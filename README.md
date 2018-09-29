@@ -1,19 +1,15 @@
-The Embodied Agent Suite (TEAS)
+TEAS
 ==============================
 
-Suite for training and benchmarking embodied agents.
+**The Embodied Agents Suite**
 
-**See the discussion in the [Quip folder](https://fb.quip.com/vAirA8l2Qrxv)**
+TEAS is a suite to train embodied agents across a variety of tasks, 
+environments, simulators. TEAS defines an API through which users can train 
+agents on existing embodied tasks as well as add new simulators, tasks. It 
+also aims to make benchmarking of agents across environments and tasks easier
+. The suite is also designed for training RL agents and will provide 
+functionality for parallel execution of episodes.
 
-## Intro
 
-The Embodied Agent Suite aims to provide utilities to make it easier to train Embodied Agents in simulated environments. It will be open-sourced to support an "Embodied Question Answering challenge" workshop (CVPR19). While it will support the EQA challenge, this suite provides support for a range of tasks beyond just EQA.
-
-It borrows heavily from the [OpenAI gym](https://github.com/openai/gym) interface which is well thought-out. It also provides additional tools on top of this interface which support training embodied agents. 
-
-This suite contains tools at multiple levels:
-- Environment wrappers to provide a unified interface to different simulators (ESP, Gibson, Minos, and others)
-- Tools for distributing environments over multiple processes, gpus, and machines
-- An interface between OpenAI gym and models at the layer of physical sensors
-- Tools for rewarding embodied agents: reward shaping, API calls to get shortest path, 
-- and, of course, much more
+**Status**: In active development, refer to `teas` for source code and 
+[pull-requests](https://github.com/fairinternal/TEAS/pulls?q=is%3Apr+is%3Aclosed) for details on features and design.
