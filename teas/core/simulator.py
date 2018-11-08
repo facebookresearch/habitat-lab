@@ -89,6 +89,9 @@ class SensorSuite:
         return self.sensors[uuid]
     
     def observations(self) -> Observation:
+        r"""
+        :return: collect data from all sensors packaged into Observation
+        """
         return Observation(self.sensors)
 
 

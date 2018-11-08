@@ -55,10 +55,10 @@ class MinosSimulator(teas.Simulator):
     
     def reset(self):
         res = self._sim.reset()
-        obs = None
+        observation = None
         if res is not False:
-            obs = self._sim.get_last_observation()
-        return obs
+            observation = self.sensor_suite.observations()
+        return observation
     
     def step(self, action):
         # TODO(akadian): In the default setting of MINOS done and rewards are

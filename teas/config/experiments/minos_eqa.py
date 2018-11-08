@@ -16,5 +16,7 @@ _minos_eqa_c.env.seed = 100
 _minos_eqa_c.env.framerate = 24
 _minos_eqa_c.env.sensors = ['MinosRGBSensor']
 _minos_eqa_c.env.simulator = 'MinosSimulator-v0'
+_minos_eqa_c.env.max_episode_seconds = 100000
+_minos_eqa_c.env.max_episode_steps = 1000
 
 minos_eqa_cfg = _minos_eqa_c

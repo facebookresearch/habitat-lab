@@ -30,8 +30,46 @@ class TeasEnv(gym.Env):
     def reconfigure(self, *config):
         self._simulator.reconfigure(*config)
 
-# TODO(akadian): Add wrappers, similar/identical to gym Monitor, TimeLimit etc
-# These wrappers will use the abstract methods for enforcement, monitoring.
+
+# TODO(akadian): Consider subclass TeasEnv instead of gym.Env for EnvWrapper
+# TODO(akadian): Refactor the below code in case we get rid of TeasEnv
+# TODO(akadian): Reduce redundancy (possibly using getattribute)
+
+class EnvWrapper(gym.Env):
+    def __init__(self, env):
+        self.env = env
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+        self.metadata = self.env.metadata
+    
+    def step(self, action):
+        return self.env.step(action)
+    
+    def reset(self):
+        return self.env.reset()
+    
+    def render(self, mode='human', **kwargs):
+        return self.env.render(mode, **kwargs)
+    
+    def close(self):
+        return self.env.close()
+    
+    def seed(self, seed=None):
+        return self.env.seed(seed)
+    
+    def reconfigure(self, *config):
+        return self.env.reconfigure(*config)
+    
+    def __str__(self):
+        return '<{}{}>'.format(type(self).__name__, self.env)
+    
+    def __repr__(self):
+        return str(self)
+    
+    @property
+    def unwrapped(self):
+        return self.env.unwrapped
+
 # TODO(akadian): Currently I haven't used the AgentState abstract class for
 # TeasEnv. Discuss if this is needed.
 # class AgentState:
