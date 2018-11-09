@@ -1,10 +1,17 @@
+def load(name):
+    import pkg_resources
+    entry_point = pkg_resources.EntryPoint.parse('x={}'.format(name))
+    result = entry_point.load(False)
+    return result
+
+
 class Spec:
     def __init__(self, id, entry_point, **kwargs):
         self.id = id
         self._entry_point = entry_point
     
     def make(self, **kwargs):
-        return self._entry_point(**kwargs)
+        return load(self._entry_point)(**kwargs)
     
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, self.id)

@@ -5,7 +5,6 @@ from PIL import Image
 import teas
 from teas.config.experiments.minos_eqa import minos_eqa_cfg
 
-
 MAX_EPISODE_STEPS = 10
 NUM_EPISODES = 5
 
