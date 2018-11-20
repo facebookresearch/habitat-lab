@@ -1,7 +1,7 @@
 def load(name):
     import pkg_resources
     entry_point = pkg_resources.EntryPoint.parse('x={}'.format(name))
-    result = entry_point.load(False)
+    result = entry_point.resolve()
     return result
 
 
