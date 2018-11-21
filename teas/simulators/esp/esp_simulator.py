@@ -8,17 +8,17 @@ import teas
 from teas.core.simulator import RGBSensor
 
 UUID_RGBSENSOR = 'rgb'
+# ESP provides RGB as RGBD structure with 4 dimensions
+RGBSENSOR_DIMENSION = 4
 
 
 class EspRGBSensor(RGBSensor):
     def __init__(self, config, simulator):
         super().__init__()
         self._simulator = simulator
-        
-        self.observation_space = Space(
-            shape=config.resolution,
-            dtype=np.uint8)
-    
+        self.observation_space = spaces.Box(low=0, high=255, shape=config.resolution + (RGBSENSOR_DIMENSION,),
+                                            dtype=np.uint8)
+
     def observation(self):
         obs = self._simulator.cache.get(self.uuid)
         if obs is not None:
@@ -52,12 +52,13 @@ class EspSimulator(teas.Simulator):
             EspActions.RIGHT.value: esp.ActionSpec(
                 'lookRight', {'amount': config.turn_angle}),
             EspActions.FORWARD.value: esp.ActionSpec(
-                'moveForward', {'amount': config.forward_step_size})
+                'moveForward', {'amount': config.forward_step_size}),
+            EspActions.STOP.value: esp.ActionSpec('stop', {})
         }
         self.esp_config.agents = [agent_config]
-        
+
         self._sim = esp.Simulator(self.esp_config)
-        
+
         esp_sensors = []
         # TODO(akadian): Get rid of caching, use hooks into simulator for
         # sensor observations.
@@ -70,21 +71,21 @@ class EspSimulator(teas.Simulator):
         self.sensor_suite = teas.SensorSuite(esp_sensors)
         self.action_space = spaces.Discrete(len(agent_config.action_space))
         self.episode_active = False
-        
+
         self._controls = {0: EspActions.LEFT.value,
                           1: EspActions.RIGHT.value,
                           2: EspActions.FORWARD.value,
                           3: EspActions.STOP.value}
-    
+
     def reset(self):
         # TODO(akadian): remove caching once setup is finalized from ESP
         obs = self._sim.reset()
         self.cache[UUID_RGBSENSOR] = obs
         self.episode_active = True
         return self.sensor_suite.observations()
-    
+
     def step(self, action):
-        assert self.episode_active is True, \
+        assert self.episode_active, \
             "episode is not active, environment not RESET or " \
             "STOP action called previously"
         sim_action = self._controls[action]
@@ -98,39 +99,37 @@ class EspSimulator(teas.Simulator):
         self.cache[UUID_RGBSENSOR] = obs
         observations = self.sensor_suite.observations()
         return observations, rewards, done, info
-    
+
     def render(self):
         return self._sim.render()
-    
+
     def seed(self, seed):
         self._sim.seed(seed)
-    
+
     def reconfigure(self, *config):
         # TODO(akadian): Implement
         raise NotImplementedError
-    
+
     def close(self):
         self._sim.close()
-    
-    def agent_state(self):
-        # TODO(akadian): currently single agent's state is returned,
-        # incorporate multi-agents in future
-        
+
+    def agent_state(self, agent_id=0):
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(self.__class__.__name__)
         return self._sim.last_state()
-    
-    def initialize_agent(self, position, rotation):
+
+    def initialize_agent(self, position, rotation, agent_id=0):
         """
         :param position: numpy ndarray containing 3 entries for (x, y, z)
         :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
                          of unit quaternion (versor) representing
                          agent 3D orientation,
                          ref: https://en.wikipedia.org/wiki/Versor
+        :param agent_id: int identification of agent from multiagent setup
         """
         agent_state = esp.AgentState()
         agent_state.position = position
         agent_state.rotation = rotation
-        # TODO(akadian): currently agent_id is always 0, incorporate multi-agent
-        # support in future
-        
-        self._sim.initialize_agent(agent_id=0,
+
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(self.__class__.__name__)
+        self._sim.initialize_agent(agent_id=agent_id,
                                    initial_state=agent_state)
