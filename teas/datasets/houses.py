@@ -19,9 +19,9 @@ class SuncgDataset(teas.Dataset):
                 self.data.append((hid, x['question'], x['answer']))
         if shuffle_order:
             shuffle(self.data)
-    
+
     def __getitem__(self, index):
         return self.data[index]
-    
+
     def __len__(self):
         return len(self.data)

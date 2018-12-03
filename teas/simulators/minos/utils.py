@@ -15,7 +15,7 @@ def minos_args(config):
                         help='Use navigation map')
     add_sim_args(parser)
     args = parser.parse_args([])  # parse empty argument input
-    
+
     if len(args.scene_ids) == 1:
         if args.scene_ids[0].endswith('txt'):
             # Read scene ids from file
@@ -26,7 +26,7 @@ def minos_args(config):
             with open(csvfile) as f:
                 reader = csv.DictReader(f)
                 args.scene_ids = [r.get('id') for r in reader]
-    
+
     if args.depth_noise:
         args.sensors = [{'name': 'depth', 'noise': True}]
     args.observations = {'color': True, 'depth': args.depth,
@@ -42,20 +42,20 @@ def minos_args(config):
             'format': 'obj',
             'positionAt': 'goal'
         }]
-    
+
     args.audio = {'debug': args.debug, 'debug_memory': args.debug_audio_memory}
     args.actionTraceLogFields = ['forces']
     args.auto_start = not args.manual_start
     if not args.auto_start:
         args.audio = {'port': 1112}
         args.port = 4899
-    
+
     sim_args = sim_config.get(args.env_config, vars(args))
     sim_args = EasyDict(sim_args)
-    
+
     # setting parameters from config
     params = vars(sim_args)
     for k, v in config.items():
         params[k] = v
-    
+
     return params

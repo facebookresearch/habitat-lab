@@ -16,7 +16,9 @@ class EspRGBSensor(RGBSensor):
     def __init__(self, config, simulator):
         super().__init__()
         self._simulator = simulator
-        self.observation_space = spaces.Box(low=0, high=255, shape=config.resolution + (RGBSENSOR_DIMENSION,),
+        self.observation_space = spaces.Box(low=0, high=255,
+                                            shape=config.resolution + (
+                                                RGBSENSOR_DIMENSION,),
                                             dtype=np.uint8)
 
     def observation(self):
@@ -37,7 +39,8 @@ class EspActions(Enum):
 class EspSimulator(teas.Simulator):
     def __init__(self, config):
         # TODO(akadian): generalize this initialization. Use sensor configs,
-        # move general parts to teas.Simulator, create predefined config for ESP
+        # move general parts to teas.Simulator, create predefined
+        # config for ESP
         self.esp_config = esp.SimulatorConfiguration()
         self.esp_config.scene.id = config.scene
         agent_config = esp.AgentConfiguration()
@@ -106,6 +109,13 @@ class EspSimulator(teas.Simulator):
     def seed(self, seed):
         self._sim.seed(seed)
 
+    def geodesic_distance(self, position_a, position_b):
+        path = esp.ShortestPath()
+        path.requested_start = position_a
+        path.requested_end = position_b
+        self._sim.pathfinder.find_path(path)
+        return path.geodesic_distance
+
     def reconfigure(self, *config):
         # TODO(akadian): Implement
         raise NotImplementedError
@@ -114,7 +124,9 @@ class EspSimulator(teas.Simulator):
         self._sim.close()
 
     def agent_state(self, agent_id=0):
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(self.__class__.__name__)
+        assert agent_id == 0, \
+            "No support of multi agent in {} yet.".format(
+                self.__class__.__name__)
         return self._sim.last_state()
 
     def initialize_agent(self, position, rotation, agent_id=0):
@@ -130,6 +142,7 @@ class EspSimulator(teas.Simulator):
         agent_state.position = position
         agent_state.rotation = rotation
 
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(self.__class__.__name__)
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(
+            self.__class__.__name__)
         self._sim.initialize_agent(agent_id=agent_id,
                                    initial_state=agent_state)

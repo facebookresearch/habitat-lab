@@ -11,11 +11,12 @@ NUM_EPISODES = 5
 
 def main():
     # TODO(akadian): Add descriptive comments for example
-    minos_eqa_cfg.freeze()
-    eqa = teas.make_task('MinosEqa-v0', config=minos_eqa_cfg)
-    
+    config = minos_eqa_cfg()
+    config.freeze()
+    eqa = teas.make_task('MinosEqa-v0', config=config)
+
     images = []
-    
+
     for ep_i, (ques, ans, env) in enumerate(eqa.episodes()):
         print("Episode: {}".format(ep_i))
         print("Question:", ques)
@@ -31,9 +32,9 @@ def main():
         if ep_i > NUM_EPISODES:
             # example setup
             break
-    
+
     eqa.close()
-    
+
     with open('res.pkl', 'wb') as f:
         pickle.dump(images, f)
 

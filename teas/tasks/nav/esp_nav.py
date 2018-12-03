@@ -1,5 +1,4 @@
 import teas
-from teas.wrappers import EnvTimeLimit
 
 
 class EspNavToy(teas.EmbodiedTask):
@@ -7,17 +6,16 @@ class EspNavToy(teas.EmbodiedTask):
         # TODO(akadian): abstract out the environment creation method,
         # currently it is not clear whether having an abstraction for TeasEnv
         # is needed. Eventually we will have a make method similar to Task
-        self._env = EnvTimeLimit(teas.TeasEnv(config),
-                                 max_episode_steps=config.max_episode_steps)
+        self._env = teas.TeasEnv(config)
         self.seed(config.seed)
-    
+
     def episodes(self):
         target_object = None
         yield target_object, self._env
-    
+
     def seed(self, seed):
         # TODO(akadian): call env seed, currently not implemented for ESP
         pass
-    
+
     def close(self):
         self._env.close()

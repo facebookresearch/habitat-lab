@@ -2,21 +2,22 @@ import os
 
 from yacs.config import CfgNode
 
-_minos_eqa_c = CfgNode()
-assert 'MINOS_EQA_DATA' in os.environ, 'environment variable MINOS_EQA_DATA ' \
-                                       'not defined'
-_minos_eqa_c.dataset = CfgNode()
-_minos_eqa_c.dataset.data_path = os.environ['MINOS_EQA_DATA']
-_minos_eqa_c.dataset.split = 'train'
 
-_minos_eqa_c.env = CfgNode()
-_minos_eqa_c.env.frameskip = 1
-_minos_eqa_c.env.angle = 5
-_minos_eqa_c.env.seed = 100
-_minos_eqa_c.env.framerate = 24
-_minos_eqa_c.env.sensors = ['MinosRGBSensor']
-_minos_eqa_c.env.simulator = 'MinosSimulator-v0'
-_minos_eqa_c.env.max_episode_seconds = 100000
-_minos_eqa_c.env.max_episode_steps = 1000
+def minos_eqa_cfg():
+    config = CfgNode()
+    assert 'MINOS_EQA_DATA' in os.environ, \
+        'environment variable MINOS_EQA_DATA not defined'
+    config.dataset = CfgNode()
+    config.dataset.data_path = os.environ['MINOS_EQA_DATA']
+    config.dataset.split = 'train'
 
-minos_eqa_cfg = _minos_eqa_c
+    config.env = CfgNode()
+    config.env.frameskip = 1
+    config.env.angle = 5
+    config.env.seed = 100
+    config.env.framerate = 24
+    config.env.sensors = ['MinosRGBSensor']
+    config.env.simulator = 'MinosSimulator-v0'
+    config.env.max_episode_seconds = 100000
+    config.env.max_episode_steps = 1000
+    return config

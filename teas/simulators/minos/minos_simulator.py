@@ -14,10 +14,10 @@ class MinosRGBSensor(RGBSensor):
         self.observation_space = Space(shape=(256, 256, 4),
                                        dtype=np.uint8)
         self._simulator = simulator
-    
+
     def observation(self):
-        sim_obs = self._simulator.get_last_observation().get('observation').get(
-            'sensors')['color']['data']
+        sim_obs = self._simulator.get_last_observation().get(
+            'observation').get('sensors')['color']['data']
         return sim_obs
 
 
@@ -43,23 +43,23 @@ class MinosSimulator(teas.Simulator):
         self._sim.start()
         common.attach_exit_handler(self._sim)
         self.viewer = None
-    
+
     @property
     def last_state(self):
         return self._last_state
-    
+
     def set_scene(self, scene_id):
         self._sim.set_scene(self.dataset + '.' + scene_id)
         episode_info = self._sim.start()
         return episode_info
-    
+
     def reset(self):
         res = self._sim.reset()
         observation = None
         if res is not False:
             observation = self.sensor_suite.observations()
         return observation
-    
+
     def step(self, action):
         # TODO(akadian): In the default setting of MINOS done and rewards are
         #  returned as None, this should be adapted
@@ -75,10 +75,10 @@ class MinosSimulator(teas.Simulator):
         done = state.get('terminals')
         info = state.get('info')
         return observation, rewards, done, info
-    
+
     def seed(self, seed):
         self._sim.seed(seed)
-    
+
     def render(self, mode, close):
         if close:
             if self.viewer is not None:
@@ -104,10 +104,10 @@ class MinosSimulator(teas.Simulator):
                 return img
             else:
                 raise NotImplemented
-    
+
     def reconfigure(self, house_id):
         self.set_scene(house_id)
-    
+
     def close(self):
         if self._sim is not None:
             self._sim.kill()

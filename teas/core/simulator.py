@@ -33,14 +33,14 @@ class SensorTypes(Enum):
 
 
 class Sensor:
-    r"""Represents a sensor that provides data from the environment to an agent.
-    
+    r"""Represents a sensor that provides data from the environment to agent.
+
     The user of this class needs to implement:
-    
+
         observation
-    
+
     The user of this class is required to set the following attributes:
-    
+
         uuid: universally unique id.
         sensor_type: type of Sensor, use SensorTypes enum if your sensor
         comes under one of it's categories.
@@ -85,7 +85,7 @@ class SensorSuite:
             spaces[sensor.uuid] = sensor.observation_space
         self.observation_spaces = Dict(spaces=spaces)
 
-    def get(self, uuid):
+    def get(self, uuid) -> OrderedDict:
         return self.sensors[uuid]
 
     def observations(self) -> Observation:
@@ -96,16 +96,26 @@ class SensorSuite:
 
 
 class Simulator:
-    def reset(self):
+    def reset(self) -> Observation:
         raise NotImplementedError
 
     def step(self, action):
         raise NotImplementedError
 
-    def seed(self, seed):
+    def seed(self, seed) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, *config):
+    def reconfigure(self, *config) -> None:
+        raise NotImplementedError
+
+    def geodesic_distance(self, position_a, position_b) -> float:
+        """
+        :param position_a: starting point for distance calculation
+        :param position_b: ending point for distance calculation
+        :return: the geodesic distance in the cartesian space between points
+                 position_a and position_b, if no path is found between the
+                 points then infinity is returned.
+        """
         raise NotImplementedError
 
     def close(self):

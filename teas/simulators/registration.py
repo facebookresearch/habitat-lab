@@ -11,9 +11,8 @@ class SimulatorSpec(Spec):
 class SimulatorRegistry(Registry):
     def register(self, id_simulator, **kwargs):
         if id_simulator in self.specs:
-            raise ValueError(
-                "Cannot re-register simulator specification with id: {}".format(
-                    id_simulator))
+            raise ValueError("Cannot re-register simulator"
+                             " specification with id: {}".format(id_simulator))
         self.specs[id_simulator] = SimulatorSpec(id_simulator, **kwargs)
 
 
