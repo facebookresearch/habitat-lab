@@ -2,7 +2,7 @@ from enum import Enum
 
 import esp
 import numpy as np
-from gym import spaces, Space
+from gym import spaces
 
 import teas
 from teas.core.simulator import RGBSensor
@@ -115,6 +115,33 @@ class EspSimulator(teas.Simulator):
         path.requested_end = position_b
         self._sim.pathfinder.find_path(path)
         return path.geodesic_distance
+
+    def semantic_annotations(self):
+        """
+        :return: SemanticScene which is a three level hierarchy of
+        semantic annotations for the current scene. Specifically this method
+        returns a SemanticScene which contains a list of SemanticLevel's
+        where each SemanticLevel contains a list of SemanticRegion's where
+        each SemanticRegion contains a list of SemanticObject's.
+
+        SemanticScene has attributes: aabb(axis-aligned bounding box) which
+        has attributes aabb.center and aabb.sizes which are 3d vectors,
+        categories, levels, objects, regions.
+
+        SemanticLevel has attributes: id, aabb, objects and regions.
+
+        SemanticRegion has attributes: id, level, aabb, category (to get
+        name of category use category.name()) and objects.
+
+        SemanticObject has attributes: id, region, aabb, obb (oriented
+        bounding box) and category.
+
+        Example to loop through in a hierarchical fashion:
+        for level in semantic_scene.levels:
+            for region in level.regions:
+                for obj in region.objects:
+        """
+        return self._sim.semantic_scene
 
     def reconfigure(self, *config):
         # TODO(akadian): Implement

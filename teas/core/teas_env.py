@@ -67,6 +67,9 @@ class TeasEnv(gym.Env):
     def geodesic_distance(self, position_a, position_b) -> float:
         return self._simulator.geodesic_distance(position_a, position_b)
 
+    def semantic_annotations(self):
+        return self._simulator.semantic_annotations()
+
     def render(self, mode='human', close=False) -> None:
         self._simulator.render(mode, close)
 
