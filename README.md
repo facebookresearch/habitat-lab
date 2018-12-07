@@ -11,5 +11,13 @@ also aims to make benchmarking of agents across environments and tasks easier
 functionality for parallel execution of episodes.
 
 
+### Install
+Clone the github repository and then run:
+```bash
+cd TEAS
+pip install -e .
+```
+
+
 **Status**: In active development, refer to `teas` for source code and 
 [pull-requests](https://github.com/fairinternal/TEAS/pulls?q=is%3Apr+is%3Aclosed) for details on features and design.

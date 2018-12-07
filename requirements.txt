@@ -1,13 +1,3 @@
-# local package
--e .
-
-# external requirements
-awscli
-click
-coverage
-flake8
 gym==0.10.9
 numpy
-python-dotenv>=0.5.1
-Sphinx
 yacs
