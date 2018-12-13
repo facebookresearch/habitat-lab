@@ -4,6 +4,7 @@ import numpy as np
 
 import teas
 from teas.config.experiments.esp_nav import esp_nav_cfg
+from teas.core.logging import logger
 
 
 def test_teas_env():
@@ -24,6 +25,7 @@ def test_teas_env():
     # check for steps limit on environment
     assert done is True
     env.close()
+    logger.info("test_teas_env test successful")
 
 
 if __name__ == '__main__':

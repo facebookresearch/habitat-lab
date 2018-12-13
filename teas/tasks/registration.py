@@ -1,4 +1,5 @@
 from teas.core.registry import Registry, Spec
+from teas.core.logging import logger
 
 
 class TaskSpec(Spec):
@@ -25,6 +26,7 @@ def register_task(id_task, **kwargs):
 
 
 def make_task(id_task, **kwargs):
+    logger.info("initializing task {}".format(id_task))
     return task_registry.make(id_task, **kwargs)
 
 

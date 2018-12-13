@@ -1,4 +1,5 @@
 from teas.core.registry import Registry, Spec
+from teas.core.logging import logger
 
 
 class SimulatorSpec(Spec):
@@ -24,6 +25,7 @@ def register_simulator(id_simulator, **kwargs):
 
 
 def make_simulator(id_simulator, **kwargs):
+    logger.info("initializing simulator {}".format(id_simulator))
     return simulator_registry.make(id_simulator, **kwargs)
 
 
