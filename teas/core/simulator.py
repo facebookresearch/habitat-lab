@@ -118,5 +118,12 @@ class Simulator:
         """
         raise NotImplementedError
 
+    def sample_navigable_point(self):
+        r"""
+        :return: a random navigable point from the simulator. A point is
+        defined as navigable if the agent can be initialized at the point.
+        """
+        raise NotImplementedError
+
     def close(self):
         raise NotImplementedError

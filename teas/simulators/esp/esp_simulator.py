@@ -116,6 +116,13 @@ class EspSimulator(teas.Simulator):
         self._sim.pathfinder.find_path(path)
         return path.geodesic_distance
 
+    def sample_navigable_point(self):
+        r"""
+        return: randomly sample a [x, y, z] point where the agent can be
+        initialized.
+        """
+        return self._sim.pathfinder.get_random_navigable_point()
+
     def semantic_annotations(self):
         """
         :return: SemanticScene which is a three level hierarchy of

@@ -70,6 +70,9 @@ class TeasEnv(gym.Env):
     def semantic_annotations(self):
         return self._simulator.semantic_annotations()
 
+    def sample_navigable_point(self):
+        return self._simulator.sample_navigable_point()
+
     def render(self, mode='human', close=False) -> None:
         self._simulator.render(mode, close)
 
