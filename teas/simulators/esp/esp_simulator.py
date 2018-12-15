@@ -1,15 +1,22 @@
 from enum import Enum
+from typing import List, Any, Dict
 
 import esp
 import numpy as np
 from gym import spaces
 
 import teas
+from teas.core.logging import logger
 from teas.core.simulator import RGBSensor
 
 UUID_RGBSENSOR = 'rgb'
 # ESP provides RGB as RGBD structure with 4 dimensions
 RGBSENSOR_DIMENSION = 4
+
+
+def overwrite_config(config_from: Dict, config_to) -> None:
+    for attr, value in config_from.items():
+        setattr(config_to, attr, value)
 
 
 class EspRGBSensor(RGBSensor):
@@ -36,14 +43,26 @@ class EspActions(Enum):
     STOP = 'stop'
 
 
+ESP_ACTION_TO_NAME = {
+    0: EspActions.FORWARD.value,
+    1: EspActions.LEFT.value,
+    2: EspActions.RIGHT.value,
+    3: EspActions.STOP.value
+}
+
+
 class EspSimulator(teas.Simulator):
-    def __init__(self, config):
+
+    @staticmethod
+    def create_esp_config(config: Any) -> esp.SimulatorConfiguration:
         # TODO(akadian): generalize this initialization. Use sensor configs,
         # move general parts to teas.Simulator, create predefined
         # config for ESP
-        self.esp_config = esp.SimulatorConfiguration()
-        self.esp_config.scene.id = config.scene
+        esp_config = esp.SimulatorConfiguration()
+        esp_config.scene.id = config.scene
         agent_config = esp.AgentConfiguration()
+        overwrite_config(config_from=config.agents[config.default_agent_id],
+                         config_to=agent_config)
         color_sensor_config = esp.SensorSpec()
         color_sensor_config.resolution = config.resolution
         color_sensor_config.parameters['hfov'] = config.hfov
@@ -56,10 +75,16 @@ class EspSimulator(teas.Simulator):
                 'lookRight', {'amount': config.turn_angle}),
             EspActions.FORWARD.value: esp.ActionSpec(
                 'moveForward', {'amount': config.forward_step_size}),
-            EspActions.STOP.value: esp.ActionSpec('stop', {})
+            EspActions.STOP.value: esp.ActionSpec('stop', {}),
         }
-        self.esp_config.agents = [agent_config]
+        esp_config.agents = [agent_config]
+        return esp_config
 
+    def __init__(self, config) -> None:
+        self.config = config
+        self.esp_config = EspSimulator.create_esp_config(config)
+        self.action_space = spaces.Discrete(
+            len(self.esp_config.agents[0].action_space))
         self._sim = esp.Simulator(self.esp_config)
 
         esp_sensors = []
@@ -72,17 +97,22 @@ class EspSimulator(teas.Simulator):
             esp_sensors.append(getattr(teas.simulators.esp, s)(config, self))
             self.cache[esp_sensors[-1].uuid] = None
         self.sensor_suite = teas.SensorSuite(esp_sensors)
-        self.action_space = spaces.Discrete(len(agent_config.action_space))
         self.episode_active = False
 
-        self._controls = {0: EspActions.LEFT.value,
-                          1: EspActions.RIGHT.value,
-                          2: EspActions.FORWARD.value,
-                          3: EspActions.STOP.value}
+        self._controls = ESP_ACTION_TO_NAME
 
     def reset(self):
         # TODO(akadian): remove caching once setup is finalized from ESP
         obs = self._sim.reset()
+
+        if hasattr(self.config, 'start_position') \
+                and hasattr(self.config, 'start_rotation') \
+                and self.config.start_position is not None \
+                and self.config.start_rotation is not None:
+            self.set_agent_state(self.config.start_position,
+                                 self.config.start_rotation,
+                                 self.config.default_agent_id)
+            obs = self._sim.render()
         self.cache[UUID_RGBSENSOR] = obs
         self.episode_active = True
         return self.sensor_suite.observations()
@@ -108,6 +138,17 @@ class EspSimulator(teas.Simulator):
 
     def seed(self, seed):
         self._sim.seed(seed)
+
+    def reconfigure(self, config: Any) -> None:
+        self.config = config
+        self.esp_config = self.create_esp_config(config)
+        self._sim.reconfigure(self.esp_config)
+        if hasattr(config, 'start_position') \
+                and hasattr(config, 'start_rotation') \
+                and config.start_position is not None \
+                and config.start_rotation is not None:
+            self.initialize_agent(config.start_position, config.start_rotation,
+                                  self.config.default_agent_id)
 
     def geodesic_distance(self, position_a, position_b):
         path = esp.ShortestPath()
@@ -150,26 +191,42 @@ class EspSimulator(teas.Simulator):
         """
         return self._sim.semantic_scene
 
-    def reconfigure(self, *config):
-        # TODO(akadian): Implement
-        raise NotImplementedError
-
     def close(self):
         self._sim.close()
 
-    def agent_state(self, agent_id=0):
-        assert agent_id == 0, \
-            "No support of multi agent in {} yet.".format(
-                self.__class__.__name__)
-        return self._sim.last_state()
+    def agent_state(self, agent_id: int = 0):
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(
+            self.__class__.__name__)
+        state = esp.AgentState()
+        self._sim.get_agent(agent_id).get_state(state)
+        return state
+
+    def set_agent_state(self, position: List[float] = None,
+                        rotation: List[float] = None,
+                        agent_id: int = 0) -> None:
+        r"""
+        Sets agent state similar to initialize_agent, but without agents
+        creation.
+        :param position: numpy ndarray containing 3 entries for (x, y, z)
+        :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
+        of unit quaternion (versor) representing agent 3D orientation,
+        ref: https://en.wikipedia.org/wiki/Versor
+        :param agent_id: int identification of agent from multiagent setup
+        """
+        agent = self._sim.get_agent(agent_id)
+        state = self.agent_state(agent_id)
+        state.position = position
+        state.rotation = rotation
+        agent.set_state(state)
+
+        self._check_agent_position(position, agent_id)
 
     def initialize_agent(self, position, rotation, agent_id=0):
         """
         :param position: numpy ndarray containing 3 entries for (x, y, z)
         :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
-                         of unit quaternion (versor) representing
-                         agent 3D orientation,
-                         ref: https://en.wikipedia.org/wiki/Versor
+        of unit quaternion (versor) representing agent 3D orientation,
+        ref: https://en.wikipedia.org/wiki/Versor
         :param agent_id: int identification of agent from multiagent setup
         """
         agent_state = esp.AgentState()
@@ -180,3 +237,9 @@ class EspSimulator(teas.Simulator):
             self.__class__.__name__)
         self._sim.initialize_agent(agent_id=agent_id,
                                    initial_state=agent_state)
+        self._check_agent_position(position, agent_id)
+
+    # TODO (maksymets): Remove check after simulator became stable
+    def _check_agent_position(self, position, agent_id=0):
+        if not np.allclose(position, self.agent_state(agent_id).position):
+            logger.info("Agent state diverges from configured start position.")

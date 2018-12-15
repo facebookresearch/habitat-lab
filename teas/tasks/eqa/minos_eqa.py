@@ -2,7 +2,7 @@ import teas
 from teas.datasets import make_dataset
 
 
-class MinosEqaTask(teas.EmbodiedTask):
+class MinosEQATask(teas.EmbodiedTask):
     def __init__(self, config):
         self._dataset = make_dataset('Suncg-v0', config=config.dataset)
         self._env = teas.TeasEnv(config=config.env)

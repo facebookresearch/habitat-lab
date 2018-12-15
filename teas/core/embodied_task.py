@@ -17,7 +17,6 @@ class EmbodiedTask:
         raise NotImplementedError
 
     # TODO(akadian): Add distributed episodes loader.
-
     def seed(self, seed):
         raise NotImplementedError
 

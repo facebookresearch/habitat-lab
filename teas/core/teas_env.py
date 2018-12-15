@@ -58,20 +58,17 @@ class TeasEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def seed(self, seed=None) -> None:
+    def seed(self, seed: int = None) -> None:
         self._simulator.seed(seed)
 
-    def reconfigure(self, *config) -> None:
-        self._simulator.reconfigure(*config)
+    def reconfigure(self, config) -> None:
+        self._simulator.reconfigure(config)
 
     def geodesic_distance(self, position_a, position_b) -> float:
         return self._simulator.geodesic_distance(position_a, position_b)
 
     def semantic_annotations(self):
         return self._simulator.semantic_annotations()
-
-    def sample_navigable_point(self):
-        return self._simulator.sample_navigable_point()
 
     def render(self, mode='human', close=False) -> None:
         self._simulator.render(mode, close)

@@ -3,6 +3,7 @@ import pickle
 from PIL import Image
 
 import teas
+from teas.core.logging import logger
 from teas.config.experiments.minos_eqa import minos_eqa_cfg
 
 MAX_EPISODE_STEPS = 10
@@ -11,16 +12,15 @@ NUM_EPISODES = 5
 
 def main():
     # TODO(akadian): Add descriptive comments for example
-    config = minos_eqa_cfg()
-    config.freeze()
-    eqa = teas.make_task('MinosEqa-v0', config=config)
+    minos_eqa_cfg.freeze()
+    eqa = teas.make_task('MinosEQA-v0', config=minos_eqa_cfg)
 
     images = []
 
     for ep_i, (ques, ans, env) in enumerate(eqa.episodes()):
-        print("Episode: {}".format(ep_i))
-        print("Question:", ques)
-        print("Answer:", ans)
+        logger.info("Episode: {}".format(ep_i))
+        logger.info("Question:", ques)
+        logger.info("Answer:", ans)
         obs = env.reset()
         images.append(Image.fromarray(obs['rgb'], 'RGBA'))
         for step in range(MAX_EPISODE_STEPS):

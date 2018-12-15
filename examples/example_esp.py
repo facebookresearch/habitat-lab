@@ -3,6 +3,7 @@ import pickle
 from PIL import Image
 
 import teas
+from teas.core.logging import logger
 from teas.config.experiments.esp_nav import esp_nav_cfg
 
 
@@ -22,7 +23,7 @@ def main():
 
         with open('res.pkl', 'wb') as f:
             pickle.dump(images, f)
-        print("successfully saved images")
+            logger.info("successfully saved images")
     nav.close()
 
 
