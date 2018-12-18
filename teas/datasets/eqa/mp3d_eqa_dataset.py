@@ -10,7 +10,7 @@ from yacs.config import CfgNode
 import teas.core.dataset as ds
 from teas.core.logging import logger
 
-BLACKLIST_QUESTION_TYPE = []
+ALLOWED_QUESTION_TYPES = ["location", "color", "color_room"]
 
 TEAS_NAME_TO_ACTION = {
     'forwards': 0,
@@ -33,7 +33,7 @@ ACTION_MAPPING = {
     MINOS_NAME_TO_ACTION['stop']: TEAS_NAME_TO_ACTION['stop']
 }
 
-EQA_MP3D_V1_TEST_EPISODE_COUNT = 3766
+EQA_MP3D_V1_TEST_EPISODE_COUNT = 3571
 
 
 def get_default_mp3d_v1_config(split: str = "test"):
@@ -91,7 +91,7 @@ def swap_yz(position: List[float]) -> List[float]:
     return [position[0], position[2], position[1]]
 
 
-class MP3DDatasetV1(ds.Dataset):
+class Matterport3dDatasetV1(ds.Dataset):
     r"""Class inherited from Dataset that loads Matterport3D
     Embodied Question Answering dataset.
 
@@ -131,7 +131,8 @@ class MP3DDatasetV1(ds.Dataset):
         return goal
 
     @staticmethod
-    def _create_shortest_path(episode, path_points, path_actions):
+    def _create_shortest_path(episode, path_points, path_actions) \
+            -> List[ds.ShortestPathPoint]:
         shortest_path = []
         for step_id, ds_point in enumerate(
                 path_actions):
@@ -152,12 +153,50 @@ class MP3DDatasetV1(ds.Dataset):
         return shortest_path
 
     @staticmethod
-    def _create_question(episode_data):
+    def _create_question(episode_data) -> ds.QuestionData:
         question = ds.QuestionData()
         question.question_text = episode_data["question"]
         question.answer_text = episode_data["answer"]
         question.question_type = episode_data["type"]
         return question
+
+    @staticmethod
+    def _create_episode(episode_id, episode_data, path_points, path_actions,
+                        scene_id, scenes_path) -> ds.EQAEpisode:
+        episode = ds.EQAEpisode()
+        episode.id = str(episode_id)
+        episode.question = Matterport3dDatasetV1._create_question(
+            episode_data["qn"])
+
+        if episode.question.question_type not in ALLOWED_QUESTION_TYPES:
+            return
+
+        episode.goals = [
+            Matterport3dDatasetV1._create_goal(episode_data["qn"])]
+        episode.shortest_paths = [
+            Matterport3dDatasetV1._create_shortest_path(
+                episode=episode,
+                path_points=path_points,
+                path_actions=path_actions)]
+
+        house = episode_data["qn"]["house"]
+        level = episode_data["qn"]["level"]
+        episode.scene_id = scene_id
+        assert episode.scene_id == "{}.{}".format(house,
+                                                  level), \
+            "Scene mismatch between metadata and environment index " \
+            "for episode {}.".format(
+                episode_id)
+        episode.scene_file = \
+            "{scenes_path}/{house}/{house}.glb".format(
+                scenes_path=scenes_path,
+                house=house)
+        episode.start_position = minos_to_esp(
+            episode_data["start"]["position"])
+        episode.start_rotation = minos_angle_to_esp_quaternion(
+            episode_data["start"]["angle"])
+        episode.start_room = episode_data["start"]["room"]
+        return episode
 
     def __init__(self, config):
         self._data = {}
@@ -175,40 +214,16 @@ class MP3DDatasetV1(ds.Dataset):
 
             for episode_id, episode_data in enumerate(dataset[meta_data_key]):
                 episode_data = dataset[meta_data_key][episode_id]
-
-                episode = ds.EQAEpisode()
-                episode.id = str(episode_id)
-                episode.question = self._create_question(
-                    episode_data["qn"])
-                if episode.question in BLACKLIST_QUESTION_TYPE:
-                    continue
-                episode.goals = [
-                    self._create_goal(episode_data["qn"])]
-                episode.shortest_paths = [
-                    self._create_shortest_path(
-                        episode=episode,
-                        path_points=dataset[path_data_key][episode_id],
-                        path_actions=shortest_path_actions[episode_id])]
-
-                house = episode_data["qn"]["house"]
-                level = episode_data["qn"]["level"]
                 inner_scene_id = dataset[env_ids_key][episode_id]
-                episode.scene_id = dataset["envs"][inner_scene_id]
-                assert episode.scene_id == "{}.{}".format(house,
-                                                          level), \
-                    "Scene mismatch between metadata and environment index " \
-                    "for episode {}.".format(
-                        episode_id)
-                episode.scene_file = \
-                    "{scenes_path}/{house}/{house}.glb".format(
-                        scenes_path=config.scenes_path,
-                        house=house)
-                episode.start_position = minos_to_esp(
-                    episode_data["start"]["position"])
-                episode.start_rotation = minos_angle_to_esp_quaternion(
-                    episode_data["start"]["angle"])
-                episode.start_room = episode_data["start"]["room"]
-                self._data[len(self._data)] = episode
+                scene_id = dataset["envs"][inner_scene_id]
+                episode = self._create_episode(
+                    episode_id=episode_id, episode_data=episode_data,
+                    path_points=dataset[path_data_key][episode_id],
+                    path_actions=shortest_path_actions[episode_id],
+                    scene_id=scene_id, scenes_path=config.scenes_path)
+
+                if episode:
+                    self._data[len(self._data)] = episode
 
     def __getitem__(self, index):
         return self._data[index]

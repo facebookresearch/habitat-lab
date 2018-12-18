@@ -7,4 +7,4 @@ register_dataset(
 
 register_dataset(
     id_dataset='MP3DEQA-v1',
-    entry_point='teas.datasets.eqa.mp3d_eqa_dataset:MP3DDatasetV1')
+    entry_point='teas.datasets.eqa.mp3d_eqa_dataset:Matterport3dDatasetV1')

@@ -5,18 +5,18 @@ import teas.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 from teas.config.experiments.esp_nav import esp_nav_cfg
 from teas.core.logging import logger
 
-CLOSE_STEP_THRESHOLD = 0.028  # 0.007
+CLOSE_STEP_THRESHOLD = 0.028
 
 IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
-# TODO (maksymets): Use episode list after
+# TODO (maksymets): Use episode list after Dataset class redesign
 TEST_EPISODE_SET = [0, 1, 2, 17, 164, 173, 250, 272, 456, 695, 698, 782,
                     966, 970, 1160, 1272, 1295, 1296, 1376, 1384, 1633,
                     1836, 1841, 1967, 2175, 2396, 2575,
                     2717]
 
-EPISODES_LIMIT = 10
+EPISODES_LIMIT = 5
 
 
 def get_minos_for_esp_eqa_config():
@@ -48,10 +48,11 @@ def get_minos_for_esp_eqa_config():
 
 def test_mp3d_eqa_dataset():
     dataset_config = mp3d_dataset.get_default_mp3d_v1_config()
-    if not mp3d_dataset.MP3DDatasetV1.check_config_paths_exist(dataset_config):
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
+            dataset_config):
         logger.info("Test skipped as dataset files are missing.")
         return
-    dataset = mp3d_dataset.MP3DDatasetV1(dataset_config)
+    dataset = mp3d_dataset.Matterport3dDatasetV1(dataset_config)
     assert dataset
     assert len(
         dataset) == mp3d_dataset.EQA_MP3D_V1_TEST_EPISODE_COUNT, \
@@ -61,7 +62,7 @@ def test_mp3d_eqa_dataset():
 def test_mp3d_eqa_esp():
     eqa_config = get_minos_for_esp_eqa_config()
 
-    if not mp3d_dataset.MP3DDatasetV1.check_config_paths_exist(
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
             eqa_config.dataset):
         logger.info("Test skipped as dataset files are missing.")
         return
@@ -88,7 +89,7 @@ def test_mp3d_eqa_esp():
 def test_mp3d_eqa_esp_correspondance():
     eqa_config = get_minos_for_esp_eqa_config()
 
-    if not mp3d_dataset.MP3DDatasetV1.check_config_paths_exist(
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
             eqa_config.dataset):
         logger.info("Test skipped as dataset files are missing.")
         return
@@ -109,6 +110,11 @@ def test_mp3d_eqa_esp_correspondance():
             "Episode has no shortest paths or more than one."
         env.reset()
         start_state = env._simulator.agent_state()
+        assert np.allclose(
+            start_state.position,
+            episode.start_position), \
+            "Agent's start position diverges from the shortest path's one."
+
         rgb_frames = []
         depth = []
         labels = []
@@ -143,12 +149,7 @@ def test_mp3d_eqa_esp_correspondance():
                 depth.append(np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
                 labels.append(np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
 
-            assert np.allclose(
-                start_state.position,
-                episode.start_position), \
-                "Agent's path diverges from the shortest path."
-
-            if IS_GENERATING_VIDEO:
-                gen_video.make_video(episode, rgb_frames, depth, labels)
+        if IS_GENERATING_VIDEO:
+            gen_video.make_video(episode, rgb_frames, depth, labels)
 
     eqa.close()
