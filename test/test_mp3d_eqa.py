@@ -4,19 +4,22 @@ import teas
 import teas.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 from teas.config.experiments.esp_nav import esp_nav_cfg
 from teas.core.logging import logger
+from teas.datasets import make_dataset
 
 CLOSE_STEP_THRESHOLD = 0.028
 
 IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
-# TODO (maksymets): Use episode list after Dataset class redesign
 TEST_EPISODE_SET = [0, 1, 2, 17, 164, 173, 250, 272, 456, 695, 698, 782,
                     966, 970, 1160, 1272, 1295, 1296, 1376, 1384, 1633,
                     1836, 1841, 1967, 2175, 2396, 2575,
                     2717]
 
-EPISODES_LIMIT = 5
+RGB_EPISODE_MEANS = [130.27629452458137, 118.33419659326944,
+                     120.8483347525963, 129.8308741124471, 141.64853506874445]
+
+EPISODES_LIMIT = 2
 
 
 def get_minos_for_esp_eqa_config():
@@ -24,6 +27,7 @@ def get_minos_for_esp_eqa_config():
     _esp_eqa_c.task_name = 'EQA-v0'
     _esp_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
     _esp_eqa_c.dataset.split = "test"
+    _esp_eqa_c.scene = "data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb"
     _esp_eqa_c.resolution = (512, 512)
     _esp_eqa_c.hfov = '45'
     _esp_eqa_c.vfov = '45'
@@ -55,7 +59,7 @@ def test_mp3d_eqa_dataset():
     dataset = mp3d_dataset.Matterport3dDatasetV1(dataset_config)
     assert dataset
     assert len(
-        dataset) == mp3d_dataset.EQA_MP3D_V1_TEST_EPISODE_COUNT, \
+        dataset.episodes) == mp3d_dataset.EQA_MP3D_V1_TEST_EPISODE_COUNT, \
         "Test split episode number mismatch"
 
 
@@ -67,10 +71,10 @@ def test_mp3d_eqa_esp():
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    eqa = teas.make_task(eqa_config.task_name, config=eqa_config)
+    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    env = teas.TeasEnv(config=eqa_config)
+    env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
-    target_object, env = next(eqa.episodes())
-    assert target_object
     assert env
     env.reset()
     done = False
@@ -83,7 +87,7 @@ def test_mp3d_eqa_esp():
             assert obs['rgb'].shape[:2] == eqa_config.resolution, \
                 "Observation resolution doesn't correspond to config."
 
-    eqa.close()
+    env.close()
 
 
 def test_mp3d_eqa_esp_correspondance():
@@ -94,21 +98,25 @@ def test_mp3d_eqa_esp_correspondance():
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    eqa = teas.make_task(eqa_config.task_name, config=eqa_config)
+    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    env = teas.TeasEnv(config=eqa_config, dataset=dataset)
+    env.episodes = dataset.get_episodes(TEST_EPISODE_SET)[:EPISODES_LIMIT]
 
     if IS_GENERATING_VIDEO:
         from teas.internal.visualize import gen_video
 
-    for ep_i, (episode, env) in enumerate(eqa.episodes()):
-        if ep_i > EPISODES_LIMIT:
-            break
-
+    ep_i = 0
+    cycles_n = 2
+    while cycles_n > 0:
+        env.reset()
+        episode = env.current_episode
         assert len(
             episode.goals) == 1, "Episode has no goals or more than one."
         assert len(
             episode.shortest_paths) == 1, \
             "Episode has no shortest paths or more than one."
-        env.reset()
+        # TODO (maksymets) get rid of private member call with better agent
+        # state interface
         start_state = env._simulator.agent_state()
         assert np.allclose(
             start_state.position,
@@ -118,6 +126,7 @@ def test_mp3d_eqa_esp_correspondance():
         rgb_frames = []
         depth = []
         labels = []
+        rgb_mean = 0
 
         for step_id, point in enumerate(episode.shortest_paths[0]):
             cur_state = env._simulator.agent_state()
@@ -142,14 +151,29 @@ def test_mp3d_eqa_esp_correspondance():
 
             obs, rew, done, info = env.step(point.action)
 
-            if not done and IS_GENERATING_VIDEO:
-                # Cut RGB channels from RGBA and fill empty frames of relevant
-                # resolution, collect frames
-                rgb_frames.append(obs['rgb'][:, :, :3])
-                depth.append(np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
-                labels.append(np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
+            if not done:
+                rgb_mean += obs['rgb'][:, :, :3].mean()
+                if IS_GENERATING_VIDEO:
+                    # Cut RGB channels from RGBA and fill empty frames of
+                    # relevant resolution, collect frames
+                    rgb_frames.append(obs['rgb'][:, :, :3])
+                    # Fill frames with zeros using same resolution as rgb frame
+                    depth.append(
+                        np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
+                    labels.append(
+                        np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
 
-        if IS_GENERATING_VIDEO:
+        if ep_i < len(RGB_EPISODE_MEANS):
+            assert np.isclose(
+                RGB_EPISODE_MEANS[ep_i],
+                rgb_mean / len(episode.shortest_paths[0])), \
+                "RGB output doesn't match the ground truth."
+
+        ep_i = (ep_i + 1) % EPISODES_LIMIT
+        if ep_i == 0:
+            cycles_n -= 1
+
+        if IS_GENERATING_VIDEO and cycles_n == 0:
             gen_video.make_video(episode, rgb_frames, depth, labels)
 
-    eqa.close()
+    env.close()

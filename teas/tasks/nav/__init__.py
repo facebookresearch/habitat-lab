@@ -1,1 +1,1 @@
-from teas.tasks.nav.esp_nav import EspNavToy
+from teas.tasks.nav.nav_task import NavigationTask

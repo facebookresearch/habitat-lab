@@ -1,33 +1,100 @@
-import teas
-from teas.datasets import make_dataset
-from teas.core.dataset import EQAEpisode
-from typing import Any, Iterable, Tuple
+from typing import Dict, Optional
+
+import numpy as np
+from gym import spaces
+
+from teas.core.simulator import Sensor, SensorTypes, SensorSuite, Observation
+from teas.tasks.nav.nav_task import (
+    NavigationEpisode, NavigationTask
+)
 
 
-class EQATask(teas.EmbodiedTask):
-    def __init__(self, config: Any) -> None:
-        self._config = config
-        self._dataset = make_dataset(config.dataset.name,
-                                     config=config.dataset)
-        self._env = teas.TeasEnv(config=config)
-        self.seed(config.seed)
+class QuestionData:
+    r"""Class saves data about question asked to the agent and correct answer.
+    """
 
-    @staticmethod
-    def _apply_episode(env_config: Any, episode: EQAEpisode) -> None:
-        env_config.scene = episode.scene_file
-        env_config.start_position = episode.start_position
-        env_config.start_rotation = episode.start_rotation
+    def __init__(self, question_text: str, question_type: str,
+                 answer_text: Optional[str] = None) -> None:
+        self.question_text: str = question_text
+        self.answer_text: Optional[str] = answer_text
+        self.question_type: Optional[str] = question_type
 
-    def episodes(self) -> Iterable[Tuple[EQAEpisode,
-                                         teas.core.teas_env.TeasEnv]]:
-        for i in range(len(self._dataset)):
-            eqa_episode = self._dataset[i]
-            self._apply_episode(self._config, eqa_episode)
-            self._env.reconfigure(self._config)
-            yield eqa_episode, self._env
 
-    def seed(self, seed: int) -> None:
-        self._env.seed(seed)
+class EQAEpisode(NavigationEpisode):
+    r"""Specification of episode that includes initial position and rotation of
+    agent, goal, question specifications and optional shortest paths.
+    """
 
-    def close(self) -> None:
-        self._env.close()
+    def __init__(self, question: QuestionData, **kwargs) -> None:
+        r"""
+        :param scene_id:
+        :param start_position: numpy ndarray containing 3 entries for (x, y, z)
+        :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
+        elements of unit quaternion (versor) representing agent 3D orientation,
+        ref: https://en.wikipedia.org/wiki/Versor
+        :param goals: relevant goal object/room
+        :param question: question related to goal object
+        """
+        super(self.__class__, self).__init__(**kwargs)
+        self.question: QuestionData = question
+
+
+class QuestionSensor(Sensor):
+    def __init__(self, **kwargs):
+        self.uuid = 'question'
+        self.sensor_type = SensorTypes.TEXT
+        # TODO (maksymets) extend gym observation space for text and metadata
+        self.observation_space = spaces.Discrete(0)
+
+    def _get_observation(self, observations: Dict[str, Observation],
+                         episode: EQAEpisode,
+                         **kwargs):
+        return episode.question.question_text
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+class AnswerSensor(Sensor):
+    def __init__(self, **kwargs):
+        self.uuid = 'answer'
+        self.sensor_type = SensorTypes.TEXT
+        # TODO (maksymets) extend gym observation space for text and metadata
+        self.observation_space = spaces.Discrete(0)
+
+    def _get_observation(self, observations: Dict[str, Observation],
+                         episode: EQAEpisode,
+                         **kwargs):
+        return episode.question.answer_text
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+# TODO (maksymets) Move reward to measurement class
+class RewardSensor(Sensor):
+    REWARD_MIN = -100
+    REWARD_MAX = -100
+
+    def __init__(self, **kwargs):
+        self.uuid = 'reward'
+        self.sensor_type = SensorTypes.TENSOR
+        self.observation_space = spaces.Box(low=RewardSensor.REWARD_MIN,
+                                            high=RewardSensor.REWARD_MAX,
+                                            shape=(1,),
+                                            dtype=np.float)
+
+    def _get_observation(self, observations: Dict[str, Observation],
+                         episode: NavigationEpisode,
+                         **kwargs):
+        return [0]
+
+    def get_observation(self, **kwargs):
+        return self._get_observation(**kwargs)
+
+
+class EQATask(NavigationTask):
+    def __init__(self, **kwargs) -> None:
+        super(EQATask, self).__init__(**kwargs)
+        self._sensor_suite: SensorSuite = SensorSuite(
+            [QuestionSensor(), AnswerSensor(), RewardSensor()])

@@ -29,13 +29,14 @@ def minos_args(config):
 
     if args.depth_noise:
         args.sensors = [{'name': 'depth', 'noise': True}]
-    args.observations = {'color': True, 'depth': args.depth,
-                         'forces': args.forces, 'audio': args.audio}
+    args.observations = {
+        'color': True, 'depth': args.depth,
+        'forces': args.forces, 'audio': args.audio
+    }
     for s in args.sensors:
         args.observations[s] = True
     args.collision_detection = {'mode': args.collision_mode}
     if args.add_object_at_goal:
-        # print('add object at goal')
         args.modifications = [{
             'name': 'add',
             'modelIds': 'p5d.s__1957',

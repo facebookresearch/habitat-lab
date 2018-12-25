@@ -1,20 +1,9 @@
 from collections import OrderedDict
 from enum import Enum
+from typing import Any, Dict, List, Tuple
 
-from gym.spaces.dict_space import Dict
-
-
-class Observation(OrderedDict):
-    r"""Represents an observation 'frame' provided by a sensor.
-
-    Thin wrapper of OrderedDict with potentially some utility functions
-    to obtain Tensors)
-    """
-
-    def __init__(self, sensors):
-        data = [(uuid, sensor.observation()) for uuid, sensor in
-                sensors.items()]
-        super().__init__(data)
+from gym import Space
+from gym.spaces.dict_space import Dict as SpaceDict
 
 
 class SensorTypes(Enum):
@@ -47,22 +36,37 @@ class Sensor:
         observation_space: gym.Space object corresponding to observation of
         sensor
     """
-    uuid = None
-    sensor_type = None
-    observation_space = None
 
-    def observation(self):
+    def __init__(self) -> None:
+        self.uuid: str
+        self.sensor_type: SensorTypes
+        self.observation_space: Space
+
+    def get_observation(self, **kwargs: Any) -> Any:
         r"""Returns the current observation for Sensor.
         """
         raise NotImplementedError
 
 
+class Observation(OrderedDict):
+    r"""Represents an observation provided by a sensor.
+
+    Thin wrapper of OrderedDict with potentially some utility functions
+    to obtain Tensors)
+    """
+
+    def __init__(self, sensors: Dict[str, Sensor], **kwargs) -> None:
+        data = [(uuid, sensor.get_observation(**kwargs)) for uuid, sensor in
+                sensors.items()]
+        super().__init__(data)
+
+
 class RGBSensor(Sensor):
-    def __init__(self, *args):
+    def __init__(self, **kwargs):
         self.uuid = 'rgb'
         self.sensor_type = SensorTypes.COLOR
 
-    def observation(self):
+    def get_observation(self, **kwargs: Any) -> Any:
         raise NotImplementedError
 
 
@@ -71,44 +75,46 @@ class SensorSuite:
     through a unique id.
     """
 
-    def __init__(self, sensors):
+    def __init__(self, sensors: List[Sensor]) -> None:
         r"""
         Args
             sensors: list containing sensors for the environment, the uuid of
             each sensor should be unique.
         """
-        self.sensors = OrderedDict()
-        spaces = OrderedDict()
+        self.sensors: OrderedDict[str, Sensor] = OrderedDict()
+        spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
-            assert sensor.uuid not in self.sensors, "duplicate sensor uuid"
+            assert sensor.uuid not in self.sensors, \
+                "'{}' is duplicated sensor uuid".format(sensor.uuid)
             self.sensors[sensor.uuid] = sensor
             spaces[sensor.uuid] = sensor.observation_space
-        self.observation_spaces = Dict(spaces=spaces)
+        self.observation_spaces: SpaceDict = SpaceDict(spaces=spaces)
 
-    def get(self, uuid) -> OrderedDict:
+    def get(self, uuid: str) -> Sensor:
         return self.sensors[uuid]
 
-    def observations(self) -> Observation:
+    def get_observations(self, **kwargs: Any) -> Observation:
         r"""
         :return: collect data from all sensors packaged into Observation
         """
-        return Observation(self.sensors)
+        return Observation(self.sensors, **kwargs)
 
 
 class Simulator:
     def reset(self) -> Observation:
         raise NotImplementedError
 
-    def step(self, action):
+    def step(self, action: int) -> Tuple[Observation, bool]:
         raise NotImplementedError
 
-    def seed(self, seed) -> None:
+    def seed(self, seed: int) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, *config) -> None:
+    def reconfigure(self, config: Any) -> None:
         raise NotImplementedError
 
-    def geodesic_distance(self, position_a, position_b) -> float:
+    def geodesic_distance(self, position_a: List[float],
+                          position_b: List[float]) -> float:
         """
         :param position_a: starting point for distance calculation
         :param position_b: ending point for distance calculation
@@ -118,12 +124,12 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def sample_navigable_point(self):
+    def sample_navigable_point(self) -> List[float]:
         r"""
         :return: a random navigable point from the simulator. A point is
         defined as navigable if the agent can be initialized at the point.
         """
         raise NotImplementedError
 
-    def close(self):
+    def close(self) -> None:
         raise NotImplementedError

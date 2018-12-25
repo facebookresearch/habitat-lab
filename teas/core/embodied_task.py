@@ -1,24 +1,27 @@
-class Dataset:
-    def __getitem__(self, index):
-        raise NotImplementedError
+from typing import Any, Dict, Type, Optional
 
-    def __len__(self):
-        raise NotImplementedError
+from teas.core.dataset import Episode, Dataset
+from teas.core.simulator import Observation, SensorSuite
 
 
 class EmbodiedTask:
-    _env = None
-    _dataset = None
 
-    # TODO(akadian): Add agent attribute to be defined by subclasses
-    def episodes(self, *args):
-        r"""Returns dataloader for episodes for the EmbodiedTask.
+    def __init__(self):
+        self._config: Any = None
+        self._simulator: Any = None
+        self._dataset: Optional[Dataset] = None
+        self._sensor_suite: SensorSuite = None
+
+    def overwrite_sim_config(self, sim_config: Any,
+                             episode: Type[Episode]) -> Any:
+        r"""Returns updated simulator config with episode data such as a start
+        state.
         """
         raise NotImplementedError
 
-    # TODO(akadian): Add distributed episodes loader.
-    def seed(self, seed):
-        raise NotImplementedError
+    @property
+    def sensor_suite(self) -> SensorSuite:
+        return self._sensor_suite
 
-    def close(self):
+    def get_reward(self, observations: Dict[str, Observation]) -> Any:
         raise NotImplementedError

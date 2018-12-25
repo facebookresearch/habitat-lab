@@ -15,8 +15,8 @@ class MinosRGBSensor(RGBSensor):
                                        dtype=np.uint8)
         self._simulator = simulator
 
-    def observation(self):
-        sim_obs = self._simulator.get_last_observation().get(
+    def get_observation(self):
+        sim_obs = self._simulator.get_last_get_observation().get(
             'observation').get('sensors')['color']['data']
         return sim_obs
 
@@ -57,18 +57,21 @@ class MinosSimulator(teas.Simulator):
         res = self._sim.reset()
         observation = None
         if res is not False:
-            observation = self.sensor_suite.observations()
+            observation = self.sensor_suite.get_observations()
         return observation
 
     def step(self, action):
         # TODO(akadian): In the default setting of MINOS done and rewards are
         #  returned as None, this should be adapted
         # according to the task the environment is being used for.
-        sim_action = {'name': self.available_controls[action], 'strength': 1,
-                      'angle': self.angle}
+        # TODO(maksymets): Move "strength" to the config.
+        sim_action = {
+            'name': self.available_controls[action], 'strength': 1,
+            'angle': self.angle
+        }
         state = self._sim.step(sim_action, self.frameskip)
         self._last_state = state
-        observation = self.sensor_suite.observations()
+        observation = self.sensor_suite.get_observations()
         if state is None:
             return None, None, None, None
         rewards = state.get('rewards')

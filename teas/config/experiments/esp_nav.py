@@ -6,11 +6,14 @@ from yacs.config import CfgNode
 
 def esp_nav_cfg():
     config = CfgNode()
+    # Environment
+    config.max_episode_steps = 1000
+
+    # Simulator
     config.resolution = (640, 480)
     config.hfov = '90'  # horizontal field of view in degrees
     config.seed = 100
     config.scene = 'data/esp/test/test.glb'
-    config.max_episode_steps = 1000
     config.sensors = ['EspRGBSensor']
     config.sensor_position = [0, 0.05, 0]
     config.forward_step_size = 0.25  # in metres

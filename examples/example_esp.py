@@ -10,7 +10,7 @@ from teas.config.experiments.esp_nav import esp_nav_cfg
 def main():
     config = esp_nav_cfg()
     config.freeze()
-    nav = teas.make_task('EspNav-v0', config=config)
+    nav = teas.make_task('Nav-v0', config=config)
 
     for ep_i, (target_object, env) in enumerate(nav.episodes()):
         images = []

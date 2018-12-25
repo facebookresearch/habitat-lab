@@ -1,10 +1,11 @@
 import os
-import tqdm
-import numpy as np
-import subprocess
 import shlex
 import shutil
+import subprocess
+
 import cv2
+import numpy as np
+import tqdm
 
 
 def combine_video(_id, images, text, output_dir):
@@ -18,9 +19,9 @@ def combine_video(_id, images, text, output_dir):
     subprocess.check_call(
         shlex.split(
             'ffmpeg -framerate 10 -i {}/f_%05d.png -r 30 -pix_fmt yuv420p'
-            ' -threads 0 -q:v 3 {}/{}_{}.mp4'.format(frames_dir, output_dir,
-                                                     _id,
-                                                     text.replace(" ", "_"))
+            ' -threads 0 -q:v 3 {}/{}_{}.mp4'.format(
+                frames_dir, output_dir, _id,
+                text.replace(" ", "_").replace("\n", "_"))
         )
     )
 
@@ -43,8 +44,9 @@ def write_text(img, text):
 
 def make_video(episode, rgb_frames, depth, labels,
                output_dir="data/videos/test"):
-    text = episode.text.text_text
-    answer = episode.text.answer_text
+    text = "{question}\n{answer}".format(
+        question=episode.question.question_text,
+        answer=episode.question.answer_text)
 
     big_frame = np.empty((512, 3 * 512, 3), dtype=np.uint8)
 
@@ -67,7 +69,7 @@ def make_video(episode, rgb_frames, depth, labels,
         big_frame[:, 0: 512] = rgb  # sim.img
         big_frame[:, 512: 2 * 512] = np.dstack([d] * 3)
         big_frame[:, 2 * 512: 3 * 512] = lut[scaled]
-        write_text(big_frame, '{}\n{}'.format(text, answer))
+        write_text(big_frame, text)
         frames.append(big_frame.copy())
 
     combine_video(episode.id, frames, text, output_dir)

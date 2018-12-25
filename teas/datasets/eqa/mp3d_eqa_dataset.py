@@ -1,14 +1,18 @@
 import gzip
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import h5py
 import numpy as np
 from yacs.config import CfgNode
 
-import teas.core.dataset as ds
+from teas.core.dataset import Dataset
 from teas.core.logging import logger
+from teas.tasks.eqa.eqa_task import EQAEpisode, QuestionData
+from teas.tasks.nav.nav_task import (
+    ObjectGoal, NavigationGoal, ShortestPathPoint
+)
 
 ALLOWED_QUESTION_TYPES = ["location", "color", "color_room"]
 
@@ -91,7 +95,7 @@ def swap_yz(position: List[float]) -> List[float]:
     return [position[0], position[2], position[1]]
 
 
-class Matterport3dDatasetV1(ds.Dataset):
+class Matterport3dDatasetV1(Dataset):
     r"""Class inherited from Dataset that loads Matterport3D
     Embodied Question Answering dataset.
 
@@ -102,46 +106,53 @@ class Matterport3dDatasetV1(ds.Dataset):
     eqa = teas.make_task(eqa_config.task_name, config=eqa_config)
 
     """
-    _data: Dict[int, ds.EQAEpisode] = None
+
+    @property
+    def episodes(self) -> List[EQAEpisode]:
+        r"""Return list of episodes for appropriate task.
+        """
+        return self._episodes
 
     @staticmethod
     def check_config_paths_exist(config: Any) -> bool:
         return os.path.exists(config.data_path) and os.path.exists(
             config.data_split_h5_path.format(
-                split=config.split)) and os.path.exists(
-            config.scenes_path)
+                split=config.split)) and os.path.exists(config.scenes_path)
 
     @staticmethod
-    def _create_goal(episode_data: Dict = None) -> ds.ObjectGoal:
-        goal = ds.ObjectGoal()
+    def _create_goal(episode_id: str,
+                     episode_data: Dict[str, Any]) -> Optional[NavigationGoal]:
         if episode_data["bbox"][0]["type"] != "object":
-            goal = ds.NavigationGoal()
-            goal.type = ds.NavGoalType.UNKNOWN.value
             logger.info("Unknown navigational goal for episode id: {}.".format(
-                episode_data.id))
-        else:
-            goal.type = ds.NavGoalType.OBJECT.value
-        goal.position = episode_data["target"]["centroid"]
-        goal.position = minos_to_esp(
-            swap_yz(episode_data["target"]["centroid"]))
-        goal.room_id = episode_data["target"]["room_id"]
-        goal.object_id = episode_data["target"]["obj_id"]
-        assert len(episode_data["bbox"]) > 0
-        goal.object_name = episode_data["bbox"][0]["name"]
+                episode_id))
+            return None
+
+        assert len(episode_data[
+                       "bbox"]) > 0, \
+            "No goals found for episode id: {}.".format(episode_id)
+
+        goal = ObjectGoal(
+            position=minos_to_esp(
+                swap_yz(episode_data["target"]["centroid"])),
+            room_id=episode_data["target"]["room_id"],
+            object_id=episode_data["target"]["obj_id"],
+            object_name=episode_data["bbox"][0]["name"]
+        )
+
         return goal
 
     @staticmethod
-    def _create_shortest_path(episode, path_points, path_actions) \
-            -> List[ds.ShortestPathPoint]:
+    def _create_shortest_path(episode_id, path_points, path_actions) \
+            -> List[ShortestPathPoint]:
         shortest_path = []
         for step_id, ds_point in enumerate(
                 path_actions):
-            point = ds.ShortestPathPoint()
-            point.position = minos_to_esp(path_points[step_id]["position"])
-            point.rotation = minos_direction_to_esp_quaternion(
-                path_points[step_id]["orientation"])
-            point.action = int(path_actions[step_id])
-            point.action = ACTION_MAPPING[point.action]
+            point = ShortestPathPoint(
+                position=minos_to_esp(path_points[step_id]["position"]),
+                rotation=minos_direction_to_esp_quaternion(
+                    path_points[step_id]["orientation"]),
+                action=ACTION_MAPPING[int(path_actions[step_id])]
+            )
             shortest_path.append(point)
             if point.action == TEAS_NAME_TO_ACTION["stop"]:
                 break
@@ -149,57 +160,64 @@ class Matterport3dDatasetV1(ds.Dataset):
         if not len(path_points) == len(shortest_path):
             logger.info(
                 "Number of positions and actions doesn't match for episode"
-                " {}.".format(episode.id))
+                " {}.".format(episode_id))
         return shortest_path
 
     @staticmethod
-    def _create_question(episode_data) -> ds.QuestionData:
-        question = ds.QuestionData()
-        question.question_text = episode_data["question"]
-        question.answer_text = episode_data["answer"]
-        question.question_type = episode_data["type"]
+    def _create_question(episode_data) -> QuestionData:
+        question = QuestionData(
+            question_text=episode_data["question"],
+            answer_text=episode_data["answer"],
+            question_type=episode_data["type"]
+        )
         return question
 
     @staticmethod
     def _create_episode(episode_id, episode_data, path_points, path_actions,
-                        scene_id, scenes_path) -> ds.EQAEpisode:
-        episode = ds.EQAEpisode()
-        episode.id = str(episode_id)
-        episode.question = Matterport3dDatasetV1._create_question(
+                        scene_id, scenes_path) -> Optional[EQAEpisode]:
+        episode_id = str(episode_id)
+        question = Matterport3dDatasetV1._create_question(
             episode_data["qn"])
 
-        if episode.question.question_type not in ALLOWED_QUESTION_TYPES:
-            return
+        if question.question_type not in ALLOWED_QUESTION_TYPES:
+            return None
 
-        episode.goals = [
-            Matterport3dDatasetV1._create_goal(episode_data["qn"])]
-        episode.shortest_paths = [
+        goal = Matterport3dDatasetV1._create_goal(episode_id,
+                                                  episode_data["qn"])
+        if goal:
+            goals = [goal]
+        shortest_paths = [
             Matterport3dDatasetV1._create_shortest_path(
-                episode=episode,
+                episode_id=episode_id,
                 path_points=path_points,
                 path_actions=path_actions)]
 
         house = episode_data["qn"]["house"]
         level = episode_data["qn"]["level"]
-        episode.scene_id = scene_id
-        assert episode.scene_id == "{}.{}".format(house,
-                                                  level), \
+        assert scene_id == "{}.{}".format(house,
+                                          level), \
             "Scene mismatch between metadata and environment index " \
             "for episode {}.".format(
                 episode_id)
-        episode.scene_file = \
-            "{scenes_path}/{house}/{house}.glb".format(
-                scenes_path=scenes_path,
-                house=house)
-        episode.start_position = minos_to_esp(
+        scene_id = "{scenes_path}/{house}/{house}.glb".format(
+            scenes_path=scenes_path,
+            house=house)
+        start_position = minos_to_esp(
             episode_data["start"]["position"])
-        episode.start_rotation = minos_angle_to_esp_quaternion(
+        start_rotation = minos_angle_to_esp_quaternion(
             episode_data["start"]["angle"])
-        episode.start_room = episode_data["start"]["room"]
+        start_room = episode_data["start"]["room"]
+
+        episode = EQAEpisode(episode_id=episode_id, question=question,
+                             goals=goals,
+                             scene_id=scene_id, start_position=start_position,
+                             start_rotation=start_rotation,
+                             start_room=start_room,
+                             shortest_paths=shortest_paths)
         return episode
 
     def __init__(self, config):
-        self._data = {}
+        self._episodes: List[EQAEpisode] = []
 
         with gzip.open(config.data_path, "rt") as f:
             dataset = json.load(f)
@@ -220,13 +238,8 @@ class Matterport3dDatasetV1(ds.Dataset):
                     episode_id=episode_id, episode_data=episode_data,
                     path_points=dataset[path_data_key][episode_id],
                     path_actions=shortest_path_actions[episode_id],
-                    scene_id=scene_id, scenes_path=config.scenes_path)
+                    scene_id=scene_id,
+                    scenes_path=config.scenes_path)
 
                 if episode:
-                    self._data[len(self._data)] = episode
-
-    def __getitem__(self, index):
-        return self._data[index]
-
-    def __len__(self):
-        return len(self._data)
+                    self._episodes.append(episode)

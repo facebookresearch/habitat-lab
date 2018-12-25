@@ -9,5 +9,5 @@ register_task(
     entry_point='teas.tasks.eqa:EQATask')
 
 register_task(
-    id_task='EspNav-v0',
-    entry_point='teas.tasks.nav:EspNavToy')
+    id_task='Nav-v0',
+    entry_point='teas.tasks.nav:NavigationTask')

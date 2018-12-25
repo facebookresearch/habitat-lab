@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 
 import esp
 import numpy as np
@@ -7,6 +7,7 @@ from gym import spaces
 
 import teas
 from teas.core.logging import logger
+from teas.core.simulator import Observation
 from teas.core.simulator import RGBSensor
 
 UUID_RGBSENSOR = 'rgb'
@@ -28,10 +29,10 @@ class EspRGBSensor(RGBSensor):
                                                 RGBSENSOR_DIMENSION,),
                                             dtype=np.uint8)
 
-    def observation(self):
+    def get_observation(self):
         obs = self._simulator.cache.get(self.uuid)
-        if obs is not None:
-            obs = self._simulator.render()
+        if obs is None:
+            obs, _ = self._simulator.render()
             self._simulator.cache[self.uuid] = obs
         return obs
 
@@ -59,6 +60,7 @@ class EspSimulator(teas.Simulator):
         # move general parts to teas.Simulator, create predefined
         # config for ESP
         esp_config = esp.SimulatorConfiguration()
+        # TODO(maksymets): use general notion of scene from Resource Manager
         esp_config.scene.id = config.scene
         agent_config = esp.AgentConfiguration()
         overwrite_config(config_from=config.agents[config.default_agent_id],
@@ -90,15 +92,15 @@ class EspSimulator(teas.Simulator):
         esp_sensors = []
         # TODO(akadian): Get rid of caching, use hooks into simulator for
         # sensor observations.
-        self.cache = {}
+        self.cache: Dict[str, Optional[Observation]] = {}
         for s in config.sensors:
-            assert hasattr(teas.simulators.esp, s), \
-                'invalid sensor type {}'.format(s)
-            esp_sensors.append(getattr(teas.simulators.esp, s)(config, self))
+            is_valid_sensor = hasattr(teas.simulators.esp, s)  # type: ignore
+            assert is_valid_sensor, 'invalid sensor type {}'.format(s)
+            esp_sensors.append(
+                getattr(teas.simulators.esp, s)(config, self))  # type: ignore
             self.cache[esp_sensors[-1].uuid] = None
         self.sensor_suite = teas.SensorSuite(esp_sensors)
         self.episode_active = False
-
         self._controls = ESP_ACTION_TO_NAME
 
     def reset(self):
@@ -112,29 +114,33 @@ class EspSimulator(teas.Simulator):
             self.set_agent_state(self.config.start_position,
                                  self.config.start_rotation,
                                  self.config.default_agent_id)
-            obs = self._sim.render()
-        self.cache[UUID_RGBSENSOR] = obs
+            obs = self._sim.get_sensor_observations()
+        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
         self.episode_active = True
-        return self.sensor_suite.observations()
+        return self.sensor_suite.get_observations(), False
 
     def step(self, action):
         assert self.episode_active, \
             "episode is not active, environment not RESET or " \
             "STOP action called previously"
         sim_action = self._controls[action]
+        obs, done = Observation({}), False
         if sim_action == EspActions.STOP.value:
             # TODO(akadian): Handle reward calculation on stop once pointnav
             # is integrated
-            obs, rewards, done, info = None, None, True, None
+            done = True
             self.episode_active = False
-            return obs, rewards, done, info
-        obs, rewards, done, info = self._sim.step(sim_action)
-        self.cache[UUID_RGBSENSOR] = obs
-        observations = self.sensor_suite.observations()
-        return observations, rewards, done, info
+            return obs, done
+        obs = self._sim.step(sim_action)
+        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
+        observations = self.sensor_suite.get_observations()
+        return observations, done
 
     def render(self):
-        return self._sim.render()
+        obs, done = self._sim.get_sensor_observations(), False
+        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
+        observations = self.sensor_suite.get_observations()
+        return observations, done
 
     def seed(self, seed):
         self._sim.seed(seed)

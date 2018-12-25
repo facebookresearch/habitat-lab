@@ -1,4 +1,5 @@
 import builtins
+
 from setuptools import find_packages, setup
 
 DISTNAME = 'teas'
@@ -9,8 +10,8 @@ LICENSE = 'TODO'  # TODO(akadian): add license
 REQUIREMENTS = ['gym==0.10.9', 'h5py', 'numpy', 'yacs']
 
 # import restricted version of teas to get __version__
-builtins.__TEAS_SETUP__ = True
-import teas
+builtins.__TEAS_SETUP__ = True  # type: ignore
+import teas  # noqa
 
 VERSION = teas.__version__
 

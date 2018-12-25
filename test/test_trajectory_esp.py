@@ -37,7 +37,7 @@ def test_esp():
                                          "at step {}".format(i)
         assert esp_simulator.action_space.contains(action)
 
-        obs, _, done, _ = esp_simulator.step(action)
+        obs, done = esp_simulator.step(action)
         if i == len(test_trajectory['actions']) - 1:  # STOP action
             assert done is True
             assert esp_simulator.episode_active is False
