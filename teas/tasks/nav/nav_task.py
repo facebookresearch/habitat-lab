@@ -129,6 +129,9 @@ class NavigationTask(teas.EmbodiedTask):
     def overwrite_sim_config(self, sim_config: Any,
                              episode: Type[Episode]) -> Any:
         sim_config.scene = episode.scene_id
-        sim_config.start_position = episode.start_position
-        sim_config.start_rotation = episode.start_rotation
+        if episode.start_position is not None and \
+                episode.start_rotation is not None:
+            # yacs config attributes cannot be None
+            sim_config.start_position = episode.start_position
+            sim_config.start_rotation = episode.start_rotation
         return sim_config

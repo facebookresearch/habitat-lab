@@ -1,14 +1,12 @@
-TEAS
+habitat-api
 ==============================
 
-**The Embodied Agents Suite**
 
-TEAS is a suite to train embodied agents across a variety of tasks, 
-environments, simulators. TEAS defines an API through which users can train 
-agents on existing embodied tasks as well as add new simulators, tasks. It 
-also aims to make benchmarking of agents across environments and tasks easier
-. The suite is also designed for training RL agents and will provide 
-functionality for parallel execution of episodes.
+A suite to train embodied agents across a variety of tasks, 
+environments, simulators. habitat-api defines an API through which users can 
+train agents on existing embodied tasks as well as add new simulators, 
+tasks. It also aims to make benchmarking of agents across datasets, 
+environments and tasks easier. 
 
 
 ### Install
@@ -19,5 +17,36 @@ pip install -e .
 ```
 
 
-**Status**: In active development, refer to `teas` for source code and 
-[pull-requests](https://github.com/fairinternal/TEAS/pulls?q=is%3Apr+is%3Aclosed) for details on features and design.
+### Example
+
+**TODO(akadian)**: Adapt below example according to any changes in API 
+
+```python
+import teas
+from teas.config.experiments.esp_nav import esp_nav_cfg
+from teas.tasks.nav.nav_task import NavigationEpisode
+import numpy as np
+
+config = esp_nav_cfg()
+config.task_name = 'Nav-v0'
+env = teas.TeasEnv(config=config)
+env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
+                                  start_position=None, start_rotation=None, 
+                                  goals=[])]
+
+observation, reward, done, info = env.reset()
+
+# randomly move around inside the environment
+while not done:
+    observation, reward, done, info = env.step(env.action_space.sample())
+```
+
+### Data
+
+**TODO(akadian)**: Update the URLs and description for below data resources
+
+**Matterport3D**
+
+1. PointNav val split: `/private/home/akadian/habitat-api-data/mp3d-splits`
+2. ObjectNav val split: **TODO(akadian)**
+3. EQA val split: **TODO(maksymets)**
