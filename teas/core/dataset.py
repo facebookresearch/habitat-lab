@@ -1,4 +1,4 @@
-from typing import Any, List, Type, TypeVar, Generic
+from typing import List, Type, TypeVar, Generic
 
 
 class Episode:
@@ -32,9 +32,6 @@ class Dataset(Generic[T]):
     episode and relevant method to access episodes from particular
     scene as well as scene id list.
     """
-
-    def __init__(self, config: Any):
-        raise NotImplementedError
 
     @property
     def episodes(self) -> List[T]:

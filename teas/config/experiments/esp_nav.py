@@ -20,6 +20,7 @@ def esp_nav_cfg():
     config.turn_angle = 10  # in degrees
     config.simulator = 'EspSimulator-v0'
     config.default_agent_id = 0
+    config.gpu_device_id = 0
 
     # Agent configuration
     agent_c = CfgNode()

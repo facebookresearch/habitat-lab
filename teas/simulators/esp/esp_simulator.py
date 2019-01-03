@@ -30,10 +30,9 @@ class EspRGBSensor(RGBSensor):
                                             dtype=np.uint8)
 
     def get_observation(self):
+        # TODO(akadian): return RGB instead of RGBD
         obs = self._simulator.cache.get(self.uuid)
-        if obs is None:
-            obs, _ = self._simulator.render()
-            self._simulator.cache[self.uuid] = obs
+        assert obs is not None, "get_observation called before reset or step"
         return obs
 
 
@@ -62,6 +61,7 @@ class EspSimulator(teas.Simulator):
         esp_config = esp.SimulatorConfiguration()
         # TODO(maksymets): use general notion of scene from Resource Manager
         esp_config.scene.id = config.scene
+        esp_config.gpu_device_id = config.gpu_device_id
         agent_config = esp.AgentConfiguration()
         overwrite_config(config_from=config.agents[config.default_agent_id],
                          config_to=agent_config)
@@ -137,10 +137,7 @@ class EspSimulator(teas.Simulator):
         return observations, done
 
     def render(self):
-        obs, done = self._sim.get_sensor_observations(), False
-        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
-        observations = self.sensor_suite.get_observations()
-        return observations, done
+        return self._sim.render()
 
     def seed(self, seed):
         self._sim.seed(seed)
@@ -171,7 +168,7 @@ class EspSimulator(teas.Simulator):
         return self._sim.pathfinder.get_random_navigable_point()
 
     def semantic_annotations(self):
-        """
+        r"""
         :return: SemanticScene which is a three level hierarchy of
         semantic annotations for the current scene. Specifically this method
         returns a SemanticScene which contains a list of SemanticLevel's
@@ -228,7 +225,7 @@ class EspSimulator(teas.Simulator):
         self._check_agent_position(position, agent_id)
 
     def initialize_agent(self, position, rotation, agent_id=0):
-        """
+        r"""
         :param position: numpy ndarray containing 3 entries for (x, y, z)
         :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
         of unit quaternion (versor) representing agent 3D orientation,

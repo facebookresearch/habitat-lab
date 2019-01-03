@@ -90,7 +90,7 @@ def test_mp3d_eqa_esp():
     env.close()
 
 
-def test_mp3d_eqa_esp_correspondance():
+def test_mp3d_eqa_esp_correspondence():
     eqa_config = get_minos_for_esp_eqa_config()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(

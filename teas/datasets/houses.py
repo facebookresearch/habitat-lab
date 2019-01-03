@@ -4,6 +4,7 @@ from random import shuffle
 import teas
 
 
+# TODO(akadian): Remove the below legacy code
 class SuncgDataset(teas.Dataset):
     def __init__(self, config, shuffle_order=False):
         with open(config.data_path, 'r') as f:

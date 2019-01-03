@@ -48,7 +48,7 @@ class Sensor:
         raise NotImplementedError
 
 
-class Observation(OrderedDict):
+class Observation(dict):
     r"""Represents an observation provided by a sensor.
 
     Thin wrapper of OrderedDict with potentially some utility functions
@@ -115,7 +115,7 @@ class Simulator:
 
     def geodesic_distance(self, position_a: List[float],
                           position_b: List[float]) -> float:
-        """
+        r"""
         :param position_a: starting point for distance calculation
         :param position_b: ending point for distance calculation
         :return: the geodesic distance in the cartesian space between points

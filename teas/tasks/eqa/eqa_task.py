@@ -35,7 +35,7 @@ class EQAEpisode(NavigationEpisode):
         :param goals: relevant goal object/room
         :param question: question related to goal object
         """
-        super(self.__class__, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.question: QuestionData = question
 
 
@@ -95,6 +95,6 @@ class RewardSensor(Sensor):
 
 class EQATask(NavigationTask):
     def __init__(self, **kwargs) -> None:
-        super(EQATask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._sensor_suite: SensorSuite = SensorSuite(
             [QuestionSensor(), AnswerSensor(), RewardSensor()])

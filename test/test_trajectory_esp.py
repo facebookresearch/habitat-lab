@@ -43,7 +43,3 @@ def test_esp():
             assert esp_simulator.episode_active is False
 
     esp_simulator.close()
-
-
-if __name__ == '__main__':
-    test_esp()

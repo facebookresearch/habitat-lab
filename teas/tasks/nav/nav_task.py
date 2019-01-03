@@ -25,7 +25,7 @@ class NavigationGoal:
 
     def __init__(self, position: List[float], radius: Optional[float] = None,
                  **kwargs) -> None:
-        super(NavigationGoal, self).__init__(**kwargs)  # type: ignore
+        super().__init__(**kwargs)  # type: ignore
         self.position: List[float] = position
         self.radius: Optional[float] = radius
 
@@ -42,7 +42,7 @@ class ObjectGoal(NavigationGoal):
                  object_category: Optional[str] = None,
                  room_name: Optional[str] = None,
                  **kwargs) -> None:
-        super(ObjectGoal, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.object_id: str = object_id
         self.object_name: Optional[str] = object_name
         self.object_category: Optional[str] = object_category
@@ -56,7 +56,7 @@ class RoomGoal(NavigationGoal):
 
     def __init__(self, room_id: str, room_name: Optional[str] = None,
                  **kwargs) -> None:
-        super(RoomGoal, self).__init__(**kwargs)  # type: ignore
+        super().__init__(**kwargs)  # type: ignore
         self.room_id: str = room_id
         self.room_name: Optional[str] = room_name
 
@@ -73,14 +73,17 @@ class NavigationEpisode(Episode):
                  shortest_paths: Optional[List[ShortestPathPoint]] = None,
                  **kwargs) -> None:
         r"""
+        :param episode_id: id of episode in the dataset, usually episode number
         :param scene_id: id of scene in scene dataset
         :param start_position: numpy ndarray containing 3 entries for (x, y, z)
         :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
         elements of unit quaternion (versor) representing agent 3D orientation,
         ref: https://en.wikipedia.org/wiki/Versor
         :param goals: list of goals specifications
+        :param: start_room: room id
+        :param: shortest_paths: list containing shortest paths to goals
         """
-        super(NavigationEpisode, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.start_room: Optional[str] = start_room
         self.goals: List[NavigationGoal] = goals
         self.shortest_paths: Optional[List[ShortestPathPoint]] = shortest_paths
@@ -118,10 +121,6 @@ class NavigationTask(teas.EmbodiedTask):
         self._simulator = simulator
         self._dataset: Optional[Dataset] = dataset
         self._sensor_suite: SensorSuite = SensorSuite([RewardSensor()])
-
-    @property
-    def sensor_suite(self) -> SensorSuite:
-        return self._sensor_suite
 
     def get_reward(self, observations: Dict[str, Observation]) -> Any:
         return observations[NavigationTask.REWARD_ID]
