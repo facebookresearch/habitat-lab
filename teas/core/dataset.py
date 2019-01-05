@@ -1,3 +1,4 @@
+import json
 from typing import List, Type, TypeVar, Generic
 
 
@@ -6,6 +7,10 @@ class Episode:
     rotation of agent, scene id, episode id provided by dataset. An
     episode is a description of one task instance for the agent.
     """
+    episode_id: str
+    scene_id: str
+    start_position: List[float]
+    start_rotation: List[float]
 
     def __init__(self, episode_id: str, scene_id: str,
                  start_position: List[float],
@@ -18,10 +23,13 @@ class Episode:
         elements of unit quaternion (versor) representing agent 3D orientation,
         ref: https://en.wikipedia.org/wiki/Versor
         """
-        self.id: str = episode_id
-        self.scene_id: str = scene_id
-        self.start_position: List[float] = start_position
-        self.start_rotation: List[float] = start_rotation
+        self.episode_id = episode_id
+        self.scene_id = scene_id
+        self.start_position = start_position
+        self.start_rotation = start_rotation
+
+    def __str__(self):
+        return str(self.__dict__)
 
 
 T = TypeVar('T', Episode, Type[Episode])
@@ -32,12 +40,7 @@ class Dataset(Generic[T]):
     episode and relevant method to access episodes from particular
     scene as well as scene id list.
     """
-
-    @property
-    def episodes(self) -> List[T]:
-        r"""Return list of episodes for appropriate task.
-        """
-        raise NotImplementedError
+    episodes: List[T]
 
     @property
     def scene_ids(self) -> List[str]:
@@ -57,3 +60,17 @@ class Dataset(Generic[T]):
         :param indexes: indexes of episodes in dataset
         """
         return [self.episodes[episode_id] for episode_id in indexes]
+
+    def to_json(self) -> str:
+        class DatasetJSONEncoder(json.JSONEncoder):
+            def default(self, object):
+                return object.__dict__
+
+        # TODO(maksymets): remove call of internal DatasetFloatJSONEncoder
+        #  used for float precision decrease
+        from teas.internal.data.datasets.utils import DatasetFloatJSONEncoder
+        result = DatasetFloatJSONEncoder().encode(self)
+        return result
+
+    def from_json(self, serialized: str) -> None:
+        raise NotImplementedError

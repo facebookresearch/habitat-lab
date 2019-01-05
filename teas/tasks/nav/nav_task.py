@@ -12,28 +12,38 @@ from teas.core.simulator import (
 
 
 class ShortestPathPoint:
+    position: List[Any]
+    rotation: List[Any]
+    action: Optional[int]
+
     def __init__(self, position: List[Any], rotation: List[Any],
                  action: Optional[int]) -> None:
-        self.position: List[Any] = position
-        self.rotation: List[Any] = rotation
+        self.position = position
+        self.rotation = rotation
         self.action: Optional[int] = action
 
 
 class NavigationGoal:
     r"""Base class for a goal specification hierarchy.
     """
+    position: List[float]
+    radius: Optional[float]
 
     def __init__(self, position: List[float], radius: Optional[float] = None,
                  **kwargs) -> None:
-        super().__init__(**kwargs)  # type: ignore
-        self.position: List[float] = position
-        self.radius: Optional[float] = radius
+        self.position = position
+        self.radius = radius
 
 
 class ObjectGoal(NavigationGoal):
     r"""Object goal that can be specified by object_id or position or object
     category.
     """
+    object_id: str
+    object_name: Optional[str]
+    object_category: Optional[str]
+    room_id: Optional[str]
+    room_name: Optional[str]
 
     def __init__(self,
                  object_id: str,
@@ -43,22 +53,24 @@ class ObjectGoal(NavigationGoal):
                  room_name: Optional[str] = None,
                  **kwargs) -> None:
         super().__init__(**kwargs)
-        self.object_id: str = object_id
-        self.object_name: Optional[str] = object_name
-        self.object_category: Optional[str] = object_category
-        self.room_id: Optional[str] = room_id
-        self.room_name: Optional[str] = room_name
+        self.object_id = object_id
+        self.object_name = object_name
+        self.object_category = object_category
+        self.room_id = room_id
+        self.room_name = room_name
 
 
 class RoomGoal(NavigationGoal):
     r"""Room goal that can be specified by room_id or position with radius.
     """
+    room_id: str
+    room_name: Optional[str]
 
     def __init__(self, room_id: str, room_name: Optional[str] = None,
                  **kwargs) -> None:
         super().__init__(**kwargs)  # type: ignore
-        self.room_id: str = room_id
-        self.room_name: Optional[str] = room_name
+        self.room_id = room_id
+        self.room_name = room_name
 
 
 class NavigationEpisode(Episode):
@@ -66,6 +78,9 @@ class NavigationEpisode(Episode):
     rotation of agent, scene name, goal and optional shortest paths. An
     episode is a description of one task instance for the agent.
     """
+    goals: List[NavigationGoal]
+    start_room: Optional[str]
+    shortest_paths: Optional[List[ShortestPathPoint]]
 
     def __init__(self,
                  goals: List[NavigationGoal],
@@ -84,9 +99,9 @@ class NavigationEpisode(Episode):
         :param: shortest_paths: list containing shortest paths to goals
         """
         super().__init__(**kwargs)
-        self.start_room: Optional[str] = start_room
-        self.goals: List[NavigationGoal] = goals
-        self.shortest_paths: Optional[List[ShortestPathPoint]] = shortest_paths
+        self.goals = goals
+        self.shortest_paths = shortest_paths
+        self.start_room = start_room
 
 
 # TODO (maksymets) Move reward to measurement class
@@ -115,12 +130,17 @@ class NavigationTask(teas.EmbodiedTask):
     REWARD_ID = "reward"
     DONE_ID = "done"
 
+    _config: Any
+    _simulator: Simulator
+    _dataset: Optional[Dataset]
+    _sensor_suite: SensorSuite
+
     def __init__(self, config: Any, simulator: Simulator,
                  dataset: Optional[Dataset] = None) -> None:
-        self._config: Any = config
+        self._config = config
         self._simulator = simulator
-        self._dataset: Optional[Dataset] = dataset
-        self._sensor_suite: SensorSuite = SensorSuite([RewardSensor()])
+        self._dataset = dataset
+        self._sensor_suite = SensorSuite([RewardSensor()])
 
     def get_reward(self, observations: Dict[str, Observation]) -> Any:
         return observations[NavigationTask.REWARD_ID]

@@ -1,16 +1,22 @@
 from typing import Any, Dict, Type, Optional
 
 from teas.core.dataset import Episode, Dataset
-from teas.core.simulator import Observation, SensorSuite
+from teas.core.simulator import Observation, SensorSuite, Simulator
 
 
 class EmbodiedTask:
+    r"""Base class to keep whole Task specific logic added on top of simulator.
+    """
+    _config: Any
+    _simulator: Optional[Simulator]
+    _dataset: Optional[Dataset]
+    _sensor_suite: SensorSuite
 
     def __init__(self):
-        self._config: Any = None
-        self._simulator: Any = None
-        self._dataset: Optional[Dataset] = None
-        self._sensor_suite: SensorSuite = None
+        self._config = None
+        self._simulator = None
+        self._dataset = None
+        self._sensor_suite = SensorSuite([])
 
     def overwrite_sim_config(self, sim_config: Any,
                              episode: Type[Episode]) -> Any:

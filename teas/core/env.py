@@ -5,11 +5,11 @@ import gym
 from gym.spaces.dict_space import Dict as SpaceDict
 import numpy as np
 
-import teas
 from teas.core.dataset import Dataset, Episode
 from teas.core.embodied_task import EmbodiedTask
 from teas.core.simulator import Observation
 from teas.simulators import make_simulator
+from teas.tasks import make_task
 
 
 class TeasEnv(gym.Env):
@@ -22,10 +22,10 @@ class TeasEnv(gym.Env):
         self._current_episode_index: Optional[int] = None
         self._simulator = make_simulator(id_simulator=self._config.simulator,
                                          config=self._config)
-        self._task: EmbodiedTask = teas.make_task(config.task_name,
-                                                  config=self._config,
-                                                  simulator=self._simulator,
-                                                  dataset=dataset)
+        self._task: EmbodiedTask = make_task(config.task_name,
+                                             config=self._config,
+                                             simulator=self._simulator,
+                                             dataset=dataset)
         self.observation_space = SpaceDict({
             **self._simulator.sensor_suite.observation_spaces.spaces,
             **self._task.sensor_suite.observation_spaces.spaces

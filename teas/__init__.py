@@ -16,8 +16,7 @@ else:
     from teas.core.env import TeasEnv
     from teas.core.vector_env import VectorEnv
     from teas.core.logging import logger
-    from teas.tasks import make_task
+    from teas.datasets import make_dataset
 
-    __all__ = ['Dataset', 'EmbodiedTask', 'TeasEnv', 'Simulator',
-               'Sensor', 'SensorTypes', 'SensorSuite', 'VectorEnv',
-               'make_task']
+    __all__ = ['Dataset', 'EmbodiedTask', 'TeasEnv', 'Simulator', 'Sensor',
+               'SensorTypes', 'SensorSuite', 'VectorEnv', 'make_dataset']

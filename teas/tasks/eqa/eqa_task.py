@@ -12,18 +12,22 @@ from teas.tasks.nav.nav_task import (
 class QuestionData:
     r"""Class saves data about question asked to the agent and correct answer.
     """
+    question_text: str
+    answer_text: Optional[str]
+    question_type: Optional[str]
 
     def __init__(self, question_text: str, question_type: str,
                  answer_text: Optional[str] = None) -> None:
-        self.question_text: str = question_text
-        self.answer_text: Optional[str] = answer_text
-        self.question_type: Optional[str] = question_type
+        self.question_text = question_text
+        self.answer_text = answer_text
+        self.question_type = question_type
 
 
 class EQAEpisode(NavigationEpisode):
     r"""Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
     """
+    question: QuestionData
 
     def __init__(self, question: QuestionData, **kwargs) -> None:
         r"""
@@ -36,7 +40,7 @@ class EQAEpisode(NavigationEpisode):
         :param question: question related to goal object
         """
         super().__init__(**kwargs)
-        self.question: QuestionData = question
+        self.question = question
 
 
 class QuestionSensor(Sensor):
@@ -94,7 +98,9 @@ class RewardSensor(Sensor):
 
 
 class EQATask(NavigationTask):
+    _sensor_suite: SensorSuite
+
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._sensor_suite: SensorSuite = SensorSuite(
+        self._sensor_suite = SensorSuite(
             [QuestionSensor(), AnswerSensor(), RewardSensor()])

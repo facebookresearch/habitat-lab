@@ -8,7 +8,7 @@ import numpy as np
 import tqdm
 
 
-def combine_video(_id, images, text, output_dir):
+def combine_video(images, text, output_dir):
     frames_dir = '{}/frames'.format(output_dir)
 
     if not os.path.exists(frames_dir):
@@ -19,8 +19,8 @@ def combine_video(_id, images, text, output_dir):
     subprocess.check_call(
         shlex.split(
             'ffmpeg -framerate 10 -i {}/f_%05d.png -r 30 -pix_fmt yuv420p'
-            ' -threads 0 -q:v 3 {}/{}_{}.mp4'.format(
-                frames_dir, output_dir, _id,
+            ' -threads 0 -q:v 3 {}/{}.mp4'.format(
+                frames_dir, output_dir,
                 text.replace(" ", "_").replace("\n", "_"))
         )
     )
@@ -42,13 +42,12 @@ def write_text(img, text):
         y -= int(1.3 * h)
 
 
-def make_video(episode, rgb_frames, depth, labels,
+def make_video(text, rgb_frames, depth, labels,
                output_dir="data/videos/test"):
-    text = "{question}\n{answer}".format(
-        question=episode.question.question_text,
-        answer=episode.question.answer_text)
+    assert len(rgb_frames) > 0
+    size = rgb_frames[0].shape[0]
 
-    big_frame = np.empty((512, 3 * 512, 3), dtype=np.uint8)
+    big_frame = np.empty((size, 3 * size, 3), dtype=np.uint8)
 
     frames = []
     episode_len = len(rgb_frames)
@@ -58,7 +57,7 @@ def make_video(episode, rgb_frames, depth, labels,
         d = depth[step_id]
         label = np.array(labels[step_id], dtype=np.uint8)
         h, w = label.shape
-        scaled = np.zeros([512, 512], dtype=np.uint8)  # output array - 6x6
+        scaled = np.zeros([size, size], dtype=np.uint8)  # output array - 6x6
 
         # Loop, filling A with tiled values of a at each index
         for i in range(scaled.shape[0]):  # lines in a
@@ -66,10 +65,10 @@ def make_video(episode, rgb_frames, depth, labels,
                 scaled[i, j] = label[
                     i * h // scaled.shape[0], j * w // scaled.shape[1]]
 
-        big_frame[:, 0: 512] = rgb  # sim.img
-        big_frame[:, 512: 2 * 512] = np.dstack([d] * 3)
-        big_frame[:, 2 * 512: 3 * 512] = lut[scaled]
+        big_frame[:, 0: size] = rgb  # sim.img
+        big_frame[:, size: 2 * size] = np.dstack([d] * 3)
+        big_frame[:, 2 * size: 3 * size] = lut[scaled]
         write_text(big_frame, text)
         frames.append(big_frame.copy())
 
-    combine_video(episode.id, frames, text, output_dir)
+    combine_video(frames, text, output_dir)

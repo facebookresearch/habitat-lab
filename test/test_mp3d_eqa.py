@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 import teas
@@ -5,28 +7,30 @@ import teas.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 from teas.config.experiments.esp_nav import esp_nav_cfg
 from teas.core.logging import logger
 from teas.datasets import make_dataset
+from teas.core.embodied_task import Episode
 
 CLOSE_STEP_THRESHOLD = 0.028
 
 IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
-TEST_EPISODE_SET = [0, 1, 2, 17, 164, 173, 250, 272, 456, 695, 698, 782,
-                    966, 970, 1160, 1272, 1295, 1296, 1376, 1384, 1633,
-                    1836, 1841, 1967, 2175, 2396, 2575,
-                    2717]
+TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
 
-RGB_EPISODE_MEANS = [130.27629452458137, 118.33419659326944,
-                     120.8483347525963, 129.8308741124471, 141.64853506874445]
+RGB_EPISODE_MEANS = {
+    1: 123.1576333222566, 10: 123.86094605688947, 297: 122.69351220853402,
+    309: 118.95794969775298, 696: 115.71903709129052, 807: 143.7834237211494,
+    958: 141.97871610030387, 1021: 119.1051016229882, 1307: 102.11408987112925,
+    1569: 91.01973929495183
+}
 
-EPISODES_LIMIT = 2
+EPISODES_LIMIT = 6
 
 
 def get_minos_for_esp_eqa_config():
     _esp_eqa_c = esp_nav_cfg()
     _esp_eqa_c.task_name = 'EQA-v0'
     _esp_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
-    _esp_eqa_c.dataset.split = "test"
+    _esp_eqa_c.dataset.split = "val"
     _esp_eqa_c.scene = "data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb"
     _esp_eqa_c.resolution = (512, 512)
     _esp_eqa_c.hfov = '45'
@@ -50,17 +54,32 @@ def get_minos_for_esp_eqa_config():
     return _esp_eqa_c
 
 
+def check_json_serializaiton(dataset: teas.Dataset):
+    start_time = time.time()
+    json_str = str(dataset.to_json())
+    logger.info("JSON conversion finished. {} sec".format((time.time() -
+                                                           start_time)))
+    decoded_dataset = dataset.__class__()
+    decoded_dataset.from_json(json_str)
+    assert len(decoded_dataset.episodes) > 0
+    episode = decoded_dataset.episodes[0]
+    assert isinstance(episode, Episode)
+    assert decoded_dataset.to_json() == json_str, \
+        "JSON dataset encoding/decoding isn't consistent"
+
+
 def test_mp3d_eqa_dataset():
-    dataset_config = mp3d_dataset.get_default_mp3d_v1_config()
+    dataset_config = mp3d_dataset.get_default_mp3d_v1_config(split="val")
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
             dataset_config):
         logger.info("Test skipped as dataset files are missing.")
         return
-    dataset = mp3d_dataset.Matterport3dDatasetV1(dataset_config)
+    dataset = mp3d_dataset.Matterport3dDatasetV1(config=dataset_config)
     assert dataset
     assert len(
-        dataset.episodes) == mp3d_dataset.EQA_MP3D_V1_TEST_EPISODE_COUNT, \
+        dataset.episodes) == mp3d_dataset.EQA_MP3D_V1_VAL_EPISODE_COUNT, \
         "Test split episode number mismatch"
+    check_json_serializaiton(dataset)
 
 
 def test_mp3d_eqa_esp():
@@ -100,7 +119,9 @@ def test_mp3d_eqa_esp_correspondence():
 
     dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
     env = teas.TeasEnv(config=eqa_config, dataset=dataset)
-    env.episodes = dataset.get_episodes(TEST_EPISODE_SET)[:EPISODES_LIMIT]
+    env.episodes = [episode for episode in dataset.episodes if
+                    int(episode.episode_id) in
+                    TEST_EPISODE_SET[:EPISODES_LIMIT]]
 
     if IS_GENERATING_VIDEO:
         from teas.internal.visualize import gen_video
@@ -127,6 +148,11 @@ def test_mp3d_eqa_esp_correspondence():
         depth = []
         labels = []
         rgb_mean = 0
+        logger.info("{id} {question}\n{answer}".format(
+            id=episode.episode_id,
+            question=episode.question.question_text,
+            answer=episode.question.answer_text,
+        ))
 
         for step_id, point in enumerate(episode.shortest_paths[0]):
             cur_state = env._simulator.agent_state()
@@ -164,16 +190,20 @@ def test_mp3d_eqa_esp_correspondence():
                         np.zeros(obs['rgb'].shape[:2], dtype=np.uint8))
 
         if ep_i < len(RGB_EPISODE_MEANS):
-            assert np.isclose(
-                RGB_EPISODE_MEANS[ep_i],
-                rgb_mean / len(episode.shortest_paths[0])), \
+            rgb_mean = rgb_mean / len(episode.shortest_paths[0])
+            assert np.isclose(RGB_EPISODE_MEANS[int(episode.episode_id)],
+                              rgb_mean), \
                 "RGB output doesn't match the ground truth."
+
+        if IS_GENERATING_VIDEO and cycles_n == 2:
+            gen_video.make_video("{id} {question}\n{answer}".format(
+                id=episode.episode_id,
+                question=episode.question.question_text,
+                answer=episode.question.answer_text,
+            ), rgb_frames, depth, labels)
 
         ep_i = (ep_i + 1) % EPISODES_LIMIT
         if ep_i == 0:
             cycles_n -= 1
-
-        if IS_GENERATING_VIDEO and cycles_n == 0:
-            gen_video.make_video(episode, rgb_frames, depth, labels)
 
     env.close()
