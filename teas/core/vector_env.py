@@ -1,12 +1,11 @@
-from multiprocessing import Process, Pipe
+import multiprocessing as mp
 from multiprocessing.connection import Connection
 import teas
 from teas.core.env import TeasEnv, Observation
 from teas.core.utils import tile_images
-from typing import List, Tuple, Callable, Union
+from typing import List, Tuple, Callable, Union, Any
 from yacs.config import CfgNode
 import numpy as np
-
 
 STEP_COMMAND = 'step'
 RESET_COMMAND = 'reset'
@@ -17,10 +16,10 @@ ACTION_SPACE_COMMAND = 'action_space'
 
 
 def _worker_env(worker_connection: Connection, env_fn: Callable,
-                auto_reset_done: bool) -> None:
+                env_fn_args: Tuple[Any], auto_reset_done: bool) -> None:
     r"""Process worker for creating and interacting with the environment.
     """
-    env = env_fn()
+    env = env_fn(*env_fn_args)
     try:
         while True:
             command, data = worker_connection.recv()
@@ -49,7 +48,9 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
 
 
 class VectorEnv:
-    def __init__(self, configs: List[CfgNode], datasets: List[teas.Dataset],
+    def __init__(self,
+                 configs: List[CfgNode],
+                 datasets: List[teas.Dataset],
                  auto_reset_done: bool = True) -> None:
         r"""
         :param configs: list containing configurations for environments.
@@ -65,18 +66,22 @@ class VectorEnv:
                                               "configs and datasets"
         self._num_envs = len(configs)
         self._auto_reset_done = auto_reset_done
-        env_fns = []
-        for i in range(self._num_envs):
-            env_fns.append(self._make_env_fn(configs[i], datasets[i], i))
+        mp_ctx = mp.get_context('forkserver')
+
+        make_env_fn_args = [
+            (configs[i], datasets[i], i) for i in range(self._num_envs)
+        ]
+
         self._parent_connections, self._worker_connections = \
-            zip(*[Pipe() for _ in range(self._num_envs)])
-        self._processes: List[Process] = []
-        for worker_conn, parent_conn, env_fn in zip(self._worker_connections,
-                                                    self._parent_connections,
-                                                    env_fns):
-            ps = Process(target=_worker_env,
-                         args=(worker_conn, env_fn,
-                               self._auto_reset_done))
+            zip(*[mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)])
+        self._processes: List[mp.Process] = []
+        for worker_conn, parent_conn, env_fn_args in zip(
+                self._worker_connections, self._parent_connections,
+                make_env_fn_args):
+            ps = mp_ctx.Process(
+                target=_worker_env,
+                args=(worker_conn, self._make_env_fn, env_fn_args,
+                      self._auto_reset_done))
             self._processes.append(ps)
             ps.daemon = True
             ps.start()
@@ -93,13 +98,10 @@ class VectorEnv:
 
     @staticmethod
     def _make_env_fn(config: CfgNode, dataset: teas.Dataset,
-                     rank: int) -> Callable:
-        def _env():
-            env_teas = TeasEnv(config=config, dataset=dataset)
-            env_teas.seed(config.seed + rank)
-            return env_teas
-
-        return _env
+                     rank: int) -> TeasEnv:
+        env_teas = TeasEnv(config=config, dataset=dataset)
+        env_teas.seed(config.seed + rank)
+        return env_teas
 
     def reset(self) -> List[Tuple[Observation, Observation, bool, None]]:
         r"""Reset all the _num_envs in the vector
@@ -182,8 +184,10 @@ class VectorEnv:
         r"""Render observations from all environments in a tiled image.
         """
         for parent_conn in self._parent_connections:
-            parent_conn.send(
-                (RENDER_COMMAND, (args, {'mode': 'rgb_array', **kwargs})))
+            parent_conn.send((RENDER_COMMAND, (args, {
+                'mode': 'rgb_array',
+                **kwargs
+            })))
         images = [pipe.recv() for pipe in self._parent_connections]
         tile = tile_images(images)
         if mode == 'human':

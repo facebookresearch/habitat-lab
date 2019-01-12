@@ -13,6 +13,27 @@ MULTIHOUSE_INITIALIZATIONS_PATH = 'data/esp/multihouse_initializations.json'
 MULTIHOUSE_MAX_STEPS = 10
 
 
+class DatasetTest(teas.Dataset):
+    def __init__(self, multihouse_initializations, ind_house):
+        house_id = sorted(os.listdir(MULTIHOUSE_RESOURCES_PATH))[ind_house]
+        path = os.path.join(MULTIHOUSE_RESOURCES_PATH, house_id,
+                            '{}.glb'.format(house_id))
+        start_position = \
+            multihouse_initializations[house_id]['start_position']
+        start_rotation = \
+            multihouse_initializations[house_id]['start_rotation']
+        house_episode = NavigationEpisode(episode_id=str(ind_house),
+                                          scene_id=path,
+                                          start_position=start_position,
+                                          start_rotation=start_rotation,
+                                          goals=[])
+        self._episodes = [house_episode]
+
+    @property
+    def episodes(self):
+        return self._episodes
+
+
 def test_vectorized_envs():
     assert os.path.exists(MULTIHOUSE_RESOURCES_PATH), \
         "Multihouse test data missing, " \
@@ -24,31 +45,11 @@ def test_vectorized_envs():
     with open(MULTIHOUSE_INITIALIZATIONS_PATH, 'r') as f:
         multihouse_initializations = json.load(f)
 
-    class TestDataset(teas.Dataset):
-        def __init__(self, ind_house):
-            house_id = sorted(os.listdir(MULTIHOUSE_RESOURCES_PATH))[ind_house]
-            path = os.path.join(MULTIHOUSE_RESOURCES_PATH, house_id,
-                                '{}.glb'.format(house_id))
-            start_position = \
-                multihouse_initializations[house_id]['start_position']
-            start_rotation = \
-                multihouse_initializations[house_id]['start_rotation']
-            house_episode = NavigationEpisode(episode_id=str(i),
-                                              scene_id=path,
-                                              start_position=start_position,
-                                              start_rotation=start_rotation,
-                                              goals=[])
-            self._episodes = [house_episode]
-
-        @property
-        def episodes(self):
-            return self._episodes
-
     configs = []
     num_envs = len(os.listdir(MULTIHOUSE_RESOURCES_PATH))
     datasets = []
     for i in range(num_envs):
-        datasets.append(TestDataset(i))
+        datasets.append(DatasetTest(multihouse_initializations, i))
 
         config = esp_nav_cfg()
         config.task_name = 'Nav-v0'
