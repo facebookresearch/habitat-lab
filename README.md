@@ -12,7 +12,7 @@ environments and tasks easier.
 ### Install
 Clone the github repository and then run:
 ```bash
-cd TEAS
+cd habitat-api
 pip install -e .
 ```
 
@@ -22,14 +22,14 @@ pip install -e .
 **TODO(akadian)**: Adapt below example according to any changes in API 
 
 ```python
-import teas
-from teas.config.experiments.esp_nav import esp_nav_cfg
-from teas.tasks.nav.nav_task import NavigationEpisode
+import habitat
+from habitat.config.experiments.sim_nav import sim_nav_cfg
+from habitat.tasks.nav.nav_task import NavigationEpisode
 import numpy as np
 
-config = esp_nav_cfg()
+config = sim_nav_cfg()
 config.task_name = 'Nav-v0'
-env = teas.TeasEnv(config=config)
+env = habitat.Env(config=config)
 env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
                                   start_position=None, start_rotation=None, 
                                   goals=[])]

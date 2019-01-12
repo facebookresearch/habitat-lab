@@ -1,13 +1,12 @@
 import time
 
+import habitat
+import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 import numpy as np
-
-import teas
-import teas.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
-from teas.config.experiments.esp_nav import esp_nav_cfg
-from teas.core.logging import logger
-from teas.datasets import make_dataset
-from teas.core.embodied_task import Episode
+from habitat.config.experiments.nav import sim_nav_cfg
+from habitat.core.embodied_task import Episode
+from habitat.core.logging import logger
+from habitat.datasets import make_dataset
 
 CLOSE_STEP_THRESHOLD = 0.028
 
@@ -26,22 +25,22 @@ RGB_EPISODE_MEANS = {
 EPISODES_LIMIT = 6
 
 
-def get_minos_for_esp_eqa_config():
-    _esp_eqa_c = esp_nav_cfg()
-    _esp_eqa_c.task_name = 'EQA-v0'
-    _esp_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
-    _esp_eqa_c.dataset.split = "val"
-    _esp_eqa_c.scene = "data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb"
-    _esp_eqa_c.resolution = (512, 512)
-    _esp_eqa_c.hfov = '45'
-    _esp_eqa_c.vfov = '45'
-    _esp_eqa_c.sensor_position = [0, 1.09, 0]
-    _esp_eqa_c.forward_step_size = 0.1  # in metres
-    _esp_eqa_c.turn_angle = 9  # in degrees
-    _esp_eqa_c.simulator = 'EspSimulator-v0'
+def get_minos_for_sim_eqa_config():
+    _sim_eqa_c = sim_nav_cfg()
+    _sim_eqa_c.task_name = 'EQA-v0'
+    _sim_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
+    _sim_eqa_c.dataset.split = "val"
+    _sim_eqa_c.scene = "data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb"
+    _sim_eqa_c.resolution = (512, 512)
+    _sim_eqa_c.hfov = '45'
+    _sim_eqa_c.vfov = '45'
+    _sim_eqa_c.sensor_position = [0, 1.09, 0]
+    _sim_eqa_c.forward_step_size = 0.1  # in metres
+    _sim_eqa_c.turn_angle = 9  # in degrees
+    _sim_eqa_c.sim = 'Sim-v0'
 
     # Agent configuration
-    agent_c = _esp_eqa_c.agents[0]
+    agent_c = _sim_eqa_c.agents[0]
     agent_c.height = 1.5
     agent_c.radius = 0.1
     agent_c.mass = 32.0
@@ -51,10 +50,10 @@ def get_minos_for_esp_eqa_config():
     agent_c.angular_friction = 1.0
     agent_c.coefficient_of_restitution = 0.15707963267
 
-    return _esp_eqa_c
+    return _sim_eqa_c
 
 
-def check_json_serializaiton(dataset: teas.Dataset):
+def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
     logger.info("JSON conversion finished. {} sec".format((time.time() -
@@ -82,8 +81,8 @@ def test_mp3d_eqa_dataset():
     check_json_serializaiton(dataset)
 
 
-def test_mp3d_eqa_esp():
-    eqa_config = get_minos_for_esp_eqa_config()
+def test_mp3d_eqa_sim():
+    eqa_config = get_minos_for_sim_eqa_config()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
             eqa_config.dataset):
@@ -91,7 +90,7 @@ def test_mp3d_eqa_esp():
         return
 
     dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
-    env = teas.TeasEnv(config=eqa_config)
+    env = habitat.Env(config=eqa_config)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
     assert env
@@ -109,8 +108,8 @@ def test_mp3d_eqa_esp():
     env.close()
 
 
-def test_mp3d_eqa_esp_correspondence():
-    eqa_config = get_minos_for_esp_eqa_config()
+def test_mp3d_eqa_sim_correspondence():
+    eqa_config = get_minos_for_sim_eqa_config()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
             eqa_config.dataset):
@@ -118,13 +117,13 @@ def test_mp3d_eqa_esp_correspondence():
         return
 
     dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
-    env = teas.TeasEnv(config=eqa_config, dataset=dataset)
+    env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = [episode for episode in dataset.episodes if
                     int(episode.episode_id) in
                     TEST_EPISODE_SET[:EPISODES_LIMIT]]
 
     if IS_GENERATING_VIDEO:
-        from teas.internal.visualize import gen_video
+        from habitat.internal.visualize import gen_video
 
     ep_i = 0
     cycles_n = 2
@@ -138,7 +137,7 @@ def test_mp3d_eqa_esp_correspondence():
             "Episode has no shortest paths or more than one."
         # TODO (maksymets) get rid of private member call with better agent
         # state interface
-        start_state = env._simulator.agent_state()
+        start_state = env._sim.agent_state()
         assert np.allclose(
             start_state.position,
             episode.start_position), \
@@ -155,7 +154,7 @@ def test_mp3d_eqa_esp_correspondence():
         ))
 
         for step_id, point in enumerate(episode.shortest_paths[0]):
-            cur_state = env._simulator.agent_state()
+            cur_state = env._sim.agent_state()
 
             logger.info(
                 'diff position: {} diff rotation: {} '
