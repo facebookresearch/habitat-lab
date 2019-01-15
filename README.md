@@ -9,25 +9,34 @@ tasks. It also aims to make benchmarking of agents across datasets,
 environments and tasks easier. 
 
 
-### Install
-Clone the github repository and then run:
+### Setup
+
+
+1. Clone the github repository and install using:
 ```bash
 cd habitat-api
 pip install -e .
 ```
 
+2. Install `habitat-sim` from: [github repo](https://github.com/facebookresearch/habitat-sim).
+
+3. Add `habitat-sim` to `PYTHONPATH`: 
+```bash
+export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
+```
+
+4. Download test data from [dropbox share](https://www.dropbox.com/sh/dl/h02865ucoh3ix07/AABkVrHCfPI0BAmSeHCytrsya) and place it in folder:`data/esp/test/`
+
 
 ### Example
 
-**TODO(akadian)**: Adapt below example according to any changes in API 
-
 ```python
 import habitat
-from habitat.config.experiments.sim_nav import sim_nav_cfg
+from habitat.config.experiments.nav import sim_nav_cfg
 from habitat.tasks.nav.nav_task import NavigationEpisode
-import numpy as np
 
 config = sim_nav_cfg()
+config.scene = 'data/esp/test/test.glb'
 config.task_name = 'Nav-v0'
 env = habitat.Env(config=config)
 env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
@@ -43,10 +52,6 @@ while not done:
 
 ### Data
 
-**TODO(akadian)**: Update the URLs and description for below data resources
-
 **Matterport3D**
 
 1. PointNav val split: `/private/home/akadian/habitat-api-data/mp3d-splits`
-2. ObjectNav val split: **TODO(akadian)**
-3. EQA val split: **TODO(maksymets)**
