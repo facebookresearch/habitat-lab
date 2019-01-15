@@ -8,6 +8,8 @@ from gym import spaces
 from habitat.core.logging import logger
 from habitat.core.simulator import Observation
 from habitat.core.simulator import RGBSensor
+from habitat.core.simulator import AgentState, ShortestPathPoint
+
 
 UUID_RGBSENSOR = 'rgb'
 # Sim provides RGB as RGBD structure with 4 dimensions
@@ -47,6 +49,13 @@ SIM_ACTION_TO_NAME = {
     1: SimActions.LEFT.value,
     2: SimActions.RIGHT.value,
     3: SimActions.STOP.value
+}
+
+SIM_NAME_TO_ACTION = {
+    SimActions.FORWARD.value: 0,
+    SimActions.LEFT.value: 1,
+    SimActions.RIGHT.value: 2,
+    SimActions.STOP.value: 3
 }
 
 
@@ -159,6 +168,39 @@ class HabitatSim(habitat.Simulator):
         path.requested_end = position_b
         self._sim.pathfinder.find_path(path)
         return path.geodesic_distance
+
+    def action_space_shortest_paths(self, source: AgentState,
+                                    targets: List[AgentState],
+                                    agent_id: int = 0) \
+            -> List[ShortestPathPoint]:
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(
+            self.__class__.__name__)
+        action_pathfinder = self._sim.make_action_pathfinder(agent_id=agent_id)
+        action_shortest_path = habitat_sim.MultiGoalActionSpaceShortestPath()
+        action_shortest_path.requested_start.position = source.position
+        action_shortest_path.requested_start.rotation = source.rotation
+
+        for target in targets:
+            action_shortest_path.requested_ends.append(
+                habitat_sim.ActionSpacePathLocation(target.position,
+                                                    target.rotation))
+
+        if not action_pathfinder.find_path(action_shortest_path):
+            return []
+
+        # add None action to last node in path
+        actions: List[Optional[int]] = \
+            [SIM_NAME_TO_ACTION[action] for action in
+             action_shortest_path.actions]
+        actions.append(None)
+
+        shortest_path = [ShortestPathPoint(position, rotation, action)
+                         for position, rotation, action in
+                         zip(action_shortest_path.points,
+                             action_shortest_path.rotations,
+                             actions)]
+
+        return shortest_path
 
     def sample_navigable_point(self):
         r"""

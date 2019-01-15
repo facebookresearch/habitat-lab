@@ -9,6 +9,7 @@ from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.simulator import Observation
 from habitat.sims import make_sim
 from habitat.tasks import make_task
+from habitat.core.simulator import AgentState, ShortestPathPoint
 
 
 class Env(gym.Env):
@@ -134,7 +135,22 @@ class Env(gym.Env):
         return self._sim.semantic_annotations()
 
     def sample_navigable_point(self):
-        return self._simulator.sample_navigable_point()
+        return self._sim.sample_navigable_point()
+
+    def action_space_shortest_path(self, source: AgentState,
+                                   targets: List[AgentState]) \
+            -> List[ShortestPathPoint]:
+        r"""
+        :param source: source agent state for shortest path calculation
+        :param targets: target agent state(s) for shortest path calculation
+        :return: List of agent states and actions along the shortest path from
+        source to the nearest target (both included). If one of the target(s)
+        is identical to the source, a list containing only one node with the
+        identical agent state is returned. Returns an empty list in case none
+        of the targets are reachable from the source.
+        """
+        return self._sim.action_space_shortest_paths(source, targets,
+                                                     agent_id=0)
 
     def render(self, mode='human', close=False) -> np.ndarray:
         return self._sim.render(mode, close)

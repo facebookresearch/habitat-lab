@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
@@ -100,6 +100,28 @@ class SensorSuite:
         return Observation(self.sensors, **kwargs)
 
 
+class AgentState:
+    position: List[float]
+    rotation: Optional[List[float]]
+
+    def __init__(self, position: List[float],
+                 rotation: Optional[List[float]]) -> None:
+        self.position = position
+        self.rotation = rotation
+
+
+class ShortestPathPoint:
+    position: List[Any]
+    rotation: List[Any]
+    action: Optional[int]
+
+    def __init__(self, position: List[Any], rotation: List[Any],
+                 action: Optional[int]) -> None:
+        self.position = position
+        self.rotation = rotation
+        self.action = action
+
+
 class Simulator:
     def reset(self) -> Observation:
         raise NotImplementedError
@@ -128,6 +150,22 @@ class Simulator:
         r"""
         :return: a random navigable point from the simulator. A point is
         defined as navigable if the agent can be initialized at the point.
+        """
+        raise NotImplementedError
+
+    def action_space_shortest_paths(self, source: AgentState,
+                                    targets: List[AgentState],
+                                    agent_id: int) -> List[ShortestPathPoint]:
+        r"""
+        :param source: source agent state for shortest path calculation
+        :param targets: target agent state(s) for shortest path calculation
+        :param agent_id: int identification of agent from multi-agent setup
+        :return: List of agent states and actions along the shortest path from
+        source to the nearest target (both included). If one of the target(s)
+        is identical to the source, a list containing only one node with the
+        identical agent state is returned. Returns an empty list in case none
+        of the targets are reachable from the source. For the last item in
+        the returned list the action will be None
         """
         raise NotImplementedError
 

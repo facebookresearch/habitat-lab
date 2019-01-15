@@ -6,6 +6,7 @@ import numpy as np
 from habitat.config.experiments.nav import sim_nav_cfg
 from habitat.sims.habitat_sim import SimActions, SIM_ACTION_TO_NAME
 from habitat.tasks.nav.nav_task import NavigationEpisode
+from habitat.core.simulator import AgentState
 
 MULTIHOUSE_RESOURCES_PATH = 'data/esp/multihouse-resources'
 MULTIHOUSE_INITIALIZATIONS_PATH = 'data/esp/multihouse_initializations.json'
@@ -99,4 +100,67 @@ def test_env():
 
     # check for steps limit on environment
     assert done is True, "done should be true after max_episode_steps"
+
+    env.close()
+
+
+def test_action_space_shortest_path():
+    config = sim_nav_cfg()
+    config.task_name = 'Nav-v0'
+    assert os.path.exists(config.scene), \
+        "ESP test data missing, please download and place it in data/esp/test/"
+    env = habitat.Env(config=config, dataset=None)
+
+    # action space shortest path
+    source_position = env.sample_navigable_point()
+    angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+    angle = np.radians(np.random.choice(angles))
+    source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+    source = AgentState(source_position, source_rotation)
+
+    reachable_targets = []
+    unreachable_targets = []
+    while len(reachable_targets) < 5:
+        position = env.sample_navigable_point()
+        angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+        angle = np.radians(np.random.choice(angles))
+        rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+        if env.geodesic_distance(source_position, position) != np.inf:
+            reachable_targets.append(AgentState(position, rotation))
+
+    while len(unreachable_targets) < 3:
+        position = env.sample_navigable_point()
+        angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+        angle = np.radians(np.random.choice(angles))
+        rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+        if env.geodesic_distance(source_position, position) == np.inf:
+            unreachable_targets.append(AgentState(position, rotation))
+
+    targets = reachable_targets
+    shortest_path1 = env.action_space_shortest_path(source, targets)
+    assert shortest_path1 != []
+
+    targets = unreachable_targets
+    shortest_path2 = env.action_space_shortest_path(source, targets)
+    assert shortest_path2 == []
+
+    targets = reachable_targets + unreachable_targets
+    shortest_path3 = env.action_space_shortest_path(source, targets)
+
+    # shortest_path1 should be identical to shortest_path3
+    assert len(shortest_path1) == len(shortest_path3)
+    for i in range(len(shortest_path1)):
+        assert np.allclose(shortest_path1[i].position,
+                           shortest_path3[i].position)
+        assert np.allclose(shortest_path1[i].rotation,
+                           shortest_path3[i].rotation)
+        assert shortest_path1[i].action == shortest_path3[i].action
+
+    targets = unreachable_targets + [source]
+    shortest_path4 = env.action_space_shortest_path(source, targets)
+    assert len(shortest_path4) == 1
+    assert np.allclose(shortest_path4[0].position, source.position)
+    assert np.allclose(shortest_path4[0].rotation, source.rotation)
+    assert shortest_path4[0].action is None
+
     env.close()

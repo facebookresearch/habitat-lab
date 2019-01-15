@@ -6,20 +6,8 @@ from gym import spaces
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import (
     Observation, SensorSuite, Sensor,
-    SensorTypes, Simulator
+    SensorTypes, Simulator, ShortestPathPoint
 )
-
-
-class ShortestPathPoint:
-    position: List[Any]
-    rotation: List[Any]
-    action: Optional[int]
-
-    def __init__(self, position: List[Any], rotation: List[Any],
-                 action: Optional[int]) -> None:
-        self.position = position
-        self.rotation = rotation
-        self.action: Optional[int] = action
 
 
 class NavigationGoal:
