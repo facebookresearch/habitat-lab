@@ -42,7 +42,7 @@ class Sensor:
         self.sensor_type: SensorTypes
         self.observation_space: Space
 
-    def get_observation(self, **kwargs: Any) -> Any:
+    def get_observation(self, *args: Any, **kwargs: Any) -> Any:
         r"""Returns the current observation for Sensor.
         """
         raise NotImplementedError
@@ -55,18 +55,36 @@ class Observation(dict):
     to obtain Tensors)
     """
 
-    def __init__(self, sensors: Dict[str, Sensor], **kwargs) -> None:
-        data = [(uuid, sensor.get_observation(**kwargs)) for uuid, sensor in
-                sensors.items()]
+    def __init__(self, sensors: Dict[str, Sensor], *args, **kwargs) -> None:
+        data = [(uuid, sensor.get_observation(*args, **kwargs))
+                for uuid, sensor in sensors.items()]
         super().__init__(data)
 
 
 class RGBSensor(Sensor):
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.uuid = 'rgb'
         self.sensor_type = SensorTypes.COLOR
 
-    def get_observation(self, **kwargs: Any) -> Any:
+    def get_observation(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError
+
+
+class DepthSensor(Sensor):
+    def __init__(self, *args, **kwargs):
+        self.uuid = 'depth'
+        self.sensor_type = SensorTypes.DEPTH
+
+    def get_observation(self, *args: Any, **kwargs: Any):
+        raise NotImplementedError
+
+
+class SemanticSensor(Sensor):
+    def __init__(self, *args, **kwargs):
+        self.uuid = 'semantic'
+        self.sensor_type = SensorTypes.SEMANTIC
+
+    def get_observation(self, *args: Any, **kwargs: Any):
         raise NotImplementedError
 
 
@@ -93,11 +111,11 @@ class SensorSuite:
     def get(self, uuid: str) -> Sensor:
         return self.sensors[uuid]
 
-    def get_observations(self, **kwargs: Any) -> Observation:
+    def get_observations(self, *args: Any, **kwargs: Any) -> Observation:
         r"""
         :return: collect data from all sensors packaged into Observation
         """
-        return Observation(self.sensors, **kwargs)
+        return Observation(self.sensors, *args, **kwargs)
 
 
 class AgentState:

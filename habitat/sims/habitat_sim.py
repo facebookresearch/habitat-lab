@@ -5,9 +5,10 @@ import esp as habitat_sim
 import habitat
 import numpy as np
 from gym import spaces
+from habitat import SensorSuite
 from habitat.core.logging import logger
 from habitat.core.simulator import Observation
-from habitat.core.simulator import RGBSensor
+from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
 from habitat.core.simulator import AgentState, ShortestPathPoint
 
 
@@ -15,25 +16,95 @@ UUID_RGBSENSOR = 'rgb'
 # Sim provides RGB as RGBD structure with 4 dimensions
 RGBSENSOR_DIMENSION = 4
 
+DEPTHSENSOR_MIN_DEPTH = 0
+DEPTHSENSOR_MAX_DEPTH = 10
+DEPTHSENSOR_NORMALIZE = True
+
 
 def overwrite_config(config_from: Dict, config_to) -> None:
     for attr, value in config_from.items():
         setattr(config_to, attr, value)
 
 
+def check_sim_obs(obs, sensor):
+    assert obs is not None, "observation corresponding to {} not " \
+                            "present in simulator's observations".format(
+                                sensor.uuid)
+
+
 class HabitatSimRGBSensor(RGBSensor):
-    def __init__(self, config, sim):
+    """RGB sensor for habitat_sim
+    """
+    def __init__(self, config):
         super().__init__()
-        self._sim = sim
+        self.sim_sensor_type = habitat_sim.SensorType.COLOR
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=config.resolution + (
                                                 RGBSENSOR_DIMENSION,),
                                             dtype=np.uint8)
 
-    def get_observation(self):
-        # TODO(akadian): return RGB instead of RGBD
-        obs = self._sim.cache.get(self.uuid)
-        assert obs is not None, "get_observation called before reset or step"
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
+        return obs
+
+
+class HabitatSimDepthSensor(DepthSensor):
+    """Depth sensor for habitat_sim
+    """
+    def __init__(self, config):
+        super().__init__()
+        self.sim_sensor_type = habitat_sim.SensorType.DEPTH
+        self.min_depth = DEPTHSENSOR_MIN_DEPTH
+        if hasattr(config, 'min_depth'):
+            self.min_depth = config.min_depth
+
+        self.max_depth = DEPTHSENSOR_MAX_DEPTH
+        if hasattr(config, 'max_depth'):
+            self.max_depth = config.max_depth
+
+        self.normalize_depth = DEPTHSENSOR_NORMALIZE
+        if hasattr(config, 'normalize_depth'):
+            self.normalize_depth = config.normalize_depth
+
+        if self.normalize_depth:
+            min_depth_value = 0
+            max_depth_value = 1
+        else:
+            min_depth_value = self.min_depth
+            max_depth_value = self.max_depth
+
+        self.observation_space = spaces.Box(low=min_depth_value,
+                                            high=max_depth_value,
+                                            shape=config.resolution,
+                                            dtype=np.float32)
+
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
+
+        obs = np.clip(obs, self.min_depth, self.max_depth)
+        if self.normalize_depth:
+            # normalize depth observation to [0, 1]
+            obs = (obs - self.min_depth) / self.max_depth
+
+        return obs
+
+
+class HabitatSimSemanticSensor(SemanticSensor):
+    """Semantic sensor for habitat_sim
+    """
+    def __init__(self, config):
+        super().__init__()
+        self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
+        self.observation_space = spaces.Box(low=np.iinfo(np.uint32).min,
+                                            high=np.iinfo(np.uint32).max,
+                                            shape=config.resolution,
+                                            dtype=np.uint32)
+
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
         return obs
 
 
@@ -60,11 +131,35 @@ SIM_NAME_TO_ACTION = {
 
 
 class HabitatSim(habitat.Simulator):
+
+    def __init__(self, config) -> None:
+        self.config = config
+
+        sim_sensors = []
+        for s in config.sensors:
+            is_valid_sensor = \
+                hasattr(habitat.sims.habitat_sim, s)  # type: ignore
+            assert is_valid_sensor, 'invalid sensor type {}'.format(s)
+            sim_sensors.append(
+                getattr(
+                    habitat.sims.habitat_sim, s)(config))  # type: ignore
+
+        self.sensor_suite = SensorSuite(sim_sensors)
+
+        self.sim_config = HabitatSim.create_sim_config(config,
+                                                       self.sensor_suite)
+
+        self._sim = habitat_sim.Simulator(self.sim_config)
+
+        self.action_space = spaces.Discrete(
+            len(self.sim_config.agents[0].action_space))
+
+        self.episode_active = False
+        self._controls = SIM_ACTION_TO_NAME
+
     @staticmethod
-    def create_sim_config(config: Any) -> habitat_sim.SimulatorConfiguration:
-        # TODO(akadian): generalize this initialization. Use sensor configs,
-        # move general parts to habitat.Sim, create predefined
-        # config for Sim
+    def create_sim_config(config: Any, sensor_suite: SensorSuite) \
+            -> habitat_sim.SimulatorConfiguration:
         sim_config = habitat_sim.SimulatorConfiguration()
         # TODO(maksymets): use general notion of scene from Resource Manager
         sim_config.scene.id = config.scene
@@ -72,11 +167,20 @@ class HabitatSim(habitat.Simulator):
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(config_from=config.agents[config.default_agent_id],
                          config_to=agent_config)
-        color_sensor_config = habitat_sim.SensorSpec()
-        color_sensor_config.resolution = config.resolution
-        color_sensor_config.parameters['hfov'] = config.hfov
-        color_sensor_config.position = config.sensor_position
-        agent_config.sensor_specifications = [color_sensor_config]
+
+        sensor_specifications = []
+        for sensor in sensor_suite.sensors.values():
+            sim_sensor_config = habitat_sim.SensorSpec()
+            sim_sensor_config.uuid = sensor.uuid
+            sim_sensor_config.resolution = list(
+                sensor.observation_space.shape[:2])
+            sim_sensor_config.parameters['hfov'] = config.hfov
+            sim_sensor_config.position = config.sensor_position
+            sim_sensor_config.sensor_type = \
+                sensor.sim_sensor_type  # type: ignore
+            sensor_specifications.append(sim_sensor_config)
+
+        agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
             SimActions.LEFT.value: habitat_sim.ActionSpec(
                 'lookLeft', {'amount': config.turn_angle}),
@@ -89,32 +193,8 @@ class HabitatSim(habitat.Simulator):
         sim_config.agents = [agent_config]
         return sim_config
 
-    def __init__(self, config) -> None:
-        self.config = config
-        self.sim_config = HabitatSim.create_sim_config(config)
-        self.action_space = spaces.Discrete(
-            len(self.sim_config.agents[0].action_space))
-        self._sim = habitat_sim.Simulator(self.sim_config)
-
-        sim_sensors = []
-        # TODO(akadian): Get rid of caching, use hooks into simulator for
-        # sensor observations.
-        self.cache: Dict[str, Optional[Observation]] = {}
-        for s in config.sensors:
-            is_valid_sensor = \
-                hasattr(habitat.sims.habitat_sim, s)  # type: ignore
-            assert is_valid_sensor, 'invalid sensor type {}'.format(s)
-            sim_sensors.append(
-                getattr(
-                    habitat.sims.habitat_sim, s)(config, self))  # type: ignore
-            self.cache[sim_sensors[-1].uuid] = None
-        self.sensor_suite = habitat.SensorSuite(sim_sensors)
-        self.episode_active = False
-        self._controls = SIM_ACTION_TO_NAME
-
     def reset(self):
-        # TODO(akadian): remove caching once setup is finalized from ESP
-        obs = self._sim.reset()
+        sim_obs = self._sim.reset()
 
         if hasattr(self.config, 'start_position') \
                 and hasattr(self.config, 'start_rotation') \
@@ -123,10 +203,9 @@ class HabitatSim(habitat.Simulator):
             self.set_agent_state(self.config.start_position,
                                  self.config.start_rotation,
                                  self.config.default_agent_id)
-            obs = self._sim.get_sensor_observations()
-        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
+            sim_obs = self._sim.get_sensor_observations()
         self.episode_active = True
-        return self.sensor_suite.get_observations(), False
+        return self.sensor_suite.get_observations(sim_obs), False
 
     def step(self, action):
         assert self.episode_active, \
@@ -140,9 +219,8 @@ class HabitatSim(habitat.Simulator):
             done = True
             self.episode_active = False
             return obs, done
-        obs = self._sim.step(sim_action)
-        self.cache[UUID_RGBSENSOR] = obs["rgba_camera"]
-        observations = self.sensor_suite.get_observations()
+        sim_obs = self._sim.step(sim_action)
+        observations = self.sensor_suite.get_observations(sim_obs)
         return observations, done
 
     def render(self):
@@ -153,7 +231,7 @@ class HabitatSim(habitat.Simulator):
 
     def reconfigure(self, config: Any) -> None:
         self.config = config
-        self.sim_config = self.create_sim_config(config)
+        self.sim_config = self.create_sim_config(config, self.sensor_suite)
         self._sim.reconfigure(self.sim_config)
         if hasattr(config, 'start_position') \
                 and hasattr(config, 'start_rotation') \

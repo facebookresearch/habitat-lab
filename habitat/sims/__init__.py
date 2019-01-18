@@ -1,4 +1,5 @@
-from habitat.sims.habitat_sim import HabitatSimRGBSensor, HabitatSim
+from habitat.sims.habitat_sim import HabitatSimRGBSensor, \
+    HabitatSimDepthSensor, HabitatSimSemanticSensor, HabitatSim
 from habitat.sims.registration import sim_registry, \
     register_sim, \
     make_sim

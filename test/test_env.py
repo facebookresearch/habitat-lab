@@ -56,6 +56,9 @@ def test_vectorized_envs():
         config.scene = datasets[-1].episodes[0].scene_id
         config.max_episode_steps = MULTIHOUSE_MAX_STEPS
         config.gpu_device_id = 0
+        config.sensors = ['HabitatSimRGBSensor',
+                          'HabitatSimDepthSensor',
+                          'HabitatSimSemanticSensor']
         configs.append(config)
 
     envs = habitat.VectorEnv(configs, datasets)
@@ -81,6 +84,9 @@ def test_vectorized_envs():
 def test_env():
     config = sim_nav_cfg()
     config.task_name = 'Nav-v0'
+    config.sensors = ['HabitatSimRGBSensor',
+                      'HabitatSimDepthSensor',
+                      'HabitatSimSemanticSensor']
     assert os.path.exists(config.scene), \
         "ESP test data missing, please download and place it in data/esp/test/"
     env = habitat.Env(config=config, dataset=None)
