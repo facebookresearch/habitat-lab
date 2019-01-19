@@ -37,10 +37,20 @@ class Sensor:
         sensor
     """
 
-    def __init__(self) -> None:
-        self.uuid: str
-        self.sensor_type: SensorTypes
-        self.observation_space: Space
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.uuid: str = self.get_uuid(*args, **kwargs)
+        self.sensor_type: SensorTypes = self.get_sensor_type(*args, **kwargs)
+        self.observation_space: Space = self.get_observation_space(*args,
+                                                                   **kwargs)
+
+    def get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+    def get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        raise NotImplementedError
+
+    def get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
         r"""Returns the current observation for Sensor.
@@ -63,8 +73,16 @@ class Observation(dict):
 
 class RGBSensor(Sensor):
     def __init__(self, *args, **kwargs):
-        self.uuid = 'rgb'
-        self.sensor_type = SensorTypes.COLOR
+        super().__init__(*args, **kwargs)
+
+    def get_uuid(self, *args, **kwargs):
+        return 'rgb'
+
+    def get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.COLOR
+
+    def get_observation_space(self, *args, **kwargs):
+        raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
@@ -72,8 +90,16 @@ class RGBSensor(Sensor):
 
 class DepthSensor(Sensor):
     def __init__(self, *args, **kwargs):
-        self.uuid = 'depth'
-        self.sensor_type = SensorTypes.DEPTH
+        super().__init__(*args, **kwargs)
+
+    def get_uuid(self, *args, **kwargs):
+        return 'depth'
+
+    def get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.DEPTH
+
+    def get_observation_space(self, *args, **kwargs):
+        raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
         raise NotImplementedError
@@ -81,8 +107,16 @@ class DepthSensor(Sensor):
 
 class SemanticSensor(Sensor):
     def __init__(self, *args, **kwargs):
-        self.uuid = 'semantic'
-        self.sensor_type = SensorTypes.SEMANTIC
+        super().__init__(*args, **kwargs)
+
+    def get_uuid(self, *args, **kwargs):
+        return 'semantic'
+
+    def get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.SEMANTIC
+
+    def get_observation_space(self, *args, **kwargs):
+        raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
         raise NotImplementedError

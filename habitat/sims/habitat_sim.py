@@ -36,12 +36,13 @@ class HabitatSimRGBSensor(RGBSensor):
     """RGB sensor for habitat_sim
     """
     def __init__(self, config):
-        super().__init__()
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
-        self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=config.resolution + (
-                                                RGBSENSOR_DIMENSION,),
-                                            dtype=np.uint8)
+        super().__init__(config)
+
+    def get_observation_space(self, config):
+        return spaces.Box(low=0, high=255,
+                          shape=config.resolution + (RGBSENSOR_DIMENSION,),
+                          dtype=np.uint8)
 
     def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
@@ -53,7 +54,6 @@ class HabitatSimDepthSensor(DepthSensor):
     """Depth sensor for habitat_sim
     """
     def __init__(self, config):
-        super().__init__()
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
         self.min_depth = DEPTHSENSOR_MIN_DEPTH
         if hasattr(config, 'min_depth'):
@@ -68,16 +68,19 @@ class HabitatSimDepthSensor(DepthSensor):
             self.normalize_depth = config.normalize_depth
 
         if self.normalize_depth:
-            min_depth_value = 0
-            max_depth_value = 1
+            self.min_depth_value = 0
+            self.max_depth_value = 1
         else:
-            min_depth_value = self.min_depth
-            max_depth_value = self.max_depth
+            self.min_depth_value = self.min_depth
+            self.max_depth_value = self.max_depth
 
-        self.observation_space = spaces.Box(low=min_depth_value,
-                                            high=max_depth_value,
-                                            shape=config.resolution,
-                                            dtype=np.float32)
+        super().__init__(config)
+
+    def get_observation_space(self, config):
+        return spaces.Box(low=self.min_depth_value,
+                          high=self.max_depth_value,
+                          shape=config.resolution,
+                          dtype=np.float32)
 
     def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
@@ -95,12 +98,14 @@ class HabitatSimSemanticSensor(SemanticSensor):
     """Semantic sensor for habitat_sim
     """
     def __init__(self, config):
-        super().__init__()
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
-        self.observation_space = spaces.Box(low=np.iinfo(np.uint32).min,
-                                            high=np.iinfo(np.uint32).max,
-                                            shape=config.resolution,
-                                            dtype=np.uint32)
+        super().__init__(config)
+
+    def get_observation_space(self, config):
+        return spaces.Box(low=np.iinfo(np.uint32).min,
+                          high=np.iinfo(np.uint32).max,
+                          shape=config.resolution,
+                          dtype=np.uint32)
 
     def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
