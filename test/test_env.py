@@ -4,7 +4,8 @@ import os
 import habitat
 import numpy as np
 from habitat.config.experiments.nav import sim_nav_cfg
-from habitat.sims.habitat_sim import SimActions, SIM_ACTION_TO_NAME
+from habitat.sims.habitat_sim import SimActions, SIM_ACTION_TO_NAME, \
+    SIM_NAME_TO_ACTION
 from habitat.tasks.nav.nav_task import NavigationEpisode
 from habitat.core.simulator import AgentState
 
@@ -106,6 +107,10 @@ def test_env():
 
     # check for steps limit on environment
     assert done is True, "done should be true after max_episode_steps"
+
+    env.reset()
+    obs, rew, done, info = env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
+    assert done is True, "done should be true after STOP action"
 
     env.close()
 

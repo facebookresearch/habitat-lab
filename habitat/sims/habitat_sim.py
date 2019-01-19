@@ -212,14 +212,15 @@ class HabitatSim(habitat.Simulator):
             "episode is not active, environment not RESET or " \
             "STOP action called previously"
         sim_action = self._controls[action]
-        obs, done = Observation({}), False
+        done = False
         if sim_action == SimActions.STOP.value:
             # TODO(akadian): Handle reward calculation on stop once pointnav
             # is integrated
             done = True
             self.episode_active = False
-            return obs, done
-        sim_obs = self._sim.step(sim_action)
+            sim_obs = self._sim.get_sensor_observations()
+        else:
+            sim_obs = self._sim.step(sim_action)
         observations = self.sensor_suite.get_observations(sim_obs)
         return observations, done
 
