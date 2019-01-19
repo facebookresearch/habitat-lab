@@ -31,7 +31,8 @@ def get_minos_for_sim_eqa_config():
     _sim_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
     _sim_eqa_c.dataset.split = "val"
     _sim_eqa_c.scene = "data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb"
-    _sim_eqa_c.resolution = (512, 512)
+    _sim_eqa_c.height = 512
+    _sim_eqa_c.width = 512
     _sim_eqa_c.hfov = '45'
     _sim_eqa_c.vfov = '45'
     _sim_eqa_c.sensor_position = [0, 1.09, 0]
@@ -102,8 +103,11 @@ def test_mp3d_eqa_sim():
         obs, rew, done, info = env.step(action)
         if not done:
             assert 'rgb' in obs, "RGB image is missing in observation."
-            assert obs['rgb'].shape[:2] == eqa_config.resolution, \
-                "Observation resolution doesn't correspond to config."
+            assert obs['rgb'].shape[:2] == \
+                (eqa_config.height, eqa_config.width), \
+                "Observation resolution %s doesn't correspond to config " \
+                "(%d, %d)." % (obs['rgb'].shape[:2], eqa_config.height,
+                               eqa_config.width)
 
     env.close()
 

@@ -10,7 +10,8 @@ def sim_nav_cfg():
     config.max_episode_steps = 1000
 
     # Simulator
-    config.resolution = (640, 480)
+    config.height = 480
+    config.width = 640
     config.hfov = '90'  # horizontal field of view in degrees
     config.seed = 100
     config.scene = 'data/esp/test/test.glb'

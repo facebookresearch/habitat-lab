@@ -41,7 +41,9 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation_space(self, config):
         return spaces.Box(low=0, high=255,
-                          shape=config.resolution + (RGBSENSOR_DIMENSION,),
+                          shape=(config.height,
+                                 config.width,
+                                 RGBSENSOR_DIMENSION),
                           dtype=np.uint8)
 
     def get_observation(self, sim_obs):
@@ -79,7 +81,7 @@ class HabitatSimDepthSensor(DepthSensor):
     def get_observation_space(self, config):
         return spaces.Box(low=self.min_depth_value,
                           high=self.max_depth_value,
-                          shape=config.resolution,
+                          shape=(config.height, config.width),
                           dtype=np.float32)
 
     def get_observation(self, sim_obs):
@@ -104,7 +106,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
     def get_observation_space(self, config):
         return spaces.Box(low=np.iinfo(np.uint32).min,
                           high=np.iinfo(np.uint32).max,
-                          shape=config.resolution,
+                          shape=(config.height, config.width),
                           dtype=np.uint32)
 
     def get_observation(self, sim_obs):
@@ -172,7 +174,6 @@ class HabitatSim(habitat.Simulator):
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(config_from=config.agents[config.default_agent_id],
                          config_to=agent_config)
-
         sensor_specifications = []
         for sensor in sensor_suite.sensors.values():
             sim_sensor_config = habitat_sim.SensorSpec()
