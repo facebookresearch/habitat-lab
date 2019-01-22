@@ -2,15 +2,16 @@ from enum import Enum
 from typing import List, Any, Dict, Optional
 
 import esp as habitat_sim
-import habitat
 import numpy as np
 from gym import spaces
+
+import habitat
 from habitat import SensorSuite
 from habitat.core.logging import logger
-from habitat.core.simulator import Observation
-from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
-from habitat.core.simulator import AgentState, ShortestPathPoint
-
+from habitat.core.simulator import (
+    AgentState, ShortestPathPoint, RGBSensor,
+    DepthSensor, SemanticSensor
+)
 
 UUID_RGBSENSOR = 'rgb'
 # Sim provides RGB as RGBD structure with 4 dimensions
@@ -27,14 +28,14 @@ def overwrite_config(config_from: Dict, config_to) -> None:
 
 
 def check_sim_obs(obs, sensor):
-    assert obs is not None, "observation corresponding to {} not " \
-                            "present in simulator's observations".format(
-                                sensor.uuid)
+    assert obs is not None, "Observation corresponding to {} not present in " \
+                            "simulator's observations".format(sensor.uuid)
 
 
 class HabitatSimRGBSensor(RGBSensor):
     """RGB sensor for habitat_sim
     """
+
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
         super().__init__(config)
@@ -55,6 +56,7 @@ class HabitatSimRGBSensor(RGBSensor):
 class HabitatSimDepthSensor(DepthSensor):
     """Depth sensor for habitat_sim
     """
+
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
         self.min_depth = DEPTHSENSOR_MIN_DEPTH
@@ -99,6 +101,7 @@ class HabitatSimDepthSensor(DepthSensor):
 class HabitatSimSemanticSensor(SemanticSensor):
     """Semantic sensor for habitat_sim
     """
+
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
         super().__init__(config)
@@ -139,8 +142,8 @@ SIM_NAME_TO_ACTION = {
 
 class HabitatSim(habitat.Simulator):
 
-    def __init__(self, config) -> None:
-        self.config = config
+    def __init__(self, config: Any) -> None:
+        self.config = config.clone()
 
         sim_sensors = []
         for s in config.sensors:
@@ -237,9 +240,17 @@ class HabitatSim(habitat.Simulator):
         self._sim.seed(seed)
 
     def reconfigure(self, config: Any) -> None:
-        self.config = config
+        # TODO(maksymets): Switch to Habitat-Sim more efficient caching
+        is_same_scene = config.scene == self.config.scene
+        self.config = config.clone()
         self.sim_config = self.create_sim_config(config, self.sensor_suite)
-        self._sim.reconfigure(self.sim_config)
+        if is_same_scene:
+            self._sim.reconfigure(self.sim_config)
+        else:
+            self._sim.close()
+            del self._sim
+            self._sim = habitat_sim.Simulator(self.sim_config)
+
         if hasattr(config, 'start_position') \
                 and hasattr(config, 'start_rotation') \
                 and config.start_position is not None \
