@@ -48,53 +48,65 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
         env.close()
 
 
-class VectorEnv:
+def _make_env_fn(config: CfgNode, dataset: habitat.Dataset,
+                 rank: int = 0) -> Env:
+    r"""Constructor for default habitat Env.
+    :param config: configurations for environment
+    :param dataset: dataset for environment
+    :param rank: rank for setting seeds for environment
+    :return: constructed habitat Env
+    """
+    habitat_env = Env(config=config, dataset=dataset)
+    habitat_env.seed(config.seed + rank)
+    return habitat_env
 
-    def __init__(self, configs: List[CfgNode], datasets: List[habitat.Dataset],
+
+class VectorEnv:
+    def __init__(self,
+                 make_env_fn: Callable[..., Env] = _make_env_fn,
+                 env_fn_args: Tuple[Tuple] = None,
                  auto_reset_done: bool = True,
                  multiprocessing_start_method: str = 'forkserver') -> None:
         r"""
-        :param configs: list containing configurations for environments.
-        :param datasets: list of datasets for environments
+        :param make_env_fn: Function which creates a single environment.
+        :param env_fn_args: tuple of tuple of args to pass to the make_env_fn.
         :param auto_reset_done: automatically reset the environment when
                                 done. This functionality is provided for
                                 seamless training of vectorized environments.
-        :param multiprocessing_start_method: The multiprocessing method used 
-                                             to spawn worker processes
-
-                                             Valid methods are 
-                                             ``{'spawn', 'forkserver', 'fork'}``
-
-                                             ``'forkserver'`` is the recommended method 
-                                             as it works well with CUDA.
-                                             If ``'fork'`` is used, 
-                                             the subproccess must be started before any GPU useage
+        :param multiprocessing_start_method: The multiprocessing method used to
+                                             spawn worker processes
+                                             Valid methods are
+                                             ``{'spawn', 'forkserver',
+                                                'fork'}``
+                                             ``'forkserver'`` is the
+                                             recommended method as it works
+                                             well with CUDA.
+                                             If ``'fork'`` is used,
+                                             the subproccess must be started
+                                             before any GPU useage
         """
         self._is_waiting = False
-        assert len(configs) > 0, "number of environments to be created " \
-                                 "should be greater than 0"
-        assert len(configs) == len(datasets), "mismatch between number of " \
-                                              "configs and datasets"
+
+        assert env_fn_args is not None and len(env_fn_args) > 0, \
+            "number of environments to be created should be greater than 0"
+
+        self._num_envs = len(env_fn_args)
+
         assert multiprocessing_start_method in self._valid_start_methods, \
-                ("multiprocessing_start_method must be one of {}. " \
-                "Got '{}'").format(self._valid_start_methods, multiprocessing_start_method)
-        self._num_envs = len(configs)
+            ("multiprocessing_start_method must be one of {}. Got '{}'"
+             ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         mp_ctx = mp.get_context(multiprocessing_start_method)
-
-        make_env_fn_args = [
-            (configs[i], datasets[i], i) for i in range(self._num_envs)
-        ]
 
         self._parent_connections, self._worker_connections = \
             zip(*[mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)])
         self._processes: List[mp.Process] = []
-        for worker_conn, parent_conn, env_fn_args in zip(
+        for worker_conn, parent_conn, env_args in zip(
                 self._worker_connections, self._parent_connections,
-                make_env_fn_args):
+                env_fn_args):
             ps = mp_ctx.Process(
                 target=_worker_env,
-                args=(worker_conn, self._make_env_fn, env_fn_args,
+                args=(worker_conn, make_env_fn, env_args,
                       self._auto_reset_done))
             self._processes.append(ps)
             ps.daemon = True
@@ -109,13 +121,6 @@ class VectorEnv:
             parent_conn.send((ACTION_SPACE_COMMAND, None))
         self.action_spaces = [parent_conn.recv() for parent_conn
                               in self._parent_connections]
-
-    @staticmethod
-    def _make_env_fn(config: CfgNode, dataset: habitat.Dataset,
-                     rank: int) -> Env:
-        habitat_env = Env(config=config, dataset=dataset)
-        habitat_env.seed(config.seed + rank)
-        return habitat_env
 
     def reset(self) -> List[Tuple[Observation, Observation, bool, None]]:
         r"""Reset all the _num_envs in the vector

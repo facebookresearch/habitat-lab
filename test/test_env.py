@@ -62,14 +62,16 @@ def _load_test_data():
                           'HabitatSimDepthSensor',
                           'HabitatSimSemanticSensor']
         configs.append(config)
-    
+
     return configs, datasets
 
 
 def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
     num_envs = len(configs)
-    envs = habitat.VectorEnv(configs, datasets,
-            multiprocessing_start_method=multiprocessing_start_method)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    envs = habitat.VectorEnv(
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method=multiprocessing_start_method)
     envs.reset()
     dones = [False] * num_envs
     non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
