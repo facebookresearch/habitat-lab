@@ -1,5 +1,6 @@
 import json
 import os
+import multiprocessing as mp
 
 import habitat
 import numpy as np
@@ -35,7 +36,7 @@ class DatasetTest(habitat.Dataset):
         return self._episodes
 
 
-def test_vectorized_envs():
+def _load_test_data():
     assert os.path.exists(MULTIHOUSE_RESOURCES_PATH), \
         "Multihouse test data missing, " \
         "please download and place it in {}".format(MULTIHOUSE_RESOURCES_PATH)
@@ -61,8 +62,14 @@ def test_vectorized_envs():
                           'HabitatSimDepthSensor',
                           'HabitatSimSemanticSensor']
         configs.append(config)
+    
+    return configs, datasets
 
-    envs = habitat.VectorEnv(configs, datasets)
+
+def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
+    num_envs = len(configs)
+    envs = habitat.VectorEnv(configs, datasets,
+            multiprocessing_start_method=multiprocessing_start_method)
     envs.reset()
     dones = [False] * num_envs
     non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
@@ -80,6 +87,30 @@ def test_vectorized_envs():
 
     envs.close()
     assert all(dones), "dones should be true after max_episode_steps"
+
+
+def test_vectorized_envs_forkserver():
+    configs, datasets = _load_test_data()
+    _vec_env_test_fn(configs, datasets, 'forkserver')
+
+
+def test_vectorized_envs_spawn():
+    configs, datasets = _load_test_data()
+    _vec_env_test_fn(configs, datasets, 'spawn')
+
+
+def _fork_test_target(configs, datasets):
+    _vec_env_test_fn(configs, datasets, 'fork')
+
+
+def test_vectorized_envs_fork():
+    configs, datasets = _load_test_data()
+    # 'fork' works in a process that has yet to use the GPU
+    # this test uses spawns a new python instance, which allows us to fork
+    mp_ctx = mp.get_context('spawn')
+    p = mp_ctx.Process(target=_fork_test_target, args=(configs, datasets))
+    p.start()
+    p.join()
 
 
 def test_env():

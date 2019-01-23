@@ -1,6 +1,6 @@
 import multiprocessing as mp
 from multiprocessing.connection import Connection
-from typing import List, Tuple, Callable, Union, Any
+from typing import List, Tuple, Callable, Union, Any, Set
 
 import habitat
 import numpy as np
@@ -49,23 +49,38 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
 
 
 class VectorEnv:
+
     def __init__(self, configs: List[CfgNode], datasets: List[habitat.Dataset],
-                 auto_reset_done: bool = True) -> None:
+                 auto_reset_done: bool = True,
+                 multiprocessing_start_method: str = 'forkserver') -> None:
         r"""
         :param configs: list containing configurations for environments.
         :param datasets: list of datasets for environments
         :param auto_reset_done: automatically reset the environment when
                                 done. This functionality is provided for
                                 seamless training of vectorized environments.
+        :param multiprocessing_start_method: The multiprocessing method used 
+                                             to spawn worker processes
+
+                                             Valid methods are 
+                                             ``{'spawn', 'forkserver', 'fork'}``
+
+                                             ``'forkserver'`` is the recommended method 
+                                             as it works well with CUDA.
+                                             If ``'fork'`` is used, 
+                                             the subproccess must be started before any GPU useage
         """
         self._is_waiting = False
         assert len(configs) > 0, "number of environments to be created " \
                                  "should be greater than 0"
         assert len(configs) == len(datasets), "mismatch between number of " \
                                               "configs and datasets"
+        assert multiprocessing_start_method in self._valid_start_methods, \
+                ("multiprocessing_start_method must be one of {}. " \
+                "Got '{}'").format(self._valid_start_methods, multiprocessing_start_method)
         self._num_envs = len(configs)
         self._auto_reset_done = auto_reset_done
-        mp_ctx = mp.get_context('forkserver')
+        mp_ctx = mp.get_context(multiprocessing_start_method)
 
         make_env_fn_args = [
             (configs[i], datasets[i], i) for i in range(self._num_envs)
@@ -198,3 +213,7 @@ class VectorEnv:
             return tile
         else:
             raise NotImplementedError
+
+    @property
+    def _valid_start_methods(self) -> Set[str]:
+        return {'forkserver', 'spawn', 'fork'}
