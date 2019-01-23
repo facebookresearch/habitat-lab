@@ -1,31 +1,19 @@
 import os
-import shlex
-import shutil
-import subprocess
 
 import cv2
+import imageio
 import numpy as np
 import tqdm
 
 
-def combine_video(images, text, output_dir):
-    frames_dir = '{}/frames'.format(output_dir)
-
-    if not os.path.exists(frames_dir):
-        os.makedirs(frames_dir)
-    for i, f in enumerate(images):
-        cv2.imwrite('{}/frames/f_{:0>5}.png'.format(output_dir, i), f)
-
-    subprocess.check_call(
-        shlex.split(
-            'ffmpeg -framerate 10 -i {}/f_%05d.png -r 30 -pix_fmt yuv420p'
-            ' -threads 0 -q:v 3 {}/{}.mp4'.format(
-                frames_dir, output_dir,
-                text.replace(" ", "_").replace("\n", "_"))
-        )
-    )
-
-    shutil.rmtree(frames_dir, ignore_errors=True)
+def images_to_video(images, output_dir, video_name):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    video_name = video_name.replace(" ", "_").replace("\n", "_") + '.mp4'
+    writer = imageio.get_writer(os.path.join(output_dir, video_name), fps=10)
+    for im in tqdm.tqdm(images):
+        writer.append_data(im)
+    writer.close()
 
 
 def write_text(img, text):
@@ -42,7 +30,7 @@ def write_text(img, text):
         y -= int(1.3 * h)
 
 
-def make_video(text, rgb_frames, depth, labels,
+def make_video(video_text, rgb_frames, depth, labels,
                output_dir="data/videos/test"):
     assert len(rgb_frames) > 0
     size = rgb_frames[0].shape[0]
@@ -68,7 +56,7 @@ def make_video(text, rgb_frames, depth, labels,
         big_frame[:, 0: size] = rgb  # sim.img
         big_frame[:, size: 2 * size] = np.dstack([d] * 3)
         big_frame[:, 2 * size: 3 * size] = lut[scaled]
-        write_text(big_frame, text)
+        write_text(big_frame, video_text)
         frames.append(big_frame.copy())
 
-    combine_video(frames, text, output_dir)
+    images_to_video(frames, output_dir, video_text)
