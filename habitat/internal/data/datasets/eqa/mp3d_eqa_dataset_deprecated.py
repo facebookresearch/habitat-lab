@@ -9,31 +9,33 @@ from habitat.core.dataset import Dataset
 from habitat.core.logging import logger
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav_task import (
-    ObjectGoal, NavigationGoal, ShortestPathPoint
+    ObjectGoal,
+    NavigationGoal,
+    ShortestPathPoint,
 )
 from yacs.config import CfgNode
 
 ALLOWED_QUESTION_TYPES = ["location", "color", "color_room"]
 
 HABITAT_NAME_TO_ACTION = {
-    'forwards': 0,
-    'turnLeft': 1,
-    'turnRight': 2,
-    'stop': 3
+    "forwards": 0,
+    "turnLeft": 1,
+    "turnRight": 2,
+    "stop": 3,
 }
 
 MINOS_NAME_TO_ACTION = {
-    'forwards': 0,
-    'turnLeft': 1,
-    'turnRight': 2,
-    'stop': 100
+    "forwards": 0,
+    "turnLeft": 1,
+    "turnRight": 2,
+    "stop": 100,
 }
 
 ACTION_MAPPING = {
-    MINOS_NAME_TO_ACTION['forwards']: HABITAT_NAME_TO_ACTION['forwards'],
-    MINOS_NAME_TO_ACTION['turnLeft']: HABITAT_NAME_TO_ACTION['turnLeft'],
-    MINOS_NAME_TO_ACTION['turnRight']: HABITAT_NAME_TO_ACTION['turnRight'],
-    MINOS_NAME_TO_ACTION['stop']: HABITAT_NAME_TO_ACTION['stop']
+    MINOS_NAME_TO_ACTION["forwards"]: HABITAT_NAME_TO_ACTION["forwards"],
+    MINOS_NAME_TO_ACTION["turnLeft"]: HABITAT_NAME_TO_ACTION["turnLeft"],
+    MINOS_NAME_TO_ACTION["turnRight"]: HABITAT_NAME_TO_ACTION["turnRight"],
+    MINOS_NAME_TO_ACTION["stop"]: HABITAT_NAME_TO_ACTION["stop"],
 }
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
@@ -52,6 +54,7 @@ def get_default_mp3d_v1_config(split: str = "val"):
 # TODO(maksymets): Get rid of conversion methods from MINOS coordinate
 # systems to Habitat Sim, as soon relative
 # transformation for whole space will be implemented.
+
 
 def minos_angle_to_sim_quaternion(angle_xy: float) -> List[float]:
     r"""
@@ -82,8 +85,12 @@ def minos_direction_to_sim_quaternion(orientation: List[float]) -> List[float]:
     assert len(orientation) == 3
     orientation = minos_to_sim(orientation)
     return minos_angle_to_sim_quaternion(
-        -1 * np.arcsin(orientation[0] / np.sqrt(
-            orientation[0] ** 2 + orientation[2] ** 2)) + 3 * np.pi / 2)
+        -1
+        * np.arcsin(
+            orientation[0] / np.sqrt(orientation[0] ** 2 + orientation[2] ** 2)
+        )
+        + 3 * np.pi / 2
+    )
 
 
 def minos_to_sim(position: List[float]) -> List[float]:
@@ -109,43 +116,51 @@ class Matterport3dDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Any) -> bool:
-        return os.path.exists(config.data_path) and os.path.exists(
-            config.data_split_h5_path.format(
-                split=config.split)) and os.path.exists(config.scenes_path)
+        return (
+            os.path.exists(config.data_path)
+            and os.path.exists(
+                config.data_split_h5_path.format(split=config.split)
+            )
+            and os.path.exists(config.scenes_path)
+        )
 
     @staticmethod
-    def _create_goal(episode_id: str,
-                     episode_data: Dict[str, Any]) -> Optional[NavigationGoal]:
+    def _create_goal(
+        episode_id: str, episode_data: Dict[str, Any]
+    ) -> Optional[NavigationGoal]:
         if episode_data["bbox"][0]["type"] != "object":
-            logger.info("Unknown navigational goal for episode id: {}.".format(
-                episode_id))
+            logger.info(
+                "Unknown navigational goal for episode id: {}.".format(
+                    episode_id
+                )
+            )
             return None
 
-        assert len(episode_data[
-                       "bbox"]) > 0, \
-            "No goals found for episode id: {}.".format(episode_id)
+        assert (
+            len(episode_data["bbox"]) > 0
+        ), "No goals found for episode id: {}.".format(episode_id)
 
         goal = ObjectGoal(
-            position=minos_to_sim(
-                swap_yz(episode_data["target"]["centroid"])),
+            position=minos_to_sim(swap_yz(episode_data["target"]["centroid"])),
             room_id=episode_data["target"]["room_id"],
             object_id=episode_data["target"]["obj_id"],
-            object_name=episode_data["bbox"][0]["name"]
+            object_name=episode_data["bbox"][0]["name"],
         )
 
         return goal
 
     @staticmethod
-    def _create_shortest_path(episode_id, path_points, path_actions) \
-            -> List[ShortestPathPoint]:
+    def _create_shortest_path(
+        episode_id, path_points, path_actions
+    ) -> List[ShortestPathPoint]:
         shortest_path = []
-        for step_id, ds_point in enumerate(
-                path_actions):
+        for step_id, ds_point in enumerate(path_actions):
             point = ShortestPathPoint(
                 position=minos_to_sim(path_points[step_id]["position"]),
                 rotation=minos_direction_to_sim_quaternion(
-                    path_points[step_id]["orientation"]),
-                action=ACTION_MAPPING[int(path_actions[step_id])]
+                    path_points[step_id]["orientation"]
+                ),
+                action=ACTION_MAPPING[int(path_actions[step_id])],
             )
             shortest_path.append(point)
             if point.action == HABITAT_NAME_TO_ACTION["stop"]:
@@ -154,7 +169,8 @@ class Matterport3dDatasetV1(Dataset):
         if not len(path_points) == len(shortest_path):
             logger.info(
                 "Number of positions and actions doesn't match for episode"
-                " {}.".format(episode_id))
+                " {}.".format(episode_id)
+            )
         return shortest_path
 
     @staticmethod
@@ -162,52 +178,63 @@ class Matterport3dDatasetV1(Dataset):
         question = QuestionData(
             question_text=episode_data["question"],
             answer_text=episode_data["answer"],
-            question_type=episode_data["type"]
+            question_type=episode_data["type"],
         )
         return question
 
     @staticmethod
-    def _create_episode(episode_id, episode_data, path_points, path_actions,
-                        scene_id, scenes_path) -> Optional[EQAEpisode]:
+    def _create_episode(
+        episode_id,
+        episode_data,
+        path_points,
+        path_actions,
+        scene_id,
+        scenes_path,
+    ) -> Optional[EQAEpisode]:
         episode_id = str(episode_id)
-        question = Matterport3dDatasetV1._create_question(
-            episode_data["qn"])
+        question = Matterport3dDatasetV1._create_question(episode_data["qn"])
 
         if question.question_type not in ALLOWED_QUESTION_TYPES:
             return None
 
-        goal = Matterport3dDatasetV1._create_goal(episode_id,
-                                                  episode_data["qn"])
+        goal = Matterport3dDatasetV1._create_goal(
+            episode_id, episode_data["qn"]
+        )
         if goal:
             goals = [goal]
         shortest_paths = [
             Matterport3dDatasetV1._create_shortest_path(
                 episode_id=episode_id,
                 path_points=path_points,
-                path_actions=path_actions)]
+                path_actions=path_actions,
+            )
+        ]
 
         house = episode_data["qn"]["house"]
         level = episode_data["qn"]["level"]
-        assert scene_id == "{}.{}".format(house,
-                                          level), \
-            "Scene mismatch between metadata and environment index " \
-            "for episode {}.".format(
-                episode_id)
+        assert scene_id == "{}.{}".format(house, level), (
+            "Scene mismatch between metadata and environment index "
+            "for episode {}.".format(episode_id)
+        )
         scene_id = "{scenes_path}/{house}/{house}.glb".format(
-            scenes_path=scenes_path,
-            house=house)
-        start_position = minos_to_sim(
-            episode_data["start"]["position"])
+            scenes_path=scenes_path, house=house
+        )
+        start_position = minos_to_sim(episode_data["start"]["position"])
         start_rotation = minos_angle_to_sim_quaternion(
-            episode_data["start"]["angle"])
+            episode_data["start"]["angle"]
+        )
         start_room = episode_data["start"]["room"]
 
-        episode = EQAEpisode(episode_id=episode_id, question=question,
-                             goals=goals,
-                             scene_id=scene_id, start_position=start_position,
-                             start_rotation=start_rotation,
-                             start_room=start_room,
-                             shortest_paths=shortest_paths)
+        episode = EQAEpisode(
+            episode_id=episode_id,
+            question=question,
+            goals=goals,
+            scene_id=scene_id,
+            start_position=start_position,
+            start_rotation=start_rotation,
+            start_room=start_room,
+            shortest_paths=shortest_paths,
+        )
         return episode
 
     def __init__(self, config=None):
@@ -219,9 +246,10 @@ class Matterport3dDatasetV1(Dataset):
         with gzip.open(config.data_path, "rt") as f:
             dataset = json.load(f)
 
-        with h5py.File(config.data_split_h5_path.format(split=config.split),
-                       "r") as questions_h5:
-            shortest_path_actions = questions_h5['action_labels']
+        with h5py.File(
+            config.data_split_h5_path.format(split=config.split), "r"
+        ) as questions_h5:
+            shortest_path_actions = questions_h5["action_labels"]
 
             env_ids_key = "{}_env_idx".format(config.split)
             meta_data_key = "{}_meta_data".format(config.split)
@@ -232,11 +260,13 @@ class Matterport3dDatasetV1(Dataset):
                 inner_scene_id = dataset[env_ids_key][episode_id]
                 scene_id = dataset["envs"][inner_scene_id]
                 episode = self._create_episode(
-                    episode_id=episode_id, episode_data=episode_data,
+                    episode_id=episode_id,
+                    episode_data=episode_data,
                     path_points=dataset[path_data_key][episode_id],
                     path_actions=shortest_path_actions[episode_id],
                     scene_id=scene_id,
-                    scenes_path=config.scenes_path)
+                    scenes_path=config.scenes_path,
+                )
 
                 if episode:
                     self.episodes.append(episode)

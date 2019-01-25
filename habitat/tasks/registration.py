@@ -14,7 +14,9 @@ class TaskRegistry(Registry):
         if id_task in self.specs:
             raise ValueError(
                 "Cannot re-register task specification with id: {}".format(
-                    id_task))
+                    id_task
+                )
+            )
         self.specs[id_task] = TaskSpec(id_task, **kwargs)
 
 

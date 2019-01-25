@@ -2,11 +2,13 @@ from typing import Dict, Optional
 
 import numpy as np
 from gym import spaces
-from habitat.core.simulator import Sensor, SensorTypes, SensorSuite, \
-    Observations
-from habitat.tasks.nav.nav_task import (
-    NavigationEpisode, NavigationTask
+from habitat.core.simulator import (
+    Sensor,
+    SensorTypes,
+    SensorSuite,
+    Observations,
 )
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
 class QuestionData:
@@ -16,8 +18,12 @@ class QuestionData:
     answer_text: Optional[str]
     question_type: Optional[str]
 
-    def __init__(self, question_text: str, question_type: str,
-                 answer_text: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        question_text: str,
+        question_type: str,
+        answer_text: Optional[str] = None,
+    ) -> None:
         self.question_text = question_text
         self.answer_text = answer_text
         self.question_type = question_type
@@ -45,14 +51,17 @@ class EQAEpisode(NavigationEpisode):
 
 class QuestionSensor(Sensor):
     def __init__(self, **kwargs):
-        self.uuid = 'question'
+        self.uuid = "question"
         self.sensor_type = SensorTypes.TEXT
         # TODO (maksymets) extend gym observation space for text and metadata
         self.observation_space = spaces.Discrete(0)
 
-    def _get_observation(self, observations: Dict[str, Observations],
-                         episode: EQAEpisode,
-                         **kwargs):
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: EQAEpisode,
+        **kwargs
+    ):
         return episode.question.question_text
 
     def get_observation(self, **kwargs):
@@ -61,14 +70,17 @@ class QuestionSensor(Sensor):
 
 class AnswerSensor(Sensor):
     def __init__(self, **kwargs):
-        self.uuid = 'answer'
+        self.uuid = "answer"
         self.sensor_type = SensorTypes.TEXT
         # TODO (maksymets) extend gym observation space for text and metadata
         self.observation_space = spaces.Discrete(0)
 
-    def _get_observation(self, observations: Dict[str, Observations],
-                         episode: EQAEpisode,
-                         **kwargs):
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: EQAEpisode,
+        **kwargs
+    ):
         return episode.question.answer_text
 
     def get_observation(self, **kwargs):
@@ -81,16 +93,21 @@ class RewardSensor(Sensor):
     REWARD_MAX = -100
 
     def __init__(self, **kwargs):
-        self.uuid = 'reward'
+        self.uuid = "reward"
         self.sensor_type = SensorTypes.TENSOR
-        self.observation_space = spaces.Box(low=RewardSensor.REWARD_MIN,
-                                            high=RewardSensor.REWARD_MAX,
-                                            shape=(1,),
-                                            dtype=np.float)
+        self.observation_space = spaces.Box(
+            low=RewardSensor.REWARD_MIN,
+            high=RewardSensor.REWARD_MAX,
+            shape=(1,),
+            dtype=np.float,
+        )
 
-    def _get_observation(self, observations: Dict[str, Observations],
-                         episode: NavigationEpisode,
-                         **kwargs):
+    def _get_observation(
+        self,
+        observations: Dict[str, Observations],
+        episode: NavigationEpisode,
+        **kwargs
+    ):
         return [0]
 
     def get_observation(self, **kwargs):
@@ -103,4 +120,5 @@ class EQATask(NavigationTask):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._sensor_suite = SensorSuite(
-            [QuestionSensor(), AnswerSensor(), RewardSensor()])
+            [QuestionSensor(), AnswerSensor(), RewardSensor()]
+        )

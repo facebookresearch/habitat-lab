@@ -18,8 +18,9 @@ class EmbodiedTask:
         self._dataset = dataset
         self._sensor_suite = sensor_suite
 
-    def overwrite_sim_config(self, sim_config: Any,
-                             episode: Type[Episode]) -> Any:
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
         r"""Returns updated simulator config with episode data such as a start
         state.
         """

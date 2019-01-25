@@ -2,9 +2,17 @@ import logging
 
 
 class HabitatLogger(logging.Logger):
-    def __init__(self, name, level, filename=None, filemode='a', stream=None,
-                 format=None, dateformat=None,
-                 style='%'):
+    def __init__(
+        self,
+        name,
+        level,
+        filename=None,
+        filemode="a",
+        stream=None,
+        format=None,
+        dateformat=None,
+        style="%",
+    ):
         super().__init__(name, level)
         if filename is not None:
             handler = logging.FileHandler(filename, filemode)
@@ -15,5 +23,6 @@ class HabitatLogger(logging.Logger):
         super().addHandler(handler)
 
 
-logger = HabitatLogger(name='habitat', level=logging.INFO,
-                       format="%(asctime)-15s %(message)s")
+logger = HabitatLogger(
+    name="habitat", level=logging.INFO, format="%(asctime)-15s %(message)s"
+)

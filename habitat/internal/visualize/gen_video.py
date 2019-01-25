@@ -9,7 +9,7 @@ import tqdm
 def images_to_video(images, output_dir, video_name):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    video_name = video_name.replace(" ", "_").replace("\n", "_") + '.mp4'
+    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
     writer = imageio.get_writer(os.path.join(output_dir, video_name), fps=10)
     for im in tqdm.tqdm(images):
         writer.append_data(im)
@@ -23,15 +23,16 @@ def write_text(img, text):
     font_color = (255, 255, 255)
     lineType = 2
     x, y = bottom_left
-    for line in reversed(text.split('\n')):
+    for line in reversed(text.split("\n")):
         cv2.putText(img, line, (x, y), font, font_scale, font_color, lineType)
         _, h = cv2.getTextSize(line, font, font_scale, lineType)[0]
 
         y -= int(1.3 * h)
 
 
-def make_video(video_text, rgb_frames, depth, labels,
-               output_dir="data/videos/test"):
+def make_video(
+    video_text, rgb_frames, depth, labels, output_dir="data/videos/test"
+):
     assert len(rgb_frames) > 0
     size = rgb_frames[0].shape[0]
 
@@ -51,11 +52,12 @@ def make_video(video_text, rgb_frames, depth, labels,
         for i in range(scaled.shape[0]):  # lines in a
             for j in range(scaled.shape[1]):
                 scaled[i, j] = label[
-                    i * h // scaled.shape[0], j * w // scaled.shape[1]]
+                    i * h // scaled.shape[0], j * w // scaled.shape[1]
+                ]
 
-        big_frame[:, 0: size] = rgb  # sim.img
-        big_frame[:, size: 2 * size] = np.dstack([d] * 3)
-        big_frame[:, 2 * size: 3 * size] = lut[scaled]
+        big_frame[:, 0:size] = rgb  # sim.img
+        big_frame[:, size : 2 * size] = np.dstack([d] * 3)
+        big_frame[:, 2 * size : 3 * size] = lut[scaled]
         write_text(big_frame, video_text)
         frames.append(big_frame.copy())
 

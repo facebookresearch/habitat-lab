@@ -5,9 +5,7 @@ from typing import Any, List
 
 from habitat.core.dataset import Dataset
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
-from habitat.tasks.nav.nav_task import (
-    ObjectGoal, ShortestPathPoint
-)
+from habitat.tasks.nav.nav_task import ObjectGoal, ShortestPathPoint
 from yacs.config import CfgNode
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
@@ -37,8 +35,9 @@ class Matterport3dDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Any) -> bool:
-        return os.path.exists(config.data_path.format(split=config.split)) \
-               and os.path.exists(config.scenes_path)
+        return os.path.exists(
+            config.data_path.format(split=config.split)
+        ) and os.path.exists(config.scenes_path)
 
     def __init__(self, config: Any = None) -> None:
         self.episodes = []

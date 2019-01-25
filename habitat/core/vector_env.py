@@ -9,16 +9,20 @@ from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from yacs.config import CfgNode
 
-STEP_COMMAND = 'step'
-RESET_COMMAND = 'reset'
-RENDER_COMMAND = 'render'
-CLOSE_COMMAND = 'close'
-OBSERVATION_SPACE_COMMAND = 'observation_space'
-ACTION_SPACE_COMMAND = 'action_space'
+STEP_COMMAND = "step"
+RESET_COMMAND = "reset"
+RENDER_COMMAND = "render"
+CLOSE_COMMAND = "close"
+OBSERVATION_SPACE_COMMAND = "observation_space"
+ACTION_SPACE_COMMAND = "action_space"
 
 
-def _worker_env(worker_connection: Connection, env_fn: Callable,
-                env_fn_args: Tuple[Any], auto_reset_done: bool) -> None:
+def _worker_env(
+    worker_connection: Connection,
+    env_fn: Callable,
+    env_fn_args: Tuple[Any],
+    auto_reset_done: bool,
+) -> None:
     r"""Process worker for creating and interacting with the environment.
     """
     env = env_fn(*env_fn_args)
@@ -52,8 +56,10 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
 
                 worker_connection.send(env.render(*data[0], **data[1]))
 
-            elif command == OBSERVATION_SPACE_COMMAND or \
-                    command == ACTION_SPACE_COMMAND:
+            elif (
+                command == OBSERVATION_SPACE_COMMAND
+                or command == ACTION_SPACE_COMMAND
+            ):
 
                 worker_connection.send(getattr(env, command))
 
@@ -64,13 +70,14 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
 
         worker_connection.close()
     except KeyboardInterrupt:
-        logger.info('Worker KeyboardInterrupt')
+        logger.info("Worker KeyboardInterrupt")
     finally:
         env.close()
 
 
-def _make_env_fn(config: CfgNode, dataset: habitat.Dataset,
-                 rank: int = 0) -> Env:
+def _make_env_fn(
+    config: CfgNode, dataset: habitat.Dataset, rank: int = 0
+) -> Env:
     r"""Constructor for default habitat Env.
     :param config: configurations for environment
     :param dataset: dataset for environment
@@ -83,11 +90,13 @@ def _make_env_fn(config: CfgNode, dataset: habitat.Dataset,
 
 
 class VectorEnv:
-    def __init__(self,
-                 make_env_fn: Callable[..., Env] = _make_env_fn,
-                 env_fn_args: Tuple[Tuple] = None,
-                 auto_reset_done: bool = True,
-                 multiprocessing_start_method: str = 'forkserver') -> None:
+    def __init__(
+        self,
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+        env_fn_args: Tuple[Tuple] = None,
+        auto_reset_done: bool = True,
+        multiprocessing_start_method: str = "forkserver",
+    ) -> None:
         r"""
         :param make_env_fn: Function which creates a single environment.
         :param env_fn_args: tuple of tuple of args to pass to the make_env_fn.
@@ -108,27 +117,34 @@ class VectorEnv:
         """
         self._is_waiting = False
 
-        assert env_fn_args is not None and len(env_fn_args) > 0, \
-            "number of environments to be created should be greater than 0"
+        assert (
+            env_fn_args is not None and len(env_fn_args) > 0
+        ), "number of environments to be created should be greater than 0"
 
         self._num_envs = len(env_fn_args)
 
-        assert multiprocessing_start_method in self._valid_start_methods, \
-            ("multiprocessing_start_method must be one of {}. Got '{}'"
-             ).format(self._valid_start_methods, multiprocessing_start_method)
+        assert multiprocessing_start_method in self._valid_start_methods, (
+            "multiprocessing_start_method must be one of {}. Got '{}'"
+        ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         mp_ctx = mp.get_context(multiprocessing_start_method)
 
-        self._parent_connections, self._worker_connections = \
-            zip(*[mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)])
+        self._parent_connections, self._worker_connections = zip(
+            *[mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+        )
         self._processes: List[mp.Process] = []
         for worker_conn, parent_conn, env_args in zip(
-                self._worker_connections, self._parent_connections,
-                env_fn_args):
+            self._worker_connections, self._parent_connections, env_fn_args
+        ):
             ps = mp_ctx.Process(
                 target=_worker_env,
-                args=(worker_conn, make_env_fn, env_args,
-                      self._auto_reset_done))
+                args=(
+                    worker_conn,
+                    make_env_fn,
+                    env_args,
+                    self._auto_reset_done,
+                ),
+            )
             self._processes.append(ps)
             ps.daemon = True
             ps.start()
@@ -136,12 +152,14 @@ class VectorEnv:
 
         for parent_conn in self._parent_connections:
             parent_conn.send((OBSERVATION_SPACE_COMMAND, None))
-        self.observation_spaces = [parent_conn.recv() for parent_conn
-                                   in self._parent_connections]
+        self.observation_spaces = [
+            parent_conn.recv() for parent_conn in self._parent_connections
+        ]
         for parent_conn in self._parent_connections:
             parent_conn.send((ACTION_SPACE_COMMAND, None))
-        self.action_spaces = [parent_conn.recv() for parent_conn
-                              in self._parent_connections]
+        self.action_spaces = [
+            parent_conn.recv() for parent_conn in self._parent_connections
+        ]
 
     def reset(self):
         r"""Reset all the _num_envs in the vector
@@ -213,27 +231,28 @@ class VectorEnv:
         for process in self._processes:
             process.join()
 
-    def render(self, mode: str = 'human', *args, **kwargs) \
-            -> Union[np.ndarray, None]:
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None]:
         r"""Render observations from all environments in a tiled image.
         """
         for parent_conn in self._parent_connections:
-            parent_conn.send((RENDER_COMMAND, (args, {
-                'mode': 'rgb_array',
-                **kwargs
-            })))
+            parent_conn.send(
+                (RENDER_COMMAND, (args, {"mode": "rgb_array", **kwargs}))
+            )
         images = [pipe.recv() for pipe in self._parent_connections]
         tile = tile_images(images)
-        if mode == 'human':
+        if mode == "human":
             import cv2
-            cv2.imshow('vecenv', tile[:, :, ::-1])
+
+            cv2.imshow("vecenv", tile[:, :, ::-1])
             cv2.waitKey(1)
             return None
-        elif mode == 'rgb_array':
+        elif mode == "rgb_array":
             return tile
         else:
             raise NotImplementedError
 
     @property
     def _valid_start_methods(self) -> Set[str]:
-        return {'forkserver', 'spawn', 'fork'}
+        return {"forkserver", "spawn", "fork"}

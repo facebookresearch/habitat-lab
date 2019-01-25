@@ -1,6 +1,7 @@
 def load(name):
     import pkg_resources
-    entry_point = pkg_resources.EntryPoint.parse('x={}'.format(name))
+
+    entry_point = pkg_resources.EntryPoint.parse("x={}".format(name))
     result = entry_point.resolve()
     return result
 
@@ -14,7 +15,7 @@ class Spec:
         return load(self._entry_point)(**kwargs)
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self.id)
+        return "{}({})".format(self.__class__.__name__, self.id)
 
 
 class Registry:
@@ -32,7 +33,8 @@ class Registry:
         spec = self.specs.get(id, None)
         if spec is None:
             raise KeyError(
-                "No registered specification with id: {}".format(id))
+                "No registered specification with id: {}".format(id)
+            )
         return spec
 
     def register(self, id, **kwargs):

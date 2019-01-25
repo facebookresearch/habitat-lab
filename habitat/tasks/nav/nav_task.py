@@ -2,14 +2,15 @@ from typing import Any, Dict, List, Optional, Type
 
 import habitat
 from habitat.core.dataset import Episode, Dataset
-from habitat.core.simulator import (
-    Observations, Simulator, ShortestPathPoint)
+from habitat.core.simulator import Observations, Simulator, ShortestPathPoint
 
 
 def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
     sim_config.scene = episode.scene_id
-    if episode.start_position is not None and \
-            episode.start_rotation is not None:
+    if (
+        episode.start_position is not None
+        and episode.start_rotation is not None
+    ):
         # yacs config attributes cannot be None
         sim_config.start_position = episode.start_position
         sim_config.start_rotation = episode.start_rotation
@@ -22,8 +23,9 @@ class NavigationGoal:
     position: List[float]
     radius: Optional[float]
 
-    def __init__(self, position: List[float], radius: Optional[float] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self, position: List[float], radius: Optional[float] = None, **kwargs
+    ) -> None:
         self.position = position
         self.radius = radius
 
@@ -38,13 +40,15 @@ class ObjectGoal(NavigationGoal):
     room_id: Optional[str]
     room_name: Optional[str]
 
-    def __init__(self,
-                 object_id: str,
-                 room_id: Optional[str] = None,
-                 object_name: Optional[str] = None,
-                 object_category: Optional[str] = None,
-                 room_name: Optional[str] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        object_id: str,
+        room_id: Optional[str] = None,
+        object_name: Optional[str] = None,
+        object_category: Optional[str] = None,
+        room_name: Optional[str] = None,
+        **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         self.object_id = object_id
         self.object_name = object_name
@@ -59,8 +63,9 @@ class RoomGoal(NavigationGoal):
     room_id: str
     room_name: Optional[str]
 
-    def __init__(self, room_id: str, room_name: Optional[str] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self, room_id: str, room_name: Optional[str] = None, **kwargs
+    ) -> None:
         super().__init__(**kwargs)  # type: ignore
         self.room_id = room_id
         self.room_name = room_name
@@ -75,11 +80,13 @@ class NavigationEpisode(Episode):
     start_room: Optional[str]
     shortest_paths: Optional[List[ShortestPathPoint]]
 
-    def __init__(self,
-                 goals: List[NavigationGoal],
-                 start_room: Optional[str] = None,
-                 shortest_paths: Optional[List[ShortestPathPoint]] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        goals: List[NavigationGoal],
+        start_room: Optional[str] = None,
+        shortest_paths: Optional[List[ShortestPathPoint]] = None,
+        **kwargs
+    ) -> None:
         r"""
         :param episode_id: id of episode in the dataset, usually episode number
         :param scene_id: id of scene in scene dataset
@@ -98,10 +105,12 @@ class NavigationEpisode(Episode):
 
 
 class NavigationTask(habitat.EmbodiedTask):
-    def __init__(self, config: Any, sim: Simulator,
-                 dataset: Optional[Dataset] = None) -> None:
+    def __init__(
+        self, config: Any, sim: Simulator, dataset: Optional[Dataset] = None
+    ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
 
-    def overwrite_sim_config(self, sim_config: Any,
-                             episode: Type[Episode]) -> Any:
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
         return merge_sim_episode_config(sim_config, episode)

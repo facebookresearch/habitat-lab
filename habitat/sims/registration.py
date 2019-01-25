@@ -12,8 +12,10 @@ class SimSpec(Spec):
 class SimRegistry(Registry):
     def register(self, id_sim, **kwargs):
         if id_sim in self.specs:
-            raise ValueError("Cannot re-register sim"
-                             " specification with id: {}".format(id_sim))
+            raise ValueError(
+                "Cannot re-register sim"
+                " specification with id: {}".format(id_sim)
+            )
         self.specs[id_sim] = SimSpec(id_sim, **kwargs)
 
 

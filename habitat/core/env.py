@@ -16,31 +16,40 @@ class Env:
     def __init__(self, config: Any, dataset: Optional[Dataset] = None) -> None:
         self._config: Any = config
         self._dataset: Optional[Dataset] = dataset
-        self._episodes: List[Type[Episode]] = self._dataset.episodes if \
-            self._dataset else []
+        self._episodes: List[
+            Type[Episode]
+        ] = self._dataset.episodes if self._dataset else []
         self._current_episode_index: Optional[int] = None
-        self._sim = make_sim(id_sim=self._config.sim,
-                             config=self._config)
-        self._task: EmbodiedTask = \
-            make_task(config.task_name, config=self._config, sim=self._sim,
-                      dataset=dataset)
-        self.observation_space = SpaceDict({
-            **self._sim.sensor_suite.observation_spaces.spaces,
-            **self._task.sensor_suite.observation_spaces.spaces
-        })
+        self._sim = make_sim(id_sim=self._config.sim, config=self._config)
+        self._task: EmbodiedTask = make_task(
+            config.task_name,
+            config=self._config,
+            sim=self._sim,
+            dataset=dataset,
+        )
+        self.observation_space = SpaceDict(
+            {
+                **self._sim.sensor_suite.observation_spaces.spaces,
+                **self._task.sensor_suite.observation_spaces.spaces,
+            }
+        )
         self.action_space = self._sim.action_space
         self._max_episode_seconds = getattr(
-            self._config, "max_episode_seconds", None)
+            self._config, "max_episode_seconds", None
+        )
         self._max_episode_steps = getattr(
-            self._config, "max_episode_steps", None)
+            self._config, "max_episode_steps", None
+        )
         self._elapsed_steps = 0
         self._episode_start_time: Optional[float] = None
         self._episode_over = False
 
     @property
     def current_episode(self) -> Type[Episode]:
-        assert self._current_episode_index is not None and \
-               self._current_episode_index < len(self._episodes)
+        assert (
+            self._current_episode_index is not None
+            and self._current_episode_index < len(self._episodes)
+        )
         return self._episodes[self._current_episode_index]
 
     @property
@@ -49,8 +58,9 @@ class Env:
 
     @episodes.setter
     def episodes(self, episodes: List[Type[Episode]]):
-        assert len(
-            episodes) > 0, "Environment doesn't accept empty episodes list."
+        assert (
+            len(episodes) > 0
+        ), "Environment doesn't accept empty episodes list."
         self._episodes = episodes
 
     @property
@@ -71,16 +81,21 @@ class Env:
 
     @property
     def _elapsed_seconds(self) -> float:
-        assert self._episode_start_time, \
-            "Elapsed seconds requested before episode was started."
+        assert (
+            self._episode_start_time
+        ), "Elapsed seconds requested before episode was started."
         return time.time() - self._episode_start_time
 
     def _past_limit(self) -> bool:
-        if self._max_episode_steps is not None and self._max_episode_steps <= \
-                self._elapsed_steps:
+        if (
+            self._max_episode_steps is not None
+            and self._max_episode_steps <= self._elapsed_steps
+        ):
             return True
-        elif self._max_episode_seconds is not None and \
-                self._max_episode_seconds <= self._elapsed_seconds:
+        elif (
+            self._max_episode_seconds is not None
+            and self._max_episode_seconds <= self._elapsed_seconds
+        ):
             return True
         return False
 
@@ -95,16 +110,20 @@ class Env:
         if self._current_episode_index is None:
             self._current_episode_index = 0
         else:
-            self._current_episode_index = \
-                (self._current_episode_index + 1) % len(self._episodes)
+            self._current_episode_index = (
+                self._current_episode_index + 1
+            ) % len(self._episodes)
         self.reconfigure(self._config)
 
     def reset(self) -> Observations:
         self._reset_stats()
 
         observations = self._sim.reset()
-        observations.update(self.task.sensor_suite.get_observations(
-            observations=observations, episode=self.current_episode))
+        observations.update(
+            self.task.sensor_suite.get_observations(
+                observations=observations, episode=self.current_episode
+            )
+        )
 
         return observations
 
@@ -115,16 +134,19 @@ class Env:
             self._episode_over = True
 
     def step(self, action: int) -> Observations:
-        assert self._episode_start_time is not None, "Cannot call step " \
-                                                     "before calling reset"
-        assert self._episode_over is False, "Episode over, call reset " \
-                                            "before calling step"
+        assert self._episode_start_time is not None, (
+            "Cannot call step " "before calling reset"
+        )
+        assert self._episode_over is False, (
+            "Episode over, call reset " "before calling step"
+        )
 
         observations = self._sim.step(action)
         observations.update(
             self._task.sensor_suite.get_observations(
-                observations=observations,
-                episode=self.current_episode))
+                observations=observations, episode=self.current_episode
+            )
+        )
 
         self._update_step_stats()
 
@@ -136,8 +158,9 @@ class Env:
     def reconfigure(self, config) -> None:
         # TODO (maksymets) switch to self._config.sim when it will
         #  be separated
-        self._config = self._task.overwrite_sim_config(self._config,
-                                                       self.current_episode)
+        self._config = self._task.overwrite_sim_config(
+            self._config, self.current_episode
+        )
         self._sim.reconfigure(config)
 
     def geodesic_distance(self, position_a, position_b) -> float:
@@ -149,9 +172,9 @@ class Env:
     def sample_navigable_point(self):
         return self._sim.sample_navigable_point()
 
-    def action_space_shortest_path(self, source: AgentState,
-                                   targets: List[AgentState]) \
-            -> List[ShortestPathPoint]:
+    def action_space_shortest_path(
+        self, source: AgentState, targets: List[AgentState]
+    ) -> List[ShortestPathPoint]:
         r"""
         :param source: source agent state for shortest path calculation
         :param targets: target agent state(s) for shortest path calculation
@@ -161,10 +184,11 @@ class Env:
         identical agent state is returned. Returns an empty list in case none
         of the targets are reachable from the source.
         """
-        return self._sim.action_space_shortest_paths(source, targets,
-                                                     agent_id=0)
+        return self._sim.action_space_shortest_paths(
+            source, targets, agent_id=0
+        )
 
-    def render(self, mode='human', close=False) -> np.ndarray:
+    def render(self, mode="human", close=False) -> np.ndarray:
         return self._sim.render(mode, close)
 
     def close(self) -> None:
@@ -204,16 +228,19 @@ class RLEnv(gym.Env):
         raise NotImplementedError
 
     def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
-        assert self._env.episode_start_time is not None, "Cannot call step " \
-                                                         "before calling reset"
-        assert self._env.episode_over is False, "Episode over,  call reset " \
-                                                "before calling step"
+        assert self._env.episode_start_time is not None, (
+            "Cannot call step " "before calling reset"
+        )
+        assert self._env.episode_over is False, (
+            "Episode over,  call reset " "before calling step"
+        )
 
         observations = self._env.sim.step(action)
         observations.update(
             self._env.task.sensor_suite.get_observations(
-                observations=observations,
-                episode=self._env.current_episode))
+                observations=observations, episode=self._env.current_episode
+            )
+        )
 
         self._env._update_step_stats()
 
@@ -226,7 +253,7 @@ class RLEnv(gym.Env):
     def seed(self, seed: int = None) -> None:
         self._env.seed(seed)
 
-    def render(self, mode='human', close=False) -> np.ndarray:
+    def render(self, mode="human", close=False) -> np.ndarray:
         return self._env.render(mode, close)
 
     def close(self) -> None:

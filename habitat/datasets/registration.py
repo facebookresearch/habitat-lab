@@ -13,7 +13,9 @@ class DatasetRegistry(Registry):
         if id_dataset in self.specs:
             raise ValueError(
                 "Cannot re-register dataset  specification with id: {}".format(
-                    id_dataset))
+                    id_dataset
+                )
+            )
         self.specs[id_dataset] = DatasetSpec(id_dataset, **kwargs)
 
 

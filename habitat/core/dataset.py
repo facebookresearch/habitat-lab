@@ -12,9 +12,13 @@ class Episode:
     start_position: List[float]
     start_rotation: List[float]
 
-    def __init__(self, episode_id: str, scene_id: str,
-                 start_position: List[float],
-                 start_rotation: List[float]) -> None:
+    def __init__(
+        self,
+        episode_id: str,
+        scene_id: str,
+        start_position: List[float],
+        start_rotation: List[float],
+    ) -> None:
         r"""
         :param episode_id: id of episode in the dataset, usually episode number
         :param scene_id: id of scene in scene dataset
@@ -32,7 +36,7 @@ class Episode:
         return str(self.__dict__)
 
 
-T = TypeVar('T', Episode, Type[Episode])
+T = TypeVar("T", Episode, Type[Episode])
 
 
 class Dataset(Generic[T]):
@@ -52,8 +56,9 @@ class Dataset(Generic[T]):
         r"""Return list of episodes for particular scene_id.
         :param scene_id: id of scene in scene dataset
         """
-        return list(filter(lambda x: x.scene_id == scene_id,
-                           iter(self.episodes)))
+        return list(
+            filter(lambda x: x.scene_id == scene_id, iter(self.episodes))
+        )
 
     def get_episodes(self, indexes: List[int]) -> List[T]:
         r"""Return list of episodes with particular episode indexes.
@@ -68,8 +73,10 @@ class Dataset(Generic[T]):
 
         # TODO(maksymets): remove call of internal DatasetFloatJSONEncoder
         #  used for float precision decrease
-        from habitat.internal.data.datasets.utils \
-            import DatasetFloatJSONEncoder
+        from habitat.internal.data.datasets.utils import (
+            DatasetFloatJSONEncoder,
+        )
+
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 

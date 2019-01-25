@@ -4,6 +4,7 @@ from yacs.config import CfgNode
 # TODO(akadian): Consider having a hierarchical config if the task definition
 # gets more complex, similar to minos-eqa.
 
+
 def sim_nav_cfg():
     config = CfgNode()
     # Environment
@@ -12,16 +13,18 @@ def sim_nav_cfg():
     # Simulator
     config.height = 480
     config.width = 640
-    config.hfov = '90'  # horizontal field of view in degrees
+    config.hfov = "90"  # horizontal field of view in degrees
     config.seed = 100
-    config.scene = 'data/esp/test/test.glb'
-    config.sensors = ['HabitatSimRGBSensor',
-                      'HabitatSimDepthSensor',
-                      'HabitatSimSemanticSensor']
+    config.scene = "data/esp/test/test.glb"
+    config.sensors = [
+        "HabitatSimRGBSensor",
+        "HabitatSimDepthSensor",
+        "HabitatSimSemanticSensor",
+    ]
     config.sensor_position = [0, 0.05, 0]
     config.forward_step_size = 0.25  # in metres
     config.turn_angle = 10  # in degrees
-    config.sim = 'Sim-v0'
+    config.sim = "Sim-v0"
     config.default_agent_id = 0
     config.gpu_device_id = 0
 
