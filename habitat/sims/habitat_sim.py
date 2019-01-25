@@ -138,12 +138,8 @@ SIM_ACTION_TO_NAME = {
     3: SimActions.STOP.value,
 }
 
-SIM_NAME_TO_ACTION = {
-    SimActions.FORWARD.value: 0,
-    SimActions.LEFT.value: 1,
-    SimActions.RIGHT.value: 2,
-    SimActions.STOP.value: 3,
-}
+
+SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
 
 
 class HabitatSim(habitat.Simulator):
