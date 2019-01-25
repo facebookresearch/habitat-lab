@@ -1,13 +1,19 @@
 from typing import Any, Dict, List, Optional, Type
 
 import habitat
-import numpy as np
-from gym import spaces
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import (
-    Observation, SensorSuite, Sensor,
-    SensorTypes, Simulator, ShortestPathPoint
-)
+    Observations, Simulator, ShortestPathPoint)
+
+
+def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
+    sim_config.scene = episode.scene_id
+    if episode.start_position is not None and \
+            episode.start_rotation is not None:
+        # yacs config attributes cannot be None
+        sim_config.start_position = episode.start_position
+        sim_config.start_rotation = episode.start_rotation
+    return sim_config
 
 
 class NavigationGoal:
@@ -91,53 +97,11 @@ class NavigationEpisode(Episode):
         self.start_room = start_room
 
 
-# TODO (maksymets) Move reward to measurement class
-class RewardSensor(Sensor):
-    REWARD_MIN = -100
-    REWARD_MAX = -100
-
-    def __init__(self, **kwargs):
-        self.uuid = 'reward'
-        self.sensor_type = SensorTypes.TENSOR
-        self.observation_space = spaces.Box(low=RewardSensor.REWARD_MIN,
-                                            high=RewardSensor.REWARD_MAX,
-                                            shape=(1,),
-                                            dtype=np.float)
-
-    def _get_observation(self, observations: Dict[str, Observation],
-                         episode: NavigationEpisode,
-                         **kwargs):
-        return [0]
-
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
-
-
 class NavigationTask(habitat.EmbodiedTask):
-    REWARD_ID = "reward"
-    DONE_ID = "done"
-
-    _config: Any
-    _sim: Simulator
-    _dataset: Optional[Dataset]
-    _sensor_suite: SensorSuite
-
     def __init__(self, config: Any, sim: Simulator,
                  dataset: Optional[Dataset] = None) -> None:
-        self._config = config
-        self._sim = sim
-        self._dataset = dataset
-        self._sensor_suite = SensorSuite([RewardSensor()])
-
-    def get_reward(self, observations: Dict[str, Observation]) -> Any:
-        return observations[NavigationTask.REWARD_ID]
+        super().__init__(config=config, sim=sim, dataset=dataset)
 
     def overwrite_sim_config(self, sim_config: Any,
                              episode: Type[Episode]) -> Any:
-        sim_config.scene = episode.scene_id
-        if episode.start_position is not None and \
-                episode.start_rotation is not None:
-            # yacs config attributes cannot be None
-            sim_config.start_position = episode.start_position
-            sim_config.start_rotation = episode.start_rotation
-        return sim_config
+        return merge_sim_episode_config(sim_config, episode)

@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import numpy as np
 from gym import spaces
 from habitat.core.simulator import Sensor, SensorTypes, SensorSuite, \
-    Observation
+    Observations
 from habitat.tasks.nav.nav_task import (
     NavigationEpisode, NavigationTask
 )
@@ -50,7 +50,7 @@ class QuestionSensor(Sensor):
         # TODO (maksymets) extend gym observation space for text and metadata
         self.observation_space = spaces.Discrete(0)
 
-    def _get_observation(self, observations: Dict[str, Observation],
+    def _get_observation(self, observations: Dict[str, Observations],
                          episode: EQAEpisode,
                          **kwargs):
         return episode.question.question_text
@@ -66,7 +66,7 @@ class AnswerSensor(Sensor):
         # TODO (maksymets) extend gym observation space for text and metadata
         self.observation_space = spaces.Discrete(0)
 
-    def _get_observation(self, observations: Dict[str, Observation],
+    def _get_observation(self, observations: Dict[str, Observations],
                          episode: EQAEpisode,
                          **kwargs):
         return episode.question.answer_text
@@ -88,7 +88,7 @@ class RewardSensor(Sensor):
                                             shape=(1,),
                                             dtype=np.float)
 
-    def _get_observation(self, observations: Dict[str, Observation],
+    def _get_observation(self, observations: Dict[str, Observations],
                          episode: NavigationEpisode,
                          **kwargs):
         return [0]

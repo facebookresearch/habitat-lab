@@ -14,10 +14,11 @@ else:
     from habitat.core.embodied_task import EmbodiedTask
     from habitat.core.simulator import SensorTypes, Sensor, SensorSuite, \
         Simulator
-    from habitat.core.env import Env
+    from habitat.core.env import Env, RLEnv
     from habitat.core.vector_env import VectorEnv
     from habitat.core.logging import logger
     from habitat.datasets import make_dataset
 
-    __all__ = ['Dataset', 'EmbodiedTask', 'Env', 'Simulator', 'Sensor',
-               'SensorTypes', 'SensorSuite', 'VectorEnv', 'make_dataset']
+    __all__ = ['Dataset', 'EmbodiedTask', 'Env', 'RLEnv',
+               'Simulator', 'Sensor', 'logger', 'SensorTypes',
+               'SensorSuite', 'VectorEnv', 'make_dataset']

@@ -8,10 +8,9 @@ from gym import spaces
 import habitat
 from habitat import SensorSuite
 from habitat.core.logging import logger
-from habitat.core.simulator import (
-    AgentState, ShortestPathPoint, RGBSensor,
-    DepthSensor, SemanticSensor
-)
+from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
+from habitat.core.simulator import AgentState, ShortestPathPoint
+
 
 UUID_RGBSENSOR = 'rgb'
 # Sim provides RGB as RGBD structure with 4 dimensions
@@ -40,7 +39,7 @@ class HabitatSimRGBSensor(RGBSensor):
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
         super().__init__(config)
 
-    def get_observation_space(self, config):
+    def _get_observation_space(self, config):
         return spaces.Box(low=0, high=255,
                           shape=(config.height,
                                  config.width,
@@ -80,7 +79,7 @@ class HabitatSimDepthSensor(DepthSensor):
 
         super().__init__(config)
 
-    def get_observation_space(self, config):
+    def _get_observation_space(self, config):
         return spaces.Box(low=self.min_depth_value,
                           high=self.max_depth_value,
                           shape=(config.height, config.width),
@@ -106,7 +105,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
         super().__init__(config)
 
-    def get_observation_space(self, config):
+    def _get_observation_space(self, config):
         return spaces.Box(low=np.iinfo(np.uint32).min,
                           high=np.iinfo(np.uint32).max,
                           shape=(config.height, config.width),
@@ -214,24 +213,22 @@ class HabitatSim(habitat.Simulator):
                                  self.config.default_agent_id)
             sim_obs = self._sim.get_sensor_observations()
         self.episode_active = True
-        return self.sensor_suite.get_observations(sim_obs), False
+        return self.sensor_suite.get_observations(sim_obs)
 
     def step(self, action):
         assert self.episode_active, \
             "episode is not active, environment not RESET or " \
             "STOP action called previously"
         sim_action = self._controls[action]
-        done = False
         if sim_action == SimActions.STOP.value:
             # TODO(akadian): Handle reward calculation on stop once pointnav
             # is integrated
-            done = True
             self.episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
             sim_obs = self._sim.step(sim_action)
         observations = self.sensor_suite.get_observations(sim_obs)
-        return observations, done
+        return observations
 
     def render(self):
         return self._sim.render()

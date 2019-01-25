@@ -36,6 +36,20 @@ class DatasetTest(habitat.Dataset):
         return self._episodes
 
 
+class DummyRLEnv(habitat.RLEnv):
+    def get_reward(self, observations):
+        return 0.
+
+    def get_done(self, observations):
+        done = False
+        if self._env.episode_over:
+            done = True
+        return done
+
+    def get_info(self, observations):
+        return {}
+
+
 def _load_test_data():
     assert os.path.exists(MULTIHOUSE_RESOURCES_PATH), \
         "Multihouse test data missing, " \
@@ -73,22 +87,14 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method)
     envs.reset()
-    dones = [False] * num_envs
     non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
                         if v != SimActions.STOP.value]
 
     for i in range(2 * MULTIHOUSE_MAX_STEPS):
-        observations, rewards, dones, infos = envs.step(
-            np.random.choice(non_stop_actions, num_envs))
+        observations = envs.step(np.random.choice(non_stop_actions, num_envs))
         assert len(observations) == num_envs
-        assert len(rewards) == num_envs
-        assert len(dones) == num_envs
-        assert len(infos) == num_envs
-        if (i + 1) % MULTIHOUSE_MAX_STEPS == 0:
-            assert all(dones), "dones should be true after max_episode_steps"
 
     envs.close()
-    assert all(dones), "dones should be true after max_episode_steps"
 
 
 def test_vectorized_envs_forkserver():
@@ -132,17 +138,97 @@ def test_env():
         goals=[])]
 
     env.reset()
-    done = False
     non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
                         if v != SimActions.STOP.value]
     for _ in range(config.max_episode_steps):
-        obs, rew, done, info = env.step(np.random.choice(non_stop_actions))
+        observation = env.step(np.random.choice(non_stop_actions))
 
     # check for steps limit on environment
-    assert done is True, "done should be true after max_episode_steps"
+    assert env._episode_over is True, "episode should be over after " \
+                                      "max_episode_steps"
+
+    observation = env.reset()
+
+    observation = env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
+    # check for STOP action
+    assert env._episode_over is True, "episode should be over after STOP " \
+                                      "action"
+
+    env.close()
+
+
+def make_rl_env(config, dataset, rank: int = 0):
+    r"""Constructor for default habitat Env.
+    :param config: configurations for environment
+    :param dataset: dataset for environment
+    :param rank: rank for setting seeds for environment
+    :return: constructed habitat Env
+    """
+    env = DummyRLEnv(config=config, dataset=dataset)
+    env.seed(config.seed + rank)
+    return env
+
+
+def test_rl_vectorized_envs():
+    configs, datasets = _load_test_data()
+
+    # TODO(akadian): get rid of the below code
+    configs = configs[:1]
+    datasets = datasets[:1]
+
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    envs = habitat.VectorEnv(
+        make_env_fn=make_rl_env,
+        env_fn_args=env_fn_args)
+    envs.reset()
+    non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
+                        if v != SimActions.STOP.value]
+
+    for i in range(2 * MULTIHOUSE_MAX_STEPS):
+        outputs = envs.step(np.random.choice(non_stop_actions, num_envs))
+        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+        assert len(observations) == num_envs
+        assert len(rewards) == num_envs
+        assert len(dones) == num_envs
+        assert len(infos) == num_envs
+        if (i + 1) % MULTIHOUSE_MAX_STEPS == 0:
+            assert all(dones), "dones should be true after max_episode steps"
+
+    envs.close()
+
+
+def test_rl_env():
+    config = sim_nav_cfg()
+    config.task_name = 'Nav-v0'
+    config.sensors = ['HabitatSimRGBSensor',
+                      'HabitatSimDepthSensor',
+                      'HabitatSimSemanticSensor']
+    assert os.path.exists(config.scene), \
+        "ESP test data missing, please download and place it in data/esp/test/"
+    env = DummyRLEnv(config=config, dataset=None)
+    env.episodes = [NavigationEpisode(
+        episode_id="0",
+        scene_id=config.scene,
+        start_position=[03.00611, 0.072447, -2.67867],
+        start_rotation=[0, 0.163276, 0, 0.98658],
+        goals=[])]
+
+    done = False
+    observation = env.reset()
+
+    non_stop_actions = [k for k, v in SIM_ACTION_TO_NAME.items()
+                        if v != SimActions.STOP.value]
+    for _ in range(config.max_episode_steps):
+        observation, reward, done, info =\
+            env.step(np.random.choice(non_stop_actions))
+
+    # check for steps limit on environment
+    assert done is True, "episodes should be over after max_episode_steps"
 
     env.reset()
-    obs, rew, done, info = env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
+    observation, reward, done, info = env.step(SIM_NAME_TO_ACTION[
+        SimActions.STOP.value])
     assert done is True, "done should be true after STOP action"
 
     env.close()

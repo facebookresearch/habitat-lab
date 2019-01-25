@@ -36,9 +36,8 @@ def test_sim():
                                          "at step {}".format(i)
         assert sim.action_space.contains(action)
 
-        obs, done = sim.step(action)
+        obs = sim.step(action)
         if i == len(test_trajectory['actions']) - 1:  # STOP action
-            assert done is True
             assert sim.episode_active is False
 
     sim.close()

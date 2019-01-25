@@ -4,7 +4,8 @@ from typing import List, Tuple, Callable, Union, Any, Set
 
 import habitat
 import numpy as np
-from habitat.core.env import Env, Observation
+from habitat.core.env import Env, Observations
+from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from yacs.config import CfgNode
 
@@ -22,28 +23,48 @@ def _worker_env(worker_connection: Connection, env_fn: Callable,
     """
     env = env_fn(*env_fn_args)
     try:
-        while True:
-            command, data = worker_connection.recv()
+        command, data = worker_connection.recv()
+        while command != CLOSE_COMMAND:
             if command == STEP_COMMAND:
-                observation, reward, done, info = env.step(data)
-                if auto_reset_done and done:
-                    observation = env.reset()
-                worker_connection.send((observation, reward, done, info))
+
+                # different step methods for habitat.RLEnv and habitat.Env
+                if isinstance(env, habitat.RLEnv):
+                    # habitat.RLEnv
+                    observations, reward, done, info = env.step(data)
+                    if auto_reset_done and done:
+                        observations = env.reset()
+                    worker_connection.send((observations, reward, done, info))
+                elif isinstance(env, habitat.Env):
+                    # habitat.Env
+                    observations = env.step(data)
+                    if auto_reset_done and env.episode_over:
+                        observations = env.reset()
+                    worker_connection.send(observations)
+                else:
+                    raise NotImplementedError
+
             elif command == RESET_COMMAND:
-                observation = env.reset()
-                worker_connection.send(observation)
+
+                observations = env.reset()
+                worker_connection.send(observations)
+
             elif command == RENDER_COMMAND:
+
                 worker_connection.send(env.render(*data[0], **data[1]))
-            elif command == CLOSE_COMMAND:
-                worker_connection.close()
-                break
+
             elif command == OBSERVATION_SPACE_COMMAND or \
                     command == ACTION_SPACE_COMMAND:
+
                 worker_connection.send(getattr(env, command))
+
             else:
                 raise NotImplementedError
+
+            command, data = worker_connection.recv()
+
+        worker_connection.close()
     except KeyboardInterrupt:
-        print('VectorEnv worker KeyboardInterrupt')
+        logger.info('Worker KeyboardInterrupt')
     finally:
         env.close()
 
@@ -122,9 +143,9 @@ class VectorEnv:
         self.action_spaces = [parent_conn.recv() for parent_conn
                               in self._parent_connections]
 
-    def reset(self) -> List[Tuple[Observation, Observation, bool, None]]:
+    def reset(self):
         r"""Reset all the _num_envs in the vector
-        :return: [observation, reward, done, info] * (_num_envs)
+        :return: [observations] * (_num_envs)
         """
         self._is_waiting = True
         for parent_conn in self._parent_connections:
@@ -135,11 +156,10 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def reset_at(self, index_env: int) -> \
-            List[Tuple[Observation, Observation, bool, None]]:
+    def reset_at(self, index_env: int):
         r"""Reset only the index_env environmet in the vector
         :param index_env: index of the environment to be reset
-        :return: [observation, reward, done, info]
+        :return: [observations]
         """
         self._is_waiting = True
         self._parent_connections[index_env].send((RESET_COMMAND, None))
@@ -147,12 +167,11 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action: int) -> \
-            List[Tuple[Observation, Observation, bool, None]]:
+    def step_at(self, index_env: int, action: int):
         r"""
         :param index_env: index of the environment to be stepped into
         :param action: action to be taken
-        :return: [observation, reward, done, info] for the indexed environment
+        :return: [observations] for the indexed environment
         """
         self._is_waiting = True
         self._parent_connections[index_env].send((STEP_COMMAND, action))
@@ -167,24 +186,20 @@ class VectorEnv:
         for parent_conn, action in zip(self._parent_connections, actions):
             parent_conn.send((STEP_COMMAND, action))
 
-    def wait_step(self) -> Tuple[List[Observation], List[Observation],
-                                 List[bool], List[None]]:
+    def wait_step(self) -> List[Observations]:
         r"""Wait until all the asynchronized environments have synchronized.
         """
-        results = []
+        observations = []
         for parent_conn in self._parent_connections:
-            results.append(parent_conn.recv())
+            observations.append(parent_conn.recv())
         self._is_waiting = False
-        observations, rewards, dones, infos = zip(*results)
-        return list(observations), list(rewards), list(dones), list(infos)
+        return observations
 
-    def step(self, actions: List[int]) -> Tuple[List[Observation],
-                                                List[Observation],
-                                                List[bool], List[None]]:
+    def step(self, actions: List[int]):
         r"""
         :param actions: list of size _num_envs containing action to be taken
                         in each environment.
-        :return: [observation, reward, done, info] * _num_envs
+        :return: [observations] * _num_envs
         """
         self.async_step(actions)
         return self.wait_step()

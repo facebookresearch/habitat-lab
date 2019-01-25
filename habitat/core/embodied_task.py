@@ -1,7 +1,7 @@
-from typing import Any, Dict, Type, Optional
+from typing import Any, Type, Optional
 
 from habitat.core.dataset import Episode, Dataset
-from habitat.core.simulator import Observation, SensorSuite, Simulator
+from habitat.core.simulator import SensorSuite, Simulator
 
 
 class EmbodiedTask:
@@ -12,11 +12,11 @@ class EmbodiedTask:
     _dataset: Optional[Dataset]
     _sensor_suite: SensorSuite
 
-    def __init__(self):
-        self._config = None
-        self._sim = None
-        self._dataset = None
-        self._sensor_suite = SensorSuite([])
+    def __init__(self, config, sim, dataset, sensor_suite=SensorSuite([])):
+        self._config = config
+        self._sim = sim
+        self._dataset = dataset
+        self._sensor_suite = sensor_suite
 
     def overwrite_sim_config(self, sim_config: Any,
                              episode: Type[Episode]) -> Any:
@@ -28,6 +28,3 @@ class EmbodiedTask:
     @property
     def sensor_suite(self) -> SensorSuite:
         return self._sensor_suite
-
-    def get_reward(self, observations: Dict[str, Observation]) -> Any:
-        raise NotImplementedError

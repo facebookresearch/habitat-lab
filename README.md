@@ -38,7 +38,7 @@ from habitat.tasks.nav.nav_task import NavigationEpisode
 config = sim_nav_cfg()
 config.scene = 'data/esp/test/test.glb'
 config.task_name = 'Nav-v0'
-env = habitat.Env(config=config)
+env = habitat.RLEnv(config=config)
 env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
                                   start_position=None, start_rotation=None, 
                                   goals=[])]

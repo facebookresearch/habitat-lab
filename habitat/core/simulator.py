@@ -38,18 +38,18 @@ class Sensor:
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.uuid: str = self.get_uuid(*args, **kwargs)
-        self.sensor_type: SensorTypes = self.get_sensor_type(*args, **kwargs)
-        self.observation_space: Space = self.get_observation_space(*args,
-                                                                   **kwargs)
+        self.uuid: str = self._get_uuid(*args, **kwargs)
+        self.sensor_type: SensorTypes = self._get_sensor_type(*args, **kwargs)
+        self.observation_space: Space = self._get_observation_space(*args,
+                                                                    **kwargs)
 
-    def get_uuid(self, *args: Any, **kwargs: Any) -> str:
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         raise NotImplementedError
 
-    def get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         raise NotImplementedError
 
-    def get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
@@ -58,8 +58,8 @@ class Sensor:
         raise NotImplementedError
 
 
-class Observation(dict):
-    r"""Represents an observation provided by a sensor.
+class Observations(dict):
+    r"""Dict containing sensor observations
 
     Thin wrapper of OrderedDict with potentially some utility functions
     to obtain Tensors)
@@ -75,13 +75,13 @@ class RGBSensor(Sensor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args, **kwargs):
         return 'rgb'
 
-    def get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.COLOR
 
-    def get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args, **kwargs):
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
@@ -92,13 +92,13 @@ class DepthSensor(Sensor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args, **kwargs):
         return 'depth'
 
-    def get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.DEPTH
 
-    def get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args, **kwargs):
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
@@ -109,13 +109,13 @@ class SemanticSensor(Sensor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args, **kwargs):
         return 'semantic'
 
-    def get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.SEMANTIC
 
-    def get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args, **kwargs):
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
@@ -145,11 +145,11 @@ class SensorSuite:
     def get(self, uuid: str) -> Sensor:
         return self.sensors[uuid]
 
-    def get_observations(self, *args: Any, **kwargs: Any) -> Observation:
+    def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
         r"""
         :return: collect data from all sensors packaged into Observation
         """
-        return Observation(self.sensors, *args, **kwargs)
+        return Observations(self.sensors, *args, **kwargs)
 
 
 class AgentState:
@@ -175,10 +175,10 @@ class ShortestPathPoint:
 
 
 class Simulator:
-    def reset(self) -> Observation:
+    def reset(self) -> Observations:
         raise NotImplementedError
 
-    def step(self, action: int) -> Tuple[Observation, bool]:
+    def step(self, action: int) -> Observations:
         raise NotImplementedError
 
     def seed(self, seed: int) -> None:
