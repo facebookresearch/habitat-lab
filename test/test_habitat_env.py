@@ -130,6 +130,7 @@ def test_vectorized_envs_fork():
     p = mp_ctx.Process(target=_fork_test_target, args=(configs, datasets))
     p.start()
     p.join()
+    assert p.exitcode == 0
 
 
 def test_env():
