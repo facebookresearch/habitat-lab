@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Any, Dict, Optional
 
-import esp as habitat_sim
+import habitat_sim
 import numpy as np
 from gym import spaces
 

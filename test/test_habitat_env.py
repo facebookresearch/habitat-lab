@@ -159,16 +159,16 @@ def test_env():
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
     for _ in range(config.max_episode_steps):
-        observation = env.step(np.random.choice(non_stop_actions))
+        env.step(np.random.choice(non_stop_actions))
 
     # check for steps limit on environment
     assert env._episode_over is True, (
         "episode should be over after " "max_episode_steps"
     )
 
-    observation = env.reset()
+    env.reset()
 
-    observation = env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
+    env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
     # check for STOP action
     assert env._episode_over is True, (
         "episode should be over after STOP " "action"
