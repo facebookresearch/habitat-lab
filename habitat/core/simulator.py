@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
@@ -36,13 +36,14 @@ class Sensor:
         observation_space: gym.Space object corresponding to observation of
         sensor
     """
+    uuid: str
+    sensor_type: SensorTypes
+    observation_space: Space
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.uuid: str = self._get_uuid(*args, **kwargs)
-        self.sensor_type: SensorTypes = self._get_sensor_type(*args, **kwargs)
-        self.observation_space: Space = self._get_observation_space(
-            *args, **kwargs
-        )
+        self.uuid = self._get_uuid(*args, **kwargs)
+        self.sensor_type = self._get_sensor_type(*args, **kwargs)
+        self.observation_space = self._get_observation_space(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         raise NotImplementedError

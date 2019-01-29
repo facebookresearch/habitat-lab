@@ -37,6 +37,8 @@ class HabitatSimRGBSensor(RGBSensor):
     """RGB sensor for habitat_sim
     """
 
+    sim_sensor_type: habitat_sim.SensorType
+
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
         super().__init__(config)
@@ -58,6 +60,8 @@ class HabitatSimRGBSensor(RGBSensor):
 class HabitatSimDepthSensor(DepthSensor):
     """Depth sensor for habitat_sim
     """
+
+    sim_sensor_type: habitat_sim.SensorType
 
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
@@ -106,6 +110,8 @@ class HabitatSimSemanticSensor(SemanticSensor):
     """Semantic sensor for habitat_sim
     """
 
+    sim_sensor_type: habitat_sim.SensorType
+
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
         super().__init__(config)
@@ -149,12 +155,12 @@ class HabitatSim(habitat.Simulator):
         sim_sensors = []
         for s in config.sensors:
             is_valid_sensor = hasattr(
-                habitat.sims.habitat_sim, s
-            )  # type: ignore
+                habitat.sims.habitat_sim, s  # type: ignore
+            )
             assert is_valid_sensor, "invalid sensor type {}".format(s)
             sim_sensors.append(
-                getattr(habitat.sims.habitat_sim, s)(config)
-            )  # type: ignore
+                getattr(habitat.sims.habitat_sim, s)(config)  # type: ignore
+            )
 
         self.sensor_suite = SensorSuite(sim_sensors)
 
@@ -193,9 +199,11 @@ class HabitatSim(habitat.Simulator):
             )
             sim_sensor_config.parameters["hfov"] = config.hfov
             sim_sensor_config.position = config.sensor_position
+            # TODO(maksymets): Add configure method to Sensor API to avoid
+            # accessing child attributes through parent interface
             sim_sensor_config.sensor_type = (
-                sensor.sim_sensor_type
-            )  # type: ignore
+                sensor.sim_sensor_type  # type: ignore
+            )
             sensor_specifications.append(sim_sensor_config)
 
         agent_config.sensor_specifications = sensor_specifications

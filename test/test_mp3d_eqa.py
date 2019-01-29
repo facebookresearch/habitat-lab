@@ -106,12 +106,11 @@ def test_mp3d_eqa_sim():
 
     assert env
     env.reset()
-    done = False
-    while not done:
+    while not env.episode_over:
         action = env.action_space.sample()
         assert env.action_space.contains(action)
-        obs, rew, done, info = env.step(action)
-        if not done:
+        obs = env.step(action)
+        if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
                 eqa_config.height,
@@ -200,9 +199,9 @@ def test_mp3d_eqa_sim_correspondence():
                 atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
             ), "Agent's path diverges from the shortest path."
 
-            obs, rew, done, info = env.step(point.action)
+            obs = env.step(point.action)
 
-            if not done:
+            if not env.episode_over:
                 rgb_mean += obs["rgb"][:, :, :3].mean()
                 if IS_GENERATING_VIDEO:
                     # Cut RGB channels from RGBA and fill empty frames of
