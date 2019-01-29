@@ -8,6 +8,7 @@ train agents on existing embodied tasks as well as add new simulators,
 tasks. It also aims to make benchmarking of agents across datasets, 
 environments and tasks easier. 
 
+<img src='docs/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
 
 ### Setup
 
@@ -47,11 +48,9 @@ observations = env.reset()
 
 for i in range(100):
     # randomly move around inside the environment
-
     observations = env.step(env.action_space.sample())
 
     # observations by default contains rgb, semantic and depth modalities
-
     if env.episode_over:
         observations = env.reset()     
 ```
