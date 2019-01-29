@@ -38,16 +38,22 @@ from habitat.tasks.nav.nav_task import NavigationEpisode
 config = sim_nav_cfg()
 config.scene = 'data/esp/test/test.glb'
 config.task_name = 'Nav-v0'
-env = habitat.RLEnv(config=config)
+env = habitat.Env(config=config)
 env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
                                   start_position=None, start_rotation=None, 
                                   goals=[])]
 
-observation, reward, done, info = env.reset()
+observations = env.reset()
 
-# randomly move around inside the environment
-while not done:
-    observation, reward, done, info = env.step(env.action_space.sample())
+for i in range(100):
+    # randomly move around inside the environment
+
+    observations = env.step(env.action_space.sample())
+
+    # observations by default contains rgb, semantic and depth modalities
+
+    if env.episode_over:
+        observations = env.reset()     
 ```
 
 ### Data

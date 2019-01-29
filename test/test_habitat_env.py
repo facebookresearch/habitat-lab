@@ -163,7 +163,7 @@ def test_env():
         env.step(np.random.choice(non_stop_actions))
 
     # check for steps limit on environment
-    assert env._episode_over is True, (
+    assert env.episode_over is True, (
         "episode should be over after " "max_episode_steps"
     )
 
@@ -171,7 +171,7 @@ def test_env():
 
     env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
     # check for STOP action
-    assert env._episode_over is True, (
+    assert env.episode_over is True, (
         "episode should be over after STOP " "action"
     )
 
