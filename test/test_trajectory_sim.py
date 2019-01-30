@@ -8,15 +8,15 @@ from habitat.sims import make_sim
 
 def init_sim():
     config = sim_nav_cfg()
-    config.scene = os.environ.get("ESP_TEST_SCENE", "data/esp/test/test.glb")
+    config.scene = "data/habitat-sim/test/test.glb"
     assert os.path.exists(
         config.scene
-    ), "Please download ESP test data to data/esp/test/."
+    ), "Please download Habitat-Sim test data to data/habitat-sim/test/."
     return make_sim("Sim-v0", config=config)
 
 
 def test_sim():
-    with open("test/data/esp_trajectory_data.json", "r") as f:
+    with open("test/data/habitat-sim_trajectory_data.json", "r") as f:
         test_trajectory = json.load(f)
     sim = init_sim()
 
@@ -27,7 +27,8 @@ def test_sim():
     )
 
     for i, action in enumerate(test_trajectory["actions"]):
-        if i > 0:  # ignore first step as esp does not update agent until then
+        if i > 0:  # ignore first step as habitat-sim doesn't update
+            # agent until then
             state = sim.agent_state()
             assert (
                 np.allclose(

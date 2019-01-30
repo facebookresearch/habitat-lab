@@ -26,7 +26,7 @@ pip install -e .
 export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
 ```
 
-4. Download test data from [dropbox share](https://www.dropbox.com/sh/dl/h02865ucoh3ix07/AABkVrHCfPI0BAmSeHCytrsya) and place it in folder:`data/esp/test/`
+4. Download test data from [dropbox share](https://www.dropbox.com/sh/dl/h02865ucoh3ix07/AABkVrHCfPI0BAmSeHCytrsya) and place it in folder:`data/habitat-sim/test/`
 
 
 ### Example
@@ -37,7 +37,7 @@ from habitat.config.experiments.nav import sim_nav_cfg
 from habitat.tasks.nav.nav_task import NavigationEpisode
 
 config = sim_nav_cfg()
-config.scene = 'data/esp/test/test.glb'
+config.scene = 'data/habitat-sim/test/test.glb'
 config.task_name = 'Nav-v0'
 env = habitat.Env(config=config)
 env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
@@ -56,7 +56,12 @@ for i in range(100):
 ```
 
 ### Data
+To set up data folder with symlink to relevant data for devfair you can run:
 
-**Matterport3D**
+ `bash habitat/internal/data/download_data_fair.sh`
 
-1. PointNav val split: `/private/home/akadian/habitat-api-data/mp3d-splits`
+**Episode datasets**
+
+The episode datasets will be loaded to S3, while you can access it here: 
+1. PointNav splits for Gibson and Matterport3D: `/private/home/maksymets/data/habitat_datasets/pointnav`
+2. EQA splits for Matterport3D: `/private/home/maksymets/data/habitat_datasets/eqa`

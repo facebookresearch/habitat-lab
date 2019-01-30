@@ -15,7 +15,7 @@ def sim_nav_cfg():
     config.width = 640
     config.hfov = "90"  # horizontal field of view in degrees
     config.seed = 100
-    config.scene = "data/esp/test/test.glb"
+    config.scene = "data/habitat-sim/test/test.glb"
     config.sensors = [
         "HabitatSimRGBSensor",
         "HabitatSimDepthSensor",

@@ -13,8 +13,10 @@ from habitat.sims.habitat_sim import (
 from habitat.tasks.nav.nav_task import NavigationEpisode
 from habitat.core.simulator import AgentState
 
-MULTIHOUSE_RESOURCES_PATH = "data/esp/multihouse-resources"
-MULTIHOUSE_INITIALIZATIONS_PATH = "data/esp/multihouse_initializations.json"
+MULTIHOUSE_RESOURCES_PATH = "data/habitat-sim/multihouse-resources"
+MULTIHOUSE_INITIALIZATIONS_PATH = (
+    "data/habitat-sim/multihouse_initializations.json"
+)
 MULTIHOUSE_MAX_STEPS = 10
 
 
@@ -141,9 +143,10 @@ def test_env():
         "HabitatSimDepthSensor",
         "HabitatSimSemanticSensor",
     ]
-    assert os.path.exists(
-        config.scene
-    ), "ESP test data missing, please download and place it in data/esp/test/"
+    assert os.path.exists(config.scene), (
+        "Habitat-Sim test data missing, please download and place it in "
+        "data/habitat-sim/test/"
+    )
     env = habitat.Env(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -226,9 +229,10 @@ def test_rl_env():
         "HabitatSimDepthSensor",
         "HabitatSimSemanticSensor",
     ]
-    assert os.path.exists(
-        config.scene
-    ), "ESP test data missing, please download and place it in data/esp/test/"
+    assert os.path.exists(config.scene), (
+        "Habitat-Sim test data missing, please download and place it in "
+        "data/habitat-sim/test/"
+    )
     env = DummyRLEnv(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -266,9 +270,10 @@ def test_rl_env():
 def test_action_space_shortest_path():
     config = sim_nav_cfg()
     config.task_name = "Nav-v0"
-    assert os.path.exists(
-        config.scene
-    ), "ESP test data missing, please download and place it in data/esp/test/"
+    assert os.path.exists(config.scene), (
+        "Habitat-Sim test data missing, please download and place it in "
+        "data/habitat-sim/test/"
+    )
     env = habitat.Env(config=config, dataset=None)
 
     # action space shortest path
