@@ -126,6 +126,23 @@ def test_vectorized_envs_fork():
     assert p.exitcode == 0
 
 
+def test_threaded_vectorized_env():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
+    envs.reset()
+    non_stop_actions = [
+        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+    ]
+
+    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+        observations = envs.step(np.random.choice(non_stop_actions, num_envs))
+        assert len(observations) == num_envs
+
+    envs.close()
+
+
 def test_env():
     config = cfg(CFG_TEST)
     assert os.path.exists(config.SIMULATOR.SCENE), (
@@ -180,10 +197,6 @@ def make_rl_env(config, dataset, rank: int = 0):
 
 def test_rl_vectorized_envs():
     configs, datasets = _load_test_data()
-
-    # TODO(akadian): get rid of the below code
-    configs = configs[:1]
-    datasets = datasets[:1]
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))

@@ -1,6 +1,8 @@
 import multiprocessing as mp
 from multiprocessing.connection import Connection
-from typing import List, Tuple, Callable, Union, Any, Set
+from threading import Thread
+from queue import Queue
+from typing import List, Tuple, Callable, Union, Any, Set, Optional
 
 import habitat
 import numpy as np
@@ -15,64 +17,6 @@ RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
-
-
-def _worker_env(
-    worker_connection: Connection,
-    env_fn: Callable,
-    env_fn_args: Tuple[Any],
-    auto_reset_done: bool,
-) -> None:
-    r"""Process worker for creating and interacting with the environment.
-    """
-    env = env_fn(*env_fn_args)
-    try:
-        command, data = worker_connection.recv()
-        while command != CLOSE_COMMAND:
-            if command == STEP_COMMAND:
-
-                # different step methods for habitat.RLEnv and habitat.Env
-                if isinstance(env, habitat.RLEnv):
-                    # habitat.RLEnv
-                    observations, reward, done, info = env.step(data)
-                    if auto_reset_done and done:
-                        observations = env.reset()
-                    worker_connection.send((observations, reward, done, info))
-                elif isinstance(env, habitat.Env):
-                    # habitat.Env
-                    observations = env.step(data)
-                    if auto_reset_done and env.episode_over:
-                        observations = env.reset()
-                    worker_connection.send(observations)
-                else:
-                    raise NotImplementedError
-
-            elif command == RESET_COMMAND:
-
-                observations = env.reset()
-                worker_connection.send(observations)
-
-            elif command == RENDER_COMMAND:
-
-                worker_connection.send(env.render(*data[0], **data[1]))
-
-            elif (
-                command == OBSERVATION_SPACE_COMMAND
-                or command == ACTION_SPACE_COMMAND
-            ):
-
-                worker_connection.send(getattr(env, command))
-
-            else:
-                raise NotImplementedError
-
-            command, data = worker_connection.recv()
-
-        worker_connection.close()
-    except KeyboardInterrupt:
-        logger.info("Worker KeyboardInterrupt")
-    finally:
-        env.close()
 
 
 def _make_env_fn(
@@ -127,50 +71,130 @@ class VectorEnv:
             "multiprocessing_start_method must be one of {}. Got '{}'"
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
-        mp_ctx = mp.get_context(multiprocessing_start_method)
-
-        self._parent_connections, self._worker_connections = zip(
-            *[mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+        self.mp_ctx = mp.get_context(multiprocessing_start_method)
+        self._workers = None
+        self._connection_read_fns, self._connection_write_fns = self._spawn_workers(
+            make_env_fn, env_fn_args
         )
-        self._processes: List[mp.Process] = []
+
+        for write_fn in self._connection_write_fns:
+            write_fn((OBSERVATION_SPACE_COMMAND, None))
+        self.observation_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+        for write_fn in self._connection_write_fns:
+            write_fn((ACTION_SPACE_COMMAND, None))
+        self.action_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+
+    @staticmethod
+    def _worker_env(
+        connection_read_fn: Callable,
+        connection_write_fn: Callable,
+        env_fn: Callable,
+        env_fn_args: Tuple[Any],
+        auto_reset_done: bool,
+        child_pipe: Optional[Connection] = None,
+        parent_pipe: Optional[Connection] = None,
+    ) -> None:
+        r"""Process worker for creating and interacting with the environment.
+        """
+        env = env_fn(*env_fn_args)
+        if parent_pipe is not None:
+            parent_pipe.close()
+        try:
+            command, data = connection_read_fn()
+            while command != CLOSE_COMMAND:
+                if command == STEP_COMMAND:
+
+                    # different step methods for habitat.RLEnv and habitat.Env
+                    if isinstance(env, habitat.RLEnv):
+                        # habitat.RLEnv
+                        observations, reward, done, info = env.step(data)
+                        if auto_reset_done and done:
+                            observations = env.reset()
+                        connection_write_fn((observations, reward, done, info))
+                    elif isinstance(env, habitat.Env):
+                        # habitat.Env
+                        observations = env.step(data)
+                        if auto_reset_done and env.episode_over:
+                            observations = env.reset()
+                        connection_write_fn(observations)
+                    else:
+                        raise NotImplementedError
+
+                elif command == RESET_COMMAND:
+
+                    observations = env.reset()
+                    connection_write_fn(observations)
+
+                elif command == RENDER_COMMAND:
+
+                    connection_write_fn(env.render(*data[0], **data[1]))
+
+                elif (
+                    command == OBSERVATION_SPACE_COMMAND
+                    or command == ACTION_SPACE_COMMAND
+                ):
+
+                    connection_write_fn(getattr(env, command))
+
+                else:
+                    raise NotImplementedError
+
+                command, data = connection_read_fn()
+
+            if child_pipe is not None:
+                child_pipe.close()
+        except KeyboardInterrupt:
+            logger.info("Worker KeyboardInterrupt")
+        finally:
+            env.close()
+
+    def _spawn_workers(
+        self,
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+        env_fn_args: Tuple[Tuple] = None,
+    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+        parent_connections, worker_connections = zip(
+            *[self.mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+        )
+        self._workers: List[mp.Process] = []
         for worker_conn, parent_conn, env_args in zip(
-            self._worker_connections, self._parent_connections, env_fn_args
+            worker_connections, parent_connections, env_fn_args
         ):
-            ps = mp_ctx.Process(
-                target=_worker_env,
+            ps = self.mp_ctx.Process(
+                target=self._worker_env,
                 args=(
-                    worker_conn,
+                    worker_conn.recv,
+                    worker_conn.send,
                     make_env_fn,
                     env_args,
                     self._auto_reset_done,
+                    worker_conn,
+                    parent_conn,
                 ),
             )
-            self._processes.append(ps)
+            self._workers.append(ps)
             ps.daemon = True
             ps.start()
             worker_conn.close()
-
-        for parent_conn in self._parent_connections:
-            parent_conn.send((OBSERVATION_SPACE_COMMAND, None))
-        self.observation_spaces = [
-            parent_conn.recv() for parent_conn in self._parent_connections
-        ]
-        for parent_conn in self._parent_connections:
-            parent_conn.send((ACTION_SPACE_COMMAND, None))
-        self.action_spaces = [
-            parent_conn.recv() for parent_conn in self._parent_connections
-        ]
+        return (
+            [p.recv for p in parent_connections],
+            [p.send for p in parent_connections],
+        )
 
     def reset(self):
         r"""Reset all the _num_envs in the vector
         :return: [observations] * (_num_envs)
         """
         self._is_waiting = True
-        for parent_conn in self._parent_connections:
-            parent_conn.send((RESET_COMMAND, None))
+        for write_fn in self._connection_write_fns:
+            write_fn((RESET_COMMAND, None))
         results = []
-        for parent_conn in self._parent_connections:
-            results.append(parent_conn.recv())
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
         self._is_waiting = False
         return results
 
@@ -180,8 +204,8 @@ class VectorEnv:
         :return: [observations]
         """
         self._is_waiting = True
-        self._parent_connections[index_env].send((RESET_COMMAND, None))
-        results = [self._parent_connections[index_env].recv()]
+        self._connection_write_fns[index_env]((RESET_COMMAND, None))
+        results = [self._connection_read_fns[index_env]()]
         self._is_waiting = False
         return results
 
@@ -192,8 +216,8 @@ class VectorEnv:
         :return: [observations] for the indexed environment
         """
         self._is_waiting = True
-        self._parent_connections[index_env].send((STEP_COMMAND, action))
-        results = [self._parent_connections[index_env].recv()]
+        self._connection_write_fns[index_env]((STEP_COMMAND, action))
+        results = [self._connection_read_fns[index_env]()]
         self._is_waiting = False
         return results
 
@@ -201,15 +225,15 @@ class VectorEnv:
         r"""Asynchronously step in the environments.
         """
         self._is_waiting = True
-        for parent_conn, action in zip(self._parent_connections, actions):
-            parent_conn.send((STEP_COMMAND, action))
+        for write_fn, action in zip(self._connection_write_fns, actions):
+            write_fn((STEP_COMMAND, action))
 
     def wait_step(self) -> List[Observations]:
         r"""Wait until all the asynchronized environments have synchronized.
         """
         observations = []
-        for parent_conn in self._parent_connections:
-            observations.append(parent_conn.recv())
+        for read_fn in self._connection_read_fns:
+            observations.append(read_fn())
         self._is_waiting = False
         return observations
 
@@ -224,11 +248,11 @@ class VectorEnv:
 
     def close(self) -> None:
         if self._is_waiting:
-            for parent_conn in self._parent_connections:
-                parent_conn.recv()
-        for parent_conn in self._parent_connections:
-            parent_conn.send((CLOSE_COMMAND, None))
-        for process in self._processes:
+            for read_fn in self._connection_read_fns:
+                read_fn()
+        for write_fn in self._connection_write_fns:
+            write_fn((CLOSE_COMMAND, None))
+        for process in self._workers:
             process.join()
 
     def render(
@@ -236,11 +260,9 @@ class VectorEnv:
     ) -> Union[np.ndarray, None]:
         r"""Render observations from all environments in a tiled image.
         """
-        for parent_conn in self._parent_connections:
-            parent_conn.send(
-                (RENDER_COMMAND, (args, {"mode": "rgb_array", **kwargs}))
-            )
-        images = [pipe.recv() for pipe in self._parent_connections]
+        for write_fn in self._connection_write_fns:
+            write_fn((args, {"mode": "rgb_array", **kwargs}))
+        images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
             import cv2
@@ -256,3 +278,35 @@ class VectorEnv:
     @property
     def _valid_start_methods(self) -> Set[str]:
         return {"forkserver", "spawn", "fork"}
+
+
+class ThreadedVectorEnv(VectorEnv):
+    def _spawn_workers(
+        self,
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+        env_fn_args: Tuple[Tuple] = None,
+    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+        parent_read_queues, parent_write_queues = zip(
+            *[(Queue(), Queue()) for _ in range(self._num_envs)]
+        )
+        self._workers: List[Thread] = []
+        for parent_read_queue, parent_write_queue, env_args in zip(
+            parent_read_queues, parent_write_queues, env_fn_args
+        ):
+            thread = Thread(
+                target=self._worker_env,
+                args=(
+                    parent_write_queue.get,
+                    parent_read_queue.put,
+                    make_env_fn,
+                    env_args,
+                    self._auto_reset_done,
+                ),
+            )
+            self._workers.append(thread)
+            thread.daemon = True
+            thread.start()
+        return (
+            [q.get for q in parent_read_queues],
+            [q.put for q in parent_write_queues],
+        )
