@@ -14,9 +14,9 @@ EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 def get_default_mp3d_v1_config(split: str = "val"):
     config = CfgNode()
     config.name = "MP3DEQA-v1"
-    config.data_path = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
-    config.scenes_path = "data/scene_datasets/mp3d"
-    config.split = split
+    config.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
+    config.SCENES_PATH = "data/scene_datasets/mp3d"
+    config.SPLIT = split
     return config
 
 
@@ -36,8 +36,8 @@ class Matterport3dDatasetV1(Dataset):
     @staticmethod
     def check_config_paths_exist(config: Any) -> bool:
         return os.path.exists(
-            config.data_path.format(split=config.split)
-        ) and os.path.exists(config.scenes_path)
+            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
+        ) and os.path.exists(config.MP3DEQAV1.SCENES_PATH)
 
     def __init__(self, config: Any = None) -> None:
         self.episodes = []
@@ -45,7 +45,9 @@ class Matterport3dDatasetV1(Dataset):
         if config is None:
             return
 
-        with gzip.open(config.data_path.format(split=config.split), "rt") as f:
+        with gzip.open(
+            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT), "rt"
+        ) as f:
             self.from_json(f.read())
 
     def from_json(self, serialized: str) -> None:

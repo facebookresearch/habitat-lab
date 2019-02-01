@@ -6,14 +6,16 @@ from habitat.core.simulator import Observations, Simulator, ShortestPathPoint
 
 
 def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
-    sim_config.scene = episode.scene_id
+    sim_config.SCENE = episode.scene_id
     if (
         episode.start_position is not None
         and episode.start_rotation is not None
     ):
-        # yacs config attributes cannot be None
-        sim_config.start_position = episode.start_position
-        sim_config.start_rotation = episode.start_rotation
+        agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
+        agent_cfg = getattr(sim_config, agent_name)
+        agent_cfg.START_POSITION = episode.start_position
+        agent_cfg.START_ROTATION = episode.start_rotation
+        agent_cfg.IS_SET_START_STATE = True
     return sim_config
 
 

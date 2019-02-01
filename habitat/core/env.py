@@ -1,29 +1,32 @@
 import time
 from typing import Type, List, Any, Optional, Tuple
 
-import numpy as np
 import gym
+import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
+
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask
+from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.simulator import Observations, Simulator
 from habitat.sims import make_sim
 from habitat.tasks import make_task
-from habitat.core.simulator import AgentState, ShortestPathPoint
 
 
 class Env:
     def __init__(self, config: Any, dataset: Optional[Dataset] = None) -> None:
-        self._config: Any = config
+        self._config: Any = config.clone()
         self._dataset: Optional[Dataset] = dataset
         self._episodes: List[
             Type[Episode]
         ] = self._dataset.episodes if self._dataset else []
         self._current_episode_index: Optional[int] = None
-        self._sim = make_sim(id_sim=self._config.sim, config=self._config)
+        self._sim = make_sim(
+            id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
+        )
         self._task: EmbodiedTask = make_task(
-            config.task_name,
-            config=self._config,
+            self._config.TASK.TYPE,
+            config=self._config.TASK,
             sim=self._sim,
             dataset=dataset,
         )
@@ -35,10 +38,10 @@ class Env:
         )
         self.action_space = self._sim.action_space
         self._max_episode_seconds = getattr(
-            self._config, "max_episode_seconds", None
+            self._config.ENVIRONMENT, "MAX_EPISODE_SECONDS", None
         )
         self._max_episode_steps = getattr(
-            self._config, "max_episode_steps", None
+            self._config.ENVIRONMENT, "MAX_EPISODE_STEPS", None
         )
         self._elapsed_steps = 0
         self._episode_start_time: Optional[float] = None
@@ -104,6 +107,9 @@ class Env:
         self._elapsed_steps = 0
         self._episode_over = False
 
+    def reset(self) -> Observations:
+        self._reset_stats()
+
         assert len(self.episodes) > 0, "Episodes list is empty"
 
         # Switch to next episode in a loop
@@ -114,9 +120,6 @@ class Env:
                 self._current_episode_index + 1
             ) % len(self._episodes)
         self.reconfigure(self._config)
-
-    def reset(self) -> Observations:
-        self._reset_stats()
 
         observations = self._sim.reset()
         observations.update(
@@ -156,12 +159,11 @@ class Env:
         self._sim.seed(seed)
 
     def reconfigure(self, config) -> None:
-        # TODO (maksymets) switch to self._config.sim when it will
-        #  be separated
-        self._config = self._task.overwrite_sim_config(
-            self._config, self.current_episode
+        self._config = config.clone()
+        self._config.SIMULATOR = self._task.overwrite_sim_config(
+            self._config.SIMULATOR, self.current_episode
         )
-        self._sim.reconfigure(config)
+        self._sim.reconfigure(self._config.SIMULATOR)
 
     def geodesic_distance(self, position_a, position_b) -> float:
         return self._sim.geodesic_distance(position_a, position_b)
@@ -212,9 +214,8 @@ class RLEnv(gym.Env):
         self._env.episodes = episodes
 
     def reset(self) -> Observations:
-        self._env._reset_stats()
 
-        observations = self._env.sim.reset()
+        observations = self._env.reset()
 
         return observations
 
@@ -235,14 +236,7 @@ class RLEnv(gym.Env):
             "Episode over,  call reset " "before calling step"
         )
 
-        observations = self._env.sim.step(action)
-        observations.update(
-            self._env.task.sensor_suite.get_observations(
-                observations=observations, episode=self._env.current_episode
-            )
-        )
-
-        self._env._update_step_stats()
+        observations = self._env.step(action)
 
         reward = self.get_reward(observations)
         done = self.get_done(observations)

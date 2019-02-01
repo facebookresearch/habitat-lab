@@ -2,17 +2,17 @@ import json
 import os
 
 import numpy as np
-from habitat.config.experiments.nav import sim_nav_cfg
 from habitat.sims import make_sim
+from habitat.config.default import cfg
 
 
 def init_sim():
-    config = sim_nav_cfg()
-    config.scene = "data/habitat-sim/test/test.glb"
+    config = cfg()
+    config.SCENE = "data/habitat-sim/test/test.glb"
     assert os.path.exists(
-        config.scene
+        config.SCENE
     ), "Please download Habitat-Sim test data to data/habitat-sim/test/."
-    return make_sim("Sim-v0", config=config)
+    return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
 
 def test_sim():
@@ -21,7 +21,7 @@ def test_sim():
     sim = init_sim()
 
     sim.reset()
-    sim.initialize_agent(
+    sim.set_agent_state(
         position=test_trajectory["positions"][0],
         rotation=test_trajectory["rotations"][0],
     )

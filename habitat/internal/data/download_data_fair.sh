@@ -24,3 +24,5 @@ cp data/scene_datasets/mp3d/1pXnuDYAj8r data/habitat-sim/multihouse-resources/ -
 cp data/scene_datasets/mp3d/29hnd4uzFmX data/habitat-sim/multihouse-resources/ -R
 cp data/scene_datasets/mp3d/2azQ1b91cZZ data/habitat-sim/multihouse-resources/ -R
 
+echo "Download SUNCG data with navmeshes for Habitat-Sim"
+ln -s /private/home/bhavanajain/habitat-suncg/data/SUNCG/house  data/scene_datasets/suncg

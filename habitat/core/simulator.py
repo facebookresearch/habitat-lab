@@ -37,10 +37,12 @@ class Sensor:
         sensor
     """
     uuid: str
+    config: Any
     sensor_type: SensorTypes
     observation_space: Space
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.config = kwargs["config"].clone() if "config" in kwargs else None
         self.uuid = self._get_uuid(*args, **kwargs)
         self.sensor_type = self._get_sensor_type(*args, **kwargs)
         self.observation_space = self._get_observation_space(*args, **kwargs)

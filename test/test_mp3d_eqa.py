@@ -1,15 +1,16 @@
 import time
 
+import numpy as np
+
 import habitat
 import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
-import numpy as np
-from habitat.config.experiments.nav import sim_nav_cfg
+from habitat.config.default import cfg
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 
+CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
-
 IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
@@ -32,7 +33,7 @@ EPISODES_LIMIT = 6
 
 
 def get_minos_for_sim_eqa_config():
-    _sim_eqa_c = sim_nav_cfg()
+    _sim_eqa_c = cfg(CFG_TEST)
     _sim_eqa_c.task_name = "EQA-v0"
     _sim_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
     _sim_eqa_c.dataset.split = "val"
@@ -77,7 +78,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 
 def test_mp3d_eqa_dataset():
-    dataset_config = mp3d_dataset.get_default_mp3d_v1_config(split="val")
+    dataset_config = cfg(CFG_TEST).DATASET
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -92,15 +93,17 @@ def test_mp3d_eqa_dataset():
 
 
 def test_mp3d_eqa_sim():
-    eqa_config = get_minos_for_sim_eqa_config()
+    eqa_config = cfg(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.dataset
+        eqa_config.DATASET
     ):
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
     env = habitat.Env(config=eqa_config)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
@@ -113,12 +116,14 @@ def test_mp3d_eqa_sim():
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
-                eqa_config.height,
-                eqa_config.width,
+                eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
             ), (
                 "Observation resolution {} doesn't correspond to config "
                 "({}, {}).".format(
-                    obs["rgb"].shape[:2], eqa_config.height, eqa_config.width
+                    obs["rgb"].shape[:2],
+                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
                 )
             )
 
@@ -126,15 +131,17 @@ def test_mp3d_eqa_sim():
 
 
 def test_mp3d_eqa_sim_correspondence():
-    eqa_config = get_minos_for_sim_eqa_config()
+    eqa_config = cfg(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.dataset
+        eqa_config.DATASET
     ):
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
     env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = [
         episode

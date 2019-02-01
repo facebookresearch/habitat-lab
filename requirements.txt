@@ -1,4 +1,4 @@
 h5py
 gym==0.10.9
 numpy
-yacs
+yacs>=0.1.5

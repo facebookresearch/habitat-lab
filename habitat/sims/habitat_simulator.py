@@ -8,22 +8,17 @@ from gym import spaces
 import habitat
 from habitat import SensorSuite
 from habitat.core.logging import logger
-from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
 from habitat.core.simulator import AgentState, ShortestPathPoint
+from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
 
-
-UUID_RGBSENSOR = "rgb"
 # Sim provides RGB as RGBD structure with 4 dimensions
 RGBSENSOR_DIMENSION = 4
-
-DEPTHSENSOR_MIN_DEPTH = 0
-DEPTHSENSOR_MAX_DEPTH = 10
-DEPTHSENSOR_NORMALIZE = True
 
 
 def overwrite_config(config_from: Dict, config_to) -> None:
     for attr, value in config_from.items():
-        setattr(config_to, attr, value)
+        if hasattr(config_to, attr.lower()):
+            setattr(config_to, attr.lower(), value)
 
 
 def check_sim_obs(obs, sensor):
@@ -41,13 +36,13 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
-        super().__init__(config)
+        super().__init__(config=config)
 
-    def _get_observation_space(self, config):
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
             low=0,
             high=255,
-            shape=(config.height, config.width, RGBSENSOR_DIMENSION),
+            shape=(self.config.HEIGHT, self.config.WIDTH, RGBSENSOR_DIMENSION),
             dtype=np.uint8,
         )
 
@@ -62,35 +57,26 @@ class HabitatSimDepthSensor(DepthSensor):
     """
 
     sim_sensor_type: habitat_sim.SensorType
+    min_depth_value: float
+    max_depth_value: float
 
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
-        self.min_depth = DEPTHSENSOR_MIN_DEPTH
-        if hasattr(config, "min_depth"):
-            self.min_depth = config.min_depth
 
-        self.max_depth = DEPTHSENSOR_MAX_DEPTH
-        if hasattr(config, "max_depth"):
-            self.max_depth = config.max_depth
-
-        self.normalize_depth = DEPTHSENSOR_NORMALIZE
-        if hasattr(config, "normalize_depth"):
-            self.normalize_depth = config.normalize_depth
-
-        if self.normalize_depth:
+        if config.NORMALIZE_DEPTH:
             self.min_depth_value = 0
             self.max_depth_value = 1
         else:
-            self.min_depth_value = self.min_depth
-            self.max_depth_value = self.max_depth
+            self.min_depth_value = config.MIN_DEPTH
+            self.max_depth_value = config.MAX_DEPTH
 
-        super().__init__(config)
+        super().__init__(config=config)
 
-    def _get_observation_space(self, config):
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
             low=self.min_depth_value,
             high=self.max_depth_value,
-            shape=(config.height, config.width),
+            shape=(self.config.HEIGHT, self.config.WIDTH),
             dtype=np.float32,
         )
 
@@ -98,10 +84,10 @@ class HabitatSimDepthSensor(DepthSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
-        obs = np.clip(obs, self.min_depth, self.max_depth)
-        if self.normalize_depth:
+        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MIN_DEPTH)
+        if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.min_depth) / self.max_depth
+            obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
 
         return obs
 
@@ -114,13 +100,13 @@ class HabitatSimSemanticSensor(SemanticSensor):
 
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
-        super().__init__(config)
+        super().__init__(config=config)
 
-    def _get_observation_space(self, config):
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
             low=np.iinfo(np.uint32).min,
             high=np.iinfo(np.uint32).max,
-            shape=(config.height, config.width),
+            shape=(self.config.HEIGHT, self.config.WIDTH),
             dtype=np.uint32,
         )
 
@@ -144,32 +130,33 @@ SIM_ACTION_TO_NAME = {
     3: SimActions.STOP.value,
 }
 
-
 SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
 
 
 class HabitatSim(habitat.Simulator):
     def __init__(self, config: Any) -> None:
         self.config = config.clone()
+        agent_config = self._get_agent_config()
 
         sim_sensors = []
-        for s in config.sensors:
+        for sensor_name in agent_config.SENSORS:
+            sensor_cfg = getattr(self.config, sensor_name)
             is_valid_sensor = hasattr(
-                habitat.sims.habitat_sim, s  # type: ignore
+                habitat.sims.habitat_simulator, sensor_cfg.TYPE  # type: ignore
             )
-            assert is_valid_sensor, "invalid sensor type {}".format(s)
+            assert is_valid_sensor, "invalid sensor type {}".format(
+                sensor_cfg.TYPE
+            )
             sim_sensors.append(
-                getattr(habitat.sims.habitat_sim, s)(config)  # type: ignore
+                getattr(
+                    habitat.sims.habitat_simulator,  # type: ignore
+                    sensor_cfg.TYPE,
+                )(sensor_cfg)
             )
 
         self.sensor_suite = SensorSuite(sim_sensors)
-
-        self.sim_config = HabitatSim.create_sim_config(
-            config, self.sensor_suite
-        )
-
+        self.sim_config = self.create_sim_config(self.sensor_suite)
         self._sim = habitat_sim.Simulator(self.sim_config)
-
         self.action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
@@ -177,66 +164,65 @@ class HabitatSim(habitat.Simulator):
         self.episode_active = False
         self._controls = SIM_ACTION_TO_NAME
 
-    @staticmethod
     def create_sim_config(
-        config: Any, sensor_suite: SensorSuite
+        self, sensor_suite: SensorSuite
     ) -> habitat_sim.SimulatorConfiguration:
         sim_config = habitat_sim.SimulatorConfiguration()
-        # TODO(maksymets): use general notion of scene from Resource Manager
-        sim_config.scene.id = config.scene
-        sim_config.gpu_device_id = config.gpu_device_id
+        sim_config.scene.id = self.config.SCENE
+        sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=config.agents[config.default_agent_id],
-            config_to=agent_config,
+            config_from=self._get_agent_config(), config_to=agent_config
         )
+
         sensor_specifications = []
         for sensor in sensor_suite.sensors.values():
-            sim_sensor_config = habitat_sim.SensorSpec()
-            sim_sensor_config.uuid = sensor.uuid
-            sim_sensor_config.resolution = list(
+            sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg.uuid = sensor.uuid
+            sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
-            sim_sensor_config.parameters["hfov"] = config.hfov
-            sim_sensor_config.position = config.sensor_position
+            sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
+            sim_sensor_cfg.position = sensor.config.POSITION
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
-            sim_sensor_config.sensor_type = (
-                sensor.sim_sensor_type  # type: ignore
-            )
-            sensor_specifications.append(sim_sensor_config)
+            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
+            sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
             SimActions.LEFT.value: habitat_sim.ActionSpec(
-                "lookLeft", {"amount": config.turn_angle}
+                "lookLeft", {"amount": self.config.TURN_ANGLE}
             ),
             SimActions.RIGHT.value: habitat_sim.ActionSpec(
-                "lookRight", {"amount": config.turn_angle}
+                "lookRight", {"amount": self.config.TURN_ANGLE}
             ),
             SimActions.FORWARD.value: habitat_sim.ActionSpec(
-                "moveForward", {"amount": config.forward_step_size}
+                "moveForward", {"amount": self.config.FORWARD_STEP_SIZE}
             ),
             SimActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
         }
         sim_config.agents = [agent_config]
         return sim_config
 
+    def _update_agents_state(self) -> bool:
+        is_updated = False
+        for agent_id, _ in enumerate(self.config.AGENTS):
+            agent_cfg = self._get_agent_config(agent_id)
+            if agent_cfg.IS_SET_START_STATE:
+                self.set_agent_state(
+                    agent_cfg.START_POSITION,
+                    agent_cfg.START_ROTATION,
+                    agent_id,
+                )
+                is_updated = True
+        return is_updated
+
     def reset(self):
         sim_obs = self._sim.reset()
-
-        if (
-            hasattr(self.config, "start_position")
-            and hasattr(self.config, "start_rotation")
-            and self.config.start_position is not None
-            and self.config.start_rotation is not None
-        ):
-            self.set_agent_state(
-                self.config.start_position,
-                self.config.start_rotation,
-                self.config.default_agent_id,
-            )
+        if self._update_agents_state():
             sim_obs = self._sim.get_sensor_observations()
+
         self.episode_active = True
         return self.sensor_suite.get_observations(sim_obs)
 
@@ -264,9 +250,9 @@ class HabitatSim(habitat.Simulator):
 
     def reconfigure(self, config: Any) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
-        is_same_scene = config.scene == self.config.scene
+        is_same_scene = config.SCENE == self.config.SCENE
         self.config = config.clone()
-        self.sim_config = self.create_sim_config(config, self.sensor_suite)
+        self.sim_config = self.create_sim_config(self.sensor_suite)
         if is_same_scene:
             self._sim.reconfigure(self.sim_config)
         else:
@@ -274,17 +260,7 @@ class HabitatSim(habitat.Simulator):
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
 
-        if (
-            hasattr(config, "start_position")
-            and hasattr(config, "start_rotation")
-            and config.start_position is not None
-            and config.start_rotation is not None
-        ):
-            self.initialize_agent(
-                config.start_position,
-                config.start_rotation,
-                self.config.default_agent_id,
-            )
+        self._update_agents_state()
 
     def geodesic_distance(self, position_a, position_b):
         path = habitat_sim.ShortestPath()
@@ -369,6 +345,13 @@ class HabitatSim(habitat.Simulator):
     def close(self):
         self._sim.close()
 
+    def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
+        if agent_id is None:
+            agent_id = self.config.DEFAULT_AGENT_ID
+        agent_name = self.config.AGENTS[agent_id]
+        agent_config = getattr(self.config, agent_name)
+        return agent_config
+
     def agent_state(self, agent_id: int = 0):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
@@ -398,26 +381,6 @@ class HabitatSim(habitat.Simulator):
         state.rotation = rotation
         agent.set_state(state)
 
-        self._check_agent_position(position, agent_id)
-
-    def initialize_agent(self, position, rotation, agent_id=0):
-        r"""
-        :param position: numpy ndarray containing 3 entries for (x, y, z)
-        :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
-        of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        :param agent_id: int identification of agent from multiagent setup
-        """
-        agent_state = habitat_sim.AgentState()
-        agent_state.position = position
-        agent_state.rotation = rotation
-
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
-        )
-        self._sim.initialize_agent(
-            agent_id=agent_id, initial_state=agent_state
-        )
         self._check_agent_position(position, agent_id)
 
     # TODO (maksymets): Remove check after simulator became stable

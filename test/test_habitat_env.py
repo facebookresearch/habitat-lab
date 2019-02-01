@@ -4,8 +4,8 @@ import multiprocessing as mp
 
 import habitat
 import numpy as np
-from habitat.config.experiments.nav import sim_nav_cfg
-from habitat.sims.habitat_sim import (
+from habitat.config.default import cfg
+from habitat.sims.habitat_simulator import (
     SimActions,
     SIM_ACTION_TO_NAME,
     SIM_NAME_TO_ACTION,
@@ -13,11 +13,11 @@ from habitat.sims.habitat_sim import (
 from habitat.tasks.nav.nav_task import NavigationEpisode
 from habitat.core.simulator import AgentState
 
+CFG_TEST = "test/habitat_all_sensors_test.yaml"
 MULTIHOUSE_RESOURCES_PATH = "data/habitat-sim/multihouse-resources"
 MULTIHOUSE_INITIALIZATIONS_PATH = (
     "data/habitat-sim/multihouse_initializations.json"
 )
-MULTIHOUSE_MAX_STEPS = 10
 
 
 class DatasetTest(habitat.Dataset):
@@ -75,17 +75,8 @@ def _load_test_data():
     datasets = []
     for i in range(num_envs):
         datasets.append(DatasetTest(multihouse_initializations, i))
-
-        config = sim_nav_cfg()
-        config.task_name = "Nav-v0"
-        config.scene = datasets[-1].episodes[0].scene_id
-        config.max_episode_steps = MULTIHOUSE_MAX_STEPS
-        config.gpu_device_id = 0
-        config.sensors = [
-            "HabitatSimRGBSensor",
-            "HabitatSimDepthSensor",
-            "HabitatSimSemanticSensor",
-        ]
+        config = cfg(CFG_TEST)
+        config.SIMULATOR.SCENE = datasets[-1].episodes[0].scene_id
         configs.append(config)
 
     return configs, datasets
@@ -103,7 +94,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
 
-    for i in range(2 * MULTIHOUSE_MAX_STEPS):
+    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         observations = envs.step(np.random.choice(non_stop_actions, num_envs))
         assert len(observations) == num_envs
 
@@ -136,14 +127,8 @@ def test_vectorized_envs_fork():
 
 
 def test_env():
-    config = sim_nav_cfg()
-    config.task_name = "Nav-v0"
-    config.sensors = [
-        "HabitatSimRGBSensor",
-        "HabitatSimDepthSensor",
-        "HabitatSimSemanticSensor",
-    ]
-    assert os.path.exists(config.scene), (
+    config = cfg(CFG_TEST)
+    assert os.path.exists(config.SIMULATOR.SCENE), (
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
     )
@@ -151,7 +136,7 @@ def test_env():
     env.episodes = [
         NavigationEpisode(
             episode_id="0",
-            scene_id=config.scene,
+            scene_id=config.SIMULATOR.SCENE,
             start_position=[03.00611, 0.072447, -2.67867],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[],
@@ -162,7 +147,7 @@ def test_env():
     non_stop_actions = [
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
-    for _ in range(config.max_episode_steps):
+    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         env.step(np.random.choice(non_stop_actions))
 
     # check for steps limit on environment
@@ -189,7 +174,7 @@ def make_rl_env(config, dataset, rank: int = 0):
     :return: constructed habitat Env
     """
     env = DummyRLEnv(config=config, dataset=dataset)
-    env.seed(config.seed + rank)
+    env.seed(config.SEED + rank)
     return env
 
 
@@ -208,28 +193,22 @@ def test_rl_vectorized_envs():
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
 
-    for i in range(2 * MULTIHOUSE_MAX_STEPS):
+    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         outputs = envs.step(np.random.choice(non_stop_actions, num_envs))
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
         assert len(observations) == num_envs
         assert len(rewards) == num_envs
         assert len(dones) == num_envs
         assert len(infos) == num_envs
-        if (i + 1) % MULTIHOUSE_MAX_STEPS == 0:
+        if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
     envs.close()
 
 
 def test_rl_env():
-    config = sim_nav_cfg()
-    config.task_name = "Nav-v0"
-    config.sensors = [
-        "HabitatSimRGBSensor",
-        "HabitatSimDepthSensor",
-        "HabitatSimSemanticSensor",
-    ]
-    assert os.path.exists(config.scene), (
+    config = cfg(CFG_TEST)
+    assert os.path.exists(config.SIMULATOR.SCENE), (
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
     )
@@ -237,7 +216,7 @@ def test_rl_env():
     env.episodes = [
         NavigationEpisode(
             episode_id="0",
-            scene_id=config.scene,
+            scene_id=config.SIMULATOR.SCENE,
             start_position=[03.00611, 0.072447, -2.67867],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[],
@@ -250,7 +229,7 @@ def test_rl_env():
     non_stop_actions = [
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
-    for _ in range(config.max_episode_steps):
+    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         observation, reward, done, info = env.step(
             np.random.choice(non_stop_actions)
         )
@@ -268,9 +247,8 @@ def test_rl_env():
 
 
 def test_action_space_shortest_path():
-    config = sim_nav_cfg()
-    config.task_name = "Nav-v0"
-    assert os.path.exists(config.scene), (
+    config = cfg()
+    assert os.path.exists(config.SIMULATOR.SCENE), (
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
     )
@@ -278,7 +256,7 @@ def test_action_space_shortest_path():
 
     # action space shortest path
     source_position = env.sample_navigable_point()
-    angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+    angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
     angle = np.radians(np.random.choice(angles))
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
@@ -287,7 +265,7 @@ def test_action_space_shortest_path():
     unreachable_targets = []
     while len(reachable_targets) < 5:
         position = env.sample_navigable_point()
-        angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.geodesic_distance(source_position, position) != np.inf:
@@ -295,7 +273,7 @@ def test_action_space_shortest_path():
 
     while len(unreachable_targets) < 3:
         position = env.sample_navigable_point()
-        angles = [x for x in range(-180, 180, sim_nav_cfg().turn_angle)]
+        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.geodesic_distance(source_position, position) == np.inf:

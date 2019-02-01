@@ -33,14 +33,12 @@ export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/buil
 
 ```python
 import habitat
-from habitat.config.experiments.nav import sim_nav_cfg
+from habitat.config.default import cfg
 from habitat.tasks.nav.nav_task import NavigationEpisode
 
-config = sim_nav_cfg()
-config.scene = 'data/habitat-sim/test/test.glb'
-config.task_name = 'Nav-v0'
+config = cfg()
 env = habitat.Env(config=config)
-env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.scene, 
+env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.SCENE, 
                                   start_position=None, start_rotation=None, 
                                   goals=[])]
 

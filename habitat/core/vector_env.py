@@ -85,7 +85,7 @@ def _make_env_fn(
     :return: constructed habitat Env
     """
     habitat_env = Env(config=config, dataset=dataset)
-    habitat_env.seed(config.seed + rank)
+    habitat_env.seed(config.SEED + rank)
     return habitat_env
 
 
