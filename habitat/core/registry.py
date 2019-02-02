@@ -1,4 +1,7 @@
-def load(name):
+from typing import Any
+
+
+def load(name: str) -> type:
     import pkg_resources
 
     entry_point = pkg_resources.EntryPoint.parse("x={}".format(name))
@@ -7,11 +10,11 @@ def load(name):
 
 
 class Spec:
-    def __init__(self, id, entry_point, **kwargs):
+    def __init__(self, id: str, entry_point: str, **kwargs: Any) -> None:
         self.id = id
         self._entry_point = entry_point
 
-    def make(self, **kwargs):
+    def make(self, **kwargs: Any) -> Any:
         return load(self._entry_point)(**kwargs)
 
     def __repr__(self):
@@ -22,14 +25,14 @@ class Registry:
     def __init__(self):
         self.specs = {}
 
-    def make(self, id, **kwargs):
+    def make(self, id: str, **kwargs: Any) -> Any:
         spec = self.get_spec(id)
         return spec.make(**kwargs)
 
-    def all(self):
+    def all(self) -> Any:
         return self.specs.values()
 
-    def get_spec(self, id):
+    def get_spec(self, id: str) -> Spec:
         spec = self.specs.get(id, None)
         if spec is None:
             raise KeyError(
@@ -37,5 +40,5 @@ class Registry:
             )
         return spec
 
-    def register(self, id, **kwargs):
+    def register(self, id: str, **kwargs: Any) -> None:
         raise NotImplementedError

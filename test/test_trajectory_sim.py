@@ -52,6 +52,6 @@ def test_sim():
 
         obs = sim.step(action)
         if i == len(test_trajectory["actions"]) - 1:  # STOP action
-            assert sim.episode_active is False
+            assert sim.is_episode_active is False
 
     sim.close()

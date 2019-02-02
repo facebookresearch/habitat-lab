@@ -1,12 +1,12 @@
 from enum import Enum
-from typing import List, Any, Dict, Optional
+from typing import List, Any, Optional
 
 import habitat_sim
 import numpy as np
 from gym import spaces
 
 import habitat
-from habitat import SensorSuite
+from habitat import SensorSuite, Config
 from habitat.core.logging import logger
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
@@ -15,7 +15,7 @@ from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
 RGBSENSOR_DIMENSION = 4
 
 
-def overwrite_config(config_from: Dict, config_to) -> None:
+def overwrite_config(config_from: Config, config_to: Any) -> None:
     for attr, value in config_from.items():
         if hasattr(config_to, attr.lower()):
             setattr(config_to, attr.lower(), value)
@@ -134,7 +134,7 @@ SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
 
 
 class HabitatSim(habitat.Simulator):
-    def __init__(self, config: Any) -> None:
+    def __init__(self, config: Config) -> None:
         self.config = config.clone()
         agent_config = self._get_agent_config()
 
@@ -154,18 +154,18 @@ class HabitatSim(habitat.Simulator):
                 )(sensor_cfg)
             )
 
-        self.sensor_suite = SensorSuite(sim_sensors)
-        self.sim_config = self.create_sim_config(self.sensor_suite)
+        self._sensor_suite = SensorSuite(sim_sensors)
+        self.sim_config = self.create_sim_config(self._sensor_suite)
         self._sim = habitat_sim.Simulator(self.sim_config)
-        self.action_space = spaces.Discrete(
+        self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
 
-        self.episode_active = False
+        self._is_episode_active = False
         self._controls = SIM_ACTION_TO_NAME
 
     def create_sim_config(
-        self, sensor_suite: SensorSuite
+        self, _sensor_suite: SensorSuite
     ) -> habitat_sim.SimulatorConfiguration:
         sim_config = habitat_sim.SimulatorConfiguration()
         sim_config.scene.id = self.config.SCENE
@@ -176,7 +176,7 @@ class HabitatSim(habitat.Simulator):
         )
 
         sensor_specifications = []
-        for sensor in sensor_suite.sensors.values():
+        for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
@@ -205,6 +205,18 @@ class HabitatSim(habitat.Simulator):
         sim_config.agents = [agent_config]
         return sim_config
 
+    @property
+    def sensor_suite(self) -> SensorSuite:
+        return self._sensor_suite
+
+    @property
+    def action_space(self) -> SensorSuite:
+        return self._action_space
+
+    @property
+    def is_episode_active(self) -> bool:
+        return self._is_episode_active
+
     def _update_agents_state(self) -> bool:
         is_updated = False
         for agent_id, _ in enumerate(self.config.AGENTS):
@@ -223,11 +235,11 @@ class HabitatSim(habitat.Simulator):
         if self._update_agents_state():
             sim_obs = self._sim.get_sensor_observations()
 
-        self.episode_active = True
-        return self.sensor_suite.get_observations(sim_obs)
+        self._is_episode_active = True
+        return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action):
-        assert self.episode_active, (
+        assert self._is_episode_active, (
             "episode is not active, environment not RESET or "
             "STOP action called previously"
         )
@@ -235,24 +247,25 @@ class HabitatSim(habitat.Simulator):
         if sim_action == SimActions.STOP.value:
             # TODO(akadian): Handle reward calculation on stop once pointnav
             # is integrated
-            self.episode_active = False
+            self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
             sim_obs = self._sim.step(sim_action)
-        observations = self.sensor_suite.get_observations(sim_obs)
+        observations = self._sensor_suite.get_observations(sim_obs)
         return observations
 
-    def render(self):
+    def render(self, mode: str = "human", close: bool = False) -> Any:
+        # TODO (@maksymets) Test render function
         return self._sim.render()
 
     def seed(self, seed):
         self._sim.seed(seed)
 
-    def reconfigure(self, config: Any) -> None:
+    def reconfigure(self, config: Config) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = config.SCENE == self.config.SCENE
         self.config = config.clone()
-        self.sim_config = self.create_sim_config(self.sensor_suite)
+        self.sim_config = self.create_sim_config(self._sensor_suite)
         if is_same_scene:
             self._sim.reconfigure(self.sim_config)
         else:
@@ -308,12 +321,12 @@ class HabitatSim(habitat.Simulator):
 
         return shortest_path
 
-    def sample_navigable_point(self):
+    def sample_navigable_point(self) -> List[float]:
         r"""
         return: randomly sample a [x, y, z] point where the agent can be
         initialized.
         """
-        return self._sim.pathfinder.get_random_navigable_point()
+        return self._sim.pathfinder.get_random_navigable_point().tolist()
 
     def semantic_annotations(self):
         r"""

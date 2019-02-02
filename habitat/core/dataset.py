@@ -80,5 +80,5 @@ class Dataset(Generic[T]):
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 
-    def from_json(self, serialized: str) -> None:
+    def from_json(self, json_str: str) -> None:
         raise NotImplementedError

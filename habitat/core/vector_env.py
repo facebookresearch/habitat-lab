@@ -1,15 +1,17 @@
 import multiprocessing as mp
 from multiprocessing.connection import Connection
-from threading import Thread
 from queue import Queue
-from typing import List, Tuple, Callable, Union, Any, Set, Optional
+from threading import Thread
+from typing import Iterable, List, Tuple, Callable, Union, Any, Set, Optional
+
+import numpy as np
+from gym.spaces.dict_space import Dict as SpaceDict
 
 import habitat
-import numpy as np
+from habitat.config import Config
 from habitat.core.env import Env, Observations
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
-from yacs.config import CfgNode
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -20,7 +22,7 @@ ACTION_SPACE_COMMAND = "action_space"
 
 
 def _make_env_fn(
-    config: CfgNode, dataset: habitat.Dataset, rank: int = 0
+    config: Config, dataset: habitat.Dataset, rank: int = 0
 ) -> Env:
     r"""Constructor for default habitat Env.
     :param config: configurations for environment
@@ -34,6 +36,16 @@ def _make_env_fn(
 
 
 class VectorEnv:
+    observation_spaces: SpaceDict
+    action_spaces: SpaceDict
+    _workers: List[Union[mp.Process, Thread]]
+    _is_waiting: bool
+    _num_envs: int
+    _auto_reset_done: bool
+    _mp_ctx: mp.context.BaseContext
+    _connection_read_fns: List[Callable[[], Any]]
+    _connection_write_fns: List[Callable[[Any], None]]
+
     def __init__(
         self,
         make_env_fn: Callable[..., Env] = _make_env_fn,
@@ -71,10 +83,10 @@ class VectorEnv:
             "multiprocessing_start_method must be one of {}. Got '{}'"
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
-        self.mp_ctx = mp.get_context(multiprocessing_start_method)
-        self._workers = None
-        self._connection_read_fns, self._connection_write_fns = self._spawn_workers(
-            make_env_fn, env_fn_args
+        self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        self._workers = []
+        self._connection_read_fns, self._connection_write_fns = self._spawn_workers(  # noqa
+            env_fn_args, make_env_fn
         )
 
         for write_fn in self._connection_write_fns:
@@ -107,7 +119,6 @@ class VectorEnv:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-
                     # different step methods for habitat.RLEnv and habitat.Env
                     if isinstance(env, habitat.RLEnv):
                         # habitat.RLEnv
@@ -125,19 +136,16 @@ class VectorEnv:
                         raise NotImplementedError
 
                 elif command == RESET_COMMAND:
-
                     observations = env.reset()
                     connection_write_fn(observations)
 
                 elif command == RENDER_COMMAND:
-
                     connection_write_fn(env.render(*data[0], **data[1]))
 
                 elif (
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-
                     connection_write_fn(getattr(env, command))
 
                 else:
@@ -154,17 +162,17 @@ class VectorEnv:
 
     def _spawn_workers(
         self,
+        env_fn_args: Iterable[Tuple[Any, ...]],
         make_env_fn: Callable[..., Env] = _make_env_fn,
-        env_fn_args: Tuple[Tuple] = None,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
-            *[self.mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
         )
-        self._workers: List[mp.Process] = []
+        self._workers = []
         for worker_conn, parent_conn, env_args in zip(
             worker_connections, parent_connections, env_fn_args
         ):
-            ps = self.mp_ctx.Process(
+            ps = self._mp_ctx.Process(
                 target=self._worker_env,
                 args=(
                     worker_conn.recv,
@@ -283,13 +291,13 @@ class VectorEnv:
 class ThreadedVectorEnv(VectorEnv):
     def _spawn_workers(
         self,
+        env_fn_args: Iterable[Tuple[Any, ...]],
         make_env_fn: Callable[..., Env] = _make_env_fn,
-        env_fn_args: Tuple[Tuple] = None,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_read_queues, parent_write_queues = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
-        self._workers: List[Thread] = []
+        self._workers = []
         for parent_read_queue, parent_write_queue, env_args in zip(
             parent_read_queues, parent_write_queues, env_fn_args
         ):

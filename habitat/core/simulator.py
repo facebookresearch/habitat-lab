@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
 
+from habitat.config import Config
+
 
 class SensorTypes(Enum):
     r"""Enumeration of types of sensors.
@@ -37,7 +39,7 @@ class Sensor:
         sensor
     """
     uuid: str
-    config: Any
+    config: Config
     sensor_type: SensorTypes
     observation_space: Space
 
@@ -69,7 +71,9 @@ class Observations(dict):
     to obtain Tensors)
     """
 
-    def __init__(self, sensors: Dict[str, Sensor], *args, **kwargs) -> None:
+    def __init__(
+        self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
+    ) -> None:
         data = [
             (uuid, sensor.get_observation(*args, **kwargs))
             for uuid, sensor in sensors.items()
@@ -78,16 +82,16 @@ class Observations(dict):
 
 
 class RGBSensor(Sensor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args: Any, **kwargs: Any):
         return "rgb"
 
-    def _get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.COLOR
 
-    def _get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
@@ -95,16 +99,16 @@ class RGBSensor(Sensor):
 
 
 class DepthSensor(Sensor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "depth"
 
-    def _get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.DEPTH
 
-    def _get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
@@ -112,16 +116,16 @@ class DepthSensor(Sensor):
 
 
 class SemanticSensor(Sensor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args, **kwargs):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "semantic"
 
-    def _get_sensor_type(self, *args, **kwargs):
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.SEMANTIC
 
-    def _get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any):
@@ -132,6 +136,8 @@ class SensorSuite:
     r"""Represents a set of sensors, with each sensor being identified
     through a unique id.
     """
+    sensors: Dict[str, Sensor]
+    observation_spaces: SpaceDict
 
     def __init__(self, sensors: List[Sensor]) -> None:
         r"""
@@ -139,7 +145,7 @@ class SensorSuite:
             sensors: list containing sensors for the environment, the uuid of
             each sensor should be unique.
         """
-        self.sensors: OrderedDict[str, Sensor] = OrderedDict()
+        self.sensors = OrderedDict()
         spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
             assert (
@@ -147,7 +153,7 @@ class SensorSuite:
             ), "'{}' is duplicated sensor uuid".format(sensor.uuid)
             self.sensors[sensor.uuid] = sensor
             spaces[sensor.uuid] = sensor.observation_space
-        self.observation_spaces: SpaceDict = SpaceDict(spaces=spaces)
+        self.observation_spaces = SpaceDict(spaces=spaces)
 
     def get(self, uuid: str) -> Sensor:
         return self.sensors[uuid]
@@ -184,6 +190,21 @@ class ShortestPathPoint:
 
 
 class Simulator:
+    @property
+    def sensor_suite(self) -> SensorSuite:
+        raise NotImplementedError
+
+    @property
+    def action_space(self) -> SensorSuite:
+        raise NotImplementedError
+
+    @property
+    def is_episode_active(self) -> bool:
+        raise NotImplementedError
+
+    def render(self, mode: str = "human", close: bool = False) -> Any:
+        raise NotImplementedError
+
     def reset(self) -> Observations:
         raise NotImplementedError
 
@@ -193,7 +214,7 @@ class Simulator:
     def seed(self, seed: int) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, config: Any) -> None:
+    def reconfigure(self, config: Config) -> None:
         raise NotImplementedError
 
     def geodesic_distance(

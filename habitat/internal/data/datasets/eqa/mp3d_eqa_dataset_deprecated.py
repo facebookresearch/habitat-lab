@@ -13,7 +13,7 @@ from habitat.tasks.nav.nav_task import (
     NavigationGoal,
     ShortestPathPoint,
 )
-from yacs.config import CfgNode
+from habitat.config import Config
 
 ALLOWED_QUESTION_TYPES = ["location", "color", "color_room"]
 
@@ -42,7 +42,7 @@ EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 
 
 def get_default_mp3d_v1_config(split: str = "val"):
-    config = CfgNode()
+    config = Config()
     config.name = "MP3DEQA-v1"
     config.data_path = "data/datasets/eqa_mp3d_v1/full_data.json.gz"
     config.data_split_h5_path = "data/datasets/eqa_mp3d_v1/full_{split}.h5"
@@ -115,7 +115,7 @@ class Matterport3dDatasetV1(Dataset):
     episodes: List[EQAEpisode]
 
     @staticmethod
-    def check_config_paths_exist(config: Any) -> bool:
+    def check_config_paths_exist(config: Config) -> bool:
         return (
             os.path.exists(config.data_path)
             and os.path.exists(

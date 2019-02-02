@@ -1,6 +1,6 @@
 from typing import Optional
 
-from yacs.config import CfgNode as CN
+from habitat.config import Config as CN
 
 from habitat.core.logging import logger
 

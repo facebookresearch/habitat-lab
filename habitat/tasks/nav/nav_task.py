@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, List, Optional, Type
 
 import habitat
+from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
-from habitat.core.simulator import Observations, Simulator, ShortestPathPoint
+from habitat.core.simulator import Simulator, ShortestPathPoint
 
 
 def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
@@ -108,7 +109,7 @@ class NavigationEpisode(Episode):
 
 class NavigationTask(habitat.EmbodiedTask):
     def __init__(
-        self, config: Any, sim: Simulator, dataset: Optional[Dataset] = None
+        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
 

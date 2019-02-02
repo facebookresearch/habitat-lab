@@ -1,5 +1,6 @@
 from typing import Any, Type, Optional
 
+from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import SensorSuite, Simulator
 
@@ -12,15 +13,21 @@ class EmbodiedTask:
     _dataset: Optional[Dataset]
     _sensor_suite: SensorSuite
 
-    def __init__(self, config, sim, dataset, sensor_suite=SensorSuite([])):
+    def __init__(
+        self,
+        config: Config,
+        sim: Simulator,
+        dataset: Optional[Dataset] = None,
+        sensor_suite: SensorSuite = SensorSuite([]),
+    ) -> None:
         self._config = config
         self._sim = sim
         self._dataset = dataset
         self._sensor_suite = sensor_suite
 
     def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
-    ) -> Any:
+        self, sim_config: Config, episode: Type[Episode]
+    ) -> Config:
         r"""Returns updated simulator config with episode data such as a start
         state.
         """

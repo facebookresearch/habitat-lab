@@ -6,13 +6,13 @@ from typing import Any, List
 from habitat.core.dataset import Dataset
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav_task import ObjectGoal, ShortestPathPoint
-from yacs.config import CfgNode
+from habitat.config import Config
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 
 
 def get_default_mp3d_v1_config(split: str = "val"):
-    config = CfgNode()
+    config = Config()
     config.name = "MP3DEQA-v1"
     config.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
     config.SCENES_PATH = "data/scene_datasets/mp3d"
@@ -34,12 +34,12 @@ class Matterport3dDatasetV1(Dataset):
     episodes: List[EQAEpisode]
 
     @staticmethod
-    def check_config_paths_exist(config: Any) -> bool:
+    def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
             config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
         ) and os.path.exists(config.MP3DEQAV1.SCENES_PATH)
 
-    def __init__(self, config: Any = None) -> None:
+    def __init__(self, config: Config = None) -> None:
         self.episodes = []
 
         if config is None:
@@ -50,8 +50,8 @@ class Matterport3dDatasetV1(Dataset):
         ) as f:
             self.from_json(f.read())
 
-    def from_json(self, serialized: str) -> None:
-        deserialized = json.loads(serialized)
+    def from_json(self, json_str: str) -> None:
+        deserialized = json.loads(json_str)
         self.__dict__.update(deserialized)
         for ep_index, episode in enumerate(deserialized["episodes"]):
             episode = EQAEpisode(**episode)

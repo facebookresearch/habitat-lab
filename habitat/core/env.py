@@ -1,10 +1,11 @@
 import time
-from typing import Type, List, Any, Optional, Tuple
+from typing import Dict, Type, List, Any, Optional, Tuple
 
 import gym
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 
+from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.simulator import AgentState, ShortestPathPoint
@@ -14,17 +15,31 @@ from habitat.tasks import make_task
 
 
 class Env:
-    def __init__(self, config: Any, dataset: Optional[Dataset] = None) -> None:
-        self._config: Any = config.clone()
-        self._dataset: Optional[Dataset] = dataset
-        self._episodes: List[
-            Type[Episode]
-        ] = self._dataset.episodes if self._dataset else []
-        self._current_episode_index: Optional[int] = None
+    observation_space: SpaceDict
+    action_space: SpaceDict
+    _config: Config
+    _dataset: Optional[Dataset]
+    _episodes: List[Type[Episode]]
+    _current_episode_index: Optional[int]
+    _sim: Simulator
+    _task: EmbodiedTask
+    _max_episode_seconds: int
+    _max_episode_steps: int
+    _elapsed_steps: int
+    _episode_start_time: Optional[float]
+    _episode_over: bool
+
+    def __init__(
+        self, config: Config, dataset: Optional[Dataset] = None
+    ) -> None:
+        self._config = config.clone()
+        self._dataset = dataset
+        self._episodes = self._dataset.episodes if self._dataset else []
+        self._current_episode_index = None
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )
-        self._task: EmbodiedTask = make_task(
+        self._task = make_task(
             self._config.TASK.TYPE,
             config=self._config.TASK,
             sim=self._sim,
@@ -37,12 +52,10 @@ class Env:
             }
         )
         self.action_space = self._sim.action_space
-        self._max_episode_seconds = getattr(
-            self._config.ENVIRONMENT, "MAX_EPISODE_SECONDS", None
+        self._max_episode_seconds = (
+            self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         )
-        self._max_episode_steps = getattr(
-            self._config.ENVIRONMENT, "MAX_EPISODE_STEPS", None
-        )
+        self._max_episode_steps = self._config.ENVIRONMENT.MAX_EPISODE_STEPS
         self._elapsed_steps = 0
         self._episode_start_time: Optional[float] = None
         self._episode_over = False
@@ -60,7 +73,7 @@ class Env:
         return self._episodes
 
     @episodes.setter
-    def episodes(self, episodes: List[Type[Episode]]):
+    def episodes(self, episodes: List[Type[Episode]]) -> None:
         assert (
             len(episodes) > 0
         ), "Environment doesn't accept empty episodes list."
@@ -91,12 +104,12 @@ class Env:
 
     def _past_limit(self) -> bool:
         if (
-            self._max_episode_steps is not None
+            self._max_episode_steps != 0
             and self._max_episode_steps <= self._elapsed_steps
         ):
             return True
         elif (
-            self._max_episode_seconds is not None
+            self._max_episode_seconds != 0
             and self._max_episode_seconds <= self._elapsed_seconds
         ):
             return True
@@ -130,9 +143,9 @@ class Env:
 
         return observations
 
-    def _update_step_stats(self):
+    def _update_step_stats(self) -> None:
         self._elapsed_steps += 1
-        self._episode_over = not self._sim.episode_active
+        self._episode_over = not self._sim.is_episode_active
         if self._past_limit():
             self._episode_over = True
 
@@ -155,23 +168,25 @@ class Env:
 
         return observations
 
-    def seed(self, seed: int = None) -> None:
+    def seed(self, seed: int) -> None:
         self._sim.seed(seed)
 
-    def reconfigure(self, config) -> None:
+    def reconfigure(self, config: Config) -> None:
         self._config = config.clone()
         self._config.SIMULATOR = self._task.overwrite_sim_config(
             self._config.SIMULATOR, self.current_episode
         )
         self._sim.reconfigure(self._config.SIMULATOR)
 
-    def geodesic_distance(self, position_a, position_b) -> float:
+    def geodesic_distance(
+        self, position_a: List[float], position_b: List[float]
+    ) -> float:
         return self._sim.geodesic_distance(position_a, position_b)
 
     def semantic_annotations(self):
         return self._sim.semantic_annotations()
 
-    def sample_navigable_point(self):
+    def sample_navigable_point(self) -> List[float]:
         return self._sim.sample_navigable_point()
 
     def action_space_shortest_path(
@@ -198,7 +213,11 @@ class Env:
 
 
 class RLEnv(gym.Env):
-    def __init__(self, config: Any, dataset: Optional[Dataset] = None) -> None:
+    _env: Env
+
+    def __init__(
+        self, config: Config, dataset: Optional[Dataset] = None
+    ) -> None:
         self._env = Env(config, dataset)
 
     @property
@@ -210,22 +229,21 @@ class RLEnv(gym.Env):
         return self._env.episodes
 
     @episodes.setter
-    def episodes(self, episodes) -> None:
+    def episodes(self, episodes: List[Type[Episode]]) -> None:
         self._env.episodes = episodes
 
     def reset(self) -> Observations:
-
         observations = self._env.reset()
 
         return observations
 
-    def get_reward(self, observations):
+    def get_reward(self, observations: Observations) -> Any:
         raise NotImplementedError
 
-    def get_done(self, observations):
+    def get_done(self, observations: Observations) -> bool:
         return self._env.episode_over
 
-    def get_info(self, observations):
+    def get_info(self, observations) -> Dict[Any, Any]:
         raise NotImplementedError
 
     def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
@@ -244,10 +262,10 @@ class RLEnv(gym.Env):
 
         return observations, reward, done, info
 
-    def seed(self, seed: int = None) -> None:
+    def seed(self, seed: int) -> None:
         self._env.seed(seed)
 
-    def render(self, mode="human", close=False) -> np.ndarray:
+    def render(self, mode: str = "human", close: bool = False) -> np.ndarray:
         return self._env.render(mode, close)
 
     def close(self) -> None:
