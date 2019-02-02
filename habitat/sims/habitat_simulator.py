@@ -84,7 +84,7 @@ class HabitatSimDepthSensor(DepthSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
-        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MIN_DEPTH)
+        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
