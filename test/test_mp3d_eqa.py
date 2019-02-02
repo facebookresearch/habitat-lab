@@ -11,7 +11,6 @@ from habitat.datasets import make_dataset
 
 CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
-IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
 TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
@@ -149,9 +148,6 @@ def test_mp3d_eqa_sim_correspondence():
         if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
     ]
 
-    if IS_GENERATING_VIDEO:
-        from habitat.internal.visualize import gen_video
-
     ep_i = 0
     cycles_n = 2
     while cycles_n > 0:
@@ -170,9 +166,6 @@ def test_mp3d_eqa_sim_correspondence():
             start_state.position, episode.start_position
         ), "Agent's start position diverges from the shortest path's one."
 
-        rgb_frames = []
-        depth = []
-        labels = []
         rgb_mean = 0
         logger.info(
             "{id} {question}\n{answer}".format(
@@ -210,35 +203,12 @@ def test_mp3d_eqa_sim_correspondence():
 
             if not env.episode_over:
                 rgb_mean += obs["rgb"][:, :, :3].mean()
-                if IS_GENERATING_VIDEO:
-                    # Cut RGB channels from RGBA and fill empty frames of
-                    # relevant resolution, collect frames
-                    rgb_frames.append(obs["rgb"][:, :, :3])
-                    # Fill frames with zeros using same resolution as rgb frame
-                    depth.append(
-                        np.zeros(obs["rgb"].shape[:2], dtype=np.uint8)
-                    )
-                    labels.append(
-                        np.zeros(obs["rgb"].shape[:2], dtype=np.uint8)
-                    )
 
         if ep_i < len(RGB_EPISODE_MEANS):
             rgb_mean = rgb_mean / len(episode.shortest_paths[0])
             assert np.isclose(
                 RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean
             ), "RGB output doesn't match the ground truth."
-
-        if IS_GENERATING_VIDEO and cycles_n == 2:
-            gen_video.make_video(
-                "{id} {question}\n{answer}".format(
-                    id=episode.episode_id,
-                    question=episode.question.question_text,
-                    answer=episode.question.answer_text,
-                ),
-                rgb_frames,
-                depth,
-                labels,
-            )
 
         ep_i = (ep_i + 1) % EPISODES_LIMIT
         if ep_i == 0:

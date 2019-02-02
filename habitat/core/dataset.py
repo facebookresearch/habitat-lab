@@ -71,13 +71,7 @@ class Dataset(Generic[T]):
             def default(self, object):
                 return object.__dict__
 
-        # TODO(maksymets): remove call of internal DatasetFloatJSONEncoder
-        #  used for float precision decrease
-        from habitat.internal.data.datasets.utils import (
-            DatasetFloatJSONEncoder,
-        )
-
-        result = DatasetFloatJSONEncoder().encode(self)
+        result = DatasetJSONEncoder().encode(self)
         return result
 
     def from_json(self, json_str: str) -> None:
