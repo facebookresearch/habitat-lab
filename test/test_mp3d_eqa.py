@@ -1,9 +1,8 @@
 import time
 
-import numpy as np
-
 import habitat
 import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
+import numpy as np
 from habitat.config.default import cfg
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger

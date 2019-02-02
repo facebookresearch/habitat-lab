@@ -1,17 +1,17 @@
 import json
-import os
 import multiprocessing as mp
+import os
 
 import habitat
 import numpy as np
 from habitat.config.default import cfg
+from habitat.core.simulator import AgentState
 from habitat.sims.habitat_simulator import (
     SimActions,
     SIM_ACTION_TO_NAME,
     SIM_NAME_TO_ACTION,
 )
 from habitat.tasks.nav.nav_task import NavigationEpisode
-from habitat.core.simulator import AgentState
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
 MULTIHOUSE_RESOURCES_PATH = "data/habitat-sim/multihouse-resources"
@@ -43,6 +43,9 @@ class DatasetTest(habitat.Dataset):
 
 
 class DummyRLEnv(habitat.RLEnv):
+    def get_reward_range(self):
+        return -1.0, 1.0
+
     def get_reward(self, observations):
         return 0.0
 
@@ -94,7 +97,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
         k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
     ]
 
-    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+    for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         observations = envs.step(np.random.choice(non_stop_actions, num_envs))
         assert len(observations) == num_envs
 
@@ -184,7 +187,7 @@ def test_env():
 
 
 def make_rl_env(config, dataset, rank: int = 0):
-    r"""Constructor for default habitat Env.
+    """Constructor for default habitat Env.
     :param config: configurations for environment
     :param dataset: dataset for environment
     :param rank: rank for setting seeds for environment
@@ -268,7 +271,7 @@ def test_action_space_shortest_path():
     env = habitat.Env(config=config, dataset=None)
 
     # action space shortest path
-    source_position = env.sample_navigable_point()
+    source_position = env.sim.sample_navigable_point()
     angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
     angle = np.radians(np.random.choice(angles))
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
@@ -277,31 +280,31 @@ def test_action_space_shortest_path():
     reachable_targets = []
     unreachable_targets = []
     while len(reachable_targets) < 5:
-        position = env.sample_navigable_point()
+        position = env.sim.sample_navigable_point()
         angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
-        if env.geodesic_distance(source_position, position) != np.inf:
+        if env.sim.geodesic_distance(source_position, position) != np.inf:
             reachable_targets.append(AgentState(position, rotation))
 
     while len(unreachable_targets) < 3:
-        position = env.sample_navigable_point()
+        position = env.sim.sample_navigable_point()
         angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
-        if env.geodesic_distance(source_position, position) == np.inf:
+        if env.sim.geodesic_distance(source_position, position) == np.inf:
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.action_space_shortest_path(source, targets)
+    shortest_path1 = env.sim.action_space_shortest_path(source, targets)
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.action_space_shortest_path(source, targets)
+    shortest_path2 = env.sim.action_space_shortest_path(source, targets)
     assert shortest_path2 == []
 
     targets = reachable_targets + unreachable_targets
-    shortest_path3 = env.action_space_shortest_path(source, targets)
+    shortest_path3 = env.sim.action_space_shortest_path(source, targets)
 
     # shortest_path1 should be identical to shortest_path3
     assert len(shortest_path1) == len(shortest_path3)
@@ -315,7 +318,7 @@ def test_action_space_shortest_path():
         assert shortest_path1[i].action == shortest_path3[i].action
 
     targets = unreachable_targets + [source]
-    shortest_path4 = env.action_space_shortest_path(source, targets)
+    shortest_path4 = env.sim.action_space_shortest_path(source, targets)
     assert len(shortest_path4) == 1
     assert np.allclose(shortest_path4[0].position, source.position)
     assert np.allclose(shortest_path4[0].rotation, source.rotation)

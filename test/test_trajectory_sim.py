@@ -2,8 +2,8 @@ import json
 import os
 
 import numpy as np
-from habitat.sims import make_sim
 from habitat.config.default import cfg
+from habitat.sims import make_sim
 
 
 def init_sim():
@@ -50,7 +50,7 @@ def test_sim():
             ), "mismatch in rotation " "at step {}".format(i)
         assert sim.action_space.contains(action)
 
-        obs = sim.step(action)
+        sim.step(action)
         if i == len(test_trajectory["actions"]) - 1:  # STOP action
             assert sim.is_episode_active is False
 

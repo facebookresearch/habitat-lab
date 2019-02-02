@@ -4,13 +4,13 @@ from typing import Any, Dict, List, Optional
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
-
 from habitat.config import Config
 
 
 class SensorTypes(Enum):
-    r"""Enumeration of types of sensors.
+    """Enumeration of types of sensors.
     """
+
     NULL = 0
     COLOR = 1
     DEPTH = 2
@@ -24,20 +24,18 @@ class SensorTypes(Enum):
 
 
 class Sensor:
-    r"""Represents a sensor that provides data from the environment to agent.
+    """Represents a sensor that provides data from the environment to agent.
+    The user of this class needs to implement the get_observation method and
+    the user is also required to set the below attributes:
 
-    The user of this class needs to implement:
-
-        observation
-
-    The user of this class is required to set the following attributes:
-
+    Attributes:
         uuid: universally unique id.
         sensor_type: type of Sensor, use SensorTypes enum if your sensor
-        comes under one of it's categories.
+            comes under one of it's categories.
         observation_space: gym.Space object corresponding to observation of
-        sensor
+            sensor
     """
+
     uuid: str
     config: Config
     sensor_type: SensorTypes
@@ -59,16 +57,16 @@ class Sensor:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        r"""Returns the current observation for Sensor.
+        """Returns the current observation for Sensor.
         """
         raise NotImplementedError
 
 
 class Observations(dict):
-    r"""Dict containing sensor observations
+    """Dictionary containing sensor observations
 
-    Thin wrapper of OrderedDict with potentially some utility functions
-    to obtain Tensors)
+    Args:
+        sensors: list of sensors whose observations are fetched and packaged.
     """
 
     def __init__(
@@ -133,18 +131,18 @@ class SemanticSensor(Sensor):
 
 
 class SensorSuite:
-    r"""Represents a set of sensors, with each sensor being identified
+    """Represents a set of sensors, with each sensor being identified
     through a unique id.
+
+    Args:
+        sensors: list containing sensors for the environment, uuid of each
+            sensor must be unique.
     """
+
     sensors: Dict[str, Sensor]
     observation_spaces: SpaceDict
 
     def __init__(self, sensors: List[Sensor]) -> None:
-        r"""
-        Args
-            sensors: list containing sensors for the environment, the uuid of
-            each sensor should be unique.
-        """
         self.sensors = OrderedDict()
         spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
@@ -159,8 +157,11 @@ class SensorSuite:
         return self.sensors[uuid]
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
-        r"""
-        :return: collect data from all sensors packaged into Observation
+        """
+
+        Returns:
+            collect data from all sensors and return it packaged into
+            Observation.
         """
         return Observations(self.sensors, *args, **kwargs)
 
@@ -190,25 +191,47 @@ class ShortestPathPoint:
 
 
 class Simulator:
+    """Basic simulator class for habitat. New simulators to be added to habtiat
+    must derive from this class and implement the below methods:
+        reset
+        step
+        seed
+        reconfigure
+        geodesic_distance
+        sample_navigable_point
+        action_space_shortest_path
+        close
+    """
+
     @property
     def sensor_suite(self) -> SensorSuite:
         raise NotImplementedError
 
     @property
-    def action_space(self) -> SensorSuite:
+    def action_space(self) -> Space:
         raise NotImplementedError
 
     @property
     def is_episode_active(self) -> bool:
         raise NotImplementedError
 
-    def render(self, mode: str = "human", close: bool = False) -> Any:
-        raise NotImplementedError
-
     def reset(self) -> Observations:
+        """Resets the simulator and returns the initial observations.
+
+        Returns:
+            Initial observations from simulator.
+        """
         raise NotImplementedError
 
     def step(self, action: int) -> Observations:
+        """Perform an action in the simulator and return observations.
+
+        Args:
+            action: action to be performed inside the simulator.
+
+        Returns:
+            observations after taking action in simulator.
+        """
         raise NotImplementedError
 
     def seed(self, seed: int) -> None:
@@ -220,36 +243,45 @@ class Simulator:
     def geodesic_distance(
         self, position_a: List[float], position_b: List[float]
     ) -> float:
-        r"""
-        :param position_a: starting point for distance calculation
-        :param position_b: ending point for distance calculation
-        :return: the geodesic distance in the cartesian space between points
-                 position_a and position_b, if no path is found between the
-                 points then infinity is returned.
+        """Calculates geodesic distance between two points.
+
+        Args:
+            position_a: coordinates of first point
+            position_b: coordinates of second point
+
+        Returns:
+            the geodesic distance in the cartesian space between points
+            position_a and position_b, if no path is found between the
+            points then infinity is returned.
         """
         raise NotImplementedError
 
     def sample_navigable_point(self) -> List[float]:
-        r"""
-        :return: a random navigable point from the simulator. A point is
-        defined as navigable if the agent can be initialized at the point.
+        """Samples a navigable point from the simulator. A point is defined as
+        navigable if the agent can be initialized at that point.
+
+        Returns:
+            Navigable point.
         """
         raise NotImplementedError
 
-    def action_space_shortest_paths(
+    def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int
     ) -> List[ShortestPathPoint]:
-        r"""
-        :param source: source agent state for shortest path calculation
-        :param targets: target agent state(s) for shortest path calculation
-        :param agent_id: int identification of agent from multi-agent setup
-        :return: List of agent states and actions along the shortest path from
-        source to the nearest target (both included). If one of the target(s)
-        is identical to the source, a list containing only one node with the
-        identical agent state is returned. Returns an empty list in case none
-        of the targets are reachable from the source. For the last item in
-        the returned list the action will be None
+        """Calculates the shortest path between source and target agent states.
+
+        Args:
+            source: source agent state for shortest path calculation.
+            targets: target agent state(s) for shortest path calculation.
+            agent_id: id for agent (relevant for multi-agent setup).
+
+        Returns:
+            List of agent states and actions along the shortest path from
+            source to the nearest target (both included).
         """
+        raise NotImplementedError
+
+    def render(self, mode: str = "human", close: bool = False) -> Any:
         raise NotImplementedError
 
     def close(self) -> None:

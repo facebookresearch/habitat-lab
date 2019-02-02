@@ -6,8 +6,22 @@ from habitat.core.simulator import SensorSuite, Simulator
 
 
 class EmbodiedTask:
-    r"""Base class to keep whole Task specific logic added on top of simulator.
+    """Base class for embodied tasks. When subclassing the user has
+    to define the attributes listed below.
+
+    Args:
+        config: config for the task.
+        sim: reference to the simulator for calculating task observations.
+        dataset: reference to dataset for task instance level information.
+        sensor_suite: task specific custom sensors which are added
+            on top of simulator's sensors. These sensors can be used to
+            connect observation from simulator and task instances,
+            eg PointGoalSensor defined in habitat.tasks.nav.nav_task.
+
+    Attributes:
+        sensor_suite: suits of task sensors.
     """
+
     _config: Any
     _sim: Optional[Simulator]
     _dataset: Optional[Dataset]
@@ -26,10 +40,15 @@ class EmbodiedTask:
         self._sensor_suite = sensor_suite
 
     def overwrite_sim_config(
-        self, sim_config: Config, episode: Type[Episode]
+        self, sim_config: Any, episode: Type[Episode]
     ) -> Config:
-        r"""Returns updated simulator config with episode data such as a start
-        state.
+        """
+        Args:
+            sim_config: config for simulator.
+            episode: current episode.
+
+        Returns:
+            update config merging information from sim_config and episode.
         """
         raise NotImplementedError
 

@@ -1,11 +1,10 @@
 from enum import Enum
 from typing import List, Any, Optional
 
+import habitat
 import habitat_sim
 import numpy as np
-from gym import spaces
-
-import habitat
+from gym import spaces, Space
 from habitat import SensorSuite, Config
 from habitat.core.logging import logger
 from habitat.core.simulator import AgentState, ShortestPathPoint
@@ -29,9 +28,6 @@ def check_sim_obs(obs, sensor):
 
 
 class HabitatSimRGBSensor(RGBSensor):
-    """RGB sensor for habitat_sim
-    """
-
     sim_sensor_type: habitat_sim.SensorType
 
     def __init__(self, config):
@@ -53,9 +49,6 @@ class HabitatSimRGBSensor(RGBSensor):
 
 
 class HabitatSimDepthSensor(DepthSensor):
-    """Depth sensor for habitat_sim
-    """
-
     sim_sensor_type: habitat_sim.SensorType
     min_depth_value: float
     max_depth_value: float
@@ -93,9 +86,6 @@ class HabitatSimDepthSensor(DepthSensor):
 
 
 class HabitatSimSemanticSensor(SemanticSensor):
-    """Semantic sensor for habitat_sim
-    """
-
     sim_sensor_type: habitat_sim.SensorType
 
     def __init__(self, config):
@@ -134,6 +124,14 @@ SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
 
 
 class HabitatSim(habitat.Simulator):
+    """Simulator wrapper over habitat-sim
+
+    habitat-sim repo: https://github.com/facebookresearch/habitat-sim
+
+    Args:
+        config: configuration for initializing the simulator.
+    """
+
     def __init__(self, config: Config) -> None:
         self.config = config.clone()
         agent_config = self._get_agent_config()
@@ -210,7 +208,7 @@ class HabitatSim(habitat.Simulator):
         return self._sensor_suite
 
     @property
-    def action_space(self) -> SensorSuite:
+    def action_space(self) -> Space:
         return self._action_space
 
     @property
@@ -245,8 +243,6 @@ class HabitatSim(habitat.Simulator):
         )
         sim_action = self._controls[action]
         if sim_action == SimActions.STOP.value:
-            # TODO(akadian): Handle reward calculation on stop once pointnav
-            # is integrated
             self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
@@ -282,9 +278,19 @@ class HabitatSim(habitat.Simulator):
         self._sim.pathfinder.find_path(path)
         return path.geodesic_distance
 
-    def action_space_shortest_paths(
+    def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
+        """
+        Returns:
+            List of agent states and actions along the shortest path from
+            source to the nearest target (both included). If one of the
+            target(s) is identical to the source, a list containing only
+            one node with the identical agent state is returned. Returns
+            an empty list in case none of the targets are reachable from
+            the source. For the last item in the returned list the action
+            will be None.
+        """
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
@@ -321,37 +327,38 @@ class HabitatSim(habitat.Simulator):
 
         return shortest_path
 
-    def sample_navigable_point(self) -> List[float]:
-        r"""
-        return: randomly sample a [x, y, z] point where the agent can be
-        initialized.
-        """
+    def sample_navigable_point(self):
         return self._sim.pathfinder.get_random_navigable_point().tolist()
 
     def semantic_annotations(self):
-        r"""
-        :return: SemanticScene which is a three level hierarchy of
-        semantic annotations for the current scene. Specifically this method
-        returns a SemanticScene which contains a list of SemanticLevel's
-        where each SemanticLevel contains a list of SemanticRegion's where
-        each SemanticRegion contains a list of SemanticObject's.
+        """
+        Returns:
+            SemanticScene which is a three level hierarchy of semantic
+            annotations for the current scene. Specifically this method
+            returns a SemanticScene which contains a list of SemanticLevel's
+            where each SemanticLevel contains a list of SemanticRegion's where
+            each SemanticRegion contains a list of SemanticObject's.
 
-        SemanticScene has attributes: aabb(axis-aligned bounding box) which
-        has attributes aabb.center and aabb.sizes which are 3d vectors,
-        categories, levels, objects, regions.
+            SemanticScene has attributes: aabb(axis-aligned bounding box) which
+            has attributes aabb.center and aabb.sizes which are 3d vectors,
+            categories, levels, objects, regions.
 
-        SemanticLevel has attributes: id, aabb, objects and regions.
+            SemanticLevel has attributes: id, aabb, objects and regions.
 
-        SemanticRegion has attributes: id, level, aabb, category (to get
-        name of category use category.name()) and objects.
+            SemanticRegion has attributes: id, level, aabb, category (to get
+            name of category use category.name()) and objects.
 
-        SemanticObject has attributes: id, region, aabb, obb (oriented
-        bounding box) and category.
+            SemanticObject has attributes: id, region, aabb, obb (oriented
+            bounding box) and category.
 
-        Example to loop through in a hierarchical fashion:
-        for level in semantic_scene.levels:
-            for region in level.regions:
-                for obj in region.objects:
+            SemanticScene contains List[SemanticLevels]
+            SemanticLevel contains List[SemanticRegion]
+            SemanticRegion contains List[SemanticObject]
+
+            Example to loop through in a hierarchical fashion:
+            for level in semantic_scene.levels:
+                for region in level.regions:
+                    for obj in region.objects:
         """
         return self._sim.semantic_scene
 
@@ -379,14 +386,15 @@ class HabitatSim(habitat.Simulator):
         rotation: List[float] = None,
         agent_id: int = 0,
     ) -> None:
-        r"""
-        Sets agent state similar to initialize_agent, but without agents
+        """Sets agent state similar to initialize_agent, but without agents
         creation.
-        :param position: numpy ndarray containing 3 entries for (x, y, z)
-        :param rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
-        of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        :param agent_id: int identification of agent from multiagent setup
+
+        Args:
+            position: numpy ndarray containing 3 entries for (x, y, z).
+            rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
+            of unit quaternion (versor) representing agent 3D orientation,
+            (https://en.wikipedia.org/wiki/Versor)
+            agent_id: int identification of agent from multiagent setup.
         """
         agent = self._sim.get_agent(agent_id)
         state = self.agent_state(agent_id)

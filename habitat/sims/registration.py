@@ -5,8 +5,6 @@ from habitat.core.registry import Registry, Spec
 class SimSpec(Spec):
     def __init__(self, id_sim, entry_point):
         super().__init__(id_sim, entry_point)
-        # TODO(akadian): Add more simulator specific details which will be
-        # recorded to ensure reproducibility
 
 
 class SimRegistry(Registry):

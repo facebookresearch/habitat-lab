@@ -4,10 +4,14 @@ import numpy as np
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    r"""
-    :param images: list of images where each image has dimension
-                   (height x width x channels)
-    :return: tiled image (new_height x width x channels)
+    """Tile multiple images into single image
+
+    Args:
+        images: list of images where each image has dimension
+            (height x width x channels)
+
+    Returns:
+        tiled image (new_height x width x channels)
     """
     assert len(images) > 0, "empty list of images"
     np_images = np.asarray(images)

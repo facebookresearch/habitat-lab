@@ -12,8 +12,6 @@ from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
 class QuestionData:
-    r"""Class saves data about question asked to the agent and correct answer.
-    """
     question_text: str
     answer_text: Optional[str]
     question_type: Optional[str]
@@ -30,21 +28,22 @@ class QuestionData:
 
 
 class EQAEpisode(NavigationEpisode):
-    r"""Specification of episode that includes initial position and rotation of
+    """Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
+
+    Args:
+        scene_id: id of scene inside the simulator.
+        start_position: numpy ndarray containing 3 entries for (x, y, z).
+        start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
+            elements of unit quaternion (versor) representing agent 3D
+            orientation.
+        goals: relevant goal object/room.
+        question: question related to goal object.
     """
+
     question: QuestionData
 
     def __init__(self, question: QuestionData, **kwargs) -> None:
-        r"""
-        :param scene_id:
-        :param start_position: numpy ndarray containing 3 entries for (x, y, z)
-        :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
-        elements of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        :param goals: relevant goal object/room
-        :param question: question related to goal object
-        """
         super().__init__(**kwargs)
         self.question = question
 

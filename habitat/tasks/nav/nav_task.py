@@ -21,8 +21,9 @@ def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
 
 
 class NavigationGoal:
-    r"""Base class for a goal specification hierarchy.
+    """Base class for a goal specification hierarchy.
     """
+
     position: List[float]
     radius: Optional[float]
 
@@ -34,9 +35,10 @@ class NavigationGoal:
 
 
 class ObjectGoal(NavigationGoal):
-    r"""Object goal that can be specified by object_id or position or object
+    """Object goal that can be specified by object_id or position or object
     category.
     """
+
     object_id: str
     object_name: Optional[str]
     object_category: Optional[str]
@@ -61,8 +63,9 @@ class ObjectGoal(NavigationGoal):
 
 
 class RoomGoal(NavigationGoal):
-    r"""Room goal that can be specified by room_id or position with radius.
+    """Room goal that can be specified by room_id or position with radius.
     """
+
     room_id: str
     room_name: Optional[str]
 
@@ -75,10 +78,22 @@ class RoomGoal(NavigationGoal):
 
 
 class NavigationEpisode(Episode):
-    r"""Class for episode specification that includes initial position and
+    """Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
     episode is a description of one task instance for the agent.
+
+    Args:
+        episode_id: id of episode in the dataset, usually episode number
+        scene_id: id of scene in scene dataset
+        start_position: numpy ndarray containing 3 entries for (x, y, z)
+        start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
+            elements of unit quaternion (versor) representing agent 3D
+            orientation. ref: https://en.wikipedia.org/wiki/Versor
+        goals: list of goals specifications
+        start_room: room id
+        shortest_paths: list containing shortest paths to goals
     """
+
     goals: List[NavigationGoal]
     start_room: Optional[str]
     shortest_paths: Optional[List[ShortestPathPoint]]
@@ -90,17 +105,6 @@ class NavigationEpisode(Episode):
         shortest_paths: Optional[List[ShortestPathPoint]] = None,
         **kwargs
     ) -> None:
-        r"""
-        :param episode_id: id of episode in the dataset, usually episode number
-        :param scene_id: id of scene in scene dataset
-        :param start_position: numpy ndarray containing 3 entries for (x, y, z)
-        :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
-        elements of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        :param goals: list of goals specifications
-        :param: start_room: room id
-        :param: shortest_paths: list containing shortest paths to goals
-        """
         super().__init__(**kwargs)
         self.goals = goals
         self.shortest_paths = shortest_paths

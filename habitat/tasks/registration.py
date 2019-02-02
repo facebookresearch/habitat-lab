@@ -5,11 +5,16 @@ from habitat.core.registry import Registry, Spec
 class TaskSpec(Spec):
     def __init__(self, id_task, entry_point):
         super().__init__(id_task, entry_point)
-        # TODO(akadian): Add more task specific details which will be
-        # recorded to ensure reproducibility.
 
 
 class TaskRegistry(Registry):
+    """Registry for maintaining tasks.
+
+    Args:
+        id_task: id for task being registered.
+        kwargs: arguments to be passed to task constructor.
+    """
+
     def register(self, id_task, **kwargs):
         if id_task in self.specs:
             raise ValueError(

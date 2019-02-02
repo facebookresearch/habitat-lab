@@ -1,7 +1,6 @@
 from typing import Optional
 
 from habitat.config import Config as CN
-
 from habitat.core.logging import logger
 
 CFG_DIR = "configs/"

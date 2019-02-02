@@ -4,17 +4,34 @@ from typing import Dict, Type, List, Any, Optional, Tuple
 import gym
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
-
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask
-from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.simulator import Observations, Simulator
 from habitat.sims import make_sim
 from habitat.tasks import make_task
 
 
 class Env:
+    """Fundamental environment class for habitat. All the information needed
+    for working on embodied tasks with simulator is abstracted inside
+    Env. Acts as a base for other derived environment classes. Env consists
+    of three major components: dataset (episodes), simulator and task and
+    connects all the three components together.
+
+    Args:
+        config: config for the environment. Should contain id for simulator and
+            task_name which are passed into make_sim and make_task.
+        dataset: reference to dataset for task instance level information.
+            Can be defined as None in which case _episodes should be populated
+            from outside.
+
+    Attributes:
+        observation_space: SpaceDict object corresponding to sensor in sim
+            and task.
+        action_space: gym.space object corresponding to valid actions.
+    """
+
     observation_space: SpaceDict
     action_space: SpaceDict
     _config: Config
@@ -121,6 +138,11 @@ class Env:
         self._episode_over = False
 
     def reset(self) -> Observations:
+        """Resets the environments and returns the initial observations.
+
+        Returns:
+            Initial observations from the environment
+        """
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
@@ -150,6 +172,16 @@ class Env:
             self._episode_over = True
 
     def step(self, action: int) -> Observations:
+        """Perform an action in the environment and return observations
+
+        Args:
+            action: action (belonging to action_space) to be performed inside
+                the environment.
+
+        Returns:
+            observations after taking action in environment.
+        """
+
         assert self._episode_start_time is not None, (
             "Cannot call step " "before calling reset"
         )
@@ -178,33 +210,6 @@ class Env:
         )
         self._sim.reconfigure(self._config.SIMULATOR)
 
-    def geodesic_distance(
-        self, position_a: List[float], position_b: List[float]
-    ) -> float:
-        return self._sim.geodesic_distance(position_a, position_b)
-
-    def semantic_annotations(self):
-        return self._sim.semantic_annotations()
-
-    def sample_navigable_point(self) -> List[float]:
-        return self._sim.sample_navigable_point()
-
-    def action_space_shortest_path(
-        self, source: AgentState, targets: List[AgentState]
-    ) -> List[ShortestPathPoint]:
-        r"""
-        :param source: source agent state for shortest path calculation
-        :param targets: target agent state(s) for shortest path calculation
-        :return: List of agent states and actions along the shortest path from
-        source to the nearest target (both included). If one of the target(s)
-        is identical to the source, a list containing only one node with the
-        identical agent state is returned. Returns an empty list in case none
-        of the targets are reachable from the source.
-        """
-        return self._sim.action_space_shortest_paths(
-            source, targets, agent_id=0
-        )
-
     def render(self, mode="human", close=False) -> np.ndarray:
         return self._sim.render(mode, close)
 
@@ -213,12 +218,33 @@ class Env:
 
 
 class RLEnv(gym.Env):
+    """Reinforcement Learning (RL) environment class which subclasses gym.Env.
+    This is a wrapper over habitat.Env for RL users. To create custom RL
+    environments users should subclass RLEnv and define the following methods:
+
+        get_reward_range
+        get_reward
+        get_done
+        get_info
+
+    As this is a subclass of gym.Env, it implements
+        reset
+        step
+
+    Args:
+        config: config to construct habitat.Env.
+        dataset: dataset to construct habtiat.Env.
+    """
+
     _env: Env
 
     def __init__(
         self, config: Config, dataset: Optional[Dataset] = None
     ) -> None:
         self._env = Env(config, dataset)
+        self.observation_space = self._env.observation_space
+        self.action_space = self._env.action_space
+        self.reward_range = self.get_reward_range()
 
     @property
     def habitat_env(self) -> Env:
@@ -237,16 +263,59 @@ class RLEnv(gym.Env):
 
         return observations
 
+    def get_reward_range(self):
+        """Get min, max range of reward
+
+        Returns:
+             [min, max] range of reward
+        """
+        raise NotImplementedError
+
     def get_reward(self, observations: Observations) -> Any:
+        """Returns reward after action has been performed. This method
+        is called inside the step method.
+
+        Args:
+            observations: observations from simulator and task
+
+        Returns:
+            reward after performing the last action.
+        """
         raise NotImplementedError
 
     def get_done(self, observations: Observations) -> bool:
-        return self._env.episode_over
+        """Returns boolean indicating whether episode is done after performing
+        the last action. This method is called inside the step method.
+
+        Args:
+            observations: observations from simulator and task
+
+        Returns:
+            done boolean after performing the last action.
+        """
+        raise NotImplementedError
 
     def get_info(self, observations) -> Dict[Any, Any]:
+        """
+        Args:
+            observations: observations from simulator and task
+
+        Returns:
+            info after performing the last action
+        """
         raise NotImplementedError
 
     def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
+        """Perform an action in the environment and return
+        (observations, reward, done, info)
+
+        Args:
+            action: action (belonging to action_space) to be performed inside
+                the environment.
+
+        Returns:
+            (observations, reward, done, info)
+        """
         assert self._env.episode_start_time is not None, (
             "Cannot call step " "before calling reset"
         )

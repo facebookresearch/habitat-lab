@@ -21,8 +21,8 @@ else:
     from habitat.core.env import Env, RLEnv
     from habitat.core.vector_env import VectorEnv, ThreadedVectorEnv
     from habitat.core.logging import logger
-    from habitat.datasets import make_dataset
     from habitat.config import Config
+    from habitat.datasets import make_dataset
 
     __all__ = [
         "Dataset",
