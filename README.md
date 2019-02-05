@@ -65,3 +65,6 @@ To set up data folder with symlink to relevant data for devfair you can run:
 The episode datasets will be loaded to S3, while you can access it here: 
 1. PointNav splits for Gibson and Matterport3D: `/private/home/maksymets/data/habitat_datasets/pointnav`
 2. EQA splits for Matterport3D: `/private/home/maksymets/data/habitat_datasets/eqa`
+
+## License
+habitat-api is MIT licensed. See the LICENSE file for details.
