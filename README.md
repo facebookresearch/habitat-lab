@@ -38,8 +38,10 @@ from habitat.tasks.nav.nav_task import NavigationEpisode
 
 config = cfg()
 env = habitat.Env(config=config)
-env.episodes = [NavigationEpisode(episode_id='0', scene_id=config.SCENE, 
-                                  start_position=None, start_rotation=None, 
+env.episodes = [NavigationEpisode(episode_id='0',
+                                  scene_id=config.SIMULATOR.SCENE,
+                                  start_position=None,
+                                  start_rotation=None,
                                   goals=[])]
 
 observations = env.reset()
