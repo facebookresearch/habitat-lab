@@ -13,7 +13,7 @@ import numpy as np
 from habitat.config.default import cfg
 from habitat.core.simulator import AgentState
 from habitat.sims.habitat_simulator import (
-    SimActions,
+    SimulatorActions,
     SIM_ACTION_TO_NAME,
     SIM_NAME_TO_ACTION,
 )
@@ -85,7 +85,9 @@ def _load_test_data():
     for i in range(num_envs):
         datasets.append(DatasetTest(multihouse_initializations, i))
         config = cfg(CFG_TEST)
+        config.defrost()
         config.SIMULATOR.SCENE = datasets[-1].episodes[0].scene_id
+        config.freeze()
         configs.append(config)
 
     return configs, datasets
@@ -100,7 +102,9 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
     )
     envs.reset()
     non_stop_actions = [
-        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+        k
+        for k, v in SIM_ACTION_TO_NAME.items()
+        if v != SimulatorActions.STOP.value
     ]
 
     for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -142,7 +146,9 @@ def test_threaded_vectorized_env():
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+        k
+        for k, v in SIM_ACTION_TO_NAME.items()
+        if v != SimulatorActions.STOP.value
     ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -154,6 +160,7 @@ def test_threaded_vectorized_env():
 
 def test_env():
     config = cfg(CFG_TEST)
+    config.freeze()
     assert os.path.exists(config.SIMULATOR.SCENE), (
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
@@ -171,7 +178,9 @@ def test_env():
 
     env.reset()
     non_stop_actions = [
-        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+        k
+        for k, v in SIM_ACTION_TO_NAME.items()
+        if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         env.step(np.random.choice(non_stop_actions))
@@ -183,7 +192,7 @@ def test_env():
 
     env.reset()
 
-    env.step(SIM_NAME_TO_ACTION[SimActions.STOP.value])
+    env.step(SIM_NAME_TO_ACTION[SimulatorActions.STOP.value])
     # check for STOP action
     assert env.episode_over is True, (
         "episode should be over after STOP " "action"
@@ -212,7 +221,9 @@ def test_rl_vectorized_envs():
     envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+        k
+        for k, v in SIM_ACTION_TO_NAME.items()
+        if v != SimulatorActions.STOP.value
     ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -230,6 +241,7 @@ def test_rl_vectorized_envs():
 
 def test_rl_env():
     config = cfg(CFG_TEST)
+    config.freeze()
     assert os.path.exists(config.SIMULATOR.SCENE), (
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
@@ -249,7 +261,9 @@ def test_rl_env():
     observation = env.reset()
 
     non_stop_actions = [
-        k for k, v in SIM_ACTION_TO_NAME.items() if v != SimActions.STOP.value
+        k
+        for k, v in SIM_ACTION_TO_NAME.items()
+        if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         observation, reward, done, info = env.step(
@@ -261,7 +275,7 @@ def test_rl_env():
 
     env.reset()
     observation, reward, done, info = env.step(
-        SIM_NAME_TO_ACTION[SimActions.STOP.value]
+        SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
     )
     assert done is True, "done should be true after STOP action"
 
@@ -274,6 +288,8 @@ def test_action_space_shortest_path():
         "Habitat-Sim test data missing, please download and place it in "
         "data/habitat-sim/test/"
     )
+    config.freeze()
+
     env = habitat.Env(config=config, dataset=None)
 
     # action space shortest path

@@ -83,3 +83,7 @@ target/
 
 # mypy
 .mypy_cache/
+
+# pre-commit
+.pre-commit-config.yaml
+pyproject.toml

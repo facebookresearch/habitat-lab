@@ -17,7 +17,7 @@ if __HABITAT_SETUP__:
     sys.stderr.write("Partial import of habitat during the install process.\n")
 else:
     from habitat.core.dataset import Dataset
-    from habitat.core.embodied_task import EmbodiedTask
+    from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
     from habitat.core.simulator import (
         SensorTypes,
         Sensor,
@@ -33,6 +33,8 @@ else:
     __all__ = [
         "Dataset",
         "EmbodiedTask",
+        "Measure",
+        "Measurements",
         "Env",
         "RLEnv",
         "Simulator",

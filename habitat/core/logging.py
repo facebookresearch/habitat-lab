@@ -24,9 +24,14 @@ class HabitatLogger(logging.Logger):
             handler = logging.FileHandler(filename, filemode)
         else:
             handler = logging.StreamHandler(stream)
-        formatter = logging.Formatter(format, dateformat, style)
-        handler.setFormatter(formatter)
+        self._formatter = logging.Formatter(format, dateformat, style)
+        handler.setFormatter(self._formatter)
         super().addHandler(handler)
+
+    def add_filehandler(self, log_filename):
+        filehandler = logging.FileHandler(log_filename)
+        filehandler.setFormatter(self._formatter)
+        self.addHandler(filehandler)
 
 
 logger = HabitatLogger(

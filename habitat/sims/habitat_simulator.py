@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from enum import Enum
 from typing import List, Any, Optional
+from enum import Enum
 
 import habitat
 import habitat_sim
@@ -16,8 +16,8 @@ from habitat.core.logging import logger
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
 
-# Sim provides RGB as RGBD structure with 4 dimensions
-RGBSENSOR_DIMENSION = 4
+
+RGBSENSOR_DIMENSION = 3
 
 
 def overwrite_config(config_from: Config, config_to: Any) -> None:
@@ -31,6 +31,13 @@ def check_sim_obs(obs, sensor):
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
     )
+
+
+class SimulatorActions(Enum):
+    LEFT = "look_left"
+    RIGHT = "look_right"
+    FORWARD = "move_forward"
+    STOP = "stop"
 
 
 class HabitatSimRGBSensor(RGBSensor):
@@ -50,6 +57,8 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
+        # remove alpha channel
+        obs = obs[:, :, :RGBSENSOR_DIMENSION]
         check_sim_obs(obs, self)
         return obs
 
@@ -112,18 +121,11 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-class SimActions(Enum):
-    LEFT = "look_left"
-    RIGHT = "look_right"
-    FORWARD = "move_forward"
-    STOP = "stop"
-
-
 SIM_ACTION_TO_NAME = {
-    0: SimActions.FORWARD.value,
-    1: SimActions.LEFT.value,
-    2: SimActions.RIGHT.value,
-    3: SimActions.STOP.value,
+    0: SimulatorActions.FORWARD.value,
+    1: SimulatorActions.LEFT.value,
+    2: SimulatorActions.RIGHT.value,
+    3: SimulatorActions.STOP.value,
 }
 
 SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
@@ -139,7 +141,7 @@ class HabitatSim(habitat.Simulator):
     """
 
     def __init__(self, config: Config) -> None:
-        self.config = config.clone()
+        self.config = config
         agent_config = self._get_agent_config()
 
         sim_sensors = []
@@ -160,6 +162,7 @@ class HabitatSim(habitat.Simulator):
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
+        self._current_scene = self.sim_config.scene.id
         self._sim = habitat_sim.Simulator(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
@@ -195,16 +198,16 @@ class HabitatSim(habitat.Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
-            SimActions.LEFT.value: habitat_sim.ActionSpec(
+            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
                 "lookLeft", {"amount": self.config.TURN_ANGLE}
             ),
-            SimActions.RIGHT.value: habitat_sim.ActionSpec(
+            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
                 "lookRight", {"amount": self.config.TURN_ANGLE}
             ),
-            SimActions.FORWARD.value: habitat_sim.ActionSpec(
+            SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
                 "moveForward", {"amount": self.config.FORWARD_STEP_SIZE}
             ),
-            SimActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
         }
         sim_config.agents = [agent_config]
         return sim_config
@@ -248,11 +251,12 @@ class HabitatSim(habitat.Simulator):
             "STOP action called previously"
         )
         sim_action = self._controls[action]
-        if sim_action == SimActions.STOP.value:
+        if sim_action == SimulatorActions.STOP.value:
             self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
             sim_obs = self._sim.step(sim_action)
+
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
 
@@ -265,13 +269,11 @@ class HabitatSim(habitat.Simulator):
 
     def reconfigure(self, config: Config) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
-        is_same_scene = config.SCENE == self.config.SCENE
-        self.config = config.clone()
+        is_same_scene = config.SCENE == self._current_scene
+        self.config = config
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        if is_same_scene:
-            self._sim.reconfigure(self.sim_config)
-        else:
-            self._sim.close()
+        if not is_same_scene:
+            self._current_scene = config.SCENE
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
 
@@ -279,8 +281,8 @@ class HabitatSim(habitat.Simulator):
 
     def geodesic_distance(self, position_a, position_b):
         path = habitat_sim.ShortestPath()
-        path.requested_start = position_a
-        path.requested_end = position_b
+        path.requested_start = np.array(position_a, dtype=np.float32)
+        path.requested_end = np.array(position_b, dtype=np.float32)
         self._sim.pathfinder.find_path(path)
         return path.geodesic_distance
 
@@ -371,6 +373,10 @@ class HabitatSim(habitat.Simulator):
     def close(self):
         self._sim.close()
 
+    @property
+    def index_stop_action(self):
+        return SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
             agent_id = self.config.DEFAULT_AGENT_ID
@@ -378,7 +384,7 @@ class HabitatSim(habitat.Simulator):
         agent_config = getattr(self.config, agent_name)
         return agent_config
 
-    def agent_state(self, agent_id: int = 0):
+    def get_agent_state(self, agent_id: int = 0):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
@@ -403,7 +409,7 @@ class HabitatSim(habitat.Simulator):
             agent_id: int identification of agent from multiagent setup.
         """
         agent = self._sim.get_agent(agent_id)
-        state = self.agent_state(agent_id)
+        state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
         agent.set_state(state)
@@ -412,5 +418,5 @@ class HabitatSim(habitat.Simulator):
 
     # TODO (maksymets): Remove check after simulator became stable
     def _check_agent_position(self, position, agent_id=0):
-        if not np.allclose(position, self.agent_state(agent_id).position):
+        if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")

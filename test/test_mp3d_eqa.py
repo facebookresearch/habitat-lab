@@ -83,6 +83,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 def test_mp3d_eqa_dataset():
     dataset_config = cfg(CFG_TEST).DATASET
+    dataset_config.freeze()
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -98,6 +99,7 @@ def test_mp3d_eqa_dataset():
 
 def test_mp3d_eqa_sim():
     eqa_config = cfg(CFG_TEST)
+    eqa_config.freeze()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET

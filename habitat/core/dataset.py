@@ -16,11 +16,13 @@ class Episode:
     Args:
         episode_id: id of episode in the dataset, usually episode number
         scene_id: id of scene in dataset.
-        start_position: numpy ndarray of shape (3,) for cartesian coordinates
+        start_position: list of length 3 for cartesian coordinates
             (x, y, z).
-        start_rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
+        start_rotation: list of length 4 for (x, y, z, w) elements
             of unit quaternion (versor) representing 3D agent orientation
-            (https://en.wikipedia.org/wiki/Versor).
+            (https://en.wikipedia.org/wiki/Versor). The rotation specifying
+            the agent's orientation is relative to the world coordinate
+            axes.
     """
 
     episode_id: str

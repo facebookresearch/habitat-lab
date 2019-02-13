@@ -114,6 +114,14 @@ class VectorEnv:
             read_fn() for read_fn in self._connection_read_fns
         ]
 
+    @property
+    def num_envs(self):
+        """
+        Returns:
+             Number of individual environments.
+        """
+        return self._num_envs
+
     @staticmethod
     def _worker_env(
         connection_read_fn: Callable,

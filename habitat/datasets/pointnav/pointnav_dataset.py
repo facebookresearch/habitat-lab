@@ -31,7 +31,7 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def get_scenes_to_load(config: Config) -> List[str]:
-        r"""Return list of scene ids for which dataset has separate files with 
+        """Return list of scene ids for which dataset has separate files with
         episodes.
         """
         assert PointNavDatasetV1.check_config_paths_exist(config)

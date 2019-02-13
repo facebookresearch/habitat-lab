@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from enum import Enum
 from typing import Any, Dict, List, Optional
+from enum import Enum
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
@@ -23,10 +23,11 @@ class SensorTypes(Enum):
     NORMAL = 3
     SEMANTIC = 4
     PATH = 5
-    GOAL = 6
+    POSITION = 6
     FORCE = 7
     TENSOR = 8
     TEXT = 9
+    MEASUREMENT = 10
 
 
 class Sensor:
@@ -48,7 +49,7 @@ class Sensor:
     observation_space: Space
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.config = kwargs["config"].clone() if "config" in kwargs else None
+        self.config = kwargs["config"] if "config" in kwargs else None
         self.uuid = self._get_uuid(*args, **kwargs)
         self.sensor_type = self._get_sensor_type(*args, **kwargs)
         self.observation_space = self._get_observation_space(*args, **kwargs)
@@ -63,7 +64,9 @@ class Sensor:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        """Returns the current observation for Sensor.
+        """
+        Returns:
+            Current observation for Sensor.
         """
         raise NotImplementedError
 
@@ -164,9 +167,8 @@ class SensorSuite:
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
         """
-
         Returns:
-            collect data from all sensors and return it packaged into
+            collect data from all sensors and return it packaged inside
             Observation.
         """
         return Observations(self.sensors, *args, **kwargs)
@@ -262,6 +264,16 @@ class Simulator:
         """
         raise NotImplementedError
 
+    def get_agent_state(self, agent_id: int = 0):
+        """
+        Args:
+             agent_id: id of agent
+
+        Returns:
+            state of agent corresponding to agent_id
+        """
+        raise NotImplementedError
+
     def sample_navigable_point(self) -> List[float]:
         """Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
@@ -272,7 +284,7 @@ class Simulator:
         raise NotImplementedError
 
     def action_space_shortest_path(
-        self, source: AgentState, targets: List[AgentState], agent_id: int
+        self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
         """Calculates the shortest path between source and target agent states.
 

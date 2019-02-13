@@ -15,6 +15,7 @@ from habitat.sims import make_sim
 def init_sim():
     config = cfg()
     config.SCENE = "data/habitat-sim/test/test.glb"
+    config.freeze()
     assert os.path.exists(
         config.SCENE
     ), "Please download Habitat-Sim test data to data/habitat-sim/test/."
@@ -35,7 +36,7 @@ def test_sim():
     for i, action in enumerate(test_trajectory["actions"]):
         if i > 0:  # ignore first step as habitat-sim doesn't update
             # agent until then
-            state = sim.agent_state()
+            state = sim.get_agent_state()
             assert (
                 np.allclose(
                     np.array(

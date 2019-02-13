@@ -4,12 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Optional
 
 from habitat.config import Config as CN
-from habitat.core.logging import logger
 
-CFG_DIR = "configs/"
+DEFAULT_CONFIG_DIR = "configs/"
 
 # -----------------------------------------------------------------------------
 # Config definition
@@ -27,6 +27,24 @@ _C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
+# TODO(akadian): restore the proper config hierarchy here
+_C.TASK.SUCCESS_DISTANCE = 0.2
+_C.TASK.SUCCESS_REWARD = 10.0
+_C.TASK.SLACK_REWARD = -0.01
+_C.TASK.SENSORS = []
+_C.TASK.MEASUREMENTS = []
+# -----------------------------------------------------------------------------
+# # POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.POINTGOAL_SENSOR = CN()
+_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
+_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+# -----------------------------------------------------------------------------
+# # SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.SPL = CN()
+_C.TASK.SPL.TYPE = "SPL"
+_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
@@ -37,7 +55,6 @@ _C.SIMULATOR.SCENE = "data/habitat-sim/test/test.glb"
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
-
 # -----------------------------------------------------------------------------
 # # SENSORS
 # -----------------------------------------------------------------------------
@@ -102,7 +119,7 @@ _C.DATASET.MP3DEQAV1.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
 # -----------------------------------------------------------------------------
 _C.DATASET.POINTNAVV1 = CN()
 _C.DATASET.POINTNAVV1.DATA_PATH = (
-    "data/datasets/pointnav/gibson/v1/{" "split}/{split}.json.gz"
+    "data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz"
 )
 _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 # -----------------------------------------------------------------------------
@@ -114,9 +131,10 @@ _C.BASELINES = CN()
 # -----------------------------------------------------------------------------
 
 
-def cfg(config_file: Optional[str] = None) -> CN:
+def cfg(
+    config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
+) -> CN:
     config = _C.clone()
     if config_file:
-        config.merge_from_file("{}{}".format(CFG_DIR, config_file))
-        logger.info(config)
+        config.merge_from_file(os.path.join(config_dir, config_file))
     return config

@@ -12,7 +12,7 @@ import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask
+from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.sims import make_sim
 from habitat.tasks import make_task
@@ -55,7 +55,11 @@ class Env:
     def __init__(
         self, config: Config, dataset: Optional[Dataset] = None
     ) -> None:
-        self._config = config.clone()
+        assert config.is_frozen(), (
+            "Freeze the config before creating the "
+            "environment, use config.freeze()"
+        )
+        self._config = config
         self._dataset = dataset
         self._episodes = self._dataset.episodes if self._dataset else []
         self._current_episode_index = None
@@ -64,7 +68,7 @@ class Env:
         )
         self._task = make_task(
             self._config.TASK.TYPE,
-            config=self._config.TASK,
+            task_config=self._config.TASK,
             sim=self._sim,
             dataset=dataset,
         )
@@ -125,6 +129,9 @@ class Env:
         ), "Elapsed seconds requested before episode was started."
         return time.time() - self._episode_start_time
 
+    def get_metrics(self) -> Metrics:
+        return self._task.measurements.get_metrics()
+
     def _past_limit(self) -> bool:
         if (
             self._max_episode_steps != 0
@@ -169,6 +176,8 @@ class Env:
             )
         )
 
+        self._task.measurements.reset_measures(episode=self.current_episode)
+
         return observations
 
     def _update_step_stats(self) -> None:
@@ -202,6 +211,10 @@ class Env:
             )
         )
 
+        self._task.measurements.update_measures(
+            episode=self.current_episode, action=action
+        )
+
         self._update_step_stats()
 
         return observations
@@ -210,10 +223,14 @@ class Env:
         self._sim.seed(seed)
 
     def reconfigure(self, config: Config) -> None:
-        self._config = config.clone()
+        self._config = config
+
+        self._config.defrost()
         self._config.SIMULATOR = self._task.overwrite_sim_config(
             self._config.SIMULATOR, self.current_episode
         )
+        self._config.freeze()
+
         self._sim.reconfigure(self._config.SIMULATOR)
 
     def render(self, mode="human", close=False) -> np.ndarray:
@@ -265,9 +282,7 @@ class RLEnv(gym.Env):
         self._env.episodes = episodes
 
     def reset(self) -> Observations:
-        observations = self._env.reset()
-
-        return observations
+        return self._env.reset()
 
     def get_reward_range(self):
         """Get min, max range of reward
@@ -322,15 +337,8 @@ class RLEnv(gym.Env):
         Returns:
             (observations, reward, done, info)
         """
-        assert self._env.episode_start_time is not None, (
-            "Cannot call step " "before calling reset"
-        )
-        assert self._env.episode_over is False, (
-            "Episode over,  call reset " "before calling step"
-        )
 
         observations = self._env.step(action)
-
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)
