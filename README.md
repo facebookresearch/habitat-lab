@@ -37,6 +37,7 @@ from habitat.config.default import cfg
 from habitat.tasks.nav.nav_task import NavigationEpisode
 
 config = cfg()
+config.freeze()
 env = habitat.Env(config=config)
 env.episodes = [NavigationEpisode(episode_id='0',
                                   scene_id=config.SIMULATOR.SCENE,
