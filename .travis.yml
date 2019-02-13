@@ -1,0 +1,10 @@
+language: python
+python:
+  - "3.6"
+install:
+  - pip install pytest black
+  - pip install .
+script:
+  - black --check habitat test --line-length 79
+  - pytest test/test_install.py
+

@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+import multiprocessing as mp
+from multiprocessing.connection import Connection
+from queue import Queue
+from threading import Thread
+from typing import Iterable, List, Tuple, Callable, Union, Any, Set, Optional
+
+import habitat
+import numpy as np
+from gym.spaces.dict_space import Dict as SpaceDict
+from habitat.config import Config
+from habitat.core.env import Env, Observations
+from habitat.core.logging import logger
+from habitat.core.utils import tile_images
+
+STEP_COMMAND = "step"
+RESET_COMMAND = "reset"
+RENDER_COMMAND = "render"
+CLOSE_COMMAND = "close"
+OBSERVATION_SPACE_COMMAND = "observation_space"
+ACTION_SPACE_COMMAND = "action_space"
+
+
+def _make_env_fn(
+    config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
+) -> Env:
+    """Constructor for default habitat Env.
+
+    Args:
+        config: configuration for environment.
+        dataset: dataset for environment.
+        rank: rank for setting seed of environment
+
+    Returns:
+        Env/RLEnv object
+    """
+    habitat_env = Env(config=config, dataset=dataset)
+    habitat_env.seed(config.SEED + rank)
+    return habitat_env
+
+
+class VectorEnv:
+    """Vectorized environment which creates multiple processes where each
+    process runs its own environment. All the environments are synchronized
+    on step and reset methods.
+
+    Args:
+        make_env_fn: Function which creates a single environment. An
+            environment can be of type Env or RLEnv
+        env_fn_args: tuple of tuple of args to pass to the make_env_fn.
+        auto_reset_done: automatically reset the environment when
+            done. This functionality is provided for seamless training
+            of vectorized environments.
+        multiprocessing_start_method: The multiprocessing method used to
+            spawn worker processes. Valid methods are
+            ``{'spawn', 'forkserver', 'fork'}`` ``'forkserver'`` is the
+            recommended method as it works well with CUDA. If
+            ``'fork'`` is used, the subproccess  must be started before
+            any other GPU useage.
+    """
+
+    observation_spaces: SpaceDict
+    action_spaces: SpaceDict
+    _workers: List[Union[mp.Process, Thread]]
+    _is_waiting: bool
+    _num_envs: int
+    _auto_reset_done: bool
+    _mp_ctx: mp.context.BaseContext
+    _connection_read_fns: List[Callable[[], Any]]
+    _connection_write_fns: List[Callable[[Any], None]]
+
+    def __init__(
+        self,
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+        env_fn_args: Tuple[Tuple] = None,
+        auto_reset_done: bool = True,
+        multiprocessing_start_method: str = "forkserver",
+    ) -> None:
+
+        self._is_waiting = False
+
+        assert (
+            env_fn_args is not None and len(env_fn_args) > 0
+        ), "number of environments to be created should be greater than 0"
+
+        self._num_envs = len(env_fn_args)
+
+        assert multiprocessing_start_method in self._valid_start_methods, (
+            "multiprocessing_start_method must be one of {}. Got '{}'"
+        ).format(self._valid_start_methods, multiprocessing_start_method)
+        self._auto_reset_done = auto_reset_done
+        self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        self._workers = []
+        (
+            self._connection_read_fns,
+            self._connection_write_fns,
+        ) = self._spawn_workers(  # noqa
+            env_fn_args, make_env_fn
+        )
+
+        for write_fn in self._connection_write_fns:
+            write_fn((OBSERVATION_SPACE_COMMAND, None))
+        self.observation_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+        for write_fn in self._connection_write_fns:
+            write_fn((ACTION_SPACE_COMMAND, None))
+        self.action_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+
+    @property
+    def num_envs(self):
+        """
+        Returns:
+             Number of individual environments.
+        """
+        return self._num_envs
+
+    @staticmethod
+    def _worker_env(
+        connection_read_fn: Callable,
+        connection_write_fn: Callable,
+        env_fn: Callable,
+        env_fn_args: Tuple[Any],
+        auto_reset_done: bool,
+        child_pipe: Optional[Connection] = None,
+        parent_pipe: Optional[Connection] = None,
+    ) -> None:
+        r"""Process worker for creating and interacting with the environment.
+        """
+        env = env_fn(*env_fn_args)
+        if parent_pipe is not None:
+            parent_pipe.close()
+        try:
+            command, data = connection_read_fn()
+            while command != CLOSE_COMMAND:
+                if command == STEP_COMMAND:
+                    # different step methods for habitat.RLEnv and habitat.Env
+                    if isinstance(env, habitat.RLEnv):
+                        # habitat.RLEnv
+                        observations, reward, done, info = env.step(data)
+                        if auto_reset_done and done:
+                            observations = env.reset()
+                        connection_write_fn((observations, reward, done, info))
+                    elif isinstance(env, habitat.Env):
+                        # habitat.Env
+                        observations = env.step(data)
+                        if auto_reset_done and env.episode_over:
+                            observations = env.reset()
+                        connection_write_fn(observations)
+                    else:
+                        raise NotImplementedError
+
+                elif command == RESET_COMMAND:
+                    observations = env.reset()
+                    connection_write_fn(observations)
+
+                elif command == RENDER_COMMAND:
+                    connection_write_fn(env.render(*data[0], **data[1]))
+
+                elif (
+                    command == OBSERVATION_SPACE_COMMAND
+                    or command == ACTION_SPACE_COMMAND
+                ):
+                    connection_write_fn(getattr(env, command))
+
+                else:
+                    raise NotImplementedError
+
+                command, data = connection_read_fn()
+
+            if child_pipe is not None:
+                child_pipe.close()
+        except KeyboardInterrupt:
+            logger.info("Worker KeyboardInterrupt")
+        finally:
+            env.close()
+
+    def _spawn_workers(
+        self,
+        env_fn_args: Iterable[Tuple[Any, ...]],
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+        parent_connections, worker_connections = zip(
+            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+        )
+        self._workers = []
+        for worker_conn, parent_conn, env_args in zip(
+            worker_connections, parent_connections, env_fn_args
+        ):
+            ps = self._mp_ctx.Process(
+                target=self._worker_env,
+                args=(
+                    worker_conn.recv,
+                    worker_conn.send,
+                    make_env_fn,
+                    env_args,
+                    self._auto_reset_done,
+                    worker_conn,
+                    parent_conn,
+                ),
+            )
+            self._workers.append(ps)
+            ps.daemon = True
+            ps.start()
+            worker_conn.close()
+        return (
+            [p.recv for p in parent_connections],
+            [p.send for p in parent_connections],
+        )
+
+    def reset(self):
+        """Reset all the vectorized environments
+
+        Returns:
+            List of outputs from the reset method of envs.
+        """
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((RESET_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def reset_at(self, index_env: int):
+        """Reset in the index_env environment in the vector.
+
+        Args:
+            index_env: index of the environment to be reset
+
+        Returns:
+            List containing the output of reset method of indexed env.
+        """
+        self._is_waiting = True
+        self._connection_write_fns[index_env]((RESET_COMMAND, None))
+        results = [self._connection_read_fns[index_env]()]
+        self._is_waiting = False
+        return results
+
+    def step_at(self, index_env: int, action: int):
+        """Step in the index_env environment in the vector.
+
+        Args:
+            index_env: index of the environment to be stepped into
+            action: action to be taken
+
+        Returns:
+            List containing the output of step method of indexed env.
+        """
+        self._is_waiting = True
+        self._connection_write_fns[index_env]((STEP_COMMAND, action))
+        results = [self._connection_read_fns[index_env]()]
+        self._is_waiting = False
+        return results
+
+    def async_step(self, actions: List[int]) -> None:
+        """Asynchronously step in the environments.
+
+        Args:
+            actions: actions to be performed in the vectorized envs.
+        """
+        self._is_waiting = True
+        for write_fn, action in zip(self._connection_write_fns, actions):
+            write_fn((STEP_COMMAND, action))
+
+    def wait_step(self) -> List[Observations]:
+        """Wait until all the asynchronized environments have synchronized.
+        """
+        observations = []
+        for read_fn in self._connection_read_fns:
+            observations.append(read_fn())
+        self._is_waiting = False
+        return observations
+
+    def step(self, actions: List[int]):
+        """Perform actions in the vectorized environments.
+
+        Args:
+            actions: list of size _num_envs containing action to be taken
+                in each environment.
+
+        Returns:
+            List of outputs from the step method of envs.
+        """
+        self.async_step(actions)
+        return self.wait_step()
+
+    def close(self) -> None:
+        if self._is_waiting:
+            for read_fn in self._connection_read_fns:
+                read_fn()
+        for write_fn in self._connection_write_fns:
+            write_fn((CLOSE_COMMAND, None))
+        for process in self._workers:
+            process.join()
+
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None]:
+        """Render observations from all environments in a tiled image.
+        """
+        for write_fn in self._connection_write_fns:
+            write_fn((args, {"mode": "rgb_array", **kwargs}))
+        images = [read_fn() for read_fn in self._connection_read_fns]
+        tile = tile_images(images)
+        if mode == "human":
+            import cv2
+
+            cv2.imshow("vecenv", tile[:, :, ::-1])
+            cv2.waitKey(1)
+            return None
+        elif mode == "rgb_array":
+            return tile
+        else:
+            raise NotImplementedError
+
+    @property
+    def _valid_start_methods(self) -> Set[str]:
+        return {"forkserver", "spawn", "fork"}
+
+
+class ThreadedVectorEnv(VectorEnv):
+    def _spawn_workers(
+        self,
+        env_fn_args: Iterable[Tuple[Any, ...]],
+        make_env_fn: Callable[..., Env] = _make_env_fn,
+    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+        parent_read_queues, parent_write_queues = zip(
+            *[(Queue(), Queue()) for _ in range(self._num_envs)]
+        )
+        self._workers = []
+        for parent_read_queue, parent_write_queue, env_args in zip(
+            parent_read_queues, parent_write_queues, env_fn_args
+        ):
+            thread = Thread(
+                target=self._worker_env,
+                args=(
+                    parent_write_queue.get,
+                    parent_read_queue.put,
+                    make_env_fn,
+                    env_args,
+                    self._auto_reset_done,
+                ),
+            )
+            self._workers.append(thread)
+            thread.daemon = True
+            thread.start()
+        return (
+            [q.get for q in parent_read_queues],
+            [q.put for q in parent_write_queues],
+        )
