@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import List, Type, TypeVar, Generic
+from typing import Dict, List, Type, TypeVar, Generic, Optional
 
 
 class Episode:
@@ -27,6 +27,7 @@ class Episode:
     scene_id: str
     start_position: List[float]
     start_rotation: List[float]
+    info: Optional[Dict[str, str]] = None
 
     def __init__(
         self,
@@ -34,11 +35,13 @@ class Episode:
         scene_id: str,
         start_position: List[float],
         start_rotation: List[float],
+        info: Optional[Dict[str, str]] = None,
     ) -> None:
         self.episode_id = episode_id
         self.scene_id = scene_id
         self.start_position = start_position
         self.start_rotation = start_rotation
+        self.info = info
 
     def __str__(self):
         return str(self.__dict__)

@@ -14,3 +14,8 @@ register_dataset(
     id_dataset="MP3DEQA-v1",
     entry_point="habitat.datasets.eqa.mp3d_eqa_dataset:Matterport3dDatasetV1",
 )
+
+register_dataset(
+    id_dataset="PointNav-v1",
+    entry_point="habitat.datasets.pointnav.pointnav_dataset:PointNavDatasetV1",
+)

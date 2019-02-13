@@ -46,7 +46,7 @@ class EmbodiedTask:
         self._sensor_suite = sensor_suite
 
     def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
+        self, sim_config: Config, episode: Type[Episode]
     ) -> Config:
         """
         Args:

@@ -21,7 +21,7 @@ def get_default_mp3d_v1_config(split: str = "val"):
     config = Config()
     config.name = "MP3DEQA-v1"
     config.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
-    config.SCENES_PATH = "data/scene_datasets/mp3d"
+    config.DATA_PATH = "data/scene_datasets/mp3d"
     config.SPLIT = split
     return config
 
@@ -41,7 +41,7 @@ class Matterport3dDatasetV1(Dataset):
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
             config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
-        ) and os.path.exists(config.MP3DEQAV1.SCENES_PATH)
+        ) and os.path.exists(config.MP3DEQAV1.DATA_PATH)
 
     def __init__(self, config: Config = None) -> None:
         self.episodes = []
@@ -62,7 +62,8 @@ class Matterport3dDatasetV1(Dataset):
             episode.question = QuestionData(**episode.question)
             for g_index, goal in enumerate(episode.goals):
                 episode.goals[g_index] = ObjectGoal(**goal)
-            for path in episode.shortest_paths:
-                for p_index, point in enumerate(path):
-                    path[p_index] = ShortestPathPoint(**point)
+            if episode.shortest_paths is not None:
+                for path in episode.shortest_paths:
+                    for p_index, point in enumerate(path):
+                        path[p_index] = ShortestPathPoint(**point)
             self.episodes[ep_index] = episode

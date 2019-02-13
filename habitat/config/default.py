@@ -45,7 +45,7 @@ SENSOR = CN()
 SENSOR.HEIGHT = 480
 SENSOR.WIDTH = 640
 SENSOR.HFOV = 90  # horizontal field of view in degrees
-SENSOR.POSITION = [0, 0.05, 0]
+SENSOR.POSITION = [0, 1.25, 0]
 # -----------------------------------------------------------------------------
 # # RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -97,7 +97,14 @@ _C.DATASET.SPLIT = "val"
 # -----------------------------------------------------------------------------
 _C.DATASET.MP3DEQAV1 = CN()
 _C.DATASET.MP3DEQAV1.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
-_C.DATASET.MP3DEQAV1.SCENES_PATH = "data/scene_datasets/mp3d"
+# -----------------------------------------------------------------------------
+# POINTNAVV1 DATASET
+# -----------------------------------------------------------------------------
+_C.DATASET.POINTNAVV1 = CN()
+_C.DATASET.POINTNAVV1.DATA_PATH = (
+    "data/datasets/pointnav/gibson/v1/{" "split}/{split}.json.gz"
+)
+_C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 # -----------------------------------------------------------------------------
 # BASELINES
 # -----------------------------------------------------------------------------
@@ -111,5 +118,5 @@ def cfg(config_file: Optional[str] = None) -> CN:
     config = _C.clone()
     if config_file:
         config.merge_from_file("{}{}".format(CFG_DIR, config_file))
-    logger.info(config)
+        logger.info(config)
     return config
