@@ -1,16 +1,35 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import json
-from typing import List, Type, TypeVar, Generic
+from typing import Dict, List, Type, TypeVar, Generic, Optional
 
 
 class Episode:
-    r"""Base class for episode specification that includes initial position and
-    rotation of agent, scene id, episode id provided by dataset. An
-    episode is a description of one task instance for the agent.
+    """Base class for episode specification that includes initial position and
+    rotation of agent, scene id, episode. This information is provided by
+    a Dataset instance.
+
+    Args:
+        episode_id: id of episode in the dataset, usually episode number
+        scene_id: id of scene in dataset.
+        start_position: list of length 3 for cartesian coordinates
+            (x, y, z).
+        start_rotation: list of length 4 for (x, y, z, w) elements
+            of unit quaternion (versor) representing 3D agent orientation
+            (https://en.wikipedia.org/wiki/Versor). The rotation specifying
+            the agent's orientation is relative to the world coordinate
+            axes.
     """
+
     episode_id: str
     scene_id: str
     start_position: List[float]
     start_rotation: List[float]
+    info: Optional[Dict[str, str]] = None
 
     def __init__(
         self,
@@ -18,19 +37,13 @@ class Episode:
         scene_id: str,
         start_position: List[float],
         start_rotation: List[float],
+        info: Optional[Dict[str, str]] = None,
     ) -> None:
-        r"""
-        :param episode_id: id of episode in the dataset, usually episode number
-        :param scene_id: id of scene in scene dataset
-        :param start_position: numpy ndarray containing 3 entries for (x, y, z)
-        :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
-        elements of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        """
         self.episode_id = episode_id
         self.scene_id = scene_id
         self.start_position = start_position
         self.start_rotation = start_rotation
+        self.info = info
 
     def __str__(self):
         return str(self.__dict__)
@@ -40,29 +53,41 @@ T = TypeVar("T", Episode, Type[Episode])
 
 
 class Dataset(Generic[T]):
-    r"""Base class for dataset specification that includes list of
-    episode and relevant method to access episodes from particular
-    scene as well as scene id list.
+    """Base class for dataset specification.
+
+    Attributes:
+        episodes: list of episodes containing instance information
     """
+
     episodes: List[T]
 
     @property
     def scene_ids(self) -> List[str]:
-        r"""Return list of scene ids for which dataset has episodes.
+        """
+        Returns:
+            unique scene ids present in the dataset
         """
         return list({episode.scene_id for episode in self.episodes})
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
-        r"""Return list of episodes for particular scene_id.
-        :param scene_id: id of scene in scene dataset
+        """
+        Args:
+            scene_id: id of scene in scene dataset
+
+        Returns:
+            list of episodes for the scene_id
         """
         return list(
             filter(lambda x: x.scene_id == scene_id, iter(self.episodes))
         )
 
     def get_episodes(self, indexes: List[int]) -> List[T]:
-        r"""Return list of episodes with particular episode indexes.
-        :param indexes: indexes of episodes in dataset
+        """
+        Args:
+            indexes: episode indices in dataset
+
+        Returns:
+            list of episodes corresponding to indexes
         """
         return [self.episodes[episode_id] for episode_id in indexes]
 
@@ -71,14 +96,8 @@ class Dataset(Generic[T]):
             def default(self, object):
                 return object.__dict__
 
-        # TODO(maksymets): remove call of internal DatasetFloatJSONEncoder
-        #  used for float precision decrease
-        from habitat.internal.data.datasets.utils import (
-            DatasetFloatJSONEncoder,
-        )
-
-        result = DatasetFloatJSONEncoder().encode(self)
+        result = DatasetJSONEncoder().encode(self)
         return result
 
-    def from_json(self, serialized: str) -> None:
+    def from_json(self, json_str: str) -> None:
         raise NotImplementedError

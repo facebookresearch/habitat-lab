@@ -1,34 +1,42 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import json
 import os
 
 import numpy as np
-from habitat.config.experiments.nav import sim_nav_cfg
+from habitat.config.default import cfg
 from habitat.sims import make_sim
 
 
 def init_sim():
-    config = sim_nav_cfg()
-    config.scene = os.environ.get("ESP_TEST_SCENE", "data/esp/test/test.glb")
+    config = cfg()
+    config.SCENE = "data/habitat-sim/test/test.glb"
+    config.freeze()
     assert os.path.exists(
-        config.scene
-    ), "Please download ESP test data to data/esp/test/."
-    return make_sim("Sim-v0", config=config)
+        config.SCENE
+    ), "Please download Habitat-Sim test data to data/habitat-sim/test/."
+    return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
 
 def test_sim():
-    with open("test/data/esp_trajectory_data.json", "r") as f:
+    with open("test/data/habitat-sim_trajectory_data.json", "r") as f:
         test_trajectory = json.load(f)
     sim = init_sim()
 
     sim.reset()
-    sim.initialize_agent(
+    sim.set_agent_state(
         position=test_trajectory["positions"][0],
         rotation=test_trajectory["rotations"][0],
     )
 
     for i, action in enumerate(test_trajectory["actions"]):
-        if i > 0:  # ignore first step as esp does not update agent until then
-            state = sim.agent_state()
+        if i > 0:  # ignore first step as habitat-sim doesn't update
+            # agent until then
+            state = sim.get_agent_state()
             assert (
                 np.allclose(
                     np.array(
@@ -49,8 +57,8 @@ def test_sim():
             ), "mismatch in rotation " "at step {}".format(i)
         assert sim.action_space.contains(action)
 
-        obs = sim.step(action)
+        sim.step(action)
         if i == len(test_trajectory["actions"]) - 1:  # STOP action
-            assert sim.episode_active is False
+            assert sim.is_episode_active is False
 
     sim.close()

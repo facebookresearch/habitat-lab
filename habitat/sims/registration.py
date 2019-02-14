@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from habitat.core.logging import logger
 from habitat.core.registry import Registry, Spec
 
@@ -5,8 +11,6 @@ from habitat.core.registry import Registry, Spec
 class SimSpec(Spec):
     def __init__(self, id_sim, entry_point):
         super().__init__(id_sim, entry_point)
-        # TODO(akadian): Add more simulator specific details which will be
-        # recorded to ensure reproducibility
 
 
 class SimRegistry(Registry):

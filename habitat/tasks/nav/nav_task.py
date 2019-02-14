@@ -1,25 +1,48 @@
-from typing import Any, Dict, List, Optional, Type
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import Any, List, Optional, Type
 
 import habitat
+import numpy as np
+from gym import spaces
+from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
-from habitat.core.simulator import Observations, Simulator, ShortestPathPoint
+from habitat.core.embodied_task import Measurements
+from habitat.core.simulator import (
+    Simulator,
+    ShortestPathPoint,
+    SensorTypes,
+    SensorSuite,
+)
+from habitat.tasks.utils import quaternion_to_rotation, cartesian_to_polar
 
 
 def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
-    sim_config.scene = episode.scene_id
+    sim_config.defrost()
+    sim_config.SCENE = episode.scene_id
+    sim_config.freeze()
     if (
         episode.start_position is not None
         and episode.start_rotation is not None
     ):
-        # yacs config attributes cannot be None
-        sim_config.start_position = episode.start_position
-        sim_config.start_rotation = episode.start_rotation
+        agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
+        agent_cfg = getattr(sim_config, agent_name)
+        agent_cfg.defrost()
+        agent_cfg.START_POSITION = episode.start_position
+        agent_cfg.START_ROTATION = episode.start_rotation
+        agent_cfg.IS_SET_START_STATE = True
+        agent_cfg.freeze()
     return sim_config
 
 
 class NavigationGoal:
-    r"""Base class for a goal specification hierarchy.
+    """Base class for a goal specification hierarchy.
     """
+
     position: List[float]
     radius: Optional[float]
 
@@ -31,9 +54,10 @@ class NavigationGoal:
 
 
 class ObjectGoal(NavigationGoal):
-    r"""Object goal that can be specified by object_id or position or object
+    """Object goal that can be specified by object_id or position or object
     category.
     """
+
     object_id: str
     object_name: Optional[str]
     object_category: Optional[str]
@@ -58,8 +82,9 @@ class ObjectGoal(NavigationGoal):
 
 
 class RoomGoal(NavigationGoal):
-    r"""Room goal that can be specified by room_id or position with radius.
+    """Room goal that can be specified by room_id or position with radius.
     """
+
     room_id: str
     room_name: Optional[str]
 
@@ -72,10 +97,22 @@ class RoomGoal(NavigationGoal):
 
 
 class NavigationEpisode(Episode):
-    r"""Class for episode specification that includes initial position and
+    """Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
     episode is a description of one task instance for the agent.
+
+    Args:
+        episode_id: id of episode in the dataset, usually episode number
+        scene_id: id of scene in scene dataset
+        start_position: numpy ndarray containing 3 entries for (x, y, z)
+        start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
+            elements of unit quaternion (versor) representing agent 3D
+            orientation. ref: https://en.wikipedia.org/wiki/Versor
+        goals: list of goals specifications
+        start_room: room id
+        shortest_paths: list containing shortest paths to goals
     """
+
     goals: List[NavigationGoal]
     start_room: Optional[str]
     shortest_paths: Optional[List[ShortestPathPoint]]
@@ -87,28 +124,181 @@ class NavigationEpisode(Episode):
         shortest_paths: Optional[List[ShortestPathPoint]] = None,
         **kwargs
     ) -> None:
-        r"""
-        :param episode_id: id of episode in the dataset, usually episode number
-        :param scene_id: id of scene in scene dataset
-        :param start_position: numpy ndarray containing 3 entries for (x, y, z)
-        :param start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
-        elements of unit quaternion (versor) representing agent 3D orientation,
-        ref: https://en.wikipedia.org/wiki/Versor
-        :param goals: list of goals specifications
-        :param: start_room: room id
-        :param: shortest_paths: list containing shortest paths to goals
-        """
         super().__init__(**kwargs)
         self.goals = goals
         self.shortest_paths = shortest_paths
         self.start_room = start_room
 
 
+class PointGoalSensor(habitat.Sensor):
+    """
+    Sensor for PointGoal observations which are used in the PointNav task.
+    For the agent in simulator the forward direction is along negative-z.
+    In polar coordinate format the angle returned is azimuth to the goal.
+
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the PointGoal sensor. Can contain field for
+            GOAL_FORMAT which can be used to specify the format in which
+            the pointgoal is specified. Current options for goal format are
+            cartesian and polar.
+
+    Attributes:
+        _goal_format: format for specifying the goal which can be done
+            in cartesian or polar coordinates.
+    """
+
+    def __init__(self, sim, config):
+        self._sim = sim
+
+        self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
+        assert self._goal_format in ["CARTESIAN", "POLAR"]
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "pointgoal"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.PATH
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        if self._goal_format == "CARTESIAN":
+            sensor_shape = (3,)
+        else:
+            sensor_shape = (2,)
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode):
+        agent_state = self._sim.get_agent_state()
+        ref_position = agent_state.position
+        ref_rotation = agent_state.rotation
+
+        direction_vector = (
+            np.array(episode.goals[0].position, dtype=np.float32)
+            - ref_position
+        )
+        rotation_mat = quaternion_to_rotation(
+            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+        )
+
+        if self._goal_format == "POLAR":
+            goal_vector = np.dot(rotation_mat, direction_vector[::-1])
+            goal_vector[0] *= -1
+
+            rho, phi = cartesian_to_polar(goal_vector[2], goal_vector[0])
+            goal_vector = np.array([rho, -phi], dtype=np.float32)
+        else:
+            goal_vector = np.dot(rotation_mat, direction_vector)
+
+        return goal_vector
+
+
+class SPL(habitat.Measure):
+    """SPL (Success weighted by Path Length)
+
+    ref: On Evaluation of Embodied Agents - Anderson et. al
+    https://arxiv.org/pdf/1807.06757.pdf
+    """
+
+    def __init__(self, sim, config):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "spl"
+
+    def reset_metric(self, episode):
+        self._previous_position = self._sim.get_agent_state().position.tolist()
+        self._start_end_episode_distance = episode.info["geodesic_distance"]
+        self._agent_episode_distance = 0.0
+        self._metric = None
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    def update_metric(self, episode, action):
+        ep_success = 0
+        current_position = self._sim.get_agent_state().position.tolist()
+
+        if (
+            action == self._sim.index_stop_action
+            and self._euclidean_distance(
+                current_position, episode.goals[0].position
+            )
+            < self._config.SUCCESS_DISTANCE
+        ):
+            ep_success = 1
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = ep_success * (
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
+
+
 class NavigationTask(habitat.EmbodiedTask):
     def __init__(
-        self, config: Any, sim: Simulator, dataset: Optional[Dataset] = None
+        self,
+        task_config: Config,
+        sim: Simulator,
+        dataset: Optional[Dataset] = None,
     ) -> None:
-        super().__init__(config=config, sim=sim, dataset=dataset)
+
+        task_measurements = []
+        for measurement_name in task_config.MEASUREMENTS:
+            measurement_cfg = getattr(task_config, measurement_name)
+            is_valid_measurement = hasattr(
+                habitat.tasks.nav.nav_task,  # type: ignore
+                measurement_cfg.TYPE,
+            )
+            assert is_valid_measurement, "invalid measurement type {}".format(
+                measurement_cfg.TYPE
+            )
+            task_measurements.append(
+                getattr(
+                    habitat.tasks.nav.nav_task,  # type: ignore
+                    measurement_cfg.TYPE,
+                )(sim, measurement_cfg)
+            )
+        self.measurements = Measurements(task_measurements)
+
+        task_sensors = []
+        for sensor_name in task_config.SENSORS:
+            sensor_cfg = getattr(task_config, sensor_name)
+            is_valid_sensor = hasattr(
+                habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
+            )
+            assert is_valid_sensor, "invalid sensor type {}".format(
+                sensor_cfg.TYPE
+            )
+            task_sensors.append(
+                getattr(
+                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
+                )(sim, sensor_cfg)
+            )
+
+        self.sensor_suite = SensorSuite(task_sensors)
+        super().__init__(config=task_config, sim=sim, dataset=dataset)
 
     def overwrite_sim_config(
         self, sim_config: Any, episode: Type[Episode]

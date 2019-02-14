@@ -7,7 +7,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-*env/
+*/env/
 build/
 develop-eggs/
 dist/
@@ -76,13 +76,14 @@ target/
 .ipynb_checkpoints/
 
 # exclude data from source control by default
-data/
-
-# ViZDoom files
-_vizdoom*
+/data/
 
 # Mac OS-specific storage files
 .DS_Store
 
 # mypy
 .mypy_cache/
+
+# pre-commit
+.pre-commit-config.yaml
+pyproject.toml

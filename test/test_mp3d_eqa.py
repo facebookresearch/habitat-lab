@@ -1,16 +1,21 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import time
 
 import habitat
 import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 import numpy as np
-from habitat.config.experiments.nav import sim_nav_cfg
+from habitat.config.default import cfg
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 
+CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
-
-IS_GENERATING_VIDEO = False
 
 # List of episodes each from unique house
 TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
@@ -32,7 +37,7 @@ EPISODES_LIMIT = 6
 
 
 def get_minos_for_sim_eqa_config():
-    _sim_eqa_c = sim_nav_cfg()
+    _sim_eqa_c = cfg(CFG_TEST)
     _sim_eqa_c.task_name = "EQA-v0"
     _sim_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
     _sim_eqa_c.dataset.split = "val"
@@ -77,7 +82,8 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 
 def test_mp3d_eqa_dataset():
-    dataset_config = mp3d_dataset.get_default_mp3d_v1_config(split="val")
+    dataset_config = cfg(CFG_TEST).DATASET
+    dataset_config.freeze()
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -92,34 +98,38 @@ def test_mp3d_eqa_dataset():
 
 
 def test_mp3d_eqa_sim():
-    eqa_config = get_minos_for_sim_eqa_config()
+    eqa_config = cfg(CFG_TEST)
+    eqa_config.freeze()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.dataset
+        eqa_config.DATASET
     ):
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
     env = habitat.Env(config=eqa_config)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
     assert env
     env.reset()
-    done = False
-    while not done:
+    while not env.episode_over:
         action = env.action_space.sample()
         assert env.action_space.contains(action)
-        obs, rew, done, info = env.step(action)
-        if not done:
+        obs = env.step(action)
+        if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
-                eqa_config.height,
-                eqa_config.width,
+                eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
             ), (
                 "Observation resolution {} doesn't correspond to config "
                 "({}, {}).".format(
-                    obs["rgb"].shape[:2], eqa_config.height, eqa_config.width
+                    obs["rgb"].shape[:2],
+                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
                 )
             )
 
@@ -127,24 +137,23 @@ def test_mp3d_eqa_sim():
 
 
 def test_mp3d_eqa_sim_correspondence():
-    eqa_config = get_minos_for_sim_eqa_config()
+    eqa_config = cfg(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.dataset
+        eqa_config.DATASET
     ):
         logger.info("Test skipped as dataset files are missing.")
         return
 
-    dataset = make_dataset(eqa_config.dataset.name, config=eqa_config.dataset)
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
     env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = [
         episode
         for episode in dataset.episodes
         if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
     ]
-
-    if IS_GENERATING_VIDEO:
-        from habitat.internal.visualize import gen_video
 
     ep_i = 0
     cycles_n = 2
@@ -164,9 +173,6 @@ def test_mp3d_eqa_sim_correspondence():
             start_state.position, episode.start_position
         ), "Agent's start position diverges from the shortest path's one."
 
-        rgb_frames = []
-        depth = []
-        labels = []
         rgb_mean = 0
         logger.info(
             "{id} {question}\n{answer}".format(
@@ -200,39 +206,16 @@ def test_mp3d_eqa_sim_correspondence():
                 atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
             ), "Agent's path diverges from the shortest path."
 
-            obs, rew, done, info = env.step(point.action)
+            obs = env.step(point.action)
 
-            if not done:
+            if not env.episode_over:
                 rgb_mean += obs["rgb"][:, :, :3].mean()
-                if IS_GENERATING_VIDEO:
-                    # Cut RGB channels from RGBA and fill empty frames of
-                    # relevant resolution, collect frames
-                    rgb_frames.append(obs["rgb"][:, :, :3])
-                    # Fill frames with zeros using same resolution as rgb frame
-                    depth.append(
-                        np.zeros(obs["rgb"].shape[:2], dtype=np.uint8)
-                    )
-                    labels.append(
-                        np.zeros(obs["rgb"].shape[:2], dtype=np.uint8)
-                    )
 
         if ep_i < len(RGB_EPISODE_MEANS):
             rgb_mean = rgb_mean / len(episode.shortest_paths[0])
             assert np.isclose(
                 RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean
             ), "RGB output doesn't match the ground truth."
-
-        if IS_GENERATING_VIDEO and cycles_n == 2:
-            gen_video.make_video(
-                "{id} {question}\n{answer}".format(
-                    id=episode.episode_id,
-                    question=episode.question.question_text,
-                    answer=episode.question.answer_text,
-                ),
-                rgb_frames,
-                depth,
-                labels,
-            )
 
         ep_i = (ep_i + 1) % EPISODES_LIMIT
         if ep_i == 0:
