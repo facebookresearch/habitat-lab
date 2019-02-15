@@ -183,20 +183,20 @@ class PointGoalSensor(habitat.Sensor):
             np.array(episode.goals[0].position, dtype=np.float32)
             - ref_position
         )
-        rotation_mat = quaternion_to_rotation(
+        rotation_world_agent = quaternion_to_rotation(
             ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+        )
+        direction_vector_agent = np.dot(
+            rotation_world_agent.T, direction_vector
         )
 
         if self._goal_format == "POLAR":
-            goal_vector = np.dot(rotation_mat, direction_vector[::-1])
-            goal_vector[0] *= -1
+            rho, phi = cartesian_to_polar(
+                -direction_vector_agent[2], direction_vector_agent[0]
+            )
+            direction_vector_agent = np.array([rho, -phi], dtype=np.float32)
 
-            rho, phi = cartesian_to_polar(goal_vector[2], goal_vector[0])
-            goal_vector = np.array([rho, -phi], dtype=np.float32)
-        else:
-            goal_vector = np.dot(rotation_mat, direction_vector)
-
-        return goal_vector
+        return direction_vector_agent
 
 
 class SPL(habitat.Measure):
