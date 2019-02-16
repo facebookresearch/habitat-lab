@@ -84,7 +84,7 @@ class HabitatSimDepthSensor(DepthSensor):
         return spaces.Box(
             low=self.min_depth_value,
             high=self.max_depth_value,
-            shape=(self.config.HEIGHT, self.config.WIDTH),
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
             dtype=np.float32,
         )
 
@@ -96,6 +96,8 @@ class HabitatSimDepthSensor(DepthSensor):
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
+
+        obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
 
         return obs
 

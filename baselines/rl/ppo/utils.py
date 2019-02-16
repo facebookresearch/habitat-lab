@@ -401,5 +401,13 @@ def ppo_args():
         default=10000,
         help="number of PPO updates to run",
     )
+    parser.add_argument(
+        "--sensors",
+        type=str,
+        default="RGB_SENSOR,DEPTH_SENSOR",
+        help="comma separated string containing different sensors to use,"
+        "currently 'RGB_SENSOR' and 'DEPTH_SENSOR' are supported",
+    )
+    parser.add_argument("--seed", type=int, default=100)
 
     return parser

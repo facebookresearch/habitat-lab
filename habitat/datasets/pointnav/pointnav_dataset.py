@@ -66,6 +66,7 @@ class PointNavDatasetV1(Dataset):
             if filename.endswith(scene_dataset_ext):
                 scene = filename[: -len(scene_dataset_ext)]
                 scenes.append(scene)
+        scenes.sort()
         return scenes
 
     def __init__(self, config: Config = None) -> None:

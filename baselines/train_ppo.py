@@ -7,24 +7,28 @@
 import os
 from time import time
 from collections import deque
+import random
+import numpy as np
 
 import torch
 import habitat
 from habitat import logger
 from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
-from habitat.config.default import cfg
+from habitat.config.default import cfg as cfg_env
+from config.default import cfg as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import update_linear_schedule, ppo_args, batch_obs
 
 
 class NavRLEnv(habitat.RLEnv):
-    def __init__(self, config, dataset):
-        self._config = config.TASK
+    def __init__(self, config_env, config_baseline, dataset):
+        self._config_env = config_env.TASK
+        self._config_baseline = config_baseline
         self._previous_target_distance = None
         self._previous_action = None
         self._episode_distance_covered = None
-        super().__init__(config, dataset)
+        super().__init__(config_env, dataset)
 
     def reset(self):
         observations = super().reset()
@@ -36,19 +40,19 @@ class NavRLEnv(habitat.RLEnv):
 
     def get_reward_range(self):
         return (
-            self._config.SLACK_REWARD - 1.0,
-            self._config.SUCCESS_REWARD + 1.0,
+            self._config_baseline.BASELINE.RL.SLACK_REWARD - 1.0,
+            self._config_baseline.BASELINE.RL.SUCCESS_REWARD + 1.0,
         )
 
     def get_reward(self, observations):
-        reward = self._config.SLACK_REWARD
+        reward = self._config_baseline.BASELINE.RL.SLACK_REWARD
 
         current_target_distance = self._distance_target()
         reward += self._previous_target_distance - current_target_distance
         self._previous_target_distance = current_target_distance
 
         if self._episode_success():
-            reward += self._config.SUCCESS_REWARD
+            reward += self._config_baseline.BASELINE.RL.SUCCESS_REWARD
 
         return reward
 
@@ -64,7 +68,7 @@ class NavRLEnv(habitat.RLEnv):
         if (
             self._previous_action
             == SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
-            and self._distance_target() < self._config.SUCCESS_DISTANCE
+            and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True
         return False
@@ -84,28 +88,50 @@ class NavRLEnv(habitat.RLEnv):
         return info
 
 
-def make_env_fn(config, rank):
-    dataset = PointNavDatasetV1(config.DATASET)
-    config.defrost()
-    config.SIMULATOR.SCENE = dataset.episodes[0].scene_id
-    config.freeze()
-    env = NavRLEnv(config=config, dataset=dataset)
+def make_env_fn(config_env, config_baseline, rank):
+    dataset = PointNavDatasetV1(config_env.DATASET)
+    config_env.SIMULATOR.SCENE = dataset.episodes[0].scene_id
+    config_env.freeze()
+    env = NavRLEnv(
+        config_env=config_env, config_baseline=config_baseline, dataset=dataset
+    )
     env.seed(rank)
     return env
 
 
 def construct_envs(args):
-    configs = []
-    # TODO(akadian): make this bucketed vectorized env compatible
-    for _ in range(args.num_processes):
-        config = cfg(config_file="baselines/pointnav_ppo.yaml")
-        # TODO(akadian): modify the below to train
-        config.DATASET.SPLIT = "val"
-        configs.append(config)
+    env_configs = []
+    baseline_configs = []
+
+    basic_config = cfg_env(config_file="tasks/pointnav.yaml")
+    scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
+
+    random.shuffle(scenes)
+    scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
+
+    for i in range(args.num_processes):
+        config_env = cfg_env(config_file="tasks/pointnav.yaml")
+
+        config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+            i * scene_split_size : (i + 1) * scene_split_size
+        ]
+
+        agent_sensors = args.sensors.strip().split(",")
+        for sensor in agent_sensors:
+            assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
+        config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        env_configs.append(config_env)
+
+        config_baseline = cfg_baseline()
+        baseline_configs.append(config_baseline)
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
-        env_fn_args=tuple(tuple(zip(configs, range(len(configs))))),
+        env_fn_args=tuple(
+            tuple(
+                zip(env_configs, baseline_configs, range(args.num_processes))
+            )
+        ),
     )
 
     return envs
@@ -114,6 +140,8 @@ def construct_envs(args):
 def main():
     parser = ppo_args()
     args = parser.parse_args()
+
+    random.seed(args.seed)
 
     device = torch.device("cuda:{}".format(args.pth_gpu_id))
 
@@ -143,7 +171,14 @@ def main():
         max_grad_norm=args.max_grad_norm,
     )
 
+    logger.info(
+        "agent number of parameters: {}".format(
+            sum(param.numel() for param in agent.parameters())
+        )
+    )
+
     observations = envs.reset()
+
     batch = batch_obs(observations)
 
     rollouts = RolloutStorage(

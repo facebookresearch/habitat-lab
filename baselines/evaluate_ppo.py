@@ -10,6 +10,7 @@ import torch
 
 import habitat
 from habitat.config.default import cfg
+from config.default import cfg as cfg_baseline
 
 from train_ppo import make_env_fn
 from rl.ppo import PPO, Policy
@@ -24,21 +25,44 @@ def main():
     parser.add_argument("--num-processes", type=int, required=True)
     parser.add_argument("--hidden-size", type=int, default=512)
     parser.add_argument("--count-test-episodes", type=int, default=100)
+    parser.add_argument(
+        "--sensors",
+        type=str,
+        default="RGB_SENSOR,DEPTH_SENSOR",
+        help="comma separated string containing different"
+        "sensors to use, currently 'RGB_SENSOR' and"
+        "'DEPTH_SENSOR' are supported",
+    )
     args = parser.parse_args()
 
     device = torch.device("cuda:{}".format(args.pth_gpu_id))
 
-    configs = []
-    for _ in range(args.num_processes):
-        config = cfg(config_file="baselines/pointnav_ppo.yaml")
-        config.DATASET.SPLIT = "val"
-        configs.append(config)
+    env_configs = []
+    baseline_configs = []
 
-    assert len(configs) > 0, "empty list of datasets"
+    for _ in range(args.num_processes):
+        config_env = cfg(config_file="tasks/pointnav.yaml")
+
+        config_env.DATASET.SPLIT = "val"
+
+        agent_sensors = args.sensors.strip().split(",")
+        for sensor in agent_sensors:
+            assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
+        config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        env_configs.append(config_env)
+
+        config_baseline = cfg_baseline()
+        baseline_configs.append(config_baseline)
+
+    assert len(baseline_configs) > 0, "empty list of datasets"
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
-        env_fn_args=tuple(tuple(zip(configs, range(len(configs))))),
+        env_fn_args=tuple(
+            tuple(
+                zip(env_configs, baseline_configs, range(args.num_processes))
+            )
+        ),
     )
 
     ckpt = torch.load(args.model_path, map_location=device)
