@@ -9,7 +9,7 @@ import sys
 
 import setuptools
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'habitat'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
 from version import VERSION  # noqa
 
 with open("README.md", encoding="utf8") as f:
@@ -28,7 +28,7 @@ AUTHOR = "Facebook AI Research"
 LICENSE = license
 REQUIREMENTS = (reqs.strip().split("\n"),)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=REQUIREMENTS,
