@@ -5,3 +5,5 @@
 # LICENSE file in the root directory of this source tree.
 
 from yacs.config import CfgNode as Config
+
+__all__ = ["Config"]

@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import builtins
+import os.path
+import sys
 
-from setuptools import find_packages, setup
+import setuptools
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'habitat'))
+from version import VERSION  # noqa
 
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
@@ -25,19 +28,16 @@ AUTHOR = "Facebook AI Research"
 LICENSE = license
 REQUIREMENTS = (reqs.strip().split("\n"),)
 
-# import restricted version of habitat to get __version__
-builtins.__HABITAT_SETUP__ = True  # type: ignore
-import habitat  # noqa
-
-VERSION = habitat.__version__
-
-setup(
-    name=DISTNAME,
-    install_requires=REQUIREMENTS,
-    packages=find_packages(),
-    version=VERSION,
-    description=DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
-    author=AUTHOR,
-    license=LICENSE,
-)
+if __name__ == '__main__':
+    setuptools.setup(
+        name=DISTNAME,
+        install_requires=REQUIREMENTS,
+        packages=setuptools.find_packages(),
+        version=VERSION,
+        description=DESCRIPTION,
+        long_description=LONG_DESCRIPTION,
+        author=AUTHOR,
+        license=LICENSE,
+        setup_requires=["pytest-runner"],
+        tests_require=["pytest"],
+    )

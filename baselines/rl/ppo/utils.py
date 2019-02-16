@@ -5,16 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import gzip
-import json
-import numpy as np
 from collections import defaultdict
 
+import numpy as np
 import torch
 import torch.nn as nn
-
-import habitat
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 
 class Flatten(nn.Module):
@@ -31,8 +26,7 @@ class CustomFixedCategorical(torch.distributions.Categorical):
             super()
             .log_prob(actions.squeeze(-1))
             .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
+            .sum(-1).unsqueeze(-1)
         )
 
     def mode(self):
@@ -66,12 +60,12 @@ def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
 
 class RolloutStorage:
     def __init__(
-        self,
-        num_steps,
-        num_envs,
-        observation_space,
-        action_space,
-        recurrent_hidden_state_size,
+            self,
+            num_steps,
+            num_envs,
+            observation_space,
+            action_space,
+            recurrent_hidden_state_size,
     ):
         self.observations = {}
 
@@ -118,14 +112,14 @@ class RolloutStorage:
         self.masks = self.masks.to(device)
 
     def insert(
-        self,
-        observations,
-        recurrent_hidden_states,
-        actions,
-        action_log_probs,
-        value_preds,
-        rewards,
-        masks,
+            self,
+            observations,
+            recurrent_hidden_states,
+            actions,
+            action_log_probs,
+            value_preds,
+            rewards,
+            masks,
     ):
         for sensor in observations:
             self.observations[sensor][self.step + 1].copy_(
@@ -155,9 +149,10 @@ class RolloutStorage:
             gae = 0
             for step in reversed(range(self.rewards.size(0))):
                 delta = (
-                    self.rewards[step]
-                    + gamma * self.value_preds[step + 1] * self.masks[step + 1]
-                    - self.value_preds[step]
+                        self.rewards[step]
+                        + gamma * self.value_preds[step + 1] * self.masks[
+                            step + 1]
+                        - self.value_preds[step]
                 )
                 gae = delta + gamma * tau * self.masks[step + 1] * gae
                 self.returns[step] = gae + self.value_preds[step]
@@ -165,8 +160,8 @@ class RolloutStorage:
             self.returns[-1] = next_value
             for step in reversed(range(self.rewards.size(0))):
                 self.returns[step] = (
-                    self.returns[step + 1] * gamma * self.masks[step + 1]
-                    + self.rewards[step]
+                        self.returns[step + 1] * gamma * self.masks[step + 1]
+                        + self.rewards[step]
                 )
 
     def recurrent_generator(self, advantages, num_mini_batch):

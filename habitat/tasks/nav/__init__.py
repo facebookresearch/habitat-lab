@@ -5,3 +5,5 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.tasks.nav.nav_task import NavigationTask
+
+__all__ = ["NavigationTask"]
