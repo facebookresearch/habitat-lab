@@ -5,3 +5,5 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.tasks.eqa.eqa_task import EQATask
+
+__all__ = ["EQATask"]

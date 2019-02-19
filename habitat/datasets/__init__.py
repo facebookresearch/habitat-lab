@@ -19,3 +19,5 @@ register_dataset(
     id_dataset="PointNav-v1",
     entry_point="habitat.datasets.pointnav.pointnav_dataset:PointNavDatasetV1",
 )
+
+__all__ = ["dataset_registry", "register_dataset", "make_dataset"]

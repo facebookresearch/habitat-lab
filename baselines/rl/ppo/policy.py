@@ -67,9 +67,18 @@ class Net(nn.Module):
     def __init__(self, observation_space, hidden_size):
         super().__init__()
 
-        n_input_image = observation_space.spaces["rgb"].shape[2]
+        if "rgb" in observation_space.spaces:
+            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+        else:
+            self._n_input_rgb = 0
+        if "depth" in observation_space.spaces:
+            self._n_input_depth = observation_space.spaces["depth"].shape[2]
+        else:
+            self._n_input_depth = 0
 
-        n_input_goal = observation_space.spaces["pointgoal"].shape[0]
+        assert self._n_input_rgb + self._n_input_depth > 0
+
+        self._n_input_goal = observation_space.spaces["pointgoal"].shape[0]
         self._hidden_size = hidden_size
 
         # kernel size for different CNN layers
@@ -78,9 +87,14 @@ class Net(nn.Module):
         # strides for different CNN layers
         self._cnn_layers_stride = [(4, 4), (2, 2), (1, 1)]
 
-        cnn_dims = np.array(
-            observation_space.spaces["rgb"].shape[:2], dtype=np.float32
-        )
+        if self._n_input_rgb > 0:
+            cnn_dims = np.array(
+                observation_space.spaces["rgb"].shape[:2], dtype=np.float32
+            )
+        else:
+            cnn_dims = np.array(
+                observation_space.spaces["depth"].shape[:2], dtype=np.float32
+            )
 
         for kernel_size, stride in zip(
             self._cnn_layers_kernel_size, self._cnn_layers_stride
@@ -95,7 +109,7 @@ class Net(nn.Module):
 
         self.cnn = nn.Sequential(
             nn.Conv2d(
-                in_channels=n_input_image,
+                in_channels=self._n_input_rgb + self._n_input_depth,
                 out_channels=32,
                 kernel_size=self._cnn_layers_kernel_size[0],
                 stride=self._cnn_layers_stride[0],
@@ -118,7 +132,7 @@ class Net(nn.Module):
             nn.Linear(32 * cnn_dims[0] * cnn_dims[1], hidden_size),
             nn.ReLU(),
         )
-        self.rnn = nn.GRU(hidden_size + n_input_goal, hidden_size)
+        self.rnn = nn.GRU(hidden_size + self._n_input_goal, hidden_size)
         self.critic_linear = nn.Linear(hidden_size, 1)
 
         self.layer_init()
@@ -227,12 +241,26 @@ class Net(nn.Module):
         return x, hidden_states
 
     def forward(self, observations, rnn_hidden_states, masks):
-        rgb_observations = observations["rgb"]
+        cnn_input = []
+        if self._n_input_rgb > 0:
+            rgb_observations = observations["rgb"]
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
+            rgb_observations = rgb_observations / 255.0  # normalize RGB
+
+            cnn_input.append(rgb_observations)
+        if self._n_input_depth > 0:
+            depth_observations = observations["depth"]
+
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            depth_observations = depth_observations.permute(0, 3, 1, 2)
+
+            cnn_input.append(depth_observations)
+
+        cnn_input = torch.cat(cnn_input, dim=1)
         goal_observations = observations["pointgoal"]
 
-        rgb_observations = rgb_observations.permute(0, 3, 1, 2)
-
-        x = self.cnn(rgb_observations / 255.0)
+        x = self.cnn(cnn_input)
         x = torch.cat([x, goal_observations], dim=1)  # concatenate goal vector
         x, rnn_hidden_states = self.forward_rnn(x, rnn_hidden_states, masks)
 

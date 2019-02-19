@@ -27,10 +27,7 @@ _C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
-# TODO(akadian): restore the proper config hierarchy here
 _C.TASK.SUCCESS_DISTANCE = 0.2
-_C.TASK.SUCCESS_REWARD = 10.0
-_C.TASK.SLACK_REWARD = -0.01
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 # -----------------------------------------------------------------------------
@@ -122,12 +119,6 @@ _C.DATASET.POINTNAVV1.DATA_PATH = (
     "data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz"
 )
 _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
-# -----------------------------------------------------------------------------
-# BASELINES
-# -----------------------------------------------------------------------------
-_C.BASELINES = CN()
-# -----------------------------------------------------------------------------
-#
 # -----------------------------------------------------------------------------
 
 

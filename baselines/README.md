@@ -37,7 +37,7 @@ python -u baselines/train_ppo.py \
 
 **test**:
 ```bash
-python -u baselines/test_ppo.py \
+python -u baselines/evaluate_ppo.py \
     --model-path "/path/to/checkpoint" \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \

@@ -5,16 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import gzip
-import json
-import numpy as np
 from collections import defaultdict
 
+import numpy as np
 import torch
 import torch.nn as nn
-
-import habitat
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 
 class Flatten(nn.Module):
@@ -406,5 +401,13 @@ def ppo_args():
         default=10000,
         help="number of PPO updates to run",
     )
+    parser.add_argument(
+        "--sensors",
+        type=str,
+        default="RGB_SENSOR,DEPTH_SENSOR",
+        help="comma separated string containing different sensors to use,"
+        "currently 'RGB_SENSOR' and 'DEPTH_SENSOR' are supported",
+    )
+    parser.add_argument("--seed", type=int, default=100)
 
     return parser
