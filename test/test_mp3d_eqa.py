@@ -170,8 +170,6 @@ def test_mp3d_eqa_sim_correspondence():
         assert (
             len(episode.shortest_paths) == 1
         ), "Episode has no shortest paths or more than one."
-        # TODO (maksymets) get rid of private member call with better agent
-        # state interface
         start_state = env.sim.get_agent_state()
         assert np.allclose(
             start_state.position, episode.start_position

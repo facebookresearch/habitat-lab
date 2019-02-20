@@ -81,7 +81,7 @@ pip install -e .
 ```bash
 export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
 ```
-3. Get the [test scene data](https://www.dropbox.com/s/gw5fk86rfy49d6a/habitat-test-scenes.zip?dl=1) and extract locally.
+3. Get the [test scene data](https://github.com/facebookresearch/habitat-sim/releases/download/v0.1.0/habitat-test-scenes.zip) and extract locally.
 
 4. Run the example script `python examples/example.py ` or `python setup.py test` to confirm everything works.
 
@@ -91,11 +91,7 @@ export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/buil
 ```python
 import habitat
 
-config = habitat.get_config()
-dataset = habitat.make_dataset(
-    id_dataset=config.DATASET.TYPE, config=config.DATASET
-)
-env = habitat.Env(config=config, dataset=dataset)
+env = habitat.Env(config=habitat.get_config())
 observations = env.reset()
 
 while not env.episode_over:

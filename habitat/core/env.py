@@ -16,6 +16,7 @@ from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.sims import make_sim
 from habitat.tasks import make_task
+from habitat.datasets import make_dataset
 
 
 class Env:
@@ -61,8 +62,12 @@ class Env:
         )
         self._config = config
         self._dataset = dataset
-        self._episodes = self._dataset.episodes if self._dataset else []
         self._current_episode_index = None
+        if self._dataset is None and config.DATASET.TYPE:
+            self._dataset = make_dataset(
+                id_dataset=config.DATASET.TYPE, config=config.DATASET
+            )
+        self._episodes = self._dataset.episodes if self._dataset else []
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )

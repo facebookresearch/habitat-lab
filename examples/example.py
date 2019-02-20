@@ -8,15 +8,10 @@ import habitat
 
 
 def example():
-    config = habitat.get_config()
-    dataset = habitat.make_dataset(
-        id_dataset=config.DATASET.TYPE, config=config.DATASET
-    )
-    env = habitat.Env(config=config, dataset=dataset)
+    env = habitat.Env(config=habitat.get_config())
     observations = env.reset()
 
     while not env.episode_over:
-        # randomly move around inside the environment
         observations = env.step(env.action_space.sample())
 
 
