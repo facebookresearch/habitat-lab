@@ -128,7 +128,7 @@ _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 # -----------------------------------------------------------------------------
 
 
-def cfg(
+def get_config(
     config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
 ) -> CN:
     config = _C.clone()

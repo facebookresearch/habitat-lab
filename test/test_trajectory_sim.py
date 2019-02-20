@@ -10,12 +10,12 @@ import os
 import numpy as np
 import pytest
 
-from habitat.config.default import cfg
+from habitat.config.default import get_config
 from habitat.sims import make_sim
 
 
 def init_sim():
-    config = cfg()
+    config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
     return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)

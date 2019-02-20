@@ -11,7 +11,7 @@ import pytest
 
 import habitat
 import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
-from habitat.config.default import cfg
+from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
@@ -39,7 +39,7 @@ EPISODES_LIMIT = 6
 
 
 def get_minos_for_sim_eqa_config():
-    _sim_eqa_c = cfg(CFG_TEST)
+    _sim_eqa_c = get_config(CFG_TEST)
     _sim_eqa_c.task_name = "EQA-v0"
     _sim_eqa_c.dataset = mp3d_dataset.get_default_mp3d_v1_config()
     _sim_eqa_c.dataset.split = "val"
@@ -84,7 +84,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 
 def test_mp3d_eqa_dataset():
-    dataset_config = cfg(CFG_TEST).DATASET
+    dataset_config = get_config(CFG_TEST).DATASET
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -101,7 +101,7 @@ def test_mp3d_eqa_dataset():
 
 
 def test_mp3d_eqa_sim():
-    eqa_config = cfg(CFG_TEST)
+    eqa_config = get_config(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET
@@ -140,7 +140,7 @@ def test_mp3d_eqa_sim():
 
 
 def test_mp3d_eqa_sim_correspondence():
-    eqa_config = cfg(CFG_TEST)
+    eqa_config = get_config(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET

@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 import habitat
-from habitat.config.default import cfg
+from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.sims.habitat_simulator import (
@@ -46,7 +46,7 @@ def _load_test_data():
     configs = []
     datasets = []
     for i in range(NUM_ENVS):
-        config = cfg(CFG_TEST)
+        config = get_config(CFG_TEST)
         if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
             pytest.skip("Please download Habitat test data to data folder.")
 
@@ -132,7 +132,7 @@ def test_threaded_vectorized_env():
 
 
 def test_env():
-    config = cfg(CFG_TEST)
+    config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
     env = habitat.Env(config=config, dataset=None)
@@ -210,7 +210,7 @@ def test_rl_vectorized_envs():
 
 
 def test_rl_env():
-    config = cfg(CFG_TEST)
+    config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -251,7 +251,7 @@ def test_rl_env():
 
 
 def test_action_space_shortest_path():
-    config = cfg()
+    config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 

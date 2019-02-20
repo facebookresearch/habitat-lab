@@ -9,7 +9,7 @@ import argparse
 import torch
 
 import habitat
-from habitat.config.default import cfg
+from habitat.config.default import get_config
 from config.default import cfg as cfg_baseline
 
 from train_ppo import make_env_fn
@@ -47,7 +47,7 @@ def main():
     baseline_configs = []
 
     for _ in range(args.num_processes):
-        config_env = cfg(config_file=args.task_config)
+        config_env = get_config(config_file=args.task_config)
 
         config_env.DATASET.SPLIT = "val"
 

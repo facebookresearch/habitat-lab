@@ -36,6 +36,25 @@ To this end, we aim to standardize the entire ‘software stack’ for training 
 #### Why the name _Habitat_?
 Because that's where AI agents live :slightly_smiling_face:
 
+#### Example
+<!--- Please, update `examples/example.py` if you update example. -->
+
+Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.yaml) for configuration of task and agent.
+
+```python
+import habitat
+
+env = habitat.Env(
+    config=habitat.get_config(config_file="tasks/pointnav.yaml")
+)
+
+observations = env.reset()
+
+while not env.episode_over:
+    observations = env.step(env.action_space.sample())
+
+```
+
 ## Citing Habitat
 If you use the Habitat platform in your research, please cite the following technical report:
 ```
@@ -71,7 +90,7 @@ Note that the core functionality defines fundamental building blocks such as the
 
 ## Installation
 
-1. Clone the github repository and install using the commands below. Note that we only support python3.
+1. Clone the github repository and install using the commands below. Note that we only support [python3](https://pythonclock.org/), all the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 ```bash
 cd habitat-api
 pip install -e .
@@ -81,29 +100,19 @@ pip install -e .
 ```bash
 export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
 ```
-3. Get the [test scene data](https://github.com/facebookresearch/habitat-sim/releases/download/v0.1.0/habitat-test-scenes.zip) and extract locally.
+3. Get the [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract locally.
 
-4. Run the example script `python examples/example.py ` or `python setup.py test` to confirm everything works.
+4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
 
-
-### Example
-<!--- Please, update `examples/example.py` if you update example. -->
-```python
-import habitat
-
-env = habitat.Env(config=habitat.get_config())
-observations = env.reset()
-
-while not env.episode_over:
-    observations = env.step(env.action_space.sample())
-
-```
 
 ## Data
 The PointNav dataset will be uploaded to S3 soon. Stay tuned!
 
 ## Baselines
-Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. More details [here](baselines/README.md).
+Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [baselines/README.md](baselines/README.md).
+
+## Acknowledgments
+The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
 
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.

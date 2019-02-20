@@ -22,9 +22,3 @@ TASK:
   SPL:
     TYPE: SPL
     SUCCESS_DISTANCE: 0.2
-DATASET:
-  TYPE: PointNav-v1
-  SPLIT: train
-  POINTNAVV1:
-    DATA_PATH: data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz
-    CONTENT_SCENES: ["*"]

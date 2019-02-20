@@ -14,7 +14,7 @@ import torch
 import habitat
 from habitat import logger
 from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
-from habitat.config.default import cfg as cfg_env
+from habitat.config.default import get_config as cfg_env
 from config.default import cfg as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from rl.ppo import PPO, Policy, RolloutStorage
@@ -105,22 +105,27 @@ def construct_envs(args):
     baseline_configs = []
 
     basic_config = cfg_env(config_file=args.task_config)
+
     scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
 
-    random.shuffle(scenes)
-    assert len(scenes) > args.num_processes, (
-        "reduce the number of processes as there "
-        "aren't enough number of scenes"
-    )
-    scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
+    if len(scenes) > 0:
+        random.shuffle(scenes)
+
+        assert len(scenes) >= args.num_processes, (
+            "reduce the number of processes as there "
+            "aren't enough number of scenes"
+        )
+        scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
         config_env = cfg_env(config_file=args.task_config)
         config_env.defrost()
 
-        config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
-            i * scene_split_size : (i + 1) * scene_split_size
-        ]
+        if len(scenes) > 0:
+            config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+                i * scene_split_size : (i + 1) * scene_split_size
+            ]
+
         config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
         agent_sensors = args.sensors.strip().split(",")
