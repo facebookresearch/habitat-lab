@@ -113,7 +113,7 @@ def test_mp3d_eqa_sim():
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
     )
-    env = habitat.Env(config=eqa_config)
+    env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
     assert env

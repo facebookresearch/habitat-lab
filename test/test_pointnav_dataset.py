@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
+import pytest
 
 import habitat
 from habitat.config.default import cfg
@@ -34,27 +35,25 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 
 def test_single_pointnav_dataset():
-    dataset_config = cfg(CFG_TEST).DATASET
-    dataset_config.defrost()
-    dataset_config.SPLIT = "val"
-    dataset_config.freeze()
+    dataset_config = cfg().DATASET
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
-        logger.info("Test skipped as dataset files are missing.")
-        return
+        pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
     assert len(scenes) == 0, (
         "Expected dataset doesn't expect separate " "episode file per scene."
     )
     dataset = PointNavDatasetV1(config=dataset_config)
     assert len(dataset.episodes) > 0, "The dataset shouldn't be empty."
+    assert (
+        len(dataset.scene_ids) == 2
+    ), "The test dataset scenes number is wrong."
     check_json_serializaiton(dataset)
 
 
 def test_multiple_files_pointnav_dataset():
     dataset_config = cfg(CFG_TEST).DATASET
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
-        logger.info("Test skipped as dataset files are missing.")
-        return
+        pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
     assert len(scenes) > 0, (
         "Expected dataset contains separate episode  " "file per scene."
