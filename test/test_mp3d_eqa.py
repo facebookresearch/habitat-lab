@@ -6,9 +6,11 @@
 
 import time
 
+import numpy as np
+import pytest
+
 import habitat
 import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
-import numpy as np
 from habitat.config.default import cfg
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
@@ -83,12 +85,13 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 def test_mp3d_eqa_dataset():
     dataset_config = cfg(CFG_TEST).DATASET
-    dataset_config.freeze()
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
-        logger.info("Test skipped as dataset files are missing.")
-        return
+        pytest.skip(
+            "Please download Matterport3D EQA dataset to " "data folder."
+        )
+
     dataset = mp3d_dataset.Matterport3dDatasetV1(config=dataset_config)
     assert dataset
     assert (
@@ -99,13 +102,13 @@ def test_mp3d_eqa_dataset():
 
 def test_mp3d_eqa_sim():
     eqa_config = cfg(CFG_TEST)
-    eqa_config.freeze()
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET
     ):
-        logger.info("Test skipped as dataset files are missing.")
-        return
+        pytest.skip(
+            "Please download Matterport3D EQA dataset to " "data folder."
+        )
 
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
@@ -142,8 +145,9 @@ def test_mp3d_eqa_sim_correspondence():
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET
     ):
-        logger.info("Test skipped as dataset files are missing.")
-        return
+        pytest.skip(
+            "Please download Matterport3D EQA dataset to " "data folder."
+        )
 
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
@@ -168,7 +172,7 @@ def test_mp3d_eqa_sim_correspondence():
         ), "Episode has no shortest paths or more than one."
         # TODO (maksymets) get rid of private member call with better agent
         # state interface
-        start_state = env._sim.agent_state()
+        start_state = env.sim.get_agent_state()
         assert np.allclose(
             start_state.position, episode.start_position
         ), "Agent's start position diverges from the shortest path's one."
@@ -183,7 +187,7 @@ def test_mp3d_eqa_sim_correspondence():
         )
 
         for step_id, point in enumerate(episode.shortest_paths[0]):
-            cur_state = env._sim.agent_state()
+            cur_state = env.sim.get_agent_state()
 
             logger.info(
                 "diff position: {} diff rotation: {} "

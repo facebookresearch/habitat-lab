@@ -90,6 +90,7 @@ class NavRLEnv(habitat.RLEnv):
 
 def make_env_fn(config_env, config_baseline, rank):
     dataset = PointNavDatasetV1(config_env.DATASET)
+    config_env.defrost()
     config_env.SIMULATOR.SCENE = dataset.episodes[0].scene_id
     config_env.freeze()
     env = NavRLEnv(
@@ -115,6 +116,7 @@ def construct_envs(args):
 
     for i in range(args.num_processes):
         config_env = cfg_env(config_file=args.task_config)
+        config_env.defrost()
 
         config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
             i * scene_split_size : (i + 1) * scene_split_size
@@ -125,6 +127,7 @@ def construct_envs(args):
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        config_env.freeze()
         env_configs.append(config_env)
 
         config_baseline = cfg_baseline()

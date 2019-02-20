@@ -8,17 +8,16 @@ import json
 import os
 
 import numpy as np
+import pytest
+
 from habitat.config.default import cfg
 from habitat.sims import make_sim
 
 
 def init_sim():
     config = cfg()
-    config.SCENE = "data/habitat-sim/test/test.glb"
-    config.freeze()
-    assert os.path.exists(
-        config.SCENE
-    ), "Please download Habitat-Sim test data to data/habitat-sim/test/."
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
     return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
 

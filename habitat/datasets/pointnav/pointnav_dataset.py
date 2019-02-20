@@ -46,6 +46,7 @@ class PointNavDatasetV1(Dataset):
         )
 
         cfg = config.clone()
+        cfg.defrost()
         cfg.POINTNAVV1.CONTENT_SCENES = []
         dataset = PointNavDatasetV1(cfg)
         return PointNavDatasetV1._get_scenes_from_folder(

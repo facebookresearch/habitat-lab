@@ -83,33 +83,23 @@ export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/buil
 ```
 3. Get the [test scene data](https://www.dropbox.com/s/gw5fk86rfy49d6a/habitat-test-scenes.zip?dl=1) and extract locally.
 
-5. Run the example script `examples/example.py --scene path/to/test_data` to confirm everything works.
+4. Run the example script `python examples/example.py ` or `python setup.py test` to confirm everything works.
+
 
 ### Example
-
+<!--- Please, update `examples/example.py` if you update example. -->
 ```python
 import habitat
-from habitat.config.default import cfg
-from habitat.tasks.nav.nav_task import NavigationEpisode
 
-config = cfg()
-config.freeze()
-env = habitat.Env(config=config)
-env.episodes = [NavigationEpisode(episode_id='0',
-                                  scene_id=config.SIMULATOR.SCENE,
-                                  start_position=None,
-                                  start_rotation=None,
-                                  goals=[])]
-
+config = habitat.get_config()
+dataset = habitat.make_dataset(
+    id_dataset=config.DATASET.TYPE, config=config.DATASET
+)
+env = habitat.Env(config=config, dataset=dataset)
 observations = env.reset()
 
-for i in range(100):
-    # randomly move around inside the environment
+while not env.episode_over:
     observations = env.step(env.action_space.sample())
-
-    # observations by default contains rgb
-    if env.episode_over:
-        observations = env.reset()    
 
 ```
 

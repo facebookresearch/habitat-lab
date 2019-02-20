@@ -41,7 +41,7 @@ class Matterport3dDatasetV1(Dataset):
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
             config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
-        ) and os.path.exists(config.MP3DEQAV1.DATA_PATH)
+        )
 
     def __init__(self, config: Config = None) -> None:
         self.episodes = []

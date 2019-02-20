@@ -13,7 +13,7 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
-CFG_TEST = "test/pointnav_gibson_test.yaml"
+CFG_TEST = "datasets/pointnav/gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 
 
@@ -35,6 +35,9 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 def test_single_pointnav_dataset():
     dataset_config = cfg(CFG_TEST).DATASET
+    dataset_config.defrost()
+    dataset_config.SPLIT = "val"
+    dataset_config.freeze()
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         logger.info("Test skipped as dataset files are missing.")
         return
@@ -49,7 +52,6 @@ def test_single_pointnav_dataset():
 
 def test_multiple_files_pointnav_dataset():
     dataset_config = cfg(CFG_TEST).DATASET
-    dataset_config.SPLIT = "train"
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         logger.info("Test skipped as dataset files are missing.")
         return
@@ -57,8 +59,9 @@ def test_multiple_files_pointnav_dataset():
     assert len(scenes) > 0, (
         "Expected dataset contains separate episode  " "file per scene."
     )
-
+    dataset_config.defrost()
     dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.freeze()
     partial_dataset = make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config
     )

@@ -17,3 +17,7 @@ SIMULATOR:
     HFOV: 45
     POSITION: [0, 1.09, 0]
     TYPE: HabitatSimRGBSensor
+
+DATASET:
+  TYPE: MP3DEQA-v1
+  SPLIT: val
