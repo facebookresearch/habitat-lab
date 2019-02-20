@@ -262,9 +262,22 @@ class HabitatSim(habitat.Simulator):
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
 
-    def render(self, mode: str = "human", close: bool = False) -> Any:
-        # TODO (@maksymets) Test render function
-        return self._sim.render()
+    def render(self, mode: str = "rgb") -> Any:
+        """
+        Args:
+            mode: sensor whose observation is used for returning the frame,
+                eg: "rgb", "depth", "semantic"
+
+        Returns:
+            rendered frame according to the mode
+        """
+        sim_obs = self._sim.get_sensor_observations()
+        observations = self._sensor_suite.get_observations(sim_obs)
+
+        output = observations.get(mode)
+        assert output is not None, "mode {} sensor is not active".format(mode)
+
+        return output
 
     def seed(self, seed):
         self._sim.seed(seed)

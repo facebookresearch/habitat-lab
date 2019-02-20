@@ -238,8 +238,8 @@ class Env:
 
         self._sim.reconfigure(self._config.SIMULATOR)
 
-    def render(self, mode="human", close=False) -> np.ndarray:
-        return self._sim.render(mode, close)
+    def render(self, mode="rgb") -> np.ndarray:
+        return self._sim.render(mode)
 
     def close(self) -> None:
         self._sim.close()
@@ -353,8 +353,8 @@ class RLEnv(gym.Env):
     def seed(self, seed: int) -> None:
         self._env.seed(seed)
 
-    def render(self, mode: str = "human", close: bool = False) -> np.ndarray:
-        return self._env.render(mode, close)
+    def render(self, mode: str = "rgb") -> np.ndarray:
+        return self._env.render(mode)
 
     def close(self) -> None:
         self._env.close()
