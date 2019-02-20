@@ -33,6 +33,8 @@ python -u baselines/train_ppo.py \
     --log-interval 5 \
     --checkpoint-folder "data/checkpoints" \
     --checkpoint-interval 50 \
+    --task-config "tasks/pointnav.yaml" \
+
 ```
 
 **test**:
@@ -43,8 +45,10 @@ python -u baselines/evaluate_ppo.py \
     --pth-gpu-id 0 \
     --num-processes 10 \
     --count-test-episodes 100 \
+    --task-config "tasks/pointnav.yaml" \
+
 ```
 
 ### Classic
 
-**SLAM** (coming soong)
+**SLAM** (coming soon)

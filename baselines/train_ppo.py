@@ -103,18 +103,23 @@ def construct_envs(args):
     env_configs = []
     baseline_configs = []
 
-    basic_config = cfg_env(config_file="tasks/pointnav.yaml")
+    basic_config = cfg_env(config_file=args.task_config)
     scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
 
     random.shuffle(scenes)
+    assert len(scenes) > args.num_processes, (
+        "reduce the number of processes as there "
+        "aren't enough number of scenes"
+    )
     scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
-        config_env = cfg_env(config_file="tasks/pointnav.yaml")
+        config_env = cfg_env(config_file=args.task_config)
 
         config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
             i * scene_split_size : (i + 1) * scene_split_size
         ]
+        config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
         agent_sensors = args.sensors.strip().split(",")
         for sensor in agent_sensors:
@@ -124,6 +129,8 @@ def construct_envs(args):
 
         config_baseline = cfg_baseline()
         baseline_configs.append(config_baseline)
+
+        logger.info("config_env: {}".format(config_env))
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
@@ -149,6 +156,9 @@ def main():
 
     if not os.path.isdir(args.checkpoint_folder):
         os.makedirs(args.checkpoint_folder)
+
+    for p in sorted(list(vars(args))):
+        logger.info("{}: {}".format(p, getattr(args, p)))
 
     envs = construct_envs(args)
 
@@ -313,6 +323,7 @@ def main():
             window_counts = (
                 window_episode_counts[-1] - window_episode_counts[0]
             ).sum()
+
             if window_counts > 0:
                 logger.info(
                     "Average window size {} reward: {:3f}".format(
