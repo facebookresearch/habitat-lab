@@ -4,14 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import json
 import multiprocessing as mp
 import os
 
-import habitat
 import numpy as np
-from habitat.config.default import cfg
+import pytest
+
+import habitat
+from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
+from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.sims.habitat_simulator import (
     SimulatorActions,
     SIM_ACTION_TO_NAME,
@@ -20,32 +22,7 @@ from habitat.sims.habitat_simulator import (
 from habitat.tasks.nav.nav_task import NavigationEpisode
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-MULTIHOUSE_RESOURCES_PATH = "data/habitat-sim/multihouse-resources"
-MULTIHOUSE_INITIALIZATIONS_PATH = (
-    "data/habitat-sim/multihouse_initializations.json"
-)
-
-
-class DatasetTest(habitat.Dataset):
-    def __init__(self, multihouse_initializations, ind_house):
-        house_id = sorted(os.listdir(MULTIHOUSE_RESOURCES_PATH))[ind_house]
-        path = os.path.join(
-            MULTIHOUSE_RESOURCES_PATH, house_id, "{}.glb".format(house_id)
-        )
-        start_position = multihouse_initializations[house_id]["start_position"]
-        start_rotation = multihouse_initializations[house_id]["start_rotation"]
-        house_episode = NavigationEpisode(
-            episode_id=str(ind_house),
-            scene_id=path,
-            start_position=start_position,
-            start_rotation=start_rotation,
-            goals=[],
-        )
-        self._episodes = [house_episode]
-
-    @property
-    def episodes(self):
-        return self._episodes
+NUM_ENVS = 2
 
 
 class DummyRLEnv(habitat.RLEnv):
@@ -66,27 +43,23 @@ class DummyRLEnv(habitat.RLEnv):
 
 
 def _load_test_data():
-    assert os.path.exists(MULTIHOUSE_RESOURCES_PATH), (
-        "Multihouse test data missing, "
-        "please download and place it in {}".format(MULTIHOUSE_RESOURCES_PATH)
-    )
-    assert os.path.isfile(MULTIHOUSE_INITIALIZATIONS_PATH), (
-        "Multhouse initialization points missing, "
-        "please download and place it in {}".format(
-            MULTIHOUSE_INITIALIZATIONS_PATH
-        )
-    )
-    with open(MULTIHOUSE_INITIALIZATIONS_PATH, "r") as f:
-        multihouse_initializations = json.load(f)
-
     configs = []
-    num_envs = len(os.listdir(MULTIHOUSE_RESOURCES_PATH))
     datasets = []
-    for i in range(num_envs):
-        datasets.append(DatasetTest(multihouse_initializations, i))
-        config = cfg(CFG_TEST)
+    for i in range(NUM_ENVS):
+        config = get_config(CFG_TEST)
+        if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+            pytest.skip("Please download Habitat test data to data folder.")
+
+        datasets.append(
+            habitat.make_dataset(
+                id_dataset=config.DATASET.TYPE, config=config.DATASET
+            )
+        )
+
         config.defrost()
         config.SIMULATOR.SCENE = datasets[-1].episodes[0].scene_id
+        if not os.path.exists(config.SIMULATOR.SCENE):
+            pytest.skip("Please download Habitat test data to data folder.")
         config.freeze()
         configs.append(config)
 
@@ -159,12 +132,9 @@ def test_threaded_vectorized_env():
 
 
 def test_env():
-    config = cfg(CFG_TEST)
-    config.freeze()
-    assert os.path.exists(config.SIMULATOR.SCENE), (
-        "Habitat-Sim test data missing, please download and place it in "
-        "data/habitat-sim/test/"
-    )
+    config = get_config(CFG_TEST)
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
     env = habitat.Env(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -240,12 +210,10 @@ def test_rl_vectorized_envs():
 
 
 def test_rl_env():
-    config = cfg(CFG_TEST)
-    config.freeze()
-    assert os.path.exists(config.SIMULATOR.SCENE), (
-        "Habitat-Sim test data missing, please download and place it in "
-        "data/habitat-sim/test/"
-    )
+    config = get_config(CFG_TEST)
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+
     env = DummyRLEnv(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -283,12 +251,9 @@ def test_rl_env():
 
 
 def test_action_space_shortest_path():
-    config = cfg()
-    assert os.path.exists(config.SIMULATOR.SCENE), (
-        "Habitat-Sim test data missing, please download and place it in "
-        "data/habitat-sim/test/"
-    )
-    config.freeze()
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
 
     env = habitat.Env(config=config, dataset=None)
 

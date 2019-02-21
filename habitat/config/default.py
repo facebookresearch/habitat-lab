@@ -7,7 +7,7 @@
 import os
 from typing import Optional
 
-from habitat.config import Config as CN
+from habitat.config import Config as CN  # type: ignore
 
 DEFAULT_CONFIG_DIR = "configs/"
 
@@ -48,7 +48,9 @@ _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
-_C.SIMULATOR.SCENE = "data/habitat-sim/test/test.glb"
+_C.SIMULATOR.SCENE = (
+    "data/scene_datasets/habitat-test-scenes/" "van-gogh-room.glb"
+)
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
@@ -104,28 +106,33 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 # DATASET
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
-_C.DATASET.TYPE = "MP3DEQA-v1"
-_C.DATASET.SPLIT = "val"
+_C.DATASET.TYPE = "PointNav-v1"
+_C.DATASET.SPLIT = "train"
 # -----------------------------------------------------------------------------
 # MP3DEQAV1 DATASET
 # -----------------------------------------------------------------------------
 _C.DATASET.MP3DEQAV1 = CN()
-_C.DATASET.MP3DEQAV1.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
+_C.DATASET.MP3DEQAV1.DATA_PATH = (
+    "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
+)
 # -----------------------------------------------------------------------------
 # POINTNAVV1 DATASET
 # -----------------------------------------------------------------------------
 _C.DATASET.POINTNAVV1 = CN()
 _C.DATASET.POINTNAVV1.DATA_PATH = (
-    "data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz"
+    "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
+
+
 # -----------------------------------------------------------------------------
 
 
-def cfg(
+def get_config(
     config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
 ) -> CN:
     config = _C.clone()
     if config_file:
         config.merge_from_file(os.path.join(config_dir, config_file))
+    config.freeze()
     return config

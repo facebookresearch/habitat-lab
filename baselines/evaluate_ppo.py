@@ -9,7 +9,7 @@ import argparse
 import torch
 
 import habitat
-from habitat.config.default import cfg
+from habitat.config.default import get_config
 from config.default import cfg as cfg_baseline
 
 from train_ppo import make_env_fn
@@ -33,6 +33,12 @@ def main():
         "sensors to use, currently 'RGB_SENSOR' and"
         "'DEPTH_SENSOR' are supported",
     )
+    parser.add_argument(
+        "--task-config",
+        type=str,
+        default="tasks/pointnav.yaml",
+        help="path to config yaml containing information about task",
+    )
     args = parser.parse_args()
 
     device = torch.device("cuda:{}".format(args.pth_gpu_id))
@@ -41,7 +47,7 @@ def main():
     baseline_configs = []
 
     for _ in range(args.num_processes):
-        config_env = cfg(config_file="tasks/pointnav.yaml")
+        config_env = get_config(config_file=args.task_config)
 
         config_env.DATASET.SPLIT = "val"
 

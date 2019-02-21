@@ -13,6 +13,8 @@ baselines
  
 **dependencies**: pytorch 1.0, for installing refer to [pytorch.org](https://pytorch.org/)
 
+For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat/`, extraction will create a data folder at `habitat/data`) and run the below training command.
+
 **train**:
 ```bash
 python -u baselines/train_ppo.py \
@@ -22,7 +24,7 @@ python -u baselines/train_ppo.py \
     --lr 2.5e-4 \
     --clip-param 0.1 \
     --value-loss-coef 0.5 \
-    --num-processes 10 \
+    --num-processes 4 \
     --num-steps 128 \
     --num-mini-batch 4 \
     --num-updates 100000 \
@@ -33,6 +35,9 @@ python -u baselines/train_ppo.py \
     --log-interval 5 \
     --checkpoint-folder "data/checkpoints" \
     --checkpoint-interval 50 \
+    --task-config "tasks/pointnav.yaml" \
+
+
 ```
 
 **test**:
@@ -41,10 +46,13 @@ python -u baselines/evaluate_ppo.py \
     --model-path "/path/to/checkpoint" \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \
-    --num-processes 10 \
+    --num-processes 4 \
     --count-test-episodes 100 \
+    --task-config "tasks/pointnav.yaml" \
+
+
 ```
 
 ### Classic
 
-**SLAM** (coming soong)
+**SLAM** (coming soon)

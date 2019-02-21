@@ -408,6 +408,12 @@ def ppo_args():
         help="comma separated string containing different sensors to use,"
         "currently 'RGB_SENSOR' and 'DEPTH_SENSOR' are supported",
     )
+    parser.add_argument(
+        "--task-config",
+        type=str,
+        default="tasks/pointnav.yaml",
+        help="path to config yaml containing information about task",
+    )
     parser.add_argument("--seed", type=int, default=100)
 
     return parser

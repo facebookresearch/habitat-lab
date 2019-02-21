@@ -299,7 +299,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def render(self, mode: str = "human", close: bool = False) -> Any:
+    def render(self, mode: str = "rgb") -> Any:
         raise NotImplementedError
 
     def close(self) -> None:

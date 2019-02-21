@@ -14,7 +14,7 @@ import torch
 import habitat
 from habitat import logger
 from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
-from habitat.config.default import cfg as cfg_env
+from habitat.config.default import get_config as cfg_env
 from config.default import cfg as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from rl.ppo import PPO, Policy, RolloutStorage
@@ -90,6 +90,7 @@ class NavRLEnv(habitat.RLEnv):
 
 def make_env_fn(config_env, config_baseline, rank):
     dataset = PointNavDatasetV1(config_env.DATASET)
+    config_env.defrost()
     config_env.SIMULATOR.SCENE = dataset.episodes[0].scene_id
     config_env.freeze()
     env = NavRLEnv(
@@ -103,27 +104,41 @@ def construct_envs(args):
     env_configs = []
     baseline_configs = []
 
-    basic_config = cfg_env(config_file="tasks/pointnav.yaml")
+    basic_config = cfg_env(config_file=args.task_config)
+
     scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
 
-    random.shuffle(scenes)
-    scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
+    if len(scenes) > 0:
+        random.shuffle(scenes)
+
+        assert len(scenes) >= args.num_processes, (
+            "reduce the number of processes as there "
+            "aren't enough number of scenes"
+        )
+        scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
-        config_env = cfg_env(config_file="tasks/pointnav.yaml")
+        config_env = cfg_env(config_file=args.task_config)
+        config_env.defrost()
 
-        config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
-            i * scene_split_size : (i + 1) * scene_split_size
-        ]
+        if len(scenes) > 0:
+            config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+                i * scene_split_size : (i + 1) * scene_split_size
+            ]
+
+        config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
         agent_sensors = args.sensors.strip().split(",")
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        config_env.freeze()
         env_configs.append(config_env)
 
         config_baseline = cfg_baseline()
         baseline_configs.append(config_baseline)
+
+        logger.info("config_env: {}".format(config_env))
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
@@ -149,6 +164,9 @@ def main():
 
     if not os.path.isdir(args.checkpoint_folder):
         os.makedirs(args.checkpoint_folder)
+
+    for p in sorted(list(vars(args))):
+        logger.info("{}: {}".format(p, getattr(args, p)))
 
     envs = construct_envs(args)
 
@@ -313,6 +331,7 @@ def main():
             window_counts = (
                 window_episode_counts[-1] - window_episode_counts[0]
             ).sum()
+
             if window_counts > 0:
                 logger.info(
                     "Average window size {} reward: {:3f}".format(

@@ -27,7 +27,7 @@ ACTION_SPACE_COMMAND = "action_space"
 
 
 def _make_env_fn(
-    config: Config, dataset: habitat.Dataset, rank: int = 0
+    config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
     """Constructor for default habitat Env.
 
