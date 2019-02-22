@@ -53,6 +53,8 @@ python -u baselines/evaluate_ppo.py \
 
 ```
 
+Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
+
 ### Classic
 
 **SLAM** (coming soon)
