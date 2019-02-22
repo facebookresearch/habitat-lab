@@ -13,13 +13,13 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
 ---
 
 ## Table of contents
-   0. [Motivation](#motivation)
-   0. [Citing Habitat](#citing-habitat)
-   0. [Details](#details)
-   0. [Installation](#installation)
-   0. [Example](#example)
-   0. [Data](#data)
-   0. [Baselines](#baselines)
+   1. [Motivation](#motivation)
+   1. [Citing Habitat](#citing-habitat)
+   1. [Details](#details)
+   1. [Installation](#installation)
+   1. [Example](#example)
+   1. [Data](#data)
+   1. [Baselines](#baselines)
 
 ## Motivation
 A key long-term goal of artificial intelligence (AI) is to build intelligent _agents_ that can
@@ -100,13 +100,33 @@ pip install -e .
 ```bash
 export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
 ```
-3. Get the [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract locally.
+3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `{HABITAT_API_MAIN_DIR}/data/`.
 
 4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
 
-
 ## Data
-The PointNav dataset will be uploaded to S3 soon. Stay tuned!
+To make things easier we expect `data` folder of particular structure or symlink presented in habitat-api working directory.
+
+### Scenes datasets
+| Scenes models | Extract path | Size |
+| --- | --- | --- |
+| [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 15 GB |
+| [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 21 GB |
+
+#### Matterport3D
+The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded using the official [Matterport3D](https://niessner.github.io/Matterport/) download script as follows: `python download_mp.py --task habitat -o data/scene_datasets/mp3d/`. You only need the habitat zip archive and not the entire Matterport3D dataset. Note that this download script requires python 2.7 to run.
+
+#### Gibson
+Download Habitat edition [link will be provided] of [Gibson scenes](http://gibsonenv.stanford.edu/database/) and extract it to `data/scene_datasets/gibson/`.
+
+
+### Task datasets
+| Task | Scenes | Link | Extract path | Config to use | Size |
+| --- | --- | --- | --- | --- | --- |
+| Point goal navigtaion | [Gibson](#Gibson) | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
+| Point goal navigtaion | [MatterPort3D](#Matterport3D) | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
+
+To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](baselines/README.md#reinforcement-learning-rl).
 
 ## Baselines
 Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [baselines/README.md](baselines/README.md).
