@@ -44,12 +44,14 @@ Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.y
 ```python
 import habitat
 
+# Load embodied AI task (PointNav) and a pre-specified virtual robot
 env = habitat.Env(
     config=habitat.get_config(config_file="tasks/pointnav.yaml")
 )
 
 observations = env.reset()
 
+# Step through environment with random actions
 while not env.episode_over:
     observations = env.step(env.action_space.sample())
 
