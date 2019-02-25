@@ -6,5 +6,5 @@ install:
   - pip install .
 script:
   - black --check habitat test --line-length 79
-  - pytest test/test_install.py
+  - python setup.py test
 
