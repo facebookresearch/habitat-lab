@@ -31,12 +31,18 @@ class NavRLEnv(habitat.RLEnv):
         super().__init__(config_env, dataset)
 
     def reset(self):
+        self._previous_action = None
+
         observations = super().reset()
 
         self._previous_target_distance = self.habitat_env.current_episode.info[
             "geodesic_distance"
         ]
         return observations
+
+    def step(self, action):
+        self._previous_action = action
+        return super().step(action)
 
     def get_reward_range(self):
         return (
@@ -115,7 +121,7 @@ def construct_envs(args):
             "reduce the number of processes as there "
             "aren't enough number of scenes"
         )
-        scene_split_size = int(np.ceil(len(scenes) / args.num_processes))
+        scene_split_size = int(np.floor(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
         config_env = cfg_env(config_file=args.task_config)
