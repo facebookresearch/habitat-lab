@@ -20,10 +20,10 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
 
 ## Table of contents
    1. [Motivation](#motivation)
+   1. [Citing Habitat](#citing-habitat)
    1. [Installation](#installation)
    1. [Example](#example)
    1. [Docker Setup](#docker-setup)
-   1. [Citing Habitat](#citing-habitat)
    1. [Details](#details)
    1. [Data](#data)
    1. [Baselines](#baselines)
@@ -39,6 +39,17 @@ A key long-term goal of artificial intelligence (AI) is to build intelligent _ag
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
 
 To this end, we aim to standardize the entire ‘software stack’ for training embodied agents – scanning the world and creating highly photorealistic 3D assets, developing the next generation of highly efficient and parallelizable simulators, specifying embodied AI tasks that enable us to benchmark scientific progress, and releasing modular high-level libraries to train and deploy embodied agents.
+
+## Citing Habitat
+If you use the Habitat platform in your research, please cite the following technical report:
+```
+@article{habitat19arxiv,
+  title =   {Habitat: A Platform for Embodied AI Research},
+  author =  {{Manolis Savva*}, {Abhishek Kadian*}, {Oleksandr Maksymets*}, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh and Dhruv Batra},
+  journal = {arXiv preprint arXiv:},
+  year =    {2019}
+}
+```
 
 ## Installation
 
@@ -78,11 +89,11 @@ while not env.episode_over:
 ```
 
 ## Docker Setup
-We also provide a docker setup for habitat. This works on machines with a NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:
+We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:
 
 1. Pull the habitat docker image: `docker pull fairhabitat/habitat:v1`
 
-1. Start an interactive bash session inside the habitat docker: `docker run --runtime=nvidia -it fairhabitat/habitat:v1`.
+1. Start an interactive bash session inside the habitat docker: `docker run --runtime=nvidia -it fairhabitat/habitat:v1`
 
 1. Activate the habitat conda environment: `source activate habitat`
 
@@ -91,17 +102,6 @@ We also provide a docker setup for habitat. This works on machines with a NVIDIA
 2019-02-25 02:39:48,680 initializing sim Sim-v0
 2019-02-25 02:39:49,655 initializing task Nav-v0
 spl: 0.000
-```
-
-## Citing Habitat
-If you use the Habitat platform in your research, please cite the following technical report:
-```
-@article{habitat19arxiv,
-  title =   {Habitat: A Platform for Embodied AI Research},
-  author =  {{Manolis Savva*}, {Abhishek Kadian*}, {Oleksandr Maksymets*}, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh and Dhruv Batra},
-  journal = {arXiv preprint arXiv:},
-  year =    {2019}
-}
 ```
 
 ## Details
@@ -154,7 +154,7 @@ To use an episode dataset provide related config to the Env in [the example](#ex
 Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [baselines/README.md](baselines/README.md).
 
 ## Acknowledgments
-The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
+The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
 
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.
