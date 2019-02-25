@@ -48,13 +48,14 @@ def main():
 
     for _ in range(args.num_processes):
         config_env = get_config(config_file=args.task_config)
-
+        config_env.defrost()
         config_env.DATASET.SPLIT = "val"
 
         agent_sensors = args.sensors.strip().split(",")
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        config_env.freeze()
         env_configs.append(config_env)
 
         config_baseline = cfg_baseline()
