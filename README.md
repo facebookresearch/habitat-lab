@@ -130,20 +130,20 @@ Note that the core functionality defines fundamental building blocks such as the
 To make things easier we expect `data` folder of particular structure or symlink presented in habitat-api working directory.
 
 ### Scenes datasets
-| Scenes models | Extract path | Size |
+| Scenes models | Extract path | Archive size |
 | --- | --- | --- |
-| [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 15 GB |
-| [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 21 GB |
+| [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
+| [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
 
 #### Matterport3D
 The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded using the official [Matterport3D](https://niessner.github.io/Matterport/) download script as follows: `python download_mp.py --task habitat -o data/scene_datasets/mp3d/`. You only need the habitat zip archive and not the entire Matterport3D dataset. Note that this download script requires python 2.7 to run. Extract the matterport data to `data/scene_datasets/mp3d`.
 
 #### Gibson
-Download Habitat edition [link will be provided] of [Gibson scenes](http://gibsonenv.stanford.edu/database/) and extract it to `data/scene_datasets/gibson/`.
+Download the Habitat related Gibson dataset following the instructions [here](https://github.com/StanfordVL/GibsonEnv#database). After downloading extract the dataset to folder `habitat-api/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
 
 
 ### Task datasets
-| Task | Scenes | Link | Extract path | Config to use | Size |
+| Task | Scenes | Link | Extract path | Config to use | Archive size |
 | --- | --- | --- | --- | --- | --- |
 | Point goal navigtaion | [Gibson](#Gibson) | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | Point goal navigtaion | [MatterPort3D](#Matterport3D) | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
