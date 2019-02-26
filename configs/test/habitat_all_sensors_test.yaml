@@ -1,0 +1,10 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 10
+SIMULATOR:
+  AGENT_0:
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: train
+  POINTNAVV1:
+    DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
