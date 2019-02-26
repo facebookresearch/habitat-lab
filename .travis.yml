@@ -2,6 +2,54 @@ language: python
 python:
   - "3.6"
 install:
+- apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    vim \
+    ca-certificates \
+    libjpeg-dev \
+    libpng-dev \
+    libglfw3-dev \
+    libglm-dev \
+    libx11-dev \
+    libomp-dev \
+    libegl1-mesa-dev \
+    pkg-config \
+    wget \
+    zip \
+    unzip &&\
+    rm -rf /var/lib/apt/lists/*
+
+# Install conda
+- curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh  &&\
+    chmod +x ~/miniconda.sh &&\
+    ~/miniconda.sh -b -p /opt/conda &&\
+    rm ~/miniconda.sh &&\
+    /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include &&\
+    /opt/conda/bin/conda clean -ya
+- EXPOR PATH=/opt/conda/bin:$PATH
+
+
+# Conda environment
+- conda create -n habitat python=3.6
+
+# Setup habtiat-sim
+- git clone https://github.com/facebookresearch/habitat-sim.git
+- /bin/bash -c ". activate habitat; cd habitat-sim; python setup.py install --headless"
+
+# Install habitat-api
+- git clone https://github.com/facebookresearch/habitat-api.git
+- /bin/bash -c ". activate habitat; cd habitat-api; pip install -e ."
+
+# Download test data
+- wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
+- unzip habitat-test-scenes.zip -d habitat-api/
+- rm habitat-test-scenes.zip
+
+# Silence habitat-sim logs
+- EXPORT GLOG_minloglevel=2
+- EXPORT MAGNUM_LOG="quiet"        
   - pip install pytest black
   - pip install .
 script:
