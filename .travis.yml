@@ -7,4 +7,5 @@ install:
 script:
   - black --check habitat test --line-length 79
   - python setup.py test
+  - pytest
 
