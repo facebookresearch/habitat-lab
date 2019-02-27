@@ -1,3 +1,9 @@
+<p align="center">
+  <img width = "50%" src='docs/img/habitat_logo_with_text_horizontal_blue.png' />
+  </p>
+  
+--------------------------------------------------------------------------------
+
 Habitat-API
 ==============================
 
@@ -7,19 +13,20 @@ defining embodied AI tasks (e.g. navigation, instruction following, question ans
 Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
 
 <p align="center">
-  <img src='docs/img/habitat_compressed.gif' />
+  <img src="docs/img/habitat_compressed.gif"  height="400">
 </p>
 
 ---
 
 ## Table of contents
-   0. [Motivation](#motivation)
-   0. [Citing Habitat](#citing-habitat)
-   0. [Details](#details)
-   0. [Installation](#installation)
-   0. [Example](#example)
-   0. [Data](#data)
-   0. [Baselines](#baselines)
+   1. [Motivation](#motivation)
+   1. [Citing Habitat](#citing-habitat)
+   1. [Installation](#installation)
+   1. [Example](#example)
+   1. [Docker Setup](#docker-setup)
+   1. [Details](#details)
+   1. [Data](#data)
+   1. [Baselines](#baselines)
 
 ## Motivation
 A key long-term goal of artificial intelligence (AI) is to build intelligent _agents_ that can
@@ -33,28 +40,6 @@ While there has been significant progress in the vision and language communities
 
 To this end, we aim to standardize the entire ‘software stack’ for training embodied agents – scanning the world and creating highly photorealistic 3D assets, developing the next generation of highly efficient and parallelizable simulators, specifying embodied AI tasks that enable us to benchmark scientific progress, and releasing modular high-level libraries to train and deploy embodied agents.
 
-#### Why the name _Habitat_?
-Because that's where AI agents live :slightly_smiling_face:
-
-#### Example
-<!--- Please, update `examples/example.py` if you update example. -->
-
-Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.yaml) for configuration of task and agent.
-
-```python
-import habitat
-
-env = habitat.Env(
-    config=habitat.get_config(config_file="tasks/pointnav.yaml")
-)
-
-observations = env.reset()
-
-while not env.episode_over:
-    observations = env.step(env.action_space.sample())
-
-```
-
 ## Citing Habitat
 If you use the Habitat platform in your research, please cite the following technical report:
 ```
@@ -64,6 +49,59 @@ If you use the Habitat platform in your research, please cite the following tech
   journal = {arXiv preprint arXiv:},
   year =    {2019}
 }
+```
+
+## Installation
+
+1. Clone the github repository and install using the commands below. Note that we only support [python3](https://pythonclock.org/), all the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+```bash
+cd habitat-api
+pip install -e .
+```
+
+2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
+
+3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `habitat-api/data/` where `habitat-api/` is the github repository folder.
+
+4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
+
+5. Run `python examples/benchmark.py` to evaluate a forward only agent in a test environment downloaded in step-3.
+
+## Example
+<!--- Please, update `examples/example.py` if you update example. -->
+
+Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.yaml) for configuration of task and agent.
+
+```python
+import habitat
+
+# Load embodied AI task (PointNav) and a pre-specified virtual robot
+env = habitat.Env(
+    config=habitat.get_config(config_file="tasks/pointnav.yaml")
+)
+
+observations = env.reset()
+
+# Step through environment with random actions
+while not env.episode_over:
+    observations = env.step(env.action_space.sample())
+
+```
+
+## Docker Setup
+We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:
+
+1. Pull the habitat docker image: `docker pull fairhabitat/habitat:v1`
+
+1. Start an interactive bash session inside the habitat docker: `docker run --runtime=nvidia -it fairhabitat/habitat:v1`
+
+1. Activate the habitat conda environment: `source activate habitat`
+
+1. Benchmark a forward only agent on the test scenes data: `cd habitat-api; python examples/benchmark.py`. This should print out an output like:
+```bash
+2019-02-25 02:39:48,680 initializing sim Sim-v0
+2019-02-25 02:39:49,655 initializing task Nav-v0
+spl: 0.000
 ```
 
 ## Details
@@ -88,31 +126,35 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 
 Note that the core functionality defines fundamental building blocks such as the API for interacting with the simulator backend, and receiving observations through Sensors. Concrete simulation backends, 3D datasets, and embodied agent baselines are implemented on top of the core API.
 
-## Installation
-
-1. Clone the github repository and install using the commands below. Note that we only support [python3](https://pythonclock.org/), all the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-```bash
-cd habitat-api
-pip install -e .
-```
-
-2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim) and as stated there, remember to add `habitat-sim` to `PYTHONPATH`:
-```bash
-export PYTHONPATH="${PYTHONPATH}:/path/to/habitat-sim/:/path/to/habitat-sim/build/esp/bindings"
-```
-3. Get the [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract locally.
-
-4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
-
-
 ## Data
-The PointNav dataset will be uploaded to S3 soon. Stay tuned!
+To make things easier we expect `data` folder of particular structure or symlink presented in habitat-api working directory.
+
+### Scenes datasets
+| Scenes models | Extract path | Archive size |
+| --- | --- | --- |
+| [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
+| [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
+
+#### Matterport3D
+The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded using the official [Matterport3D](https://niessner.github.io/Matterport/) download script as follows: `python download_mp.py --task habitat -o data/scene_datasets/mp3d/`. You only need the habitat zip archive and not the entire Matterport3D dataset. Note that this download script requires python 2.7 to run. Extract the matterport data to `data/scene_datasets/mp3d`.
+
+#### Gibson
+Download the Habitat related Gibson dataset following the instructions [here](https://github.com/StanfordVL/GibsonEnv#database). After downloading extract the dataset to folder `habitat-api/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
+
+
+### Task datasets
+| Task | Scenes | Link | Extract path | Config to use | Archive size |
+| --- | --- | --- | --- | --- | --- |
+| Point goal navigtaion | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
+| Point goal navigtaion | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
+
+To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](baselines/README.md#reinforcement-learning-rl).
 
 ## Baselines
 Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [baselines/README.md](baselines/README.md).
 
 ## Acknowledgments
-The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
+The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
 
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.
