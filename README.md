@@ -46,7 +46,7 @@ If you use the Habitat platform in your research, please cite the following tech
 
 ## Installation
 
-1. Clone the github repository and install using the commands below. Note that we only support [python3](https://pythonclock.org/), all the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+1. Clone the github repository and install using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 ```bash
 cd habitat-api
 pip install -e .
