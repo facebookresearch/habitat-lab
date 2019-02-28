@@ -92,4 +92,3 @@ def draw_target_birdseye_view(
     # Rotate twice to fix coordinate system to upwards being positive.
     im_position = np.rot90(im_position, 2)
     return im_position
-
