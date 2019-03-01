@@ -29,13 +29,6 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
    1. [Baselines](#baselines)
 
 ## Motivation
-A key long-term goal of artificial intelligence (AI) is to build intelligent _agents_ that can
-* _see_ or more generally perceive their environment through vision, audition, or other senses,
-* _talk_, i.e. hold a natural language dialog grounded in the environment,
-* _act_, i.e. navigate their environment and interact with it to accomplish goals, and
-* _reason_, i.e. consider the long-term consequences of their actions
-
-#### From ‘Internet AI’ to Embodied AI.
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
 
 To this end, we aim to standardize the entire ‘software stack’ for training embodied agents – scanning the world and creating highly photorealistic 3D assets, developing the next generation of highly efficient and parallelizable simulators, specifying embodied AI tasks that enable us to benchmark scientific progress, and releasing modular high-level libraries to train and deploy embodied agents.
@@ -53,7 +46,7 @@ If you use the Habitat platform in your research, please cite the following tech
 
 ## Installation
 
-1. Clone the github repository and install using the commands below. Note that we only support [python3](https://pythonclock.org/), all the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+1. Clone the github repository and install using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 ```bash
 cd habitat-api
 pip install -e .
