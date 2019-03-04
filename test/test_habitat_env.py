@@ -84,8 +84,6 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
         observations = envs.step(np.random.choice(non_stop_actions, num_envs))
         assert len(observations) == num_envs
 
-    envs.close()
-
 
 def test_vectorized_envs_forkserver():
     configs, datasets = _load_test_data()
@@ -110,6 +108,18 @@ def test_vectorized_envs_fork():
     p.start()
     p.join()
     assert p.exitcode == 0
+
+
+def test_with_scope():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+    ) as envs:
+        envs.reset()
+
+    assert envs._is_closed
 
 
 def test_threaded_vectorized_env():

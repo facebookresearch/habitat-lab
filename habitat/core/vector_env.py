@@ -83,6 +83,7 @@ class VectorEnv:
     ) -> None:
 
         self._is_waiting = False
+        self._is_closed = True
 
         assert (
             env_fn_args is not None and len(env_fn_args) > 0
@@ -102,6 +103,8 @@ class VectorEnv:
         ) = self._spawn_workers(  # noqa
             env_fn_args, make_env_fn
         )
+
+        self._is_closed = False
 
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
@@ -294,6 +297,9 @@ class VectorEnv:
         return self.wait_step()
 
     def close(self) -> None:
+        if self._is_closed:
+            return
+
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
                 read_fn()
@@ -301,6 +307,8 @@ class VectorEnv:
             write_fn((CLOSE_COMMAND, None))
         for process in self._workers:
             process.join()
+
+        self._is_closed = True
 
     def render(
         self, mode: str = "human", *args, **kwargs
@@ -325,6 +333,15 @@ class VectorEnv:
     @property
     def _valid_start_methods(self) -> Set[str]:
         return {"forkserver", "spawn", "fork"}
+
+    def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class ThreadedVectorEnv(VectorEnv):
