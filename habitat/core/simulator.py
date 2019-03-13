@@ -28,6 +28,7 @@ class SensorTypes(Enum):
     TENSOR = 8
     TEXT = 9
     MEASUREMENT = 10
+    HEADING = 11
 
 
 class Sensor:

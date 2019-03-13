@@ -199,6 +199,45 @@ class PointGoalSensor(habitat.Sensor):
         return direction_vector_agent
 
 
+class HeadingSensor(habitat.Sensor):
+    """
+       Sensor for observing the agent's heading in the global coordinate frame.
+
+       Args:
+           sim: reference to the simulator for calculating task observations.
+           config: config for the sensor.
+       """
+
+    def __init__(self, sim, config):
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "heading"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.HEADING
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float)
+
+    def get_observation(self, observations, episode):
+        agent_state = self._sim.get_agent_state()
+        # Quaternion is in x, y, z, w format
+        ref_rotation = agent_state.rotation
+
+        direction_vector = np.array([0, 0, -1])
+
+        rotation_world_agent = quaternion_to_rotation(
+            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+        )
+
+        heading_vector = np.dot(rotation_world_agent.T, direction_vector)
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        return np.array(phi)
+
+
 class SPL(habitat.Measure):
     """SPL (Success weighted by Path Length)
 
