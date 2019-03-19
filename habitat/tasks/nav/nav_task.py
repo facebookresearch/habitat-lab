@@ -272,12 +272,13 @@ class SPL(habitat.Measure):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
 
+        distance_to_target = self._sim.geodesic_distance(
+            current_position, episode.goals[0].position
+        )
+
         if (
             action == self._sim.index_stop_action
-            and self._euclidean_distance(
-                current_position, episode.goals[0].position
-            )
-            < self._config.SUCCESS_DISTANCE
+            and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
 

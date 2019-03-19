@@ -22,7 +22,7 @@ def test_heading_sensor():
         pytest.skip("Please download Habitat test data to data folder.")
     config = get_config()
     config.defrost()
-    config.TASK.SENSORS = ['HEADING_SENSOR']
+    config.TASK.SENSORS = ["HEADING_SENSOR"]
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
@@ -30,7 +30,12 @@ def test_heading_sensor():
 
     for _ in range(100):
         random_heading = np.random.uniform(-np.pi, np.pi)
-        random_rotation = [0, np.sin(random_heading / 2), 0, np.cos(random_heading / 2)]
+        random_rotation = [
+            0,
+            np.sin(random_heading / 2),
+            0,
+            np.cos(random_heading / 2),
+        ]
         env.episodes = [
             NavigationEpisode(
                 episode_id="0",
@@ -42,7 +47,7 @@ def test_heading_sensor():
         ]
 
         obs = env.reset()
-        heading = obs['heading']
+        heading = obs["heading"]
         assert np.allclose(heading, random_heading)
 
     env.close()

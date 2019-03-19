@@ -9,7 +9,9 @@ import pytest
 import habitat
 from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from examples.visualization_examples import example_pointnav_draw_target_birdseye_view
+from examples.visualization_examples import (
+    example_pointnav_draw_target_birdseye_view,
+)
 
 
 def test_readme_example():
