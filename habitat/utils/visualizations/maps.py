@@ -30,7 +30,7 @@ def pointnav_draw_target_birdseye_view(
     goal_radius: float = 0.2,
     agent_radius_px: int = 20,
     target_band_radii: Optional[List[float]] = None,
-    target_band_colors: Optional[List[Tuple[int]]] = None,
+    target_band_colors: Optional[List[Tuple[int, int, int]]] = None,
 ) -> np.ndarray:
 
     """Return an image of agent w.r.t. centered target location for pointnav
