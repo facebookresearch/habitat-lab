@@ -6,12 +6,13 @@
 
 import numpy as np
 import cv2
-import scipy.misc
+import imageio
 import scipy.ndimage
 import os
 from typing import List, Tuple, Optional
+from habitat.utils.visualizations import utils
 
-AGENT_SPRITE = scipy.misc.imread(
+AGENT_SPRITE = imageio.imread(
     os.path.join(
         os.path.dirname(__file__),
         "assets",
@@ -20,6 +21,42 @@ AGENT_SPRITE = scipy.misc.imread(
     )
 )
 AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
+
+
+def draw_agent(
+    image: np.ndarray,
+    agent_center_coord: Tuple[int, int],
+    agent_rotation: float,
+    agent_radius_px: int = 5,
+) -> np.ndarray:
+    """Return an image with the agent image composited onto it.
+    Args:
+        image: the image onto which to put the agent.
+        agent_center_coord: the image coordinates where to paste the agent.
+        agent_rotation: the agent's current rotation in radians.
+        agent_radius_px: 1/2 number of pixels the agent will be resized to.
+    Returns:
+        The modified background image. This operation is in place.
+    """
+
+    # Rotate before resize to keep good resolution.
+    rotated_agent = scipy.ndimage.interpolation.rotate(
+        AGENT_SPRITE, agent_rotation * -180 / np.pi
+    )
+    # Rescale because rotation may result in larger image than original, but the
+    # agent sprite size should stay the same.
+    initial_agent_size = AGENT_SPRITE.shape[0]
+    new_size = rotated_agent.shape[0]
+    agent_size_px = max(
+        1, int(agent_radius_px * 2 * new_size / initial_agent_size)
+    )
+    resized_agent = cv2.resize(
+        rotated_agent,
+        (agent_size_px, agent_size_px),
+        interpolation=cv2.INTER_LINEAR,
+    )
+    utils.paste_overlapping_image(image, resized_agent, agent_center_coord)
+    return image
 
 
 def pointnav_draw_target_birdseye_view(
@@ -44,7 +81,7 @@ def pointnav_draw_target_birdseye_view(
         resolution_px: number of pixels for the output image width and height.
         goal_radius: how near the agent needs to be to be successful for the
             pointnav task.
-        agent_radius_px: number of pixels the agent will be
+        agent_radius_px: 1/2 number of pixels the agent will be resized to.
         target_band_radii: distance in meters to the outer-radius of each band
             in the target image.
         target_band_colors: colors in RGB 0-255 for the bands in the target.
@@ -72,7 +109,7 @@ def pointnav_draw_target_birdseye_view(
     goal_agent_dist = np.linalg.norm(agent_position - goal_position, 2)
 
     goal_distance_padding = max(
-        2, 2 ** np.ceil(np.log(goal_agent_dist) / np.log(2))
+        2, 2 ** np.ceil(np.log(max(1e-6, goal_agent_dist)) / np.log(2))
     )
     movement_scale = 1.0 / goal_distance_padding
     half_res = resolution_px // 2
@@ -108,63 +145,8 @@ def pointnav_draw_target_birdseye_view(
     relative_position += half_res
     relative_position = np.round(relative_position).astype(np.int32)
 
-    # Rotate before resize to keep good resolution.
-    rotated_agent = scipy.ndimage.interpolation.rotate(
-        AGENT_SPRITE, agent_heading * -180 / np.pi
-    )
-    # Rescale because rotation may result in larger image than original, but the
-    # agent sprite size should stay the same.
-    initial_agent_size = AGENT_SPRITE.shape[0]
-    new_size = rotated_agent.shape[0]
-    agent_size_px = max(
-        1, int(agent_radius_px * 2 * new_size / initial_agent_size)
-    )
-    # Making scale_size odd makes cropping math easier to center.
-    if agent_size_px % 2 == 0:
-        agent_size_px += 1
-    resized_agent = cv2.resize(
-        rotated_agent,
-        (agent_size_px, agent_size_px),
-        interpolation=cv2.INTER_LINEAR,
-    )
-
-    # The padding represents how much over the edge of the image the agent might
-    # be, and corrects for that when pasting the agent into the main image.
-    min_pad = (
-        max(0, agent_size_px // 2 - relative_position[0]),
-        max(0, agent_size_px // 2 - relative_position[1]),
-    )
-
-    max_pad = (
-        max(
-            0,
-            (relative_position[0] + agent_size_px // 2 + 1)
-            - im_position.shape[0],
-        ),
-        max(
-            0,
-            (relative_position[1] + agent_size_px // 2 + 1)
-            - im_position.shape[1],
-        ),
-    )
-
-    agent_patch = im_position[
-        (relative_position[0] - agent_size_px // 2 + min_pad[0]) : (
-            relative_position[0] + agent_size_px // 2 + 1 - max_pad[0]
-        ),
-        (relative_position[1] - agent_size_px // 2 + min_pad[1]) : (
-            relative_position[1] + agent_size_px // 2 + 1 - max_pad[1]
-        ),
-        :,
-    ]
-    resized_agent = resized_agent[
-        min_pad[0] : resized_agent.shape[0] - max_pad[0],
-        min_pad[1] : resized_agent.shape[1] - max_pad[1],
-    ]
-
-    # Removes black background.
-    agent_bg_mask = np.all(resized_agent > 10, axis=2)
-    agent_patch[agent_bg_mask] = resized_agent[agent_bg_mask]
+    # Draw the agent
+    draw_agent(im_position, relative_position, agent_heading, agent_radius_px)
 
     # Rotate twice to fix coordinate system to upwards being positive-z.
     # Rotate instead of flip to keep agent rotations in sync with egocentric
