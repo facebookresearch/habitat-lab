@@ -21,7 +21,9 @@ from habitat.core.simulator import (
 from habitat.tasks.utils import quaternion_to_rotation, cartesian_to_polar
 
 
-def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
+def merge_sim_episode_config(
+    sim_config: Config, episode: Type[Episode]
+) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
@@ -148,7 +150,7 @@ class PointGoalSensor(habitat.Sensor):
             in cartesian or polar coordinates.
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
@@ -208,7 +210,7 @@ class HeadingSensor(habitat.Sensor):
            config: config for the sensor.
        """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
         super().__init__(config=config)
 
@@ -245,7 +247,7 @@ class SPL(habitat.Measure):
     https://arxiv.org/pdf/1807.06757.pdf
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None

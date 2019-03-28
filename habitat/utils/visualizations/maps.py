@@ -6,12 +6,14 @@
 
 import numpy as np
 import cv2
-import scipy.misc
+import imageio
 import scipy.ndimage
 import os
 from typing import List, Tuple, Optional
+from habitat.core.simulator import Simulator
+from habitat.utils.visualizations import utils
 
-AGENT_SPRITE = scipy.misc.imread(
+AGENT_SPRITE = imageio.imread(
     os.path.join(
         os.path.dirname(__file__),
         "assets",
@@ -20,6 +22,45 @@ AGENT_SPRITE = scipy.misc.imread(
     )
 )
 AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
+COORDINATE_EPSILON = 1e-6
+COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
+COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
+
+
+def draw_agent(
+    image: np.ndarray,
+    agent_center_coord: Tuple[int, int],
+    agent_rotation: float,
+    agent_radius_px: int = 5,
+) -> np.ndarray:
+    """Return an image with the agent image composited onto it.
+    Args:
+        image: the image onto which to put the agent.
+        agent_center_coord: the image coordinates where to paste the agent.
+        agent_rotation: the agent's current rotation in radians.
+        agent_radius_px: 1/2 number of pixels the agent will be resized to.
+    Returns:
+        The modified background image. This operation is in place.
+    """
+
+    # Rotate before resize to keep good resolution.
+    rotated_agent = scipy.ndimage.interpolation.rotate(
+        AGENT_SPRITE, agent_rotation * -180 / np.pi
+    )
+    # Rescale because rotation may result in larger image than original, but the
+    # agent sprite size should stay the same.
+    initial_agent_size = AGENT_SPRITE.shape[0]
+    new_size = rotated_agent.shape[0]
+    agent_size_px = max(
+        1, int(agent_radius_px * 2 * new_size / initial_agent_size)
+    )
+    resized_agent = cv2.resize(
+        rotated_agent,
+        (agent_size_px, agent_size_px),
+        interpolation=cv2.INTER_LINEAR,
+    )
+    utils.paste_overlapping_image(image, resized_agent, agent_center_coord)
+    return image
 
 
 def pointnav_draw_target_birdseye_view(
@@ -32,7 +73,6 @@ def pointnav_draw_target_birdseye_view(
     target_band_radii: Optional[List[float]] = None,
     target_band_colors: Optional[List[Tuple[int, int, int]]] = None,
 ) -> np.ndarray:
-
     """Return an image of agent w.r.t. centered target location for pointnav
     tasks.
 
@@ -44,7 +84,7 @@ def pointnav_draw_target_birdseye_view(
         resolution_px: number of pixels for the output image width and height.
         goal_radius: how near the agent needs to be to be successful for the
             pointnav task.
-        agent_radius_px: number of pixels the agent will be
+        agent_radius_px: 1/2 number of pixels the agent will be resized to.
         target_band_radii: distance in meters to the outer-radius of each band
             in the target image.
         target_band_colors: colors in RGB 0-255 for the bands in the target.
@@ -72,7 +112,7 @@ def pointnav_draw_target_birdseye_view(
     goal_agent_dist = np.linalg.norm(agent_position - goal_position, 2)
 
     goal_distance_padding = max(
-        2, 2 ** np.ceil(np.log(goal_agent_dist) / np.log(2))
+        2, 2 ** np.ceil(np.log(max(1e-6, goal_agent_dist)) / np.log(2))
     )
     movement_scale = 1.0 / goal_distance_padding
     half_res = resolution_px // 2
@@ -108,66 +148,167 @@ def pointnav_draw_target_birdseye_view(
     relative_position += half_res
     relative_position = np.round(relative_position).astype(np.int32)
 
-    # Rotate before resize to keep good resolution.
-    rotated_agent = scipy.ndimage.interpolation.rotate(
-        AGENT_SPRITE, agent_heading * -180 / np.pi
-    )
-    # Rescale because rotation may result in larger image than original, but the
-    # agent sprite size should stay the same.
-    initial_agent_size = AGENT_SPRITE.shape[0]
-    new_size = rotated_agent.shape[0]
-    agent_size_px = max(
-        1, int(agent_radius_px * 2 * new_size / initial_agent_size)
-    )
-    # Making scale_size odd makes cropping math easier to center.
-    if agent_size_px % 2 == 0:
-        agent_size_px += 1
-    resized_agent = cv2.resize(
-        rotated_agent,
-        (agent_size_px, agent_size_px),
-        interpolation=cv2.INTER_LINEAR,
-    )
-
-    # The padding represents how much over the edge of the image the agent might
-    # be, and corrects for that when pasting the agent into the main image.
-    min_pad = (
-        max(0, agent_size_px // 2 - relative_position[0]),
-        max(0, agent_size_px // 2 - relative_position[1]),
-    )
-
-    max_pad = (
-        max(
-            0,
-            (relative_position[0] + agent_size_px // 2 + 1)
-            - im_position.shape[0],
-        ),
-        max(
-            0,
-            (relative_position[1] + agent_size_px // 2 + 1)
-            - im_position.shape[1],
-        ),
-    )
-
-    agent_patch = im_position[
-        (relative_position[0] - agent_size_px // 2 + min_pad[0]) : (
-            relative_position[0] + agent_size_px // 2 + 1 - max_pad[0]
-        ),
-        (relative_position[1] - agent_size_px // 2 + min_pad[1]) : (
-            relative_position[1] + agent_size_px // 2 + 1 - max_pad[1]
-        ),
-        :,
-    ]
-    resized_agent = resized_agent[
-        min_pad[0] : resized_agent.shape[0] - max_pad[0],
-        min_pad[1] : resized_agent.shape[1] - max_pad[1],
-    ]
-
-    # Removes black background.
-    agent_bg_mask = np.all(resized_agent > 10, axis=2)
-    agent_patch[agent_bg_mask] = resized_agent[agent_bg_mask]
+    # Draw the agent
+    draw_agent(im_position, relative_position, agent_heading, agent_radius_px)
 
     # Rotate twice to fix coordinate system to upwards being positive-z.
     # Rotate instead of flip to keep agent rotations in sync with egocentric
     # view.
     im_position = np.rot90(im_position, 2)
     return im_position
+
+
+def _to_grid(
+    realworld_x: float,
+    realworld_y: float,
+    coordinate_min: float,
+    coordinate_max: float,
+    grid_resolution: Tuple[int, int],
+) -> Tuple[int, int]:
+    """Return gridworld index of realworld coordinates assuming top-left corner
+    is the origin. The real world coordinates of lower left corner are
+    (coordinate_min, coordinate_min) and of top right corner are
+    (coordinate_max, coordinate_max)
+    """
+    grid_size = (
+        (coordinate_max - coordinate_min) / grid_resolution[0],
+        (coordinate_max - coordinate_min) / grid_resolution[1],
+    )
+    grid_x = int((coordinate_max - realworld_x) / grid_size[0])
+    grid_y = int((realworld_y - coordinate_min) / grid_size[1])
+    return grid_x, grid_y
+
+
+def _from_grid(
+    grid_x: int,
+    grid_y: int,
+    coordinate_min: float,
+    coordinate_max: float,
+    grid_resolution: Tuple[int, int],
+) -> Tuple[float, float]:
+    """Inverse of _to_grid function. Return real world coordinate from gridworld
+    assuming top-left corner is the origin. The real world coordinates of lower
+    left corner are (coordinate_min, coordinate_min) and of top right corner
+    are (coordinate_max, coordinate_max)
+    """
+    grid_size = (
+        (coordinate_max - coordinate_min) / grid_resolution[0],
+        (coordinate_max - coordinate_min) / grid_resolution[1],
+    )
+    realworld_x = coordinate_max - grid_x * grid_size[0]
+    realworld_y = coordinate_min + grid_y * grid_size[1]
+    return realworld_x, realworld_y
+
+
+def _check_valid_nav_point(sim: Simulator, point: List[float]) -> bool:
+    """Checks if a given point is inside a wall or other object or not."""
+    return (
+        0.01
+        < sim.geodesic_distance(point, [point[0], point[1] + 0.1, point[2]])
+        < 0.11
+    )
+
+
+def _outline_border(top_down_map):
+    left_right_block_nav = (top_down_map[:, :-1] == 1) & (
+        top_down_map[:, :-1] != top_down_map[:, 1:]
+    )
+    left_right_nav_block = (top_down_map[:, 1:] == 1) & (
+        top_down_map[:, :-1] != top_down_map[:, 1:]
+    )
+
+    up_down_block_nav = (top_down_map[:-1] == 1) & (
+        top_down_map[:-1] != top_down_map[1:]
+    )
+    up_down_nav_block = (top_down_map[1:] == 1) & (
+        top_down_map[:-1] != top_down_map[1:]
+    )
+
+    top_down_map[:, :-1][left_right_block_nav] = 2
+    top_down_map[:, 1:][left_right_nav_block] = 2
+
+    top_down_map[:-1][up_down_block_nav] = 2
+    top_down_map[1:][up_down_nav_block] = 2
+
+
+def get_topdown_map(
+    sim: Simulator,
+    map_resolution: Tuple[int, int] = (1250, 1250),
+    num_samples: int = 20000,
+    draw_border: bool = True,
+) -> np.ndarray:
+    """Return a top-down occupancy map for a sim. Note, this only returns valid
+    values for whatever floor the agent is currently on.
+
+    Args:
+        sim: The simulator.
+        map_resolution: The resolution of map which will be computed and returned.
+        num_samples: The number of random navigable points which will be initially
+            sampled. For large environments it may need to be increased.
+        draw_border: Whether to outline the border of the occupied spaces.
+
+    Returns:
+        Image containing 0 if occupied, 1 if unoccupied, and 2 if border (if
+        the flag is set).
+    """
+    top_down_map = np.zeros(map_resolution, dtype=np.uint8)
+    grid_delta = 3
+
+    start_height = sim.get_agent_state().position[1]
+
+    # Use sampling to find the extrema points that might be navigable.
+    for _ in range(num_samples):
+        point = sim.sample_navigable_point()
+        # Check if on same level as original
+        if np.abs(start_height - point[1]) > 0.5:
+            continue
+        g_x, g_y = _to_grid(
+            point[0], point[2], COORDINATE_MIN, COORDINATE_MAX, map_resolution
+        )
+
+        top_down_map[g_x, g_y] = 1
+
+    range_x = np.where(np.any(top_down_map, axis=1))[0]
+    range_y = np.where(np.any(top_down_map, axis=0))[0]
+    # Pad the range just in case not enough points were sampled to get the true
+    # extrema.
+    padding = int(np.ceil(map_resolution[0] / 125))
+    range_x = (
+        max(range_x[0] - padding, 0),
+        min(range_x[-1] + padding + 1, top_down_map.shape[0]),
+    )
+    range_y = (
+        max(range_y[0] - padding, 0),
+        min(range_y[-1] + padding + 1, top_down_map.shape[1]),
+    )
+    top_down_map[:] = 0
+    # Search over grid for valid points.
+    for ii in range(range_x[0], range_x[1]):
+        for jj in range(range_y[0], range_y[1]):
+            realworld_x, realworld_y = _from_grid(
+                ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
+            )
+            valid_point = _check_valid_nav_point(
+                sim, [realworld_x, start_height + 0.5, realworld_y]
+            )
+            if valid_point:
+                top_down_map[ii, jj] = 1
+
+    # Draw border if necessary
+    if draw_border:
+        # Recompute range in case padding added any more values.
+        range_x = np.where(np.any(top_down_map, axis=1))[0]
+        range_y = np.where(np.any(top_down_map, axis=0))[0]
+        range_x = (
+            max(range_x[0] - grid_delta, 0),
+            min(range_x[-1] + grid_delta + 1, top_down_map.shape[0]),
+        )
+        range_y = (
+            max(range_y[0] - grid_delta, 0),
+            min(range_y[-1] + grid_delta + 1, top_down_map.shape[1]),
+        )
+
+        _outline_border(
+            top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]
+        )
+    return top_down_map
