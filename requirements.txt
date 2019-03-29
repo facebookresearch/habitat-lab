@@ -4,3 +4,4 @@ numpy==1.15
 yacs>=0.1.5
 opencv-python>=3.3.0
 scipy>=1.0.0
+numpy-quaternion

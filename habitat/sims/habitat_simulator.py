@@ -412,6 +412,7 @@ class HabitatSim(habitat.Simulator):
         position: List[float] = None,
         rotation: List[float] = None,
         agent_id: int = 0,
+        reset_sensors: bool = True,
     ) -> None:
         """Sets agent state similar to initialize_agent, but without agents
         creation.
@@ -422,12 +423,14 @@ class HabitatSim(habitat.Simulator):
             of unit quaternion (versor) representing agent 3D orientation,
             (https://en.wikipedia.org/wiki/Versor)
             agent_id: int identification of agent from multiagent setup.
+            reset_sensors: bool for if sensor changes (e.g. tilt) should be
+                reset).
         """
         agent = self._sim.get_agent(agent_id)
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
-        agent.set_state(state)
+        agent.set_state(state, reset_sensors)
 
         self._check_agent_position(position, agent_id)
 
@@ -435,3 +438,18 @@ class HabitatSim(habitat.Simulator):
     def _check_agent_position(self, position, agent_id=0):
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")
+
+    @property
+    def UP(self):
+        return np.array([0.0, 1.0, 0.0])
+
+    @property
+    def FORWARD(self):
+        return -np.array([0.0, 0.0, 1.0])
+
+    def straight_spath_points(self, position_a, position_b):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = position_a
+        path.requested_end = position_b
+        self._sim.pathfinder.find_path(path)
+        return path.points
