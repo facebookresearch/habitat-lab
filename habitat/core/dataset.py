@@ -4,8 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import json
-from typing import Dict, List, Type, TypeVar, Generic, Optional
+from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
+import numpy as np
 
 
 class Episode:
@@ -101,3 +103,111 @@ class Dataset(Generic[T]):
 
     def from_json(self, json_str: str) -> None:
         raise NotImplementedError
+
+    def filter_episodes(self, filter_fn: Callable[[Episode], bool]):
+        """
+        Args:
+            filter_fn: Funcion used to filter the episodes.
+        """
+        new_episodes = []
+        for episode in self.episodes:
+            if filter_fn(episode):
+                new_episodes.append(episode)
+        self.episodes = new_episodes
+
+    def get_splits(
+        self,
+        num_splits: int,
+        max_episodes_per_split: Optional[int] = None,
+        remove_unused_episodes: bool = True,
+    ) -> List["Dataset"]:
+        """
+        Returns a list of new datasets, each with a subset of the original
+            episodes. All splits will have the same number of episodes.
+        Args:
+            num_splits: The number of splits to create.
+            max_episodes_per_split: If provided, each split will have up to this
+                many episodes. If it is not provided, each dataset will have
+                len(original_dataset.episodes) // num_splits episodes. If
+                max_episodes_per_split is provided and is larger than this
+                value, it will be capped to this value.
+            remove_unused_episodes: Once the splits are created, the extra
+                episodes will be destroyed from the original dataset. This saves
+                 memory for large datasets.
+        Returns:
+            A list of new datasets, each with their own subset of episodes.
+        """
+
+        assert (
+            len(self.episodes) >= num_splits
+        ), "Not enough episodes to create this many splits."
+
+        new_datasets = []
+        if max_episodes_per_split is None:
+            max_episodes_per_split = len(self.episodes) // num_splits
+        max_episodes_per_split = min(
+            max_episodes_per_split, (len(self.episodes) // num_splits)
+        )
+        if num_splits * max_episodes_per_split == len(self.episodes):
+            # Special case for exact size match
+            stride = len(self.episodes) // num_splits
+            for ii, split in enumerate(
+                range(0, len(self.episodes), stride)[:num_splits]
+            ):
+                new_dataset = copy.copy(self)  # Creates a shallow copy
+                new_dataset.episodes = new_dataset.episodes[
+                    split : split + stride
+                ].copy()
+                new_datasets.append(new_dataset)
+            new_episodes = self.episodes
+        else:
+            rand_items = np.random.choice(
+                len(self.episodes),
+                num_splits * max_episodes_per_split,
+                replace=False,
+            )
+            # Sort it so episode scene doesn't switch as often.
+            rand_items.sort()
+            ep_ind = 0
+            new_episodes = []
+            for nn in range(num_splits):
+                new_dataset = copy.copy(self)  # Creates a shallow copy
+                new_dataset.episodes = []
+                new_datasets.append(new_dataset)
+                for ii in range(max_episodes_per_split):
+                    new_dataset.episodes.append(
+                        self.episodes[rand_items[ep_ind]]
+                    )
+                    ep_ind += 1
+                new_episodes.extend(new_dataset.episodes)
+        if remove_unused_episodes:
+            self.episodes = new_episodes
+        return new_datasets
+
+    def get_uneven_splits(self, num_splits):
+        """
+        Returns a list of new datasets, each with a subset of the original
+            episodes. The last dataset may have fewer episodes than the others.
+            This is especially useful for splitting over validation/test
+            datasets.
+        Args:
+            num_splits: The number of splits to create.
+        Returns:
+            A list of new datasets, each with their own subset of episodes.
+        """
+        assert (
+            len(self.episodes) >= num_splits
+        ), "Not enough episodes to create this many splits."
+        num_splits = min(num_splits, len(self.episodes))
+        new_datasets = []
+        num_episodes = len(self.episodes)
+        stride = int(np.ceil(num_episodes * 1.0 / num_splits))
+        for ii, split in enumerate(
+            range(0, num_episodes, stride)[:num_splits]
+        ):
+            new_dataset = copy.copy(self)  # Creates a shallow copy
+            new_dataset.episodes = new_dataset.episodes[
+                split : min(split + stride, num_episodes)
+            ].copy()
+            new_datasets.append(new_dataset)
+        return new_datasets
