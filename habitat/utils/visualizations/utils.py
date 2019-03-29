@@ -4,8 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
+import os
 from typing import Tuple, Optional
+
+import numpy as np
+import imageio
+import tqdm
 
 
 def paste_overlapping_image(
@@ -84,3 +88,15 @@ def paste_overlapping_image(
     else:
         background_patch[:] = foreground
     return background
+
+
+def images_to_video(images, output_dir, video_name):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
+    writer = imageio.get_writer(
+        os.path.join(output_dir, video_name), fps=10, quality=5
+    )
+    for im in tqdm.tqdm(images):
+        writer.append_data(im)
+    writer.close()
