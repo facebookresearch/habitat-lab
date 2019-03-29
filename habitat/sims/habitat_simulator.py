@@ -34,10 +34,12 @@ def check_sim_obs(obs, sensor):
 
 
 class SimulatorActions(Enum):
-    LEFT = "look_left"
-    RIGHT = "look_right"
-    FORWARD = "move_forward"
     STOP = "stop"
+    FORWARD = "move_forward"
+    LEFT = "rotate_left"
+    RIGHT = "rotate_right"
+    LOOK_UP = "look_up"
+    LOOK_DOWN = "look_down"
 
 
 class HabitatSimRGBSensor(RGBSensor):
@@ -124,10 +126,12 @@ class HabitatSimSemanticSensor(SemanticSensor):
 
 
 SIM_ACTION_TO_NAME = {
-    0: SimulatorActions.FORWARD.value,
-    1: SimulatorActions.LEFT.value,
-    2: SimulatorActions.RIGHT.value,
-    3: SimulatorActions.STOP.value,
+    0: SimulatorActions.STOP.value,
+    1: SimulatorActions.FORWARD.value,
+    2: SimulatorActions.LEFT.value,
+    3: SimulatorActions.RIGHT.value,
+    4: SimulatorActions.LOOK_UP.value,
+    5: SimulatorActions.LOOK_DOWN.value,
 }
 
 SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
@@ -200,16 +204,22 @@ class HabitatSim(habitat.Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
-            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
-                "lookLeft", {"amount": self.config.TURN_ANGLE}
-            ),
-            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
-                "lookRight", {"amount": self.config.TURN_ANGLE}
-            ),
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
             SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
                 "moveForward", {"amount": self.config.FORWARD_STEP_SIZE}
             ),
-            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
+            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
+                "rotateLeft", {"amount": self.config.TURN_ANGLE}
+            ),
+            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
+                "rotateRight", {"amount": self.config.TURN_ANGLE}
+            ),
+            SimulatorActions.LOOK_UP.value: habitat_sim.ActionSpec(
+                "lookUp", {"amount": self.config.TILT_ANGLE}
+            ),
+            SimulatorActions.LOOK_DOWN.value: habitat_sim.ActionSpec(
+                "lookDown", {"amount": self.config.TILT_ANGLE}
+            ),
         }
         sim_config.agents = [agent_config]
         return sim_config
@@ -412,6 +422,7 @@ class HabitatSim(habitat.Simulator):
         position: List[float] = None,
         rotation: List[float] = None,
         agent_id: int = 0,
+        reset_sensors: bool = True,
     ) -> None:
         """Sets agent state similar to initialize_agent, but without agents
         creation.
@@ -422,12 +433,14 @@ class HabitatSim(habitat.Simulator):
             of unit quaternion (versor) representing agent 3D orientation,
             (https://en.wikipedia.org/wiki/Versor)
             agent_id: int identification of agent from multiagent setup.
+            reset_sensors: bool for if sensor changes (e.g. tilt) should be
+                reset).
         """
         agent = self._sim.get_agent(agent_id)
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
-        agent.set_state(state)
+        agent.set_state(state, reset_sensors)
 
         self._check_agent_position(position, agent_id)
 
