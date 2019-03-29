@@ -90,12 +90,12 @@ def paste_overlapping_image(
     return background
 
 
-def images_to_video(images, output_dir, video_name):
+def images_to_video(images, output_dir, video_name, fps=10, quality=5):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
     writer = imageio.get_writer(
-        os.path.join(output_dir, video_name), fps=10, quality=5
+        os.path.join(output_dir, video_name), fps=fps, quality=quality
     )
     for im in tqdm.tqdm(images):
         writer.append_data(im)
