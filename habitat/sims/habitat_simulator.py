@@ -198,6 +198,13 @@ class HabitatSim(habitat.Simulator):
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
             sensor_specifications.append(sim_sensor_cfg)
 
+        # If there is no sensors specified create a dummy sensor so simulator
+        # won't throw an error
+        if not _sensor_suite.sensors.values():
+            sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg.resolution = [1, 1]
+            sensor_specifications.append(sim_sensor_cfg)
+
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
             SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
