@@ -150,21 +150,22 @@ def test_env():
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[3.00611, 0.072447, -2.67867],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([3.00611, 0.072447, -2.67867])],
+            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
             info={"geodesic_distance": 0.001},
         )
     ]
-
     env.reset()
+
     non_stop_actions = [
         k
         for k, v in SIM_ACTION_TO_NAME.items()
         if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        env.step(np.random.choice(non_stop_actions))
+        act = np.random.choice(non_stop_actions)
+        env.step(act)
 
     # check for steps limit on environment
     assert env.episode_over is True, (
@@ -230,9 +231,9 @@ def test_rl_env():
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[3.00611, 0.072447, -2.67867],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([3.00611, 0.072447, -2.67867])],
+            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
             info={"geodesic_distance": 0.001},
         )
     ]
