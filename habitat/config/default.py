@@ -42,11 +42,22 @@ _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
 _C.TASK.HEADING_SENSOR = CN()
 _C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
 # -----------------------------------------------------------------------------
+# # PROXIMITY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.PROXIMITY_SENSOR = CN()
+_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
+_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
+# -----------------------------------------------------------------------------
 # # SPL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# # COLLISIONS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.COLLISIONS = CN()
+_C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------

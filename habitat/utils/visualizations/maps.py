@@ -200,15 +200,6 @@ def _from_grid(
     return realworld_x, realworld_y
 
 
-def _check_valid_nav_point(sim: Simulator, point: List[float]) -> bool:
-    """Checks if a given point is inside a wall or other object or not."""
-    return (
-        0.01
-        < sim.geodesic_distance(point, [point[0], point[1] + 0.1, point[2]])
-        < 0.11
-    )
-
-
 def _outline_border(top_down_map):
     left_right_block_nav = (top_down_map[:, :-1] == 1) & (
         top_down_map[:, :-1] != top_down_map[:, 1:]
@@ -282,17 +273,17 @@ def get_topdown_map(
         min(range_y[-1] + padding + 1, top_down_map.shape[1]),
     )
     top_down_map[:] = 0
+
     # Search over grid for valid points.
     for ii in range(range_x[0], range_x[1]):
         for jj in range(range_y[0], range_y[1]):
             realworld_x, realworld_y = _from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
-            valid_point = _check_valid_nav_point(
-                sim, [realworld_x, start_height + 0.5, realworld_y]
+            valid_point = sim._sim.pathfinder.is_navigable(
+                [realworld_x, start_height, realworld_y]
             )
-            if valid_point:
-                top_down_map[ii, jj] = 1
+            top_down_map[ii, jj] = 1 if valid_point else 0
 
     # Draw border if necessary
     if draw_border:

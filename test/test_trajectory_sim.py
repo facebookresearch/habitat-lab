@@ -54,6 +54,15 @@ def test_sim_trajectory():
                 )
                 is True
             ), "mismatch in rotation " "at step {}".format(i)
+
+            max_search_radius = 2.0
+            dist_to_obs = sim.distance_to_closest_obstacle(
+                state.position, max_search_radius
+            )
+            assert np.isclose(
+                dist_to_obs, test_trajectory["distances_to_obstacles"][i]
+            )
+
         assert sim.action_space.contains(action)
 
         sim.step(action)
