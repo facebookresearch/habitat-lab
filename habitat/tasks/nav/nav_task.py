@@ -20,6 +20,8 @@ from habitat.core.simulator import (
 )
 from habitat.tasks.utils import quaternion_to_rotation, cartesian_to_polar
 
+COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
+
 
 def merge_sim_episode_config(
     sim_config: Config, episode: Type[Episode]
@@ -240,6 +242,44 @@ class HeadingSensor(habitat.Sensor):
         return np.array(phi)
 
 
+class ProximitySensor(habitat.Sensor):
+    """
+       Sensor for observing the distance to the closest obstacle
+
+       Args:
+           sim: reference to the simulator for calculating task observations.
+           config: config for the sensor.
+       """
+
+    def __init__(self, sim, config):
+        self._sim = sim
+        self._max_detection_radius = getattr(
+            config, "MAX_DETECTION_RADIUS", 2.0
+        )
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "proximity"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TACTILE
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=0.0,
+            high=self._max_detection_radius,
+            shape=(1,),
+            dtype=np.float,
+        )
+
+    def get_observation(self, observations, episode):
+        current_position = self._sim.get_agent_state().position
+
+        return self._sim.distance_to_closest_obstacle(
+            current_position, self._max_detection_radius
+        )
+
+
 class SPL(habitat.Measure):
     """SPL (Success weighted by Path Length)
 
@@ -298,6 +338,33 @@ class SPL(habitat.Measure):
         )
 
 
+class Collisions(habitat.Measure):
+    def __init__(self, sim, config):
+        self._sim = sim
+        self._config = config
+        self._metric = None
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "collisions"
+
+    def reset_metric(self, episode):
+        self._metric = None
+
+    def update_metric(self, episode, action):
+        if self._metric is None:
+            self._metric = 0
+
+        current_position = self._sim.get_agent_state().position
+        if (
+            action == self._sim.index_forward_action
+            and self._sim.distance_to_closest_obstacle(current_position)
+            < COLLISION_PROXIMITY_TOLERANCE
+        ):
+            self._metric += 1
+
+
 class NavigationTask(habitat.EmbodiedTask):
     def __init__(
         self,
@@ -310,16 +377,16 @@ class NavigationTask(habitat.EmbodiedTask):
         for measurement_name in task_config.MEASUREMENTS:
             measurement_cfg = getattr(task_config, measurement_name)
             is_valid_measurement = hasattr(
-                habitat.tasks.nav.nav_task,  # type: ignore
-                measurement_cfg.TYPE,
+                habitat.tasks.nav.nav_task,
+                measurement_cfg.TYPE,  # type: ignore
             )
             assert is_valid_measurement, "invalid measurement type {}".format(
                 measurement_cfg.TYPE
             )
             task_measurements.append(
                 getattr(
-                    habitat.tasks.nav.nav_task,  # type: ignore
-                    measurement_cfg.TYPE,
+                    habitat.tasks.nav.nav_task,
+                    measurement_cfg.TYPE,  # type: ignore
                 )(sim, measurement_cfg)
             )
         self.measurements = Measurements(task_measurements)
@@ -335,8 +402,10 @@ class NavigationTask(habitat.EmbodiedTask):
             )
             task_sensors.append(
                 getattr(
-                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
-                )(sim, sensor_cfg)
+                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE
+                )(  # type: ignore
+                    sim, sensor_cfg
+                )
             )
 
         self.sensor_suite = SensorSuite(task_sensors)
