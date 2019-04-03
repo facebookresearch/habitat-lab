@@ -7,8 +7,8 @@
 from collections import defaultdict
 from typing import Dict, Optional
 
+from habitat.config.default import get_config, DEFAULT_CONFIG_DIR
 from habitat.core.agent import Agent
-from habitat.config.default import get_config
 from habitat.core.env import Env
 
 
@@ -18,10 +18,15 @@ class Benchmark:
 
     Args:
         config_file: file to be used for creating the environment.
+        config_dir: directory where config_file is located.
     """
 
-    def __init__(self, config_file: Optional[str] = None) -> None:
-        config_env = get_config(config_file=config_file)
+    def __init__(
+        self,
+        config_file: Optional[str] = None,
+        config_dir: str = DEFAULT_CONFIG_DIR,
+    ) -> None:
+        config_env = get_config(config_file=config_file, config_dir=config_dir)
         self._env = Env(config=config_env)
 
     def evaluate(

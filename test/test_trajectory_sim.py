@@ -21,7 +21,7 @@ def init_sim():
     return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
 
 
-def test_sim():
+def test_sim_trajectory():
     with open("test/data/habitat-sim_trajectory_data.json", "r") as f:
         test_trajectory = json.load(f)
     sim = init_sim()
@@ -60,4 +60,15 @@ def test_sim():
         if i == len(test_trajectory["actions"]) - 1:  # STOP action
             assert sim.is_episode_active is False
 
+    sim.close()
+
+
+def test_sim_no_sensors():
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.AGENT_0.SENSORS = []
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    sim = make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
+    sim.reset()
     sim.close()

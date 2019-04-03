@@ -21,7 +21,9 @@ from habitat.core.simulator import (
 from habitat.tasks.utils import quaternion_to_rotation, cartesian_to_polar
 
 
-def merge_sim_episode_config(sim_config: Any, episode: Type[Episode]) -> Any:
+def merge_sim_episode_config(
+    sim_config: Config, episode: Type[Episode]
+) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
@@ -148,7 +150,7 @@ class PointGoalSensor(habitat.Sensor):
             in cartesian or polar coordinates.
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
@@ -199,6 +201,45 @@ class PointGoalSensor(habitat.Sensor):
         return direction_vector_agent
 
 
+class HeadingSensor(habitat.Sensor):
+    """
+       Sensor for observing the agent's heading in the global coordinate frame.
+
+       Args:
+           sim: reference to the simulator for calculating task observations.
+           config: config for the sensor.
+       """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "heading"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.HEADING
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float)
+
+    def get_observation(self, observations, episode):
+        agent_state = self._sim.get_agent_state()
+        # Quaternion is in x, y, z, w format
+        ref_rotation = agent_state.rotation
+
+        direction_vector = np.array([0, 0, -1])
+
+        rotation_world_agent = quaternion_to_rotation(
+            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+        )
+
+        heading_vector = np.dot(rotation_world_agent.T, direction_vector)
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        return np.array(phi)
+
+
 class SPL(habitat.Measure):
     """SPL (Success weighted by Path Length)
 
@@ -206,7 +247,7 @@ class SPL(habitat.Measure):
     https://arxiv.org/pdf/1807.06757.pdf
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
@@ -233,12 +274,13 @@ class SPL(habitat.Measure):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
 
+        distance_to_target = self._sim.geodesic_distance(
+            current_position, episode.goals[0].position
+        )
+
         if (
             action == self._sim.index_stop_action
-            and self._euclidean_distance(
-                current_position, episode.goals[0].position
-            )
-            < self._config.SUCCESS_DISTANCE
+            and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
 

@@ -31,9 +31,9 @@ RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-la
 ENV PATH /opt/conda/bin:$PATH
 
 # Install cmake
-ADD cmake-3.13.3-Linux-x86_64.sh /cmake-3.13.3-Linux-x86_64.sh
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh
 RUN mkdir /opt/cmake
-RUN sh /cmake-3.13.3-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+RUN sh /cmake-3.13.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
@@ -56,4 +56,3 @@ RUN rm habitat-test-scenes.zip
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
 ENV MAGNUM_LOG="quiet"
-
