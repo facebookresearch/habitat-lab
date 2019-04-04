@@ -120,11 +120,14 @@ class PPOAgent(Agent):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input_type",
+        "--input-type",
         default="blind",
         choices=["blind", "rgb", "depth", "rgbd"],
     )
-    parser.add_argument("--model_path", default="", type=str)
+    parser.add_argument("--model-path", default="", type=str)
+    parser.add_argument(
+        "--task-config", type=str, default="tasks/pointnav.yaml"
+    )
     args = parser.parse_args()
 
     config = get_defaut_config()
@@ -132,8 +135,11 @@ def main():
     config.MODEL_PATH = args.model_path
 
     agent = PPOAgent(config)
-    challenge = habitat.Challenge()
-    challenge.submit(agent)
+    benchmark = habitat.Benchmark(args.task_config)
+    metrics = benchmark.evaluate(agent)
+
+    for k, v in metrics.items():
+        habitat.logger.info("{}: {:.3f}".format(k, v))
 
 
 if __name__ == "__main__":

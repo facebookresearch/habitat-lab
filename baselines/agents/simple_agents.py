@@ -6,7 +6,6 @@
 
 
 import argparse
-import random
 from math import pi
 
 import numpy as np
@@ -26,15 +25,11 @@ NON_STOP_ACTIONS = [
 
 
 class RandomAgent(habitat.Agent):
-    def __init__(self, config):
-        self.dist_threshold_to_stop = config.TASK.SUCCESS_DISTANCE
+    def __init__(self, success_distance):
+        self.dist_threshold_to_stop = success_distance
 
     def reset(self):
         pass
-
-    def act(self, observations):
-        action = SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
-        return action
 
     def is_goal_reached(self, observations):
         dist = observations["pointgoal"][0]
@@ -58,9 +53,8 @@ class ForwardOnlyAgent(RandomAgent):
 
 
 class RandomForwardAgent(RandomAgent):
-    def __init__(self, config):
-        super(RandomForwardAgent, self).__init__(config)
-        self.dist_threshold_to_stop = config.TASK.SUCCESS_DISTANCE
+    def __init__(self, success_distance):
+        super().__init__(success_distance)
         self.FORWARD_PROBABILITY = 0.8
 
     def act(self, observations):
@@ -81,8 +75,8 @@ class RandomForwardAgent(RandomAgent):
 
 
 class GoalFollower(RandomAgent):
-    def __init__(self, config):
-        super(GoalFollower, self).__init__(config)
+    def __init__(self, success_distance):
+        super().__init__(success_distance)
         self.pos_th = self.dist_threshold_to_stop
         self.angle_th = float(np.deg2rad(15))
         self.random_prob = 0
@@ -135,14 +129,15 @@ def get_agent_cls(agent_class_name):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--success-distance", type=float, default=0.2)
     parser.add_argument(
         "--task-config", type=str, default="tasks/pointnav.yaml"
     )
-    parser.add_argument("--agent_class", type=str, default="GoalFollower")
+    parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()
 
     agent = get_agent_cls(args.agent_class)(
-        habitat.get_config(args.task_config)
+        success_distance=args.success_distance
     )
     benchmark = habitat.Benchmark(args.task_config)
     metrics = benchmark.evaluate(agent)
