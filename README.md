@@ -84,7 +84,7 @@ while not env.episode_over:
 ## Docker Setup
 We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:
 
-1. Pull the habitat docker image: `docker pull fairhabitat/habitat:v1`
+1. Pull the habitat docker image: `docker pull fairembodied/habitat:latest`
 
 1. Start an interactive bash session inside the habitat docker: `docker run --runtime=nvidia -it fairhabitat/habitat:v1`
 
