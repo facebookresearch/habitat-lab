@@ -210,4 +210,8 @@ class Dataset(Generic[T]):
                 split : min(split + stride, num_episodes)
             ].copy()
             new_datasets.append(new_dataset)
+        assert (
+            sum([len(new_dataset.episodes) for new_dataset in new_datasets])
+            == num_episodes
+        )
         return new_datasets
