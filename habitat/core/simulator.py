@@ -29,6 +29,7 @@ class SensorTypes(Enum):
     TEXT = 9
     MEASUREMENT = 10
     HEADING = 11
+    TACTILE = 12
 
 
 class Sensor:

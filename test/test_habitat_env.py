@@ -19,7 +19,7 @@ from habitat.sims.habitat_simulator import (
     SIM_ACTION_TO_NAME,
     SIM_NAME_TO_ACTION,
 )
-from habitat.tasks.nav.nav_task import NavigationEpisode
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
 NUM_ENVS = 2
@@ -150,20 +150,22 @@ def test_env():
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[03.00611, 0.072447, -2.67867],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[],
+            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            info={"geodesic_distance": 0.001},
         )
     ]
-
     env.reset()
+
     non_stop_actions = [
         k
         for k, v in SIM_ACTION_TO_NAME.items()
         if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        env.step(np.random.choice(non_stop_actions))
+        act = np.random.choice(non_stop_actions)
+        env.step(act)
 
     # check for steps limit on environment
     assert env.episode_over is True, (
@@ -229,9 +231,10 @@ def test_rl_env():
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[03.00611, 0.072447, -2.67867],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[],
+            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            info={"geodesic_distance": 0.001},
         )
     ]
 
@@ -286,6 +289,8 @@ def test_action_space_shortest_path():
 
     while len(unreachable_targets) < 3:
         position = env.sim.sample_navigable_point()
+        # Change height of the point to make it unreachable
+        position[1] = 100
         angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
@@ -299,26 +304,4 @@ def test_action_space_shortest_path():
     targets = unreachable_targets
     shortest_path2 = env.sim.action_space_shortest_path(source, targets)
     assert shortest_path2 == []
-
-    targets = reachable_targets + unreachable_targets
-    shortest_path3 = env.sim.action_space_shortest_path(source, targets)
-
-    # shortest_path1 should be identical to shortest_path3
-    assert len(shortest_path1) == len(shortest_path3)
-    for i in range(len(shortest_path1)):
-        assert np.allclose(
-            shortest_path1[i].position, shortest_path3[i].position
-        )
-        assert np.allclose(
-            shortest_path1[i].rotation, shortest_path3[i].rotation
-        )
-        assert shortest_path1[i].action == shortest_path3[i].action
-
-    targets = unreachable_targets + [source]
-    shortest_path4 = env.sim.action_space_shortest_path(source, targets)
-    assert len(shortest_path4) == 1
-    assert np.allclose(shortest_path4[0].position, source.position)
-    assert np.allclose(shortest_path4[0].rotation, source.rotation)
-    assert shortest_path4[0].action is None
-
     env.close()
