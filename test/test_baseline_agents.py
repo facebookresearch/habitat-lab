@@ -52,6 +52,6 @@ def test_simple_agents():
         simple_agents.RandomAgent,
         simple_agents.RandomForwardAgent,
     ]:
-        agent = agent_class(config_env)
+        agent = agent_class(config_env.TASK.SUCCESS_DISTANCE)
         habitat.logger.info(agent_class.__name__)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=100))
