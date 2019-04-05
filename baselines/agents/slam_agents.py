@@ -4,6 +4,7 @@ import torch
 import random
 import time
 import os
+import PIL
 from math import pi
 import torch.nn.functional as F
 import orbslam2
@@ -33,6 +34,33 @@ from baselines.slambased.path_planners import DifferentiableStarPlanner
 
 from baselines.config.default import cfg
 from habitat.config.default import get_config
+
+from baselines.slambased.monodepth import MonoDepthEstimator
+
+# https://sumit-ghosh.com/articles/python-download-progress-bar/
+import sys
+import requests
+def download(url, filename):
+    with open(filename, 'wb') as f:
+        response = requests.get(url, stream=True)
+        total = response.headers.get('content-length')
+        if total is None:
+            f.write(response.content)
+        else:
+            downloaded = 0
+            total = int(total)
+            for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
+                downloaded += len(data)
+                f.write(data)
+                done = int(50*downloaded/total)
+                sys.stdout.write('\r[{}{}]'.format('█' * done, '.' * (50-done)))
+                sys.stdout.flush()
+    sys.stdout.write('\n')
+
+
+def ResizePIL2(np_img, size = 256):
+    im1 = PIL.Image.fromarray(np_img)
+    return np.array(im1.resize((size,size)))
 
 def make_good_config_for_orbslam2(config):
     config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
@@ -492,6 +520,70 @@ class ORBSLAM2Agent(RandomAgent):
         command = self.planner_prediction_to_command(self.waypointPose6D)
         return SIM_NAME_TO_ACTION[command]
 
+class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
+    def __init__(
+        self,
+        config,
+        device=torch.device("cuda:0"),
+        monocheckpoint = 'baselines/slambased/data/mp3d_resnet50.pth',
+    ):
+        self.num_actions = config.NUM_ACTIONS
+        self.dist_threshold_to_stop = config.DIST_TO_STOP
+        self.slam_vocab_path = config.SLAM_VOCAB_PATH
+        assert os.path.isfile(self.slam_vocab_path)
+        self.slam_settings_path = config.SLAM_SETTINGS_PATH
+        assert os.path.isfile(self.slam_settings_path)
+        self.slam = orbslam2.System(
+            self.slam_vocab_path, self.slam_settings_path, orbslam2.Sensor.RGBD
+        )
+        self.slam.set_use_viewer(False)
+        self.slam.initialize()
+        self.device = device
+        self.map_size_meters = config.MAP_SIZE
+        self.map_cell_size = config.MAP_CELL_SIZE
+        self.pos_th = config.DIST_REACHED_TH
+        self.next_wp_th = config.NEXT_WAYPOINT_TH
+        self.angle_th = config.ANGLE_TH
+        self.obstacle_th = config.MIN_PTS_IN_OBSTACLE
+        self.depth_denorm = config.DEPTH_DENORM
+        self.planned_waypoints = []
+        self.mapper = DirectDepthMapper(
+                      camera_height = config.CAMERA_HEIGHT,
+                      near_th = config.D_OBSTACLE_MIN,
+                      far_th = config.D_OBSTACLE_MAX,
+                      h_min = config.H_OBSTACLE_MIN,
+                      h_max = config.H_OBSTACLE_MAX,
+                      map_size = config.MAP_SIZE,
+                      map_cell_size = config.MAP_CELL_SIZE,
+                      device = device)
+        self.planner = DifferentiableStarPlanner(
+                      max_steps = config.PLANNER_MAX_STEPS,
+                      preprocess = config.PREPROCESS_MAP,
+                      beta = config.BETA,
+                      device = device)
+        self.slam_to_world = 1.0
+        self.timestep = 0.1
+        self.timing = False
+        self.checkpoint = monocheckpoint
+        if not os.path.isfile(self.checkpoint):
+            mp3d_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/mp3d_ft_monodepth_resnet50.pth'
+            suncg_me_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth'
+            suncg_mf_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth'
+            url = mp3d_url
+            print ("No monodepth checkpoint found. Downloading...", url)
+            download(url, self.checkpoint)
+        self.monodepth = MonoDepthEstimator(self.checkpoint)
+        self.reset()
+        return
+
+    def rgb_d_from_observation(self, habitat_observation):
+        rgb = habitat_observation["rgb"]
+        depth = ResizePIL2(self.monodepth.compute_depth(PIL.Image.fromarray(rgb).resize((320,320))), 256)#/1.75
+        depth[depth > 3.0] = 0
+        depth[depth < 0.1] = 0
+        return rgb, np.array(depth).astype(np.float32)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -517,7 +609,7 @@ def main():
     elif args.agent_type == 'orbslam2-rgbd':
         agent = ORBSLAM2Agent(config.BASELINE.ORBSLAM2)
     elif args.agent_type == 'orbslam2-rgb-monod':
-        agent = ORBSLAM2Agent(config.BASELINE.ORBSLAM2)
+        agent = ORBSLAM2MonodepthAgent(config.BASELINE.ORBSLAM2)
     else:
         raise ValueError(args.agent_type, 'is unknown type of agent')
     benchmark = habitat.Benchmark(args.task_config)
