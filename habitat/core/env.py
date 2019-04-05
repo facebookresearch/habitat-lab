@@ -68,6 +68,16 @@ class Env:
                 id_dataset=config.DATASET.TYPE, config=config.DATASET
             )
         self._episodes = self._dataset.episodes if self._dataset else []
+
+        # load the first scene if dataset is present
+        if self._dataset:
+            assert len(self._dataset.episodes) > 0, (
+                "dataset should have " "non-empty episodes list"
+            )
+            self._config.defrost()
+            self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
+            self._config.freeze()
+
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )
@@ -75,7 +85,7 @@ class Env:
             self._config.TASK.TYPE,
             task_config=self._config.TASK,
             sim=self._sim,
-            dataset=dataset,
+            dataset=self._dataset,
         )
         self.observation_space = SpaceDict(
             {

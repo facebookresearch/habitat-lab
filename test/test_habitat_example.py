@@ -21,4 +21,8 @@ def test_readme_example():
 
 
 def test_visualizations_example():
+    if not PointNavDatasetV1.check_config_paths_exist(
+        config=habitat.get_config().DATASET
+    ):
+        pytest.skip("Please download Habitat test data to data folder.")
     visualization_examples.main()
