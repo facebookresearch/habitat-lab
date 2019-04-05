@@ -202,6 +202,13 @@ class HabitatSim(habitat.Simulator):
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
             sensor_specifications.append(sim_sensor_cfg)
 
+        # If there is no sensors specified create a dummy sensor so simulator
+        # won't throw an error
+        if not _sensor_suite.sensors.values():
+            sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg.resolution = [1, 1]
+            sensor_specifications.append(sim_sensor_cfg)
+
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
             SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
@@ -402,6 +409,10 @@ class HabitatSim(habitat.Simulator):
     def index_stop_action(self):
         return SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
 
+    @property
+    def index_forward_action(self):
+        return SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
+
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
             agent_id = self.config.DEFAULT_AGENT_ID
@@ -448,3 +459,8 @@ class HabitatSim(habitat.Simulator):
     def _check_agent_position(self, position, agent_id=0):
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")
+
+    def distance_to_closest_obstacle(self, position, max_search_radius=2.0):
+        return self._sim.pathfinder.distance_to_closest_obstacle(
+            position, max_search_radius
+        )

@@ -87,3 +87,6 @@ target/
 # pre-commit
 .pre-commit-config.yaml
 pyproject.toml
+
+# vim
+*.swp
