@@ -418,6 +418,7 @@ class SPL(habitat.Measure):
             )
         )
 
+
 class Collisions(habitat.Measure):
     def __init__(self, sim, config):
         self._sim = sim
@@ -442,6 +443,7 @@ class Collisions(habitat.Measure):
                 < COLLISION_PROXIMITY_TOLERANCE
         ):
             self._metric += 1
+
 
 class TopDownMap(habitat.Measure):
     """Top Down Map measure
