@@ -438,9 +438,9 @@ class Collisions(habitat.Measure):
 
         current_position = self._sim.get_agent_state().position
         if (
-                action == self._sim.index_forward_action
-                and self._sim.distance_to_closest_obstacle(current_position)
-                < COLLISION_PROXIMITY_TOLERANCE
+            action == self._sim.index_forward_action
+            and self._sim.distance_to_closest_obstacle(current_position)
+            < COLLISION_PROXIMITY_TOLERANCE
         ):
             self._metric += 1
 
