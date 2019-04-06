@@ -188,7 +188,7 @@ class PointGoalSensor(habitat.Sensor):
             - ref_position
         )
         rotation_world_agent = quaternion_to_rotation(
-            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+            ref_rotation.real, *ref_rotation.imag
         )
         direction_vector_agent = np.dot(
             rotation_world_agent.T, direction_vector
@@ -233,7 +233,7 @@ class HeadingSensor(habitat.Sensor):
         direction_vector = np.array([0, 0, -1])
 
         rotation_world_agent = quaternion_to_rotation(
-            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+            ref_rotation.real, *ref_rotation.imag
         )
 
         heading_vector = np.dot(rotation_world_agent.T, direction_vector)

@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import habitat
 from habitat import logger
-from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.config.default import get_config as cfg_env
 from config.default import cfg as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
@@ -73,7 +73,7 @@ class NavRLEnv(habitat.RLEnv):
     def _episode_success(self):
         if (
             self._previous_action
-            == SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            == SimulatorActions.STOP.value
             and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True
