@@ -80,7 +80,9 @@ class GoalFollower(RandomAgent):
         return angle
 
     def turn_towards_goal(self, angle_to_goal):
-        if angle_to_goal > pi or ((angle_to_goal < 0) and (angle_to_goal > -pi)):
+        if angle_to_goal > pi or (
+            (angle_to_goal < 0) and (angle_to_goal > -pi)
+        ):
             action = SimulatorActions.RIGHT.value
         else:
             action = SimulatorActions.LEFT.value
@@ -90,7 +92,9 @@ class GoalFollower(RandomAgent):
         if self.is_goal_reached(observations):
             action = SimulatorActions.STOP.value
         else:
-            angle_to_goal = self.normalize_angle(np.array(observations["pointgoal"][1]))
+            angle_to_goal = self.normalize_angle(
+                np.array(observations["pointgoal"][1])
+            )
             if abs(angle_to_goal) < self.angle_th:
                 action = SimulatorActions.FORWARD.value
             else:
@@ -117,11 +121,15 @@ def get_agent_cls(agent_class_name):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--success-distance", type=float, default=0.2)
-    parser.add_argument("--task-config", type=str, default="tasks/pointnav.yaml")
+    parser.add_argument(
+        "--task-config", type=str, default="tasks/pointnav.yaml"
+    )
     parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()
 
-    agent = get_agent_cls(args.agent_class)(success_distance=args.success_distance)
+    agent = get_agent_cls(args.agent_class)(
+        success_distance=args.success_distance
+    )
     benchmark = habitat.Benchmark(args.task_config)
     metrics = benchmark.evaluate(agent)
 

@@ -60,7 +60,11 @@ class PPOAgent(Agent):
 
         action_spaces = Discrete(4)
 
-        self.device = torch.device("cuda:{}".format(config.PTH_GPU_ID)) if torch.cuda.is_available() else torch.device('cpu')
+        self.device = (
+            torch.device("cuda:{}".format(config.PTH_GPU_ID))
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
         self.hidden_size = config.HIDDEN_SIZE
 
         random.seed(config.RANDOM_SEED)
