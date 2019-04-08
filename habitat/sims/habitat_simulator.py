@@ -456,14 +456,14 @@ class HabitatSim(habitat.Simulator):
         )
 
     @property
-    def UP(self):
+    def up_vector(self):
         return np.array([0.0, 1.0, 0.0])
 
     @property
-    def FORWARD(self):
+    def forward_vector(self):
         return -np.array([0.0, 0.0, 1.0])
 
-    def straight_spath_points(self, position_a, position_b):
+    def get_shortest_path_points(self, position_a, position_b):
         path = habitat_sim.ShortestPath()
         path.requested_start = position_a
         path.requested_end = position_b
