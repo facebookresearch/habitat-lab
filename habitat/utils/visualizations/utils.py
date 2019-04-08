@@ -125,4 +125,3 @@ def images_to_video(
     for im in tqdm.tqdm(images):
         writer.append_data(im)
     writer.close()
-
