@@ -3,6 +3,7 @@ numpy>=1.16.1
 yacs>=0.1.5
 # visualization optional dependencies
 imageio>=2.2.0
+imageio-ffmpeg>=0.2.0
 opencv-python>=3.3.0
 scipy>=1.0.0
 tqdm>=4.0.0
