@@ -158,7 +158,7 @@ def pointnav_draw_target_birdseye_view(
     return im_position
 
 
-def _to_grid(
+def to_grid(
     realworld_x: float,
     realworld_y: float,
     coordinate_min: float,
@@ -179,7 +179,7 @@ def _to_grid(
     return grid_x, grid_y
 
 
-def _from_grid(
+def from_grid(
     grid_x: int,
     grid_y: int,
     coordinate_min: float,
@@ -253,7 +253,7 @@ def get_topdown_map(
         # Check if on same level as original
         if np.abs(start_height - point[1]) > 0.5:
             continue
-        g_x, g_y = _to_grid(
+        g_x, g_y = to_grid(
             point[0], point[2], COORDINATE_MIN, COORDINATE_MAX, map_resolution
         )
 
@@ -277,7 +277,7 @@ def get_topdown_map(
     # Search over grid for valid points.
     for ii in range(range_x[0], range_x[1]):
         for jj in range(range_y[0], range_y[1]):
-            realworld_x, realworld_y = _from_grid(
+            realworld_x, realworld_y = from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
             valid_point = sim._sim.pathfinder.is_navigable(
