@@ -32,7 +32,7 @@ class ShortestPathFollower:
         )
 
         self._sim = sim
-        self._max_delta = self._sim.config.FORWARD_STEP_SIZE - 1e6
+        self._max_delta = self._sim.config.FORWARD_STEP_SIZE - EPSILON
         self._goal_radius = goal_radius
         self._step_size = self._sim.config.FORWARD_STEP_SIZE
 
@@ -127,7 +127,7 @@ class ShortestPathFollower:
             current_rotation = self._sim.get_agent_state().rotation
             current_dist = self._geo_dist(goal_pos)
 
-            best_geodesic_delta = -1e10
+            best_geodesic_delta = -2 * self._max_delta
             best_rotation = current_rotation
             for _ in range(0, 360, self._sim.config.TURN_ANGLE):
                 sim_action = SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
