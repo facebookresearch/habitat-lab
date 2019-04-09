@@ -6,8 +6,8 @@ EPSILON = 1e-8
 
 
 def angle_between_quaternions(q1: np.quaternion, q2: np.quaternion) -> float:
-    """Returns the angle (in radians) between two quaternions. This angle will always be
-    positive.
+    """Returns the angle (in radians) between two quaternions. This angle will
+    always be positive.
     """
     q1_inv = np.conjugate(q1)
     dq = quaternion.as_float_array(q1_inv * q2)

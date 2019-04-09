@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys
+
 import cv2
 
 import habitat
@@ -20,7 +22,7 @@ def shortest_path_example():
     follower = ShortestPathFollower(env.sim, goal_radius, False)
 
     print("Environment creation successful")
-    for episode in range(10):
+    for episode in range(3):
         observations = env.reset()
         print("Agent stepping around inside environment.")
         count_steps = 0
@@ -30,17 +32,18 @@ def shortest_path_example():
             )
             observations = env.step(SIM_NAME_TO_ACTION[best_action.value])
             count_steps += 1
-            im = observations["rgb"][:, :, ::-1].copy()
-            cv2.putText(
-                im,
-                "Action: " + best_action.value,
-                (0, 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-            )
-            cv2.imshow("im", im)
-            cv2.waitKey(1)
+            if "pytest" not in sys.modules:
+                im = observations["rgb"][:, :, ::-1].copy()
+                cv2.putText(
+                    im,
+                    "Action: " + best_action.value,
+                    (0, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 0, 255),
+                )
+                cv2.imshow("im", im)
+                cv2.waitKey(1)
         print("Episode finished after {} steps.".format(count_steps))
 
 

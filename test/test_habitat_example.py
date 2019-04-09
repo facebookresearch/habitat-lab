@@ -34,4 +34,4 @@ def test_shortest_path_follower_example():
         config=habitat.get_config().DATASET
     ):
         pytest.skip("Please download Habitat test data to data folder.")
-    shortest_path_follower_example.main()
+    shortest_path_follower_example.shortest_path_example()

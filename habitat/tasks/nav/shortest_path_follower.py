@@ -22,6 +22,17 @@ def action_to_one_hot(action: int) -> np.array:
 
 
 class ShortestPathFollower:
+    """Utility class for extracting the action on the shortest path to the
+        goal.
+    Args:
+        sim: HabitatSim instance.
+        goal_radius: Distance between the agent and the goal for it to be
+            considered successful.
+        return_one_hot: If true, returns a one-hot encoding of the action
+            (useful for training ML agents). If false, returns the
+            SimulatorAction.
+    """
+
     def __init__(
         self, sim: HabitatSim, goal_radius: float, return_one_hot: bool = True
     ):
@@ -54,6 +65,7 @@ class ShortestPathFollower:
     def get_next_action(
         self, goal_pos: np.array
     ) -> Union[SimulatorActions, np.array]:
+        """Returns the next action along the shortest path."""
         if (
             np.linalg.norm(goal_pos - self._sim.get_agent_state().position)
             <= self._goal_radius
@@ -63,9 +75,9 @@ class ShortestPathFollower:
         max_grad_dir = self._est_max_grad_dir(goal_pos)
         if max_grad_dir is None:
             return self._get_return_value(SimulatorActions.FORWARD)
-        return self.step_along_grad(max_grad_dir)
+        return self._step_along_grad(max_grad_dir)
 
-    def step_along_grad(
+    def _step_along_grad(
         self, grad_dir: np.quaternion
     ) -> Union[SimulatorActions, np.array]:
         current_state = self._sim.get_agent_state()
@@ -138,9 +150,9 @@ class ShortestPathFollower:
                     best_rotation = self._sim.get_agent_state().rotation
                     best_geodesic_delta = new_delta
 
-                # If the best delta is within (1 - cos(TURN_ANGLE))% of the best
-                # delta (the step size), then we almost certainly have found the
-                # max grad dir and should just exit
+                # If the best delta is within (1 - cos(TURN_ANGLE))% of the
+                # best delta (the step size), then we almost certainly have
+                # found the max grad dir and should just exit
                 if np.isclose(
                     best_geodesic_delta,
                     self._max_delta,
@@ -169,11 +181,14 @@ class ShortestPathFollower:
 
     @mode.setter
     def mode(self, new_mode: str):
-        """Sets the mode for how the greedy follower determines the best next step.
-            Args: new_mode: shortest_path indicates using the simulator's shortest path algorithm to
-                                find points on the map to navigate between.
-                            greedy indicates trying to move forward at all possible orientations and
-                                selecting the one which reduces the geodesic distance the most.
+        """Sets the mode for how the greedy follower determines the best next
+            step.
+        Args:
+            new_mode: shortest_path indicates using the simulator's shortest
+                path algorithm to find points on the map to navigate between.
+                greedy indicates trying to move forward at all possible
+                orientations and selecting the one which reduces the geodesic
+                distance the most.
         """
         assert new_mode in {"shortest_path", "greedy"}
         if new_mode == "shortest_path":
