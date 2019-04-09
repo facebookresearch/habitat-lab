@@ -48,8 +48,9 @@ class ShortestPathFollower:
         self._step_size = self._sim.config.FORWARD_STEP_SIZE
 
         self._mode = (
-            "shortest_path"
-            if getattr(sim, "straight_shortest_path_points", None) is not None
+            "geodesic_path"
+            if getattr(sim, "get_straight_shortest_path_points", None)
+            is not None
             else "greedy"
         )
         self._return_one_hot = return_one_hot
@@ -120,11 +121,11 @@ class ShortestPathFollower:
         current_state = self._sim.get_agent_state()
         current_pos = current_state.position
 
-        if self.mode == "shortest_path":
-            points = self._sim.get_shortest_path_points(
+        if self.mode == "geodesic_path":
+            points = self._sim.get_straight_shortest_path_points(
                 self._sim.get_agent_state().position, goal_pos
             )
-            # NB: Add a little offset as things get weird if
+            # Add a little offset as things get weird if
             # points[1] - points[0] is anti-parallel with forward
             if len(points) < 2:
                 return None
@@ -135,6 +136,8 @@ class ShortestPathFollower:
                 + EPSILON
                 * np.cross(self._sim.up_vector, self._sim.forward_vector),
             )
+            max_grad_dir.x = 0
+            max_grad_dir = np.normalized(max_grad_dir)
         else:
             current_rotation = self._sim.get_agent_state().rotation
             current_dist = self._geo_dist(goal_pos)
@@ -184,16 +187,16 @@ class ShortestPathFollower:
         """Sets the mode for how the greedy follower determines the best next
             step.
         Args:
-            new_mode: shortest_path indicates using the simulator's shortest
+            new_mode: geodesic_path indicates using the simulator's shortest
                 path algorithm to find points on the map to navigate between.
                 greedy indicates trying to move forward at all possible
                 orientations and selecting the one which reduces the geodesic
                 distance the most.
         """
-        assert new_mode in {"shortest_path", "greedy"}
-        if new_mode == "shortest_path":
+        assert new_mode in {"geodesic_path", "greedy"}
+        if new_mode == "geodesic_path":
             assert (
-                getattr(self._sim, "straight_shortest_path_points", None)
+                getattr(self._sim, "get_straight_shortest_path_points", None)
                 is not None
             )
         self._mode = new_mode

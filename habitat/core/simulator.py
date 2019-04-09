@@ -309,6 +309,39 @@ class Simulator:
         """
         raise NotImplementedError
 
+    def get_straight_shortest_path_points(
+        self, position_a: List[float], position_b: List[float]
+    ) -> List[List[float]]:
+        """Returns points along the geodesic (shortest) path between two points
+         irrespective of the angles between the waypoints.
+
+         Args:
+            position_a: The start point. This will be the first point in the
+                returned list.
+            position_b: The end point. This will be the last point in the
+                returned list.
+        Returns:
+            A list of waypoints (x, y, z) on the geodesic path between the two
+            points.
+         """
+
+        raise NotImplementedError
+
+    @property
+    def up_vector(self):
+        """The vector representing the direction upward (perpendicular to the
+        floor) from the global coordinate frame.
+        """
+        raise NotImplementedError
+
+    @property
+    def forward_vector(self):
+        """The forward direction in the global coordinate frame i.e. the
+        direction of forward movement for an agent with 0 degrees rotation in
+        the ground plane.
+        """
+        raise NotImplementedError
+
     def render(self, mode: str = "rgb") -> Any:
         raise NotImplementedError
 

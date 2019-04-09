@@ -357,6 +357,21 @@ class HabitatSim(habitat.Simulator):
 
         return shortest_path
 
+    @property
+    def up_vector(self):
+        return np.array([0.0, 1.0, 0.0])
+
+    @property
+    def forward_vector(self):
+        return -np.array([0.0, 0.0, 1.0])
+
+    def get_straight_shortest_path_points(self, position_a, position_b):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = position_a
+        path.requested_end = position_b
+        self._sim.pathfinder.find_path(path)
+        return path.points
+
     def sample_navigable_point(self):
         return self._sim.pathfinder.get_random_navigable_point().tolist()
 
@@ -457,18 +472,3 @@ class HabitatSim(habitat.Simulator):
         return self._sim.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
-
-    @property
-    def up_vector(self):
-        return np.array([0.0, 1.0, 0.0])
-
-    @property
-    def forward_vector(self):
-        return -np.array([0.0, 0.0, 1.0])
-
-    def get_shortest_path_points(self, position_a, position_b):
-        path = habitat_sim.ShortestPath()
-        path.requested_start = position_a
-        path.requested_end = position_b
-        self._sim.pathfinder.find_path(path)
-        return path.points

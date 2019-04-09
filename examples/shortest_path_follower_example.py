@@ -18,22 +18,23 @@ if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
 
 
-def shortest_path_example():
-    if os.path.exists(os.path.join(IMAGE_DIR, "shortest_path_example")):
-        shutil.rmtree(os.path.join(IMAGE_DIR, "shortest_path_example"))
+def shortest_path_example(mode):
     config = habitat.get_config(config_file="tasks/pointnav.yaml")
     env = habitat.Env(config=config)
     goal_radius = env.episodes[0].goals[0].radius
     if goal_radius is None:
         goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
     follower = ShortestPathFollower(env.sim, goal_radius, False)
+    follower.mode = mode
 
     print("Environment creation successful")
     for episode in range(3):
         observations = env.reset()
         dirname = os.path.join(
-            IMAGE_DIR, "shortest_path_example", "%02d" % episode
+            IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
         )
+        if os.path.exists(dirname):
+            shutil.rmtree(dirname)
         os.makedirs(dirname)
         print("Agent stepping around inside environment.")
         count_steps = 0
@@ -48,5 +49,10 @@ def shortest_path_example():
         print("Episode finished after {} steps.".format(count_steps))
 
 
+def main():
+    shortest_path_example("geodesic_path")
+    shortest_path_example("greedy")
+
+
 if __name__ == "__main__":
-    shortest_path_example()
+    main()
