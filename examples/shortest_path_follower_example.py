@@ -4,16 +4,24 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+import shutil
 import sys
 
-import cv2
+import imageio
 
 import habitat
 from habitat.sims.habitat_simulator import SIM_NAME_TO_ACTION
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
+IMAGE_DIR = os.path.join("examples", "images")
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
+
 
 def shortest_path_example():
+    if os.path.exists(os.path.join(IMAGE_DIR, "shortest_path_example")):
+        shutil.rmtree(os.path.join(IMAGE_DIR, "shortest_path_example"))
     config = habitat.get_config(config_file="tasks/pointnav.yaml")
     env = habitat.Env(config=config)
     goal_radius = env.episodes[0].goals[0].radius
@@ -24,6 +32,10 @@ def shortest_path_example():
     print("Environment creation successful")
     for episode in range(3):
         observations = env.reset()
+        dirname = os.path.join(
+            IMAGE_DIR, "shortest_path_example", "%02d" % episode
+        )
+        os.makedirs(dirname)
         print("Agent stepping around inside environment.")
         count_steps = 0
         while not env.episode_over:
@@ -32,18 +44,8 @@ def shortest_path_example():
             )
             observations = env.step(SIM_NAME_TO_ACTION[best_action.value])
             count_steps += 1
-            if "pytest" not in sys.modules:
-                im = observations["rgb"][:, :, ::-1].copy()
-                cv2.putText(
-                    im,
-                    "Action: " + best_action.value,
-                    (0, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 0, 255),
-                )
-                cv2.imshow("im", im)
-                cv2.waitKey(1)
+            im = observations["rgb"]
+            imageio.imsave(os.path.join(dirname, "%03d.jpg" % count_steps), im)
         print("Episode finished after {} steps.".format(count_steps))
 
 
