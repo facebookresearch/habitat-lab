@@ -290,6 +290,7 @@ class HabitatSim(habitat.Simulator):
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
             self._current_scene = config.SCENE
+            self._sim.close()
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
 
