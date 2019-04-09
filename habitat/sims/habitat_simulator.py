@@ -360,6 +360,9 @@ class HabitatSim(habitat.Simulator):
     def sample_navigable_point(self):
         return self._sim.pathfinder.get_random_navigable_point().tolist()
 
+    def is_navigable(self, point: List[float]):
+        return self._sim.pathfinder.is_navigable(point)
+
     def semantic_annotations(self):
         """
         Returns:

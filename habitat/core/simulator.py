@@ -285,6 +285,14 @@ class Simulator:
         """
         raise NotImplementedError
 
+    def is_navigable(self, point: List[float]) -> bool:
+        """Return true if the agent can stand at the specified point.
+
+        Args:
+            point: The point to check.
+        """
+        raise NotImplementedError
+
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:

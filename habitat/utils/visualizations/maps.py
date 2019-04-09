@@ -282,7 +282,7 @@ def get_topdown_map(
             realworld_x, realworld_y = _from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
-            valid_point = sim._sim.pathfinder.is_navigable(
+            valid_point = sim.is_navigable(
                 [realworld_x, start_height, realworld_y]
             )
             top_down_map[ii, jj] = 1 if valid_point else 0

@@ -377,16 +377,16 @@ class NavigationTask(habitat.EmbodiedTask):
         for measurement_name in task_config.MEASUREMENTS:
             measurement_cfg = getattr(task_config, measurement_name)
             is_valid_measurement = hasattr(
-                habitat.tasks.nav.nav_task,
-                measurement_cfg.TYPE,  # type: ignore
+                habitat.tasks.nav.nav_task,  # type: ignore
+                measurement_cfg.TYPE,
             )
             assert is_valid_measurement, "invalid measurement type {}".format(
                 measurement_cfg.TYPE
             )
             task_measurements.append(
                 getattr(
-                    habitat.tasks.nav.nav_task,
-                    measurement_cfg.TYPE,  # type: ignore
+                    habitat.tasks.nav.nav_task,  # type: ignore
+                    measurement_cfg.TYPE,
                 )(sim, measurement_cfg)
             )
         self.measurements = Measurements(task_measurements)
@@ -402,10 +402,8 @@ class NavigationTask(habitat.EmbodiedTask):
             )
             task_sensors.append(
                 getattr(
-                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE
-                )(  # type: ignore
-                    sim, sensor_cfg
-                )
+                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
+                )(sim, sensor_cfg)
             )
 
         self.sensor_suite = SensorSuite(task_sensors)
