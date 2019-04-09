@@ -11,7 +11,7 @@ jobs:
               sudo pip install black isort
       - run:
           name: run black
-          command: black . --line-length 79 --check --diff
+          command: black . --line-length 79 --check  --diff
       - run:
           name: run isort
           command: |
