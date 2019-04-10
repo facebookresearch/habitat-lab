@@ -47,8 +47,8 @@ def draw_agent(
     rotated_agent = scipy.ndimage.interpolation.rotate(
         AGENT_SPRITE, agent_rotation * -180 / np.pi
     )
-    # Rescale because rotation may result in larger image than original, but the
-    # agent sprite size should stay the same.
+    # Rescale because rotation may result in larger image than original, but
+    # the agent sprite size should stay the same.
     initial_agent_size = AGENT_SPRITE.shape[0]
     new_size = rotated_agent.shape[0]
     agent_size_px = max(
@@ -186,10 +186,10 @@ def _from_grid(
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
 ) -> Tuple[float, float]:
-    """Inverse of _to_grid function. Return real world coordinate from gridworld
-    assuming top-left corner is the origin. The real world coordinates of lower
-    left corner are (coordinate_min, coordinate_min) and of top right corner
-    are (coordinate_max, coordinate_max)
+    """Inverse of _to_grid function. Return real world coordinate from
+    gridworld assuming top-left corner is the origin. The real world
+    coordinates of lower left corner are (coordinate_min, coordinate_min) and
+    of top right corner are (coordinate_max, coordinate_max)
     """
     grid_size = (
         (coordinate_max - coordinate_min) / grid_resolution[0],
@@ -233,8 +233,10 @@ def get_topdown_map(
 
     Args:
         sim: The simulator.
-        map_resolution: The resolution of map which will be computed and returned.
-        num_samples: The number of random navigable points which will be initially
+        map_resolution: The resolution of map which will be computed and
+            returned.
+        num_samples: The number of random navigable points which will be
+            initially
             sampled. For large environments it may need to be increased.
         draw_border: Whether to outline the border of the occupied spaces.
 
@@ -280,7 +282,7 @@ def get_topdown_map(
             realworld_x, realworld_y = _from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
-            valid_point = sim._sim.pathfinder.is_navigable(
+            valid_point = sim.is_navigable(
                 [realworld_x, start_height, realworld_y]
             )
             top_down_map[ii, jj] = 1 if valid_point else 0
