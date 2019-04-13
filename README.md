@@ -13,7 +13,7 @@ defining embodied AI tasks (e.g. navigation, instruction following, question ans
 Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
 
 <p align="center">
-  <img src="docs/img/habitat_compressed.gif"  height="400">
+    <img src="docs/img/habitat_compressed.gif"  height="400">
 </p>
 
 ---
