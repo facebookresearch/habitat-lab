@@ -18,6 +18,7 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
 
 ---
 
+
 ## Table of contents
    1. [Motivation](#motivation)
    1. [Citing Habitat](#citing-habitat)
