@@ -10,7 +10,7 @@ import shutil
 import imageio
 
 import habitat
-from habitat.sims.habitat_simulator import SIM_NAME_TO_ACTION
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 IMAGE_DIR = os.path.join("examples", "images")
@@ -42,7 +42,7 @@ def shortest_path_example(mode):
             best_action = follower.get_next_action(
                 env.current_episode.goals[0].position
             )
-            observations = env.step(SIM_NAME_TO_ACTION[best_action.value])
+            observations = env.step(best_action.value)
             count_steps += 1
             im = observations["rgb"]
             imageio.imsave(os.path.join(dirname, "%03d.jpg" % count_steps), im)
