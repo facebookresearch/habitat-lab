@@ -257,6 +257,7 @@ def test_rl_env():
     env.close()
 
 
+# TODO Bring back this test for the greedy follower
 @pytest.mark.skip
 def test_action_space_shortest_path():
     config = get_config()
