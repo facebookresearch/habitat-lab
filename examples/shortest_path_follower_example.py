@@ -10,7 +10,6 @@ import shutil
 import imageio
 
 import habitat
-from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 IMAGE_DIR = os.path.join("examples", "images")

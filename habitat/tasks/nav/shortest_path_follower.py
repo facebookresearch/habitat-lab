@@ -82,9 +82,7 @@ class ShortestPathFollower:
         self, grad_dir: np.quaternion
     ) -> Union[SimulatorActions, np.array]:
         current_state = self._sim.get_agent_state()
-        alpha = angle_between_quaternions(
-            grad_dir, quaternion_xyzw_to_wxyz(current_state.rotation)
-        )
+        alpha = angle_between_quaternions(grad_dir, current_state.rotation)
         if alpha <= np.deg2rad(self._sim.config.TURN_ANGLE) + EPSILON:
             return self._get_return_value(SimulatorActions.FORWARD)
         else:
@@ -94,10 +92,7 @@ class ShortestPathFollower:
                 SimulatorActions.LEFT
                 if (
                     angle_between_quaternions(
-                        grad_dir,
-                        quaternion_xyzw_to_wxyz(
-                            self._sim.get_agent_state().rotation
-                        ),
+                        grad_dir, self._sim.get_agent_state().rotation
                     )
                     < alpha
                 )
@@ -174,7 +169,7 @@ class ShortestPathFollower:
 
             self._reset_agent_state(current_state)
 
-            max_grad_dir = quaternion_xyzw_to_wxyz(best_rotation)
+            max_grad_dir = best_rotation
 
         return max_grad_dir
 
