@@ -21,7 +21,7 @@ from habitat.core.simulator import (
 from habitat.tasks.utils import (
     quaternion_to_rotation,
     cartesian_to_polar,
-    quat_rotate_vector,
+    quaternion_rotate_vector,
 )
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
@@ -191,7 +191,7 @@ class PointGoalSensor(habitat.Sensor):
             np.array(episode.goals[0].position, dtype=np.float32)
             - ref_position
         )
-        direction_vector_agent = quat_rotate_vector(
+        direction_vector_agent = quaternion_rotate_vector(
             rotation_world_agent.inverse(), direction_vector
         )
 
@@ -232,7 +232,7 @@ class HeadingSensor(habitat.Sensor):
 
         direction_vector = np.array([0, 0, -1])
 
-        heading_vector = quat_rotate_vector(
+        heading_vector = quaternion_rotate_vector(
             rotation_world_agent.inverse(), direction_vector
         )
 

@@ -36,12 +36,12 @@ def quaternion_to_rotation(q_r, q_i, q_j, q_k):
     return rotation_mat
 
 
-def quat_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
-    r"""Rotates a vector by a quat
+def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
+    r"""Rotates a vector by a quaternion
 
     Args:
-        quat (np.quaternion): The quaternion to rotate by
-        v (np.array): The vector to rotate
+        quaternion: The quaternion to rotate by
+        v: The vector to rotate
 
     Returns:
         np.array: The rotated vector
