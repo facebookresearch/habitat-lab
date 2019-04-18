@@ -5,12 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import numpy as np
+import os
+
 import imageio
+import numpy as np
 
 import habitat
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.utils.visualizations import maps
+
+IMAGE_DIR = os.path.join("examples", "images")
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
 
 
 def example_pointnav_draw_target_birdseye_view():
@@ -34,7 +40,9 @@ def example_pointnav_draw_target_birdseye_view():
         agent_radius_px=25,
     )
 
-    imageio.imsave("pointnav_target_image.png", target_image)
+    imageio.imsave(
+        os.path.join(IMAGE_DIR, "pointnav_target_image.png"), target_image
+    )
 
 
 def example_pointnav_draw_target_birdseye_view_agent_on_border():
@@ -64,7 +72,10 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
                 agent_radius_px=25,
             )
             imageio.imsave(
-                "pointnav_target_image_edge_%d.png" % ii, target_image
+                os.path.join(
+                    IMAGE_DIR, "pointnav_target_image_edge_%d.png" % ii
+                ),
+                target_image,
             )
 
 
@@ -94,7 +105,7 @@ def example_get_topdown_map():
         range_x[0] : range_x[1], range_y[0] : range_y[1]
     ]
     top_down_map = recolor_map[top_down_map]
-    imageio.imsave("top_down_map.png", top_down_map)
+    imageio.imsave(os.path.join(IMAGE_DIR, "top_down_map.png"), top_down_map)
 
 
 def main():
