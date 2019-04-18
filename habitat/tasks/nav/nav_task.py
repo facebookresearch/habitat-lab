@@ -18,7 +18,11 @@ from habitat.core.simulator import (
     SensorTypes,
     SensorSuite,
 )
-from habitat.tasks.utils import quaternion_to_rotation, cartesian_to_polar
+from habitat.tasks.utils import (
+    quaternion_to_rotation,
+    cartesian_to_polar,
+    quaternion_rotate_vector,
+)
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 
@@ -181,17 +185,14 @@ class PointGoalSensor(habitat.Sensor):
     def get_observation(self, observations, episode):
         agent_state = self._sim.get_agent_state()
         ref_position = agent_state.position
-        ref_rotation = agent_state.rotation
+        rotation_world_agent = agent_state.rotation
 
         direction_vector = (
             np.array(episode.goals[0].position, dtype=np.float32)
             - ref_position
         )
-        rotation_world_agent = quaternion_to_rotation(
-            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
-        )
-        direction_vector_agent = np.dot(
-            rotation_world_agent.T, direction_vector
+        direction_vector_agent = quaternion_rotate_vector(
+            rotation_world_agent.inverse(), direction_vector
         )
 
         if self._goal_format == "POLAR":
@@ -227,16 +228,13 @@ class HeadingSensor(habitat.Sensor):
 
     def get_observation(self, observations, episode):
         agent_state = self._sim.get_agent_state()
-        # Quaternion is in x, y, z, w format
-        ref_rotation = agent_state.rotation
+        rotation_world_agent = agent_state.rotation
 
         direction_vector = np.array([0, 0, -1])
 
-        rotation_world_agent = quaternion_to_rotation(
-            ref_rotation[3], ref_rotation[0], ref_rotation[1], ref_rotation[2]
+        heading_vector = quaternion_rotate_vector(
+            rotation_world_agent.inverse(), direction_vector
         )
-
-        heading_vector = np.dot(rotation_world_agent.T, direction_vector)
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
         return np.array(phi)

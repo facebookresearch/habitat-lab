@@ -34,10 +34,10 @@ def check_sim_obs(obs, sensor):
 
 
 class SimulatorActions(Enum):
-    LEFT = "look_left"
-    RIGHT = "look_right"
-    FORWARD = "move_forward"
-    STOP = "stop"
+    FORWARD = 0
+    LEFT = 1
+    RIGHT = 2
+    STOP = 3
 
 
 class HabitatSimRGBSensor(RGBSensor):
@@ -123,16 +123,6 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-SIM_ACTION_TO_NAME = {
-    0: SimulatorActions.FORWARD.value,
-    1: SimulatorActions.LEFT.value,
-    2: SimulatorActions.RIGHT.value,
-    3: SimulatorActions.STOP.value,
-}
-
-SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
-
-
 class HabitatSim(habitat.Simulator):
     """Simulator wrapper over habitat-sim
 
@@ -157,25 +147,24 @@ class HabitatSim(habitat.Simulator):
             )
             sim_sensors.append(
                 getattr(
-                    habitat.sims.habitat_simulator,  # type: ignore
-                    sensor_cfg.TYPE,
+                    habitat.sims.habitat_simulator,
+                    sensor_cfg.TYPE,  # type: ignore
                 )(sensor_cfg)
             )
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        self._current_scene = self.sim_config.scene.id
+        self._current_scene = self.sim_config.sim_cfg.scene.id
         self._sim = habitat_sim.Simulator(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
 
         self._is_episode_active = False
-        self._controls = SIM_ACTION_TO_NAME
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
-    ) -> habitat_sim.SimulatorConfiguration:
+    ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
         sim_config.scene.id = self.config.SCENE
         sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
@@ -208,18 +197,23 @@ class HabitatSim(habitat.Simulator):
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
             SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
-                "lookLeft", {"amount": self.config.TURN_ANGLE}
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
             SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
-                "lookRight", {"amount": self.config.TURN_ANGLE}
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
             SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
-                "moveForward", {"amount": self.config.FORWARD_STEP_SIZE}
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.FORWARD_STEP_SIZE
+                ),
             ),
-            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
         }
-        sim_config.agents = [agent_config]
-        return sim_config
+
+        return habitat_sim.Configuration(sim_config, [agent_config])
 
     @property
     def sensor_suite(self) -> SensorSuite:
@@ -259,12 +253,12 @@ class HabitatSim(habitat.Simulator):
             "episode is not active, environment not RESET or "
             "STOP action called previously"
         )
-        sim_action = self._controls[action]
-        if sim_action == SimulatorActions.STOP.value:
+
+        if action == SimulatorActions.STOP.value:
             self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
-            sim_obs = self._sim.step(sim_action)
+            sim_obs = self._sim.step(action)
 
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
@@ -296,6 +290,7 @@ class HabitatSim(habitat.Simulator):
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
             self._current_scene = config.SCENE
+            self._sim.close()
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
 
@@ -321,41 +316,9 @@ class HabitatSim(habitat.Simulator):
             the source. For the last item in the returned list the action
             will be None.
         """
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
+        raise NotImplementedError(
+            "This function is no longer implemented.  Please use the greedy follower instead"
         )
-        action_pathfinder = self._sim.make_action_pathfinder(agent_id=agent_id)
-        action_shortest_path = habitat_sim.MultiGoalActionSpaceShortestPath()
-        action_shortest_path.requested_start.position = source.position
-        action_shortest_path.requested_start.rotation = source.rotation
-
-        for target in targets:
-            action_shortest_path.requested_ends.append(
-                habitat_sim.ActionSpacePathLocation(
-                    target.position, target.rotation
-                )
-            )
-
-        if not action_pathfinder.find_path(action_shortest_path):
-            return []
-
-        # add None action to last node in path
-        actions: List[Optional[int]] = [
-            SIM_NAME_TO_ACTION[action]
-            for action in action_shortest_path.actions
-        ]
-        actions.append(None)
-
-        shortest_path = [
-            ShortestPathPoint(position, rotation, action)
-            for position, rotation, action in zip(
-                action_shortest_path.points,
-                action_shortest_path.rotations,
-                actions,
-            )
-        ]
-
-        return shortest_path
 
     @property
     def up_vector(self):
@@ -415,11 +378,11 @@ class HabitatSim(habitat.Simulator):
 
     @property
     def index_stop_action(self):
-        return SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+        return SimulatorActions.STOP.value
 
     @property
     def index_forward_action(self):
-        return SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
+        return SimulatorActions.FORWARD.value
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
@@ -432,9 +395,7 @@ class HabitatSim(habitat.Simulator):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
-        state = habitat_sim.AgentState()
-        self._sim.get_agent(agent_id).get_state(state)
-        return state
+        return self._sim.get_agent(agent_id).get_state()
 
     def set_agent_state(
         self,

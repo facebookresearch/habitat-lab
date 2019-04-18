@@ -26,8 +26,6 @@ from baselines.slambased.reprojection import (
 )
 from habitat.sims.habitat_simulator import (
     SimulatorActions,
-    SIM_ACTION_TO_NAME,
-    SIM_NAME_TO_ACTION,
 )
 from baselines.slambased.mappers import DirectDepthMapper
 from baselines.slambased.path_planners import DifferentiableStarPlanner
@@ -107,7 +105,7 @@ class RandomAgent(object):
         # Act
         # Check if we are done
         if self.is_goal_reached():
-            action = SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            action = SimulatorActions.STOP.value
         else:
             action = random.randint(0, self.num_actions - 1)
         return action
@@ -127,34 +125,35 @@ class BlindAgent(RandomAgent):
     def decide_what_to_do(self):
         distance_to_goal = self.obs["pointgoal"][0]
         angle_to_goal = norm_ang(np.array(self.obs["pointgoal"][1]))
-        command = SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+        command = SimulatorActions.STOP.value
         if distance_to_goal <= self.pos_th:
             return command
         if abs(angle_to_goal) < self.angle_th:
-            command = "move_forward"
+            command = SimulatorActions.FORWARD.value
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
-                command = "look_left"
+                command = SimulatorActions.LEFT.value
             elif angle_to_goal > pi:
-                command = "look_right"
+                command = SimulatorActions.RIGHT.value
             elif (angle_to_goal < 0) and (angle_to_goal > -pi):
-                command = "look_right"
+                command = SimulatorActions.RIGHT.value
             else:
-                command = "look_left"
+                command = SimulatorActions.LEFT.value
+
         return command
 
     def act(self, habitat_observation=None, random_prob=0.1):
         self.update_internal_state(habitat_observation)
         # Act
         if self.is_goal_reached():
-            return SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            return SimulatorActions.STOP.value
         command = self.decide_what_to_do()
         random_action = random.randint(0, self.num_actions - 1)
         act_randomly = np.random.uniform(0, 1, 1) < random_prob
         if act_randomly:
             action = random_action
         else:
-            action = SIM_NAME_TO_ACTION[command]
+            action = command
         return action
 
 
@@ -265,8 +264,7 @@ class ORBSLAM2Agent(RandomAgent):
                     .to(self.device),
                 )
                 if (
-                    SIM_ACTION_TO_NAME[self.action_history[-1]]
-                    == "move_forward"
+                    self.action_history[-1] == SimulatorActions.FORWARD.value
                 ):
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
@@ -332,7 +330,7 @@ class ORBSLAM2Agent(RandomAgent):
         )
         success = self.is_goal_reached()
         if success:
-            action = SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            action = SimulatorActions.STOP.value
             self.action_history.append(action)
             return action
         # Plan action
@@ -486,7 +484,7 @@ class ORBSLAM2Agent(RandomAgent):
         return path, planned_waypoints
 
     def planner_prediction_to_command(self, p_next):
-        command = "stop"
+        command = SimulatorActions.STOP.value
         p_init = self.pose6D.squeeze()
         d_angle_rot_th = self.angle_th
         pos_th = self.pos_th
@@ -496,29 +494,29 @@ class ORBSLAM2Agent(RandomAgent):
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
-            command = "move_forward"
+            command = SimulatorActions.FORWARD.value
         else:
             if (d_angle > 0) and (d_angle < pi):
-                command = "look_left"
+                command = SimulatorActions.LEFT.value
             elif d_angle > pi:
-                command = "look_right"
+                command = SimulatorActions.RIGHT.value
             elif (d_angle < 0) and (d_angle > -pi):
-                command = "look_right"
+                command = SimulatorActions.RIGHT.value
             else:
-                command = "look_left"
+                command = SimulatorActions.LEFT.value
         return command
 
     def decide_what_to_do(self):
         action = None
         if self.is_goal_reached():
-            action = SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            action = SimulatorActions.STOP.value
             return action
         if self.unseen_obstacle:
-            command = "look_right"
-            return SIM_NAME_TO_ACTION[command]
-        command = "stop"
+            command = SimulatorActions.RIGHT.value
+            return command
+        command = SimulatorActions.STOP.value
         command = self.planner_prediction_to_command(self.waypointPose6D)
-        return SIM_NAME_TO_ACTION[command]
+        return command
 
 class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
     def __init__(
