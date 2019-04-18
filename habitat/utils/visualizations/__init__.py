@@ -5,5 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.utils.visualizations import maps
+from habitat.utils.visualizations import utils
 
-__all__ = ["maps"]
+__all__ = ["maps", "utils"]

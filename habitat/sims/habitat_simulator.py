@@ -357,8 +357,26 @@ class HabitatSim(habitat.Simulator):
 
         return shortest_path
 
+    @property
+    def up_vector(self):
+        return np.array([0.0, 1.0, 0.0])
+
+    @property
+    def forward_vector(self):
+        return -np.array([0.0, 0.0, 1.0])
+
+    def get_straight_shortest_path_points(self, position_a, position_b):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = position_a
+        path.requested_end = position_b
+        self._sim.pathfinder.find_path(path)
+        return path.points
+
     def sample_navigable_point(self):
         return self._sim.pathfinder.get_random_navigable_point().tolist()
+
+    def is_navigable(self, point: List[float]):
+        return self._sim.pathfinder.is_navigable(point)
 
     def semantic_annotations(self):
         """
@@ -423,6 +441,7 @@ class HabitatSim(habitat.Simulator):
         position: List[float] = None,
         rotation: List[float] = None,
         agent_id: int = 0,
+        reset_sensors: bool = True,
     ) -> None:
         """Sets agent state similar to initialize_agent, but without agents
         creation.
@@ -433,12 +452,14 @@ class HabitatSim(habitat.Simulator):
             of unit quaternion (versor) representing agent 3D orientation,
             (https://en.wikipedia.org/wiki/Versor)
             agent_id: int identification of agent from multiagent setup.
+            reset_sensors: bool for if sensor changes (e.g. tilt) should be
+                reset).
         """
         agent = self._sim.get_agent(agent_id)
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
-        agent.set_state(state)
+        agent.set_state(state, reset_sensors)
 
         self._check_agent_position(position, agent_id)
 
