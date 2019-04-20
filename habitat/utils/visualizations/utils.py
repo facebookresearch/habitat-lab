@@ -99,8 +99,7 @@ def images_to_video(
     **kwargs
 ):
     """Calls imageio to run FFMPEG on a list of images. For more info on
-        parameters, see
-        https://imageio.readthedocs.io/en/stable/format_ffmpeg.html
+    parameters, see https://imageio.readthedocs.io/en/stable/format_ffmpeg.html
     Args:
         images: The list of images. Images should be HxWx3 in RGB order.
         output_dir: The folder to put the video in.
