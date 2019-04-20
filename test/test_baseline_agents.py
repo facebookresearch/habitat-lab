@@ -4,14 +4,25 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from baselines.agents import simple_agents, ppo_agents
 import habitat
 import os
 import pytest
+from baselines.agents import simple_agents
+
+try:
+    import torch
+
+    has_torch = True
+except ImportError:
+    has_torch = False
+
+if has_torch:
+    from baselines.agents import ppo_agents
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
 
 
+@pytest.mark.skipif(not has_torch, reason="Test needs torch")
 def test_ppo_agents():
     config = ppo_agents.get_defaut_config()
     config.MODEL_PATH = ""
