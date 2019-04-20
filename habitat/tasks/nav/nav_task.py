@@ -28,6 +28,9 @@ from habitat.tasks.utils import (
 from habitat.utils.visualizations import maps
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
+NAVIGABLE_POINT_TOLERANCE: float = 0.01
+NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE: float = 0.1
+MAP_THICKNESS_SCALAR: int = 1250
 
 
 def merge_sim_episode_config(
@@ -230,7 +233,7 @@ class StaticPointGoalSensor(habitat.Sensor):
 
         super().__init__(sim, config)
         self.initial_vector = None
-        self.episode_unique_id = None
+        self.current_episode_id = None
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "static_pointgoal"
@@ -251,10 +254,10 @@ class StaticPointGoalSensor(habitat.Sensor):
         )
 
     def get_observation(self, observations, episode):
-        episode_unique_id = (episode.episode_id, episode.scene_id)
-        if self.episode_unique_id != episode_unique_id:
+        episode_id = (episode.episode_id, episode.scene_id)
+        if self.current_episode_id != episode_id:
             # Only compute the direction vector when a new episode is started.
-            self.episode_unique_id = episode_unique_id
+            self.current_episode_id = episode_id
             agent_state = self._sim.get_agent_state()
             ref_position = agent_state.position
             ref_rotation = agent_state.rotation
@@ -474,11 +477,19 @@ class TopDownMap(habitat.Measure):
 
     def _check_valid_nav_point(self, point: List[float]):
         return (
-            0.01
+            NAVIGABLE_POINT_TOLERANCE
             < self._sim.geodesic_distance(
-                point, [point[0], point[1] + 0.1, point[2]]
+                point,
+                [
+                    point[0],
+                    point[1] + NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE,
+                    point[2],
+                ],
             )
-            < 0.11
+            < (
+                NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE
+                + NAVIGABLE_POINT_TOLERANCE
+            )
         )
 
     def get_original_map(self, episode):
@@ -506,7 +517,9 @@ class TopDownMap(habitat.Measure):
                 self._coordinate_max,
                 self._map_resolution,
             )
-            point_padding = 2 * int(np.ceil(self._map_resolution[0] / 1250))
+            point_padding = 2 * int(
+                np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+            )
             top_down_map[
                 s_x - point_padding : s_x + point_padding + 1,
                 s_y - point_padding : s_y + point_padding + 1,
@@ -572,7 +585,9 @@ class TopDownMap(habitat.Measure):
         )
         color = int(color)
 
-        thickness = int(np.round(self._map_resolution[0] / 625))
+        thickness = int(
+            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+        )
         cv2.line(
             self._top_down_map,
             self._previous_xy_location,
