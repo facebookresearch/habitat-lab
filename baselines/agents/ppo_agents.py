@@ -60,12 +60,17 @@ class PPOAgent(Agent):
 
         action_spaces = Discrete(4)
 
-        self.device = torch.device("cuda:{}".format(config.PTH_GPU_ID))
+        self.device = (
+            torch.device("cuda:{}".format(config.PTH_GPU_ID))
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
         self.hidden_size = config.HIDDEN_SIZE
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)
-        torch.backends.cudnn.deterministic = True
+        if torch.cuda.is_available():
+            torch.backends.cudnn.deterministic = True
 
         self.actor_critic = Policy(
             observation_space=observation_spaces,

@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
+import quaternion
 
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
@@ -33,6 +34,21 @@ def quaternion_to_rotation(q_r, q_i, q_j, q_k):
         dtype=np.float32,
     )
     return rotation_mat
+
+
+def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
+    r"""Rotates a vector by a quaternion
+
+    Args:
+        quaternion: The quaternion to rotate by
+        v: The vector to rotate
+
+    Returns:
+        np.array: The rotated vector
+    """
+    vq = np.quaternion(0, 0, 0, 0)
+    vq.imag = v
+    return (quat * vq * quat.inverse()).imag
 
 
 def cartesian_to_polar(x, y):

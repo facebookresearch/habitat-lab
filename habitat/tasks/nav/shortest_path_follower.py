@@ -4,7 +4,7 @@ import habitat_sim
 import numpy as np
 
 from habitat.sims.habitat_simulator import HabitatSim
-from habitat.sims.habitat_simulator import SIM_NAME_TO_ACTION, SimulatorActions
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_two_vectors,
@@ -16,7 +16,7 @@ EPSILON = 1e-6
 
 
 def action_to_one_hot(action: int) -> np.array:
-    one_hot = np.zeros(len(SIM_NAME_TO_ACTION), dtype=np.float32)
+    one_hot = np.zeros(len(SimulatorActions), dtype=np.float32)
     one_hot[action] = 1
     return one_hot
 
@@ -59,7 +59,7 @@ class ShortestPathFollower:
         self, action: SimulatorActions
     ) -> Union[SimulatorActions, np.array]:
         if self._return_one_hot:
-            return action_to_one_hot(SIM_NAME_TO_ACTION[action.value])
+            return action_to_one_hot(action.value)
         else:
             return action
 
@@ -82,22 +82,17 @@ class ShortestPathFollower:
         self, grad_dir: np.quaternion
     ) -> Union[SimulatorActions, np.array]:
         current_state = self._sim.get_agent_state()
-        alpha = angle_between_quaternions(
-            grad_dir, quaternion_xyzw_to_wxyz(current_state.rotation)
-        )
+        alpha = angle_between_quaternions(grad_dir, current_state.rotation)
         if alpha <= np.deg2rad(self._sim.config.TURN_ANGLE) + EPSILON:
             return self._get_return_value(SimulatorActions.FORWARD)
         else:
-            sim_action = SIM_NAME_TO_ACTION[SimulatorActions.LEFT.value]
+            sim_action = SimulatorActions.LEFT.value
             self._sim.step(sim_action)
             best_turn = (
                 SimulatorActions.LEFT
                 if (
                     angle_between_quaternions(
-                        grad_dir,
-                        quaternion_xyzw_to_wxyz(
-                            self._sim.get_agent_state().rotation
-                        ),
+                        grad_dir, self._sim.get_agent_state().rotation
                     )
                     < alpha
                 )
@@ -145,7 +140,7 @@ class ShortestPathFollower:
             best_geodesic_delta = -2 * self._max_delta
             best_rotation = current_rotation
             for _ in range(0, 360, self._sim.config.TURN_ANGLE):
-                sim_action = SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
+                sim_action = SimulatorActions.FORWARD.value
                 self._sim.step(sim_action)
                 new_delta = current_dist - self._geo_dist(goal_pos)
 
@@ -169,12 +164,12 @@ class ShortestPathFollower:
                     reset_sensors=False,
                 )
 
-                sim_action = SIM_NAME_TO_ACTION[SimulatorActions.LEFT.value]
+                sim_action = SimulatorActions.LEFT.value
                 self._sim.step(sim_action)
 
             self._reset_agent_state(current_state)
 
-            max_grad_dir = quaternion_xyzw_to_wxyz(best_rotation)
+            max_grad_dir = best_rotation
 
         return max_grad_dir
 
