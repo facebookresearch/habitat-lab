@@ -69,7 +69,7 @@ class Dataset(Generic[T]):
         Returns:
             unique scene ids present in the dataset
         """
-        return list({episode.scene_id for episode in self.episodes})
+        return sorted(list({episode.scene_id for episode in self.episodes}))
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
         """
@@ -104,26 +104,34 @@ class Dataset(Generic[T]):
     def from_json(self, json_str: str) -> None:
         raise NotImplementedError
 
-    def filter_episodes(self, filter_fn: Callable[[Episode], bool]):
+    def filter_episodes(
+        self, filter_fn: Callable[[Episode], bool]
+    ) -> "Dataset":
         """
+        Returns a new dataset with only the filtered episodes from the original
+        dataset.
         Args:
-            filter_fn: Funcion used to filter the episodes.
+            filter_fn: Function used to filter the episodes.
+        Returns:
+            The new dataset.
         """
         new_episodes = []
         for episode in self.episodes:
             if filter_fn(episode):
                 new_episodes.append(episode)
-        self.episodes = new_episodes
+        new_dataset = copy.copy(self)
+        new_dataset.episodes = new_episodes
+        return new_dataset
 
     def get_splits(
         self,
         num_splits: int,
         max_episodes_per_split: Optional[int] = None,
-        remove_unused_episodes: bool = True,
+        remove_unused_episodes: bool = False,
     ) -> List["Dataset"]:
         """
         Returns a list of new datasets, each with a subset of the original
-            episodes. All splits will have the same number of episodes.
+        episodes. All splits will have the same number of episodes.
         Args:
             num_splits: The number of splits to create.
             max_episodes_per_split: If provided, each split will have up to this
@@ -187,9 +195,10 @@ class Dataset(Generic[T]):
     def get_uneven_splits(self, num_splits):
         """
         Returns a list of new datasets, each with a subset of the original
-            episodes. The last dataset may have fewer episodes than the others.
-            This is especially useful for splitting over validation/test
-            datasets.
+        episodes. The last dataset may have fewer episodes than the others.
+        This is especially useful for splitting over validation/test datasets
+        in order to make sure that all episodes are copied but none are
+        duplicated.
         Args:
             num_splits: The number of splits to create.
         Returns:
