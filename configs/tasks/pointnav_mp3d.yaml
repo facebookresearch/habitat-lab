@@ -2,13 +2,16 @@ ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
 SIMULATOR:
   AGENT_0:
-    SENSORS: ['RGB_SENSOR']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
   RGB_SENSOR:
     WIDTH: 256
     HEIGHT: 256
   DEPTH_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+  SEMANTIC_SENSOR:
     WIDTH: 256
     HEIGHT: 256
 TASK:
@@ -24,6 +27,6 @@ TASK:
     SUCCESS_DISTANCE: 0.2
 DATASET:
   TYPE: PointNav-v1
-  SPLIT: train
+  SPLIT: val 
   POINTNAVV1:
-    DATA_PATH: data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz
+    DATA_PATH: /private/home/bhavanajain/habitat-notebooks/habitat-api/data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz
