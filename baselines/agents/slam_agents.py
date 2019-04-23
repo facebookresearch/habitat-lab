@@ -9,9 +9,7 @@ from math import pi
 import torch.nn.functional as F
 import orbslam2
 import habitat
-from baselines.slambased.utils import (
-    generate_2dgrid,
-)
+from baselines.slambased.utils import generate_2dgrid
 from baselines.slambased.reprojection import (
     homogenize_p,
     get_distance,
@@ -19,14 +17,12 @@ from baselines.slambased.reprojection import (
     get_direction,
     habitat_goalpos_to_mapgoal_pos,
     planned_path2tps,
-    angle_to_pi_2_minus_pi_2
+    angle_to_pi_2_minus_pi_2,
 )
 from baselines.slambased.reprojection import (
-    angle_to_pi_2_minus_pi_2 as norm_ang
+    angle_to_pi_2_minus_pi_2 as norm_ang,
 )
-from habitat.sims.habitat_simulator import (
-    SimulatorActions,
-)
+from habitat.sims.habitat_simulator import SimulatorActions
 from baselines.slambased.mappers import DirectDepthMapper
 from baselines.slambased.path_planners import DifferentiableStarPlanner
 
@@ -38,27 +34,34 @@ from baselines.slambased.monodepth import MonoDepthEstimator
 # https://sumit-ghosh.com/articles/python-download-progress-bar/
 import sys
 import requests
+
+
 def download(url, filename):
-    with open(filename, 'wb') as f:
+    with open(filename, "wb") as f:
         response = requests.get(url, stream=True)
-        total = response.headers.get('content-length')
+        total = response.headers.get("content-length")
         if total is None:
             f.write(response.content)
         else:
             downloaded = 0
             total = int(total)
-            for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
+            for data in response.iter_content(
+                chunk_size=max(int(total / 1000), 1024 * 1024)
+            ):
                 downloaded += len(data)
                 f.write(data)
-                done = int(50*downloaded/total)
-                sys.stdout.write('\r[{}{}]'.format('█' * done, '.' * (50-done)))
+                done = int(50 * downloaded / total)
+                sys.stdout.write(
+                    "\r[{}{}]".format("█" * done, "." * (50 - done))
+                )
                 sys.stdout.flush()
-    sys.stdout.write('\n')
+    sys.stdout.write("\n")
 
 
-def ResizePIL2(np_img, size = 256):
+def ResizePIL2(np_img, size=256):
     im1 = PIL.Image.fromarray(np_img)
-    return np.array(im1.resize((size,size)))
+    return np.array(im1.resize((size, size)))
+
 
 def make_good_config_for_orbslam2(config):
     config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
@@ -66,21 +69,27 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.BASELINE.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[1]
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
-    config.BASELINE.ORBSLAM2.MIN_PTS_IN_OBSTACLE = config.SIMULATOR.DEPTH_SENSOR.WIDTH/2.0
+    config.BASELINE.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
+        1
+    ]
+    config.BASELINE.ORBSLAM2.H_OBSTACLE_MIN = (
+        0.3 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    )
+    config.BASELINE.ORBSLAM2.H_OBSTACLE_MAX = (
+        1.0 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    )
+    config.BASELINE.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
+        config.SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
+    )
     return
+
 
 class RandomAgent(object):
     r"""Simplest agent, which returns random actions,
     until reach the goal
     """
 
-    def __init__(
-        self,
-        config
-    ):
+    def __init__(self, config):
         super(RandomAgent, self).__init__()
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
@@ -112,10 +121,7 @@ class RandomAgent(object):
 
 
 class BlindAgent(RandomAgent):
-    def __init__(
-        self,
-        config
-    ):
+    def __init__(self, config):
         super(BlindAgent, self).__init__()
         self.pos_th = config.DIST_TO_STOP
         self.angle_th = config.ANGLE_TH
@@ -158,11 +164,7 @@ class BlindAgent(RandomAgent):
 
 
 class ORBSLAM2Agent(RandomAgent):
-    def __init__(
-        self,
-        config,
-        device=torch.device("cuda:0"),
-    ):
+    def __init__(self, config, device=torch.device("cuda:0")):
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.slam_vocab_path = config.SLAM_VOCAB_PATH
@@ -184,19 +186,21 @@ class ORBSLAM2Agent(RandomAgent):
         self.depth_denorm = config.DEPTH_DENORM
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
-                      camera_height = config.CAMERA_HEIGHT,
-                      near_th = config.D_OBSTACLE_MIN,
-                      far_th = config.D_OBSTACLE_MAX,
-                      h_min = config.H_OBSTACLE_MIN,
-                      h_max = config.H_OBSTACLE_MAX,
-                      map_size = config.MAP_SIZE,
-                      map_cell_size = config.MAP_CELL_SIZE,
-                      device = device)
+            camera_height=config.CAMERA_HEIGHT,
+            near_th=config.D_OBSTACLE_MIN,
+            far_th=config.D_OBSTACLE_MAX,
+            h_min=config.H_OBSTACLE_MIN,
+            h_max=config.H_OBSTACLE_MAX,
+            map_size=config.MAP_SIZE,
+            map_cell_size=config.MAP_CELL_SIZE,
+            device=device,
+        )
         self.planner = DifferentiableStarPlanner(
-                      max_steps = config.PLANNER_MAX_STEPS,
-                      preprocess = config.PREPROCESS_MAP,
-                      beta = config.BETA,
-                      device = device)
+            max_steps=config.PLANNER_MAX_STEPS,
+            preprocess=config.PREPROCESS_MAP,
+            beta=config.BETA,
+            device=device,
+        )
         self.slam_to_world = 1.0
         self.timestep = 0.1
         self.timing = False
@@ -230,9 +234,7 @@ class ORBSLAM2Agent(RandomAgent):
         return
 
     def update_internal_state(self, habitat_observation):
-        super(ORBSLAM2Agent, self).update_internal_state(
-            habitat_observation
-        )
+        super(ORBSLAM2Agent, self).update_internal_state(habitat_observation)
         self.cur_time += self.timestep
         rgb, depth = self.rgb_d_from_observation(habitat_observation)
         t = time.time()
@@ -263,9 +265,7 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if (
-                    self.action_history[-1] == SimulatorActions.FORWARD.value
-                ):
+                if self.action_history[-1] == SimulatorActions.FORWARD.value:
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
@@ -288,10 +288,9 @@ class ORBSLAM2Agent(RandomAgent):
 
     def init_map2d(self):
         return (
-            torch.zeros(1,
-                        1,
-                        self.map_size_in_cells(),
-                        self.map_size_in_cells())
+            torch.zeros(
+                1, 1, self.map_size_in_cells(), self.map_size_in_cells()
+            )
             .float()
             .to(self.device)
         )
@@ -420,9 +419,7 @@ class ORBSLAM2Agent(RandomAgent):
         rgb = habitat_observation["rgb"]
         depth = None
         if "depth" in habitat_observation:
-            depth = (
-                self.depth_denorm * habitat_observation["depth"]
-            )  
+            depth = self.depth_denorm * habitat_observation["depth"]
         return rgb, depth
 
     def prev_plan_is_not_valid(self):
@@ -518,12 +515,13 @@ class ORBSLAM2Agent(RandomAgent):
         command = self.planner_prediction_to_command(self.waypointPose6D)
         return command
 
+
 class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
     def __init__(
         self,
         config,
         device=torch.device("cuda:0"),
-        monocheckpoint = 'baselines/slambased/data/mp3d_resnet50.pth',
+        monocheckpoint="baselines/slambased/data/mp3d_resnet50.pth",
     ):
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
@@ -546,29 +544,31 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         self.depth_denorm = config.DEPTH_DENORM
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
-                      camera_height = config.CAMERA_HEIGHT,
-                      near_th = config.D_OBSTACLE_MIN,
-                      far_th = config.D_OBSTACLE_MAX,
-                      h_min = config.H_OBSTACLE_MIN,
-                      h_max = config.H_OBSTACLE_MAX,
-                      map_size = config.MAP_SIZE,
-                      map_cell_size = config.MAP_CELL_SIZE,
-                      device = device)
+            camera_height=config.CAMERA_HEIGHT,
+            near_th=config.D_OBSTACLE_MIN,
+            far_th=config.D_OBSTACLE_MAX,
+            h_min=config.H_OBSTACLE_MIN,
+            h_max=config.H_OBSTACLE_MAX,
+            map_size=config.MAP_SIZE,
+            map_cell_size=config.MAP_CELL_SIZE,
+            device=device,
+        )
         self.planner = DifferentiableStarPlanner(
-                      max_steps = config.PLANNER_MAX_STEPS,
-                      preprocess = config.PREPROCESS_MAP,
-                      beta = config.BETA,
-                      device = device)
+            max_steps=config.PLANNER_MAX_STEPS,
+            preprocess=config.PREPROCESS_MAP,
+            beta=config.BETA,
+            device=device,
+        )
         self.slam_to_world = 1.0
         self.timestep = 0.1
         self.timing = False
         self.checkpoint = monocheckpoint
         if not os.path.isfile(self.checkpoint):
-            mp3d_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/mp3d_ft_monodepth_resnet50.pth'
-            suncg_me_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth'
-            suncg_mf_url = 'http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth'
+            mp3d_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/mp3d_ft_monodepth_resnet50.pth"
+            suncg_me_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth"
+            suncg_mf_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth"
             url = mp3d_url
-            print ("No monodepth checkpoint found. Downloading...", url)
+            print("No monodepth checkpoint found. Downloading...", url)
             download(url, self.checkpoint)
         self.monodepth = MonoDepthEstimator(self.checkpoint)
         self.reset()
@@ -576,7 +576,12 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
 
     def rgb_d_from_observation(self, habitat_observation):
         rgb = habitat_observation["rgb"]
-        depth = ResizePIL2(self.monodepth.compute_depth(PIL.Image.fromarray(rgb).resize((320,320))), 256)#/1.75
+        depth = ResizePIL2(
+            self.monodepth.compute_depth(
+                PIL.Image.fromarray(rgb).resize((320, 320))
+            ),
+            256,
+        )  # /1.75
         depth[depth > 3.0] = 0
         depth[depth < 0.1] = 0
         return rgb, np.array(depth).astype(np.float32)
@@ -587,9 +592,7 @@ def main():
     parser.add_argument(
         "--agent-type",
         default="orbslam2-rgbd",
-        choices=["blind",
-                 "orbslam2-rgbd",
-                 "orbslam2-rgb-monod"],
+        choices=["blind", "orbslam2-rgbd", "orbslam2-rgb-monod"],
     )
     parser.add_argument(
         "--task-config", type=str, default="tasks/pointnav_rgbd.yaml"
@@ -602,14 +605,14 @@ def main():
     config.BASELINE = agent_config.BASELINE
     make_good_config_for_orbslam2(config)
 
-    if args.agent_type == 'blind':
+    if args.agent_type == "blind":
         agent = BlindAgent(config.BASELINE.ORBSLAM2)
-    elif args.agent_type == 'orbslam2-rgbd':
+    elif args.agent_type == "orbslam2-rgbd":
         agent = ORBSLAM2Agent(config.BASELINE.ORBSLAM2)
-    elif args.agent_type == 'orbslam2-rgb-monod':
+    elif args.agent_type == "orbslam2-rgb-monod":
         agent = ORBSLAM2MonodepthAgent(config.BASELINE.ORBSLAM2)
     else:
-        raise ValueError(args.agent_type, 'is unknown type of agent')
+        raise ValueError(args.agent_type, "is unknown type of agent")
     benchmark = habitat.Benchmark(args.task_config)
     metrics = benchmark.evaluate(agent)
     for k, v in metrics.items():
@@ -618,4 +621,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
