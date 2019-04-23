@@ -420,7 +420,7 @@ class HabitatSim(habitat.Simulator):
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
-        
+
         state.sensor_states = dict()
 
         agent.set_state(state, reset_sensors)
