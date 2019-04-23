@@ -131,9 +131,7 @@ class DifferentiableStarPlanner(nn.Module):
 
     def preprocess_obstacle_map(self, obstacle_map):
         if self.preprocess:
-            return self.preprocessNet(
-                obstacle_map
-            )
+            return self.preprocessNet(obstacle_map)
         return obstacle_map
 
     def coords2grid(self, node_coords, h, w):
@@ -144,9 +142,7 @@ class DifferentiableStarPlanner(nn.Module):
         return grid.view(1, 1, 1, 2).flip(3)
 
     def init_closelistmap(self):
-        return torch.zeros_like(
-            self.start_map
-        ).float()
+        return torch.zeros_like(self.start_map).float()
 
     def init_openlistmap(self):
         return self.start_map.clone()
@@ -196,9 +192,7 @@ class DifferentiableStarPlanner(nn.Module):
         self.height = obstacles.size(2)
         self.width = obstacles.size(3)
         m, goal_idx = torch.max(self.goal_map.view(-1), 0)
-        c_map = self.calculate_local_path_costs(
-            non_obstacle_cost_map
-        )
+        c_map = self.calculate_local_path_costs(non_obstacle_cost_map)
         # c_map might be non persistent in map update
         self.g_map = self.init_g_map()
         self.close_list_map = self.init_closelistmap()
@@ -249,7 +243,7 @@ class DifferentiableStarPlanner(nn.Module):
                 and (xmax + 1 < self.width)
             ):
                 n2c = self.neights2channels(
-                    self.g_map[:, :, ymin - 1:ymax + 1, xmin - 1:xmax + 1]
+                    self.g_map[:, :, ymin - 1 : ymax + 1, xmin - 1 : xmax + 1]
                 )
                 self.g_map[:, :, ymin:ymax, xmin:xmax] = torch.min(
                     self.g_map[:, :, ymin:ymax, xmin:xmax].clone(),
@@ -264,7 +258,7 @@ class DifferentiableStarPlanner(nn.Module):
                 self.open_list_map[:, :, ymin:ymax, xmin:xmax] = F.relu(
                     F.max_pool2d(
                         self.open_list_map[
-                            :, :, ymin - 1:ymax + 1, xmin - 1:xmax + 1
+                            :, :, ymin - 1 : ymax + 1, xmin - 1 : xmax + 1
                         ],
                         3,
                         stride=1,
@@ -359,59 +353,60 @@ class DifferentiableStarPlanner(nn.Module):
             )
             ** 2
         )
-        out = torch.cat([
+        out = torch.cat(
+            [
                 # Order in from up to down, from left to right
                 # hopefully same as in PyTorch
                 torch.sqrt(left_diff_sq + up_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
                     obstacles_pd[:, :, 0:h, 0:w],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(left_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 0:h, 1:w + 1],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 0:h, 1 : w + 1],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(left_diff_sq + down_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 2:h + 2, 0:w],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 2 : h + 2, 0:w],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(up_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 0:h, 1:w + 1],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 0:h, 1 : w + 1],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 0 * right_diff_sq
                 + self.ob_cost
-                * obstacles_pd[:, :, 1:h + 1, 1:w + 1],  # current center
+                * obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],  # current center
                 torch.sqrt(down_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 2:h + 2, 1:w + 1],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 2 : h + 2, 1 : w + 1],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(right_diff_sq + up_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 0:h, 2:w + 2],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 0:h, 2 : w + 2],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(right_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 1:h + 1, 2:w + 2],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 1 : h + 1, 2 : w + 2],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
                 torch.sqrt(right_diff_sq + down_diff_sq + self.eps)
                 + self.ob_cost
                 * torch.max(
-                    obstacles_pd[:, :, 2:h + 2, 2:w + 2],
-                    obstacles_pd[:, :, 1:h + 1, 1:w + 1],
+                    obstacles_pd[:, :, 2 : h + 2, 2 : w + 2],
+                    obstacles_pd[:, :, 1 : h + 1, 1 : w + 1],
                 ),
             ],
             dim=1,
@@ -470,12 +465,8 @@ class DifferentiableStarPlanner(nn.Module):
 
     def reconstruct_path(self):
         out_path = []
-        goal_coords = (
-            self.goal_coords.cpu()
-        )
-        start_coords = (
-            self.start_coords.cpu()
-        )
+        goal_coords = self.goal_coords.cpu()
+        start_coords = self.start_coords.cpu()
 
         cost = self.g_map[:, :, f2ind(goal_coords, 0), f2ind(goal_coords, 1)]
         # Traversing
@@ -500,7 +491,7 @@ class DifferentiableStarPlanner(nn.Module):
             if torch.norm(node_coords - out_path[-1], 2).item() < 0.3:
                 y = node_coords.flatten()[0].long()
                 x = node_coords.flatten()[1].long()
-                print(self.g_map[0, 0, y - 2:y + 3, x - 2:x + 3])
+                print(self.g_map[0, 0, y - 2 : y + 3, x - 2 : x + 3])
                 print("loop in out_path", node_coords)
                 raise ValueError("loop in out_path")
                 return out_path, cost
