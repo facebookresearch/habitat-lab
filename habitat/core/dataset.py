@@ -131,10 +131,12 @@ class Dataset(Generic[T]):
         max_episodes_per_split: Optional[int] = None,
         remove_unused_episodes: bool = False,
         collate_scene_ids: bool = True,
+        sort_by_episode_id: bool = False,
     ) -> List["Dataset"]:
         """
         Returns a list of new datasets, each with a subset of the original
-        episodes. All splits will have the same number of episodes.
+        episodes. All splits will have the same number of episodes, but no
+        episodes will be duplicated.
         Args:
             num_splits: The number of splits to create.
             max_episodes_per_split: If provided, each split will have up to
@@ -149,6 +151,8 @@ class Dataset(Generic[T]):
                 next to each other. This saves on overhead of switching between
                 scenes, but means multiple sequential episodes will be related
                 to each other because they will be in the same scene.
+            sort_by_episode_id: If true, sequences are sorted by their episode
+                ID in the returned splits.
         Returns:
             A list of new datasets, each with their own subset of episodes.
         """
@@ -163,49 +167,32 @@ class Dataset(Generic[T]):
         max_episodes_per_split = min(
             max_episodes_per_split, (len(self.episodes) // num_splits)
         )
-        if num_splits * max_episodes_per_split == len(self.episodes):
-            # Special case for exact size match
-            stride = len(self.episodes) // num_splits
-            for ii, split in enumerate(
-                range(0, len(self.episodes), stride)[:num_splits]
-            ):
-                new_dataset = copy.copy(self)  # Creates a shallow copy
-                new_dataset.episodes = new_dataset.episodes[
-                    split : split + stride
-                ].copy()
-                if collate_scene_ids:
-                    new_dataset.episodes.sort(key=lambda ep: ep.scene_id)
-                else:
-                    random.shuffle(new_dataset.episodes)
-                new_datasets.append(new_dataset)
-            new_episodes = self.episodes
-        else:
-            rand_items = np.random.choice(
-                len(self.episodes),
-                num_splits * max_episodes_per_split,
-                replace=False,
-            )
-            if collate_scene_ids:
-                scene_ids = {}
-                for rand_ind in rand_items:
-                    scene = self.episodes[rand_ind].scene_id
-                    if scene not in scene_ids:
-                        scene_ids[scene] = []
-                    scene_ids[scene].append(rand_ind)
-                rand_items = []
-                list(map(rand_items.extend, scene_ids.values()))
-            ep_ind = 0
-            new_episodes = []
-            for nn in range(num_splits):
-                new_dataset = copy.copy(self)  # Creates a shallow copy
-                new_dataset.episodes = []
-                new_datasets.append(new_dataset)
-                for ii in range(max_episodes_per_split):
-                    new_dataset.episodes.append(
-                        self.episodes[rand_items[ep_ind]]
-                    )
-                    ep_ind += 1
-                new_episodes.extend(new_dataset.episodes)
+        rand_items = np.random.choice(
+            len(self.episodes),
+            num_splits * max_episodes_per_split,
+            replace=False,
+        )
+        if collate_scene_ids:
+            scene_ids = {}
+            for rand_ind in rand_items:
+                scene = self.episodes[rand_ind].scene_id
+                if scene not in scene_ids:
+                    scene_ids[scene] = []
+                scene_ids[scene].append(rand_ind)
+            rand_items = []
+            list(map(rand_items.extend, scene_ids.values()))
+        ep_ind = 0
+        new_episodes = []
+        for nn in range(num_splits):
+            new_dataset = copy.copy(self)  # Creates a shallow copy
+            new_dataset.episodes = []
+            new_datasets.append(new_dataset)
+            for ii in range(max_episodes_per_split):
+                new_dataset.episodes.append(self.episodes[rand_items[ep_ind]])
+                ep_ind += 1
+            if sort_by_episode_id:
+                new_dataset.episodes.sort(key=lambda ep: ep.episode_id)
+            new_episodes.extend(new_dataset.episodes)
         if remove_unused_episodes:
             self.episodes = new_episodes
         return new_datasets
@@ -225,7 +212,6 @@ class Dataset(Generic[T]):
         assert (
             len(self.episodes) >= num_splits
         ), "Not enough episodes to create this many splits."
-        num_splits = min(num_splits, len(self.episodes))
         new_datasets = []
         num_episodes = len(self.episodes)
         stride = int(np.ceil(num_episodes * 1.0 / num_splits))

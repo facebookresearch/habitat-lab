@@ -87,7 +87,7 @@ def test_get_splits_max_episodes_specified():
     assert len(dataset.episodes) == 30
 
 
-def test_split_collate_scenes():
+def test_get_splits_collate_scenes():
     dataset = _construct_dataset(10000)
     splits = dataset.get_splits(10, 23, collate_scene_ids=True)
     assert len(splits) == 10
@@ -141,6 +141,17 @@ def test_split_collate_scenes():
                     found_not_collated = True
                     break
         assert found_not_collated
+
+
+def test_get_splits_sort_by_episode_id():
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, 23, sort_by_episode_id=True)
+    assert len(splits) == 10
+    for split in splits:
+        assert len(split.episodes) == 23
+        for ii, ep in enumerate(split.episodes):
+            if ii > 0:
+                assert ep.episode_id >= split.episodes[ii - 1].episode_id
 
 
 def test_get_uneven_splits():
