@@ -420,6 +420,13 @@ class HabitatSim(habitat.Simulator):
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
+
+        # NB: The agent state also contains the sensor states in _absolute_ coordinates.
+        # In order to set the agent's body to a specific location and have the sensors follow,
+        # we must not provide any state for the sensors.
+        # This will cause them to follow the agent's body
+        state.sensor_states = dict()
+
         agent.set_state(state, reset_sensors)
 
         self._check_agent_position(position, agent_id)

@@ -28,8 +28,6 @@ from habitat.tasks.utils import (
 from habitat.utils.visualizations import maps
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
-NAVIGABLE_POINT_TOLERANCE: float = 0.01
-NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE: float = 0.1
 MAP_THICKNESS_SCALAR: int = 1250
 
 
@@ -455,7 +453,7 @@ class TopDownMap(habitat.Measure):
         self._draw_source_and_target = config.DRAW_SOURCE_AND_TARGET
         self._draw_border = config.DRAW_BORDER
         self._grid_delta = 3
-        self._step_count = 0
+        self._step_count = None
         self._max_steps = config.MAX_EPISODE_STEPS
         self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
         self._num_samples = 20000
@@ -476,21 +474,7 @@ class TopDownMap(habitat.Measure):
         return "top_down_map"
 
     def _check_valid_nav_point(self, point: List[float]):
-        return (
-            NAVIGABLE_POINT_TOLERANCE
-            < self._sim.geodesic_distance(
-                point,
-                [
-                    point[0],
-                    point[1] + NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE,
-                    point[2],
-                ],
-            )
-            < (
-                NAVIGABLE_POINT_HEIGHT_CHECK_DISTANCE
-                + NAVIGABLE_POINT_TOLERANCE
-            )
-        )
+        self._sim.is_navigable(point)
 
     def get_original_map(self, episode):
         top_down_map = maps.get_topdown_map(
@@ -541,6 +525,7 @@ class TopDownMap(habitat.Measure):
         return top_down_map
 
     def reset_metric(self, episode):
+        self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map(episode)
         agent_position = self._sim.get_agent_state().position
