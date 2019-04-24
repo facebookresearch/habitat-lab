@@ -6,7 +6,9 @@
 
 import copy
 import json
+import random
 from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
+
 import numpy as np
 
 
@@ -128,20 +130,25 @@ class Dataset(Generic[T]):
         num_splits: int,
         max_episodes_per_split: Optional[int] = None,
         remove_unused_episodes: bool = False,
+        collate_scene_ids: bool = True,
     ) -> List["Dataset"]:
         """
         Returns a list of new datasets, each with a subset of the original
         episodes. All splits will have the same number of episodes.
         Args:
             num_splits: The number of splits to create.
-            max_episodes_per_split: If provided, each split will have up to this
-                many episodes. If it is not provided, each dataset will have
-                len(original_dataset.episodes) // num_splits episodes. If
+            max_episodes_per_split: If provided, each split will have up to
+                this many episodes. If it is not provided, each dataset will
+                have len(original_dataset.episodes) // num_splits episodes. If
                 max_episodes_per_split is provided and is larger than this
                 value, it will be capped to this value.
             remove_unused_episodes: Once the splits are created, the extra
-                episodes will be destroyed from the original dataset. This saves
-                 memory for large datasets.
+                episodes will be destroyed from the original dataset. This
+                saves memory for large datasets.
+            collate_scene_ids: If true, episodes with the same scene id are
+                next to each other. This saves on overhead of switching between
+                scenes, but means multiple sequential episodes will be related
+                to each other because they will be in the same scene.
         Returns:
             A list of new datasets, each with their own subset of episodes.
         """
@@ -166,6 +173,10 @@ class Dataset(Generic[T]):
                 new_dataset.episodes = new_dataset.episodes[
                     split : split + stride
                 ].copy()
+                if collate_scene_ids:
+                    new_dataset.episodes.sort(key=lambda ep: ep.scene_id)
+                else:
+                    random.shuffle(new_dataset.episodes)
                 new_datasets.append(new_dataset)
             new_episodes = self.episodes
         else:
@@ -174,8 +185,15 @@ class Dataset(Generic[T]):
                 num_splits * max_episodes_per_split,
                 replace=False,
             )
-            # Sort it so episode scene doesn't switch as often.
-            rand_items.sort()
+            if collate_scene_ids:
+                scene_ids = {}
+                for rand_ind in rand_items:
+                    scene = self.episodes[rand_ind].scene_id
+                    if scene not in scene_ids:
+                        scene_ids[scene] = []
+                    scene_ids[scene].append(rand_ind)
+                rand_items = []
+                list(map(rand_items.extend, scene_ids.values()))
             ep_ind = 0
             new_episodes = []
             for nn in range(num_splits):

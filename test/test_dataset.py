@@ -87,6 +87,62 @@ def test_get_splits_max_episodes_specified():
     assert len(dataset.episodes) == 30
 
 
+def test_split_collate_scenes():
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, 23, collate_scene_ids=True)
+    assert len(splits) == 10
+    for split in splits:
+        assert len(split.episodes) == 23
+        prev_ids = set()
+        for ii, ep in enumerate(split.episodes):
+            if ep.scene_id not in prev_ids:
+                prev_ids.add(ep.scene_id)
+            else:
+                assert split.episodes[ii - 1].scene_id == ep.scene_id
+
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, 200, collate_scene_ids=False)
+    assert len(splits) == 10
+    for split in splits:
+        prev_ids = set()
+        found_not_collated = False
+        for ii, ep in enumerate(split.episodes):
+            if ep.scene_id not in prev_ids:
+                prev_ids.add(ep.scene_id)
+            else:
+                if split.episodes[ii - 1].scene_id != ep.scene_id:
+                    found_not_collated = True
+                    break
+        assert found_not_collated
+
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, collate_scene_ids=True)
+    assert len(splits) == 10
+    for split in splits:
+        assert len(split.episodes) == 1000
+        prev_ids = set()
+        for ii, ep in enumerate(split.episodes):
+            if ep.scene_id not in prev_ids:
+                prev_ids.add(ep.scene_id)
+            else:
+                assert split.episodes[ii - 1].scene_id == ep.scene_id
+
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, collate_scene_ids=False)
+    assert len(splits) == 10
+    for split in splits:
+        prev_ids = set()
+        found_not_collated = False
+        for ii, ep in enumerate(split.episodes):
+            if ep.scene_id not in prev_ids:
+                prev_ids.add(ep.scene_id)
+            else:
+                if split.episodes[ii - 1].scene_id != ep.scene_id:
+                    found_not_collated = True
+                    break
+        assert found_not_collated
+
+
 def test_get_uneven_splits():
     dataset = _construct_dataset(100)
     splits = dataset.get_uneven_splits(9)
