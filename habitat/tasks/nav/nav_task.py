@@ -6,9 +6,11 @@
 
 from typing import Any, List, Optional, Type
 
-import habitat
+import cv2
 import numpy as np
 from gym import spaces
+
+import habitat
 from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.embodied_task import Measurements
@@ -23,8 +25,10 @@ from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_rotate_vector,
 )
+from habitat.utils.visualizations import maps
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
+MAP_THICKNESS_SCALAR: int = 1250
 
 
 def merge_sim_episode_config(
@@ -204,6 +208,78 @@ class PointGoalSensor(habitat.Sensor):
         return direction_vector_agent
 
 
+class StaticPointGoalSensor(habitat.Sensor):
+    """
+    Sensor for PointGoal observations which are used in the StaticPointNav
+    task. For the agent in simulator the forward direction is along negative-z.
+    In polar coordinate format the angle returned is azimuth to the goal.
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the PointGoal sensor. Can contain field for
+            GOAL_FORMAT which can be used to specify the format in which
+            the pointgoal is specified. Current options for goal format are
+            cartesian and polar.
+    Attributes:
+        _goal_format: format for specifying the goal which can be done
+            in cartesian or polar coordinates.
+    """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._sim = sim
+        self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
+        assert self._goal_format in ["CARTESIAN", "POLAR"]
+
+        super().__init__(sim, config)
+        self._initial_vector = None
+        self.current_episode_id = None
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "static_pointgoal"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.STATIC_GOAL_VECTOR
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        if self._goal_format == "CARTESIAN":
+            sensor_shape = (3,)
+        else:
+            sensor_shape = (2,)
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode):
+        episode_id = (episode.episode_id, episode.scene_id)
+        if self.current_episode_id != episode_id:
+            # Only compute the direction vector when a new episode is started.
+            self.current_episode_id = episode_id
+            agent_state = self._sim.get_agent_state()
+            ref_position = agent_state.position
+            rotation_world_agent = agent_state.rotation
+
+            direction_vector = (
+                np.array(episode.goals[0].position, dtype=np.float32)
+                - ref_position
+            )
+            direction_vector_agent = quaternion_rotate_vector(
+                rotation_world_agent.inverse(), direction_vector
+            )
+
+            if self._goal_format == "POLAR":
+                rho, phi = cartesian_to_polar(
+                    -direction_vector_agent[2], direction_vector_agent[0]
+                )
+                direction_vector_agent = np.array(
+                    [rho, -phi], dtype=np.float32
+                )
+
+            self._initial_vector = direction_vector_agent
+        return self._initial_vector
+
+
 class HeadingSensor(habitat.Sensor):
     """
        Sensor for observing the agent's heading in the global coordinate frame.
@@ -341,7 +417,6 @@ class Collisions(habitat.Measure):
         self._sim = sim
         self._config = config
         self._metric = None
-
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -361,6 +436,149 @@ class Collisions(habitat.Measure):
             < COLLISION_PROXIMITY_TOLERANCE
         ):
             self._metric += 1
+
+
+class TopDownMap(habitat.Measure):
+    """Top Down Map measure
+    """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._sim = sim
+        self._config = config
+        self._grid_delta = config.MAP_PADDING
+        self._step_count = None
+        self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
+        self._num_samples = config.NUM_TOPDOWN_MAP_SAMPLE_POINTS
+        self._ind_x_min = None
+        self._ind_x_max = None
+        self._ind_y_min = None
+        self._ind_y_max = None
+        self._previous_xy_location = None
+        self._coordinate_min = maps.COORDINATE_MIN
+        self._coordinate_max = maps.COORDINATE_MAX
+        self._top_down_map = None
+        self._cell_scale = (
+            self._coordinate_max - self._coordinate_min
+        ) / self._map_resolution[0]
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "top_down_map"
+
+    def _check_valid_nav_point(self, point: List[float]):
+        self._sim.is_navigable(point)
+
+    def get_original_map(self, episode):
+        top_down_map = maps.get_topdown_map(
+            self._sim,
+            self._map_resolution,
+            self._num_samples,
+            self._config.DRAW_BORDER,
+        )
+
+        range_x = np.where(np.any(top_down_map, axis=1))[0]
+        range_y = np.where(np.any(top_down_map, axis=0))[0]
+
+        self._ind_x_min = range_x[0]
+        self._ind_x_max = range_x[-1]
+        self._ind_y_min = range_y[0]
+        self._ind_y_max = range_y[-1]
+
+        if self._config.DRAW_SOURCE_AND_TARGET:
+            # mark source point
+            s_x, s_y = maps.to_grid(
+                episode.start_position[0],
+                episode.start_position[2],
+                self._coordinate_min,
+                self._coordinate_max,
+                self._map_resolution,
+            )
+            point_padding = 2 * int(
+                np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+            )
+            top_down_map[
+                s_x - point_padding : s_x + point_padding + 1,
+                s_y - point_padding : s_y + point_padding + 1,
+            ] = maps.MAP_SOURCE_POINT_INDICATOR
+
+            # mark target point
+            t_x, t_y = maps.to_grid(
+                episode.goals[0].position[0],
+                episode.goals[0].position[2],
+                self._coordinate_min,
+                self._coordinate_max,
+                self._map_resolution,
+            )
+            top_down_map[
+                t_x - point_padding : t_x + point_padding + 1,
+                t_y - point_padding : t_y + point_padding + 1,
+            ] = maps.MAP_TARGET_POINT_INDICATOR
+
+        return top_down_map
+
+    def reset_metric(self, episode):
+        self._step_count = 0
+        self._metric = None
+        self._top_down_map = self.get_original_map(episode)
+        agent_position = self._sim.get_agent_state().position
+        a_x, a_y = maps.to_grid(
+            agent_position[0],
+            agent_position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        self._previous_xy_location = (a_y, a_x)
+
+    def update_metric(self, episode, action):
+        self._step_count += 1
+        house_map, map_agent_x, map_agent_y = self.update_map(
+            self._sim.get_agent_state().position
+        )
+
+        # Rather than return the whole map which may have large empty regions,
+        # only return the occupied part (plus some padding).
+        house_map = house_map[
+            self._ind_x_min
+            - self._grid_delta : self._ind_x_max
+            + self._grid_delta,
+            self._ind_y_min
+            - self._grid_delta : self._ind_y_max
+            + self._grid_delta,
+        ]
+
+        self._metric = house_map
+
+    def update_map(self, agent_position):
+        a_x, a_y = maps.to_grid(
+            agent_position[0],
+            agent_position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        # Don't draw over the source point
+        color = (
+            min(self._step_count * 245 / self._config.MAX_EPISODE_STEPS, 245)
+            + 10
+            if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR
+            else maps.MAP_SOURCE_POINT_INDICATOR
+        )
+        color = int(color)
+
+        thickness = int(
+            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+        )
+        cv2.line(
+            self._top_down_map,
+            self._previous_xy_location,
+            (a_y, a_x),
+            color,
+            thickness=thickness,
+        )
+
+        self._previous_xy_location = (a_y, a_x)
+        return self._top_down_map, a_x, a_y
 
 
 class NavigationTask(habitat.EmbodiedTask):
