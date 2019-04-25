@@ -64,7 +64,7 @@ def test_get_splits_with_remainder():
         assert len(split.episodes) == 9
 
 
-def test_get_splits_max_episodes_specified():
+def test_get_splits_num_episodes_specified():
     dataset = _construct_dataset(100)
     splits = dataset.get_splits(10, 3, False)
     assert len(splits) == 10
@@ -73,7 +73,7 @@ def test_get_splits_max_episodes_specified():
     assert len(dataset.episodes) == 100
 
     dataset = _construct_dataset(100)
-    splits = dataset.get_splits(10, 11, False)
+    splits = dataset.get_splits(10, 10)
     assert len(splits) == 10
     for split in splits:
         assert len(split.episodes) == 10
@@ -85,6 +85,13 @@ def test_get_splits_max_episodes_specified():
     for split in splits:
         assert len(split.episodes) == 3
     assert len(dataset.episodes) == 30
+
+    dataset = _construct_dataset(100)
+    try:
+        splits = dataset.get_splits(10, 20)
+        assert False
+    except AssertionError:
+        pass
 
 
 def test_get_splits_collate_scenes():
@@ -155,7 +162,17 @@ def test_get_splits_sort_by_episode_id():
 
 
 def test_get_uneven_splits():
-    dataset = _construct_dataset(100)
-    splits = dataset.get_uneven_splits(9)
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(9, allow_uneven_splits=False)
     assert len(splits) == 9
-    assert sum([len(split.episodes) for split in splits]) == 100
+    assert sum([len(split.episodes) for split in splits]) == (10000 // 9) * 9
+
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(9, allow_uneven_splits=True)
+    assert len(splits) == 9
+    assert sum([len(split.episodes) for split in splits]) == 10000
+
+    dataset = _construct_dataset(10000)
+    splits = dataset.get_splits(10, allow_uneven_splits=True)
+    assert len(splits) == 10
+    assert sum([len(split.episodes) for split in splits]) == 10000
