@@ -26,6 +26,11 @@ COORDINATE_EPSILON = 1e-6
 COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
 COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
 
+MAP_INVALID_POINT = 0
+MAP_VALID_POINT = 1
+MAP_BORDER_INDICATOR = 2
+MAP_SOURCE_POINT_INDICATOR = 4
+MAP_TARGET_POINT_INDICATOR = 6
 
 def draw_agent(
     image: np.ndarray,
@@ -215,11 +220,11 @@ def _outline_border(top_down_map):
         top_down_map[:-1] != top_down_map[1:]
     )
 
-    top_down_map[:, :-1][left_right_block_nav] = 2
-    top_down_map[:, 1:][left_right_nav_block] = 2
+    top_down_map[:, :-1][left_right_block_nav] = MAP_BORDER_INDICATOR
+    top_down_map[:, 1:][left_right_nav_block] = MAP_BORDER_INDICATOR
 
-    top_down_map[:-1][up_down_block_nav] = 2
-    top_down_map[1:][up_down_nav_block] = 2
+    top_down_map[:-1][up_down_block_nav] = MAP_BORDER_INDICATOR
+    top_down_map[1:][up_down_nav_block] = MAP_BORDER_INDICATOR
 
 
 def get_topdown_map(
@@ -285,7 +290,7 @@ def get_topdown_map(
             valid_point = sim.is_navigable(
                 [realworld_x, start_height, realworld_y]
             )
-            top_down_map[ii, jj] = 1 if valid_point else 0
+            top_down_map[ii, jj] = (MAP_VALID_POINT if valid_point else MAP_INVALID_POINT)
 
     # Draw border if necessary
     if draw_border:

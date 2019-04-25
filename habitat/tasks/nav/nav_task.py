@@ -31,6 +31,7 @@ COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 MAP_THICKNESS_SCALAR: int = 1250
 
 
+
 def merge_sim_episode_config(
     sim_config: Config, episode: Type[Episode]
 ) -> Any:
@@ -230,7 +231,7 @@ class StaticPointGoalSensor(habitat.Sensor):
         assert self._goal_format in ["CARTESIAN", "POLAR"]
 
         super().__init__(sim, config)
-        self.initial_vector = None
+        self._initial_vector = None
         self.current_episode_id = None
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -258,32 +259,24 @@ class StaticPointGoalSensor(habitat.Sensor):
             self.current_episode_id = episode_id
             agent_state = self._sim.get_agent_state()
             ref_position = agent_state.position
-            ref_rotation = agent_state.rotation
+            rotation_world_agent = agent_state.rotation
 
             direction_vector = (
-                np.array(episode.goals[0].position, dtype=np.float32)
-                - ref_position
+                    np.array(episode.goals[0].position, dtype=np.float32)
+                    - ref_position
             )
-            rotation_world_agent = quaternion_to_rotation(
-                ref_rotation[3],
-                ref_rotation[0],
-                ref_rotation[1],
-                ref_rotation[2],
-            )
-            direction_vector_agent = np.dot(
-                rotation_world_agent.T, direction_vector
+            direction_vector_agent = quaternion_rotate_vector(
+                rotation_world_agent.inverse(), direction_vector
             )
 
             if self._goal_format == "POLAR":
                 rho, phi = cartesian_to_polar(
                     -direction_vector_agent[2], direction_vector_agent[0]
                 )
-                direction_vector_agent = np.array(
-                    [rho, -phi], dtype=np.float32
-                )
+                direction_vector_agent = np.array([rho, -phi], dtype=np.float32)
 
-            self.initial_vector = direction_vector_agent
-        return self.initial_vector
+            self._initial_vector = direction_vector_agent
+        return self._initial_vector
 
 
 class HeadingSensor(habitat.Sensor):
@@ -450,11 +443,9 @@ class TopDownMap(habitat.Measure):
 
     def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
-        self._draw_source_and_target = config.DRAW_SOURCE_AND_TARGET
-        self._draw_border = config.DRAW_BORDER
+        self._config = config
         self._grid_delta = 3
         self._step_count = None
-        self._max_steps = config.MAX_EPISODE_STEPS
         self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
         self._num_samples = 20000
         self._ind_x_min = None
@@ -481,7 +472,7 @@ class TopDownMap(habitat.Measure):
             self._sim,
             self._map_resolution,
             self._num_samples,
-            self._draw_border,
+            self._config.DRAW_BORDER,
         )
 
         range_x = np.where(np.any(top_down_map, axis=1))[0]
@@ -492,7 +483,10 @@ class TopDownMap(habitat.Measure):
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
 
-        if self._draw_source_and_target:
+        MAP_SOURCE_POINT_INDICATOR = 4
+        MAP_TARGET_POINT_INDICATOR = 6
+
+        if self._config.DRAW_SOURCE_AND_TARGET:
             # mark source point
             s_x, s_y = maps.to_grid(
                 episode.start_position[0],
@@ -544,6 +538,8 @@ class TopDownMap(habitat.Measure):
             self._sim.get_agent_state().position
         )
 
+        # Rather than return the whole map which may have large empty regions,
+        # only return the occupied part (plus some padding).
         house_map = house_map[
             self._ind_x_min
             - self._grid_delta : self._ind_x_max
@@ -563,10 +559,11 @@ class TopDownMap(habitat.Measure):
             self._coordinate_max,
             self._map_resolution,
         )
+        # Don't draw over the source point
         color = (
-            min(self._step_count * 245 / self._max_steps, 245) + 10
-            if self._top_down_map[a_x, a_y] != 4
-            else self._top_down_map[a_x, a_y]
+            min(self._step_count * 245 / self._config.MAX_EPISODE_STEPS, 245) + 10
+            if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR
+            else maps.MAP_SOURCE_POINT_INDICATOR
         )
         color = int(color)
 
