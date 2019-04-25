@@ -337,15 +337,15 @@ class VectorEnv:
         read_fn = self._connection_read_fns.pop(index)
         write_fn = self._connection_write_fns.pop(index)
         worker = self._workers.pop(index)
-        self._paused.append((read_fn, write_fn, worker))
+        self._paused.append((index, read_fn, write_fn, worker))
 
     def resume_all(self) -> None:
         """Resumes any paused envs.
         """
-        for read_fn, write_fn, worker in self._paused:
-            self._connection_read_fns.append(read_fn)
-            self._connection_write_fns.append(write_fn)
-            self._workers.append(worker)
+        for index, read_fn, write_fn, worker in self._paused:
+            self._connection_read_fns.insert(index, read_fn)
+            self._connection_write_fns.insert(index, write_fn)
+            self._workers.insert(index, worker)
         self._paused = []
 
     def call_at(

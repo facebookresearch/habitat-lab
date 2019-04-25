@@ -18,10 +18,14 @@ from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-NUM_ENVS = 2
+NUM_ENVS = 4
 
 
 class DummyRLEnv(habitat.RLEnv):
+    def __init__(self, config, dataset=None, env_ind=0):
+        super(DummyRLEnv, self).__init__(config, dataset)
+        self._env_ind = env_ind
+
     def get_reward_range(self):
         return -1.0, 1.0
 
@@ -36,6 +40,12 @@ class DummyRLEnv(habitat.RLEnv):
 
     def get_info(self, observations):
         return {}
+
+    def get_env_ind(self):
+        return self._env_ind
+
+    def set_env_ind(self, new_env_ind):
+        self._env_ind = new_env_ind
 
 
 def _load_test_data():
@@ -255,6 +265,53 @@ def test_rl_env():
     assert done is True, "done should be true after STOP action"
 
     env.close()
+
+
+def _make_dummy_env_func(config, dataset, id):
+    return DummyRLEnv(config=config, dataset=dataset, env_ind=id)
+
+
+def test_vec_env_call_func():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    true_env_ids = list(range(num_envs))
+    envs = habitat.VectorEnv(
+        make_env_fn=_make_dummy_env_func,
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method="forkserver",
+    )
+    envs.reset()
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    env_id = envs.call_at(1, "get_env_ind")
+    assert env_id == true_env_ids[1]
+
+    envs.call_at(2, "set_env_ind", [20])
+    true_env_ids[2] = 20
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.call_at(2, "set_env_ind", [2])
+    true_env_ids[2] = 2
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.pause_at(3)
+    true_env_ids.pop(3)
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.pause_at(0)
+    true_env_ids.pop(0)
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.resume_all()
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == list(range(num_envs))
+    envs.close()
 
 
 # TODO Bring back this test for the greedy follower
