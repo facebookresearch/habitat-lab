@@ -17,6 +17,7 @@ from habitat.config import Config
 from habitat.core.env import Env, Observations
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
+import gym
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -24,6 +25,7 @@ RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
+CALL_COMMAND = "call"
 
 
 def _make_env_fn(
@@ -116,6 +118,7 @@ class VectorEnv:
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
+        self._paused = []
 
     @property
     def num_envs(self):
@@ -145,7 +148,9 @@ class VectorEnv:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     # different step methods for habitat.RLEnv and habitat.Env
-                    if isinstance(env, habitat.RLEnv):
+                    if isinstance(env, habitat.RLEnv) or isinstance(
+                        env, gym.Env
+                    ):
                         # habitat.RLEnv
                         observations, reward, done, info = env.step(data)
                         if auto_reset_done and done:
@@ -173,6 +178,13 @@ class VectorEnv:
                 ):
                     connection_write_fn(getattr(env, command))
 
+                elif command == CALL_COMMAND:
+                    function_name, function_args = data
+                    if function_args is None or len(function_args) == 0:
+                        result = getattr(env, function_name)()
+                    else:
+                        result = getattr(env, function_name)(*function_args)
+                    connection_write_fn(result)
                 else:
                     raise NotImplementedError
 
@@ -307,8 +319,89 @@ class VectorEnv:
             write_fn((CLOSE_COMMAND, None))
         for process in self._workers:
             process.join()
-
         self._is_closed = True
+
+    def pause_at(self, index: int) -> None:
+        """Pauses computation on this env without destroying the env. This is
+            useful for not needing to call steps on all environments when only
+            some are active (for example during the last episodes of running
+            eval episodes).
+
+        Args:
+            index: which env to pause. All indexes after this one will be
+                shifted down by one.
+        """
+        if self._is_waiting:
+            for read_fn in self._connection_read_fns:
+                read_fn()
+        read_fn = self._connection_read_fns.pop(index)
+        write_fn = self._connection_write_fns.pop(index)
+        worker = self._workers.pop(index)
+        self._paused.append((index, read_fn, write_fn, worker))
+
+    def resume_all(self) -> None:
+        """Resumes any paused envs.
+        """
+        for index, read_fn, write_fn, worker in self._paused:
+            self._connection_read_fns.insert(index, read_fn)
+            self._connection_write_fns.insert(index, write_fn)
+            self._workers.insert(index, worker)
+        self._paused = []
+
+    def call_at(
+        self,
+        index: int,
+        function_name: str,
+        function_args: Optional[List[Any]] = None,
+    ) -> Any:
+        """Calls a function (which is passed by name) on the selected env and
+            returns the result.
+
+        Args:
+            index: Which env to call the function on.
+            function_name: The name of the function to call on the env.
+            function_args: Optional function args.
+        Returns:
+            A The result of calling the function.
+        """
+        self._is_waiting = True
+        self._connection_write_fns[index](
+            (CALL_COMMAND, (function_name, function_args))
+        )
+        result = self._connection_read_fns[index]()
+        self._is_waiting = False
+        return result
+
+    def call(
+        self,
+        function_names: List[str],
+        function_args_list: Optional[List[Any]] = None,
+    ) -> List[Any]:
+        """Calls a list of functions (which are passed by name) on the
+            corresponding env (by index).
+
+        Args:
+            function_names: The name of the functions to call on the envs.
+            function_args_list: List of function args for each function. If
+                provided, len(function_args_list) should be as long as
+                len(function_names).
+        Returns:
+            A The result of calling the function.
+        """
+        self._is_waiting = True
+        if function_args_list is None:
+            function_args_list = [None] * len(function_names)
+        assert len(function_names) == len(function_args_list)
+        func_args = zip(function_names, function_args_list)
+        for write_fn, func_args_on in zip(
+            self._connection_write_fns, func_args
+        ):
+            write_fn((CALL_COMMAND, func_args_on))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
 
     def render(
         self, mode: str = "human", *args, **kwargs
