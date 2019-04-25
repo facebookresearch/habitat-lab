@@ -224,7 +224,7 @@ class StaticPointGoalSensor(habitat.Sensor):
             in cartesian or polar coordinates.
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
         assert self._goal_format in ["CARTESIAN", "POLAR"]
@@ -484,9 +484,6 @@ class TopDownMap(habitat.Measure):
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
 
-        MAP_SOURCE_POINT_INDICATOR = 4
-        MAP_TARGET_POINT_INDICATOR = 6
-
         if self._config.DRAW_SOURCE_AND_TARGET:
             # mark source point
             s_x, s_y = maps.to_grid(
@@ -502,7 +499,7 @@ class TopDownMap(habitat.Measure):
             top_down_map[
                 s_x - point_padding : s_x + point_padding + 1,
                 s_y - point_padding : s_y + point_padding + 1,
-            ] = 4
+            ] = maps.MAP_SOURCE_POINT_INDICATOR
 
             # mark target point
             t_x, t_y = maps.to_grid(
@@ -515,7 +512,7 @@ class TopDownMap(habitat.Measure):
             top_down_map[
                 t_x - point_padding : t_x + point_padding + 1,
                 t_y - point_padding : t_y + point_padding + 1,
-            ] = 6
+            ] = maps.MAP_TARGET_POINT_INDICATOR
 
         return top_down_map
 
