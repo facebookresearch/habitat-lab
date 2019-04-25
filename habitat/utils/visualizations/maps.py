@@ -32,6 +32,7 @@ MAP_BORDER_INDICATOR = 2
 MAP_SOURCE_POINT_INDICATOR = 4
 MAP_TARGET_POINT_INDICATOR = 6
 
+
 def draw_agent(
     image: np.ndarray,
     agent_center_coord: Tuple[int, int],
@@ -290,7 +291,9 @@ def get_topdown_map(
             valid_point = sim.is_navigable(
                 [realworld_x, start_height, realworld_y]
             )
-            top_down_map[ii, jj] = (MAP_VALID_POINT if valid_point else MAP_INVALID_POINT)
+            top_down_map[ii, jj] = (
+                MAP_VALID_POINT if valid_point else MAP_INVALID_POINT
+            )
 
     # Draw border if necessary
     if draw_border:

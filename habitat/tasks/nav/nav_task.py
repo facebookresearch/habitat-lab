@@ -31,7 +31,6 @@ COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 MAP_THICKNESS_SCALAR: int = 1250
 
 
-
 def merge_sim_episode_config(
     sim_config: Config, episode: Type[Episode]
 ) -> Any:
@@ -211,8 +210,8 @@ class PointGoalSensor(habitat.Sensor):
 
 class StaticPointGoalSensor(habitat.Sensor):
     """
-    Sensor for PointGoal observations which are used in the StaticPointNav task.
-    For the agent in simulator the forward direction is along negative-z.
+    Sensor for PointGoal observations which are used in the StaticPointNav
+    task. For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -262,8 +261,8 @@ class StaticPointGoalSensor(habitat.Sensor):
             rotation_world_agent = agent_state.rotation
 
             direction_vector = (
-                    np.array(episode.goals[0].position, dtype=np.float32)
-                    - ref_position
+                np.array(episode.goals[0].position, dtype=np.float32)
+                - ref_position
             )
             direction_vector_agent = quaternion_rotate_vector(
                 rotation_world_agent.inverse(), direction_vector
@@ -273,7 +272,9 @@ class StaticPointGoalSensor(habitat.Sensor):
                 rho, phi = cartesian_to_polar(
                     -direction_vector_agent[2], direction_vector_agent[0]
                 )
-                direction_vector_agent = np.array([rho, -phi], dtype=np.float32)
+                direction_vector_agent = np.array(
+                    [rho, -phi], dtype=np.float32
+                )
 
             self._initial_vector = direction_vector_agent
         return self._initial_vector
@@ -561,7 +562,8 @@ class TopDownMap(habitat.Measure):
         )
         # Don't draw over the source point
         color = (
-            min(self._step_count * 245 / self._config.MAX_EPISODE_STEPS, 245) + 10
+            min(self._step_count * 245 / self._config.MAX_EPISODE_STEPS, 245)
+            + 10
             if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR
             else maps.MAP_SOURCE_POINT_INDICATOR
         )
