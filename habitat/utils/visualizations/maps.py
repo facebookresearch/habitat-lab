@@ -251,11 +251,13 @@ def get_topdown_map(
         the flag is set).
     """
     top_down_map = np.zeros(map_resolution, dtype=np.uint8)
-    grid_delta = 3
+    border_padding = 3
 
     start_height = sim.get_agent_state().position[1]
 
     # Use sampling to find the extrema points that might be navigable.
+    range_x = (map_resolution[0], 0)
+    range_y = (map_resolution[1], 0)
     for _ in range(num_samples):
         point = sim.sample_navigable_point()
         # Check if on same level as original
@@ -264,11 +266,9 @@ def get_topdown_map(
         g_x, g_y = to_grid(
             point[0], point[2], COORDINATE_MIN, COORDINATE_MAX, map_resolution
         )
+        range_x = (min(range_x[0], g_x), max(range_x[1], g_x))
+        range_y = (min(range_y[0], g_y), max(range_y[1], g_y))
 
-        top_down_map[g_x, g_y] = 1
-
-    range_x = np.where(np.any(top_down_map, axis=1))[0]
-    range_y = np.where(np.any(top_down_map, axis=0))[0]
     # Pad the range just in case not enough points were sampled to get the true
     # extrema.
     padding = int(np.ceil(map_resolution[0] / 125))
@@ -280,7 +280,6 @@ def get_topdown_map(
         max(range_y[0] - padding, 0),
         min(range_y[-1] + padding + 1, top_down_map.shape[1]),
     )
-    top_down_map[:] = 0
 
     # Search over grid for valid points.
     for ii in range(range_x[0], range_x[1]):
@@ -301,12 +300,12 @@ def get_topdown_map(
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
         range_x = (
-            max(range_x[0] - grid_delta, 0),
-            min(range_x[-1] + grid_delta + 1, top_down_map.shape[0]),
+            max(range_x[0] - border_padding, 0),
+            min(range_x[-1] + border_padding + 1, top_down_map.shape[0]),
         )
         range_y = (
-            max(range_y[0] - grid_delta, 0),
-            min(range_y[-1] + grid_delta + 1, top_down_map.shape[1]),
+            max(range_y[0] - border_padding, 0),
+            min(range_y[-1] + border_padding + 1, top_down_map.shape[1]),
         )
 
         _outline_border(

@@ -445,10 +445,10 @@ class TopDownMap(habitat.Measure):
     def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
         self._config = config
-        self._grid_delta = 3
+        self._grid_delta = config.MAP_PADDING
         self._step_count = None
         self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
-        self._num_samples = 20000
+        self._num_samples = config.NUM_TOPDOWN_MAP_SAMPLE_POINTS
         self._ind_x_min = None
         self._ind_x_max = None
         self._ind_y_min = None
