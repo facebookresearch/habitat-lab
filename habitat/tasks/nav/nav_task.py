@@ -565,14 +565,8 @@ class TopDownMap(habitat.Measure):
         )
         # Don't draw over the source point
         if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
-            color = (
-                min(
-                    int(
-                        self._step_count * 245 / self._config.MAX_EPISODE_STEPS
-                    ),
-                    245,
-                )
-                + 10
+            color = 10 + min(
+                self._step_count * 245 // self._config.MAX_EPISODE_STEPS, 245
             )
 
             thickness = int(
