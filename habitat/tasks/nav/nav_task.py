@@ -547,7 +547,13 @@ class TopDownMap(habitat.Measure):
             + self._grid_delta,
         ]
 
-        self._metric = house_map
+        self._metric = {
+            "map": house_map,
+            "agent_map_coord": (
+                map_agent_x - (self._ind_x_min - self._grid_delta),
+                map_agent_y - (self._ind_y_min - self._grid_delta),
+            ),
+        }
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(
@@ -558,24 +564,21 @@ class TopDownMap(habitat.Measure):
             self._map_resolution,
         )
         # Don't draw over the source point
-        color = (
-            min(self._step_count * 245 / self._config.MAX_EPISODE_STEPS, 245)
-            + 10
-            if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR
-            else maps.MAP_SOURCE_POINT_INDICATOR
-        )
-        color = int(color)
+        if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
+            color = 10 + min(
+                self._step_count * 245 // self._config.MAX_EPISODE_STEPS, 245
+            )
 
-        thickness = int(
-            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
-        )
-        cv2.line(
-            self._top_down_map,
-            self._previous_xy_location,
-            (a_y, a_x),
-            color,
-            thickness=thickness,
-        )
+            thickness = int(
+                np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+            )
+            cv2.line(
+                self._top_down_map,
+                self._previous_xy_location,
+                (a_y, a_x),
+                color,
+                thickness=thickness,
+            )
 
         self._previous_xy_location = (a_y, a_x)
         return self._top_down_map, a_x, a_y
