@@ -54,6 +54,17 @@ _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 # -----------------------------------------------------------------------------
+# # TopDownMap MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.TOP_DOWN_MAP = CN()
+_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
+_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
+_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
+_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
+_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
+_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
+_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
+# -----------------------------------------------------------------------------
 # # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.COLLISIONS = CN()

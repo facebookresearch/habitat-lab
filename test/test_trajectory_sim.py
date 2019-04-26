@@ -50,7 +50,7 @@ def test_sim_trajectory():
                     np.array(
                         test_trajectory["rotations"][i], dtype=np.float32
                     ),
-                    state.rotation,
+                    np.array([*state.rotation.imag, state.rotation.real]),
                 )
                 is True
             ), "mismatch in rotation " "at step {}".format(i)
