@@ -4,12 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
-import cv2
-import imageio
-import scipy.ndimage
 import os
 from typing import List, Tuple, Optional
+
+import cv2
+import imageio
+import numpy as np
+import scipy.ndimage
 from habitat.core.simulator import Simulator
 from habitat.utils.visualizations import utils
 
@@ -32,6 +33,16 @@ MAP_BORDER_INDICATOR = 2
 MAP_SOURCE_POINT_INDICATOR = 4
 MAP_TARGET_POINT_INDICATOR = 6
 
+TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
+TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
+    np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
+).squeeze(1)[:, ::-1]
+TOP_DOWN_MAP_COLORS[MAP_INVALID_POINT] = [255, 255, 255]
+TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]
+TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]
+TOP_DOWN_MAP_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]
+TOP_DOWN_MAP_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]
+
 
 def draw_agent(
     image: np.ndarray,
@@ -51,7 +62,7 @@ def draw_agent(
 
     # Rotate before resize to keep good resolution.
     rotated_agent = scipy.ndimage.interpolation.rotate(
-        AGENT_SPRITE, agent_rotation * -180 / np.pi
+        AGENT_SPRITE, agent_rotation * 180 / np.pi
     )
     # Rescale because rotation may result in larger image than original, but
     # the agent sprite size should stay the same.
@@ -312,3 +323,13 @@ def get_topdown_map(
             top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]
         )
     return top_down_map
+
+
+def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
+    """Convert the top down map to RGB based on the indicator values.
+        Args:
+            top_down_map: A non-colored version of the map.
+        Returns:
+            A colored version of the top-down map.
+    """
+    return TOP_DOWN_MAP_COLORS[top_down_map]
