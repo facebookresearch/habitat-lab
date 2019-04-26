@@ -548,9 +548,11 @@ class TopDownMap(habitat.Measure):
         ]
 
         self._metric = {
-            'map': house_map,
-            'agent_map_coord': (map_agent_x - (self._ind_x_min - self._grid_delta),
-                                map_agent_y - (self._ind_y_min - self._grid_delta))
+            "map": house_map,
+            "agent_map_coord": (
+                map_agent_x - (self._ind_x_min - self._grid_delta),
+                map_agent_y - (self._ind_y_min - self._grid_delta),
+            ),
         }
 
     def update_map(self, agent_position):
@@ -564,7 +566,12 @@ class TopDownMap(habitat.Measure):
         # Don't draw over the source point
         if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
             color = (
-                min(int(self._step_count * 245 / self._config.MAX_EPISODE_STEPS), 245)
+                min(
+                    int(
+                        self._step_count * 245 / self._config.MAX_EPISODE_STEPS
+                    ),
+                    245,
+                )
                 + 10
             )
 

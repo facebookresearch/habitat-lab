@@ -34,8 +34,9 @@ MAP_SOURCE_POINT_INDICATOR = 4
 MAP_TARGET_POINT_INDICATOR = 6
 
 TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
-TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(np.arange(246, dtype=np.uint8),
-                                             cv2.COLORMAP_JET).squeeze(1)[:, ::-1]
+TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
+    np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
+).squeeze(1)[:, ::-1]
 TOP_DOWN_MAP_COLORS[MAP_INVALID_POINT] = [255, 255, 255]
 TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]
 TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]
@@ -322,7 +323,6 @@ def get_topdown_map(
             top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]
         )
     return top_down_map
-
 
 
 def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
