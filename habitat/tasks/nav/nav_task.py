@@ -282,12 +282,12 @@ class StaticPointGoalSensor(habitat.Sensor):
 
 class HeadingSensor(habitat.Sensor):
     """
-       Sensor for observing the agent's heading in the global coordinate frame.
+    Sensor for observing the agent's heading in the global coordinate frame.
 
-       Args:
-           sim: reference to the simulator for calculating task observations.
-           config: config for the sensor.
-       """
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the sensor.
+    """
 
     def __init__(self, sim: Simulator, config: Config):
         self._sim = sim
@@ -318,12 +318,12 @@ class HeadingSensor(habitat.Sensor):
 
 class ProximitySensor(habitat.Sensor):
     """
-       Sensor for observing the distance to the closest obstacle
+    Sensor for observing the distance to the closest obstacle
 
-       Args:
-           sim: reference to the simulator for calculating task observations.
-           config: config for the sensor.
-       """
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the sensor.
+    """
 
     def __init__(self, sim, config):
         self._sim = sim
