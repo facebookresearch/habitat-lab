@@ -11,7 +11,7 @@ from habitat import get_config
 from habitat.config import Config as CN
 
 DEFAULT_CONFIG_DIR = "configs/"
-
+CONFIG_FILE_SEPARATOR = ","
 # -----------------------------------------------------------------------------
 # Config definition
 # -----------------------------------------------------------------------------
@@ -60,10 +60,15 @@ _C.BASELINE.ORBSLAM2.DEPTH_DENORM = (
 )
 
 
-def cfg(
-    config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
-) -> CN:
+def get_config(config_file: Optional[str] = None) -> CN:
     config = _C.clone()
     if config_file:
-        config.merge_from_file(os.path.join(config_dir, config_file))
+        if CONFIG_FILE_SEPARATOR in config_file:
+            config_files = config_file.split(CONFIG_FILE_SEPARATOR)
+        else:
+            config_files = [config_file]
+
+        for config_path in config_files:
+            config.merge_from_file(config_path)
+    config.freeze()
     return config

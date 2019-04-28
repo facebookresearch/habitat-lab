@@ -6,7 +6,6 @@
 
 import copy
 import json
-import random
 from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
 
 import numpy as np
@@ -103,7 +102,9 @@ class Dataset(Generic[T]):
         result = DatasetJSONEncoder().encode(self)
         return result
 
-    def from_json(self, json_str: str) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
         raise NotImplementedError
 
     def filter_episodes(

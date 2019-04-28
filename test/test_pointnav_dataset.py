@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import time
+
 import pytest
 
 import habitat
@@ -14,7 +16,7 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
-CFG_TEST = "datasets/pointnav/gibson.yaml"
+CFG_TEST = "configs/datasets/pointnav/gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 
 
@@ -48,6 +50,32 @@ def test_single_pointnav_dataset():
         len(dataset.scene_ids) == 2
     ), "The test dataset scenes number is wrong."
     check_json_serializaiton(dataset)
+
+
+def test_multiple_files_scene_path():
+    dataset_config = get_config(CFG_TEST).DATASET
+    if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
+        pytest.skip("Test skipped as dataset files are missing.")
+    scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
+    assert (
+        len(scenes) > 0
+    ), "Expected dataset contains separate episode file per scene."
+    dataset_config.defrost()
+    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.SCENES_DIR = os.path.join(os.getcwd(), "data")
+    dataset_config.freeze()
+    partial_dataset = make_dataset(
+        id_dataset=dataset_config.TYPE, config=dataset_config
+    )
+    assert (
+        len(partial_dataset.scene_ids) == PARTIAL_LOAD_SCENES
+    ), "Number of loaded scenes doesn't correspond."
+    print(partial_dataset.episodes[0].scene_id)
+    assert os.path.exists(
+        partial_dataset.episodes[0].scene_id
+    ), "Scene file {} doesn't exist using absolute path".format(
+        partial_dataset.episodes[0].scene_id
+    )
 
 
 def test_multiple_files_pointnav_dataset():

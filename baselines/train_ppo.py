@@ -15,7 +15,7 @@ import habitat
 from habitat import logger
 from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.config.default import get_config as cfg_env
-from config.default import cfg as cfg_baseline
+from config.default import get_config as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import update_linear_schedule, ppo_args, batch_obs

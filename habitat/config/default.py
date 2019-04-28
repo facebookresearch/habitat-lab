@@ -10,6 +10,7 @@ from typing import Optional
 from habitat.config import Config as CN  # type: ignore
 
 DEFAULT_CONFIG_DIR = "configs/"
+CONFIG_FILE_SEPARATOR = ","
 
 # -----------------------------------------------------------------------------
 # Config definition
@@ -135,6 +136,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
+_C.DATASET.SCENES_DIR = "data"
 # -----------------------------------------------------------------------------
 # MP3DEQAV1 DATASET
 # -----------------------------------------------------------------------------
@@ -155,11 +157,15 @@ _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 # -----------------------------------------------------------------------------
 
 
-def get_config(
-    config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
-) -> CN:
+def get_config(config_file: Optional[str] = None) -> CN:
     config = _C.clone()
     if config_file:
-        config.merge_from_file(os.path.join(config_dir, config_file))
+        if CONFIG_FILE_SEPARATOR in config_file:
+            config_files = config_file.split(CONFIG_FILE_SEPARATOR)
+        else:
+            config_files = [config_file]
+
+        for config_path in config_files:
+            config.merge_from_file(config_path)
     config.freeze()
     return config

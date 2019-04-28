@@ -10,7 +10,7 @@ import torch
 
 import habitat
 from habitat.config.default import get_config
-from config.default import cfg as cfg_baseline
+from config.default import get_config as cfg_baseline
 
 from train_ppo import make_env_fn
 from rl.ppo import PPO, Policy
@@ -36,7 +36,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="tasks/pointnav.yaml",
+        default="configs/tasks/pointnav.yaml",
         help="path to config yaml containing information about task",
     )
     args = parser.parse_args()

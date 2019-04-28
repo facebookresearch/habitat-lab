@@ -19,7 +19,7 @@ except ImportError:
 if has_torch:
     from baselines.agents import ppo_agents
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
 
 @pytest.mark.skipif(not has_torch, reason="Test needs torch")
@@ -31,7 +31,7 @@ def test_ppo_agents():
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    benchmark = habitat.Benchmark(config_file=CFG_TEST, config_dir="configs")
+    benchmark = habitat.Benchmark(config_file=CFG_TEST)
 
     for input_type in ["blind", "rgb", "depth", "rgbd"]:
         config_env.defrost()
@@ -55,7 +55,7 @@ def test_simple_agents():
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    benchmark = habitat.Benchmark(config_file=CFG_TEST, config_dir="configs")
+    benchmark = habitat.Benchmark(config_file=CFG_TEST)
 
     for agent_class in [
         simple_agents.ForwardOnlyAgent,

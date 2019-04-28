@@ -35,7 +35,7 @@ python -u baselines/train_ppo.py \
     --log-interval 5 \
     --checkpoint-folder "data/checkpoints" \
     --checkpoint-interval 50 \
-    --task-config "tasks/pointnav.yaml" \
+    --task-config "configs/tasks/pointnav.yaml" \
 
 
 ```
@@ -48,7 +48,7 @@ python -u baselines/evaluate_ppo.py \
     --pth-gpu-id 0 \
     --num-processes 4 \
     --count-test-episodes 100 \
-    --task-config "tasks/pointnav.yaml" \
+    --task-config "configs/tasks/pointnav.yaml" \
 
 
 ```
