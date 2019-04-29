@@ -109,7 +109,7 @@ def construct_envs(args):
     env_configs = []
     baseline_configs = []
 
-    basic_config = cfg_env(config_file=args.task_config)
+    basic_config = cfg_env(config_paths=args.task_config)
 
     scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
 
@@ -123,7 +123,7 @@ def construct_envs(args):
         scene_split_size = int(np.floor(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
-        config_env = cfg_env(config_file=args.task_config)
+        config_env = cfg_env(config_paths=args.task_config)
         config_env.defrost()
 
         if len(scenes) > 0:

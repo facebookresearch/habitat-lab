@@ -47,7 +47,7 @@ def main():
     baseline_configs = []
 
     for _ in range(args.num_processes):
-        config_env = get_config(config_file=args.task_config)
+        config_env = get_config(config_paths=args.task_config)
         config_env.defrost()
         config_env.DATASET.SPLIT = "val"
 

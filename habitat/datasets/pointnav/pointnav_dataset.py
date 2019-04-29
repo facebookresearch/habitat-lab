@@ -19,7 +19,7 @@ from habitat.tasks.nav.nav_task import (
 
 ALL_SCENES_MASK = "*"
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
-DEFAULT_SCENE_PATH_PREFIX = "data/"
+DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
 class PointNavDatasetV1(Dataset):
@@ -97,7 +97,6 @@ class PointNavDatasetV1(Dataset):
                 data_path=dataset_dir, scene=scene
             )
             with gzip.open(scene_filename, "rt") as f:
-                # import pdb; pdb.set_trace()
                 self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
     def from_json(
@@ -109,14 +108,13 @@ class PointNavDatasetV1(Dataset):
 
         for episode in deserialized["episodes"]:
             episode = NavigationEpisode(**episode)
-            # import pdb; pdb.set_trace()
 
-            if scenes_dir is not None and episode.scene_id.startswith(
-                DEFAULT_SCENE_PATH_PREFIX
-            ):
-                episode.scene_id = episode.scene_id[
-                    len(DEFAULT_SCENE_PATH_PREFIX) :
-                ]
+            if scenes_dir is not None:
+                if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
+                    episode.scene_id = episode.scene_id[
+                        len(DEFAULT_SCENE_PATH_PREFIX) :
+                    ]
+
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             for g_index, goal in enumerate(episode.goals):

@@ -8,6 +8,7 @@ from habitat.config.default import get_config
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_EQA = "configs/test/habitat_mp3d_eqa_test.yaml"
+MAX_TEST_STEPS_LIMIT = 3
 
 
 def test_merged_configs():
@@ -19,3 +20,14 @@ def test_merged_configs():
         merged_config.ENVIRONMENT.MAX_EPISODE_STEPS
         == test_config.ENVIRONMENT.MAX_EPISODE_STEPS
     )
+
+
+def test_overwrite_options():
+    for steps_limit in range(MAX_TEST_STEPS_LIMIT):
+        config = get_config(
+            config_paths=CFG_TEST,
+            opts=["ENVIRONMENT.MAX_EPISODE_STEPS", steps_limit],
+        )
+        assert (
+            config.ENVIRONMENT.MAX_EPISODE_STEPS == steps_limit
+        ), "Overwriting of config options failed."

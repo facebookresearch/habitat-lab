@@ -193,7 +193,10 @@ def test_mp3d_eqa_sim_correspondence():
                 "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
                 "".format(
                     cur_state.position - point.position,
-                    np.array(cur_state.rotation) - point.rotation,
+                    cur_state.rotation
+                    - habitat.utils.geometry_utils.quaternion_wxyz_to_xyzw(
+                        point.rotation
+                    ),
                     cur_state.position,
                     point.position,
                     cur_state.rotation,

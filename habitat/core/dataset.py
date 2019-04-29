@@ -105,6 +105,14 @@ class Dataset(Generic[T]):
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
+        """
+        Parses passed JSON string and creates dataset based on that.
+        Function is used as deserialization method for Dataset.
+        Args:
+            json_str: JSON dump of Dataset instance.
+            scenes_dir: Path to directory with scenes assets such as *.glb
+            files.
+        """
         raise NotImplementedError
 
     def filter_episodes(

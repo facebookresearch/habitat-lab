@@ -14,7 +14,10 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
-from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.datasets.pointnav.pointnav_dataset import (
+    PointNavDatasetV1,
+    DEFAULT_SCENE_PATH_PREFIX,
+)
 
 CFG_TEST = "configs/datasets/pointnav/gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
@@ -62,7 +65,9 @@ def test_multiple_files_scene_path():
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
     dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
-    dataset_config.SCENES_DIR = os.path.join(os.getcwd(), "data")
+    dataset_config.SCENES_DIR = os.path.join(
+        os.getcwd(), DEFAULT_SCENE_PATH_PREFIX
+    )
     dataset_config.freeze()
     partial_dataset = make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config
