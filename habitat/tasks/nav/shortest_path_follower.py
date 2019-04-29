@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Union
 
 import habitat_sim
@@ -8,7 +14,6 @@ from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_two_vectors,
-    quaternion_xyzw_to_wxyz,
 )
 
 
