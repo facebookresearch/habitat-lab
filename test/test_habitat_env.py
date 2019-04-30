@@ -17,7 +17,7 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 NUM_ENVS = 4
 
 

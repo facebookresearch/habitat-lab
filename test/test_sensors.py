@@ -17,7 +17,7 @@ from habitat.tasks.nav.nav_task import (
 )
 from habitat.sims.habitat_simulator import SimulatorActions
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
 
 def _random_episode(env, config):

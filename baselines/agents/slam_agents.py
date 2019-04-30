@@ -26,7 +26,7 @@ from habitat.sims.habitat_simulator import SimulatorActions
 from baselines.slambased.mappers import DirectDepthMapper
 from baselines.slambased.path_planners import DifferentiableStarPlanner
 
-from baselines.config.default import cfg
+from baselines.config.default import get_config as cfg_baseline
 from habitat.config.default import get_config
 
 from baselines.slambased.monodepth import MonoDepthEstimator
@@ -600,7 +600,7 @@ def main():
     args = parser.parse_args()
 
     config = get_config()
-    agent_config = cfg()
+    agent_config = cfg_baseline()
     config.defrost()
     config.BASELINE = agent_config.BASELINE
     make_good_config_for_orbslam2(config)

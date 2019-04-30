@@ -4,12 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
-from typing import Optional
+from typing import List, Optional, Union
 
 from habitat.config import Config as CN  # type: ignore
 
 DEFAULT_CONFIG_DIR = "configs/"
+CONFIG_FILE_SEPARATOR = ","
 
 # -----------------------------------------------------------------------------
 # Config definition
@@ -135,6 +135,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
+_C.DATASET.SCENES_DIR = "data/scene_datasets"
 # -----------------------------------------------------------------------------
 # MP3DEQAV1 DATASET
 # -----------------------------------------------------------------------------
@@ -156,10 +157,32 @@ _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 
 
 def get_config(
-    config_file: Optional[str] = None, config_dir: str = DEFAULT_CONFIG_DIR
+    config_paths: Optional[Union[List[str], str]] = None,
+    opts: Optional[list] = None,
 ) -> CN:
+    """
+    Create a unified config with default values overwritten by values from
+    `config_paths` and overwritten by options from `opts`.
+    Args:
+        config_paths: List of config paths or string that contains comma
+        separated list of config paths.
+        opts: Config options (keys, values) in a list (e.g., passed from
+        command line into the config. For example, `opts = ['FOO.BAR',
+        0.5]`. Argument can be used for parameter sweeping or quick tests.
+    """
     config = _C.clone()
-    if config_file:
-        config.merge_from_file(os.path.join(config_dir, config_file))
+    if config_paths:
+        if isinstance(config_paths, str):
+            if CONFIG_FILE_SEPARATOR in config_paths:
+                config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
+            else:
+                config_paths = [config_paths]
+
+        for config_path in config_paths:
+            config.merge_from_file(config_path)
+
+    if opts:
+        config.merge_from_list(opts)
+
     config.freeze()
     return config
