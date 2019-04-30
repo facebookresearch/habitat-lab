@@ -16,7 +16,7 @@ from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 
-CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
+CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
 
 # List of episodes each from unique house
@@ -193,7 +193,10 @@ def test_mp3d_eqa_sim_correspondence():
                 "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
                 "".format(
                     cur_state.position - point.position,
-                    cur_state.rotation - point.rotation,
+                    cur_state.rotation
+                    - habitat.utils.geometry_utils.quaternion_wxyz_to_xyzw(
+                        point.rotation
+                    ),
                     cur_state.position,
                     point.position,
                     cur_state.rotation,

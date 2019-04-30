@@ -57,7 +57,7 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def shortest_path_example(mode):
-    config = habitat.get_config(config_file="tasks/pointnav.yaml")
+    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
     env = SimpleRLEnv(config=config)

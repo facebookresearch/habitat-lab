@@ -12,8 +12,8 @@ from habitat.core.logging import logger
 
 class Challenge(Benchmark):
     def __init__(self):
-        config_file = os.environ["CHALLENGE_CONFIG_FILE"]
-        super().__init__(config_file)
+        config_paths = os.environ["CHALLENGE_CONFIG_FILE"]
+        super().__init__(config_paths)
 
     def submit(self, agent):
         metrics = super().evaluate(agent)

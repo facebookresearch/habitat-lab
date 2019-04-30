@@ -122,7 +122,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--success-distance", type=float, default=0.2)
     parser.add_argument(
-        "--task-config", type=str, default="tasks/pointnav.yaml"
+        "--task-config", type=str, default="configs/tasks/pointnav.yaml"
     )
     parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()

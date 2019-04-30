@@ -6,7 +6,6 @@
 
 import copy
 import json
-import random
 from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
 
 import numpy as np
@@ -103,7 +102,17 @@ class Dataset(Generic[T]):
         result = DatasetJSONEncoder().encode(self)
         return result
 
-    def from_json(self, json_str: str) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
+        """
+        Parses passed JSON string and creates dataset based on that.
+        Function is used as deserialization method for Dataset.
+        Args:
+            json_str: JSON dump of Dataset instance.
+            scenes_dir: Path to directory with scenes assets such as *.glb
+            files.
+        """
         raise NotImplementedError
 
     def filter_episodes(
