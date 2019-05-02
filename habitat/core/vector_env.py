@@ -409,7 +409,7 @@ class VectorEnv:
         """Render observations from all environments in a tiled image.
         """
         for write_fn in self._connection_write_fns:
-            write_fn((args, {"mode": "rgb_array", **kwargs}))
+            write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
