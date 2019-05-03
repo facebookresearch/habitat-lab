@@ -30,9 +30,11 @@ _C.BASELINE.RL.SLACK_REWARD = -0.01
 # ORBSLAM2 BASELINE
 # -----------------------------------------------------------------------------
 _C.BASELINE.ORBSLAM2 = CN()
-_C.BASELINE.ORBSLAM2.SLAM_VOCAB_PATH = "baselines/slambased/data/ORBvoc.txt"
+_C.BASELINE.ORBSLAM2.SLAM_VOCAB_PATH = (
+    "habitat_baselines/slambased/data/ORBvoc.txt"
+)
 _C.BASELINE.ORBSLAM2.SLAM_SETTINGS_PATH = (
-    "baselines/slambased/data/mp3d3_small1k.yaml"
+    "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
 )
 _C.BASELINE.ORBSLAM2.MAP_CELL_SIZE = 0.1
 _C.BASELINE.ORBSLAM2.MAP_SIZE = 40

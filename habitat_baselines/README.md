@@ -17,7 +17,7 @@ For training on sample data please follow steps in the repository README. You sh
 
 **train**:
 ```bash
-python -u baselines/train_ppo.py \
+python -u habitat_baselines/train_ppo.py \
     --use-gae \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \
@@ -42,7 +42,7 @@ python -u baselines/train_ppo.py \
 
 **test**:
 ```bash
-python -u baselines/evaluate_ppo.py \
+python -u habitat_baselines/evaluate_ppo.py \
     --model-path "/path/to/checkpoint" \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \

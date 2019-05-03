@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from baselines.slambased.reprojection import (
+from habitat_baselines.slambased.reprojection import (
     get_map_size_in_cells,
     project2d_pcl_into_worldmap,
     reproject_local_to_global,

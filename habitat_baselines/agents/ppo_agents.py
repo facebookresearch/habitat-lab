@@ -13,8 +13,8 @@ import torch
 from gym.spaces import Discrete, Dict, Box
 
 import habitat
-from baselines.rl.ppo import Policy
-from baselines.rl.ppo.utils import batch_obs
+from habitat_baselines.rl.ppo import Policy
+from habitat_baselines.rl.ppo.utils import batch_obs
 from habitat import Config
 from habitat.core.agent import Agent
 
