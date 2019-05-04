@@ -121,7 +121,7 @@ def test_with_scope():
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
-            env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
     ) as envs:
         envs.reset()
 
@@ -222,7 +222,8 @@ def test_rl_vectorized_envs():
         assert len(dones) == num_envs
         assert len(infos) == num_envs
         assert envs.render(
-            mode="rgb_array").all(), "vector env render is broken"
+            mode="rgb_array"
+        ).all(), "vector env render is broken"
         if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
