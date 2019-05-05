@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import matplotlib.pyplot as plt
-from baselines.slambased.utils import generate_2dgrid
+from habitat_baselines.slambased.utils import generate_2dgrid
 
 
 def safe_roi_2d(array2d, ymin, ymax, xmin, xmax):

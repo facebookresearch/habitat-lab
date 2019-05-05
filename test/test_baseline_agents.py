@@ -7,7 +7,7 @@
 import habitat
 import os
 import pytest
-from baselines.agents import simple_agents
+from habitat_baselines.agents import simple_agents
 
 try:
     import torch
@@ -17,7 +17,7 @@ except ImportError:
     has_torch = False
 
 if has_torch:
-    from baselines.agents import ppo_agents
+    from habitat_baselines.agents import ppo_agents
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
