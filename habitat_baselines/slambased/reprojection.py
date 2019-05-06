@@ -3,7 +3,6 @@ import torch
 from math import ceil, floor
 
 
-
 def p_zx(p):
     return p[(0, 2), 3]
 
@@ -122,17 +121,17 @@ def add_rot_wps(p):
 
     angles = torch.atan2(pos_diffs[:, 1], pos_diffs[:, 0])
     rotmats = get_rotation_matrix(angles)
-    planned_tps_norm[:p.size(0) - 1, 0, 0] = rotmats[:, 0, 0]
-    planned_tps_norm[:p.size(0) - 1, 0, 2] = rotmats[:, 0, 1]
-    planned_tps_norm[:p.size(0) - 1, 2, 0] = rotmats[:, 1, 0]
-    planned_tps_norm[:p.size(0) - 1, 2, 2] = rotmats[:, 1, 1]
+    planned_tps_norm[: p.size(0) - 1, 0, 0] = rotmats[:, 0, 0]
+    planned_tps_norm[: p.size(0) - 1, 0, 2] = rotmats[:, 0, 1]
+    planned_tps_norm[: p.size(0) - 1, 2, 0] = rotmats[:, 1, 0]
+    planned_tps_norm[: p.size(0) - 1, 2, 2] = rotmats[:, 1, 1]
 
     planned_points2 = planned_tps_norm.clone()
 
-    planned_points2[1:, 0, 0] = planned_tps_norm[:p.size(0) - 1, 0, 0]
-    planned_points2[1:, 0, 2] = planned_tps_norm[:p.size(0) - 1, 0, 2]
-    planned_points2[1:, 2, 0] = planned_tps_norm[:p.size(0) - 1, 2, 0]
-    planned_points2[1:, 2, 2] = planned_tps_norm[:p.size(0) - 1, 2, 2]
+    planned_points2[1:, 0, 0] = planned_tps_norm[: p.size(0) - 1, 0, 0]
+    planned_points2[1:, 0, 2] = planned_tps_norm[: p.size(0) - 1, 0, 2]
+    planned_points2[1:, 2, 0] = planned_tps_norm[: p.size(0) - 1, 2, 0]
+    planned_points2[1:, 2, 2] = planned_tps_norm[: p.size(0) - 1, 2, 2]
     out = torch.stack(
         (planned_points2.unsqueeze(0), planned_tps_norm.unsqueeze(0)), dim=0
     ).squeeze()
@@ -141,10 +140,10 @@ def add_rot_wps(p):
 
 
 def planned_path2tps(path, cell_size, map_size, agent_h, add_rot=False):
-    '''Path is list of 2d coordinates from planner, in map cells. 
+    """Path is list of 2d coordinates from planner, in map cells. 
     tp is trajectory pose, 4x4 matrix - same format,
     as in localization module
-    '''
+    """
     path = torch.cat(path).view(-1, 2)
     # print(path.size())
     num_pts = len(path)
@@ -172,10 +171,10 @@ def planned_path2tps(path, cell_size, map_size, agent_h, add_rot=False):
 
 
 def habitat_goalpos_to_tp(ro_phi, p_curr):
-    '''Convert distance and azimuth to 
+    """Convert distance and azimuth to 
     trajectory pose, 4x4 matrix - same format,
     as in localization module
-    '''
+    """
     device = ro_phi.device
     offset = torch.tensor(
         [
@@ -202,9 +201,9 @@ def habitat_goalpos_to_tp(ro_phi, p_curr):
 
 
 def habitat_goalpos_to_mapgoal_pos(offset, p_curr, cell_size, map_size):
-    '''Convert distance and azimuth to 
+    """Convert distance and azimuth to 
     map cell coordinates
-    '''
+    """
     device = offset.device
     goal_tp = habitat_goalpos_to_tp(offset, p_curr)
     goal_tp1 = torch.eye(4).to(device)
@@ -213,7 +212,6 @@ def habitat_goalpos_to_mapgoal_pos(offset, p_curr, cell_size, map_size):
         goal_tp1.view(1, 4, 4), cell_size, map_size
     )
     return projected_p
-
 
 
 def homogenize_p(tps):
@@ -232,9 +230,9 @@ def homogenize_p(tps):
 
 
 def project_tps_into_worldmap(tps, cell_size, map_size, do_floor=True):
-    '''Convert 4x4 pose matrices (trajectory poses) to 
+    """Convert 4x4 pose matrices (trajectory poses) to 
     map cell coordinates
-    '''
+    """
     if len(tps) == 0:
         return []
     if isinstance(tps, list):

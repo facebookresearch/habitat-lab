@@ -4,12 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
-import cv2
-import imageio
-import scipy.ndimage
 import os
 from typing import List, Tuple, Optional
+
+import cv2
+import imageio
+import numpy as np
+import scipy.ndimage
 from habitat.core.simulator import Simulator
 from habitat.utils.visualizations import utils
 
@@ -25,6 +26,22 @@ AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
 COORDINATE_EPSILON = 1e-6
 COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
 COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
+
+MAP_INVALID_POINT = 0
+MAP_VALID_POINT = 1
+MAP_BORDER_INDICATOR = 2
+MAP_SOURCE_POINT_INDICATOR = 4
+MAP_TARGET_POINT_INDICATOR = 6
+
+TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
+TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
+    np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
+).squeeze(1)[:, ::-1]
+TOP_DOWN_MAP_COLORS[MAP_INVALID_POINT] = [255, 255, 255]
+TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]
+TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]
+TOP_DOWN_MAP_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]
+TOP_DOWN_MAP_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]
 
 
 def draw_agent(
@@ -45,7 +62,7 @@ def draw_agent(
 
     # Rotate before resize to keep good resolution.
     rotated_agent = scipy.ndimage.interpolation.rotate(
-        AGENT_SPRITE, agent_rotation * -180 / np.pi
+        AGENT_SPRITE, agent_rotation * 180 / np.pi
     )
     # Rescale because rotation may result in larger image than original, but
     # the agent sprite size should stay the same.
@@ -158,7 +175,7 @@ def pointnav_draw_target_birdseye_view(
     return im_position
 
 
-def _to_grid(
+def to_grid(
     realworld_x: float,
     realworld_y: float,
     coordinate_min: float,
@@ -179,7 +196,7 @@ def _to_grid(
     return grid_x, grid_y
 
 
-def _from_grid(
+def from_grid(
     grid_x: int,
     grid_y: int,
     coordinate_min: float,
@@ -215,11 +232,11 @@ def _outline_border(top_down_map):
         top_down_map[:-1] != top_down_map[1:]
     )
 
-    top_down_map[:, :-1][left_right_block_nav] = 2
-    top_down_map[:, 1:][left_right_nav_block] = 2
+    top_down_map[:, :-1][left_right_block_nav] = MAP_BORDER_INDICATOR
+    top_down_map[:, 1:][left_right_nav_block] = MAP_BORDER_INDICATOR
 
-    top_down_map[:-1][up_down_block_nav] = 2
-    top_down_map[1:][up_down_nav_block] = 2
+    top_down_map[:-1][up_down_block_nav] = MAP_BORDER_INDICATOR
+    top_down_map[1:][up_down_nav_block] = MAP_BORDER_INDICATOR
 
 
 def get_topdown_map(
@@ -245,24 +262,24 @@ def get_topdown_map(
         the flag is set).
     """
     top_down_map = np.zeros(map_resolution, dtype=np.uint8)
-    grid_delta = 3
+    border_padding = 3
 
     start_height = sim.get_agent_state().position[1]
 
     # Use sampling to find the extrema points that might be navigable.
+    range_x = (map_resolution[0], 0)
+    range_y = (map_resolution[1], 0)
     for _ in range(num_samples):
         point = sim.sample_navigable_point()
         # Check if on same level as original
         if np.abs(start_height - point[1]) > 0.5:
             continue
-        g_x, g_y = _to_grid(
+        g_x, g_y = to_grid(
             point[0], point[2], COORDINATE_MIN, COORDINATE_MAX, map_resolution
         )
+        range_x = (min(range_x[0], g_x), max(range_x[1], g_x))
+        range_y = (min(range_y[0], g_y), max(range_y[1], g_y))
 
-        top_down_map[g_x, g_y] = 1
-
-    range_x = np.where(np.any(top_down_map, axis=1))[0]
-    range_y = np.where(np.any(top_down_map, axis=0))[0]
     # Pad the range just in case not enough points were sampled to get the true
     # extrema.
     padding = int(np.ceil(map_resolution[0] / 125))
@@ -274,18 +291,19 @@ def get_topdown_map(
         max(range_y[0] - padding, 0),
         min(range_y[-1] + padding + 1, top_down_map.shape[1]),
     )
-    top_down_map[:] = 0
 
     # Search over grid for valid points.
     for ii in range(range_x[0], range_x[1]):
         for jj in range(range_y[0], range_y[1]):
-            realworld_x, realworld_y = _from_grid(
+            realworld_x, realworld_y = from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
             valid_point = sim.is_navigable(
                 [realworld_x, start_height, realworld_y]
             )
-            top_down_map[ii, jj] = 1 if valid_point else 0
+            top_down_map[ii, jj] = (
+                MAP_VALID_POINT if valid_point else MAP_INVALID_POINT
+            )
 
     # Draw border if necessary
     if draw_border:
@@ -293,15 +311,25 @@ def get_topdown_map(
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
         range_x = (
-            max(range_x[0] - grid_delta, 0),
-            min(range_x[-1] + grid_delta + 1, top_down_map.shape[0]),
+            max(range_x[0] - border_padding, 0),
+            min(range_x[-1] + border_padding + 1, top_down_map.shape[0]),
         )
         range_y = (
-            max(range_y[0] - grid_delta, 0),
-            min(range_y[-1] + grid_delta + 1, top_down_map.shape[1]),
+            max(range_y[0] - border_padding, 0),
+            min(range_y[-1] + border_padding + 1, top_down_map.shape[1]),
         )
 
         _outline_border(
             top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]
         )
     return top_down_map
+
+
+def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
+    """Convert the top down map to RGB based on the indicator values.
+        Args:
+            top_down_map: A non-colored version of the map.
+        Returns:
+            A colored version of the top-down map.
+    """
+    return TOP_DOWN_MAP_COLORS[top_down_map]

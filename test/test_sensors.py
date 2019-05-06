@@ -15,9 +15,9 @@ from habitat.tasks.nav.nav_task import (
     NavigationEpisode,
     COLLISION_PROXIMITY_TOLERANCE,
 )
-from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
+from habitat.sims.habitat_simulator import SimulatorActions
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
 
 def _random_episode(env, config):
@@ -124,9 +124,9 @@ def test_collisions():
     np.random.seed(123)
 
     actions = [
-        SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value],
-        SIM_NAME_TO_ACTION[SimulatorActions.LEFT.value],
-        SIM_NAME_TO_ACTION[SimulatorActions.RIGHT.value],
+        SimulatorActions.FORWARD.value,
+        SimulatorActions.LEFT.value,
+        SimulatorActions.RIGHT.value,
     ]
 
     for _ in range(20):

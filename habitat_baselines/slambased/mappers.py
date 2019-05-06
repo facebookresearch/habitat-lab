@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from baselines.slambased.reprojection import (
+from habitat_baselines.slambased.reprojection import (
     get_map_size_in_cells,
     project2d_pcl_into_worldmap,
     reproject_local_to_global,
@@ -28,7 +28,7 @@ def depth2local3d(depth, fx, fy, cx, cy):
     )  # z
 
 
-def pcl_to_obstacles(pts3d, map_size=40, cell_size=0.2, min_pts= 10):
+def pcl_to_obstacles(pts3d, map_size=40, cell_size=0.2, min_pts=10):
     """Counts number of 3d points in 2d map cell.
     Height is sum-pooled.
     """
@@ -93,17 +93,15 @@ class DirectDepthMapper(nn.Module):
         self.cx = int(self.fx) - 1
         self.cy = int(self.fy) - 1
         pose = pose.to(self.device)
-        local_3d_pcl = depth2local3d(
-            depth, self.fx, self.fy, self.cx, self.cy
-        )
+        local_3d_pcl = depth2local3d(depth, self.fx, self.fy, self.cx, self.cy)
         idxs = (torch.abs(local_3d_pcl[:, 2]) < self.far_th) * (
             torch.abs(local_3d_pcl[:, 2]) >= self.near_th
         )
         survived_points = local_3d_pcl[idxs]
         if len(survived_points) < 20:
             map_size_in_cells = (
-                get_map_size_in_cells(self.map_size_meters,
-                                      self.map_cell_size) - 1
+                get_map_size_in_cells(self.map_size_meters, self.map_cell_size)
+                - 1
             )
             init_map = torch.zeros(
                 (map_size_in_cells, map_size_in_cells), device=self.device

@@ -14,18 +14,18 @@ import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.sims.habitat_simulator import (
-    SimulatorActions,
-    SIM_ACTION_TO_NAME,
-    SIM_NAME_TO_ACTION,
-)
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
-NUM_ENVS = 2
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
+NUM_ENVS = 4
 
 
 class DummyRLEnv(habitat.RLEnv):
+    def __init__(self, config, dataset=None, env_ind=0):
+        super(DummyRLEnv, self).__init__(config, dataset)
+        self._env_ind = env_ind
+
     def get_reward_range(self):
         return -1.0, 1.0
 
@@ -40,6 +40,12 @@ class DummyRLEnv(habitat.RLEnv):
 
     def get_info(self, observations):
         return {}
+
+    def get_env_ind(self):
+        return self._env_ind
+
+    def set_env_ind(self, new_env_ind):
+        self._env_ind = new_env_ind
 
 
 def _load_test_data():
@@ -75,8 +81,8 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
     )
     envs.reset()
     non_stop_actions = [
-        k
-        for k, v in SIM_ACTION_TO_NAME.items()
+        v
+        for v in range(len(SimulatorActions))
         if v != SimulatorActions.STOP.value
     ]
 
@@ -129,8 +135,8 @@ def test_threaded_vectorized_env():
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        k
-        for k, v in SIM_ACTION_TO_NAME.items()
+        v
+        for v in range(len(SimulatorActions))
         if v != SimulatorActions.STOP.value
     ]
 
@@ -159,8 +165,8 @@ def test_env():
     env.reset()
 
     non_stop_actions = [
-        k
-        for k, v in SIM_ACTION_TO_NAME.items()
+        v
+        for v in range(len(SimulatorActions))
         if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -174,7 +180,7 @@ def test_env():
 
     env.reset()
 
-    env.step(SIM_NAME_TO_ACTION[SimulatorActions.STOP.value])
+    env.step(SimulatorActions.STOP.value)
     # check for STOP action
     assert env.episode_over is True, (
         "episode should be over after STOP " "action"
@@ -203,8 +209,8 @@ def test_rl_vectorized_envs():
     envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        k
-        for k, v in SIM_ACTION_TO_NAME.items()
+        v
+        for v in range(len(SimulatorActions))
         if v != SimulatorActions.STOP.value
     ]
 
@@ -215,6 +221,9 @@ def test_rl_vectorized_envs():
         assert len(rewards) == num_envs
         assert len(dones) == num_envs
         assert len(infos) == num_envs
+        assert envs.render(
+            mode="rgb_array"
+        ).all(), "vector env render is broken"
         if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
@@ -242,8 +251,8 @@ def test_rl_env():
     observation = env.reset()
 
     non_stop_actions = [
-        k
-        for k, v in SIM_ACTION_TO_NAME.items()
+        v
+        for v in range(len(SimulatorActions))
         if v != SimulatorActions.STOP.value
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -255,14 +264,61 @@ def test_rl_env():
     assert done is True, "episodes should be over after max_episode_steps"
 
     env.reset()
-    observation, reward, done, info = env.step(
-        SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
-    )
+    observation, reward, done, info = env.step(SimulatorActions.STOP.value)
     assert done is True, "done should be true after STOP action"
 
     env.close()
 
 
+def _make_dummy_env_func(config, dataset, id):
+    return DummyRLEnv(config=config, dataset=dataset, env_ind=id)
+
+
+def test_vec_env_call_func():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    true_env_ids = list(range(num_envs))
+    envs = habitat.VectorEnv(
+        make_env_fn=_make_dummy_env_func,
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method="forkserver",
+    )
+    envs.reset()
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    env_id = envs.call_at(1, "get_env_ind")
+    assert env_id == true_env_ids[1]
+
+    envs.call_at(2, "set_env_ind", [20])
+    true_env_ids[2] = 20
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.call_at(2, "set_env_ind", [2])
+    true_env_ids[2] = 2
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.pause_at(3)
+    true_env_ids.pop(3)
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.pause_at(0)
+    true_env_ids.pop(0)
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == true_env_ids
+
+    envs.resume_all()
+    env_ids = envs.call(["get_env_ind"] * num_envs)
+    assert env_ids == list(range(num_envs))
+    envs.close()
+
+
+# TODO Bring back this test for the greedy follower
+@pytest.mark.skip
 def test_action_space_shortest_path():
     config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
