@@ -240,6 +240,10 @@ class HabitatSim(habitat.Simulator):
                 is_updated = True
         return is_updated
 
+    def get_observation(self):
+        sim_obs = self._sim.get_sensor_observations()
+        return self._sensor_suite.get_observations(sim_obs)
+
     def reset(self):
         sim_obs = self._sim.reset()
         if self._update_agents_state():

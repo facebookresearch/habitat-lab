@@ -276,6 +276,10 @@ class Simulator:
         """
         raise NotImplementedError
 
+    def get_observation(self) -> Observations:
+        """Returns the current observation."""
+        raise NotImplementedError
+
     def sample_navigable_point(self) -> List[float]:
         """Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
