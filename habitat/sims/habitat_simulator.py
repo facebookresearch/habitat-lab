@@ -240,7 +240,7 @@ class HabitatSim(habitat.Simulator):
                 is_updated = True
         return is_updated
 
-    def get_observation(self):
+    def get_observations(self):
         sim_obs = self._sim.get_sensor_observations()
         return self._sensor_suite.get_observations(sim_obs)
 
@@ -276,8 +276,7 @@ class HabitatSim(habitat.Simulator):
         Returns:
             rendered frame according to the mode
         """
-        sim_obs = self._sim.get_sensor_observations()
-        observations = self._sensor_suite.get_observations(sim_obs)
+        observations = self.get_observations()
 
         output = observations.get(mode)
         assert output is not None, "mode {} sensor is not active".format(mode)

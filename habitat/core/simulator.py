@@ -276,7 +276,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def get_observation(self) -> Observations:
+    def get_observations(self) -> Observations:
         """Returns the current observation."""
         raise NotImplementedError
 
