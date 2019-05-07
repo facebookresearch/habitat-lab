@@ -226,10 +226,11 @@ def test_rl_vectorized_envs():
         new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
         new_width = int(np.ceil(float(NUM_ENVS) / new_height))
         h, w, c = observations[0]['rgb'].shape
-        assert tiled_img.shape[0] == h * new_height \
-               and tiled_img.shape[1] == w * new_width \
-               and tiled_img.shape[2] == d, \
-            "vector env render is broken"
+        assert tiled_img.shape == (
+            h * new_height,
+            w * new_width,
+            c,
+        ), "vector env render is broken"
         
         if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
