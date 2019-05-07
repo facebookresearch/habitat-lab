@@ -225,7 +225,7 @@ def test_rl_vectorized_envs():
         tiled_img = envs.render(mode="rgb_array")
         new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
         new_width = int(np.ceil(float(NUM_ENVS) / new_height))
-        h, w, d = observations[0]['rgb'].shape
+        h, w, c = observations[0]['rgb'].shape
         assert tiled_img.shape[0] == h * new_height \
                and tiled_img.shape[1] == w * new_width \
                and tiled_img.shape[2] == d, \
