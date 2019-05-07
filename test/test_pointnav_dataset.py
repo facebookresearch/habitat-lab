@@ -14,13 +14,15 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.datasets.pointnav.generator import generate_pointnav_episode
 from habitat.datasets.pointnav.pointnav_dataset import (
     PointNavDatasetV1,
     DEFAULT_SCENE_PATH_PREFIX,
 )
 
-CFG_TEST = "configs/datasets/pointnav/gibson.yaml"
+CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 PARTIAL_LOAD_SCENES = 3
+NUM_EPISODES = 10
 
 
 def check_json_serializaiton(dataset: habitat.Dataset):
@@ -101,3 +103,22 @@ def test_multiple_files_pointnav_dataset():
         len(partial_dataset.scene_ids) == PARTIAL_LOAD_SCENES
     ), "Number of loaded scenes doesn't correspond."
     check_json_serializaiton(partial_dataset)
+
+
+def test_pointnav_episode_generator():
+    config = get_config(CFG_TEST)
+    config.defrost()
+    config.DATASET.SPLIT = "val"
+    config.freeze()
+    env = habitat.Env(config)
+    habitat.datasets.pointnav.generator.GEODESIC_TO_EUCLID_RATIO_THRESHOLD = 0
+    generator = generate_pointnav_episode(env)
+    episodes = []
+    for i in range(NUM_EPISODES):
+        episode = next(generator)
+        episodes.append(episode)
+
+    for episode in generate_pointnav_episode(env, NUM_EPISODES):
+        episodes.append(episode)
+
+    assert len(episodes) == 2 * NUM_EPISODES
