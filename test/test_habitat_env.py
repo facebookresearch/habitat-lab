@@ -221,7 +221,16 @@ def test_rl_vectorized_envs():
         assert len(rewards) == num_envs
         assert len(dones) == num_envs
         assert len(infos) == num_envs
-        assert envs.render(mode="rgb_array") is not None, "vector env render is broken"
+        
+        tiled_img = envs.render(mode="rgb_array")
+        new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+        new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+        h, w, d = observations[0]['rgb'].shape
+        assert tiled_img.shape[0] == h * new_height \
+               and tiled_img.shape[1] == w * new_width \
+               and tiled_img.shape[2] == d, \
+            "vector env render is broken"
+        
         if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
