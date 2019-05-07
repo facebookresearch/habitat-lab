@@ -23,10 +23,12 @@ def _ratio_sample_rate(ratio):
 
 
 def is_compatible_episode(s, t, env, near_dist, far_dist):
-    euclid_dist = np.power(np.power(s - t, 2).sum(0), 0.5)
+    substract_vec = [a_i - b_i for a_i, b_i in zip(s, t)]
+    # euclid_dist = np.power(np.power(s - t, 2).sum(0), 0.5)
+    euclid_dist = np.power(np.power(substract_vec, 2).sum(0), 0.5)
     if np.abs(s[1] - t[1]) > 0.5:
         return False, 0
-    d_separation = env._sim.geodesic_distance(s, t)
+    d_separation = env.sim.geodesic_distance(s, t)
     if d_separation == np.inf:
         return False, 0
     if not near_dist <= d_separation <= far_dist:
@@ -36,7 +38,7 @@ def is_compatible_episode(s, t, env, near_dist, far_dist):
         distances_ratio
     ):
         return False, 0
-    if env._sim._sim.pathfinder.island_radius(s) < ISLAND_RADIUS_LIMIT:
+    if env.sim.island_radius(s) < ISLAND_RADIUS_LIMIT:
         return False, 0
     return True, d_separation
 
@@ -96,21 +98,15 @@ def get_action_shortest_path(
 
 
 def generate_pointnav_episode(env, num_episodes=-1, gen_shortest_path=True):
-    episode = None
     episode_count = 0
     while episode_count < num_episodes or num_episodes < 0:
-        target_position = env._sim._sim.pathfinder.get_random_navigable_point()
+        target_position = env.sim.sample_navigable_point()
 
-        if (
-            env._sim._sim.pathfinder.island_radius(target_position)
-            < ISLAND_RADIUS_LIMIT
-        ):
+        if env.sim.island_radius(target_position) < ISLAND_RADIUS_LIMIT:
             continue
 
         for retry in range(NUMBER_RETRIES_PER_TARGET):
-            source_position = (
-                env._sim._sim.pathfinder.get_random_navigable_point()
-            )
+            source_position = env.sim.sample_navigable_point()
 
             is_compatible, dist = is_compatible_episode(
                 source_position,
@@ -134,10 +130,10 @@ def generate_pointnav_episode(env, num_episodes=-1, gen_shortest_path=True):
 
                 episode = _create_episode(
                     episode_id=episode_count,
-                    scene_id=env._sim.config.SCENE,
-                    start_position=source_position.tolist(),
+                    scene_id=env.sim.config.SCENE,
+                    start_position=source_position,
                     start_rotation=source_rotation,
-                    target_position=target_position.tolist(),
+                    target_position=target_position,
                     shortest_paths=shortest_paths,
                     info={"geodesic_distance": dist},
                 )

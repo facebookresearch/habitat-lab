@@ -440,3 +440,6 @@ class HabitatSim(habitat.Simulator):
         return self._sim.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
+
+    def island_radius(self, position):
+        return self._sim.pathfinder.island_radius(position)
