@@ -7,7 +7,7 @@
 from collections import defaultdict
 from typing import Dict, Optional
 
-from habitat.config.default import get_config, DEFAULT_CONFIG_DIR
+from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat.core.env import Env
 

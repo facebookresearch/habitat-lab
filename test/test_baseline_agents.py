@@ -10,7 +10,7 @@ import pytest
 from habitat_baselines.agents import simple_agents
 
 try:
-    import torch
+    import torch  # noqa # pylint: disable=unused-import
 
     has_torch = True
 except ImportError:

@@ -20,11 +20,7 @@ from habitat.core.simulator import (
     SensorTypes,
     SensorSuite,
 )
-from habitat.tasks.utils import (
-    quaternion_to_rotation,
-    cartesian_to_polar,
-    quaternion_rotate_vector,
-)
+from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3

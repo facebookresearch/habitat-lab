@@ -108,8 +108,9 @@ def images_to_video(
             use at your own risk.
         quality: Default is 5. Uses variable bit rate. Highest quality is 10,
             lowest is 0.  Set to None to prevent variable bitrate flags to
-            FFMPEG so you can manually specify them using output_params instead.
-            Specifying a fixed bitrate using ‘bitrate’ disables this parameter.
+            FFMPEG so you can manually specify them using output_params
+            instead. Specifying a fixed bitrate using ‘bitrate’ disables
+            this parameter.
     """
     assert 0 <= quality <= 10
     if not os.path.exists(output_dir):
