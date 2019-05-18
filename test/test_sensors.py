@@ -148,8 +148,8 @@ def test_collisions():
                 < 0.9 * config.SIMULATOR.FORWARD_STEP_SIZE
                 and action == actions[0]
             ):
-                # Check to see if the new method of doing collisions catches all the same
-                # collisions as the old method
+                # Check to see if the new method of doing collisions catches
+                # all the same collisions as the old method
                 assert collisions == prev_collisions + 1
 
             prev_loc = loc

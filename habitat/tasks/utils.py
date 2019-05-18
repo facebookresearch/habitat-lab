@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-import quaternion
+import quaternion  # noqa # pylint: disable=unused-import
 
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
