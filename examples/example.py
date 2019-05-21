@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import habitat
-import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
