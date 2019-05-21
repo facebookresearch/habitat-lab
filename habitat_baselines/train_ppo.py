@@ -128,9 +128,14 @@ def construct_envs(args):
         config_env.defrost()
 
         if len(scenes) > 0:
-            config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
-                i * scene_split_size : (i + 1) * scene_split_size
-            ]
+            if i < args.num_processes - 1:
+                config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+                    i * scene_split_size : (i + 1) * scene_split_size
+                ]
+            else:
+                config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+                    i * scene_split_size : len(scenes)
+                ]
 
         config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
