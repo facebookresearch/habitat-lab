@@ -126,7 +126,7 @@ class VectorEnv:
         Returns:
              Number of individual environments.
         """
-        return self._num_envs
+        return self._num_envs - len(self._paused)
 
     @staticmethod
     def _worker_env(
