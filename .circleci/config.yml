@@ -17,8 +17,14 @@ jobs:
           command: |
               isort pytext --recursive --multi-line 3 --trailing-comma --force-grid-wrap 0 \
                   --line-width 88 --lines-after-imports 2 --combine-as --section-default THIRDPARTY --check-only
+  pytorch_linux_xenial_cuda10_cudnn7_py3_gcc7_build:
+    environment:
+      BUILD_ENVIRONMENT: pytorch-linux-xenial-cuda10-cudnn7-py3-gcc7-build
+      DOCKER_IMAGE: "308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/pytorch-linux-xenial-cuda10-cudnn7-py3-gcc7:300"
+      PYTHON_VERSION: "3.6"
 workflows:
   version: 2
   build_and_test:
     jobs:
       - python_lint
+      - pytorch_linux_xenial_cuda10_cudnn7_py3_gcc7_build
