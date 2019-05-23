@@ -13,8 +13,8 @@ import torch
 from gym.spaces import Discrete, Dict, Box
 
 import habitat
-from baselines.rl.ppo import Policy
-from baselines.rl.ppo.utils import batch_obs
+from habitat_baselines.rl.ppo import Policy
+from habitat_baselines.rl.ppo.utils import batch_obs
 from habitat import Config
 from habitat.core.agent import Agent
 
@@ -60,12 +60,17 @@ class PPOAgent(Agent):
 
         action_spaces = Discrete(4)
 
-        self.device = torch.device("cuda:{}".format(config.PTH_GPU_ID))
+        self.device = (
+            torch.device("cuda:{}".format(config.PTH_GPU_ID))
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
         self.hidden_size = config.HIDDEN_SIZE
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)
-        torch.backends.cudnn.deterministic = True
+        if torch.cuda.is_available():
+            torch.backends.cudnn.deterministic = True
 
         self.actor_critic = Policy(
             observation_space=observation_spaces,
@@ -126,7 +131,7 @@ def main():
     )
     parser.add_argument("--model-path", default="", type=str)
     parser.add_argument(
-        "--task-config", type=str, default="tasks/pointnav.yaml"
+        "--task-config", type=str, default="configs/tasks/pointnav.yaml"
     )
     args = parser.parse_args()
 

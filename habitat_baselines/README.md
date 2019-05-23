@@ -17,7 +17,7 @@ For training on sample data please follow steps in the repository README. You sh
 
 **train**:
 ```bash
-python -u baselines/train_ppo.py \
+python -u habitat_baselines/train_ppo.py \
     --use-gae \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \
@@ -35,20 +35,20 @@ python -u baselines/train_ppo.py \
     --log-interval 5 \
     --checkpoint-folder "data/checkpoints" \
     --checkpoint-interval 50 \
-    --task-config "tasks/pointnav.yaml" \
+    --task-config "configs/tasks/pointnav.yaml" \
 
 
 ```
 
 **test**:
 ```bash
-python -u baselines/evaluate_ppo.py \
+python -u habitat_baselines/evaluate_ppo.py \
     --model-path "/path/to/checkpoint" \
     --sim-gpu-id 0 \
     --pth-gpu-id 0 \
     --num-processes 4 \
     --count-test-episodes 100 \
-    --task-config "tasks/pointnav.yaml" \
+    --task-config "configs/tasks/pointnav.yaml" \
 
 
 ```
