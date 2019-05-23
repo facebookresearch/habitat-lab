@@ -7,7 +7,7 @@
 import gzip
 import json
 import os
-from typing import List
+from typing import List, Optional
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset
@@ -19,6 +19,7 @@ from habitat.tasks.nav.nav_task import (
 
 ALL_SCENES_MASK = "*"
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
+DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
 class PointNavDatasetV1(Dataset):
@@ -70,7 +71,7 @@ class PointNavDatasetV1(Dataset):
         scenes.sort()
         return scenes
 
-    def __init__(self, config: Config = None) -> None:
+    def __init__(self, config: Optional[Config] = None) -> None:
         self.episodes = []
 
         if config is None:
@@ -80,7 +81,7 @@ class PointNavDatasetV1(Dataset):
             split=config.SPLIT
         )
         with gzip.open(datasetfile_path, "rt") as f:
-            self.from_json(f.read())
+            self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
@@ -96,15 +97,26 @@ class PointNavDatasetV1(Dataset):
                 data_path=dataset_dir, scene=scene
             )
             with gzip.open(scene_filename, "rt") as f:
-                self.from_json(f.read())
+                self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
-    def from_json(self, json_str: str) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
         deserialized = json.loads(json_str)
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
 
         for episode in deserialized["episodes"]:
             episode = NavigationEpisode(**episode)
+
+            if scenes_dir is not None:
+                if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
+                    episode.scene_id = episode.scene_id[
+                        len(DEFAULT_SCENE_PATH_PREFIX) :
+                    ]
+
+                episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
+
             for g_index, goal in enumerate(episode.goals):
                 episode.goals[g_index] = NavigationGoal(**goal)
             if episode.shortest_paths is not None:

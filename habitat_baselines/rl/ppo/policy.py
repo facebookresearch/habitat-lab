@@ -7,7 +7,7 @@
 import torch
 import torch.nn as nn
 
-from baselines.rl.ppo.utils import Flatten, CategoricalNet
+from habitat_baselines.rl.ppo.utils import Flatten, CategoricalNet
 
 import numpy as np
 
