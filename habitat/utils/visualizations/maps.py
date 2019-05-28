@@ -5,12 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
-import cv2
 import imageio
 import numpy as np
 import scipy.ndimage
+
+import cv2
 from habitat.core.simulator import Simulator
 from habitat.utils.visualizations import utils
 

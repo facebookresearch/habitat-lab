@@ -6,19 +6,19 @@
 
 from typing import Any, List, Optional, Type
 
-import cv2
 import numpy as np
 from gym import spaces
 
+import cv2
 import habitat
 from habitat.config import Config
-from habitat.core.dataset import Episode, Dataset
+from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import Measurements
 from habitat.core.simulator import (
-    Simulator,
-    ShortestPathPoint,
-    SensorTypes,
     SensorSuite,
+    SensorTypes,
+    ShortestPathPoint,
+    Simulator,
 )
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps

@@ -6,8 +6,8 @@
 
 from habitat.datasets.registration import (
     dataset_registry,
-    register_dataset,
     make_dataset,
+    register_dataset,
 )
 
 register_dataset(

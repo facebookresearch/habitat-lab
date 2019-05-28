@@ -4,18 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 import os
-import pytest
 import random
 
+import numpy as np
+
 import habitat
+import pytest
 from habitat.config.default import get_config
-from habitat.tasks.nav.nav_task import (
-    NavigationEpisode,
-    COLLISION_PROXIMITY_TOLERANCE,
-)
 from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.tasks.nav.nav_task import (
+    COLLISION_PROXIMITY_TOLERANCE,
+    NavigationEpisode,
+)
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 

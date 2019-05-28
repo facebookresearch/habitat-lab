@@ -9,14 +9,14 @@ import argparse
 import random
 
 import numpy as np
-import torch
-from gym.spaces import Discrete, Dict, Box
+from gym.spaces import Box, Dict, Discrete
 
 import habitat
-from habitat_baselines.rl.ppo import Policy
-from habitat_baselines.rl.ppo.utils import batch_obs
+import torch
 from habitat import Config
 from habitat.core.agent import Agent
+from habitat_baselines.rl.ppo import Policy
+from habitat_baselines.rl.ppo.utils import batch_obs
 
 
 def get_defaut_config():

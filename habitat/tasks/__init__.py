@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat.tasks.registration import task_registry, register_task, make_task
+from habitat.tasks.registration import make_task, register_task, task_registry
 
 register_task(id_task="EQA-v0", entry_point="habitat.tasks.eqa:EQATask")
 

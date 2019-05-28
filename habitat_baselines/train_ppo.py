@@ -5,20 +5,21 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from time import time
-from collections import deque
 import random
+from collections import deque
+from time import time
+
 import numpy as np
 
-import torch
 import habitat
-from habitat import logger
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat.config.default import get_config as cfg_env
+import torch
 from config.default import get_config as cfg_baseline
+from habitat import logger
+from habitat.config.default import get_config as cfg_env
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
-from rl.ppo.utils import update_linear_schedule, ppo_args, batch_obs
+from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
 
 
 class NavRLEnv(habitat.RLEnv):

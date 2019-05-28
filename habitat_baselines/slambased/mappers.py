@@ -1,4 +1,5 @@
 import numpy as np
+
 import torch
 import torch.nn as nn
 from habitat_baselines.slambased.reprojection import (

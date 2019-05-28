@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
+
 import quaternion  # noqa # pylint: disable=unused-import
 
 

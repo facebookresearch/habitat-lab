@@ -6,7 +6,7 @@
 
 import copy
 import json
-from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
+from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
 
 import numpy as np
 

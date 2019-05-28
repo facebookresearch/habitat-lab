@@ -6,26 +6,27 @@ WACV 2019
 """
 
 
+import math
+import os
+import pdb
+
+import numpy as np
+
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torch.nn.parallel
+import torch.utils.model_zoo as model_zoo
+from PIL import Image
+from torchvision import transforms, utils
 
 """
 ResNet code gently borrowed from
 https://github.com/pytorch/vision/blob/master/torchvision/models/py
 """
 
-import torch.nn as nn
-import math
-import torch.utils.model_zoo as model_zoo
-import torch.nn.functional as F
-import torch
-import numpy as np
-import pdb
-import os
-from PIL import Image
 
 accimage = None
-from torchvision import transforms, utils
 
 
 __all__ = [

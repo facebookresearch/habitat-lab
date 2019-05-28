@@ -1,6 +1,8 @@
-import numpy as np
-import torch
 from math import ceil, floor
+
+import numpy as np
+
+import torch
 
 
 def p_zx(p):

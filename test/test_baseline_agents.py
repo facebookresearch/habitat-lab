@@ -4,8 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import habitat
 import os
+
+import habitat
 import pytest
 from habitat_baselines.agents import simple_agents
 
