@@ -27,6 +27,11 @@ LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = license
 REQUIREMENTS = (reqs.strip().split("\n"),)
+EXTRA_REQUIREMENT = {
+    'baseline': ["torch>=1.0.0"],
+    'rl_baseline': ["torch>=1.0.0"],
+    'slam_baseline': []
+}
 
 if __name__ == "__main__":
     setuptools.setup(
@@ -40,5 +45,6 @@ if __name__ == "__main__":
         license=LICENSE,
         setup_requires=["pytest-runner"],
         tests_require=["pytest"],
+        extras_require=EXTRA_REQUIREMENT,
         include_package_data=True,
     )
