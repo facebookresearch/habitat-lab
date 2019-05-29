@@ -18,6 +18,10 @@ from habitat.tasks.nav.nav_task import (
 )
 from habitat.sims.habitat_simulator import SimulatorActions
 
+NON_STOP_ACTIONS = [
+    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value
+]
+
 
 def _random_episode(env, config):
     random_location = env._sim.sample_navigable_point()
@@ -165,21 +169,30 @@ def test_static_pointgoal_sensor():
     random.seed(123)
     np.random.seed(123)
 
+    # start position is checked for validity for the specific test scene
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+    expected_static_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_static_pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+
     env.episodes = [
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[-1.3731, 0.08431, 8.60692],
-            start_rotation=[0, -np.pi, 0, np.pi],
-            goals=[NavigationGoal([-1.2731, 0.08431, 8.60692])],
+            start_position=valid_start_position,
+            start_rotation=start_rotation,
+            goals=[NavigationGoal(goal_position)],
         )
     ]
 
     obs = env.reset()
     for _ in range(5):
-        env.step(np.random.choice([0, 1, 2]))
+        env.step(np.random.choice(NON_STOP_ACTIONS))
     static_pointgoal = obs["static_pointgoal"]
 
-    # check to see if taking actions (other than STOP) will affect static point_goal
-    assert np.allclose(static_pointgoal, [0, 0, -0.1])
+    # check to see if taking non-stop actions will affect static point_goal
+    assert np.allclose(static_pointgoal, expected_static_pointgoal)
     env.close()
