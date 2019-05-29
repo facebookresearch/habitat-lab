@@ -14,7 +14,7 @@ from habitat.config.default import get_config
 from habitat.tasks.nav.nav_task import (
     NavigationEpisode,
     COLLISION_PROXIMITY_TOLERANCE,
-    NavigationGoal
+    NavigationGoal,
 )
 from habitat.sims.habitat_simulator import SimulatorActions
 
@@ -116,8 +116,8 @@ def test_collisions():
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
-    random.seed(100)
-    np.random.seed(100)
+    random.seed(123)
+    np.random.seed(123)
 
     actions = [
         SimulatorActions.FORWARD.value,
