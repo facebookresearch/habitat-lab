@@ -18,8 +18,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
 from version import VERSION  # noqa
 
 
-
-
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
 
