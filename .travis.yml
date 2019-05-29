@@ -2,9 +2,10 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install pytest black
+  - pip install pytest black isort
   - pip install .
 script:
+  - isort --recursive --check habitat test
   - black --check habitat test --line-length 79
   - pytest test/test_install.py
 

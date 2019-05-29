@@ -1,8 +1,8 @@
+# https://sumit-ghosh.com/articles/python-download-progress-bar/
+
 import argparse
 import os
 import random
-
-# https://sumit-ghosh.com/articles/python-download-progress-bar/
 import sys
 import time
 from math import pi
