@@ -5,9 +5,7 @@ install:
   - pip install pytest black isort
   - pip install .
 script:
-  - isort --version
-  - git rev-parse HEAD FETCH_HEAD
-  - isort --recursive --check --trailing-comma --multi-line 3 --use-parentheses habitat test
+  - isort --recursive --check habitat test
   - black --check habitat test --line-length 79
   - pytest test/test_install.py
 
