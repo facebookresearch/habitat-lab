@@ -166,8 +166,6 @@ def test_static_pointgoal_sensor():
     config.TASK.SENSORS = ["STATIC_POINTGOAL_SENSOR"]
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
-    random.seed(123)
-    np.random.seed(123)
 
     # start position is checked for validity for the specific test scene
     valid_start_position = [-1.3731, 0.08431, 8.60692]
