@@ -37,6 +37,12 @@ _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
 # -----------------------------------------------------------------------------
+# # STATIC POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
+_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
+_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+# -----------------------------------------------------------------------------
 # # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
