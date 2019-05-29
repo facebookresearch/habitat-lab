@@ -1,5 +1,3 @@
-# https://sumit-ghosh.com/articles/python-download-progress-bar/
-
 import argparse
 import os
 import random
@@ -35,6 +33,7 @@ from habitat_baselines.slambased.reprojection import (
 from habitat_baselines.slambased.utils import generate_2dgrid
 
 
+# https://sumit-ghosh.com/articles/python-download-progress-bar/
 def download(url, filename):
     with open(filename, "wb") as f:
         response = requests.get(url, stream=True)
