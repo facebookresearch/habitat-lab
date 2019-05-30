@@ -28,9 +28,9 @@ AUTHOR = "Facebook AI Research"
 LICENSE = license
 REQUIREMENTS = (reqs.strip().split("\n"),)
 EXTRA_REQUIREMENT = {
-    'baseline': ["torch>=1.0.0"],
-    'rl_baseline': ["torch>=1.0.0"],
-    'slam_baseline': []
+    "baseline": ["torch>=1.0.0"],
+    "rl_baseline": ["torch>=1.0.0"],
+    "slam_baseline": [],
 }
 
 if __name__ == "__main__":
@@ -38,9 +38,7 @@ if __name__ == "__main__":
         name=DISTNAME,
         install_requires=REQUIREMENTS,
         packages=setuptools.find_packages(
-            exclude=["test",
-                     "examples",
-                     "habitat_baselines"]
+            exclude=["test", "examples", "habitat_baselines"]
         ),
         version=VERSION,
         description=DESCRIPTION,
