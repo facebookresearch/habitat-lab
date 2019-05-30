@@ -37,7 +37,11 @@ if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=REQUIREMENTS,
-        packages=setuptools.find_packages(),
+        packages=setuptools.find_packages(
+            exclude=["test",
+                     "examples",
+                     "habitat_baselines"]
+        ),
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
