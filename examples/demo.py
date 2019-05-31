@@ -31,8 +31,8 @@ AGENT_ACTION_KEYS = [
 ]
 
 INSTRUCTIONS = [
-    "Use W/A/D to move Forward/Left/Right"
-    "Press <Space> when you reach the goal"
+    "Use W/A/D to move Forward/Left/Right",
+    "Press <Space> when you reach the goal",
     "Q - Quit"
 ]  
 
@@ -57,11 +57,14 @@ class Rect(NamedTuple):
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
 
-def display_instructions(image, instructions, offset):
+
+def display_instructions(image, instructions, size=1, offset=(0,0), fontcolor=(255,255,255)):
     for i,instruction in enumerate(instructions):
         x = offset[1]
-        y = offset[0] + i*10
-        cv2.putText(image, instructions, (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
+        y = offset[0] + (i+1)*size*50 - 15
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(image, instruction, (x,y), font, size, fontcolor, 2, cv2.LINE_AA)
+
 
 def draw_goal_radar(pointgoal, img, 
                     r: Rect, 
@@ -85,6 +88,7 @@ def draw_goal_radar(pointgoal, img,
     cv2.line(img, center, target, color, 1)
     cv2.circle(img, target, 4, color, -1)
 
+
 def draw_top_down_map(info, heading, output_size):
     top_down_map = maps.colorize_topdown_map(info["top_down_map"]["map"])
     original_map_size = top_down_map.shape[:2]
@@ -106,6 +110,7 @@ def draw_top_down_map(info, heading, output_size):
         agent_radius_px=top_down_map.shape[0] / 40,
     )
     return top_down_map
+
 
 class Viewer:
     def __init__(self, initial_observations, 
@@ -135,11 +140,13 @@ class Viewer:
             total_width += goal_display_size
         self.window_size = (total_height, total_width)  
 
+
     def draw_observations(self, observations, info=None):    
         active_image_observations = [observations[s] for s in self.active_image_sensors]
         for i,img in enumerate(active_image_observations):
             if img.shape[2] == 1:
-                active_image_observations[i] = cv2.convertScaleAbs(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
+                img *= (255.0 / img.max())  # naive rescaling for visualization
+                active_image_observations[i] = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR).astype(np.uint8)
             elif img.shape[2] == 3:
                 active_image_observations[i] = transform_rgb_bgr(img)
 
@@ -164,25 +171,64 @@ class Viewer:
         return stacked
 
 
+def get_video_writer(filename='output.avi', fps=20.0, resolution=(640,480)):
+#    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    writer = cv2.VideoWriter(filename, fourcc, fps, resolution)
+    return writer
+
+
+class VideoWriter:
+    # wrapper around video writer that will create video writer and
+    # initialize the resolution the first time write happens
+    def __init__(self, filename='output.avi', fps=20.0):
+        self.filename = filename
+        self.fps = fps
+        self.writer = None
+
+    def write(self, frame):
+        if self.writer is None:
+            self.resolution = (frame.shape[1], frame.shape[0])
+            self.writer = get_video_writer(self.filename, self.fps, self.resolution)
+        print('save frame')
+        self.writer.write(frame)
+
+    def release(self):
+        if self.writer is not None:
+            print('release')
+            self.writer.release()
+            self.writer = None
+
+
 class Demo:
     def __init__(self, config, action_keys: List[ActionKeyMapping], instructions: List[str]):
         self.window_name = "Habitat"
         self.config = config
+        self.instructions = instructions
         self.action_keys = action_keys
         self.action_keys_map = {k.key : k for k in self.action_keys}
         self.is_quit = False
-        
+
         self.env = habitat.Env(
             config=self.config
         )
         print("Environment creation successful")
 
 
-    def update(self, img):
-        cv2.imshow(self.window_name, img)
+    def update(self, img, video_writer=None):
+        fontsize = 1
+        instructions_height = fontsize*50*len(self.instructions)
+        instructions_img = np.zeros((instructions_height, img.shape[1], 3), np.uint8)
+        display_instructions(instructions_img, self.instructions, size=fontsize)
+        combined = np.vstack((instructions_img, img))
+        self.window_shape = combined.shape
+        if video_writer is not None:
+            #frame = cv2.flip(combined,0)
+            video_writer.write(combined)
+        cv2.imshow(self.window_name, combined)
 
 
-    def run(self, overlay_goal_radar=False, show_map=False):
+    def run(self, overlay_goal_radar=False, show_map=False, video_writer=None):
         env = self.env
         action_keys_map = self.action_keys_map
 
@@ -216,13 +262,13 @@ class Demo:
             count_steps += 1
 
             img = viewer.draw_observations(observations, info)
-            self.update(img)
+            self.update(img, video_writer)
 
         print("Episode finished after {} steps.".format(count_steps))
         return actions
 
 
-    def replay(self, actions, overlay_goal_radar=False, delay=1):
+    def replay(self, actions, overlay_goal_radar=False, delay=1, video_writer=None):
         # Set delay to 0 to wait for key presses before advancing
         env = self.env
         action_keys_map = self.action_keys_map
@@ -248,15 +294,23 @@ class Demo:
             count_steps += 1
 
             img = viewer.draw_observations(observations, info)
-            self.update(img)
+            self.update(img, video_writer)
 
         print("Episode finished after {} steps.".format(count_steps))
 
 
     def demo(self, args):
-        actions = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map)
+        video_writer = None
+        #video_writer = VideoWriter('test1.avi') if args.save_video else None
+        actions = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
+        #if video_writer is not None:
+        #    video_writer.release()
         if not self.is_quit:
-            self.replay(actions, overlay_goal_radar=args.overlay, delay=1)
+            # Hack to get size of video 
+            video_writer = VideoWriter('output.avi') if args.save_video else None
+            self.replay(actions, overlay_goal_radar=args.overlay, delay=1, video_writer=video_writer)
+            if video_writer is not None:
+                video_writer.release()
         if not self.is_quit:
             keystroke = cv2.waitKey(0)
 
@@ -286,3 +340,4 @@ if __name__ == "__main__":
     print(config)
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
     demo.demo(args)
+    cv2.destroyAllWindows()
