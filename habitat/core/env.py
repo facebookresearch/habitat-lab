@@ -165,7 +165,7 @@ class Env:
         self._elapsed_steps = 0
         self._episode_over = False
 
-    def reset(self) -> Observations:
+    def reset(self, keep_current_episode=False) -> Observations:
         """Resets the environments and returns the initial observations.
 
         Returns:
@@ -175,13 +175,14 @@ class Env:
 
         assert len(self.episodes) > 0, "Episodes list is empty"
 
-        # Switch to next episode in a loop
-        if self._current_episode_index is None:
-            self._current_episode_index = 0
-        else:
-            self._current_episode_index = (
-                self._current_episode_index + 1
-            ) % len(self._episodes)
+        if not keep_current_episode:
+            # Switch to next episode in a loop        
+            if self._current_episode_index is None:
+                self._current_episode_index = 0
+            else:
+                self._current_episode_index = (
+                    self._current_episode_index + 1
+                ) % len(self._episodes)
         self.reconfigure(self._config)
 
         observations = self._sim.reset()
@@ -194,6 +195,7 @@ class Env:
         self._task.measurements.reset_measures(episode=self.current_episode)
 
         return observations
+
 
     def _update_step_stats(self) -> None:
         self._elapsed_steps += 1

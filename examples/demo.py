@@ -10,7 +10,11 @@ import habitat
 import math
 import numpy as np
 
-from typing import NamedTuple, Tuple
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.utils.visualizations import maps
+
+from time import sleep
+from typing import List, NamedTuple, Tuple
 
 class ActionKeyMapping(NamedTuple):
     name: str
@@ -24,6 +28,12 @@ AGENT_ACTION_KEYS = [
     ActionKeyMapping("RIGHT", ord("d"), 2),
     ActionKeyMapping("DONE", ord(" "), 3),
     ActionKeyMapping("QUIT", ord("q"), -1, True)
+]
+
+INSTRUCTIONS = [
+    "Use W/A/D to move Forward/Left/Right"
+    "Press <Space> when you reach the goal"
+    "Q - Quit"
 ]  
 
 class Rect(NamedTuple):
@@ -47,11 +57,63 @@ class Rect(NamedTuple):
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
 
-class ObsViewer:
+def display_instructions(image, instructions, offset):
+    for i,instruction in enumerate(instructions):
+        x = offset[1]
+        y = offset[0] + i*10
+        cv2.putText(image, instructions, (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
+
+def draw_goal_radar(pointgoal, img, 
+                    r: Rect, 
+                    fov=0,
+                    color=(0,0,255), wincolor=(0,0,0,0), 
+                    overlaycolor=(128,128,128), bgcolor=(255,255,255)):
+    angle = pointgoal[1]
+    mag = pointgoal[0]
+    nm = mag/(mag+1)
+    xy = (-math.sin(angle), -math.cos(angle))
+    size = int(round(0.45*min(r.width, r.height)))
+    center = r.center
+    target = (int(round(center[0]+xy[0]*size*nm)), int(round(center[1]+xy[1]*size*nm)))
+    cv2.rectangle(img,(r.left,r.top), (r.right,r.bottom), wincolor, -1)    # Fill with window color 
+    cv2.circle(img, center, size, bgcolor, -1)  # Circle with background color
+    if fov > 0:
+        masked = 360-fov
+        cv2.ellipse(img, center, (size,size), 90, -masked/2, masked/2, overlaycolor, -1) 
+    #print(center)
+    #print(target)
+    cv2.line(img, center, target, color, 1)
+    cv2.circle(img, target, 4, color, -1)
+
+def draw_top_down_map(info, heading, output_size):
+    top_down_map = maps.colorize_topdown_map(info["top_down_map"]["map"])
+    original_map_size = top_down_map.shape[:2]
+    map_scale = np.array(
+        (1, original_map_size[1] * 1.0 / original_map_size[0])
+    )
+    new_map_size = np.round(output_size * map_scale).astype(np.int32)
+    # OpenCV expects w, h but map size is in h, w
+    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
+
+    map_agent_pos = info["top_down_map"]["agent_map_coord"]
+    map_agent_pos = np.round(
+        map_agent_pos * new_map_size / original_map_size
+    ).astype(np.int32)
+    top_down_map = maps.draw_agent(
+        top_down_map,
+        map_agent_pos,
+        heading - np.pi / 2,
+        agent_radius_px=top_down_map.shape[0] / 40,
+    )
+    return top_down_map
+
+class Viewer:
     def __init__(self, initial_observations, 
-            goal_display_size=128, overlay_goal=None):
-        self.window_name = "Habitat"
-        self.overlay_goal = overlay_goal
+            overlay_goal_radar=None,            
+            goal_display_size=128,
+            show_map=False):
+        self.overlay_goal_radar = overlay_goal_radar
+        self.show_map = show_map
 
         # What image sensors are active
         all_image_sensors = ['rgb', 'depth'] 
@@ -63,7 +125,7 @@ class ObsViewer:
             total_height = max(initial_observations[s].shape[0], total_height)
 
         self.draw_info = {}
-        if self.overlay_goal:
+        if self.overlay_goal_radar:
             img = np.zeros((goal_display_size, goal_display_size, 3), np.uint8)
             self.draw_info["pointgoal"] = { "image": img, "region": Rect(0,0,goal_display_size,goal_display_size) }
         else:
@@ -73,22 +135,18 @@ class ObsViewer:
             total_width += goal_display_size
         self.window_size = (total_height, total_width)  
 
-    def show(self, observations):
-        img = self.draw_observations(observations)
-        cv2.imshow(self.window_name, img)
-
-    def draw_observations(self, observations):    
+    def draw_observations(self, observations, info=None):    
         active_image_observations = [observations[s] for s in self.active_image_sensors]
         for i,img in enumerate(active_image_observations):
             if img.shape[2] == 1:
-                active_image_observations[i] = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                active_image_observations[i] = cv2.convertScaleAbs(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
             elif img.shape[2] == 3:
                 active_image_observations[i] = transform_rgb_bgr(img)
 
         # draw pointgoal
         goal_draw_surface = self.draw_info['pointgoal']        
-        self.draw_pointgoal_polar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
-        if self.overlay_goal:    
+        draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
+        if self.overlay_goal_radar:    
             goal_region = goal_draw_surface['region']
             bottom = self.window_size[0]
             top = bottom - goal_region.height
@@ -99,63 +157,108 @@ class ObsViewer:
             stacked[top:bottom, left:right] = overlay
         else:
             stacked = np.hstack(active_image_observations + [self.side_img])
+        if info is not None:
+            if self.show_map and info.get('top_down_map') is not None and 'heading' in observations: 
+                top_down_map = draw_top_down_map(info, observations['heading'], stacked.shape[0])
+                stacked = np.hstack((top_down_map, stacked))
         return stacked
 
-    def draw_pointgoal_polar(self, pointgoal, img, 
-                    r: Rect, 
-                    fov=0,
-                    color=(0,0,255), wincolor=(0,0,0,0), 
-                    overlaycolor=(128,128,128), bgcolor=(255,255,255)):
-        angle = pointgoal[1]
-        mag = pointgoal[0]
-        nm = mag/(mag+1)
-        xy = (-math.sin(angle), -math.cos(angle))
-        size = int(round(0.45*min(r.width, r.height)))
-        center = r.center
-        target = (int(round(center[0]+xy[0]*size*nm)), int(round(center[1]+xy[1]*size*nm)))
-        cv2.rectangle(img,(r.left,r.top), (r.right,r.bottom), wincolor, -1)    # Fill with window color 
-        cv2.circle(img, center, size, bgcolor, -1)  # Circle with background color
-        if fov > 0:
-            masked = 360-fov
-            cv2.ellipse(img, center, (size,size), 90, -masked/2, masked/2, overlaycolor, -1) 
-        #print(center)
-        #print(target)
-        cv2.line(img, center, target, color, 1)
-        cv2.circle(img, target, 4, color, -1)
 
-def example(config, action_keys, args):
-    env = habitat.Env(
-        config=config
-    )
+class Demo:
+    def __init__(self, config, action_keys: List[ActionKeyMapping], instructions: List[str]):
+        self.window_name = "Habitat"
+        self.config = config
+        self.action_keys = action_keys
+        self.action_keys_map = {k.key : k for k in self.action_keys}
+        self.is_quit = False
+        
+        self.env = habitat.Env(
+            config=self.config
+        )
+        print("Environment creation successful")
 
-    print("Environment creation successful")
-    observations = env.reset()
-    viewer = ObsViewer(observations, overlay_goal=args.overlay)
-    viewer.show(observations)
 
-    action_keys_map = {k.key : k for k in action_keys}
-    print("Agent stepping around inside environment.")
-    count_steps = 0
-    while not env.episode_over:
-        # observations = env.step(env.action_space.sample())
-        keystroke = cv2.waitKey(0)
+    def update(self, img):
+        cv2.imshow(self.window_name, img)
 
-        action = action_keys_map.get(keystroke)
-        if action is not None:
-            print(action.name)
-            if action.is_quit:
-                break
-        else:
-            print("INVALID KEY")
-            continue
 
-        observations = env.step(action.action_id)
-        count_steps += 1
+    def run(self, overlay_goal_radar=False, show_map=False):
+        env = self.env
+        action_keys_map = self.action_keys_map
 
-        viewer.show(observations)
+        observations = env.reset()
+        info = env.get_metrics()
+        viewer = Viewer(observations, overlay_goal_radar=overlay_goal_radar, show_map=show_map)
+        img = viewer.draw_observations(observations, info)
+        self.update(img)
+        print(env.current_episode)
 
-    print(env.get_metrics())
-    print("Episode finished after {} steps.".format(count_steps))
+        print("Agent stepping around inside environment.")
+        count_steps = 0
+        actions = []
+        while not env.episode_over:
+            # observations = env.step(env.action_space.sample())
+            keystroke = cv2.waitKey(0)
+
+            action = action_keys_map.get(keystroke)
+            if action is not None:
+                print(action.name)
+                if action.is_quit:
+                    self.is_quit = True
+                    break
+            else:
+                print("INVALID KEY")
+                continue
+
+            actions.append(action.action_id)
+            observations = env.step(action.action_id)
+            info = env.get_metrics()
+            count_steps += 1
+
+            img = viewer.draw_observations(observations, info)
+            self.update(img)
+
+        print("Episode finished after {} steps.".format(count_steps))
+        return actions
+
+
+    def replay(self, actions, overlay_goal_radar=False, delay=1):
+        # Set delay to 0 to wait for key presses before advancing
+        env = self.env
+        action_keys_map = self.action_keys_map
+
+        observations = env.reset(keep_current_episode=True)
+        info = env.get_metrics()
+        viewer = Viewer(observations, overlay_goal_radar=overlay_goal_radar, show_map=True)
+        img = viewer.draw_observations(observations, info)
+        self.update(img)
+
+        count_steps = 0
+        for action_id in actions:
+            # wait for key before advancing
+            keystroke = cv2.waitKey(delay)
+            action = action_keys_map.get(keystroke)
+            if action is not None:
+                if action.is_quit:
+                    self.is_quit = True
+                    break
+
+            observations = env.step(action_id)
+            info = env.get_metrics()
+            count_steps += 1
+
+            img = viewer.draw_observations(observations, info)
+            self.update(img)
+
+        print("Episode finished after {} steps.".format(count_steps))
+
+
+    def demo(self, args):
+        actions = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map)
+        if not self.is_quit:
+            self.replay(actions, overlay_goal_radar=args.overlay, delay=1)
+        if not self.is_quit:
+            keystroke = cv2.waitKey(0)
 
 
 if __name__ == "__main__":
@@ -167,8 +270,19 @@ if __name__ == "__main__":
                         default=False,
                         action="store_true",
                         help='Overlay pointgoal')
+    parser.add_argument("--show-map",
+                        default=False,
+                        action="store_true",
+                        help='Show top down map as agent is stepping')
+    parser.add_argument("--save-video",
+                        default=False,
+                        action="store_true",
+                        help='Save video as agent is stepping')
     args = parser.parse_args()
     opts = []
     config = habitat.get_config(args.task_config.split(","), opts)
-    #print(config)
-    example(config, AGENT_ACTION_KEYS, args)
+    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+    config.TASK.SENSORS.append("HEADING_SENSOR")
+    print(config)
+    demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
+    demo.demo(args)
