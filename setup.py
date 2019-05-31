@@ -10,7 +10,6 @@ import glob
 import setuptools
 from setuptools.command.develop import develop
 from setuptools.command.install import install
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
 from version import VERSION  # noqa
 
@@ -39,18 +38,18 @@ for file_name in glob.glob("**/*requirements.txt", recursive=True):
 
 class OptionedCommand(object):
     user_options = [
-        ("include_baseline", None, "include habitat_baselines in installation")
+        ('all', None, 'include habitat_baselines in installation')
     ]
 
     def initialize_options(self):
         super().initialize_options(self)
-        self.include_baseline = None
+        self.all = None
 
     def finalize_options(self):
         super().finalize_options(self)
 
     def run(self):
-        if not self.include_baseline:
+        if not self.all:
             DEFAULT_EXCLUSION.append("baselines")
         else:
             REQUIREMENTS[:] = FULL_REQUIREMENTS
@@ -58,22 +57,20 @@ class OptionedCommand(object):
 
 
 class InstallCommand(OptionedCommand, install):
-    user_options = (
-        getattr(install, "user_options", []) + OptionedCommand.user_options
-    )
+    user_options = getattr(install, 'user_options', []) + OptionedCommand.user_options
 
 
 class DevelopCommand(OptionedCommand, develop):
-    user_options = (
-        getattr(develop, "user_options", []) + OptionedCommand.user_options
-    )
+    user_options = getattr(develop, 'user_options', []) + OptionedCommand.user_options
 
 
 if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=REQUIREMENTS,
-        packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
+        packages=setuptools.find_packages(
+            exclude=DEFAULT_EXCLUSION
+        ),
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
@@ -82,5 +79,8 @@ if __name__ == "__main__":
         setup_requires=["pytest-runner"],
         tests_require=["pytest"],
         include_package_data=True,
-        cmdclass={"install": InstallCommand, "develop": DevelopCommand},
+        cmdclass={
+            'install': InstallCommand,
+            'develop': DevelopCommand,
+        }
     )
