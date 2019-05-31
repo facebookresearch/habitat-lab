@@ -10,6 +10,7 @@ import glob
 import setuptools
 from setuptools.command.develop import develop
 from setuptools.command.install import install
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
 from version import VERSION  # noqa
 
@@ -27,50 +28,55 @@ DESCRIPTION = "habitat: a suite for embodied agent tasks and benchmarks"
 LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = license
-REQUIREMENTS = (reqs.strip().split("\n"),)
+REQUIREMENTS = reqs.strip().split("\n")
 DEFAULT_EXCLUSION = ["test", "examples"]
+
 FULL_REQUIREMENTS = []
+# collect requirements.txt file in all subdirectories
 for file_name in glob.glob("**/*requirements.txt", recursive=True):
     with open(file_name) as f:
         reqs = f.read()
         FULL_REQUIREMENTS.extend(reqs.strip().split("\n"))
 
 
+# overriding install and develop
 class OptionedCommand(object):
-    user_options = [
-        ('all', None, 'include habitat_baselines in installation')
-    ]
+    user_options = [("all", None, "include habitat_baselines in installation")]
 
     def initialize_options(self):
-        super().initialize_options(self)
+        super().initialize_options()
         self.all = None
-
-    def finalize_options(self):
-        super().finalize_options(self)
 
     def run(self):
         if not self.all:
-            DEFAULT_EXCLUSION.append("baselines")
+            DEFAULT_EXCLUSION.extend(
+                ["habitat_baselines", "habitat_baselines.*"]
+            )
+            self.distribution.packages = setuptools.find_packages(
+                exclude=DEFAULT_EXCLUSION
+            )
         else:
-            REQUIREMENTS[:] = FULL_REQUIREMENTS
-        super().run(self)
+            self.distribution.install_requires = FULL_REQUIREMENTS
+        super().run()
 
 
 class InstallCommand(OptionedCommand, install):
-    user_options = getattr(install, 'user_options', []) + OptionedCommand.user_options
+    user_options = (
+        getattr(install, "user_options", []) + OptionedCommand.user_options
+    )
 
 
 class DevelopCommand(OptionedCommand, develop):
-    user_options = getattr(develop, 'user_options', []) + OptionedCommand.user_options
+    user_options = (
+        getattr(develop, "user_options", []) + OptionedCommand.user_options
+    )
 
 
 if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=REQUIREMENTS,
-        packages=setuptools.find_packages(
-            exclude=DEFAULT_EXCLUSION
-        ),
+        packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
@@ -79,8 +85,5 @@ if __name__ == "__main__":
         setup_requires=["pytest-runner"],
         tests_require=["pytest"],
         include_package_data=True,
-        cmdclass={
-            'install': InstallCommand,
-            'develop': DevelopCommand,
-        }
+        cmdclass={"install": InstallCommand, "develop": DevelopCommand},
     )
