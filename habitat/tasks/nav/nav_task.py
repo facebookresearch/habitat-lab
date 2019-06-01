@@ -233,7 +233,7 @@ class StaticPointGoalSensor(habitat.Sensor):
         return "static_pointgoal"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.STATIC_GOAL_VECTOR
+        return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         if self._goal_format == "CARTESIAN":
