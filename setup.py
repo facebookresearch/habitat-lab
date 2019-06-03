@@ -4,15 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import os.path
 import sys
-import glob
+
 import setuptools
-from setuptools.command.develop import develop
-from setuptools.command.install import install
+from setuptools.command.develop import develop as DefaultDevelopCommand
+from setuptools.command.install import install as DefaultInstallCommand
+
+from version import VERSION  # noqa
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
-from version import VERSION  # noqa
 
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
@@ -29,18 +31,25 @@ LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = license
 REQUIREMENTS = reqs.strip().split("\n")
+BASELINE_PATH = ["habitat_baselines", "habitat_baselines.*"]
 DEFAULT_EXCLUSION = ["test", "examples"]
-
-FULL_REQUIREMENTS = []
+FULL_REQUIREMENTS = set()
 # collect requirements.txt file in all subdirectories
-for file_name in glob.glob("**/*requirements.txt", recursive=True):
+for file_name in glob.glob("**/requirements.txt", recursive=True):
     with open(file_name) as f:
         reqs = f.read()
-        FULL_REQUIREMENTS.extend(reqs.strip().split("\n"))
+        FULL_REQUIREMENTS.update(reqs.strip().split("\n"))
 
 
-# overriding install and develop
-class OptionedCommand(object):
+class OptionedCommand:
+    """
+    Generic Command class that takes extra user options and modifies
+    arguments in setuptools.setup() accordingly.
+    Though OptionedCommand inherits directly from object, it assumes
+    inheritance from DefaultDevelopCommand or DefaultInstallCommand, as it
+    overrides methods from those two classes.
+    """
+
     user_options = [("all", None, "include habitat_baselines in installation")]
 
     def initialize_options(self):
@@ -48,27 +57,28 @@ class OptionedCommand(object):
         self.all = None
 
     def run(self):
-        if not self.all:
-            DEFAULT_EXCLUSION.extend(
-                ["habitat_baselines", "habitat_baselines.*"]
-            )
+        if not self.all:  # install core only
+            DEFAULT_EXCLUSION.extend(BASELINE_PATH)
             self.distribution.packages = setuptools.find_packages(
                 exclude=DEFAULT_EXCLUSION
             )
-        else:
+            # self.distribution accesses arguments of setup() in main()
+        else:  # install all except test and examples
             self.distribution.install_requires = FULL_REQUIREMENTS
         super().run()
 
 
-class InstallCommand(OptionedCommand, install):
+class InstallCommand(OptionedCommand, DefaultInstallCommand):
     user_options = (
-        getattr(install, "user_options", []) + OptionedCommand.user_options
+        getattr(DefaultInstallCommand, "user_options", [])
+        + OptionedCommand.user_options
     )
 
 
-class DevelopCommand(OptionedCommand, develop):
+class DevelopCommand(OptionedCommand, DefaultDevelopCommand):
     user_options = (
-        getattr(develop, "user_options", []) + OptionedCommand.user_options
+        getattr(DefaultDevelopCommand, "user_options", [])
+        + OptionedCommand.user_options
     )
 
 
