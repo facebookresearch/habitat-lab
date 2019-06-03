@@ -393,7 +393,7 @@ class HabitatSim(habitat.Simulator):
 
     @property
     def index_forward_action(self):
-        return SimulatorActions.FORWARD.value
+        return SimulatorActions.MOVE_FORWARD.value
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:

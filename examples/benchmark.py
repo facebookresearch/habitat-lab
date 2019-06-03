@@ -15,7 +15,7 @@ class ForwardOnlyAgent(habitat.Agent):
         pass
 
     def act(self, observations):
-        action = SimulatorActions.FORWARD.value
+        action = SimulatorActions.MOVE_FORWARD.value
         return action
 
 
