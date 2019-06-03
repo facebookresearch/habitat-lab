@@ -317,7 +317,8 @@ class HabitatSim(habitat.Simulator):
             will be None.
         """
         raise NotImplementedError(
-            "This function is no longer implemented.  Please use the greedy follower instead"
+            "This function is no longer implemented. Please use the greedy "
+            "follower instead"
         )
 
     @property
@@ -421,10 +422,11 @@ class HabitatSim(habitat.Simulator):
         state.position = position
         state.rotation = rotation
 
-        # NB: The agent state also contains the sensor states in _absolute_ coordinates.
-        # In order to set the agent's body to a specific location and have the sensors follow,
-        # we must not provide any state for the sensors.
-        # This will cause them to follow the agent's body
+        # NB: The agent state also contains the sensor states in _absolute_
+        # coordinates. In order to set the agent's body to a specific
+        # location and have the sensors follow, we must not provide any
+        # state for the sensors. This will cause them to follow the agent's
+        # body
         state.sensor_states = dict()
 
         agent.set_state(state, reset_sensors)
@@ -440,3 +442,6 @@ class HabitatSim(habitat.Simulator):
         return self._sim.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
+
+    def island_radius(self, position):
+        return self._sim.pathfinder.island_radius(position)
