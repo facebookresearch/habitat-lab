@@ -13,7 +13,7 @@ class Agent:
     agent the user has to implement two methods:
 
         reset
-        step
+        act
     """
 
     def reset(self) -> None:

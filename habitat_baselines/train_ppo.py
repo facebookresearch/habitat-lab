@@ -13,9 +13,9 @@ import numpy as np
 import torch
 import habitat
 from habitat import logger
-from habitat.sims.habitat_simulator import SimulatorActions, SIM_NAME_TO_ACTION
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.config.default import get_config as cfg_env
-from config.default import cfg as cfg_baseline
+from config.default import get_config as cfg_baseline
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import update_linear_schedule, ppo_args, batch_obs
@@ -72,8 +72,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action
-            == SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+            self._previous_action == SimulatorActions.STOP.value
             and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True
@@ -110,7 +109,7 @@ def construct_envs(args):
     env_configs = []
     baseline_configs = []
 
-    basic_config = cfg_env(config_file=args.task_config)
+    basic_config = cfg_env(config_paths=args.task_config)
 
     scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
 
@@ -124,7 +123,7 @@ def construct_envs(args):
         scene_split_size = int(np.floor(len(scenes) / args.num_processes))
 
     for i in range(args.num_processes):
-        config_env = cfg_env(config_file=args.task_config)
+        config_env = cfg_env(config_paths=args.task_config)
         config_env.defrost()
 
         if len(scenes) > 0:

@@ -34,12 +34,12 @@ def check_sim_obs(obs, sensor):
 
 
 class SimulatorActions(Enum):
-    STOP = "stop"
-    FORWARD = "move_forward"
-    LEFT = "rotate_left"
-    RIGHT = "rotate_right"
-    LOOK_UP = "look_up"
-    LOOK_DOWN = "look_down"
+    STOP = 0
+    MOVE_FORWARD = 1
+    TURN_LEFT = 2
+    TURN_RIGHT = 3
+    LOOK_UP = 4
+    LOOK_DOWN = 5
 
 
 class HabitatSimRGBSensor(RGBSensor):
@@ -125,18 +125,6 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-SIM_ACTION_TO_NAME = {
-    0: SimulatorActions.STOP.value,
-    1: SimulatorActions.FORWARD.value,
-    2: SimulatorActions.LEFT.value,
-    3: SimulatorActions.RIGHT.value,
-    4: SimulatorActions.LOOK_UP.value,
-    5: SimulatorActions.LOOK_DOWN.value,
-}
-
-SIM_NAME_TO_ACTION = {v: k for k, v in SIM_ACTION_TO_NAME.items()}
-
-
 class HabitatSim(habitat.Simulator):
     """Simulator wrapper over habitat-sim
 
@@ -161,25 +149,24 @@ class HabitatSim(habitat.Simulator):
             )
             sim_sensors.append(
                 getattr(
-                    habitat.sims.habitat_simulator,  # type: ignore
-                    sensor_cfg.TYPE,
+                    habitat.sims.habitat_simulator,
+                    sensor_cfg.TYPE,  # type: ignore
                 )(sensor_cfg)
             )
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        self._current_scene = self.sim_config.scene.id
+        self._current_scene = self.sim_config.sim_cfg.scene.id
         self._sim = habitat_sim.Simulator(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
 
         self._is_episode_active = False
-        self._controls = SIM_ACTION_TO_NAME
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
-    ) -> habitat_sim.SimulatorConfiguration:
+    ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
         sim_config.scene.id = self.config.SCENE
         sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
@@ -211,25 +198,32 @@ class HabitatSim(habitat.Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
-            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop", {}),
-            SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
-                "moveForward", {"amount": self.config.FORWARD_STEP_SIZE}
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
+            SimulatorActions.MOVE_FORWARD.value: habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.FORWARD_STEP_SIZE
+                ),
             ),
-            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
-                "rotateLeft", {"amount": self.config.TURN_ANGLE}
+            SimulatorActions.TURN_LEFT.value: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
-            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
-                "rotateRight", {"amount": self.config.TURN_ANGLE}
+            SimulatorActions.TURN_RIGHT.value: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
             SimulatorActions.LOOK_UP.value: habitat_sim.ActionSpec(
-                "lookUp", {"amount": self.config.TILT_ANGLE}
+                "look_up",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
             ),
             SimulatorActions.LOOK_DOWN.value: habitat_sim.ActionSpec(
-                "lookDown", {"amount": self.config.TILT_ANGLE}
+                "look_down",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
             ),
         }
-        sim_config.agents = [agent_config]
-        return sim_config
+
+        return habitat_sim.Configuration(sim_config, [agent_config])
 
     @property
     def sensor_suite(self) -> SensorSuite:
@@ -269,12 +263,12 @@ class HabitatSim(habitat.Simulator):
             "episode is not active, environment not RESET or "
             "STOP action called previously"
         )
-        sim_action = self._controls[action]
-        if sim_action == SimulatorActions.STOP.value:
+
+        if action == SimulatorActions.STOP.value:
             self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
-            sim_obs = self._sim.step(sim_action)
+            sim_obs = self._sim.step(action)
 
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
@@ -306,6 +300,7 @@ class HabitatSim(habitat.Simulator):
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
             self._current_scene = config.SCENE
+            self._sim.close()
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
 
@@ -331,44 +326,31 @@ class HabitatSim(habitat.Simulator):
             the source. For the last item in the returned list the action
             will be None.
         """
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
+        raise NotImplementedError(
+            "This function is no longer implemented. Please use the greedy "
+            "follower instead"
         )
-        action_pathfinder = self._sim.make_action_pathfinder(agent_id=agent_id)
-        action_shortest_path = habitat_sim.MultiGoalActionSpaceShortestPath()
-        action_shortest_path.requested_start.position = source.position
-        action_shortest_path.requested_start.rotation = source.rotation
 
-        for target in targets:
-            action_shortest_path.requested_ends.append(
-                habitat_sim.ActionSpacePathLocation(
-                    target.position, target.rotation
-                )
-            )
+    @property
+    def up_vector(self):
+        return np.array([0.0, 1.0, 0.0])
 
-        if not action_pathfinder.find_path(action_shortest_path):
-            return []
+    @property
+    def forward_vector(self):
+        return -np.array([0.0, 0.0, 1.0])
 
-        # add None action to last node in path
-        actions: List[Optional[int]] = [
-            SIM_NAME_TO_ACTION[action]
-            for action in action_shortest_path.actions
-        ]
-        actions.append(None)
-
-        shortest_path = [
-            ShortestPathPoint(position, rotation, action)
-            for position, rotation, action in zip(
-                action_shortest_path.points,
-                action_shortest_path.rotations,
-                actions,
-            )
-        ]
-
-        return shortest_path
+    def get_straight_shortest_path_points(self, position_a, position_b):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = position_a
+        path.requested_end = position_b
+        self._sim.pathfinder.find_path(path)
+        return path.points
 
     def sample_navigable_point(self):
         return self._sim.pathfinder.get_random_navigable_point().tolist()
+
+    def is_navigable(self, point: List[float]):
+        return self._sim.pathfinder.is_navigable(point)
 
     def semantic_annotations(self):
         """
@@ -407,11 +389,11 @@ class HabitatSim(habitat.Simulator):
 
     @property
     def index_stop_action(self):
-        return SIM_NAME_TO_ACTION[SimulatorActions.STOP.value]
+        return SimulatorActions.STOP.value
 
     @property
     def index_forward_action(self):
-        return SIM_NAME_TO_ACTION[SimulatorActions.FORWARD.value]
+        return SimulatorActions.FORWARD.value
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
@@ -424,9 +406,7 @@ class HabitatSim(habitat.Simulator):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
-        state = habitat_sim.AgentState()
-        self._sim.get_agent(agent_id).get_state(state)
-        return state
+        return self._sim.get_agent(agent_id).get_state()
 
     def set_agent_state(
         self,
@@ -451,6 +431,14 @@ class HabitatSim(habitat.Simulator):
         state = self.get_agent_state(agent_id)
         state.position = position
         state.rotation = rotation
+
+        # NB: The agent state also contains the sensor states in _absolute_
+        # coordinates. In order to set the agent's body to a specific
+        # location and have the sensors follow, we must not provide any
+        # state for the sensors. This will cause them to follow the agent's
+        # body
+        state.sensor_states = dict()
+
         agent.set_state(state, reset_sensors)
 
         self._check_agent_position(position, agent_id)
@@ -464,3 +452,6 @@ class HabitatSim(habitat.Simulator):
         return self._sim.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
+
+    def island_radius(self, position):
+        return self._sim.pathfinder.island_radius(position)
