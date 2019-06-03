@@ -4,17 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import glob
 import os.path
 import sys
-
+import glob
 import setuptools
 from setuptools.command.develop import develop as DefaultDevelopCommand
 from setuptools.command.install import install as DefaultInstallCommand
 
-from version import VERSION  # noqa
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
+from version import VERSION  # noqa
 
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
