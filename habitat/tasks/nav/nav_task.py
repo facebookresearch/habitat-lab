@@ -20,11 +20,7 @@ from habitat.core.simulator import (
     SensorTypes,
     SensorSuite,
 )
-from habitat.tasks.utils import (
-    quaternion_to_rotation,
-    cartesian_to_polar,
-    quaternion_rotate_vector,
-)
+from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
@@ -237,7 +233,7 @@ class StaticPointGoalSensor(habitat.Sensor):
         return "static_pointgoal"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.STATIC_GOAL_VECTOR
+        return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         if self._goal_format == "CARTESIAN":

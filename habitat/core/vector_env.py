@@ -126,7 +126,7 @@ class VectorEnv:
         Returns:
              Number of individual environments.
         """
-        return self._num_envs
+        return self._num_envs - len(self._paused)
 
     @staticmethod
     def _worker_env(
@@ -315,10 +315,19 @@ class VectorEnv:
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
                 read_fn()
+
         for write_fn in self._connection_write_fns:
             write_fn((CLOSE_COMMAND, None))
+
+        for _, _, write_fn, _ in self._paused:
+            write_fn((CLOSE_COMMAND, None))
+
         for process in self._workers:
             process.join()
+
+        for _, _, _, process in self._paused:
+            process.join()
+
         self._is_closed = True
 
     def pause_at(self, index: int) -> None:
@@ -342,7 +351,7 @@ class VectorEnv:
     def resume_all(self) -> None:
         """Resumes any paused envs.
         """
-        for index, read_fn, write_fn, worker in self._paused:
+        for index, read_fn, write_fn, worker in reversed(self._paused):
             self._connection_read_fns.insert(index, read_fn)
             self._connection_write_fns.insert(index, write_fn)
             self._workers.insert(index, worker)

@@ -48,3 +48,9 @@ def quaternion_xyzw_to_wxyz(v: np.array):
 
 def quaternion_wxyz_to_xyzw(v: np.array):
     return np.quaternion(*v[1:4], v[0])
+
+
+def quaternion_to_list(q: np.quaternion):
+    return quaternion.as_float_array(
+        quaternion_wxyz_to_xyzw(quaternion.as_float_array(q))
+    ).tolist()
