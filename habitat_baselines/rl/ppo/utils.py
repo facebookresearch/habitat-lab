@@ -411,6 +411,7 @@ def ppo_args():
     parser.add_argument(
         "--task-config",
         type=str,
+        nargs="+",
         default="configs/tasks/pointnav.yaml",
         help="path to config yaml containing information about task",
     )

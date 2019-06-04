@@ -143,6 +143,7 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
+_C.DATASET.NUM_EPISODE_SAMPLE = -1
 # -----------------------------------------------------------------------------
 # MP3DEQAV1 DATASET
 # -----------------------------------------------------------------------------

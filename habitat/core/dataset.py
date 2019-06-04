@@ -215,3 +215,12 @@ class Dataset(Generic[T]):
         if remove_unused_episodes:
             self.episodes = new_episodes
         return new_datasets
+
+    def sample_episodes(self, num_episodes):
+        """
+        Sample from existing episodes a list of episodes of size num_episodes,
+        and replace self.episodes with the list of sampled episodes.
+        Args:
+            num_episodes: number of episodes to sample
+        """
+        self.episodes = np.random.choice(self.episodes, num_episodes)
