@@ -13,6 +13,7 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav_task import ObjectGoal, ShortestPathPoint
+from habitat.core.registry import registry
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -26,6 +27,7 @@ def get_default_mp3d_v1_config(split: str = "val"):
     return config
 
 
+@registry.register_dataset(name="MP3DEQA-v1")
 class Matterport3dDatasetV1(Dataset):
     """Class inherited from Dataset that loads Matterport3D
     Embodied Question Answering dataset.

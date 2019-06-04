@@ -15,6 +15,7 @@ from habitat.core.simulator import (
     Observations,
 )
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
+from habitat.core.registry import registry
 
 
 class QuestionData:
@@ -119,6 +120,7 @@ class RewardSensor(Sensor):
         return self._get_observation(**kwargs)
 
 
+@registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     _sensor_suite: SensorSuite
 
