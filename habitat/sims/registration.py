@@ -6,9 +6,25 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
+from habitat.core.simulator import Simulator
 
 
-from habitat.sims.habitat_simulator import HabitatSim
+try:
+    import habitat_sim
+
+    has_habitat_sim = True
+except ImportError as e:
+    has_habitat_sim = False
+    habitat_sim_import_error = e
+
+if has_habitat_sim:
+    from habitat.sims.habitat_simulator import HabitatSim
+else:
+
+    @registry.register_simulator(name="Sim-v0")
+    class HabitatSimImportError(Simulator):
+        def __init__(self, *args, **kwargs):
+            raise habitat_sim_import_error
 
 
 def make_sim(id_sim, **kwargs):
