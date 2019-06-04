@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Registry is central source of truth in Habitat. Shamelessly taken from Pythia, it is
-inspired from Redux's
+Registry is central source of truth in Habitat.
+Shamelessly taken from Pythia, it is inspired from Redux's
 concept of global store, Registry maintains mappings of various information
 to unique keys. Special functions in registry can be used as decorators to
 register different kind of classes.
@@ -29,9 +29,6 @@ import collections
 
 
 class _Registry:
-    r"""Class for registry object which acts as central source of truth
-    for Pythia
-    """
     mapping = collections.defaultdict(dict)
 
     @classmethod
