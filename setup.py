@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import os.path
 import sys
-import glob
 import setuptools
 from setuptools.command.develop import develop as DefaultDevelopCommand
 from setuptools.command.install import install as DefaultInstallCommand
