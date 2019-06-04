@@ -32,12 +32,7 @@ class _Registry:
     mapping = collections.defaultdict(dict)
 
     @classmethod
-    def _register_impl(cls, _type, name, assert_type=None):
-        to_register = None
-        if not isinstance(name, str):
-            to_register = name
-            name = to_register.__name__
-
+    def _register_impl(cls, _type, to_register, name, assert_type=None):
         def wrap(to_register):
             if assert_type is not None:
                 assert issubclass(
@@ -46,6 +41,7 @@ class _Registry:
                     to_register, assert_type
                 )
 
+            name = name if name is not None else to_register.__name__
             cls.mapping[_type][name] = to_register
 
             return to_register
@@ -56,7 +52,7 @@ class _Registry:
             return wrap(to_register)
 
     @classmethod
-    def register_task(cls, name: Optional[str] = None):
+    def register_task(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a task to registry with key 'name'
 
         Args:
@@ -82,10 +78,14 @@ class _Registry:
         """
         from habitat.core.embodied_task import EmbodiedTask
 
-        return cls._register_impl("task", name, assert_type=EmbodiedTask)
+        return cls._register_impl(
+            "task", to_register, name, assert_type=EmbodiedTask
+        )
 
     @classmethod
-    def register_simulator(cls, name: Optional[str] = None):
+    def register_simulator(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
         r"""Register a simulator to registry with key 'name'
 
         Args:
@@ -111,10 +111,12 @@ class _Registry:
         """
         from habitat.core.simulator import Simulator
 
-        return cls._register_impl("sim", name, assert_type=Simulator)
+        return cls._register_impl(
+            "sim", to_register, name, assert_type=Simulator
+        )
 
     @classmethod
-    def register_sensor(cls, name: Optional[str] = None):
+    def register_sensor(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a sensor to registry with key 'name'
 
         Args:
@@ -124,10 +126,12 @@ class _Registry:
         """
         from habitat.core.simulator import Sensor
 
-        return cls._register_impl("sensor", name, assert_type=Sensor)
+        return cls._register_impl(
+            "sensor", to_register, name, assert_type=Sensor
+        )
 
     @classmethod
-    def register_measure(cls, name: Optional[str] = None):
+    def register_measure(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a measure to registry with key 'name'
 
         Args:
@@ -137,10 +141,12 @@ class _Registry:
         """
         from habitat.core.embodied_task import Measure
 
-        return cls._register_impl("measure", name, assert_type=Measure)
+        return cls._register_impl(
+            "measure", to_register, name, assert_type=Measure
+        )
 
     @classmethod
-    def register_dataset(cls, name: Optional[str] = None):
+    def register_dataset(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a dataset to registry with key 'name'
 
         Args:
@@ -150,7 +156,9 @@ class _Registry:
         """
         from habitat.core.dataset import Dataset
 
-        return cls._register_impl("dataset", name, assert_type=Dataset)
+        return cls._register_impl(
+            "dataset", to_register, name, assert_type=Dataset
+        )
 
     @classmethod
     def _get_impl(cls, _type, name):
