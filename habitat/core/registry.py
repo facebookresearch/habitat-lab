@@ -41,8 +41,9 @@ class _Registry:
                     to_register, assert_type
                 )
 
-            name = name if name is not None else to_register.__name__
-            cls.mapping[_type][name] = to_register
+            cls.mapping[_type][
+                to_register.__name__ if name is None else name
+            ] = to_register
 
             return to_register
 
