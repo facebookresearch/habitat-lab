@@ -124,9 +124,9 @@ def test_collisions():
     np.random.seed(123)
 
     actions = [
-        SimulatorActions.FORWARD.value,
-        SimulatorActions.LEFT.value,
-        SimulatorActions.RIGHT.value,
+        SimulatorActions.MOVE_FORWARD.value,
+        SimulatorActions.TURN_LEFT.value,
+        SimulatorActions.TURN_RIGHT.value,
     ]
 
     for _ in range(20):
