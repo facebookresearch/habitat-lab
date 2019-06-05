@@ -34,8 +34,12 @@ class Episode:
 
     episode_id: str = attr.ib(default=None, validator=not_none_validator)
     scene_id: str = attr.ib(default=None, validator=not_none_validator)
-    start_position: Optional[List[float]] = None
-    start_rotation: Optional[List[float]] = None
+    start_position: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    start_rotation: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     info: Optional[Dict[str, str]] = None
 
 

@@ -23,7 +23,7 @@ from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 @attr.s(auto_attribs=True)
 class QuestionData:
     question_text: str
-    answer_text: Optional[str] = None
+    answer_text: str
     question_type: Optional[str] = None
 
 
