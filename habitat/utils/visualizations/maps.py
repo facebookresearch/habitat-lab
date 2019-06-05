@@ -51,7 +51,7 @@ def draw_agent(
     agent_rotation: float,
     agent_radius_px: int = 5,
 ) -> np.ndarray:
-    """Return an image with the agent image composited onto it.
+    r"""Return an image with the agent image composited onto it.
     Args:
         image: the image onto which to put the agent.
         agent_center_coord: the image coordinates where to paste the agent.
@@ -91,7 +91,7 @@ def pointnav_draw_target_birdseye_view(
     target_band_radii: Optional[List[float]] = None,
     target_band_colors: Optional[List[Tuple[int, int, int]]] = None,
 ) -> np.ndarray:
-    """Return an image of agent w.r.t. centered target location for pointnav
+    r"""Return an image of agent w.r.t. centered target location for pointnav
     tasks.
 
     Args:
@@ -183,7 +183,7 @@ def to_grid(
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
 ) -> Tuple[int, int]:
-    """Return gridworld index of realworld coordinates assuming top-left corner
+    r"""Return gridworld index of realworld coordinates assuming top-left corner
     is the origin. The real world coordinates of lower left corner are
     (coordinate_min, coordinate_min) and of top right corner are
     (coordinate_max, coordinate_max)
@@ -204,7 +204,7 @@ def from_grid(
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
 ) -> Tuple[float, float]:
-    """Inverse of _to_grid function. Return real world coordinate from
+    r"""Inverse of _to_grid function. Return real world coordinate from
     gridworld assuming top-left corner is the origin. The real world
     coordinates of lower left corner are (coordinate_min, coordinate_min) and
     of top right corner are (coordinate_max, coordinate_max)
@@ -246,7 +246,7 @@ def get_topdown_map(
     num_samples: int = 20000,
     draw_border: bool = True,
 ) -> np.ndarray:
-    """Return a top-down occupancy map for a sim. Note, this only returns valid
+    r"""Return a top-down occupancy map for a sim. Note, this only returns valid
     values for whatever floor the agent is currently on.
 
     Args:
@@ -327,7 +327,7 @@ def get_topdown_map(
 
 
 def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
-    """Convert the top down map to RGB based on the indicator values.
+    r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
         Returns:

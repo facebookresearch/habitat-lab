@@ -30,7 +30,7 @@ class QuestionData:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class EQAEpisode(NavigationEpisode):
-    """Specification of episode that includes initial position and rotation of
+    r"""Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
 
     Args:

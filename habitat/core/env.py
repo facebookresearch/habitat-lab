@@ -21,7 +21,7 @@ from habitat.tasks import make_task
 
 
 class Env:
-    """Fundamental environment class for ``habitat``. All the information 
+    r"""Fundamental environment class for ``habitat``. All the information 
     needed for working on embodied tasks with simulator is abstracted inside
     Env. Acts as a base for other derived environment classes. Env consists
     of three major components: ``dataset`` (``episodes``), ``simulator`` and 
@@ -167,7 +167,7 @@ class Env:
         self._episode_over = False
 
     def reset(self) -> Observations:
-        """Resets the environments and returns the initial observations.
+        r"""Resets the environments and returns the initial observations.
 
         Returns:
             initial observations from the environment.
@@ -203,7 +203,7 @@ class Env:
             self._episode_over = True
 
     def step(self, action: int) -> Observations:
-        """Perform an action in the environment and return observations.
+        r"""Perform an action in the environment and return observations.
 
         Args:
             action: action (belonging to ``action_space``) to be performed 
@@ -257,7 +257,7 @@ class Env:
 
 
 class RLEnv(gym.Env):
-    """Reinforcement Learning (RL) environment class which subclasses gym.Env.
+    r"""Reinforcement Learning (RL) environment class which subclasses gym.Env.
     This is a wrapper over habitat.Env for RL users. To create custom RL
     environments users should subclass RLEnv and define the following methods:
     ``get_reward_range``, ``get_reward``, ``get_done``, ``get_info``.
@@ -295,7 +295,7 @@ class RLEnv(gym.Env):
         return self._env.reset()
 
     def get_reward_range(self):
-        """Get min, max range of reward.
+        r"""Get min, max range of reward.
 
         Returns:
              [min, max] range of reward.
@@ -303,7 +303,7 @@ class RLEnv(gym.Env):
         raise NotImplementedError
 
     def get_reward(self, observations: Observations) -> Any:
-        """Returns reward after action has been performed. This method
+        r"""Returns reward after action has been performed. This method
         is called inside the step method.
 
         Args:
@@ -315,7 +315,7 @@ class RLEnv(gym.Env):
         raise NotImplementedError
 
     def get_done(self, observations: Observations) -> bool:
-        """Returns boolean indicating whether episode is done after performing
+        r"""Returns boolean indicating whether episode is done after performing
         the last action. This method is called inside the step method.
 
         Args:
@@ -327,7 +327,7 @@ class RLEnv(gym.Env):
         raise NotImplementedError
 
     def get_info(self, observations) -> Dict[Any, Any]:
-        """
+        r"""
         Args:
             observations: observations from simulator and task.
 
@@ -337,7 +337,7 @@ class RLEnv(gym.Env):
         raise NotImplementedError
 
     def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
-        """Perform an action in the environment and return
+        r"""Perform an action in the environment and return
         ``(observations, reward, done, info)``.
 
         Args:

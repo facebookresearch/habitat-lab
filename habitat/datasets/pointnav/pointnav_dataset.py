@@ -25,8 +25,7 @@ DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 @registry.register_dataset(name="PointNav-v1")
 class PointNavDatasetV1(Dataset):
-    """
-        Class inherited from Dataset that loads Point Navigation dataset.
+    r"""Class inherited from Dataset that loads Point Navigation dataset.
     """
 
     episodes: List[NavigationEpisode]
@@ -40,7 +39,7 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def get_scenes_to_load(config: Config) -> List[str]:
-        """Return list of scene ids for which dataset has separate files with
+        r"""Return list of scene ids for which dataset has separate files with
         episodes.
         """
         assert PointNavDatasetV1.check_config_paths_exist(config)

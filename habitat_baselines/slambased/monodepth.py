@@ -1,5 +1,4 @@
-"""
-The code below is taked from https://github.com/JunjH/Revisiting_Single_Depth_Estimation
+r"""The code below is taked from https://github.com/JunjH/Revisiting_Single_Depth_Estimation
 Revisiting Single Image Depth Estimation: Toward Higher Resolution Maps With Accurate Object Boundaries
 Junjie Hu and Mete Ozay and Yan Zhang and Takayuki Okatani
 WACV 2019
@@ -19,8 +18,7 @@ import torch.utils.model_zoo as model_zoo
 from PIL import Image
 from torchvision import transforms, utils
 
-"""
-ResNet code gently borrowed from
+r"""ResNet code gently borrowed from
 https://github.com/pytorch/vision/blob/master/torchvision/models/py
 """
 
@@ -197,7 +195,7 @@ class ResNet(nn.Module):
 
 
 def resnet18(pretrained=False, **kwargs):
-    """Constructs a ResNet-18 model.
+    r"""Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -208,7 +206,7 @@ def resnet18(pretrained=False, **kwargs):
 
 
 def resnet34(pretrained=False, **kwargs):
-    """Constructs a ResNet-34 model.
+    r"""Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -219,7 +217,7 @@ def resnet34(pretrained=False, **kwargs):
 
 
 def resnet50(pretrained=False, **kwargs):
-    """Constructs a ResNet-50 model.
+    r"""Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -234,7 +232,7 @@ def resnet50(pretrained=False, **kwargs):
 
 
 def resnet101(pretrained=False, **kwargs):
-    """Constructs a ResNet-101 model.
+    r"""Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -245,7 +243,7 @@ def resnet101(pretrained=False, **kwargs):
 
 
 def resnet152(pretrained=False, **kwargs):
-    """Constructs a ResNet-152 model.
+    r"""Constructs a ResNet-152 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -534,7 +532,7 @@ class CenterCrop(object):
 
 
 class ToTensor(object):
-    """Convert a ``PIL.Image`` or ``numpy.ndarray`` to tensor.
+    r"""Convert a ``PIL.Image`` or ``numpy.ndarray`` to tensor.
     Converts a PIL.Image or numpy.ndarray (H x W x C) in the range
     [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0].
     """

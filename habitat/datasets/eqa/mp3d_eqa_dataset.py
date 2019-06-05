@@ -29,7 +29,7 @@ def get_default_mp3d_v1_config(split: str = "val"):
 
 @registry.register_dataset(name="MP3DEQA-v1")
 class Matterport3dDatasetV1(Dataset):
-    """Class inherited from Dataset that loads Matterport3D
+    r"""Class inherited from Dataset that loads Matterport3D
     Embodied Question Answering dataset.
 
     This class can then be used as follows::

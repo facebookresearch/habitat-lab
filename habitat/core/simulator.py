@@ -15,7 +15,7 @@ from habitat.config import Config
 
 
 class SensorTypes(Enum):
-    """Enumeration of types of sensors.
+    r"""Enumeration of types of sensors.
     """
 
     NULL = 0
@@ -34,7 +34,7 @@ class SensorTypes(Enum):
 
 
 class Sensor:
-    """Represents a sensor that provides data from the environment to agent.
+    r"""Represents a sensor that provides data from the environment to agent.
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
 
@@ -67,7 +67,7 @@ class Sensor:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        """
+        r"""
         Returns:
             current observation for Sensor.
         """
@@ -75,7 +75,7 @@ class Sensor:
 
 
 class Observations(dict):
-    """Dictionary containing sensor observations
+    r"""Dictionary containing sensor observations
 
     Args:
         sensors: list of sensors whose observations are fetched and packaged.
@@ -143,7 +143,7 @@ class SemanticSensor(Sensor):
 
 
 class SensorSuite:
-    """Represents a set of sensors, with each sensor being identified
+    r"""Represents a set of sensors, with each sensor being identified
     through a unique id.
 
     Args:
@@ -169,7 +169,7 @@ class SensorSuite:
         return self.sensors[uuid]
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
-        """
+        r"""
         Returns:
             collect data from all sensors and return it packaged inside
             Observation.
@@ -202,7 +202,7 @@ class ShortestPathPoint:
 
 
 class Simulator:
-    """Basic simulator class for habitat. New simulators to be added to habtiat
+    r"""Basic simulator class for habitat. New simulators to be added to habtiat
     must derive from this class and implement the abstarct methods.
     """
 
@@ -219,7 +219,7 @@ class Simulator:
         raise NotImplementedError
 
     def reset(self) -> Observations:
-        """resets the simulator and returns the initial observations.
+        r"""resets the simulator and returns the initial observations.
 
         Returns:
             initial observations from simulator.
@@ -227,7 +227,7 @@ class Simulator:
         raise NotImplementedError
 
     def step(self, action: int) -> Observations:
-        """Perform an action in the simulator and return observations.
+        r"""Perform an action in the simulator and return observations.
 
         Args:
             action: action to be performed inside the simulator.
@@ -246,7 +246,7 @@ class Simulator:
     def geodesic_distance(
         self, position_a: List[float], position_b: List[float]
     ) -> float:
-        """Calculates geodesic distance between two points.
+        r"""Calculates geodesic distance between two points.
 
         Args:
             position_a: coordinates of first point.
@@ -260,7 +260,7 @@ class Simulator:
         raise NotImplementedError
 
     def get_agent_state(self, agent_id: int = 0):
-        """
+        r"""
         Args:
             agent_id: id of agent.
 
@@ -294,7 +294,7 @@ class Simulator:
         raise NotImplementedError
 
     def sample_navigable_point(self) -> List[float]:
-        """Samples a navigable point from the simulator. A point is defined as
+        r"""Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
 
         Returns:
@@ -303,7 +303,7 @@ class Simulator:
         raise NotImplementedError
 
     def is_navigable(self, point: List[float]) -> bool:
-        """Return true if the agent can stand at the specified point.
+        r"""Return true if the agent can stand at the specified point.
 
         Args:
             point: the point to check.
@@ -313,7 +313,8 @@ class Simulator:
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        """Calculates the shortest path between source and target agent states.
+        r"""Calculates the shortest path between source and target agent 
+        states.
 
         Args:
             source: source agent state for shortest path calculation.
@@ -329,8 +330,8 @@ class Simulator:
     def get_straight_shortest_path_points(
         self, position_a: List[float], position_b: List[float]
     ) -> List[List[float]]:
-        """Returns points along the geodesic (shortest) path between two points
-         irrespective of the angles between the waypoints.
+        r"""Returns points along the geodesic (shortest) path between two 
+        points irrespective of the angles between the waypoints.
 
          Args:
             position_a: the start point. This will be the first point in the
@@ -347,14 +348,14 @@ class Simulator:
 
     @property
     def up_vector(self):
-        """The vector representing the direction upward (perpendicular to the
+        r"""The vector representing the direction upward (perpendicular to the
         floor) from the global coordinate frame.
         """
         raise NotImplementedError
 
     @property
     def forward_vector(self):
-        """The forward direction in the global coordinate frame i.e. the
+        r"""The forward direction in the global coordinate frame i.e. the
         direction of forward movement for an agent with 0 degrees rotation in
         the ground plane.
         """

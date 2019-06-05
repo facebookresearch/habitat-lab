@@ -3,8 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-"""
-Implements tasks and measurements needed for training and benchmarking of
+r"""Implements tasks and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
@@ -17,7 +16,7 @@ from habitat.core.simulator import SensorSuite, Simulator
 
 
 class Measure:
-    """Represents a measure that provides measurement on top of environment
+    r"""Represents a measure that provides measurement on top of environment
     and task. This can be used for tracking statistics when running
     experiments. The user of this class needs to implement the reset_metric
     and update_metric method and the user is also required to set the below
@@ -37,18 +36,18 @@ class Measure:
         raise NotImplementedError
 
     def reset_metric(self, *args: Any, **kwargs: Any) -> None:
-        """Reset ``_metric``, this method is called from ``Env`` on each reset.
+        r"""Reset ``_metric``, this method is called from ``Env`` on each reset.
         """
         raise NotImplementedError
 
     def update_metric(self, *args: Any, **kwargs: Any) -> None:
-        """Update ``_metric``, this method is called from ``Env`` on each 
+        r"""Update ``_metric``, this method is called from ``Env`` on each 
         ``step``.
         """
         raise NotImplementedError
 
     def get_metric(self):
-        """
+        r"""
         Returns:
              the current metric for ``Measure``.
         """
@@ -56,7 +55,7 @@ class Measure:
 
 
 class Metrics(dict):
-    """Dictionary containing measurements.
+    r"""Dictionary containing measurements.
 
     Args:
         measures: list of ``Measure`` whose metrics are fetched and packaged.
@@ -70,7 +69,7 @@ class Metrics(dict):
 
 
 class Measurements:
-    """Represents a set of Measures, with each ``Measure`` being identified
+    r"""Represents a set of Measures, with each ``Measure`` being identified
     through a unique id.
 
     Args:
@@ -97,7 +96,7 @@ class Measurements:
             measure.update_metric(*args, **kwargs)
 
     def get_metrics(self) -> Metrics:
-        """
+        r"""
         Returns:
             collect measurement from all Measures and return it packaged inside
             Metrics.
@@ -106,7 +105,7 @@ class Measurements:
 
 
 class EmbodiedTask:
-    """Base class for embodied tasks. When subclassing the user has to
+    r"""Base class for embodied tasks. When subclassing the user has to
     define the attributes ``measurements`` and ``sensor_suite``.
 
     Args:
@@ -135,7 +134,7 @@ class EmbodiedTask:
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
     ) -> Config:
-        """
+        r"""
         Args:
             sim_config: config for simulator.
             episode: current episode.

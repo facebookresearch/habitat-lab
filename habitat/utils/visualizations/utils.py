@@ -18,7 +18,7 @@ def paste_overlapping_image(
     location: Tuple[int, int],
     mask: Optional[np.ndarray] = None,
 ):
-    """Composites the foreground onto the background dealing with edge
+    r"""Composites the foreground onto the background dealing with edge
     boundaries.
     Args:
         background: the background image to paste on.
@@ -98,7 +98,7 @@ def images_to_video(
     quality: Optional[float] = 5,
     **kwargs
 ):
-    """Calls imageio to run FFMPEG on a list of images. For more info on
+    r"""Calls imageio to run FFMPEG on a list of images. For more info on
     parameters, see https://imageio.readthedocs.io/en/stable/format_ffmpeg.html
     Args:
         images: The list of images. Images should be HxWx3 in RGB order.

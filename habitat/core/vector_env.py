@@ -32,7 +32,7 @@ CALL_COMMAND = "call"
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
-    """Constructor for default habitat Env.
+    r"""Constructor for default habitat Env.
 
     Args:
         config: configuration for environment.
@@ -123,7 +123,7 @@ class VectorEnv:
 
     @property
     def num_envs(self):
-        """
+        r"""
         Returns:
              number of individual environments.
         """
@@ -232,7 +232,7 @@ class VectorEnv:
         )
 
     def reset(self):
-        """Reset all the vectorized environments
+        r"""Reset all the vectorized environments
 
         Returns:
             list of outputs from the reset method of envs.
@@ -247,7 +247,7 @@ class VectorEnv:
         return results
 
     def reset_at(self, index_env: int):
-        """Reset in the index_env environment in the vector.
+        r"""Reset in the index_env environment in the vector.
 
         Args:
             index_env: index of the environment to be reset
@@ -262,7 +262,7 @@ class VectorEnv:
         return results
 
     def step_at(self, index_env: int, action: int):
-        """Step in the index_env environment in the vector.
+        r"""Step in the index_env environment in the vector.
 
         Args:
             index_env: index of the environment to be stepped into
@@ -278,7 +278,7 @@ class VectorEnv:
         return results
 
     def async_step(self, actions: List[int]) -> None:
-        """Asynchronously step in the environments.
+        r"""Asynchronously step in the environments.
 
         Args:
             actions: actions to be performed in the vectorized envs.
@@ -288,7 +288,7 @@ class VectorEnv:
             write_fn((STEP_COMMAND, action))
 
     def wait_step(self) -> List[Observations]:
-        """Wait until all the asynchronized environments have synchronized.
+        r"""Wait until all the asynchronized environments have synchronized.
         """
         observations = []
         for read_fn in self._connection_read_fns:
@@ -297,7 +297,7 @@ class VectorEnv:
         return observations
 
     def step(self, actions: List[int]):
-        """Perform actions in the vectorized environments.
+        r"""Perform actions in the vectorized environments.
 
         Args:
             actions: list of size _num_envs containing action to be taken
@@ -332,7 +332,7 @@ class VectorEnv:
         self._is_closed = True
 
     def pause_at(self, index: int) -> None:
-        """Pauses computation on this env without destroying the env. This is
+        r"""Pauses computation on this env without destroying the env. This is
         useful for not needing to call steps on all environments when only
         some are active (for example during the last episodes of running
         eval episodes).
@@ -350,7 +350,7 @@ class VectorEnv:
         self._paused.append((index, read_fn, write_fn, worker))
 
     def resume_all(self) -> None:
-        """Resumes any paused envs.
+        r"""Resumes any paused envs.
         """
         for index, read_fn, write_fn, worker in reversed(self._paused):
             self._connection_read_fns.insert(index, read_fn)
@@ -364,7 +364,7 @@ class VectorEnv:
         function_name: str,
         function_args: Optional[List[Any]] = None,
     ) -> Any:
-        """Calls a function (which is passed by name) on the selected env and
+        r"""Calls a function (which is passed by name) on the selected env and
         returns the result.
 
         Args:
@@ -388,7 +388,7 @@ class VectorEnv:
         function_names: List[str],
         function_args_list: Optional[List[Any]] = None,
     ) -> List[Any]:
-        """Calls a list of functions (which are passed by name) on the
+        r"""Calls a list of functions (which are passed by name) on the
         corresponding env (by index).
 
         Args:
@@ -418,7 +418,7 @@ class VectorEnv:
     def render(
         self, mode: str = "human", *args, **kwargs
     ) -> Union[np.ndarray, None]:
-        """Render observations from all environments in a tiled image.
+        r"""Render observations from all environments in a tiled image.
         """
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
@@ -450,7 +450,7 @@ class VectorEnv:
 
 
 class ThreadedVectorEnv(VectorEnv):
-    """Provides same functionality as ``VectorEnv``, the only difference is it
+    r"""Provides same functionality as ``VectorEnv``, the only difference is it
     runs in a multi-thread setup inside a single process. ``VectorEnv`` runs
     in a multi-proc setup. This makes it much easier to debug when using 
     ``VectorEnv`` because you can actually put break points in the environment 
