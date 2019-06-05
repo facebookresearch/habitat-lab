@@ -92,38 +92,5 @@ class AnswerSensor(Sensor):
         return self._get_observation(**kwargs)
 
 
-# TODO (maksymets) Move reward to measurement class
-class RewardSensor(Sensor):
-    REWARD_MIN = -100
-    REWARD_MAX = -100
-
-    def __init__(self, **kwargs):
-        self.uuid = "reward"
-        self.sensor_type = SensorTypes.TENSOR
-        self.observation_space = spaces.Box(
-            low=RewardSensor.REWARD_MIN,
-            high=RewardSensor.REWARD_MAX,
-            shape=(1,),
-            dtype=np.float,
-        )
-
-    def _get_observation(
-        self,
-        observations: Dict[str, Observations],
-        episode: NavigationEpisode,
-        **kwargs
-    ):
-        return [0]
-
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
-
-
 class EQATask(NavigationTask):
-    _sensor_suite: SensorSuite
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self._sensor_suite = SensorSuite(
-            [QuestionSensor(), AnswerSensor(), RewardSensor()]
-        )
+    pass
