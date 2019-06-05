@@ -456,6 +456,7 @@ class ThreadedVectorEnv(VectorEnv):
     ``VectorEnv`` because you can actually put break points in the environment 
     methods. It should not be used for best performance.
     """
+
     def _spawn_workers(
         self,
         env_fn_args: Iterable[Tuple[Any, ...]],
