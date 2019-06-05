@@ -17,22 +17,14 @@ from habitat.core.simulator import (
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
+@attr.s(auto_attribs=True)
 class QuestionData:
     question_text: str
-    answer_text: Optional[str]
-    question_type: Optional[str]
-
-    def __init__(
-        self,
-        question_text: str,
-        question_type: str,
-        answer_text: Optional[str] = None,
-    ) -> None:
-        self.question_text = question_text
-        self.answer_text = answer_text
-        self.question_type = question_type
+    answer_text: Optional[str] = None
+    question_type: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class EQAEpisode(NavigationEpisode):
     """Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
@@ -47,11 +39,7 @@ class EQAEpisode(NavigationEpisode):
         question: question related to goal object.
     """
 
-    question: QuestionData
-
-    def __init__(self, question: QuestionData, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.question = question
+    question: Optional[QuestionData] = None
 
 
 class QuestionSensor(Sensor):

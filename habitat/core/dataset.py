@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import attr
 import copy
 import json
 from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
@@ -11,6 +12,7 @@ from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
 import numpy as np
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class Episode:
     """Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode. This information is provided by
@@ -28,28 +30,11 @@ class Episode:
             axes.
     """
 
-    episode_id: str
-    scene_id: str
-    start_position: List[float]
-    start_rotation: List[float]
+    episode_id: Optional[str] = None
+    scene_id: Optional[str] = None
+    start_position: Optional[List[float]] = None
+    start_rotation: Optional[List[float]] = None
     info: Optional[Dict[str, str]] = None
-
-    def __init__(
-        self,
-        episode_id: str,
-        scene_id: str,
-        start_position: List[float],
-        start_rotation: List[float],
-        info: Optional[Dict[str, str]] = None,
-    ) -> None:
-        self.episode_id = episode_id
-        self.scene_id = scene_id
-        self.start_position = start_position
-        self.start_rotation = start_rotation
-        self.info = info
-
-    def __str__(self):
-        return str(self.__dict__)
 
 
 T = TypeVar("T", Episode, Type[Episode])
