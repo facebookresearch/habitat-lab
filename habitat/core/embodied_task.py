@@ -3,6 +3,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+"""
+Implements tasks and measurements needed for training and benchmarking of
+``habitat.Agent`` inside ``habitat.Env``.
+"""
 
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Type
@@ -21,8 +25,8 @@ class Measure:
 
     Attributes:
         uuid: universally unique id.
-        _metric: metric for the Measure, this has to be updated with each
-            step call on environment.
+        _metric: metric for the ``Measure``, this has to be updated with each
+            ``step`` call on ``habitat.Env``.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -33,19 +37,20 @@ class Measure:
         raise NotImplementedError
 
     def reset_metric(self, *args: Any, **kwargs: Any) -> None:
-        """Reset _metric, this method is called from Env on each reset.
+        """Reset ``_metric``, this method is called from ``Env`` on each reset.
         """
         raise NotImplementedError
 
     def update_metric(self, *args: Any, **kwargs: Any) -> None:
-        """Update _metric, this method is called from Env on each step.
+        """Update ``_metric``, this method is called from ``Env`` on each 
+        ``step``.
         """
         raise NotImplementedError
 
     def get_metric(self):
         """
         Returns:
-             the current metric for Measure.
+             the current metric for ``Measure``.
         """
         return self._metric
 
@@ -54,7 +59,7 @@ class Metrics(dict):
     """Dictionary containing measurements.
 
     Args:
-        measures: list of Measures whose metrics are fetched and packaged.
+        measures: list of ``Measure`` whose metrics are fetched and packaged.
     """
 
     def __init__(self, measures: Dict[str, Measure]) -> None:
@@ -65,12 +70,12 @@ class Metrics(dict):
 
 
 class Measurements:
-    """Represents a set of Measures, with each Measure being identified
+    """Represents a set of Measures, with each ``Measure`` being identified
     through a unique id.
 
     Args:
-        measures: list containing Measures, uuid of each
-            Measure must be unique.
+        measures: list containing ``Measure``, uuid of each
+            ``Measure`` must be unique.
     """
 
     measures: Dict[str, Measure]
@@ -101,9 +106,8 @@ class Measurements:
 
 
 class EmbodiedTask:
-    """Base class for embodied tasks. When subclassing the user has
-    to define the attributes listed below. When subclassing the user has to
-    define the attributes measurements and sensor_suite.
+    """Base class for embodied tasks. When subclassing the user has to
+    define the attributes ``measurements`` and ``sensor_suite``.
 
     Args:
         config: config for the task.
@@ -137,6 +141,7 @@ class EmbodiedTask:
             episode: current episode.
 
         Returns:
-            update config merging information from sim_config and episode.
+            update config merging information from ``sim_config`` and 
+                ``episode``.
         """
         raise NotImplementedError

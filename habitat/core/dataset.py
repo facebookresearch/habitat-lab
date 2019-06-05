@@ -3,7 +3,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""
+Implements dataset functionality to be used ``habitat.EmbodiedTask``.
+``habitat.core.dataset`` abstracts over a collection of 
+``habitat.core.Episode``. Each episode consists of a single instantiation
+of a ``habitat.Agent`` inside ``habitat.Env``.
+"""
 import copy
 import json
 from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
@@ -18,10 +23,10 @@ from habitat.core.utils import not_none_validator
 class Episode:
     """Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode. This information is provided by
-    a Dataset instance.
+    a ``Dataset`` instance.
 
     Args:
-        episode_id: id of episode in the dataset, usually episode number
+        episode_id: id of episode in the dataset, usually episode number.
         scene_id: id of scene in dataset.
         start_position: list of length 3 for cartesian coordinates
             (x, y, z).
@@ -50,7 +55,7 @@ class Dataset(Generic[T]):
     """Base class for dataset specification.
 
     Attributes:
-        episodes: list of episodes containing instance information
+        episodes: list of episodes containing instance information.
     """
 
     episodes: List[T]
@@ -59,17 +64,17 @@ class Dataset(Generic[T]):
     def scene_ids(self) -> List[str]:
         """
         Returns:
-            unique scene ids present in the dataset
+            unique scene ids present in the dataset.
         """
         return sorted(list({episode.scene_id for episode in self.episodes}))
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
         """
         Args:
-            scene_id: id of scene in scene dataset
+            scene_id: id of scene in scene dataset.
 
         Returns:
-            list of episodes for the scene_id
+            list of episodes for the ``scene_id``.
         """
         return list(
             filter(lambda x: x.scene_id == scene_id, iter(self.episodes))
@@ -78,10 +83,10 @@ class Dataset(Generic[T]):
     def get_episodes(self, indexes: List[int]) -> List[T]:
         """
         Args:
-            indexes: episode indices in dataset
+            indexes: episode indices in dataset.
 
         Returns:
-            list of episodes corresponding to indexes
+            list of episodes corresponding to indexes.
         """
         return [self.episodes[episode_id] for episode_id in indexes]
 
@@ -97,12 +102,13 @@ class Dataset(Generic[T]):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         """
-        Parses passed JSON string and creates dataset based on that.
-        Function is used as deserialization method for Dataset.
+        Creates dataset from ``json_str``. Directory containing relevant 
+        graphical assets of scenes is passed through ``scenes_dir``.
+
         Args:
-            json_str: JSON dump of Dataset instance.
-            scenes_dir: Path to directory with scenes assets such as *.glb
-            files.
+            json_str: JSON string containing episodes information.
+            scenes_dir: directory containing graphical assets relevant
+                for episodes present in ``json_str``.
         """
         raise NotImplementedError
 
@@ -110,10 +116,12 @@ class Dataset(Generic[T]):
         self, filter_fn: Callable[[Episode], bool]
     ) -> "Dataset":
         """
-        Returns a new dataset with only the filtered episodes from the original
-        dataset.
+        Returns a new dataset with only the filtered episodes from the 
+        original dataset.
+
         Args:
             filter_fn: Function used to filter the episodes.
+
         Returns:
             The new dataset.
         """
@@ -138,26 +146,29 @@ class Dataset(Generic[T]):
         Returns a list of new datasets, each with a subset of the original
         episodes. All splits will have the same number of episodes, but no
         episodes will be duplicated.
+
         Args:
             num_splits: The number of splits to create.
             episodes_per_split: If provided, each split will have up to
                 this many episodes. If it is not provided, each dataset will
-                have len(original_dataset.episodes) // num_splits episodes. If
-                max_episodes_per_split is provided and is larger than this
-                value, it will be capped to this value.
+                have ``len(original_dataset.episodes) // num_splits`` 
+                episodes. If max_episodes_per_split is provided and is 
+                larger than this value, it will be capped to this value.
             remove_unused_episodes: Once the splits are created, the extra
                 episodes will be destroyed from the original dataset. This
                 saves memory for large datasets.
             collate_scene_ids: If true, episodes with the same scene id are
-                next to each other. This saves on overhead of switching between
-                scenes, but means multiple sequential episodes will be related
-                to each other because they will be in the same scene.
+                next to each other. This saves on overhead of switching 
+                between scenes, but means multiple sequential episodes will 
+                be related to each other because they will be in the 
+                same scene.
             sort_by_episode_id: If true, sequences are sorted by their episode
                 ID in the returned splits.
             allow_uneven_splits: If true, the last split can be shorter than
                 the others. This is especially useful for splitting over
                 validation/test datasets in order to make sure that all
                 episodes are copied but none are duplicated.
+
         Returns:
             A list of new datasets, each with their own subset of episodes.
         """

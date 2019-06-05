@@ -21,12 +21,11 @@ A modular high-level library to train embodied AI agents across a variety of tas
    :maxdepth: 1
    :caption: Package Reference
 
-   habitat.core <core>
-   habitat.sims <sims>
-   habitat.tasks <tasks>
-   habitat.datasets <datasets>
-   habitat.config <config>
-   habitat.utils <utils>
+   habitat.core.env <core/env>
+   habitat.core.embodied_task <core/embodied_task>
+   habitat.core.dataset <core/dataset>
+   habitat.Agent <core/agent>
+   habitat.Benchmark <core/benchmark>
 
 
 Indices and tables
