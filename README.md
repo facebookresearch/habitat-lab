@@ -29,7 +29,6 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
    1. [Baselines](#baselines)
    1. [Acknowledgments](#acknowledgments)
    1. [License](#license)
-   1. [References](#references)
 
 ## Motivation
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
@@ -162,5 +161,3 @@ The Habitat project would not have been possible without the support and contrib
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.
 
-## References
-1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019. 
