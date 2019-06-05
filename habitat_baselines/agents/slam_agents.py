@@ -1,39 +1,34 @@
 import argparse
-import numpy as np
-import torch
-import random
-import time
 import os
-import PIL
+import random
+import sys
+import time
 from math import pi
+
+import numpy as np
+import PIL
+import requests
+import torch
 import torch.nn.functional as F
-import orbslam2
+
 import habitat
-from habitat_baselines.slambased.utils import generate_2dgrid
-from habitat_baselines.slambased.reprojection import (
-    homogenize_p,
-    get_distance,
-    project_tps_into_worldmap,
-    get_direction,
-    habitat_goalpos_to_mapgoal_pos,
-    planned_path2tps,
-    angle_to_pi_2_minus_pi_2,
-)
+import orbslam2
+from habitat.config.default import get_config
+from habitat.sims.habitat_simulator import SimulatorActions
+from habitat_baselines.config.default import get_config as cfg_baseline
+from habitat_baselines.slambased.mappers import DirectDepthMapper
+from habitat_baselines.slambased.monodepth import MonoDepthEstimator
+from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
     angle_to_pi_2_minus_pi_2 as norm_ang,
+    get_direction,
+    get_distance,
+    habitat_goalpos_to_mapgoal_pos,
+    homogenize_p,
+    planned_path2tps,
+    project_tps_into_worldmap,
 )
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat_baselines.slambased.mappers import DirectDepthMapper
-from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
-
-from habitat_baselines.config.default import get_config as cfg_baseline
-from habitat.config.default import get_config
-
-from habitat_baselines.slambased.monodepth import MonoDepthEstimator
-
-# https://sumit-ghosh.com/articles/python-download-progress-bar/
-import sys
-import requests
+from habitat_baselines.slambased.utils import generate_2dgrid
 
 
 def download(url, filename):

@@ -8,11 +8,12 @@ from typing import Dict, Optional
 
 import numpy as np
 from gym import spaces
+
 from habitat.core.simulator import (
-    Sensor,
-    SensorTypes,
-    SensorSuite,
     Observations,
+    Sensor,
+    SensorSuite,
+    SensorTypes,
 )
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
