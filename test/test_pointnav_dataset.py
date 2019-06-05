@@ -54,7 +54,6 @@ def test_single_pointnav_dataset():
         len(scenes) == 0
     ), "Expected dataset doesn't expect separate episode file per scene."
     dataset = PointNavDatasetV1(config=dataset_config)
-    print(dataset.episodes[0])
     assert len(dataset.episodes) > 0, "The dataset shouldn't be empty."
     assert (
         len(dataset.scene_ids) == 2

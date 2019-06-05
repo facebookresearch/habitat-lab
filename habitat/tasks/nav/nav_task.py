@@ -21,6 +21,7 @@ from habitat.core.simulator import (
     SensorTypes,
     SensorSuite,
 )
+from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
@@ -53,7 +54,7 @@ class NavigationGoal:
     """Base class for a goal specification hierarchy.
     """
 
-    position: Optional[List[float]] = None
+    position: List[float] = attr.ib(default=None, validator=not_none_validator)
     radius: Optional[float] = None
 
 
@@ -63,7 +64,7 @@ class ObjectGoal(NavigationGoal):
     category.
     """
 
-    object_id: Optional[str] = None
+    object_id: str = attr.ib(default=None, validator=not_none_validator)
     object_name: Optional[str] = None
     object_category: Optional[str] = None
     room_id: Optional[str] = None
@@ -75,7 +76,7 @@ class RoomGoal(NavigationGoal):
     """Room goal that can be specified by room_id or position with radius.
     """
 
-    room_id: Optional[str] = None
+    room_id: str = attr.ib(default=None, validator=not_none_validator)
     room_name: Optional[str] = None
 
 
@@ -97,7 +98,9 @@ class NavigationEpisode(Episode):
         shortest_paths: list containing shortest paths to goals
     """
 
-    goals: Optional[List[NavigationGoal]] = None
+    goals: List[NavigationGoal] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     start_room: Optional[str] = None
     shortest_paths: Optional[List[ShortestPathPoint]] = None
 

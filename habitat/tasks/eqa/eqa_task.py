@@ -6,6 +6,8 @@
 
 from typing import Dict, Optional
 
+import attr
+
 import numpy as np
 from gym import spaces
 from habitat.core.simulator import (
@@ -14,6 +16,7 @@ from habitat.core.simulator import (
     SensorSuite,
     Observations,
 )
+from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
@@ -39,7 +42,9 @@ class EQAEpisode(NavigationEpisode):
         question: question related to goal object.
     """
 
-    question: Optional[QuestionData] = None
+    question: QuestionData = attr.ib(
+        default=None, validator=not_none_validator
+    )
 
 
 class QuestionSensor(Sensor):

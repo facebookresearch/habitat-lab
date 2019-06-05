@@ -9,6 +9,8 @@ import copy
 import json
 from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
 
+from habitat.core.utils import not_none_validator
+
 import numpy as np
 
 
@@ -30,8 +32,8 @@ class Episode:
             axes.
     """
 
-    episode_id: Optional[str] = None
-    scene_id: Optional[str] = None
+    episode_id: str = attr.ib(default=None, validator=not_none_validator)
+    scene_id: str = attr.ib(default=None, validator=not_none_validator)
     start_position: Optional[List[float]] = None
     start_rotation: Optional[List[float]] = None
     info: Optional[Dict[str, str]] = None
