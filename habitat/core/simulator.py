@@ -276,8 +276,28 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def get_observations(self) -> Observations:
-        """Returns the current observation."""
+    def get_observations_at(
+        self,
+        position: List[float],
+        rotation: List[float],
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+        """Returns the observation.
+
+        Args:
+            position: list containing 3 entries for (x, y, z).
+            rotation: list with 4 entries for (x, y, z, w) elements of unit
+                quaternion (versor) representing agent 3D orientation,
+                (https://en.wikipedia.org/wiki/Versor)
+            keep_agent_at_new_pose: If true, the agent will stay at the
+                requested location. Otherwise it will return to where it
+                started.
+
+        Returns:
+            The observations or None if it was unable to get valid
+            observations.
+
+        """
         raise NotImplementedError
 
     def sample_navigable_point(self) -> List[float]:

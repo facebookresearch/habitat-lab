@@ -15,6 +15,7 @@ from habitat import SensorSuite, Config
 from habitat.core.logging import logger
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
+from habitat.core.simulator import Observations
 
 
 RGBSENSOR_DIMENSION = 3
@@ -240,10 +241,6 @@ class HabitatSim(habitat.Simulator):
                 is_updated = True
         return is_updated
 
-    def get_observations(self):
-        sim_obs = self._sim.get_sensor_observations()
-        return self._sensor_suite.get_observations(sim_obs)
-
     def reset(self):
         sim_obs = self._sim.reset()
         if self._update_agents_state():
@@ -276,7 +273,8 @@ class HabitatSim(habitat.Simulator):
         Returns:
             rendered frame according to the mode
         """
-        observations = self.get_observations()
+        sim_obs = self._sim.get_sensor_observations()
+        observations = self._sensor_suite.get_observations(sim_obs)
 
         output = observations.get(mode)
         assert output is not None, "mode {} sensor is not active".format(mode)
@@ -395,7 +393,7 @@ class HabitatSim(habitat.Simulator):
         agent_config = getattr(self.config, agent_name)
         return agent_config
 
-    def get_agent_state(self, agent_id: int = 0):
+    def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
@@ -403,43 +401,82 @@ class HabitatSim(habitat.Simulator):
 
     def set_agent_state(
         self,
-        position: List[float] = None,
-        rotation: List[float] = None,
+        position: List[float],
+        rotation: List[float],
         agent_id: int = 0,
         reset_sensors: bool = True,
-    ) -> None:
+    ) -> bool:
         """Sets agent state similar to initialize_agent, but without agents
-        creation.
+        creation. On failure to place the agent in the proper position, it is
+        moved back to its previous pose.
 
         Args:
-            position: numpy ndarray containing 3 entries for (x, y, z).
-            rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
-            of unit quaternion (versor) representing agent 3D orientation,
-            (https://en.wikipedia.org/wiki/Versor)
+            position: list containing 3 entries for (x, y, z).
+            rotation: list with 4 entries for (x, y, z, w) elements of unit
+                quaternion (versor) representing agent 3D orientation,
+                (https://en.wikipedia.org/wiki/Versor)
             agent_id: int identification of agent from multiagent setup.
             reset_sensors: bool for if sensor changes (e.g. tilt) should be
                 reset).
+
+        Returns:
+            True if the set was successful else moves the agent back to its
+            original pose and returns false.
         """
         agent = self._sim.get_agent(agent_id)
-        state = self.get_agent_state(agent_id)
-        state.position = position
-        state.rotation = rotation
+        original_state = self.get_agent_state(agent_id)
+        new_state = self.get_agent_state(agent_id)
+        new_state.position = position
+        new_state.rotation = rotation
 
         # NB: The agent state also contains the sensor states in _absolute_
         # coordinates. In order to set the agent's body to a specific
         # location and have the sensors follow, we must not provide any
         # state for the sensors. This will cause them to follow the agent's
         # body
-        state.sensor_states = dict()
+        new_state.sensor_states = dict()
 
-        agent.set_state(state, reset_sensors)
+        agent.set_state(new_state, reset_sensors)
 
-        self._check_agent_position(position, agent_id)
+        if not self._check_agent_position(position, agent_id):
+            agent.set_state(original_state, reset_sensors)
+            return False
+        return True
+
+    def get_observations_at(
+        self,
+        position: List[float],
+        rotation: List[float],
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+
+        # TODO do we need to support multiple agents for this?
+        agent_id = 0
+        current_state = self.get_agent_state(agent_id)
+
+        success = self.set_agent_state(
+            position, rotation, agent_id, reset_sensors=False
+        )
+        if success:
+            sim_obs = self._sim.get_sensor_observations()
+            observations = self._sensor_suite.get_observations(sim_obs)
+            if not keep_agent_at_new_pose:
+                self.set_agent_state(
+                    current_state.position,
+                    current_state.rotation,
+                    agent_id,
+                    reset_sensors=False,
+                )
+            return observations
+        else:
+            return None
 
     # TODO (maksymets): Remove check after simulator became stable
-    def _check_agent_position(self, position, agent_id=0):
+    def _check_agent_position(self, position, agent_id=0) -> bool:
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")
+            return False
+        return True
 
     def distance_to_closest_obstacle(self, position, max_search_radius=2.0):
         return self._sim.pathfinder.distance_to_closest_obstacle(
