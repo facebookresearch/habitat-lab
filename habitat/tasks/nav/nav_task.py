@@ -6,10 +6,10 @@
 
 from typing import Any, List, Optional, Type
 
+import cv2
 import numpy as np
 from gym import spaces
 
-import cv2
 import habitat
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode

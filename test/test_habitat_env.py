@@ -8,9 +8,9 @@ import multiprocessing as mp
 import os
 
 import numpy as np
+import pytest
 
 import habitat
-import pytest
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1

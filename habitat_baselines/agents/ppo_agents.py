@@ -9,10 +9,10 @@ import argparse
 import random
 
 import numpy as np
+import torch
 from gym.spaces import Box, Dict, Discrete
 
 import habitat
-import torch
 from habitat import Config
 from habitat.core.agent import Agent
 from habitat_baselines.rl.ppo import Policy

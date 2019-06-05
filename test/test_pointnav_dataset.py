@@ -9,10 +9,10 @@ import random
 import time
 
 import numpy as np
+import pytest
 
 import habitat
 import habitat.datasets.pointnav.pointnav_generator as pointnav_generator
-import pytest
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger

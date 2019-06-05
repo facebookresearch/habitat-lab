@@ -6,13 +6,13 @@ import time
 from math import pi
 
 import numpy as np
-
-import habitat
-import orbslam2
 import PIL
 import requests
 import torch
 import torch.nn.functional as F
+
+import habitat
+import orbslam2
 from habitat.config.default import get_config
 from habitat.sims.habitat_simulator import SimulatorActions
 from habitat_baselines.config.default import get_config as cfg_baseline

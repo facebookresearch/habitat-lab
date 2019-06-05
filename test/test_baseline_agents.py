@@ -6,8 +6,9 @@
 
 import os
 
-import habitat
 import pytest
+
+import habitat
 from habitat_baselines.agents import simple_agents
 
 try:
