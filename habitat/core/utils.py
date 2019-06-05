@@ -44,4 +44,4 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 
 def not_none_validator(self, attribute, value):
     if value is None:
-        raise ValueError(f"Arguement '{attribute.name}' must be set")
+        raise ValueError(f"Argument '{attribute.name}' must be set")
