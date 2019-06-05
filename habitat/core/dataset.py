@@ -120,10 +120,10 @@ class Dataset(Generic[T]):
         original dataset.
 
         Args:
-            filter_fn: Function used to filter the episodes.
+            filter_fn: function used to filter the episodes.
 
         Returns:
-            The new dataset.
+            the new dataset.
         """
         new_episodes = []
         for episode in self.episodes:
@@ -148,29 +148,29 @@ class Dataset(Generic[T]):
         episodes will be duplicated.
 
         Args:
-            num_splits: The number of splits to create.
-            episodes_per_split: If provided, each split will have up to
+            num_splits: the number of splits to create.
+            episodes_per_split: if provided, each split will have up to
                 this many episodes. If it is not provided, each dataset will
                 have ``len(original_dataset.episodes) // num_splits`` 
                 episodes. If max_episodes_per_split is provided and is 
                 larger than this value, it will be capped to this value.
-            remove_unused_episodes: Once the splits are created, the extra
+            remove_unused_episodes: once the splits are created, the extra
                 episodes will be destroyed from the original dataset. This
                 saves memory for large datasets.
-            collate_scene_ids: If true, episodes with the same scene id are
+            collate_scene_ids: if true, episodes with the same scene id are
                 next to each other. This saves on overhead of switching 
                 between scenes, but means multiple sequential episodes will 
                 be related to each other because they will be in the 
                 same scene.
-            sort_by_episode_id: If true, sequences are sorted by their episode
+            sort_by_episode_id: if true, sequences are sorted by their episode
                 ID in the returned splits.
-            allow_uneven_splits: If true, the last split can be shorter than
+            allow_uneven_splits: if true, the last split can be shorter than
                 the others. This is especially useful for splitting over
                 validation/test datasets in order to make sure that all
                 episodes are copied but none are duplicated.
 
         Returns:
-            A list of new datasets, each with their own subset of episodes.
+            a list of new datasets, each with their own subset of episodes.
         """
         assert (
             len(self.episodes) >= num_splits

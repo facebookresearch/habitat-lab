@@ -170,7 +170,7 @@ class Env:
         """Resets the environments and returns the initial observations.
 
         Returns:
-            Initial observations from the environment.
+            initial observations from the environment.
         """
         self._reset_stats()
 
