@@ -14,6 +14,7 @@ from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.simulator import SensorTypes, Sensor, SensorSuite, Simulator
 from habitat.core.vector_env import VectorEnv, ThreadedVectorEnv
+from habitat.core.registry import registry
 from habitat.datasets import make_dataset
 from habitat.version import VERSION as __version__  # noqa
 

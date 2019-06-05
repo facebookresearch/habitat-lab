@@ -11,6 +11,7 @@ from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from examples import visualization_examples
 from examples import shortest_path_follower_example
+from examples import register_new_sensors_and_measures
 
 
 def test_readme_example():
@@ -35,3 +36,12 @@ def test_shortest_path_follower_example():
     ):
         pytest.skip("Please download Habitat test data to data folder.")
     shortest_path_follower_example.main()
+
+
+def test_register_new_sensors_and_measures():
+    if not PointNavDatasetV1.check_config_paths_exist(
+        config=habitat.get_config().DATASET
+    ):
+        pytest.skip("Please download Habitat test data to data folder.")
+
+    register_new_sensors_and_measures.main()
