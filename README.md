@@ -1,5 +1,5 @@
 <p align="center">
-  <img width = "50%" src='docs/img/habitat_logo_with_text_horizontal_blue.png' />
+  <img width = "50%" src='resources/img/habitat_logo_with_text_horizontal_blue.png' />
   </p>
   
 --------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ defining embodied AI tasks (e.g. navigation, instruction following, question ans
 Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
 
 <p align="center">
-  <img src="docs/img/habitat_compressed.gif"  height="400">
+  <img src="resources/img/habitat_compressed.gif"  height="400">
 </p>
 
 ---
@@ -117,7 +117,7 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='docs/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
+  <img src='resources/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat-API</i></p>
 </p>
 

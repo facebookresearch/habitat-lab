@@ -3,16 +3,30 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to habitat-api's documentation!
+:github_url: https://github.com/facebookresearch/habitat-api
+
+habitat-api documentation
 =======================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+A modular high-level library to train embodied AI agents across a variety of tasks, environments, and simulators.
 
-   intro
-   code_example
-   api
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
+   tutorials/quickstart
+   tutorials/examples
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Package Reference
+
+   habitat.core <core>
+   habitat.sims <sims>
+   habitat.tasks <tasks>
+   habitat.datasets <datasets>
+   habitat.config <config>
+   habitat.utils <utils>
 
 
 Indices and tables
@@ -20,4 +34,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
