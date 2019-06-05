@@ -411,10 +411,14 @@ def ppo_args():
     parser.add_argument(
         "--task-config",
         type=str,
-        nargs="+",
         default="configs/tasks/pointnav.yaml",
         help="path to config yaml containing information about task",
     )
     parser.add_argument("--seed", type=int, default=100)
-
+    parser.add_argument(
+        "opts",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="Modify config options from command line",
+    )
     return parser
