@@ -10,9 +10,9 @@ from collections import deque
 from time import time
 
 import numpy as np
-import torch
 
 import habitat
+import torch
 from config.default import get_config as cfg_baseline
 from habitat import logger
 from habitat.config.default import get_config as cfg_env

@@ -6,9 +6,8 @@
 
 import argparse
 
-import torch
-
 import habitat
+import torch
 from config.default import get_config as cfg_baseline
 from habitat.config.default import get_config
 from rl.ppo import PPO, Policy

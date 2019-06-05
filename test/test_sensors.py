@@ -8,17 +8,20 @@ import os
 import random
 
 import numpy as np
-import pytest
 
 import habitat
+import pytest
 from habitat.config.default import get_config
 from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import (
     COLLISION_PROXIMITY_TOLERANCE,
     NavigationEpisode,
+    NavigationGoal,
 )
 
-CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
+NON_STOP_ACTIONS = [
+    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value
+]
 
 
 def _random_episode(env, config):
@@ -42,10 +45,9 @@ def _random_episode(env, config):
 
 
 def test_heading_sensor():
-    config = get_config(CFG_TEST)
+    config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
-    config = get_config()
     config.defrost()
     config.TASK.SENSORS = ["HEADING_SENSOR"]
     config.freeze()
@@ -80,10 +82,9 @@ def test_heading_sensor():
 
 
 def test_tactile():
-    config = get_config(CFG_TEST)
+    config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
-    config = get_config()
     config.defrost()
     config.TASK.SENSORS = ["PROXIMITY_SENSOR"]
     config.TASK.MEASUREMENTS = ["COLLISIONS"]
@@ -112,10 +113,9 @@ def test_tactile():
 
 
 def test_collisions():
-    config = get_config(CFG_TEST)
+    config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
-    config = get_config()
     config.defrost()
     config.TASK.MEASUREMENTS = ["COLLISIONS"]
     config.freeze()
@@ -156,4 +156,42 @@ def test_collisions():
             prev_loc = loc
             prev_collisions = collisions
 
+    env.close()
+
+
+def test_static_pointgoal_sensor():
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    config.defrost()
+    config.TASK.SENSORS = ["STATIC_POINTGOAL_SENSOR"]
+    config.freeze()
+    env = habitat.Env(config=config, dataset=None)
+
+    # start position is checked for validity for the specific test scene
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+    expected_static_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_static_pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+
+    env.episodes = [
+        NavigationEpisode(
+            episode_id="0",
+            scene_id=config.SIMULATOR.SCENE,
+            start_position=valid_start_position,
+            start_rotation=start_rotation,
+            goals=[NavigationGoal(goal_position)],
+        )
+    ]
+
+    obs = env.reset()
+    for _ in range(5):
+        env.step(np.random.choice(NON_STOP_ACTIONS))
+    static_pointgoal = obs["static_pointgoal"]
+
+    # check to see if taking non-stop actions will affect static point_goal
+    assert np.allclose(static_pointgoal, expected_static_pointgoal)
     env.close()

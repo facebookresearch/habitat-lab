@@ -6,10 +6,10 @@
 
 from typing import Any, List, Optional, Type
 
-import cv2
 import numpy as np
 from gym import spaces
 
+import cv2
 import habitat
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
@@ -233,7 +233,7 @@ class StaticPointGoalSensor(habitat.Sensor):
         return "static_pointgoal"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.STATIC_GOAL_VECTOR
+        return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         if self._goal_format == "CARTESIAN":
