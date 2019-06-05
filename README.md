@@ -57,6 +57,7 @@ pip install -e .
 The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
 ```bash
 cd habitat-api
+pip install -r requirements.txt
 python setup.py develop --all # install habitat and habitat_baselines
 ```
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
