@@ -216,7 +216,7 @@ class Dataset(Generic[T]):
             self.episodes = new_episodes
         return new_datasets
 
-    def sample_episodes(self, num_episodes):
+    def sample_episodes(self, num_episodes: int) -> None:
         """
         Sample from existing episodes a list of episodes of size num_episodes,
         and replace self.episodes with the list of sampled episodes.
