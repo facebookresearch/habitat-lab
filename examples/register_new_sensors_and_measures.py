@@ -6,67 +6,67 @@ import numpy as np
 import habitat
 from habitat.config import Config as CN
 
+# Define the measure and register it with habitat
+# By default, the things are registered with the class name
+@habitat.registry.register_measure
+class EpisodeInfo(habitat.Measure):
+    def __init__(self, sim, config):
+        # This measure only needs the config
+        self._config = config
+
+        super().__init__()
+
+    # Defines the name of the measure in the measurements dictionary
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "episode_info"
+
+    # This is called whenver the environment is reset
+    def reset_metric(self, episode):
+        # Our measure always contains all the attributes of the episode
+        self._metric = vars(episode).copy()
+        # But only on reset, it has an additional field of my_value
+        self._metric["my_value"] = self._config.VALUE
+
+    # This is called whenver an action is taken in the environment
+    def update_metric(self, episode, action):
+        # Now the measure will just have all the attributes of the episode
+        self._metric = vars(episode).copy()
+
+
+# Define the sensor and register it with habitat
+# For the sensor, we will register it with a custom name
+@habitat.registry.register_sensor(name="my_supercool_sensor")
+class AgentPositionSensor(habitat.Sensor):
+    def __init__(self, sim, config):
+        super().__init__(config=config)
+
+        self._sim = sim
+        # Prints out the answer to life on init
+        print("The answer to life is", self.config.ANSWER_TO_LIFE)
+
+    # Defines the name of the sensor in the sensor suite dictionary
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "agent_position"
+
+    # Defines the type of the sensor
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return habitat.SensorTypes.POSITION
+
+    # Defines the size and range of the observations of the sensor
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=(3,),
+            dtype=np.float32,
+        )
+
+    # This is called whenver reset is called or an action is taken
+    def get_observation(self, observations, episode):
+        return self._sim.get_agent_state().position
+
 
 def main():
-
-    # Define the measure and register it with habitat
-    # By default, the things are registered with the class name
-    @habitat.registry.register_measure
-    class EpisodeInfo(habitat.Measure):
-        def __init__(self, sim, config):
-            # This measure only needs the config
-            self._config = config
-
-            super().__init__()
-
-        # Defines the name of the measure in the measurements dictionary
-        def _get_uuid(self, *args: Any, **kwargs: Any):
-            return "episode_info"
-
-        # This is called whenver the environment is reset
-        def reset_metric(self, episode):
-            # Our measure always contains all the attributes of the episode
-            self._metric = vars(episode).copy()
-            # But only on reset, it has an additional field of my_value
-            self._metric["my_value"] = self._config.VALUE
-
-        # This is called whenver an action is taken in the environment
-        def update_metric(self, episode, action):
-            # Now the measure will just have all the attributes of the episode
-            self._metric = vars(episode).copy()
-
-    # Define the sensor and register it with habitat
-    # For the sensor, we will register it with a custom name
-    @habitat.registry.register_sensor(name="my_supercool_sensor")
-    class AgentPositionSensor(habitat.Sensor):
-        def __init__(self, sim, config):
-            super().__init__(config=config)
-
-            self._sim = sim
-            # Prints out the answer to life on init
-            print("The answer to life is", self.config.ANSWER_TO_LIFE)
-
-        # Defines the name of the sensor in the sensor suite dictionary
-        def _get_uuid(self, *args: Any, **kwargs: Any):
-            return "agent_position"
-
-        # Defines the type of the sensor
-        def _get_sensor_type(self, *args: Any, **kwargs: Any):
-            return habitat.SensorTypes.POSITION
-
-        # Defines the size and range of the observations of the sensor
-        def _get_observation_space(self, *args: Any, **kwargs: Any):
-            return spaces.Box(
-                low=np.finfo(np.float32).min,
-                high=np.finfo(np.float32).max,
-                shape=(3,),
-                dtype=np.float32,
-            )
-
-        # This is called whenver reset is called or an action is taken
-        def get_observation(self, observations, episode):
-            return self._sim.get_agent_state().position
-
     # Get the default config node
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
