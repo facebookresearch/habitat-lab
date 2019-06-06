@@ -183,7 +183,7 @@ def test_static_pointgoal_sensor():
             scene_id=config.SIMULATOR.SCENE,
             start_position=valid_start_position,
             start_rotation=start_rotation,
-            goals=[NavigationGoal(goal_position)],
+            goals=[NavigationGoal(position=goal_position)],
         )
     ]
 
