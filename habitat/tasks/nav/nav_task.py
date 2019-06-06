@@ -107,6 +107,7 @@ class NavigationEpisode(Episode):
 
 
 @registry.register_sensor
+class PointGoalSensor(Sensor):
     r"""Sensor for PointGoal observations which are used in the PointNav task.
     For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
@@ -173,8 +174,7 @@ class NavigationEpisode(Episode):
 
 @registry.register_sensor
 class StaticPointGoalSensor(Sensor):
-    """
-    rSensor for PointGoal observations which are used in the StaticPointNav
+    r"""Sensor for PointGoal observations which are used in the StaticPointNav
     task. For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
     Args:
@@ -283,8 +283,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor
 class ProximitySensor(Sensor):
-    r"""
-    Sensor for observing the distance to the closest obstacle
+    r"""Sensor for observing the distance to the closest obstacle
 
     Args:
         sim: reference to the simulator for calculating task observations.

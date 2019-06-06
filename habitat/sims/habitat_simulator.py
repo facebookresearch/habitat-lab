@@ -137,7 +137,6 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-<<<<<<< HEAD
 @registry.register_simulator(name="Sim-v0")
 class HabitatSim(habitat.Simulator):
     r"""Simulator wrapper over habitat-sim
