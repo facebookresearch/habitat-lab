@@ -8,8 +8,9 @@ import os
 import shutil
 
 import cv2
-import habitat
 import numpy as np
+
+import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video

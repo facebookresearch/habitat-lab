@@ -8,16 +8,17 @@ import multiprocessing as mp
 from multiprocessing.connection import Connection
 from queue import Queue
 from threading import Thread
-from typing import Iterable, List, Tuple, Callable, Union, Any, Set, Optional
+from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
 
-import habitat
+import gym
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
+
+import habitat
 from habitat.config import Config
 from habitat.core.env import Env, Observations
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
-import gym
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"

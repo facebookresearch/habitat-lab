@@ -5,10 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Tuple, Optional, List
+from typing import List, Optional, Tuple
 
-import numpy as np
 import imageio
+import numpy as np
 import tqdm
 
 

@@ -7,14 +7,17 @@
 import os
 import random
 
+import numpy as np
+import pytest
+
 import habitat
 import numpy as np
 import pytest
 from habitat.config.default import get_config
 from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import (
-    NavigationEpisode,
     COLLISION_PROXIMITY_TOLERANCE,
+    NavigationEpisode,
     NavigationGoal,
 )
 

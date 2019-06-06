@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
+
 from habitat.config import Config
 
 

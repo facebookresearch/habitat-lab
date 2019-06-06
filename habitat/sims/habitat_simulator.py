@@ -5,17 +5,22 @@
 # LICENSE file in the root directory of this source tree.
 
 from enum import Enum
-from typing import List, Any, Optional
+from typing import Any, List, Optional
+
+import numpy as np
+from gym import Space, spaces
 
 import habitat
 import habitat_sim
-import numpy as np
-from gym import spaces, Space
-from habitat import SensorSuite, Config
+from habitat import Config, SensorSuite
 from habitat.core.logging import logger
-from habitat.core.simulator import AgentState, ShortestPathPoint
-from habitat.core.simulator import Observations
-from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
+from habitat.core.simulator import (
+    AgentState,
+    DepthSensor,
+    RGBSensor,
+    SemanticSensor,
+    ShortestPathPoint,
+)
 
 RGBSENSOR_DIMENSION = 3
 
