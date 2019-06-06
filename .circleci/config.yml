@@ -73,9 +73,6 @@ jobs:
       - restore_cache:
           keys:
             - conda-{{ checksum "habitat-api/.circleci/config.yml" }}
-      - restore_cache:
-          keys:
-            - habitat-sim-{{ checksum "./hsim_sha" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -104,6 +101,9 @@ jobs:
                 conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed
+      - restore_cache:
+          keys:
+            - habitat-sim-{{ checksum "./hsim_sha" }}
       - run:
           name: Build, install habitat-sim and run benchmark
           no_output_timeout: 20m
@@ -157,8 +157,10 @@ jobs:
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
               pip install -r requirements.txt --progress-bar off
-              python setup.py test
               touch ~/miniconda/pip_deps_installed
+              python setup.py test
+              python setup.py develop --all
+              python -u habitat_baselines/train_ppo.py --log-file "train.log" --checkpoint-folder "data/checkpoints" --sim-gpu-id 0 --pth-gpu-id 0 --num-processes 1 --num-mini-batch 1 --num-updates 10
       - save_cache:
           key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
           paths:
