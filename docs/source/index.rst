@@ -15,7 +15,6 @@ A modular high-level library to train embodied AI agents across a variety of tas
    :caption: Tutorials
 
    tutorials/quickstart
-   tutorials/examples
 
 .. toctree::
    :maxdepth: 1
