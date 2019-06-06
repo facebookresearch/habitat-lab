@@ -80,7 +80,7 @@ jobs:
           name: Install conda and dependencies
           no_output_timeout: 20m
           command: |
-              if [ ! -d $HOME/miniconda ]
+              if [ ! -d ~/miniconda ]
               then
                 curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
                 chmod +x ~/miniconda.sh
@@ -154,9 +154,9 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api
-              while [ ! ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
+              while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
-              pip install -r requirements.txt
+              pip install -r requirements.txt --progress-bar off
               python setup.py test
               touch ~/miniconda/pip_deps_installed
       - save_cache:
