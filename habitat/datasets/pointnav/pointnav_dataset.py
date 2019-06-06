@@ -34,9 +34,17 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
-        return os.path.exists(
-            config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
-        )
+        if not os.path.exists(config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)):
+            return False
+        else:
+            with gzip.GzipFile(config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT), 'r') as f:
+                data = f.read()
+
+            data = json.loads(data)
+            for episode in data['episodes']:
+                if not os.path.exists(episode['scene_id']):
+                    return False
+            return True
 
     @staticmethod
     def get_scenes_to_load(config: Config) -> List[str]:
