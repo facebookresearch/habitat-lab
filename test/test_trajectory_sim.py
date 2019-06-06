@@ -10,6 +10,7 @@ import os
 import numpy as np
 import pytest
 
+from habitat import SimulatorActions
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 
@@ -33,7 +34,7 @@ def test_sim_trajectory():
     )
 
     for i, action in enumerate(test_trajectory["actions"]):
-        action = sim.action_space_definition.action_enum[action].value
+        action = SimulatorActions[action]
         if i > 0:  # ignore first step as habitat-sim doesn't update
             # agent until then
             state = sim.get_agent_state()
