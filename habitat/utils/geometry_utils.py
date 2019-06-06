@@ -7,7 +7,6 @@
 import numpy as np
 import quaternion
 
-
 EPSILON = 1e-8
 
 

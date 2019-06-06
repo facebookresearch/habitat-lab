@@ -42,7 +42,7 @@ class ForwardOnlyAgent(RandomAgent):
         if self.is_goal_reached(observations):
             action = SimulatorActions.STOP.value
         else:
-            action = SimulatorActions.FORWARD.value
+            action = SimulatorActions.MOVE_FORWARD.value
         return action
 
 
@@ -56,10 +56,13 @@ class RandomForwardAgent(RandomAgent):
             action = SimulatorActions.STOP.value
         else:
             if np.random.uniform(0, 1, 1) < self.FORWARD_PROBABILITY:
-                action = SimulatorActions.FORWARD.value
+                action = SimulatorActions.MOVE_FORWARD.value
             else:
                 action = np.random.choice(
-                    [SimulatorActions.LEFT.value, SimulatorActions.RIGHT.value]
+                    [
+                        SimulatorActions.TURN_LEFT.value,
+                        SimulatorActions.TURN_RIGHT.value,
+                    ]
                 )
 
         return action
@@ -83,9 +86,9 @@ class GoalFollower(RandomAgent):
         if angle_to_goal > pi or (
             (angle_to_goal < 0) and (angle_to_goal > -pi)
         ):
-            action = SimulatorActions.RIGHT.value
+            action = SimulatorActions.TURN_RIGHT.value
         else:
-            action = SimulatorActions.LEFT.value
+            action = SimulatorActions.TURN_LEFT.value
         return action
 
     def act(self, observations):
@@ -96,7 +99,7 @@ class GoalFollower(RandomAgent):
                 np.array(observations["pointgoal"][1])
             )
             if abs(angle_to_goal) < self.angle_th:
-                action = SimulatorActions.FORWARD.value
+                action = SimulatorActions.MOVE_FORWARD.value
             else:
                 action = self.turn_towards_goal(angle_to_goal)
 

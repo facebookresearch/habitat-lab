@@ -4,7 +4,7 @@ import numpy as np
 
 from habitat.core.simulator import Simulator
 from habitat.datasets.utils import get_action_shortest_path
-from habitat.tasks.nav.nav_task import NavigationGoal, NavigationEpisode
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 """
     A minimum radius of a plane that a point should be part of to be

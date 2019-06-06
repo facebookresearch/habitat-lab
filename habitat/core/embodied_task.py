@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Type, Optional, Dict
 from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Type
 
 from habitat.config import Config
-from habitat.core.dataset import Episode, Dataset
+from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import SensorSuite, Simulator
 
 

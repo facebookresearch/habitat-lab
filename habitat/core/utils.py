@@ -40,3 +40,8 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
         new_height * height, new_width * width, n_channels
     )
     return out_image
+
+
+def not_none_validator(self, attribute, value):
+    if value is None:
+        raise ValueError(f"Argument '{attribute.name}' must be set")

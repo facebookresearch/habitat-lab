@@ -5,35 +5,36 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.core.logging import logger
-from habitat.core.registry import Registry, Spec
+from habitat.core.registry import registry
+from habitat.core.simulator import Simulator
 
 
-class SimSpec(Spec):
-    def __init__(self, id_sim, entry_point):
-        super().__init__(id_sim, entry_point)
+def _try_register_habitat_sim():
+    try:
+        import habitat_sim
 
+        has_habitat_sim = True
+    except ImportError as e:
+        has_habitat_sim = False
+        habitat_sim_import_error = e
 
-class SimRegistry(Registry):
-    def register(self, id_sim, **kwargs):
-        if id_sim in self.specs:
-            raise ValueError(
-                "Cannot re-register sim"
-                " specification with id: {}".format(id_sim)
-            )
-        self.specs[id_sim] = SimSpec(id_sim, **kwargs)
+    if has_habitat_sim:
+        from habitat.sims.habitat_simulator import HabitatSim
+    else:
 
-
-sim_registry = SimRegistry()
-
-
-def register_sim(id_sim, **kwargs):
-    sim_registry.register(id_sim, **kwargs)
+        @registry.register_simulator(name="Sim-v0")
+        class HabitatSimImportError(Simulator):
+            def __init__(self, *args, **kwargs):
+                raise habitat_sim_import_error
 
 
 def make_sim(id_sim, **kwargs):
     logger.info("initializing sim {}".format(id_sim))
-    return sim_registry.make(id_sim, **kwargs)
+    _sim = registry.get_simulator(id_sim)
+    assert _sim is not None, "Could not find simulator with name {}".format(
+        id_sim
+    )
+    return _sim(**kwargs)
 
 
-def get_spec_sim(id_sim):
-    return sim_registry.get_spec(id_sim)
+_try_register_habitat_sim()

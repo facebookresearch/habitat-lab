@@ -5,18 +5,19 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Dict, Type, List, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import gym
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
+
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
+from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks import make_task
-from habitat.datasets import make_dataset
 
 
 class Env:

@@ -4,18 +4,27 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Any, Optional
 from enum import Enum
+from typing import Any, List, Optional
 
-import habitat
-import habitat_sim
 import numpy as np
-from gym import spaces, Space
-from habitat import SensorSuite, Config
-from habitat.core.logging import logger
-from habitat.core.simulator import AgentState, ShortestPathPoint
-from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
+from gym import Space, spaces
 
+import habitat_sim
+from habitat.core.logging import logger
+from habitat.core.registry import registry
+from habitat.core.simulator import (
+    AgentState,
+    Config,
+    DepthSensor,
+    Observations,
+    RGBSensor,
+    SemanticSensor,
+    Sensor,
+    SensorSuite,
+    ShortestPathPoint,
+    Simulator,
+)
 
 RGBSENSOR_DIMENSION = 3
 
@@ -34,12 +43,15 @@ def check_sim_obs(obs, sensor):
 
 
 class SimulatorActions(Enum):
-    FORWARD = 0
-    LEFT = 1
-    RIGHT = 2
-    STOP = 3
+    STOP = 0
+    MOVE_FORWARD = 1
+    TURN_LEFT = 2
+    TURN_RIGHT = 3
+    LOOK_UP = 4
+    LOOK_DOWN = 5
 
 
+@registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor):
     sim_sensor_type: habitat_sim.SensorType
 
@@ -63,6 +75,7 @@ class HabitatSimRGBSensor(RGBSensor):
         return obs
 
 
+@registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor):
     sim_sensor_type: habitat_sim.SensorType
     min_depth_value: float
@@ -102,6 +115,7 @@ class HabitatSimDepthSensor(DepthSensor):
         return obs
 
 
+@registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor):
     sim_sensor_type: habitat_sim.SensorType
 
@@ -123,7 +137,8 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-class HabitatSim(habitat.Simulator):
+@registry.register_simulator(name="Sim-v0")
+class HabitatSim(Simulator):
     """Simulator wrapper over habitat-sim
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
@@ -139,18 +154,12 @@ class HabitatSim(habitat.Simulator):
         sim_sensors = []
         for sensor_name in agent_config.SENSORS:
             sensor_cfg = getattr(self.config, sensor_name)
-            is_valid_sensor = hasattr(
-                habitat.sims.habitat_simulator, sensor_cfg.TYPE  # type: ignore
-            )
-            assert is_valid_sensor, "invalid sensor type {}".format(
+            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
+
+            assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            sim_sensors.append(
-                getattr(
-                    habitat.sims.habitat_simulator,
-                    sensor_cfg.TYPE,  # type: ignore
-                )(sensor_cfg)
-            )
+            sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
@@ -196,21 +205,29 @@ class HabitatSim(habitat.Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
-            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
-                "turn_left",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
-            ),
-            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
-                "turn_right",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
-            ),
-            SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
+            SimulatorActions.MOVE_FORWARD.value: habitat_sim.ActionSpec(
                 "move_forward",
                 habitat_sim.ActuationSpec(
                     amount=self.config.FORWARD_STEP_SIZE
                 ),
             ),
-            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
+            SimulatorActions.TURN_LEFT.value: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            SimulatorActions.TURN_RIGHT.value: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            SimulatorActions.LOOK_UP.value: habitat_sim.ActionSpec(
+                "look_up",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+            SimulatorActions.LOOK_DOWN.value: habitat_sim.ActionSpec(
+                "look_down",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
         }
 
         return habitat_sim.Configuration(sim_config, [agent_config])
@@ -383,7 +400,7 @@ class HabitatSim(habitat.Simulator):
 
     @property
     def index_forward_action(self):
-        return SimulatorActions.FORWARD.value
+        return SimulatorActions.MOVE_FORWARD.value
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
@@ -392,7 +409,7 @@ class HabitatSim(habitat.Simulator):
         agent_config = getattr(self.config, agent_name)
         return agent_config
 
-    def get_agent_state(self, agent_id: int = 0):
+    def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
@@ -400,43 +417,77 @@ class HabitatSim(habitat.Simulator):
 
     def set_agent_state(
         self,
-        position: List[float] = None,
-        rotation: List[float] = None,
+        position: List[float],
+        rotation: List[float],
         agent_id: int = 0,
         reset_sensors: bool = True,
-    ) -> None:
+    ) -> bool:
         """Sets agent state similar to initialize_agent, but without agents
-        creation.
+        creation. On failure to place the agent in the proper position, it is
+        moved back to its previous pose.
 
         Args:
-            position: numpy ndarray containing 3 entries for (x, y, z).
-            rotation: numpy ndarray with 4 entries for (x, y, z, w) elements
-            of unit quaternion (versor) representing agent 3D orientation,
-            (https://en.wikipedia.org/wiki/Versor)
+            position: list containing 3 entries for (x, y, z).
+            rotation: list with 4 entries for (x, y, z, w) elements of unit
+                quaternion (versor) representing agent 3D orientation,
+                (https://en.wikipedia.org/wiki/Versor)
             agent_id: int identification of agent from multiagent setup.
             reset_sensors: bool for if sensor changes (e.g. tilt) should be
                 reset).
+
+        Returns:
+            True if the set was successful else moves the agent back to its
+            original pose and returns false.
         """
         agent = self._sim.get_agent(agent_id)
-        state = self.get_agent_state(agent_id)
-        state.position = position
-        state.rotation = rotation
+        original_state = self.get_agent_state(agent_id)
+        new_state = self.get_agent_state(agent_id)
+        new_state.position = position
+        new_state.rotation = rotation
 
         # NB: The agent state also contains the sensor states in _absolute_
         # coordinates. In order to set the agent's body to a specific
         # location and have the sensors follow, we must not provide any
         # state for the sensors. This will cause them to follow the agent's
         # body
-        state.sensor_states = dict()
+        new_state.sensor_states = dict()
 
-        agent.set_state(state, reset_sensors)
+        agent.set_state(new_state, reset_sensors)
 
-        self._check_agent_position(position, agent_id)
+        if not self._check_agent_position(position, agent_id):
+            agent.set_state(original_state, reset_sensors)
+            return False
+        return True
+
+    def get_observations_at(
+        self,
+        position: List[float],
+        rotation: List[float],
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+
+        current_state = self.get_agent_state()
+
+        success = self.set_agent_state(position, rotation, reset_sensors=False)
+        if success:
+            sim_obs = self._sim.get_sensor_observations()
+            observations = self._sensor_suite.get_observations(sim_obs)
+            if not keep_agent_at_new_pose:
+                self.set_agent_state(
+                    current_state.position,
+                    current_state.rotation,
+                    reset_sensors=False,
+                )
+            return observations
+        else:
+            return None
 
     # TODO (maksymets): Remove check after simulator became stable
-    def _check_agent_position(self, position, agent_id=0):
+    def _check_agent_position(self, position, agent_id=0) -> bool:
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")
+            return False
+        return True
 
     def distance_to_closest_obstacle(self, position, max_search_radius=2.0):
         return self._sim.pathfinder.distance_to_closest_obstacle(

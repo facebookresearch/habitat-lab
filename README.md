@@ -57,6 +57,7 @@ pip install -e .
 The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
 ```bash
 cd habitat-api
+pip install -r requirements.txt
 python setup.py develop --all # install habitat and habitat_baselines
 ```
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
@@ -87,6 +88,8 @@ while not env.episode_over:
     observations = env.step(env.action_space.sample())
 
 ```
+
+See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures) for an example of how to extend habitat-api from _outside_ the source code
 
 ## Docker Setup
 We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:

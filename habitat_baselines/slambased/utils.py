@@ -1,6 +1,7 @@
+import time
+
 import numpy as np
 import torch
-import time
 from PIL import Image
 
 
