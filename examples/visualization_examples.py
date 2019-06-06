@@ -58,7 +58,7 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
             agent_rotation = np.pi / 2
 
             dummy_episode = NavigationEpisode(
-                [goal],
+                goals=[goal],
                 episode_id="dummy_id",
                 scene_id="dummy_scene",
                 start_position=agent_position,
