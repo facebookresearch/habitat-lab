@@ -10,17 +10,20 @@ from typing import Any, List, Optional
 import numpy as np
 from gym import Space, spaces
 
-import habitat
 import habitat_sim
-from habitat import Config, SensorSuite
 from habitat.core.logging import logger
+from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    Config,
     DepthSensor,
     Observations,
     RGBSensor,
     SemanticSensor,
+    Sensor,
+    SensorSuite,
     ShortestPathPoint,
+    Simulator,
 )
 
 RGBSENSOR_DIMENSION = 3
@@ -48,6 +51,7 @@ class SimulatorActions(Enum):
     LOOK_DOWN = 5
 
 
+@registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor):
     sim_sensor_type: habitat_sim.SensorType
 
@@ -71,6 +75,7 @@ class HabitatSimRGBSensor(RGBSensor):
         return obs
 
 
+@registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor):
     sim_sensor_type: habitat_sim.SensorType
     min_depth_value: float
@@ -110,6 +115,7 @@ class HabitatSimDepthSensor(DepthSensor):
         return obs
 
 
+@registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor):
     sim_sensor_type: habitat_sim.SensorType
 
@@ -131,7 +137,8 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-class HabitatSim(habitat.Simulator):
+@registry.register_simulator(name="Sim-v0")
+class HabitatSim(Simulator):
     """Simulator wrapper over habitat-sim
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
@@ -147,18 +154,12 @@ class HabitatSim(habitat.Simulator):
         sim_sensors = []
         for sensor_name in agent_config.SENSORS:
             sensor_cfg = getattr(self.config, sensor_name)
-            is_valid_sensor = hasattr(
-                habitat.sims.habitat_simulator, sensor_cfg.TYPE  # type: ignore
-            )
-            assert is_valid_sensor, "invalid sensor type {}".format(
+            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
+
+            assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            sim_sensors.append(
-                getattr(
-                    habitat.sims.habitat_simulator,
-                    sensor_cfg.TYPE,  # type: ignore
-                )(sensor_cfg)
-            )
+            sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)

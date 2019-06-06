@@ -11,6 +11,7 @@ from typing import List, Optional
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset
+from habitat.core.registry import registry
 from habitat.tasks.nav.nav_task import (
     NavigationEpisode,
     NavigationGoal,
@@ -22,6 +23,7 @@ CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
+@registry.register_dataset(name="PointNav-v1")
 class PointNavDatasetV1(Dataset):
     """
         Class inherited from Dataset that loads Point Navigation dataset.

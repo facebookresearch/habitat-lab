@@ -10,6 +10,7 @@ import attr
 import numpy as np
 from gym import spaces
 
+from habitat.core.registry import registry
 from habitat.core.simulator import (
     Observations,
     Sensor,
@@ -112,6 +113,7 @@ class RewardSensor(Sensor):
         return self._get_observation(**kwargs)
 
 
+@registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     _sensor_suite: SensorSuite
 
