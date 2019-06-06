@@ -11,9 +11,9 @@ from typing import List, Optional
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset
+from habitat.core.registry import registry
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav_task import ObjectGoal, ShortestPathPoint
-from habitat.core.registry import registry
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"

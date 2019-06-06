@@ -1,10 +1,11 @@
 from typing import Any
-from gym import spaces
 
 import numpy as np
+from gym import spaces
 
 import habitat
 from habitat.config import Config as CN
+
 
 # Define the measure and register it with habitat
 # By default, the things are registered with the class name

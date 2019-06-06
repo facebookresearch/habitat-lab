@@ -10,6 +10,7 @@ import attr
 import numpy as np
 from gym import spaces
 
+from habitat.core.registry import registry
 from habitat.core.simulator import (
     Observations,
     Sensor,
@@ -18,7 +19,6 @@ from habitat.core.simulator import (
 )
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
-from habitat.core.registry import registry
 
 
 @attr.s(auto_attribs=True)

@@ -11,14 +11,19 @@ import numpy as np
 from gym import Space, spaces
 
 import habitat_sim
-import numpy as np
-from gym import spaces, Space
-from habitat.core.simulator import Simulator, Sensor, Config, SensorSuite
 from habitat.core.logging import logger
-from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.registry import registry
-from habitat.core.simulator import RGBSensor, DepthSensor, SemanticSensor
-
+from habitat.core.simulator import (
+    AgentState,
+    Config,
+    DepthSensor,
+    RGBSensor,
+    SemanticSensor,
+    Sensor,
+    SensorSuite,
+    ShortestPathPoint,
+    Simulator,
+)
 
 RGBSENSOR_DIMENSION = 3
 

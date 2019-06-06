@@ -12,12 +12,12 @@ import numpy as np
 from gym import spaces
 
 from habitat.config import Config
-from habitat.core.dataset import Episode, Dataset
-from habitat.core.embodied_task import Measurements, EmbodiedTask, Measure
->>>>>>> 61af1b666bf082000280e407870fd42aa73da6a9
+from habitat.core.dataset import Dataset, Episode
+from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
+from habitat.core.registry import registry
 from habitat.core.simulator import (
-    SensorSuite,
     Sensor,
+    SensorSuite,
     SensorTypes,
     ShortestPathPoint,
     Simulator,
@@ -25,7 +25,6 @@ from habitat.core.simulator import (
 from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
-from habitat.core.registry import registry
 
 COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 MAP_THICKNESS_SCALAR: int = 1250

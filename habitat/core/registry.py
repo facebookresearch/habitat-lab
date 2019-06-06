@@ -24,8 +24,8 @@ Various decorators for registry different kind of classes with unique keys
 - Register a dataset: ``@registry.register_dataset``
 """
 
-from typing import Optional
 import collections
+from typing import Optional
 
 
 class _Registry:
