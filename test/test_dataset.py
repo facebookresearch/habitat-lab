@@ -176,3 +176,17 @@ def test_get_uneven_splits():
     splits = dataset.get_splits(10, allow_uneven_splits=True)
     assert len(splits) == 10
     assert sum([len(split.episodes) for split in splits]) == 10000
+
+
+def test_sample_episodes():
+    dataset = _construct_dataset(10000)
+    dataset.sample_episodes(0)
+    assert len(dataset.episodes) == 0
+
+    dataset = _construct_dataset(10000)
+    dataset.sample_episodes(1)
+    assert len(dataset.episodes) == 1
+
+    dataset = _construct_dataset(10000)
+    dataset.sample_episodes(10000)
+    assert len(dataset.episodes) == 10000
