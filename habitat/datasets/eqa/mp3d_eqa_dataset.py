@@ -56,8 +56,7 @@ class Matterport3dDatasetV1(Dataset):
         ) as f:
             self.from_json(f.read())
 
-        if config.NUM_EPISODE_SAMPLE >= 0:
-            self.sample_episodes(config.NUM_EPISODE_SAMPLE)
+        self.sample_episodes(config.NUM_EPISODE_SAMPLE)
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
