@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# pythia documentation build configuration file, created by
-# sphinx-quickstart on Tue Apr 23 10:42:55 2019.
+# habitat-api documentation build configuration file, created by
+# sphinx-quickstart on Wed Jun 07 09:33:48 2019.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
