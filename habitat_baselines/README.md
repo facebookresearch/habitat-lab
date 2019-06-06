@@ -48,6 +48,12 @@ python -u habitat_baselines/train_ppo.py \
 
 ```
 
+**single-episode training**: 
+Algorithms can be trained with a single-episode option. This option can be used as a sanity check since good algorithms should overfit one episode relatively fast. To enable this option, add `DATASET.NUM_EPISODE_SAMPLE 1` *at the end* of the training command, or include the single-episode yaml file in `--task-config` like this:
+```
+   --task-config "configs/tasks/pointnav.yaml,configs/datasets/single_episode.yaml"
+```
+
 **test**:
 ```bash
 python -u habitat_baselines/evaluate_ppo.py \
