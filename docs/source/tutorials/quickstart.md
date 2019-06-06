@@ -15,7 +15,7 @@ For installing Habitat-Sim and Habitat-API follow instructions [here](https://gi
 
 In this example we will setup a PointNav task in which the agent is tasked to go from a source location to a target location. For this example the agent will be you (the user). You will be able to step around in an environment using keys.
 
-For running this example both Habitat-Sim and Habitat-API should be installed successfully. The data for scene should also be downloaded (steps to do this are provided in the installation instructions of Habitat-API). Running the code below also requires installation of cv2 which you can install using: `pip install opencv-python`.
+For running this example both Habitat-Sim and Habitat-API should be installed successfully. The data for scene should also be downloaded (steps to do this are provided in the [installation instructions](https://github.com/facebookresearch/habitat-api#installation) of Habitat-API). Running the code below also requires installation of cv2 which you can install using: `pip install opencv-python`.
 
 ```python
 import habitat
@@ -91,6 +91,8 @@ Below is a demo of what the example output will look like:
 <p align="center">
   <img src="https://i.imgur.com/5EaQUnf.png"  height="400">
 </p>
+
+For more examples refer to [Habitat-API examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples) and [Habitat-Sim examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples).
 
 ## Citation
 
