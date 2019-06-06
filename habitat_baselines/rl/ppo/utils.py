@@ -53,7 +53,8 @@ def _flatten_helper(t, n, tensor):
 
 
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
-    """Decreases the learning rate linearly"""
+    r"""Decreases the learning rate linearly
+    """
     lr = initial_lr - (initial_lr * (epoch / float(total_num_epochs)))
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
@@ -415,5 +416,10 @@ def ppo_args():
         help="path to config yaml containing information about task",
     )
     parser.add_argument("--seed", type=int, default=100)
-
+    parser.add_argument(
+        "opts",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="Modify config options from command line",
+    )
     return parser

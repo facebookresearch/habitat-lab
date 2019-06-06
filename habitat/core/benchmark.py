@@ -3,6 +3,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+r"""Implements evaluation of ``habitat.Agent`` inside ``habitat.Env``.
+``habitat.Benchmark`` creates a ``habitat.Env`` which is specified through 
+the ``config_env`` parameter in constructor. The evaluation is task agnostic 
+and is implemented through metrics defined for ``habitat.EmbodiedTask``.
+"""
 
 from collections import defaultdict
 from typing import Dict, Optional
@@ -13,7 +18,7 @@ from habitat.core.env import Env
 
 
 class Benchmark:
-    """Benchmark for evaluating agents in environments.
+    r"""Benchmark for evaluating agents in environments.
 
 
     Args:
@@ -28,7 +33,7 @@ class Benchmark:
     def evaluate(
         self, agent: Agent, num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
-        """
+        r"""
         Args:
             agent: agent to be evaluated in environment.
             num_episodes: count of number of episodes for which the evaluation

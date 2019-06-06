@@ -185,7 +185,7 @@ def test_env():
 
 
 def make_rl_env(config, dataset, rank: int = 0):
-    """Constructor for default habitat Env.
+    r"""Constructor for default habitat Env.
     :param config: configurations for environment
     :param dataset: dataset for environment
     :param rank: rank for setting seeds for environment

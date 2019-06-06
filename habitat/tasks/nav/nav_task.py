@@ -52,7 +52,7 @@ def merge_sim_episode_config(
 
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
-    """Base class for a goal specification hierarchy.
+    r"""Base class for a goal specification hierarchy.
     """
 
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
@@ -61,7 +61,7 @@ class NavigationGoal:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectGoal(NavigationGoal):
-    """Object goal that can be specified by object_id or position or object
+    r"""Object goal that can be specified by object_id or position or object
     category.
     """
 
@@ -74,7 +74,7 @@ class ObjectGoal(NavigationGoal):
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RoomGoal(NavigationGoal):
-    """Room goal that can be specified by room_id or position with radius.
+    r"""Room goal that can be specified by room_id or position with radius.
     """
 
     room_id: str = attr.ib(default=None, validator=not_none_validator)
@@ -83,7 +83,7 @@ class RoomGoal(NavigationGoal):
 
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationEpisode(Episode):
-    """Class for episode specification that includes initial position and
+    r"""Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
     episode is a description of one task instance for the agent.
 
@@ -108,8 +108,7 @@ class NavigationEpisode(Episode):
 
 @registry.register_sensor
 class PointGoalSensor(Sensor):
-    """
-    Sensor for PointGoal observations which are used in the PointNav task.
+    r"""Sensor for PointGoal observations which are used in the PointNav task.
     For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
 
@@ -175,8 +174,7 @@ class PointGoalSensor(Sensor):
 
 @registry.register_sensor
 class StaticPointGoalSensor(Sensor):
-    """
-    Sensor for PointGoal observations which are used in the StaticPointNav
+    r"""Sensor for PointGoal observations which are used in the StaticPointNav
     task. For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
     Args:
@@ -248,8 +246,8 @@ class StaticPointGoalSensor(Sensor):
 
 @registry.register_sensor
 class HeadingSensor(Sensor):
-    """
-    Sensor for observing the agent's heading in the global coordinate frame.
+    r"""Sensor for observing the agent's heading in the global coordinate
+    frame.
 
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -285,8 +283,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor
 class ProximitySensor(Sensor):
-    """
-    Sensor for observing the distance to the closest obstacle
+    r"""Sensor for observing the distance to the closest obstacle
 
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -324,7 +321,7 @@ class ProximitySensor(Sensor):
 
 @registry.register_measure
 class SPL(Measure):
-    """SPL (Success weighted by Path Length)
+    r"""SPL (Success weighted by Path Length)
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf
@@ -410,7 +407,7 @@ class Collisions(Measure):
 
 @registry.register_measure
 class TopDownMap(Measure):
-    """Top Down Map measure
+    r"""Top Down Map measure
     """
 
     def __init__(self, sim: Simulator, config: Config):

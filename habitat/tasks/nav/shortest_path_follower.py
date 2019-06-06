@@ -26,7 +26,7 @@ def action_to_one_hot(self, action: int) -> np.array:
 
 
 class ShortestPathFollower:
-    """Utility class for extracting the action on the shortest path to the
+    r"""Utility class for extracting the action on the shortest path to the
         goal.
     Args:
         sim: HabitatSim instance.
@@ -66,7 +66,8 @@ class ShortestPathFollower:
             return action
 
     def get_next_action(self, goal_pos: np.array) -> Union[int, np.array]:
-        """Returns the next action along the shortest path."""
+        """Returns the next action along the shortest path.
+        """
         if (
             np.linalg.norm(goal_pos - self._sim.get_agent_state().position)
             <= self._goal_radius
@@ -179,7 +180,7 @@ class ShortestPathFollower:
 
     @mode.setter
     def mode(self, new_mode: str):
-        """Sets the mode for how the greedy follower determines the best next
+        r"""Sets the mode for how the greedy follower determines the best next
             step.
         Args:
             new_mode: geodesic_path indicates using the simulator's shortest

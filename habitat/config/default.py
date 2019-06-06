@@ -144,6 +144,7 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
+_C.DATASET.NUM_EPISODE_SAMPLE = -1
 # -----------------------------------------------------------------------------
 # MP3DEQAV1 DATASET
 # -----------------------------------------------------------------------------
@@ -168,8 +169,7 @@ def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:
-    """
-    Create a unified config with default values overwritten by values from
+    r"""Create a unified config with default values overwritten by values from
     `config_paths` and overwritten by options from `opts`.
     Args:
         config_paths: List of config paths or string that contains comma

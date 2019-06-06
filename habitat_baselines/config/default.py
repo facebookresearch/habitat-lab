@@ -67,8 +67,7 @@ def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:
-    """
-    Create a unified config with default values overwritten by values from
+    r"""Create a unified config with default values overwritten by values from
     `config_paths` and overwritten by options from `opts`.
     Args:
         config_paths: List of config paths or string that contains comma
