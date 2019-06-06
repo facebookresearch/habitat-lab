@@ -223,4 +223,6 @@ class Dataset(Generic[T]):
         Args:
             num_episodes: number of episodes to sample
         """
-        self.episodes = np.random.choice(self.episodes, num_episodes, replace=False)
+        self.episodes = np.random.choice(
+            self.episodes, num_episodes, replace=False
+        )
