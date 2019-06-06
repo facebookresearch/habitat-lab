@@ -17,6 +17,7 @@ from habitat.core.logging import logger
 from habitat.core.simulator import (
     AgentState,
     DepthSensor,
+    Observations,
     RGBSensor,
     SemanticSensor,
     ShortestPathPoint,
