@@ -50,16 +50,19 @@ If you use the Habitat platform in your research, please cite the following [tec
 ## Installation
 
 1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-```bash
-cd habitat-api
-pip install -e .
-```
-The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
-```bash
-cd habitat-api
-pip install -r requirements.txt
-python setup.py develop --all # install habitat and habitat_baselines
-```
+  
+    ```bash
+    cd habitat-api
+    pip install -e .
+    ```
+  
+    The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
+  
+    ```bash
+    cd habitat-api
+    pip install -r requirements.txt
+    python setup.py develop --all # install habitat and habitat_baselines
+    ```
 
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
 
