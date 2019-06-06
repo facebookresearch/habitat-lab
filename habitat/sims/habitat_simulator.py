@@ -449,12 +449,10 @@ class HabitatSim(habitat.Simulator):
         keep_agent_at_new_pose: bool = False,
     ) -> Optional[Observations]:
 
-        # TODO do we need to support multiple agents for this?
-        agent_id = 0
-        current_state = self.get_agent_state(agent_id)
+        current_state = self.get_agent_state()
 
         success = self.set_agent_state(
-            position, rotation, agent_id, reset_sensors=False
+            position, rotation, reset_sensors=False
         )
         if success:
             sim_obs = self._sim.get_sensor_observations()
@@ -463,7 +461,6 @@ class HabitatSim(habitat.Simulator):
                 self.set_agent_state(
                     current_state.position,
                     current_state.rotation,
-                    agent_id,
                     reset_sensors=False,
                 )
             return observations
