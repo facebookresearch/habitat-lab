@@ -158,7 +158,9 @@ def test_env():
             scene_id=config.SIMULATOR.SCENE,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            goals=[
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
+            ],
             info={"geodesic_distance": 0.001},
         )
     ]
@@ -250,7 +252,9 @@ def test_rl_env():
             scene_id=config.SIMULATOR.SCENE,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            goals=[
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
+            ],
             info={"geodesic_distance": 0.001},
         )
     ]

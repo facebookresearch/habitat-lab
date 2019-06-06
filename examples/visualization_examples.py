@@ -21,12 +21,12 @@ if not os.path.exists(IMAGE_DIR):
 
 def example_pointnav_draw_target_birdseye_view():
     goal_radius = 0.5
-    goal = NavigationGoal([10, 0.25, 10], goal_radius)
+    goal = NavigationGoal(position=[10, 0.25, 10], radius=goal_radius)
     agent_position = np.array([0, 0.25, 0])
     agent_rotation = -np.pi / 4
 
     dummy_episode = NavigationEpisode(
-        [goal],
+        goals=[goal],
         episode_id="dummy_id",
         scene_id="dummy_scene",
         start_position=agent_position,
@@ -47,7 +47,7 @@ def example_pointnav_draw_target_birdseye_view():
 
 def example_pointnav_draw_target_birdseye_view_agent_on_border():
     goal_radius = 0.5
-    goal = NavigationGoal([0, 0.25, 0], goal_radius)
+    goal = NavigationGoal(position=[0, 0.25, 0], radius=goal_radius)
     ii = 0
     for x_edge in [-1, 0, 1]:
         for y_edge in [-1, 0, 1]:
@@ -58,7 +58,7 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
             agent_rotation = np.pi / 2
 
             dummy_episode = NavigationEpisode(
-                [goal],
+                goals=[goal],
                 episode_id="dummy_id",
                 scene_id="dummy_scene",
                 start_position=agent_position,

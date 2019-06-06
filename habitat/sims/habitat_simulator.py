@@ -4,8 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Any, Optional
 from enum import Enum
+from typing import Any, List, Optional
+
+import numpy as np
+from gym import Space, spaces
 
 import habitat_sim
 import numpy as np
@@ -34,10 +37,12 @@ def check_sim_obs(obs, sensor):
 
 
 class SimulatorActions(Enum):
-    FORWARD = 0
-    LEFT = 1
-    RIGHT = 2
-    STOP = 3
+    STOP = 0
+    MOVE_FORWARD = 1
+    TURN_LEFT = 2
+    TURN_RIGHT = 3
+    LOOK_UP = 4
+    LOOK_DOWN = 5
 
 
 @registry.register_sensor
@@ -194,21 +199,29 @@ class HabitatSim(Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = {
-            SimulatorActions.LEFT.value: habitat_sim.ActionSpec(
-                "turn_left",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
-            ),
-            SimulatorActions.RIGHT.value: habitat_sim.ActionSpec(
-                "turn_right",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
-            ),
-            SimulatorActions.FORWARD.value: habitat_sim.ActionSpec(
+            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
+            SimulatorActions.MOVE_FORWARD.value: habitat_sim.ActionSpec(
                 "move_forward",
                 habitat_sim.ActuationSpec(
                     amount=self.config.FORWARD_STEP_SIZE
                 ),
             ),
-            SimulatorActions.STOP.value: habitat_sim.ActionSpec("stop"),
+            SimulatorActions.TURN_LEFT.value: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            SimulatorActions.TURN_RIGHT.value: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            SimulatorActions.LOOK_UP.value: habitat_sim.ActionSpec(
+                "look_up",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+            SimulatorActions.LOOK_DOWN.value: habitat_sim.ActionSpec(
+                "look_down",
+                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
         }
 
         return habitat_sim.Configuration(sim_config, [agent_config])
@@ -381,7 +394,7 @@ class HabitatSim(Simulator):
 
     @property
     def index_forward_action(self):
-        return SimulatorActions.FORWARD.value
+        return SimulatorActions.MOVE_FORWARD.value
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:

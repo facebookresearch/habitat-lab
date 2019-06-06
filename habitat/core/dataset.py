@@ -6,11 +6,15 @@
 
 import copy
 import json
-from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
+from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
 
+import attr
 import numpy as np
 
+from habitat.core.utils import not_none_validator
 
+
+@attr.s(auto_attribs=True, kw_only=True)
 class Episode:
     """Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode. This information is provided by
@@ -28,28 +32,15 @@ class Episode:
             axes.
     """
 
-    episode_id: str
-    scene_id: str
-    start_position: List[float]
-    start_rotation: List[float]
+    episode_id: str = attr.ib(default=None, validator=not_none_validator)
+    scene_id: str = attr.ib(default=None, validator=not_none_validator)
+    start_position: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    start_rotation: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     info: Optional[Dict[str, str]] = None
-
-    def __init__(
-        self,
-        episode_id: str,
-        scene_id: str,
-        start_position: List[float],
-        start_rotation: List[float],
-        info: Optional[Dict[str, str]] = None,
-    ) -> None:
-        self.episode_id = episode_id
-        self.scene_id = scene_id
-        self.start_position = start_position
-        self.start_rotation = start_rotation
-        self.info = info
-
-    def __str__(self):
-        return str(self.__dict__)
 
 
 T = TypeVar("T", Episode, Type[Episode])

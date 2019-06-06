@@ -1,5 +1,13 @@
 baselines
 ==============================
+### Installation
+
+The `habitat_baselines` sub-package is NOT included upon installation by default. To install `habitat_baselines`, use the following command instead:
+```bash
+pip install -r requirements.txt
+python setup.py develop --all
+```
+This will also install additional requirements for each sub-module in `habitat_baselines/`, which are specified in `requirements.txt` files located in the sub-module directory.
 
 
 ### Reinforcement Learning (RL)

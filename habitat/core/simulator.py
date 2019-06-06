@@ -5,11 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
+
 from habitat.config import Config
 
 

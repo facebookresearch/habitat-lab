@@ -13,9 +13,9 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav_task import (
+    NavigationEpisode,
     NavigationGoal,
     ShortestPathPoint,
-    NavigationEpisode,
 )
 
 ALL_SCENES_MASK = "*"

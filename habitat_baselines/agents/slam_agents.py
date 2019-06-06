@@ -1,39 +1,34 @@
 import argparse
-import numpy as np
-import torch
-import random
-import time
 import os
-import PIL
+import random
+import sys
+import time
 from math import pi
+
+import numpy as np
+import PIL
+import requests
+import torch
 import torch.nn.functional as F
-import orbslam2
+
 import habitat
-from habitat_baselines.slambased.utils import generate_2dgrid
-from habitat_baselines.slambased.reprojection import (
-    homogenize_p,
-    get_distance,
-    project_tps_into_worldmap,
-    get_direction,
-    habitat_goalpos_to_mapgoal_pos,
-    planned_path2tps,
-    angle_to_pi_2_minus_pi_2,
-)
+import orbslam2
+from habitat.config.default import get_config
+from habitat.sims.habitat_simulator import SimulatorActions
+from habitat_baselines.config.default import get_config as cfg_baseline
+from habitat_baselines.slambased.mappers import DirectDepthMapper
+from habitat_baselines.slambased.monodepth import MonoDepthEstimator
+from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
     angle_to_pi_2_minus_pi_2 as norm_ang,
+    get_direction,
+    get_distance,
+    habitat_goalpos_to_mapgoal_pos,
+    homogenize_p,
+    planned_path2tps,
+    project_tps_into_worldmap,
 )
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat_baselines.slambased.mappers import DirectDepthMapper
-from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
-
-from habitat_baselines.config.default import get_config as cfg_baseline
-from habitat.config.default import get_config
-
-from habitat_baselines.slambased.monodepth import MonoDepthEstimator
-
-# https://sumit-ghosh.com/articles/python-download-progress-bar/
-import sys
-import requests
+from habitat_baselines.slambased.utils import generate_2dgrid
 
 
 def download(url, filename):
@@ -135,16 +130,16 @@ class BlindAgent(RandomAgent):
         if distance_to_goal <= self.pos_th:
             return command
         if abs(angle_to_goal) < self.angle_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD.value
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
             elif angle_to_goal > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             elif (angle_to_goal < 0) and (angle_to_goal > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
 
         return command
 
@@ -265,7 +260,10 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if self.action_history[-1] == SimulatorActions.FORWARD.value:
+                if (
+                    self.action_history[-1]
+                    == SimulatorActions.MOVE_FORWARD.value
+                ):
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
@@ -491,16 +489,16 @@ class ORBSLAM2Agent(RandomAgent):
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD.value
         else:
             if (d_angle > 0) and (d_angle < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
             elif d_angle > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             elif (d_angle < 0) and (d_angle > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
         return command
 
     def decide_what_to_do(self):
@@ -509,7 +507,7 @@ class ORBSLAM2Agent(RandomAgent):
             action = SimulatorActions.STOP.value
             return action
         if self.unseen_obstacle:
-            command = SimulatorActions.RIGHT.value
+            command = SimulatorActions.TURN_RIGHT.value
             return command
         command = SimulatorActions.STOP.value
         command = self.planner_prediction_to_command(self.waypointPose6D)

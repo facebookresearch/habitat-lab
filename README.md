@@ -54,7 +54,12 @@ If you use the Habitat platform in your research, please cite the following [tec
 cd habitat-api
 pip install -e .
 ```
-
+The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
+```bash
+cd habitat-api
+pip install -r requirements.txt
+python setup.py develop --all # install habitat and habitat_baselines
+```
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
 
 3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `habitat-api/data/` where `habitat-api/` is the github repository folder.

@@ -4,19 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 import os
-import pytest
 import random
+
+import numpy as np
+import pytest
 
 import habitat
 from habitat.config.default import get_config
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import (
-    NavigationEpisode,
     COLLISION_PROXIMITY_TOLERANCE,
+    NavigationEpisode,
     NavigationGoal,
 )
-from habitat.sims.habitat_simulator import SimulatorActions
 
 NON_STOP_ACTIONS = [
     v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value
@@ -124,9 +125,9 @@ def test_collisions():
     np.random.seed(123)
 
     actions = [
-        SimulatorActions.FORWARD.value,
-        SimulatorActions.LEFT.value,
-        SimulatorActions.RIGHT.value,
+        SimulatorActions.MOVE_FORWARD.value,
+        SimulatorActions.TURN_LEFT.value,
+        SimulatorActions.TURN_RIGHT.value,
     ]
 
     for _ in range(20):
@@ -182,7 +183,7 @@ def test_static_pointgoal_sensor():
             scene_id=config.SIMULATOR.SCENE,
             start_position=valid_start_position,
             start_rotation=start_rotation,
-            goals=[NavigationGoal(goal_position)],
+            goals=[NavigationGoal(position=goal_position)],
         )
     ]
 
