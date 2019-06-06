@@ -42,8 +42,7 @@ for file_name in glob.glob("**/requirements.txt", recursive=True):
 
 
 class OptionedCommand:
-    """
-    Generic Command class that takes extra user options and modifies
+    r"""Generic Command class that takes extra user options and modifies
     arguments in setuptools.setup() accordingly.
     Though OptionedCommand inherits directly from object, it assumes
     inheritance from DefaultDevelopCommand or DefaultInstallCommand, as it

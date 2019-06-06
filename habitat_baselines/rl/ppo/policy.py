@@ -59,7 +59,7 @@ class Policy(nn.Module):
 
 
 class Net(nn.Module):
-    """Network which passes the input image through CNN and concatenates
+    r"""Network which passes the input image through CNN and concatenates
     goal vector with CNN's output and passes that through RNN.
     """
 
@@ -152,7 +152,7 @@ class Net(nn.Module):
     def _conv_output_dim(
         self, dimension, padding, dilation, kernel_size, stride
     ):
-        """Calculates the output height and width based on the input
+        r"""Calculates the output height and width based on the input
         height and width to the convolution layer.
 
         ref: https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d

@@ -1,5 +1,5 @@
 <p align="center">
-  <img width = "50%" src='docs/img/habitat_logo_with_text_horizontal_blue.png' />
+  <img width = "50%" src='res/img/habitat_logo_with_text_horizontal_blue.png' />
   </p>
   
 --------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ defining embodied AI tasks (e.g. navigation, instruction following, question ans
 Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
 
 <p align="center">
-  <img src="docs/img/habitat_compressed.gif"  height="400">
+  <img src="res/img/habitat_compressed.gif"  height="400">
 </p>
 
 ---
@@ -49,17 +49,21 @@ If you use the Habitat platform in your research, please cite the following [tec
 
 ## Installation
 
-1. Clone the github repository and install using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-```bash
-cd habitat-api
-pip install -e .
-```
-The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
-```bash
-cd habitat-api
-pip install -r requirements.txt
-python setup.py develop --all # install habitat and habitat_baselines
-```
+1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+  
+    ```bash
+    cd habitat-api
+    pip install -e .
+    ```
+  
+    The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
+  
+    ```bash
+    cd habitat-api
+    pip install -r requirements.txt
+    python setup.py develop --all # install habitat and habitat_baselines
+    ```
+
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
 
 3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `habitat-api/data/` where `habitat-api/` is the github repository folder.
@@ -117,7 +121,7 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='docs/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
+  <img src='res/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat-API</i></p>
 </p>
 
@@ -164,3 +168,4 @@ Habitat-API is MIT licensed. See the LICENSE file for details.
 
 ## References
 1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019. 
+

@@ -139,7 +139,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
 
 @registry.register_simulator(name="Sim-v0")
 class HabitatSim(Simulator):
-    """Simulator wrapper over habitat-sim
+    r"""Simulator wrapper over habitat-sim
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
 
@@ -281,7 +281,7 @@ class HabitatSim(Simulator):
         return observations
 
     def render(self, mode: str = "rgb") -> Any:
-        """
+        r"""
         Args:
             mode: sensor whose observation is used for returning the frame,
                 eg: "rgb", "depth", "semantic"
@@ -323,7 +323,7 @@ class HabitatSim(Simulator):
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        """
+        r"""
         Returns:
             List of agent states and actions along the shortest path from
             source to the nearest target (both included). If one of the
@@ -360,7 +360,7 @@ class HabitatSim(Simulator):
         return self._sim.pathfinder.is_navigable(point)
 
     def semantic_annotations(self):
-        """
+        r"""
         Returns:
             SemanticScene which is a three level hierarchy of semantic
             annotations for the current scene. Specifically this method
@@ -422,7 +422,7 @@ class HabitatSim(Simulator):
         agent_id: int = 0,
         reset_sensors: bool = True,
     ) -> bool:
-        """Sets agent state similar to initialize_agent, but without agents
+        r"""Sets agent state similar to initialize_agent, but without agents
         creation. On failure to place the agent in the proper position, it is
         moved back to its previous pose.
 

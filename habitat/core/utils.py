@@ -10,7 +10,7 @@ import numpy as np
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    """Tile multiple images into single image
+    r"""Tile multiple images into single image
 
     Args:
         images: list of images where each image has dimension
