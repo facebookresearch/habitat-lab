@@ -138,7 +138,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
 
 
 @registry.register_simulator(name="Sim-v0")
-class HabitatSim(habitat.Simulator):
+class HabitatSim(Simulator):
     r"""Simulator wrapper over habitat-sim
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
