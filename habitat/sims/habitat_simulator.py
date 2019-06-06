@@ -451,9 +451,7 @@ class HabitatSim(habitat.Simulator):
 
         current_state = self.get_agent_state()
 
-        success = self.set_agent_state(
-            position, rotation, reset_sensors=False
-        )
+        success = self.set_agent_state(position, rotation, reset_sensors=False)
         if success:
             sim_obs = self._sim.get_sensor_observations()
             observations = self._sensor_suite.get_observations(sim_obs)
