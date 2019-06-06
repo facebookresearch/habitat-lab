@@ -45,3 +45,14 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 def not_none_validator(self, attribute, value):
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(
+                *args, **kwargs
+            )
+        return cls._instances[cls]

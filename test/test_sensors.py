@@ -11,10 +11,8 @@ import numpy as np
 import pytest
 
 import habitat
-import numpy as np
-import pytest
 from habitat.config.default import get_config
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.core.simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import (
     COLLISION_PROXIMITY_TOLERANCE,
     NavigationEpisode,
@@ -22,13 +20,13 @@ from habitat.tasks.nav.nav_task import (
 )
 
 NON_STOP_ACTIONS = [
-    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value
+    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP
 ]
 
 MOVEMENT_ACTIONS = [
-    SimulatorActions.MOVE_FORWARD.value,
-    SimulatorActions.TURN_LEFT.value,
-    SimulatorActions.TURN_RIGHT.value,
+    SimulatorActions.MOVE_FORWARD,
+    SimulatorActions.TURN_LEFT,
+    SimulatorActions.TURN_RIGHT,
 ]
 
 
@@ -133,9 +131,9 @@ def test_collisions():
     np.random.seed(123)
 
     actions = [
-        SimulatorActions.MOVE_FORWARD.value,
-        SimulatorActions.TURN_LEFT.value,
-        SimulatorActions.TURN_RIGHT.value,
+        SimulatorActions.MOVE_FORWARD,
+        SimulatorActions.TURN_LEFT,
+        SimulatorActions.TURN_RIGHT,
     ]
 
     for _ in range(20):

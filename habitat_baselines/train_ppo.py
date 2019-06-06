@@ -73,7 +73,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action == SimulatorActions.STOP.value
+            self._previous_action == SimulatorActions.STOP
             and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True
