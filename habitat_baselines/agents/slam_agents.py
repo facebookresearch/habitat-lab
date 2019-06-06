@@ -135,16 +135,16 @@ class BlindAgent(RandomAgent):
         if distance_to_goal <= self.pos_th:
             return command
         if abs(angle_to_goal) < self.angle_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD.value
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
             elif angle_to_goal > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             elif (angle_to_goal < 0) and (angle_to_goal > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
 
         return command
 
@@ -265,7 +265,10 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if self.action_history[-1] == SimulatorActions.FORWARD.value:
+                if (
+                    self.action_history[-1]
+                    == SimulatorActions.MOVE_FORWARD.value
+                ):
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
@@ -491,16 +494,16 @@ class ORBSLAM2Agent(RandomAgent):
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD.value
         else:
             if (d_angle > 0) and (d_angle < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
             elif d_angle > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             elif (d_angle < 0) and (d_angle > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT.value
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT.value
         return command
 
     def decide_what_to_do(self):
@@ -509,7 +512,7 @@ class ORBSLAM2Agent(RandomAgent):
             action = SimulatorActions.STOP.value
             return action
         if self.unseen_obstacle:
-            command = SimulatorActions.RIGHT.value
+            command = SimulatorActions.TURN_RIGHT.value
             return command
         command = SimulatorActions.STOP.value
         command = self.planner_prediction_to_command(self.waypointPose6D)

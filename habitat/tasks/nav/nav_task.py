@@ -7,6 +7,7 @@
 from typing import Any, List, Optional, Type
 
 import cv2
+import attr
 import numpy as np
 from gym import spaces
 
@@ -20,6 +21,7 @@ from habitat.core.simulator import (
     SensorTypes,
     SensorSuite,
 )
+from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
@@ -47,63 +49,38 @@ def merge_sim_episode_config(
     return sim_config
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
     """Base class for a goal specification hierarchy.
     """
 
-    position: List[float]
-    radius: Optional[float]
-
-    def __init__(
-        self, position: List[float], radius: Optional[float] = None, **kwargs
-    ) -> None:
-        self.position = position
-        self.radius = radius
+    position: List[float] = attr.ib(default=None, validator=not_none_validator)
+    radius: Optional[float] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class ObjectGoal(NavigationGoal):
     """Object goal that can be specified by object_id or position or object
     category.
     """
 
-    object_id: str
-    object_name: Optional[str]
-    object_category: Optional[str]
-    room_id: Optional[str]
-    room_name: Optional[str]
-
-    def __init__(
-        self,
-        object_id: str,
-        room_id: Optional[str] = None,
-        object_name: Optional[str] = None,
-        object_category: Optional[str] = None,
-        room_name: Optional[str] = None,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.object_id = object_id
-        self.object_name = object_name
-        self.object_category = object_category
-        self.room_id = room_id
-        self.room_name = room_name
+    object_id: str = attr.ib(default=None, validator=not_none_validator)
+    object_name: Optional[str] = None
+    object_category: Optional[str] = None
+    room_id: Optional[str] = None
+    room_name: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class RoomGoal(NavigationGoal):
     """Room goal that can be specified by room_id or position with radius.
     """
 
-    room_id: str
-    room_name: Optional[str]
-
-    def __init__(
-        self, room_id: str, room_name: Optional[str] = None, **kwargs
-    ) -> None:
-        super().__init__(**kwargs)  # type: ignore
-        self.room_id = room_id
-        self.room_name = room_name
+    room_id: str = attr.ib(default=None, validator=not_none_validator)
+    room_name: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class NavigationEpisode(Episode):
     """Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
@@ -121,21 +98,11 @@ class NavigationEpisode(Episode):
         shortest_paths: list containing shortest paths to goals
     """
 
-    goals: List[NavigationGoal]
-    start_room: Optional[str]
-    shortest_paths: Optional[List[ShortestPathPoint]]
-
-    def __init__(
-        self,
-        goals: List[NavigationGoal],
-        start_room: Optional[str] = None,
-        shortest_paths: Optional[List[ShortestPathPoint]] = None,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.goals = goals
-        self.shortest_paths = shortest_paths
-        self.start_room = start_room
+    goals: List[NavigationGoal] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    start_room: Optional[str] = None
+    shortest_paths: Optional[List[ShortestPathPoint]] = None
 
 
 class PointGoalSensor(habitat.Sensor):
