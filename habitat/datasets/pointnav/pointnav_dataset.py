@@ -37,12 +37,14 @@ class PointNavDatasetV1(Dataset):
         if not os.path.exists(config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)):
             return False
         else:
-            with gzip.GzipFile(config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT), 'r') as f:
+            with gzip.GzipFile(
+                config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT), "r"
+            ) as f:
                 data = f.read()
 
             data = json.loads(data)
-            for episode in data['episodes']:
-                if not os.path.exists(episode['scene_id']):
+            for episode in data["episodes"]:
+                if not os.path.exists(episode["scene_id"]):
                     return False
             return True
 
@@ -61,8 +63,7 @@ class PointNavDatasetV1(Dataset):
         cfg.POINTNAVV1.CONTENT_SCENES = []
         dataset = PointNavDatasetV1(cfg)
         return PointNavDatasetV1._get_scenes_from_folder(
-            content_scenes_path=dataset.content_scenes_path,
-            dataset_dir=dataset_dir,
+            content_scenes_path=dataset.content_scenes_path, dataset_dir=dataset_dir
         )
 
     @staticmethod
@@ -87,9 +88,7 @@ class PointNavDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.POINTNAVV1.DATA_PATH.format(
-            split=config.SPLIT
-        )
+        datasetfile_path = config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(datasetfile_path, "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
@@ -98,8 +97,7 @@ class PointNavDatasetV1(Dataset):
         scenes = config.POINTNAVV1.CONTENT_SCENES
         if ALL_SCENES_MASK in scenes:
             scenes = PointNavDatasetV1._get_scenes_from_folder(
-                content_scenes_path=self.content_scenes_path,
-                dataset_dir=dataset_dir,
+                content_scenes_path=self.content_scenes_path, dataset_dir=dataset_dir
             )
 
         for scene in scenes:
@@ -109,9 +107,7 @@ class PointNavDatasetV1(Dataset):
             with gzip.open(scene_filename, "rt") as f:
                 self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
-    def from_json(
-        self, json_str: str, scenes_dir: Optional[str] = None
-    ) -> None:
+    def from_json(self, json_str: str, scenes_dir: Optional[str] = None) -> None:
         deserialized = json.loads(json_str)
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
