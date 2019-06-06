@@ -43,11 +43,13 @@ class _SimulatorActions(metaclass=Singleton):
         for action in _DefaultSimulatorActions:
             self._known_actions[action.name] = action.value
 
-    def extend_action_space(self, name: str):
+    def extend_action_space(self, name: str) -> int:
         assert (
             name not in self._known_actions
         ), "Cannot register add action name twice"
         self._known_actions[name] = len(self._known_actions)
+
+        return self._known_actions[name]
 
     def has_action(self, name: str) -> bool:
         return name in self._known_actions
