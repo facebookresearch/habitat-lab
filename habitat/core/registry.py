@@ -4,10 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""
-Registry is central source of truth in Habitat.
-Shamelessly taken from Pythia, it is inspired from Redux's
-concept of global store, Registry maintains mappings of various information
+r"""Registry is central source of truth in Habitat.
+Taken from Pythia, it is inspired from Redux's
+concept of global store. Registry maintains mappings of various information
 to unique keys. Special functions in registry can be used as decorators to
 register different kind of classes.
 

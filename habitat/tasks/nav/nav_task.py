@@ -321,7 +321,7 @@ class ProximitySensor(Sensor):
 
 @registry.register_measure
 class SPL(Measure):
-    """SPL (Success weighted by Path Length)
+    r"""SPL (Success weighted by Path Length)
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf

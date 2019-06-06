@@ -342,7 +342,7 @@ class Simulator:
         Returns:
             a list of waypoints (x, y, z) on the geodesic path between the two
             points.
-         """
+        """
 
         raise NotImplementedError
 

@@ -69,7 +69,8 @@ class ShortestPathFollower:
     def get_next_action(
         self, goal_pos: np.array
     ) -> Union[SimulatorActions, np.array]:
-        r"""Returns the next action along the shortest path."""
+        r"""Returns the next action along the shortest path.
+        """
         if (
             np.linalg.norm(goal_pos - self._sim.get_agent_state().position)
             <= self._goal_radius
