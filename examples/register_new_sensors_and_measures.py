@@ -95,7 +95,7 @@ def main():
     print(env.get_metrics()["episode_info"])
     print(
         env.step(
-            habitat.sims.habitat_simulator.SimulatorActions.FORWARD.value
+            habitat.sims.habitat_simulator.SimulatorActions.MOVE_FORWARD.value
         )["agent_position"]
     )
     print(env.get_metrics()["episode_info"])
