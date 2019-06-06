@@ -59,7 +59,10 @@ class RandomForwardAgent(RandomAgent):
                 action = SimulatorActions.MOVE_FORWARD.value
             else:
                 action = np.random.choice(
-                    [SimulatorActions.TURN_LEFT.value, SimulatorActions.TURN_RIGHT.value]
+                    [
+                        SimulatorActions.TURN_LEFT.value,
+                        SimulatorActions.TURN_RIGHT.value,
+                    ]
                 )
 
         return action

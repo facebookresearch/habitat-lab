@@ -265,7 +265,10 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if self.action_history[-1] == SimulatorActions.MOVE_FORWARD.value:
+                if (
+                    self.action_history[-1]
+                    == SimulatorActions.MOVE_FORWARD.value
+                ):
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
