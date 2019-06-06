@@ -4,8 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 from typing import List, Optional, Union
+
+import numpy as np
+
 from habitat import get_config
 from habitat.config import Config as CN
 

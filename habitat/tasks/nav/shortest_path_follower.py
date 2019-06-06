@@ -6,16 +6,14 @@
 
 from typing import Union
 
-import habitat_sim
 import numpy as np
 
-from habitat.sims.habitat_simulator import HabitatSim
-from habitat.sims.habitat_simulator import SimulatorActions
+import habitat_sim
+from habitat.sims.habitat_simulator import HabitatSim, SimulatorActions
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_two_vectors,
 )
-
 
 EPSILON = 1e-6
 

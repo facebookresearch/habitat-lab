@@ -7,10 +7,9 @@
 import pytest
 
 import habitat
+from examples import shortest_path_follower_example, visualization_examples
 from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from examples import visualization_examples
-from examples import shortest_path_follower_example
 
 
 def test_readme_example():

@@ -9,6 +9,7 @@ import os
 
 import numpy as np
 import pytest
+
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 from habitat.sims.habitat_simulator import SimulatorActions

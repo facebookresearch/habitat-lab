@@ -4,14 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import attr
 import copy
 import json
-from typing import Dict, List, Type, TypeVar, Generic, Optional, Callable
+from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
+
+import attr
+import numpy as np
 
 from habitat.core.utils import not_none_validator
-
-import numpy as np
 
 
 @attr.s(auto_attribs=True, kw_only=True)

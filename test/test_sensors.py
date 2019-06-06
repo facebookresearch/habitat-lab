@@ -4,19 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 import os
-import pytest
 import random
+
+import numpy as np
+import pytest
 
 import habitat
 from habitat.config.default import get_config
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import (
-    NavigationEpisode,
     COLLISION_PROXIMITY_TOLERANCE,
+    NavigationEpisode,
     NavigationGoal,
 )
-from habitat.sims.habitat_simulator import SimulatorActions
 
 NON_STOP_ACTIONS = [
     v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value

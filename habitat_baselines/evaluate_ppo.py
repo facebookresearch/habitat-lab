@@ -9,12 +9,11 @@ import argparse
 import torch
 
 import habitat
-from habitat.config.default import get_config
 from config.default import get_config as cfg_baseline
-
-from train_ppo import make_env_fn
+from habitat.config.default import get_config
 from rl.ppo import PPO, Policy
 from rl.ppo.utils import batch_obs
+from train_ppo import make_env_fn
 
 
 def main():

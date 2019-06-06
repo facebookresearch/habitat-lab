@@ -7,12 +7,14 @@
 import glob
 import os.path
 import sys
+
 import setuptools
 from setuptools.command.develop import develop as DefaultDevelopCommand
 from setuptools.command.install import install as DefaultInstallCommand
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "habitat"))
-from version import VERSION  # noqa
+from version import VERSION  # isort:skip noqa
+
 
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
