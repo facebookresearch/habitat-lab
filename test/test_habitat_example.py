@@ -7,7 +7,11 @@
 import pytest
 
 import habitat
-from examples import shortest_path_follower_example, visualization_examples
+from examples import (
+    register_new_sensors_and_measures,
+    shortest_path_follower_example,
+    visualization_examples,
+)
 from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
