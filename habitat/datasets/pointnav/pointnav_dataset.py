@@ -37,8 +37,6 @@ class PointNavDatasetV1(Dataset):
         json_str: str, scenes_dir: Optional[str]
     ) -> bool:
         deserialized = json.loads(json_str)
-        if CONTENT_SCENES_PATH_FIELD in deserialized:
-            self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
 
         for episode in deserialized["episodes"]:
             if episode["scene_id"].startswith(DEFAULT_SCENE_PATH_PREFIX):
@@ -61,6 +59,7 @@ class PointNavDatasetV1(Dataset):
         ):
             return False
         else:
+            content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
             datasetfile_path = config.POINTNAVV1.DATA_PATH.format(
                 split=config.SPLIT
             )
@@ -74,11 +73,11 @@ class PointNavDatasetV1(Dataset):
             scenes = config.POINTNAVV1.CONTENT_SCENES
             if ALL_SCENES_MASK in scenes:
                 scenes = PointNavDatasetV1._get_scenes_from_folder(
-                    content_scenes_path=self.content_scenes_path,
+                    content_scenes_path=content_scenes_path,
                     dataset_dir=dataset_dir,
                 )
             for scene in scenes:
-                scene_filename = self.content_scenes_path.format(
+                scene_filename = content_scenes_path.format(
                     data_path=dataset_dir, scene=scene
                 )
                 with gzip.open(scene_filename, "rt") as f:
