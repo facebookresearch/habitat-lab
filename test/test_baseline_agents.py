@@ -29,11 +29,10 @@ def test_ppo_agents():
     config = ppo_agents.get_defaut_config()
     config.MODEL_PATH = ""
     config_env = habitat.get_config(config_paths=CFG_TEST)
-    config_env.defrost()
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    benchmark = habitat.Benchmark(config_paths=CFG_TEST)
+    benchmark = habitat.Benchmark(config_env)
 
     for input_type in ["blind", "rgb", "depth", "rgbd"]:
         config_env.defrost()
@@ -57,7 +56,7 @@ def test_simple_agents():
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    benchmark = habitat.Benchmark(config_paths=CFG_TEST)
+    benchmark = habitat.Benchmark(config_env)
 
     for agent_class in [
         simple_agents.ForwardOnlyAgent,

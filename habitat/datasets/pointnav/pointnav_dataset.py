@@ -49,7 +49,7 @@ class PointNavDatasetV1(Dataset):
 
         cfg = config.clone()
         cfg.defrost()
-        cfg.POINTNAVV1.CONTENT_SCENES = []
+        cfg.CONTENT_SCENES = []
         dataset = PointNavDatasetV1(cfg)
         return PointNavDatasetV1._get_scenes_from_folder(
             content_scenes_path=dataset.content_scenes_path,
@@ -86,7 +86,7 @@ class PointNavDatasetV1(Dataset):
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
-        scenes = config.POINTNAVV1.CONTENT_SCENES
+        scenes = config.CONTENT_SCENES
         if ALL_SCENES_MASK in scenes:
             scenes = PointNavDatasetV1._get_scenes_from_folder(
                 content_scenes_path=self.content_scenes_path,

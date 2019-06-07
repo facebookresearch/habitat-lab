@@ -16,7 +16,7 @@ import habitat
 from config.default import get_config as cfg_baseline
 from habitat import logger
 from habitat.config.default import get_config as cfg_env
-from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.datasets.registration import make_dataset
 from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
@@ -95,7 +95,7 @@ class NavRLEnv(habitat.RLEnv):
 
 
 def make_env_fn(config_env, config_baseline, rank):
-    dataset = PointNavDatasetV1(config_env.DATASET)
+    dataset = make_dataset(config_env.DATASET.TYPE, config=config_env.DATASET)
     config_env.defrost()
     config_env.SIMULATOR.SCENE = dataset.episodes[0].scene_id
     config_env.freeze()
@@ -111,8 +111,8 @@ def construct_envs(args):
     baseline_configs = []
 
     basic_config = cfg_env(config_paths=args.task_config, opts=args.opts)
-
-    scenes = PointNavDatasetV1.get_scenes_to_load(basic_config.DATASET)
+    dataset = make_dataset(basic_config.DATASET.TYPE)
+    scenes = dataset.__class__.get_scenes_to_load(basic_config.DATASET)
 
     if len(scenes) > 0:
         random.shuffle(scenes)
@@ -128,7 +128,7 @@ def construct_envs(args):
         config_env.defrost()
 
         if len(scenes) > 0:
-            config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
+            config_env.DATASET.CONTENT_SCENES = scenes[
                 i * scene_split_size : (i + 1) * scene_split_size
             ]
 
@@ -158,7 +158,7 @@ def construct_envs(args):
     return envs
 
 
-def main():
+def run_training():
     parser = ppo_args()
     args = parser.parse_args()
 
@@ -175,11 +175,12 @@ def main():
         logger.info("{}: {}".format(p, getattr(args, p)))
 
     envs = construct_envs(args)
-
+    task_cfg = cfg_env(config_paths=args.task_config)
     actor_critic = Policy(
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=args.hidden_size,
+        goal_sensor_uuid=task_cfg.TASK.GOAL_SENSOR_UUID
     )
     actor_critic.to(device)
 
@@ -362,4 +363,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_training()

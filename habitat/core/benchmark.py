@@ -12,7 +12,7 @@ and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 from collections import defaultdict
 from typing import Dict, Optional
 
-from habitat.config.default import get_config
+from habitat.config import Config
 from habitat.core.agent import Agent
 from habitat.core.env import Env
 
@@ -22,13 +22,11 @@ class Benchmark:
 
 
     Args:
-        config_paths: file to be used for creating the environment.
-        config_dir: directory where config_paths is located.
+        config: environment config object for creating environment.
     """
 
-    def __init__(self, config_paths: Optional[str] = None) -> None:
-        config_env = get_config(config_paths)
-        self._env = Env(config=config_env)
+    def __init__(self, config: Optional[Config] = None) -> None:
+        self._env = Env(config=config)
 
     def evaluate(
         self, agent: Agent, num_episodes: Optional[int] = None
