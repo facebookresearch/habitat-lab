@@ -76,6 +76,16 @@ _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
+# # EQA TASK QUESTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.QUESTION_SENSOR = CN()
+_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ANSWER_SENSOR = CN()
+_C.TASK.ANSWER_SENSOR.TYPE = "AnswerSensor"
+# -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
