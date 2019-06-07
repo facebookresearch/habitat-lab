@@ -1,5 +1,6 @@
 from habitat.core.registry import registry
 
+
 def _try_register_habitat_sim():
     try:
         import habitat_sim
