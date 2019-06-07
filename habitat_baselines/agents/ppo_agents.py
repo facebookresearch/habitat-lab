@@ -139,15 +139,15 @@ def main():
     )
     args = parser.parse_args()
 
-    task_config = get_config(args.task_config)
+    config = get_config(args.task_config)
 
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
-    agent_config.GOAL_SENSOR_UUID = task_config.TASK.GOAL_SENSOR_UUID
+    agent_config.GOAL_SENSOR_UUID = config.TASK.GOAL_SENSOR_UUID
 
     agent = PPOAgent(agent_config)
-    benchmark = habitat.Benchmark(task_config)
+    benchmark = habitat.Benchmark(config_paths=args.task_config)
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():

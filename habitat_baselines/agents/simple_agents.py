@@ -139,7 +139,7 @@ def main():
         success_distance=args.success_distance,
         goal_sensor_uuid=config.TASK.GOAL_SENSOR_UUID,
     )
-    benchmark = habitat.Benchmark(config)
+    benchmark = habitat.Benchmark(config_paths=args.task_config)
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():
