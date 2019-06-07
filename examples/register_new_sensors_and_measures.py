@@ -11,7 +11,7 @@ from habitat.config import Config as CN
 # By default, the things are registered with the class name
 @habitat.registry.register_measure
 class EpisodeInfo(habitat.Measure):
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, **kwargs: Any):
         # This measure only needs the config
         self._config = config
 
@@ -38,7 +38,7 @@ class EpisodeInfo(habitat.Measure):
 # For the sensor, we will register it with a custom name
 @habitat.registry.register_sensor(name="my_supercool_sensor")
 class AgentPositionSensor(habitat.Sensor):
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, **kwargs: Any):
         super().__init__(config=config)
 
         self._sim = sim

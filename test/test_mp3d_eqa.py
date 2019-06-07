@@ -227,3 +227,31 @@ def test_mp3d_eqa_sim_correspondence():
             cycles_n -= 1
 
     env.close()
+
+
+def test_eqa_task():
+    eqa_config = get_config(CFG_TEST)
+
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
+        eqa_config.DATASET
+    ):
+        pytest.skip(
+            "Please download Matterport3D EQA dataset to " "data folder."
+        )
+
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
+    env = habitat.Env(config=eqa_config, dataset=dataset)
+    env.episodes = [
+        episode
+        for episode in dataset.episodes
+        if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
+    ]
+
+    for i in range(10):
+        env.reset()
+        observation = env.step(
+            np.random.choice(3)
+        )
+        print(observation)
