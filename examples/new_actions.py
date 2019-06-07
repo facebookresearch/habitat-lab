@@ -33,7 +33,10 @@ class NoisyStrafeActuationSpec:
 
 
 def _strafe_impl(
-    scene_node: habitat_sim.SceneNode, strafe_angle: float, noise_amount: float
+    scene_node: habitat_sim.SceneNode,
+    move_amount: float,
+    strafe_angle: float,
+    noise_amount: float,
 ):
     forward_ax = (
         scene_node.absolute_transformation()[0:3, 0:3] @ habitat_sim.geo.FRONT
@@ -48,10 +51,10 @@ def _strafe_impl(
     )
     move_ax = habitat_sim.utils.quat_rotate_vector(rotation, forward_ax)
 
-    noise_amount = np.random.uniform(
-        (1 - noise_amount) * noise_amount, (1 + noise_amount) * noise_amount
+    move_amount = np.random.uniform(
+        (1 - noise_amount) * move_amount, (1 + noise_amount) * move_amount
     )
-    scene_node.translate_local(move_ax * noise_amount)
+    scene_node.translate_local(move_ax * move_amount)
 
 
 @register_move_fn(body_action=True)
@@ -64,6 +67,7 @@ class NoisyStrafeLeft(habitat_sim.SceneNodeControl):
         print(f"strafing left with noise_amount={actuation_spec.noise_amount}")
         _strafe_impl(
             scene_node,
+            actuation_spec.move_amount,
             actuation_spec.strafe_angle,
             actuation_spec.noise_amount,
         )
@@ -81,6 +85,7 @@ class NoisyStrafeRight(habitat_sim.SceneNodeControl):
         )
         _strafe_impl(
             scene_node,
+            actuation_spec.move_amount,
             -actuation_spec.strafe_angle,
             actuation_spec.noise_amount,
         )
