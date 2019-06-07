@@ -14,10 +14,9 @@ import torch
 
 import habitat
 from config.default import get_config as cfg_baseline
-from habitat import logger
+from habitat import SimulatorActions, logger
 from habitat.config.default import get_config as cfg_env
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
 

@@ -13,8 +13,8 @@ import torch.nn.functional as F
 
 import habitat
 import orbslam2
+from habitat import SimulatorActions
 from habitat.config.default import get_config
-from habitat.sims.habitat_simulator import SimulatorActions
 from habitat_baselines.config.default import get_config as cfg_baseline
 from habitat_baselines.slambased.mappers import DirectDepthMapper
 from habitat_baselines.slambased.monodepth import MonoDepthEstimator

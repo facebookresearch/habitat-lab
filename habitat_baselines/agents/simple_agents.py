@@ -11,7 +11,7 @@ from math import pi
 import numpy as np
 
 import habitat
-from habitat.core.simulator import SimulatorActions
+from habitat import SimulatorActions
 
 NON_STOP_ACTIONS = [
     v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP
