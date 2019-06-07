@@ -1,4 +1,5 @@
 from habitat.core.registry import registry
+from habitat.core.simulator import Simulator
 
 
 def _try_register_habitat_sim():
