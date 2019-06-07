@@ -61,7 +61,7 @@ def transform_rgb_bgr(image):
 def display_instructions(image, instructions, size=1, offset=(0,0), fontcolor=(255,255,255)):
     for i,instruction in enumerate(instructions):
         x = offset[1]
-        y = offset[0] + (i+1)*size*50 - 15
+        y = offset[0] + int((i+1)*size*50) - 15
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(image, instruction, (x,y), font, size, fontcolor, 2, cv2.LINE_AA)
 
@@ -217,8 +217,8 @@ class Demo:
 
 
     def update(self, img, video_writer=None):
-        fontsize = 1
-        instructions_height = fontsize*50*len(self.instructions)
+        fontsize = 0.8
+        instructions_height = int(fontsize*50*len(self.instructions))
         instructions_img = np.zeros((instructions_height, img.shape[1], 3), np.uint8)
         display_instructions(instructions_img, self.instructions, size=fontsize)
         combined = np.vstack((instructions_img, img))
@@ -265,7 +265,7 @@ class Demo:
             self.update(img, video_writer)
 
         print("Episode finished after {} steps.".format(count_steps))
-        return actions
+        return actions, info
 
 
     def replay(self, actions, overlay_goal_radar=False, delay=1, video_writer=None):
@@ -302,10 +302,17 @@ class Demo:
     def demo(self, args):
         video_writer = None
         #video_writer = VideoWriter('test1.avi') if args.save_video else None
-        actions = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
+        actions, info = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
         #if video_writer is not None:
         #    video_writer.release()
         if not self.is_quit:
+            # Display info about how well you did
+            if info is not None:
+                success = info['spl'] > 0
+                if success:
+                    print("You succeeded!")
+                else:
+                    print("You failed!")    
             # Hack to get size of video 
             video_writer = VideoWriter('output.avi') if args.save_video else None
             self.replay(actions, overlay_goal_radar=args.overlay, delay=1, video_writer=video_writer)
