@@ -180,7 +180,7 @@ def run_training():
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=args.hidden_size,
-        goal_sensor_uuid=task_cfg.TASK.GOAL_SENSOR_UUID
+        goal_sensor_uuid=task_cfg.TASK.GOAL_SENSOR_UUID,
     )
     actor_critic.to(device)
 

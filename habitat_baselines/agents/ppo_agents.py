@@ -13,14 +13,14 @@ import torch
 from gym.spaces import Box, Dict, Discrete
 
 import habitat
-from habitat import Config
+from habitat.config import Config
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat_baselines.rl.ppo import Policy
 from habitat_baselines.rl.ppo.utils import batch_obs
 
 
-def get_defaut_config():
+def get_default_config():
     c = Config()
     c.INPUT_TYPE = "blind"
     c.MODEL_PATH = "data/checkpoints/blind.pth"
@@ -79,7 +79,7 @@ class PPOAgent(Agent):
             observation_space=observation_spaces,
             action_space=action_spaces,
             hidden_size=self.hidden_size,
-            goal_sensor_uuid=self.goal_sensor_uuid
+            goal_sensor_uuid=self.goal_sensor_uuid,
         )
         self.actor_critic.to(self.device)
 
@@ -141,13 +141,13 @@ def main():
 
     task_config = get_config(args.task_config)
 
-    agent_config = get_defaut_config()
+    agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
     agent_config.GOAL_SENSOR_UUID = task_config.TASK.GOAL_SENSOR_UUID
 
     agent = PPOAgent(agent_config)
-    benchmark = habitat.Benchmark(args.task_config)
+    benchmark = habitat.Benchmark(task_config)
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():
