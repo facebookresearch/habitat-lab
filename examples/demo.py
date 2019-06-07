@@ -172,7 +172,6 @@ class Viewer:
 
 
 def get_video_writer(filename='output.avi', fps=20.0, resolution=(640,480)):
-#    fourcc = cv2.VideoWriter_fourcc(*'XVID')
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     writer = cv2.VideoWriter(filename, fourcc, fps, resolution)
     return writer
@@ -190,12 +189,14 @@ class VideoWriter:
         if self.writer is None:
             self.resolution = (frame.shape[1], frame.shape[0])
             self.writer = get_video_writer(self.filename, self.fps, self.resolution)
-        print('save frame')
+        else:
+            res = (frame.shape[1], frame.shape[0])
+            if res != self.resolution:
+                print(f"Warning: video resolution mismatch expected={self.resolution}, frame={res}")
         self.writer.write(frame)
 
     def release(self):
         if self.writer is not None:
-            print('release')
             self.writer.release()
             self.writer = None
 
@@ -223,7 +224,6 @@ class Demo:
         combined = np.vstack((instructions_img, img))
         self.window_shape = combined.shape
         if video_writer is not None:
-            #frame = cv2.flip(combined,0)
             video_writer.write(combined)
         cv2.imshow(self.window_name, combined)
 
@@ -324,6 +324,8 @@ if __name__ == "__main__":
                         default=False,
                         action="store_true",
                         help='Overlay pointgoal')
+    parser.add_argument("--scenes-dir",
+                        help='Directory where scenes are found')
     parser.add_argument("--show-map",
                         default=False,
                         action="store_true",
@@ -337,6 +339,12 @@ if __name__ == "__main__":
     config = habitat.get_config(args.task_config.split(","), opts)
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
+
+    if args.scenes_dir is not None:
+        config.defrost()
+        config.DATASET.SCENES_DIR = args.scenes_dir
+        config.freeze()
+
     print(config)
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
     demo.demo(args)
