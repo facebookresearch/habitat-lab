@@ -29,7 +29,7 @@ from typing import Optional
 from habitat.core.utils import Singleton
 
 
-class _Registry(metaclass=Singleton):
+class Registry(metaclass=Singleton):
     mapping = collections.defaultdict(dict)
 
     @classmethod
@@ -210,4 +210,4 @@ class _Registry(metaclass=Singleton):
         return cls._get_impl("action_space_config", name)
 
 
-registry = _Registry()
+registry = Registry()

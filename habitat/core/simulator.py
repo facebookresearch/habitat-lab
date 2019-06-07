@@ -36,18 +36,18 @@ class _DefaultSimulatorActions(Enum):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class _SimulatorActions(metaclass=Singleton):
+class SimulatorActionsSingleton(metaclass=Singleton):
     r"""Implements an extendable Enum for the mapping of action names
     to their integer values.  
 
     This means that new action names can be added, but old action names cannot be
     removed nor can their mapping be altered.  This also ensures that all actions
-    are always contigously mapped in [0, len(SimulatorActions) - 1]
+    are always contigously mapped in ``[0, len(SimulatorActions) - 1]``
 
     This accesible as the global singleton SimulatorActions
     """
 
-    _known_actions: Dict[str, int] = attr.Factory(dict)
+    _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
 
     def __attrs_post_init__(self):
         for action in _DefaultSimulatorActions:
@@ -69,7 +69,9 @@ class _SimulatorActions(metaclass=Singleton):
             SimulatorActions.extend_action_space("MY_ACTION")
             print(SimulatorActions.MY_ACTION)
         """
-        assert name not in self._known_actions, "Cannot register an action name twice"
+        assert (
+            name not in self._known_actions
+        ), "Cannot register an action name twice"
         self._known_actions[name] = len(self._known_actions)
 
         return self._known_actions[name]
@@ -96,7 +98,7 @@ class _SimulatorActions(metaclass=Singleton):
         return len(self._known_actions)
 
 
-SimulatorActions = _SimulatorActions()
+SimulatorActions = SimulatorActionsSingleton()
 
 
 class SensorTypes(Enum):
@@ -166,7 +168,9 @@ class Observations(dict):
         sensors: list of sensors whose observations are fetched and packaged.
     """
 
-    def __init__(self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
+    ) -> None:
         data = [
             (uuid, sensor.get_observation(*args, **kwargs))
             for uuid, sensor in sensors.items()
@@ -264,7 +268,9 @@ class AgentState:
     position: List[float]
     rotation: Optional[List[float]]
 
-    def __init__(self, position: List[float], rotation: Optional[List[float]]) -> None:
+    def __init__(
+        self, position: List[float], rotation: Optional[List[float]]
+    ) -> None:
         self.position = position
         self.rotation = rotation
 
