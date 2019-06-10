@@ -11,8 +11,8 @@ from habitat.core.simulator import (
 )
 
 
-@registry.register_action_space_configuration(name="v1")
-class HabitatSimV1ActionSpaceConfiguration(ActionSpaceConfiguration):
+@registry.register_action_space_configuration(name="v0")
+class HabitatSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
         return {
             SimulatorActions.STOP: habitat_sim.ActionSpec("stop"),
@@ -30,6 +30,16 @@ class HabitatSimV1ActionSpaceConfiguration(ActionSpaceConfiguration):
                 "turn_right",
                 habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
+        }
+
+
+@registry.register_action_space_configuration(name="v1")
+class HabitatSimV1ActionSpaceConfiguration(
+    HabitatSimV0ActionSpaceConfiguration
+):
+    def get(self):
+        config = super().get()
+        new_config = {
             SimulatorActions.LOOK_UP: habitat_sim.ActionSpec(
                 "look_up",
                 habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
@@ -39,3 +49,7 @@ class HabitatSimV1ActionSpaceConfiguration(ActionSpaceConfiguration):
                 habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
             ),
         }
+
+        config.update(new_config)
+
+        return config
