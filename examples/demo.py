@@ -11,6 +11,7 @@ import math
 import numpy as np
 
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 
 from time import sleep
@@ -36,6 +37,8 @@ INSTRUCTIONS = [
     "Q - Quit"
 ]  
 
+LINE_SPACING = 50
+
 class Rect(NamedTuple):
     left: int
     top: int
@@ -58,12 +61,30 @@ def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
 
 
-def display_instructions(image, instructions, size=1, offset=(0,0), fontcolor=(255,255,255)):
-    for i,instruction in enumerate(instructions):
+def write_textlines(output, textlines, size=1, offset=(0,0), fontcolor=(255,255,255)):
+    for i,text in enumerate(textlines):
         x = offset[1]
-        y = offset[0] + int((i+1)*size*50) - 15
+        y = offset[0] + int((i+1)*size*LINE_SPACING) - 15
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(image, instruction, (x,y), font, size, fontcolor, 2, cv2.LINE_AA)
+        cv2.putText(output, text, (x,y), font, size, fontcolor, 2, cv2.LINE_AA)
+
+
+def draw_text(textlines=[], width=300, fontsize=0.8):
+    text_height = int(fontsize*LINE_SPACING*len(textlines))
+    text_img = np.zeros((text_height, width, 3), np.uint8)
+    write_textlines(text_img, textlines, size=fontsize)
+    return text_img
+
+
+def add_text(img, textlines=[], fontsize=0.8, top=False):   
+    combined = img
+    if len(textlines) > 0:
+        text_img = draw_text(textlines, img.shape[1], fontsize)
+        if top:
+            combined = np.vstack((text_img, img))
+        else:
+            combined = np.vstack((img, text_img))
+    return combined
 
 
 def draw_goal_radar(pointgoal, img, 
@@ -161,6 +182,8 @@ class Viewer:
             right = left + goal_region.width
             stacked = np.hstack(active_image_observations)
             overlay=cv2.addWeighted(stacked[top:bottom, left:right],0.5,goal_draw_surface['image'],0.5,0)
+            distance = observations['pointgoal'][0]
+            mag_img = draw_text([f'{distance}'])
             stacked[top:bottom, left:right] = overlay
         else:
             stacked = np.hstack(active_image_observations + [self.side_img])
@@ -213,34 +236,29 @@ class Demo:
         self.env = habitat.Env(
             config=self.config
         )
+        #self.env.reset()
         print("Environment creation successful")
 
 
-    def update(self, img, video_writer=None):
-        fontsize = 0.8
-        instructions_height = int(fontsize*50*len(self.instructions))
-        instructions_img = np.zeros((instructions_height, img.shape[1], 3), np.uint8)
-        display_instructions(instructions_img, self.instructions, size=fontsize)
-        combined = np.vstack((instructions_img, img))
-        self.window_shape = combined.shape
+    def update(self, img, textlines=[], video_writer=None):
+        self.window_shape = img.shape
         if video_writer is not None:
-            video_writer.write(combined)
-        cv2.imshow(self.window_name, combined)
+            video_writer.write(img)
+        cv2.imshow(self.window_name, img)
 
 
     def run(self, overlay_goal_radar=False, show_map=False, video_writer=None):
         env = self.env
         action_keys_map = self.action_keys_map
 
-        observations = env.reset()
+        observations = env.reset(keep_current_episode=False)
         info = env.get_metrics()
         viewer = Viewer(observations, overlay_goal_radar=overlay_goal_radar, show_map=show_map)
         img = viewer.draw_observations(observations, info)
-        self.update(img)
+        self.update(add_text(img, self.instructions))
         print(env.current_episode)
 
         print("Agent stepping around inside environment.")
-        count_steps = 0
         actions = []
         while not env.episode_over:
             # observations = env.step(env.action_space.sample())
@@ -259,13 +277,33 @@ class Demo:
             actions.append(action.action_id)
             observations = env.step(action.action_id)
             info = env.get_metrics()
-            count_steps += 1
 
             img = viewer.draw_observations(observations, info)
-            self.update(img, video_writer)
+            self.update(add_text(img, self.instructions), video_writer)
 
-        print("Episode finished after {} steps.".format(count_steps))
-        return actions, info
+        print("Episode finished after {} steps.".format(len(actions)))
+        return actions, info, observations
+
+
+    def get_follower_actions(self, mode="geodesic_path"):
+        env = self.env
+        observations = env.reset(keep_current_episode=True)
+        goal_radius = env.current_episode.goals[0].radius
+        #if goal_radius is None:
+        #    goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
+        follower = ShortestPathFollower(env.sim, goal_radius, False)
+        follower.mode = mode
+        actions = []
+        while not env.episode_over:
+            best_action = follower.get_next_action(
+                env.current_episode.goals[0].position
+            )
+            actions.append(best_action.value)
+            observations = env.step(best_action.value)
+            info = env.get_metrics()
+
+        print("Episode finished after {} steps.".format(len(actions)))
+        return actions, info, observations
 
 
     def replay(self, actions, overlay_goal_radar=False, delay=1, video_writer=None):
@@ -299,21 +337,47 @@ class Demo:
         print("Episode finished after {} steps.".format(count_steps))
 
 
+    def get_comparisons(self):
+        comparisons = {}
+        comparisons['Shortest'] = self.get_follower_actions(mode="geodesic_path")
+        # TODO: Get agent performance and other famouse people
+        return comparisons    
+
+    def show_comparisons(self, comparisons):
+        imgs = []
+        for name, (actions, info, observations) in comparisons.items():
+            top_down_map = draw_top_down_map(info, observations['heading'], 256)
+            spl = info['spl']
+            success = spl > 0
+            distance = observations['pointgoal'][0]
+            textlines = [
+                name,
+                'Success' if success else 'Failed',
+                f'{len(actions)} steps, SPL={spl}',
+                f'dist={distance}'
+            ]
+            imgs.append(add_text(top_down_map, textlines))
+        stacked = np.hstack(imgs)
+        cv2.imshow(self.window_name, stacked)
+
+
     def demo(self, args):
         video_writer = None
         #video_writer = VideoWriter('test1.avi') if args.save_video else None
-        actions, info = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
+        actions, info, observations = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
+        comparisons = self.get_comparisons()
+        comparisons['Yours'] = actions, info, observations
         #if video_writer is not None:
         #    video_writer.release()
         if not self.is_quit:
             # Display info about how well you did
-            if info is not None:
-                success = info['spl'] > 0
-                if success:
-                    print("You succeeded!")
-                else:
-                    print("You failed!")    
+            viewer = Viewer(observations, overlay_goal_radar=args.overlay, show_map=True)
+
+            # Show other people's route
+            self.show_comparisons(comparisons)
+
             # Hack to get size of video 
+            keystroke = cv2.waitKey(0)
             video_writer = VideoWriter('output.avi') if args.save_video else None
             self.replay(actions, overlay_goal_radar=args.overlay, delay=1, video_writer=video_writer)
             if video_writer is not None:
@@ -344,8 +408,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     opts = []
     config = habitat.get_config(args.task_config.split(","), opts)
+    config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+    config.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 6000
     config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.freeze()
 
     if args.scenes_dir is not None:
         config.defrost()
