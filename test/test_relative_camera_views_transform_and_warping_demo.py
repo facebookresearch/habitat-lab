@@ -16,4 +16,9 @@ def test_demo_notebook():
             "Please download the Matterport3D PointNav val dataset and Matterport3D val scenes"
         )
     else:
-        pytest.main(["--nbval-lax", "notebooks/relative_camera_views_transform_and_warping_demo.ipynb"])
+        pytest.main(
+            [
+                "--nbval-lax", 
+                "notebooks/relative_camera_views_transform_and_warping_demo.ipynb"
+            ]
+        )
