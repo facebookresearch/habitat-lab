@@ -141,6 +141,8 @@ def test_pointnav_episode_generator():
     config.DATASET.SPLIT = "val"
     config.ENVIRONMENT.MAX_EPISODE_STEPS = 500
     config.freeze()
+    if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+        pytest.skip("Test skipped as dataset files are missing.")
     env = habitat.Env(config)
     env.seed(config.SEED)
     random.seed(config.SEED)
