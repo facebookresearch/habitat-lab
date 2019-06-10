@@ -12,9 +12,7 @@ def test_demo_notebook():
     config.DATASET.SPLIT = "val"
 
     if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
-        pytest.skip(
-            "Please download the habitat test scenes"
-        )
+        pytest.skip("Please download the habitat test scenes")
     else:
         pytest.main(
             [
