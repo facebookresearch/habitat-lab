@@ -263,6 +263,7 @@ class HabitatSim(Simulator):
         if self._update_agents_state():
             sim_obs = self._sim.get_sensor_observations()
 
+        self._prev_sim_obs = sim_obs
         self._is_episode_active = True
         return self._sensor_suite.get_observations(sim_obs)
 
@@ -505,4 +506,15 @@ class HabitatSim(Simulator):
 
     @property
     def previous_step_collided(self):
+        r"""Whether or not the previous step resulted in a collision
+
+        Returns:
+            bool: True if the previous step resulted in a collision, false otherwise
+
+        Warning:
+            This feild is only updated when :meth:`step`, :meth:`reset`, or :meth:`get_observations_at` are
+            called.  It does not update when the agent is moved to a new loction.  Furthermore, it
+            will _always_ be false after :meth:`reset` or :meth:`get_observations_at` as neither of those
+            result in an action (step) being taken.
+        """
         return self._prev_sim_obs.get("collided", False)
