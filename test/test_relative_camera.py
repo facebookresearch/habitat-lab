@@ -7,18 +7,18 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
 def test_demo_notebook():
-    config = habitat.get_config("configs/tasks/pointnav_mp3d.yaml")
+    config = habitat.get_config("configs/tasks/pointnav_rgbd.yaml")
     config.defrost()
     config.DATASET.SPLIT = "val"
 
     if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
         pytest.skip(
-            "Please download the Matterport3D PointNav val dataset and Matterport3D val scenes"
+            "Please download the habitat test scenes"
         )
     else:
         pytest.main(
             [
-                "--nbval-lax", 
-                "notebooks/relative_camera_views_transform_and_warping_demo.ipynb"
+                "--nbval-lax",
+                "notebooks/relative_camera_views_transform_and_warping_demo.ipynb",
             ]
         )
