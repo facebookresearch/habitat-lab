@@ -71,7 +71,7 @@ class Net(nn.Module):
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size, goal_sensor_uuid):
+    def     __init__(self, observation_space, hidden_size, goal_sensor_uuid):
         super().__init__()
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_input_goal = observation_space.spaces[

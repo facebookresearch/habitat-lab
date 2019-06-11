@@ -77,6 +77,7 @@ def main():
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=512,
+        goal_sensor_uuid=env_configs[0].TASK.GOAL_SENSOR_UUID,
     )
     actor_critic.to(device)
 
@@ -124,6 +125,7 @@ def main():
         outputs = envs.step([a[0].item() for a in actions])
 
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+        print("-------infos {}".format(infos))
         batch = batch_obs(observations)
         for sensor in batch:
             batch[sensor] = batch[sensor].to(device)

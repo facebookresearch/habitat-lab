@@ -86,12 +86,14 @@ class NavRLEnv(habitat.RLEnv):
         return done
 
     def get_info(self, observations):
-        info = {}
+        # info = {}
+        # print("========in get_info, printing metrics==========")
+        # print(self.habitat_env.get_metrics())
+        # if self.get_done(observations):
+        #     info["spl"] = self.habitat_env.get_metrics()["spl"]
 
-        if self.get_done(observations):
-            info["spl"] = self.habitat_env.get_metrics()["spl"]
-
-        return info
+        # return info
+        return self.habitat_env.get_metrics()
 
 
 def make_env_fn(config_env, config_baseline, rank):
