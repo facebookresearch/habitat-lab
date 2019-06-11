@@ -5,7 +5,14 @@ import pytest
 import habitat
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
+try:
+    import torch  # noqa # pylint: disable=unused-import
 
+    has_torch = True
+except ImportError:
+    has_torch = False
+
+@pytest.mark.skipif(not has_torch, reason="Test needs torch")
 def test_demo_notebook():
     config = habitat.get_config("configs/tasks/pointnav_rgbd.yaml")
     config.defrost()
