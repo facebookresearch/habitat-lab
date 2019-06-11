@@ -12,6 +12,7 @@ try:
 except ImportError:
     has_torch = False
 
+
 @pytest.mark.skipif(not has_torch, reason="Test needs torch")
 def test_demo_notebook():
     config = habitat.get_config("configs/tasks/pointnav_rgbd.yaml")
