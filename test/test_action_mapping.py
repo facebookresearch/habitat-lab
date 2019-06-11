@@ -11,7 +11,6 @@ except ImportError:
     has_torch = False
 
 
-
 def test_mapping_matrix():
     mapping = {0: 1, 1: 2, 2: 3, 3: 4}
     gt_matrix = np.zeros((4, 5), dtype=np.float32)
