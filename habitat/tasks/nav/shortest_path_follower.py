@@ -19,7 +19,7 @@ from habitat.utils.geometry_utils import (
 EPSILON = 1e-6
 
 
-def action_to_one_hot(self, action: int) -> np.array:
+def action_to_one_hot(action: int) -> np.array:
     one_hot = np.zeros(len(SimulatorActions), dtype=np.float32)
     one_hot[action] = 1
     return one_hot
@@ -61,7 +61,7 @@ class ShortestPathFollower:
 
     def _get_return_value(self, action) -> Union[int, np.array]:
         if self._return_one_hot:
-            return self.action_to_one_hot(action)
+            return action_to_one_hot(action)
         else:
             return action
 
