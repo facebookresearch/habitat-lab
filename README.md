@@ -40,7 +40,7 @@ To this end, we aim to standardize the entire ‘software stack’ for training 
 If you use the Habitat platform in your research, please cite the following [technical report](https://arxiv.org/abs/1904.01201):
 ```
 @article{habitat19arxiv,
-  title =   {Habitat: A Platform for Embodied AI Research},
+  title =   {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
   author =  {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
   journal = {arXiv preprint arXiv:1904.01201},
   year =    {2019}
