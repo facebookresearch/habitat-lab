@@ -151,7 +151,7 @@ class PointGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, **kwargs: Any):
         agent_state = self._sim.get_agent_state()
         ref_position = agent_state.position
         rotation_world_agent = agent_state.rotation
@@ -217,7 +217,7 @@ class StaticPointGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, **kwargs: Any):
         episode_id = (episode.episode_id, episode.scene_id)
         if self.current_episode_id != episode_id:
             # Only compute the direction vector when a new episode is started.
@@ -269,7 +269,7 @@ class HeadingSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float)
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, **kwargs: Any):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
 
@@ -314,7 +314,7 @@ class ProximitySensor(Sensor):
             dtype=np.float,
         )
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
 
         return self._sim.distance_to_closest_obstacle(

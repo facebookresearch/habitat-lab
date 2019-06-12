@@ -249,9 +249,15 @@ def test_eqa_task():
         if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
     ]
 
-    for i in range(10):
+    for i in range(3):
         env.reset()
         observation = env.step(
             np.random.choice(3)
         )
         print(observation)
+    correct = env.task.answer_question(10)
+    print(correct)
+    correct_answer_id = dataset.get_answers_vocabulary()[
+        env.current_episode.question.answer_text]
+    correct = env.task.answer_question(correct_answer_id)
+    print(correct)
