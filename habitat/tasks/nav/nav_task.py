@@ -394,7 +394,7 @@ class Collisions(Measure):
 
     def update_metric(self, episode, action):
         if self._metric is None:
-            self._metric = 0
+            self._metric = dict(count=0, is_collision=False)
 
         current_position = self._sim.get_agent_state().position
         if (
@@ -402,7 +402,10 @@ class Collisions(Measure):
             and self._sim.distance_to_closest_obstacle(current_position)
             < COLLISION_PROXIMITY_TOLERANCE
         ):
-            self._metric += 1
+            self._metric["count"] += 1
+            self._metric["is_collision"] = True
+        else:
+            self._metric["is_collision"] = False
 
 
 @registry.register_measure
@@ -521,7 +524,20 @@ class TopDownMap(Measure):
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
             ),
+            "agent_angle": self.get_polar_angle()
         }
+
+    def get_polar_angle(self):
+        agent_state = self._sim.get_agent_state()
+        # Quaternion is in x, y, z, w format
+        ref_rotation = agent_state.rotation
+
+        heading_vector = quaternion_rotate_vector(
+            ref_rotation.inverse(), np.array([0, 0, -1])
+        )
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        return np.array(phi) - np.pi / 2
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(
