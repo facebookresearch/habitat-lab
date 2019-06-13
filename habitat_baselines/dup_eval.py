@@ -5,21 +5,23 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import cv2
-import numpy as np
 import os
-import torch
 import time
+
+import numpy as np
+
+import cv2
 import habitat
-from habitat import logger
-from torch.utils import tensorboard
-from habitat.utils.visualizations.utils import images_to_video
+import torch
 from config.default import get_config as cfg_baseline
+from habitat import logger
 from habitat.config.default import get_config
+from habitat.utils.visualizations import maps
+from habitat.utils.visualizations.utils import images_to_video
 from rl.ppo import PPO, Policy
 from rl.ppo.utils import batch_obs
+from torch.utils import tensorboard
 from train_ppo import make_env_fn
-from habitat.utils.visualizations import maps
 
 
 def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
