@@ -524,7 +524,7 @@ class TopDownMap(Measure):
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
             ),
-            "agent_angle": self.get_polar_angle()
+            "agent_angle": self.get_polar_angle(),
         }
 
     def get_polar_angle(self):

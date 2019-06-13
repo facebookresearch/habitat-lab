@@ -6,17 +6,14 @@
 
 import argparse
 import cv2
-import imageio
 import numpy as np
 import os
 import torch
-import tqdm
-
-
+import time
 import habitat
 from habitat import logger
 from torch.utils import tensorboard
-
+from habitat.utils.visualizations.utils import images_to_video
 from config.default import get_config as cfg_baseline
 from habitat.config.default import get_config
 from rl.ppo import PPO, Policy
@@ -25,22 +22,40 @@ from train_ppo import make_env_fn
 from habitat.utils.visualizations import maps
 
 
-def images_to_video(images, output_dir, video_name):
-    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
-    video_path = os.path.join(output_dir, video_name)
-    writer = imageio.get_writer(video_path, fps=10)
-    for im in tqdm.tqdm(images):
-        writer.append_data(im)
-    writer.close()
-    logger.info(
-        "Generated video: {}".format(os.path.join(output_dir, video_name))
-    )
-    return video_path
+def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
+    assert os.path.isdir(checkpoint_folder), "invalid checkpoint folder path"
+    models = os.listdir(checkpoint_folder)
+    models.sort(key=lambda x: int(x.strip().split(".")[1]))
+    ind = previous_ckpt_ind + 1
+    if ind < len(models):
+        return os.path.join(checkpoint_folder, models[ind])
+    return None
+
+
+def images_to_tb_video(video_name, step_idx, frames, writer, fps=10):
+    frame_tensors = [
+        torch.from_numpy(np_arr).unsqueeze(0) for np_arr in frames
+    ]
+    video_tensor = torch.cat(tuple(frame_tensors))
+    video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(
+        0
+    )  # Shape (N,T,C,H,W)
+    writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
+
+
+def draw_collision(view):
+    mask = np.ones((view.shape[0], view.shape[1]))
+    mask[30:-30, 30:-30] = 0
+    mask = mask == 1
+    alpha = 0.5
+    view[mask] = (alpha * np.array([255, 0, 0]) + (1.0 - alpha) * view)[mask]
+    return view
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", type=str, required=True)
+    parser.add_argument("--model-path", type=str, required=False)
+    parser.add_argument("--tracking-model-dir", type=str, required=False)
     parser.add_argument("--sim-gpu-id", type=int, required=True)
     parser.add_argument("--pth-gpu-id", type=int, required=True)
     parser.add_argument("--num-processes", type=int, required=True)
@@ -60,19 +75,42 @@ def main():
         default="configs/tasks/pointnav.yaml",
         help="path to config yaml containing information about task",
     )
-    parser.add_argument("--video", type=int, default=0, choices=[0, 1], help="1 for add video")
-    parser.add_argument("--out-dir-video", type=str, help="video dir")
-    args = parser.parse_args()
+    parser.add_argument("--video", type=int, default=0, choices=[0, 1])
+    parser.add_argument("--out-dir-video", type=str)
+    parser.add_argument("--tensorboard-dir", type=str, default="tb_eval")
 
-    device = torch.device("cuda:{}".format(args.pth_gpu_id))
+    args = parser.parse_args()
+    assert (args.model_path is not None) != (
+        args.tracking_model_dir is not None
+    ), "Must specify a single model or a directory of models, but not both"
 
     writer_kwargs = dict(
-        log_dir="tb_video", purge_step=0, flush_secs=30
+        log_dir=args.tensorboard_dir, purge_step=0, flush_secs=30
     )
+    with (tensorboard.SummaryWriter(**writer_kwargs)) as writer:
 
+        if args.model_path is not None:
+            eval_checkpoint(args.model_path, args, writer)
+        else:  # track model progression
+            prev_ckpt_ind = -1
+            while True:
+                current_ckpt = None
+                while current_ckpt is None:
+                    current_ckpt = poll_checkpoint_folder(
+                        args.tracking_model_dir, prev_ckpt_ind
+                    )
+                    time.sleep(2)  # sleep for 2 seconds before polling again
+
+                logger.warning("current_ckpt: {}".format(current_ckpt))
+                eval_checkpoint(current_ckpt, args, writer)
+                prev_ckpt_ind += 1
+
+
+def eval_checkpoint(checkpoint_path, args, writer):
+    checkpoint_idx = int(checkpoint_path.strip().split(".")[1])
     env_configs = []
     baseline_configs = []
-
+    device = torch.device("cuda:{}".format(args.pth_gpu_id))
 
     for _ in range(args.num_processes):
         config_env = get_config(config_paths=args.task_config)
@@ -103,7 +141,7 @@ def main():
         ),
     )
 
-    ckpt = torch.load(args.model_path, map_location=device)
+    ckpt = torch.load(checkpoint_path, map_location=device)
 
     actor_critic = Policy(
         observation_space=envs.observation_spaces[0],
@@ -152,175 +190,173 @@ def main():
     else:
         rgb_frames = None
 
-    with (tensorboard.SummaryWriter(**writer_kwargs)) as writer:
-        while episode_counts.sum() < args.count_test_episodes:
-            current_episodes = envs.current_episodes()
+    while episode_counts.sum() < args.count_test_episodes:
+        current_episodes = envs.current_episodes()
 
-
-            with torch.no_grad():
-                _, actions, _, test_recurrent_hidden_states = actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    not_done_masks,
-                    deterministic=False,
-                )
-
-            outputs = envs.step([a[0].item() for a in actions])
-
-            observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
-            batch = batch_obs(observations)
-            for sensor in batch:
-                batch[sensor] = batch[sensor].to(device)
-
-            not_done_masks = torch.tensor(
-                [[0.0] if done else [1.0] for done in dones],
-                dtype=torch.float,
-                device=device,
+        with torch.no_grad():
+            _, actions, _, test_recurrent_hidden_states = actor_critic.act(
+                batch,
+                test_recurrent_hidden_states,
+                not_done_masks,
+                deterministic=False,
             )
 
-            for i in range(not_done_masks.shape[0]):
-                if not_done_masks[i].item() == 0:
-                    episode_spls[i] += infos[i]["spl"]
-                    if infos[i]["spl"] > 0:
-                        episode_success[i] += 1
+        outputs = envs.step([a[0].item() for a in actions])
 
-            rewards = torch.tensor(
-                rewards, dtype=torch.float, device=device
-            ).unsqueeze(1)
-            current_episode_reward += rewards
-            episode_rewards += (1 - not_done_masks) * current_episode_reward
-            episode_counts += 1 - not_done_masks
-            current_episode_reward *= not_done_masks
+        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+        batch = batch_obs(observations)
+        for sensor in batch:
+            batch[sensor] = batch[sensor].to(device)
 
-            # added for video support
-            next_episodes = envs.current_episodes()
-            envs_to_pause = []
-            n_envs = envs.num_envs
-            for i in range(n_envs):
-                if next_episodes[i].episode_id in stats_episodes:
-                    envs_to_pause.append(i)
+        not_done_masks = torch.tensor(
+            [[0.0] if done else [1.0] for done in dones],
+            dtype=torch.float,
+            device=device,
+        )
 
-                if not_done_masks[i].item() == 0:
-                    # new episode ended, record stats
-                    stats_episodes.add(current_episodes[i].episode_id)
-                    if args.video == 1:
+        for i in range(not_done_masks.shape[0]):
+            if not_done_masks[i].item() == 0:
+                episode_spls[i] += infos[i]["spl"]
+                if infos[i]["spl"] > 0:
+                    episode_success[i] += 1
 
-                        video_name = "{}_{}_{}_{:.2f}".format(
-                            current_episodes[i].episode_id,
-                            "apt",
-                            "spl",
-                            infos[i]["spl"],
-                        )
+        rewards = torch.tensor(
+            rewards, dtype=torch.float, device=device
+        ).unsqueeze(1)
+        current_episode_reward += rewards
+        episode_rewards += (1 - not_done_masks) * current_episode_reward
+        episode_counts += 1 - not_done_masks
+        current_episode_reward *= not_done_masks
 
-                        video_path = images_to_video(
-                            rgb_frames[i],
-                            args.out_dir_video,
-                            video_name,
-                        )
+        # added for video support
+        next_episodes = envs.current_episodes()
+        envs_to_pause = []
+        n_envs = envs.num_envs
+        for i in range(n_envs):
+            if next_episodes[i].episode_id in stats_episodes:
+                envs_to_pause.append(i)
 
-                        frame_tensors = [torch.from_numpy(np_arr).unsqueeze(0) for np_arr in rgb_frames[i]]
-                        video_tensor = torch.cat(tuple(frame_tensors))
-                        video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)  # Shape (N,T,C,H,W)
-                        writer.add_video(video_path, video_tensor, fps=8)
-                        rgb_frames[i] = []
+            if not_done_masks[i].item() == 0:
+                # new episode ended, record stats
+                stats_episodes.add(current_episodes[i].episode_id)
+                if args.video == 1 and len(rgb_frames[i]) > 0:
 
-                elif args.video == 1:
-                    observation_size = observations[i]["rgb"].shape[0]
-                    egocentric_view = observations[i]["rgb"][:, :, :3]
-                    # print("=============observations {}".format(observations[i]["depth"].shape))
-                    egocentric_depth = (observations[i]["depth"].squeeze() * 255).astype(np.uint8)
-                    egocentric_depth = np.stack([egocentric_depth for _ in range(3)], axis=2)
-                    egocentric_depth = cv2.applyColorMap(egocentric_depth, cv2.COLORMAP_PINK)
-                    # draw collision
-                    if infos[i]["collisions"]["is_collision"]:
-                        mask = np.ones(
-                            (egocentric_view.shape[0], egocentric_view.shape[1])
-                        )
-                        mask[30:-30, 30:-30] = 0
-                        mask = mask == 1
-                        alpha = 0.5
-                        egocentric_view[mask] = (
-                            alpha * np.array([255, 0, 0])
-                            + (1.0 - alpha) * egocentric_view
-                        )[mask]
-
-                    top_down_map = infos[i]["top_down_map"]["map"]
-                    top_down_map = maps.colorize_topdown_map(top_down_map)
-                    map_agent_pos = infos[i]["top_down_map"][
-                        "agent_map_coord"
-                    ]
-
-                    top_down_map = maps.draw_agent(
-                        image=top_down_map,
-                        agent_center_coord=map_agent_pos,
-                        agent_rotation=infos[i]["top_down_map"]["agent_angle"],
-                        agent_radius_px=8,
+                    video_name = "{}{}_{}{}_{}{:.2f}".format(
+                        "episode",
+                        current_episodes[i].episode_id,
+                        "ckpt",
+                        checkpoint_idx,
+                        "spl",
+                        infos[i]["spl"],
                     )
 
-                    if top_down_map.shape[0] > top_down_map.shape[1]:
-                        top_down_map = np.rot90(top_down_map, 1)
+                    images_to_video(
+                        rgb_frames[i], args.out_dir_video, video_name
+                    )
 
-                    # print("old shape {}".format(top_down_map.shape))
-                    old_h, old_w, _ = top_down_map.shape
-                    top_down_height = observation_size
-                    top_down_width = int(float(top_down_height)/old_h * old_w)
-                    # print("new height {}, new width {}".format(top_down_height, top_down_width))
+                    images_to_tb_video(
+                        "episode{}".format(current_episodes[i].episode_id),
+                        checkpoint_idx,
+                        rgb_frames[i],
+                        writer,
+                        fps=10,
+                    )
 
-                    # cv2 resize dsize is width first
-                    top_down_map = cv2.resize(
-                                                top_down_map,
-                                                (top_down_width, top_down_height),
-                                                interpolation=cv2.INTER_CUBIC,
-                                                )
-                    frame = np.concatenate((egocentric_view, egocentric_depth, top_down_map), axis=1)
+                    rgb_frames[i] = []
 
-                    # print("ego shape {}, type {}".format(egocentric_view.shape, egocentric_view.dtype))
-                    # print("topdown shape {}, type {}".format(top_down_map.shape, top_down_map.dtype))
-                    # print("final frame shape: {} ".format(frame.shape))
+            elif args.video == 1:
+                observation_size = observations[i]["rgb"].shape[0]
+                egocentric_rgb = observations[i]["rgb"][:, :, :3]
+                egocentric_depth = (
+                    observations[i]["depth"].squeeze() * 255
+                ).astype(np.uint8)
+                egocentric_depth = np.stack(
+                    [egocentric_depth for _ in range(3)], axis=2
+                )
 
+                # # color-mapping depth field
+                # egocentric_depth = cv2.applyColorMap(
+                #     egocentric_depth, cv2.COLORMAP_PINK
+                # )
 
-                    # # no zooming top_down_map
-                    # top_down_frame = np.full_like(egocentric_view, 255)
-                    # top_down_frame[: top_down_map.shape[0], :top_down_map.shape[1], ] = top_down_map
-                    # frame = np.concatenate((egocentric_view, top_down_frame), axis=1)
+                # draw collision
+                if infos[i]["collisions"]["is_collision"]:
+                    egocentric_rgb = draw_collision(egocentric_rgb)
 
-                    # make frame size divisible by 16 to accommodate imageio default basic_block_size
-                    if frame.shape[1] % 16 != 0:
-                        white_strip = np.full((frame.shape[0], 16-frame.shape[1]%16, frame.shape[2]), 255, dtype=np.uint8)
-                        frame = np.concatenate((frame, white_strip), axis=1)
+                top_down_map = infos[i]["top_down_map"]["map"]
+                top_down_map = maps.colorize_topdown_map(top_down_map)
+                map_agent_pos = infos[i]["top_down_map"]["agent_map_coord"]
 
-                    rgb_frames[i].append(frame)
+                top_down_map = maps.draw_agent(
+                    image=top_down_map,
+                    agent_center_coord=map_agent_pos,
+                    agent_rotation=infos[i]["top_down_map"]["agent_angle"],
+                    agent_radius_px=8,
+                )
 
-            if len(envs_to_pause) > 0:
-                state_index = list(range(envs.num_envs))
+                if top_down_map.shape[0] > top_down_map.shape[1]:
+                    top_down_map = np.rot90(top_down_map, 1)
 
-                for idx in reversed(envs_to_pause):
-                    state_index.pop(idx)
-                    envs.pause_at(idx)
+                # scale top down map to align with rgb view
+                old_h, old_w, _ = top_down_map.shape
+                top_down_height = observation_size
+                top_down_width = int(float(top_down_height) / old_h * old_w)
+                # cv2 resize dsize is width first
+                top_down_map = cv2.resize(
+                    top_down_map,
+                    (top_down_width, top_down_height),
+                    interpolation=cv2.INTER_CUBIC,
+                )
+                frame = np.concatenate(
+                    (egocentric_rgb, egocentric_depth, top_down_map), axis=1
+                )
 
-                # indexing along the batch dimensions
-                test_recurrent_hidden_states = test_recurrent_hidden_states[
-                                               :, state_index
-                                               ]
-                not_done_masks = not_done_masks[state_index]
-                current_episode_reward = current_episode_reward[
-                    state_index
-                ]
+                # # make frame size divisible by 16 to accommodate for imageio default basic_block_size
+                # if frame.shape[1] % 16 != 0:
+                #     white_strip = np.full(
+                #         (
+                #             frame.shape[0],
+                #             16 - frame.shape[1] % 16,
+                #             frame.shape[2],
+                #         ),
+                #         255,
+                #         dtype=np.uint8,
+                #     )
+                #     frame = np.concatenate((frame, white_strip), axis=1)
+                #
+                # rgb_frames[i].append(frame)
 
-                for k, v in batch.items():
-                    batch[k] = v[state_index]
+        if len(envs_to_pause) > 0:
+            state_index = list(range(envs.num_envs))
 
-                if args.video == 1:
+            for idx in reversed(envs_to_pause):
+                state_index.pop(idx)
+                envs.pause_at(idx)
 
-                    rgb_frames = [rgb_frames[i] for i in state_index]
+            # indexing along the batch dimensions
+            test_recurrent_hidden_states = test_recurrent_hidden_states[
+                :, state_index
+            ]
+            not_done_masks = not_done_masks[state_index]
+            current_episode_reward = current_episode_reward[state_index]
+
+            for k, v in batch.items():
+                batch[k] = v[state_index]
+
+            if args.video == 1:
+
+                rgb_frames = [rgb_frames[i] for i in state_index]
 
     episode_reward_mean = (episode_rewards / episode_counts).mean().item()
     episode_spl_mean = (episode_spls / episode_counts).mean().item()
     episode_success_mean = (episode_success / episode_counts).mean().item()
 
-    print("Average episode reward: {:.6f}".format(episode_reward_mean))
-    print("Average episode success: {:.6f}".format(episode_success_mean))
-    print("Average episode spl: {:.6f}".format(episode_spl_mean))
+    logger.info("Average episode reward: {:.6f}".format(episode_reward_mean))
+    logger.info("Average episode success: {:.6f}".format(episode_success_mean))
+    logger.info("Average episode SPL: {:.6f}".format(episode_spl_mean))
+
+    writer.add_scalar("Average reward", episode_reward_mean, checkpoint_idx)
+    writer.add_scalar("SPL", episode_spl_mean, checkpoint_idx)
 
 
 if __name__ == "__main__":

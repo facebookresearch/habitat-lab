@@ -30,7 +30,6 @@ CALL_COMMAND = "call"
 EPISODE_COMMAND = "current_episode"
 
 
-
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:

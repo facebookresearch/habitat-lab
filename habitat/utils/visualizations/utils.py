@@ -103,7 +103,7 @@ def images_to_video(
     Args:
         images: The list of images. Images should be HxWx3 in RGB order.
         output_dir: The folder to put the video in.
-        video_name: The navme for the video.
+        video_name: The name for the video.
         fps: Frames per second for the video. Not all values work with FFMPEG,
             use at your own risk.
         quality: Default is 5. Uses variable bit rate. Highest quality is 10,
