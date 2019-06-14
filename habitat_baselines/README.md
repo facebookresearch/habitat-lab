@@ -76,4 +76,5 @@ Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [Matt
 
 **SLAM based**
 
-- [Handcrafted agent baseline adopted from the paper "Benchmarking Classic and Learned Navigation in Complex 3D Environments"](slambased/README.md)
+- [Handcrafted agent baseline](slambased/README.md) adopted from the paper 
+"Benchmarking Classic and Learned Navigation in Complex 3D Environments".
