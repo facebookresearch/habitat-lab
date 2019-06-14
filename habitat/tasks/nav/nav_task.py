@@ -400,6 +400,7 @@ class Collisions(Measure):
         else:
             self._metric["is_collision"] = False
 
+
 @registry.register_measure
 class TopDownMap(Measure):
     r"""Top Down Map measure
