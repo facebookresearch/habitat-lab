@@ -4,14 +4,13 @@ import numpy as np
 from gym import spaces
 
 import habitat
-from habitat.config import Config as CN
 
 
 # Define the measure and register it with habitat
 # By default, the things are registered with the class name
 @habitat.registry.register_measure
 class EpisodeInfo(habitat.Measure):
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, **kwargs: Any):
         # This measure only needs the config
         self._config = config
 
@@ -38,7 +37,7 @@ class EpisodeInfo(habitat.Measure):
 # For the sensor, we will register it with a custom name
 @habitat.registry.register_sensor(name="my_supercool_sensor")
 class AgentPositionSensor(habitat.Sensor):
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, **kwargs: Any):
         super().__init__(config=config)
 
         self._sim = sim
@@ -73,7 +72,7 @@ def main():
     config.defrost()
 
     # Add things to the config to for the measure
-    config.TASK.EPISODE_INFO = CN()
+    config.TASK.EPISODE_INFO = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
     config.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
@@ -82,7 +81,7 @@ def main():
     config.TASK.MEASUREMENTS.append("EPISODE_INFO")
 
     # Now define the config for the sensor
-    config.TASK.AGENT_POSITION_SENSOR = CN()
+    config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
     # Use the custom name
     config.TASK.AGENT_POSITION_SENSOR.TYPE = "my_supercool_sensor"
     config.TASK.AGENT_POSITION_SENSOR.ANSWER_TO_LIFE = 42
