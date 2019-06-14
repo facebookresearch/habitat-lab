@@ -1,4 +1,11 @@
-r"""The code below is taked from https://github.com/JunjH/Revisiting_Single_Depth_Estimation
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+r"""The code below is taken from
+https://github.com/JunjH/Revisiting_Single_Depth_Estimation
 Revisiting Single Image Depth Estimation: Toward Higher Resolution Maps With Accurate Object Boundaries
 Junjie Hu and Mete Ozay and Yan Zhang and Takayuki Okatani
 WACV 2019

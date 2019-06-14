@@ -366,3 +366,13 @@ class Simulator:
 
     def close(self) -> None:
         raise NotImplementedError
+
+    @property
+    def previous_step_collided(self):
+        r"""Whether or not the previous step resulted in a collision
+
+        Returns:
+            bool: True if the previous step resulted in a collision, false otherwise
+
+        """
+        raise NotImplementedError

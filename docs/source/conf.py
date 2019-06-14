@@ -32,10 +32,9 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 
-import sphinx_rtd_theme
 import recommonmark
+import sphinx_rtd_theme
 from recommonmark.transform import AutoStructify
-
 
 extensions = [
     "sphinx.ext.autodoc",

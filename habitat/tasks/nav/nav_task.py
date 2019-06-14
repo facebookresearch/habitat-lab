@@ -26,7 +26,6 @@ from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
-COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 MAP_THICKNESS_SCALAR: int = 1250
 
 
@@ -395,18 +394,11 @@ class Collisions(Measure):
     def update_metric(self, episode, action):
         if self._metric is None:
             self._metric = dict(count=0, is_collision=False)
-
-        current_position = self._sim.get_agent_state().position
-        if (
-            action == self._sim.index_forward_action
-            and self._sim.distance_to_closest_obstacle(current_position)
-            < COLLISION_PROXIMITY_TOLERANCE
-        ):
+        if self._sim.previous_step_collided:
             self._metric["count"] += 1
             self._metric["is_collision"] = True
         else:
             self._metric["is_collision"] = False
-
 
 @registry.register_measure
 class TopDownMap(Measure):
