@@ -425,7 +425,7 @@ def ppo_args():
     parser.add_argument(
         "--tensorboard-dir",
         type=str,
-        required=True,
+        default="tb_train",
         help="path to logging dir for Tensorboard",
     )
     return parser

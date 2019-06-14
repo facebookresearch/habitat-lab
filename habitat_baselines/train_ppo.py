@@ -10,9 +10,9 @@ from collections import deque
 from time import time
 
 import numpy as np
-import torch
 
 import habitat
+import torch
 from config.default import get_config as cfg_baseline
 from habitat import logger
 from habitat.config.default import get_config as cfg_env
@@ -20,6 +20,7 @@ from habitat.datasets.registration import make_dataset
 from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
+from torch.utils import tensorboard
 
 
 class NavRLEnv(habitat.RLEnv):
@@ -224,137 +225,184 @@ def run_training():
     count_steps = 0
     count_checkpoints = 0
 
-    for update in range(args.num_updates):
-        if args.use_linear_lr_decay:
-            update_linear_schedule(
-                agent.optimizer, update, args.num_updates, args.lr
+    tensorboard_dir = args.tensorboard_dir
+
+    writer_kwargs = dict(
+        log_dir=tensorboard_dir, purge_step=count_steps, flush_secs=30
+    )
+    with (tensorboard.SummaryWriter(**writer_kwargs)) as writer:
+        for update in range(args.num_updates):
+            if args.use_linear_lr_decay:
+                update_linear_schedule(
+                    agent.optimizer, update, args.num_updates, args.lr
+                )
+
+            agent.clip_param = args.clip_param * (
+                1 - update / args.num_updates
             )
 
-        agent.clip_param = args.clip_param * (1 - update / args.num_updates)
+            for step in range(args.num_steps):
+                t_sample_action = time()
+                # sample actions
+                with torch.no_grad():
+                    step_observation = {
+                        k: v[step] for k, v in rollouts.observations.items()
+                    }
 
-        for step in range(args.num_steps):
-            t_sample_action = time()
-            # sample actions
-            with torch.no_grad():
-                step_observation = {
-                    k: v[step] for k, v in rollouts.observations.items()
-                }
+                    (
+                        values,
+                        actions,
+                        actions_log_probs,
+                        recurrent_hidden_states,
+                    ) = actor_critic.act(
+                        step_observation,
+                        rollouts.recurrent_hidden_states[step],
+                        rollouts.masks[step],
+                    )
+                pth_time += time() - t_sample_action
 
-                (
-                    values,
+                t_step_env = time()
+
+                outputs = envs.step([a[0].item() for a in actions])
+                observations, rewards, dones, infos = [
+                    list(x) for x in zip(*outputs)
+                ]
+
+                env_time += time() - t_step_env
+
+                t_update_stats = time()
+                batch = batch_obs(observations)
+                rewards = torch.tensor(rewards, dtype=torch.float)
+                rewards = rewards.unsqueeze(1)
+
+                masks = torch.tensor(
+                    [[0.0] if done else [1.0] for done in dones],
+                    dtype=torch.float,
+                )
+
+                current_episode_reward += rewards
+                episode_rewards += (1 - masks) * current_episode_reward
+                episode_counts += 1 - masks
+                current_episode_reward *= masks
+
+                rollouts.insert(
+                    batch,
+                    recurrent_hidden_states,
                     actions,
                     actions_log_probs,
-                    recurrent_hidden_states,
-                ) = actor_critic.act(
-                    step_observation,
-                    rollouts.recurrent_hidden_states[step],
-                    rollouts.masks[step],
+                    values,
+                    rewards,
+                    masks,
                 )
-            pth_time += time() - t_sample_action
 
-            t_step_env = time()
+                count_steps += envs.num_envs
+                pth_time += time() - t_update_stats
 
-            outputs = envs.step([a[0].item() for a in actions])
-            observations, rewards, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
+            if len(window_episode_reward) == args.reward_window_size:
+                window_episode_reward.popleft()
+                window_episode_counts.popleft()
+            window_episode_reward.append(episode_rewards.clone())
+            window_episode_counts.append(episode_counts.clone())
 
-            env_time += time() - t_step_env
+            t_update_model = time()
+            with torch.no_grad():
+                last_observation = {
+                    k: v[-1] for k, v in rollouts.observations.items()
+                }
+                next_value = actor_critic.get_value(
+                    last_observation,
+                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.masks[-1],
+                ).detach()
 
-            t_update_stats = time()
-            batch = batch_obs(observations)
-            rewards = torch.tensor(rewards, dtype=torch.float)
-            rewards = rewards.unsqueeze(1)
-
-            masks = torch.tensor(
-                [[0.0] if done else [1.0] for done in dones], dtype=torch.float
+            rollouts.compute_returns(
+                next_value, args.use_gae, args.gamma, args.tau
             )
 
-            current_episode_reward += rewards
-            episode_rewards += (1 - masks) * current_episode_reward
-            episode_counts += 1 - masks
-            current_episode_reward *= masks
+            value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
-            rollouts.insert(
-                batch,
-                recurrent_hidden_states,
-                actions,
-                actions_log_probs,
-                values,
-                rewards,
-                masks,
+            rollouts.after_update()
+            pth_time += time() - t_update_model
+
+            # add tensorboard support
+            key_spl = "spl"
+            losses = torch.tensor(
+                [value_loss, action_loss, dist_entropy],
+                device=device,
+                dtype=torch.float32,
             )
-
-            count_steps += envs.num_envs
-            pth_time += time() - t_update_stats
-
-        if len(window_episode_reward) == args.reward_window_size:
-            window_episode_reward.popleft()
-            window_episode_counts.popleft()
-        window_episode_reward.append(episode_rewards.clone())
-        window_episode_counts.append(episode_counts.clone())
-
-        t_update_model = time()
-        with torch.no_grad():
-            last_observation = {
-                k: v[-1] for k, v in rollouts.observations.items()
+            stats = zip(
+                ["count", "reward"],
+                [window_episode_counts, window_episode_reward],
+            )
+            deltas = {
+                k: (
+                    (v[-1] - v[0]).sum().item()
+                    if len(v) > 1
+                    else v[0].sum().item()
+                )
+                for k, v in stats
             }
-            next_value = actor_critic.get_value(
-                last_observation,
-                rollouts.recurrent_hidden_states[-1],
-                rollouts.masks[-1],
-            ).detach()
+            deltas["count"] = max(deltas["count"], 1.0)
 
-        rollouts.compute_returns(
-            next_value, args.use_gae, args.gamma, args.tau
-        )
-
-        value_loss, action_loss, dist_entropy = agent.update(rollouts)
-
-        rollouts.after_update()
-        pth_time += time() - t_update_model
-
-        # log stats
-        if update > 0 and update % args.log_interval == 0:
-            logger.info(
-                "update: {}\tfps: {:.3f}\t".format(
-                    update, count_steps / (time() - t_start)
-                )
+            writer.add_scalar(
+                "reward", deltas["reward"] / deltas["count"], count_steps
             )
 
-            logger.info(
-                "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                "frames: {}".format(update, env_time, pth_time, count_steps)
+            writer.add_scalars(
+                "losses",
+                {
+                    k: l.item() * s
+                    for l, k, s in zip(
+                        losses, ["value", "policy", "entropy"], [1, 1, 0.1]
+                    )
+                },
+                count_steps,
             )
 
-            window_rewards = (
-                window_episode_reward[-1] - window_episode_reward[0]
-            ).sum()
-            window_counts = (
-                window_episode_counts[-1] - window_episode_counts[0]
-            ).sum()
-
-            if window_counts > 0:
+            # log stats
+            if update > 0 and update % args.log_interval == 0:
                 logger.info(
-                    "Average window size {} reward: {:3f}".format(
-                        len(window_episode_reward),
-                        (window_rewards / window_counts).item(),
+                    "update: {}\tfps: {:.3f}\t".format(
+                        update, count_steps / (time() - t_start)
                     )
                 )
-            else:
-                logger.info("No episodes finish in current window")
 
-        # checkpoint model
-        if update % args.checkpoint_interval == 0:
-            checkpoint = {"state_dict": agent.state_dict()}
-            torch.save(
-                checkpoint,
-                os.path.join(
-                    args.checkpoint_folder,
-                    "ckpt.{}.pth".format(count_checkpoints),
-                ),
-            )
-            count_checkpoints += 1
+                logger.info(
+                    "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
+                    "frames: {}".format(
+                        update, env_time, pth_time, count_steps
+                    )
+                )
+
+                window_rewards = (
+                    window_episode_reward[-1] - window_episode_reward[0]
+                ).sum()
+                window_counts = (
+                    window_episode_counts[-1] - window_episode_counts[0]
+                ).sum()
+
+                if window_counts > 0:
+                    logger.info(
+                        "Average window size {} reward: {:3f}".format(
+                            len(window_episode_reward),
+                            (window_rewards / window_counts).item(),
+                        )
+                    )
+                else:
+                    logger.info("No episodes finish in current window")
+
+            # checkpoint model
+            if update % args.checkpoint_interval == 0:
+                checkpoint = {"state_dict": agent.state_dict(), "args": args}
+                torch.save(
+                    checkpoint,
+                    os.path.join(
+                        args.checkpoint_folder,
+                        "ckpt.{}.pth".format(count_checkpoints),
+                    ),
+                )
+                count_checkpoints += 1
 
 
 if __name__ == "__main__":
