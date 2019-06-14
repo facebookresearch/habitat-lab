@@ -103,7 +103,11 @@ def main():
                     )
                     time.sleep(2)  # sleep for 2 seconds before polling again
 
-                logger.warning("current_ckpt: {}".format(current_ckpt))
+                logger.warning(
+                    "=============current_ckpt: {}=============".format(
+                        current_ckpt
+                    )
+                )
                 eval_checkpoint(current_ckpt, args, writer)
                 prev_ckpt_ind += 1
 
@@ -280,11 +284,6 @@ def eval_checkpoint(checkpoint_path, args, writer):
                     ).astype(np.uint8)
                     depth_map = np.stack([depth_map for _ in range(3)], axis=2)
 
-                    # # color-mapping depth field
-                    # depth_map = cv2.applyColorMap(
-                    #     depth_map, cv2.COLORMAP_PINK
-                    # )
-
                     egocentric_view = np.concatenate(
                         (egocentric_view, depth_map), axis=1
                     )
@@ -315,19 +314,6 @@ def eval_checkpoint(checkpoint_path, args, writer):
                 )
 
                 frame = np.concatenate((egocentric_view, top_down_map), axis=1)
-
-                # # make frame size divisible by 16 to accommodate for imageio default basic_block_size
-                # if frame.shape[1] % 16 != 0:
-                #     white_strip = np.full(
-                #         (
-                #             frame.shape[0],
-                #             16 - frame.shape[1] % 16,
-                #             frame.shape[2],
-                #         ),
-                #         255,
-                #         dtype=np.uint8,
-                #     )
-                #     frame = np.concatenate((frame, white_strip), axis=1)
 
                 rgb_frames[i].append(frame)
 
