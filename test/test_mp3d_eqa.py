@@ -235,9 +235,7 @@ def test_eqa_task():
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         eqa_config.DATASET
     ):
-        pytest.skip(
-            "Please download Matterport3D EQA dataset to " "data folder."
-        )
+        pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
@@ -251,13 +249,16 @@ def test_eqa_task():
 
     for i in range(3):
         env.reset()
-        observation = env.step(
-            np.random.choice(3)
-        )
-        print(observation)
-    correct = env.task.answer_question(10)
-    print(correct)
+        env.step(1 + np.random.choice(2))
+        metrics = env.get_metrics()
+        del metrics["episode_info"]
+        print(metrics)
     correct_answer_id = dataset.get_answers_vocabulary()[
-        env.current_episode.question.answer_text]
-    correct = env.task.answer_question(correct_answer_id)
-    print(correct)
+        env.current_episode.question.answer_text
+    ]
+    env.step(0)
+    env.task.answer_question(correct_answer_id, env.episode_over)
+    metrics = env.get_metrics()
+    assert metrics["answer_accuracy"] == 1
+    del metrics["episode_info"]
+    print(metrics)

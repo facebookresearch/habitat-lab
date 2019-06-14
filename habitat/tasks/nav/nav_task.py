@@ -31,14 +31,14 @@ MAP_THICKNESS_SCALAR: int = 1250
 
 
 def merge_sim_episode_config(
-        sim_config: Config, episode: Type[Episode]
+    sim_config: Config, episode: Type[Episode]
 ) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
     if (
-            episode.start_position is not None
-            and episode.start_rotation is not None
+        episode.start_position is not None
+        and episode.start_rotation is not None
     ):
         agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
         agent_cfg = getattr(sim_config, agent_name)
@@ -157,8 +157,8 @@ class PointGoalSensor(Sensor):
         rotation_world_agent = agent_state.rotation
 
         direction_vector = (
-                np.array(episode.goals[0].position, dtype=np.float32)
-                - ref_position
+            np.array(episode.goals[0].position, dtype=np.float32)
+            - ref_position
         )
         direction_vector_agent = quaternion_rotate_vector(
             rotation_world_agent.inverse(), direction_vector
@@ -227,8 +227,8 @@ class StaticPointGoalSensor(Sensor):
             rotation_world_agent = agent_state.rotation
 
             direction_vector = (
-                    np.array(episode.goals[0].position, dtype=np.float32)
-                    - ref_position
+                np.array(episode.goals[0].position, dtype=np.float32)
+                - ref_position
             )
             direction_vector_agent = quaternion_rotate_vector(
                 rotation_world_agent.inverse(), direction_vector
@@ -362,8 +362,8 @@ class SPL(Measure):
         )
 
         if (
-                action == self._sim.index_stop_action
-                and distance_to_target < self._config.SUCCESS_DISTANCE
+            action == self._sim.index_stop_action
+            and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
 
@@ -374,10 +374,10 @@ class SPL(Measure):
         self._previous_position = current_position
 
         self._metric = ep_success * (
-                self._start_end_episode_distance
-                / max(
-            self._start_end_episode_distance, self._agent_episode_distance
-        )
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
         )
 
 
@@ -401,9 +401,9 @@ class Collisions(Measure):
 
         current_position = self._sim.get_agent_state().position
         if (
-                action == self._sim.index_forward_action
-                and self._sim.distance_to_closest_obstacle(current_position)
-                < COLLISION_PROXIMITY_TOLERANCE
+            action == self._sim.index_forward_action
+            and self._sim.distance_to_closest_obstacle(current_position)
+            < COLLISION_PROXIMITY_TOLERANCE
         ):
             self._metric += 1
 
@@ -429,8 +429,8 @@ class TopDownMap(Measure):
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
         self._cell_scale = (
-                                   self._coordinate_max - self._coordinate_min
-                           ) / self._map_resolution[0]
+            self._coordinate_max - self._coordinate_min
+        ) / self._map_resolution[0]
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -468,8 +468,8 @@ class TopDownMap(Measure):
                 np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
             )
             top_down_map[
-            s_x - point_padding: s_x + point_padding + 1,
-            s_y - point_padding: s_y + point_padding + 1,
+                s_x - point_padding : s_x + point_padding + 1,
+                s_y - point_padding : s_y + point_padding + 1,
             ] = maps.MAP_SOURCE_POINT_INDICATOR
 
             # mark target point
@@ -481,8 +481,8 @@ class TopDownMap(Measure):
                 self._map_resolution,
             )
             top_down_map[
-            t_x - point_padding: t_x + point_padding + 1,
-            t_y - point_padding: t_y + point_padding + 1,
+                t_x - point_padding : t_x + point_padding + 1,
+                t_y - point_padding : t_y + point_padding + 1,
             ] = maps.MAP_TARGET_POINT_INDICATOR
 
         return top_down_map
@@ -510,13 +510,13 @@ class TopDownMap(Measure):
         # Rather than return the whole map which may have large empty regions,
         # only return the occupied part (plus some padding).
         house_map = house_map[
-                    self._ind_x_min
-                    - self._grid_delta: self._ind_x_max
-                                        + self._grid_delta,
-                    self._ind_y_min
-                    - self._grid_delta: self._ind_y_max
-                                        + self._grid_delta,
-                    ]
+            self._ind_x_min
+            - self._grid_delta : self._ind_x_max
+            + self._grid_delta,
+            self._ind_y_min
+            - self._grid_delta : self._ind_y_max
+            + self._grid_delta,
+        ]
 
         self._metric = {
             "map": house_map,
@@ -558,10 +558,10 @@ class TopDownMap(Measure):
 @registry.register_task(name="Nav-v0")
 class NavigationTask(EmbodiedTask):
     def __init__(
-            self,
-            task_config: Config,
-            sim: Simulator,
-            dataset: Optional[Dataset] = None,
+        self,
+        task_config: Config,
+        sim: Simulator,
+        dataset: Optional[Dataset] = None,
     ) -> None:
 
         task_measurements = []
@@ -569,12 +569,11 @@ class NavigationTask(EmbodiedTask):
             measurement_cfg = getattr(task_config, measurement_name)
             measure_type = registry.get_measure(measurement_cfg.TYPE)
             assert (
-                    measure_type is not None
+                measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
             task_measurements.append(
-                measure_type(sim=sim, config=measurement_cfg,
-                             dataset=dataset
-                             ))
+                measure_type(sim=sim, config=measurement_cfg, dataset=dataset)
+            )
         self.measurements = Measurements(task_measurements)
 
         task_sensors = []
@@ -584,13 +583,14 @@ class NavigationTask(EmbodiedTask):
             assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            task_sensors.append(sensor_type(sim=sim, config=sensor_cfg,
-                                            dataset=dataset))
+            task_sensors.append(
+                sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
+            )
 
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
 
     def overwrite_sim_config(
-            self, sim_config: Any, episode: Type[Episode]
+        self, sim_config: Any, episode: Type[Episode]
     ) -> Any:
         return merge_sim_episode_config(sim_config, episode)

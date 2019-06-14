@@ -6,9 +6,9 @@
 
 from typing import Union
 
+import habitat_sim
 import numpy as np
 
-import habitat_sim
 from habitat.sims.habitat_simulator import HabitatSim, SimulatorActions
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,

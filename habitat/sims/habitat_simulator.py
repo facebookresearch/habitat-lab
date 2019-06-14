@@ -7,10 +7,10 @@
 from enum import Enum
 from typing import Any, List, Optional
 
+import habitat_sim
 import numpy as np
 from gym import Space, spaces
 
-import habitat_sim
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (

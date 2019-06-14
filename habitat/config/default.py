@@ -31,72 +31,6 @@ _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 # -----------------------------------------------------------------------------
-# # POINTGOAL SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_SENSOR = CN()
-_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
-_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
-# -----------------------------------------------------------------------------
-# # STATIC POINTGOAL SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
-_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
-_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# -----------------------------------------------------------------------------
-# # HEADING SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.HEADING_SENSOR = CN()
-_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
-# -----------------------------------------------------------------------------
-# # PROXIMITY SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.PROXIMITY_SENSOR = CN()
-_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
-_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
-# -----------------------------------------------------------------------------
-# # SPL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
-_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
-# -----------------------------------------------------------------------------
-# # TopDownMap MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.TOP_DOWN_MAP = CN()
-_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
-_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
-_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
-_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
-_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
-_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
-_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
-# -----------------------------------------------------------------------------
-# # COLLISIONS MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.COLLISIONS = CN()
-_C.TASK.COLLISIONS.TYPE = "Collisions"
-# -----------------------------------------------------------------------------
-# # EQA TASK QUESTION SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.QUESTION_SENSOR = CN()
-_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.ANSWER_SENSOR = CN()
-_C.TASK.ANSWER_SENSOR.TYPE = "AnswerSensor"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.EPISODE_INFO = CN()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-# -----------------------------------------------------------------------------
-# # SPL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
-_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
-# -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
@@ -180,7 +114,94 @@ _C.DATASET.POINTNAVV1.DATA_PATH = (
 )
 _C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 
+# -----------------------------------------------------------------------------
+# # NAVIGATION TASK
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.POINTGOAL_SENSOR = CN()
+_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
+_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+# -----------------------------------------------------------------------------
+# # STATIC POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
+_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
+_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+# -----------------------------------------------------------------------------
+# # HEADING SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.HEADING_SENSOR = CN()
+_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+# -----------------------------------------------------------------------------
+# # PROXIMITY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.PROXIMITY_SENSOR = CN()
+_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
+_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
+# -----------------------------------------------------------------------------
+# # SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.SPL = CN()
+_C.TASK.SPL.TYPE = "SPL"
+_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# # TopDownMap MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.TOP_DOWN_MAP = CN()
+_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
+_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
+_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
+_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
+_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
+_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
+_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
+# -----------------------------------------------------------------------------
+# # COLLISIONS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.COLLISIONS = CN()
+_C.TASK.COLLISIONS.TYPE = "Collisions"
+# -----------------------------------------------------------------------------
+# # SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.SPL = CN()
+_C.TASK.SPL.TYPE = "SPL"
+_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
+# -----------------------------------------------------------------------------
+# # EQA TASK
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # EQA TASK QUESTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.QUESTION_SENSOR = CN()
+_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+# -----------------------------------------------------------------------------
+# # EQA TASK CORRECT_ANSWER measure for training
+# -----------------------------------------------------------------------------
+_C.TASK.CORRECT_ANSWER = CN()
+_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.EPISODE_INFO = CN()
+_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ACTION_STAS = CN()
+_C.TASK.ACTION_STAS.TYPE = "ActionStats"
+# -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL = CN()
+_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+# -----------------------------------------------------------------------------
+# # ANSWER_ACCURACY MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ANSWER_ACCURACY = CN()
+_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 
 

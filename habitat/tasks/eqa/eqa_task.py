@@ -4,23 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Optional, Any
+from typing import Any, Dict, List, Optional, Type
 
 import attr
+import numpy as np
 from gym import spaces
 
-from habitat.core.registry import registry
-from habitat.core.simulator import (
-    Observations,
-    Sensor,
-    SensorTypes,
-)
-from habitat.core.utils import not_none_validator
+from habitat.config import Config
 from habitat.core.embodied_task import Measure
+from habitat.core.registry import registry
+from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
+from habitat.core.utils import not_none_validator
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
-
-
-# from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
 
 
 @attr.s(auto_attribs=True)
@@ -58,35 +54,39 @@ class QuestionSensor(Sensor):
         self._dataset = dataset
 
         self.observation_space = spaces.Discrete(
-            len(dataset.get_questions_vocabulary()))
+            len(dataset.get_questions_vocabulary())
+        )
 
     def get_observation(
-            self,
-            observations: Dict[str, Observations],
-            episode: EQAEpisode,
-            **kwargs
+        self,
+        observations: Dict[str, Observations],
+        episode: EQAEpisode,
+        **kwargs,
     ):
         return self._dataset.get_questions_vocabulary()[
-            episode.question.question_text]
+            episode.question.question_text
+        ]
 
 
-@registry.register_sensor
-class AnswerSensor(Sensor):
+@registry.register_measure
+class CorrectAnswer(Measure):
+    """CorrectAnswer
+    """
+
     def __init__(self, dataset, **kwargs):
-        self.uuid = "answer"
-        self.sensor_type = SensorTypes.TEXT
         self._dataset = dataset
-        self.observation_space = spaces.Discrete(len(
-            dataset.get_answers_vocabulary()))
+        super().__init__(**kwargs)
 
-    def get_observation(
-            self,
-            observations: Dict[str, Observations],
-            episode: EQAEpisode,
-            **kwargs
-    ):
-        return self._dataset.get_answers_vocabulary()[
-            episode.question.answer_text]
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "correct_answer"
+
+    def reset_metric(self, episode):
+        self._metric = self._dataset.get_answers_vocabulary()[
+            episode.question.answer_text
+        ]
+
+    def update_metric(self, *args: Any, **kwargs: Any):
+        pass
 
 
 @registry.register_measure
@@ -107,8 +107,26 @@ class EpisodeInfo(Measure):
     def reset_metric(self, episode):
         self._metric = episode
 
-    def update_metric(self, episode, action):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         pass
+
+
+@registry.register_measure
+class ActionStats(Measure):
+    """Actions Statistic
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "action_stats"
+
+    def reset_metric(self, episode):
+        self._metric = None
+
+    def update_metric(self, episode, action):
+        self._metric = {"previous_action": action}
 
 
 @registry.register_measure
@@ -116,33 +134,137 @@ class AnswerAccuracy(Measure):
     """AnswerAccuracy
     """
 
-    def __init__(self, sim, config, dataset, **kwargs):
-        self._sim = sim
-        self._config = config
+    def __init__(self, dataset, **kwargs):
         self._dataset = dataset
-
+        self._answer_received = False
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "answer_accuracy"
 
     def reset_metric(self, episode):
-        self._previous_position = self._sim.get_agent_state().position.tolist()
-        self._start_end_episode_distance = episode.info["geodesic_distance"]
-        self._agent_episode_distance = 0.0
         self._metric = 0
+        self._answer_received = False
+
+    def update_metric(
+        self,
+        answer_id=None,
+        episode=None,
+        prev_action=None,
+        episode_over=None,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        if (
+            prev_action is None
+            or answer_id is None
+            or episode is None
+            or episode_over is None
+        ):
+            return
+        assert not self._answer_received, (
+            "Question can be answered only " "once per episode."
+        )
+        self._answer_received = True
+        if prev_action == SimulatorActions.STOP.value:
+            assert episode_over, "Episode should be over after stop action."
+        if prev_action == SimulatorActions.STOP.value and episode_over:
+            self._metric = (
+                1
+                if self._dataset.get_answers_vocabulary()[
+                    episode.question.answer_text
+                ]
+                == answer_id
+                else 0
+            )
+        else:
+            # Episode wasn't finished, but to reflect unfinished episodes in
+            # average accuracy metric we report 0
+            self._metric = 0
+
+
+@registry.register_measure
+class DistanceToGoal(Measure):
+    """Distance To Goal metrics
+    """
+
+    def __init__(self, sim: Simulator, config: Config, **kwargs):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "distance_to_goal"
+
+    def reset_metric(self, episode):
+        self._previous_position = self._sim.get_agent_state().position.tolist()
+        self._start_end_episode_distance = self._sim.geodesic_distance(
+            self._previous_position, episode.goals[0].position
+        )
+        self._agent_episode_distance = 0.0
+        self._metric = None
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
 
     def update_metric(self, episode, action):
-        self._metric = self._dataset.get_answers_vocabulary()[
-            episode.question.answer_text] == action
+        current_position = self._sim.get_agent_state().position.tolist()
+
+        distance_to_target = self._sim.geodesic_distance(
+            current_position, episode.goals[0].position
+        )
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = {
+            "distance_to_target": distance_to_target,
+            "start_distance_to_target": self._start_end_episode_distance,
+            "distance_delta": self._start_end_episode_distance
+            - distance_to_target,
+            "agent_path_length": self._agent_episode_distance,
+        }
 
 
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
+    """
+        Embodied Question Answering Task
+        Usage example:
+            observations = self._env.reset()
+            while not env.episode_over:
+                action = agent.act(observations)
+                observations = env.step(action)
+            env.task.answer_question(
+                agent.answer_question(observations), env.episode_over)
+            metrics = self._env.get_metrics()
+    """
+
     def step(self, action):
         pass
 
-    def answer_question(self, answer_id: int):
+    def answer_question(self, answer_id: int, episode_over: bool):
+        required_measures = {"episode_info", "action_stats", "answer_accuracy"}
+        assert (
+            required_measures <= self.measurements.measures.keys()
+        ), f"{required_measures} are required to be enabled for EQA task"
         episode = self.measurements.measures["episode_info"].get_metric()
-        return self._dataset.get_answers_vocabulary()[
-            episode.question.answer_text] == answer_id
+        prev_action = self.measurements.measures["action_stats"].get_metric()[
+            "previous_action"
+        ]
+
+        self.measurements.measures["answer_accuracy"].update_metric(
+            answer_id=answer_id,
+            prev_action=prev_action,
+            episode=episode,
+            episode_over=episode_over,
+        )
