@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/facebookresearch/habitat-api.svg?style=svg)](https://circleci.com/gh/facebookresearch/habitat-api)
+
 Habitat-API
 ==============================
 
