@@ -77,6 +77,7 @@ def main():
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=512,
+        goal_sensor_uuid=env_configs[0].TASK.GOAL_SENSOR_UUID,
     )
     actor_critic.to(device)
 
