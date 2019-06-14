@@ -112,7 +112,7 @@ def construct_envs(args):
 
     basic_config = cfg_env(config_paths=args.task_config, opts=args.opts)
     dataset = make_dataset(basic_config.DATASET.TYPE)
-    scenes = dataset.__class__.get_scenes_to_load(basic_config.DATASET)
+    scenes = dataset.get_scenes_to_load(basic_config.DATASET)
 
     if len(scenes) > 0:
         random.shuffle(scenes)
