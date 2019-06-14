@@ -33,9 +33,7 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
-        return os.path.exists(
-            config.DATA_PATH.format(split=config.SPLIT)
-        )
+        return os.path.exists(config.DATA_PATH.format(split=config.SPLIT))
 
     @staticmethod
     def get_scenes_to_load(config: Config) -> List[str]:
@@ -78,9 +76,7 @@ class PointNavDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.DATA_PATH.format(
-            split=config.SPLIT
-        )
+        datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(datasetfile_path, "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
