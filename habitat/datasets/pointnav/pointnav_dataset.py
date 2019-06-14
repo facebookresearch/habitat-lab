@@ -34,7 +34,7 @@ class PointNavDatasetV1(Dataset):
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
-            config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
+            config.DATA_PATH.format(split=config.SPLIT)
         )
 
     @staticmethod
@@ -44,7 +44,7 @@ class PointNavDatasetV1(Dataset):
         """
         assert PointNavDatasetV1.check_config_paths_exist(config)
         dataset_dir = os.path.dirname(
-            config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
+            config.DATA_PATH.format(split=config.SPLIT)
         )
 
         cfg = config.clone()
@@ -78,7 +78,7 @@ class PointNavDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.POINTNAVV1.DATA_PATH.format(
+        datasetfile_path = config.DATA_PATH.format(
             split=config.SPLIT
         )
         with gzip.open(datasetfile_path, "rt") as f:

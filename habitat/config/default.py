@@ -146,19 +146,7 @@ _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
 _C.DATASET.NUM_EPISODE_SAMPLE = -1
 _C.DATASET.CONTENT_SCENES = ["*"]
-
-# -----------------------------------------------------------------------------
-# MP3DEQAV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.MP3DEQAV1 = CN()
-_C.DATASET.MP3DEQAV1.DATA_PATH = (
-    "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-)
-# -----------------------------------------------------------------------------
-# POINTNAVV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.POINTNAVV1 = CN()
-_C.DATASET.POINTNAVV1.DATA_PATH = (
+_C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 
