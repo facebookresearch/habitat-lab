@@ -69,9 +69,10 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
+
         # remove alpha channel
         obs = obs[:, :, :RGBSENSOR_DIMENSION]
-        check_sim_obs(obs, self)
         return obs
 
 
@@ -262,6 +263,7 @@ class HabitatSim(Simulator):
         if self._update_agents_state():
             sim_obs = self._sim.get_sensor_observations()
 
+        self._prev_sim_obs = sim_obs
         self._is_episode_active = True
         return self._sensor_suite.get_observations(sim_obs)
 
@@ -276,6 +278,8 @@ class HabitatSim(Simulator):
             sim_obs = self._sim.get_sensor_observations()
         else:
             sim_obs = self._sim.step(action)
+
+        self._prev_sim_obs = sim_obs
 
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
@@ -471,6 +475,9 @@ class HabitatSim(Simulator):
         success = self.set_agent_state(position, rotation, reset_sensors=False)
         if success:
             sim_obs = self._sim.get_sensor_observations()
+
+            self._prev_sim_obs = sim_obs
+
             observations = self._sensor_suite.get_observations(sim_obs)
             if not keep_agent_at_new_pose:
                 self.set_agent_state(
@@ -496,3 +503,18 @@ class HabitatSim(Simulator):
 
     def island_radius(self, position):
         return self._sim.pathfinder.island_radius(position)
+
+    @property
+    def previous_step_collided(self):
+        r"""Whether or not the previous step resulted in a collision
+
+        Returns:
+            bool: True if the previous step resulted in a collision, false otherwise
+
+        Warning:
+            This feild is only updated when :meth:`step`, :meth:`reset`, or :meth:`get_observations_at` are
+            called.  It does not update when the agent is moved to a new loction.  Furthermore, it
+            will _always_ be false after :meth:`reset` or :meth:`get_observations_at` as neither of those
+            result in an action (step) being taken.
+        """
+        return self._prev_sim_obs.get("collided", False)
