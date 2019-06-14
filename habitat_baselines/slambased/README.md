@@ -3,6 +3,10 @@
 Project website: https://sites.google.com/view/classic-vs-learned-navigation
 Paper: https://arxiv.org/abs/1901.10915
 
+<p align="center">
+  <img src="data/slam-based-agent.png">
+</p>
+
 If you use this code or the provided environments in your research, please cite the following:
 
     @ARTICLE{Navigation2019,
