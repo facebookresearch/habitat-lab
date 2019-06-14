@@ -4,12 +4,12 @@ Habitat-API Configuration
 Habitat-API uses [Yacs configuration system](https://github.com/rbgirshick/yacs) 
 with the paradigm of `your code + a YACS config for experiment E (+
 external dependencies + hardware + other nuisance terms ...) =
-reproducible experiment E`. List of Yacs advantages:
+reproducible experiment E`. Yacs advantages:
 - Checks for type consistency.
 - All parameters and default values are searchable in the code.
-- A parameter doesn't need to be set explicitly as each parameter has a 
+- A parameter doesn't need to be set always as each parameter has a 
     default value.
-- Freeze config to prevent unintended changes.
+- Ability to freeze config to prevent unintended changes.
 
 ## Config usage
 An example of how to merge default config with 2 others configs and overwrite 
@@ -42,7 +42,7 @@ particular sensor parameter in yaml file without redefining the whole sensor
 config. 
 
 ## Extending the config
-Example on how to extend a config outside of `habtiat-api` repository. 
+Example of how to extend a config outside of `habtiat-api` repository.
 First, we create a config extending the default config in the code and re-use 
 `habitat.get_config()`:
 ```
