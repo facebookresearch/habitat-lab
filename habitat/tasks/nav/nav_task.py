@@ -428,6 +428,7 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
+        self._shortest_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
@@ -491,6 +492,22 @@ class TopDownMap(Measure):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map(episode)
+        self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+            self._sim.get_agent_state().position, episode.goals[0].position
+        )
+        self._shortest_path_points = [
+            maps.to_grid(
+                p[0],
+                p[2],
+                self._coordinate_min,
+                self._coordinate_max,
+                self._map_resolution,
+            )
+            for p in self._shortest_path_points
+        ]
+        self._shortest_path_points = [
+            (y, x) for (x, y) in self._shortest_path_points
+        ]
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
             agent_position[0],
@@ -500,6 +517,29 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
+        self._draw_shortest_path()
+
+    def _draw_shortest_path(self):
+        for prev_pt, next_pt in zip(
+            self._shortest_path_points[:-1], self._shortest_path_points[1:]
+        ):
+            if (
+                self._top_down_map[prev_pt[0], prev_pt[1]]
+                != maps.MAP_SOURCE_POINT_INDICATOR
+            ):
+                color = 7
+                thickness = int(
+                    np.round(
+                        self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR
+                    )
+                )
+                cv2.line(
+                    self._top_down_map,
+                    prev_pt,
+                    next_pt,
+                    color,
+                    thickness=thickness,
+                )
 
     def update_metric(self, episode, action):
         self._step_count += 1

@@ -5,23 +5,21 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import os
-import time
-
-import numpy as np
-
 import cv2
-import habitat
+import numpy as np
+import os
 import torch
-from config.default import get_config as cfg_baseline
+import time
+import habitat
 from habitat import logger
-from habitat.config.default import get_config
-from habitat.utils.visualizations import maps
+from torch.utils import tensorboard
 from habitat.utils.visualizations.utils import images_to_video
+from config.default import get_config as cfg_baseline
+from habitat.config.default import get_config
 from rl.ppo import PPO, Policy
 from rl.ppo.utils import batch_obs
-from torch.utils import tensorboard
 from train_ppo import make_env_fn
+from habitat.utils.visualizations import maps
 
 
 def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
@@ -46,10 +44,12 @@ def images_to_tb_video(video_name, step_idx, frames, writer, fps=10):
 
 
 def draw_collision(view):
-    mask = np.ones((view.shape[0], view.shape[1]))
-    mask[30:-30, 30:-30] = 0
+    size = view.shape[0]
+    strip_width = int(size / 20)
+    mask = np.ones((size, size))
+    mask[strip_width:-strip_width, strip_width:-strip_width] = 0
     mask = mask == 1
-    alpha = 0.5
+    alpha = 0.4
     view[mask] = (alpha * np.array([255, 0, 0]) + (1.0 - alpha) * view)[mask]
     return view
 
@@ -268,22 +268,26 @@ def eval_checkpoint(checkpoint_path, args, writer):
 
             elif args.video == 1:
                 observation_size = observations[i]["rgb"].shape[0]
-                egocentric_rgb = observations[i]["rgb"][:, :, :3]
-                egocentric_depth = (
-                    observations[i]["depth"].squeeze() * 255
-                ).astype(np.uint8)
-                egocentric_depth = np.stack(
-                    [egocentric_depth for _ in range(3)], axis=2
-                )
-
-                # # color-mapping depth field
-                # egocentric_depth = cv2.applyColorMap(
-                #     egocentric_depth, cv2.COLORMAP_PINK
-                # )
-
+                egocentric_view = observations[i]["rgb"][:, :, :3]
                 # draw collision
                 if infos[i]["collisions"]["is_collision"]:
-                    egocentric_rgb = draw_collision(egocentric_rgb)
+                    egocentric_view = draw_collision(egocentric_view)
+
+                # draw depth map if observation has depth info
+                if "depth" in observations[i].keys():
+                    depth_map = (
+                        observations[i]["depth"].squeeze() * 255
+                    ).astype(np.uint8)
+                    depth_map = np.stack([depth_map for _ in range(3)], axis=2)
+
+                    # # color-mapping depth field
+                    # depth_map = cv2.applyColorMap(
+                    #     depth_map, cv2.COLORMAP_PINK
+                    # )
+
+                    egocentric_view = np.concatenate(
+                        (egocentric_view, depth_map), axis=1
+                    )
 
                 top_down_map = infos[i]["top_down_map"]["map"]
                 top_down_map = maps.colorize_topdown_map(top_down_map)
@@ -309,9 +313,8 @@ def eval_checkpoint(checkpoint_path, args, writer):
                     (top_down_width, top_down_height),
                     interpolation=cv2.INTER_CUBIC,
                 )
-                frame = np.concatenate(
-                    (egocentric_rgb, egocentric_depth, top_down_map), axis=1
-                )
+
+                frame = np.concatenate((egocentric_view, top_down_map), axis=1)
 
                 # # make frame size divisible by 16 to accommodate for imageio default basic_block_size
                 # if frame.shape[1] % 16 != 0:
@@ -325,8 +328,8 @@ def eval_checkpoint(checkpoint_path, args, writer):
                 #         dtype=np.uint8,
                 #     )
                 #     frame = np.concatenate((frame, white_strip), axis=1)
-                #
-                # rgb_frames[i].append(frame)
+
+                rgb_frames[i].append(frame)
 
         if len(envs_to_pause) > 0:
             state_index = list(range(envs.num_envs))
