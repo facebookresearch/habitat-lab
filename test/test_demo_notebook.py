@@ -23,7 +23,7 @@ def test_demo_notebook():
     else:
         pytest.main(["--nbval-lax", "notebooks/habitat-api-demo.ipynb"])
 
-        # NB: Force a gc collect run as it can take a little bit for 
-        # the cleanup to happen after the notebook and we get 
+        # NB: Force a gc collect run as it can take a little bit for
+        # the cleanup to happen after the notebook and we get
         # a double context crash!
         gc.collect()

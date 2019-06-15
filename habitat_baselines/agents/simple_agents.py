@@ -15,7 +15,6 @@ from habitat import SimulatorActions
 from habitat.config.default import get_config
 
 
-
 class RandomAgent(habitat.Agent):
     def __init__(self, success_distance, goal_sensor_uuid):
         self.dist_threshold_to_stop = success_distance
