@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 r"""Base implementation of agent inside habitat. To build agents inside habitat 
-the user should subclass ``habitat.Agent`` and implement the ``step()``
+the user should subclass ``habitat.Agent`` and implement the ``act()``
 and ``reset()`` methods.
 """
 
