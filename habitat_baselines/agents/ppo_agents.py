@@ -13,13 +13,14 @@ import torch
 from gym.spaces import Box, Dict, Discrete
 
 import habitat
-from habitat import Config
+from habitat.config import Config
+from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat_baselines.rl.ppo import Policy
 from habitat_baselines.rl.ppo.utils import batch_obs
 
 
-def get_defaut_config():
+def get_default_config():
     c = Config()
     c.INPUT_TYPE = "blind"
     c.MODEL_PATH = "data/checkpoints/blind.pth"
@@ -27,13 +28,15 @@ def get_defaut_config():
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
+    c.GOAL_SENSOR_UUID = "pointgoal"
     return c
 
 
 class PPOAgent(Agent):
     def __init__(self, config: Config):
+        self.goal_sensor_uuid = config.GOAL_SENSOR_UUID
         spaces = {
-            "pointgoal": Box(
+            self.goal_sensor_uuid: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),
@@ -76,6 +79,7 @@ class PPOAgent(Agent):
             observation_space=observation_spaces,
             action_space=action_spaces,
             hidden_size=self.hidden_size,
+            goal_sensor_uuid=self.goal_sensor_uuid,
         )
         self.actor_critic.to(self.device)
 
@@ -135,12 +139,15 @@ def main():
     )
     args = parser.parse_args()
 
-    config = get_defaut_config()
-    config.INPUT_TYPE = args.input_type
-    config.MODEL_PATH = args.model_path
+    config = get_config(args.task_config)
 
-    agent = PPOAgent(config)
-    benchmark = habitat.Benchmark(args.task_config)
+    agent_config = get_default_config()
+    agent_config.INPUT_TYPE = args.input_type
+    agent_config.MODEL_PATH = args.model_path
+    agent_config.GOAL_SENSOR_UUID = config.TASK.GOAL_SENSOR_UUID
+
+    agent = PPOAgent(agent_config)
+    benchmark = habitat.Benchmark(config_paths=args.task_config)
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():

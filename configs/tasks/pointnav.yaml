@@ -19,6 +19,7 @@ TASK:
     TYPE: PointGoalSensor
     GOAL_FORMAT: POLAR
   MEASUREMENTS: ['SPL']
+  GOAL_SENSOR_UUID: pointgoal
   SPL:
     TYPE: SPL
     SUCCESS_DISTANCE: 0.2

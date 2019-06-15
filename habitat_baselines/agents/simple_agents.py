@@ -12,17 +12,20 @@ import numpy as np
 
 import habitat
 from habitat import SimulatorActions
+from habitat.config.default import get_config
+
 
 
 class RandomAgent(habitat.Agent):
-    def __init__(self, success_distance):
+    def __init__(self, success_distance, goal_sensor_uuid):
         self.dist_threshold_to_stop = success_distance
+        self.goal_sensor_uuid = goal_sensor_uuid
 
     def reset(self):
         pass
 
     def is_goal_reached(self, observations):
-        dist = observations["pointgoal"][0]
+        dist = observations[self.goal_sensor_uuid][0]
         return dist <= self.dist_threshold_to_stop
 
     def act(self, observations):
@@ -49,8 +52,8 @@ class ForwardOnlyAgent(RandomAgent):
 
 
 class RandomForwardAgent(RandomAgent):
-    def __init__(self, success_distance):
-        super().__init__(success_distance)
+    def __init__(self, success_distance, goal_sensor_uuid):
+        super().__init__(success_distance, goal_sensor_uuid)
         self.FORWARD_PROBABILITY = 0.8
 
     def act(self, observations):
@@ -68,8 +71,8 @@ class RandomForwardAgent(RandomAgent):
 
 
 class GoalFollower(RandomAgent):
-    def __init__(self, success_distance):
-        super().__init__(success_distance)
+    def __init__(self, success_distance, goal_sensor_uuid):
+        super().__init__(success_distance, goal_sensor_uuid)
         self.pos_th = self.dist_threshold_to_stop
         self.angle_th = float(np.deg2rad(15))
         self.random_prob = 0
@@ -95,7 +98,7 @@ class GoalFollower(RandomAgent):
             action = SimulatorActions.STOP
         else:
             angle_to_goal = self.normalize_angle(
-                np.array(observations["pointgoal"][1])
+                np.array(observations[self.goal_sensor_uuid][1])
             )
             if abs(angle_to_goal) < self.angle_th:
                 action = SimulatorActions.MOVE_FORWARD
@@ -129,10 +132,13 @@ def main():
     parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()
 
+    config = get_config(args.task_config)
+
     agent = get_agent_cls(args.agent_class)(
-        success_distance=args.success_distance
+        success_distance=args.success_distance,
+        goal_sensor_uuid=config.TASK.GOAL_SENSOR_UUID,
     )
-    benchmark = habitat.Benchmark(args.task_config)
+    benchmark = habitat.Benchmark(config_paths=args.task_config)
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():

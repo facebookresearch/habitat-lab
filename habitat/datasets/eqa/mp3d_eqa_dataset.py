@@ -41,9 +41,7 @@ class Matterport3dDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
-        return os.path.exists(
-            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
-        )
+        return os.path.exists(config.DATA_PATH.format(split=config.SPLIT))
 
     def __init__(self, config: Config = None) -> None:
         self.episodes = []
@@ -51,9 +49,7 @@ class Matterport3dDatasetV1(Dataset):
         if config is None:
             return
 
-        with gzip.open(
-            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT), "rt"
-        ) as f:
+        with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read())
 
         self.sample_episodes(config.NUM_EPISODE_SAMPLE)

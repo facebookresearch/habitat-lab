@@ -30,6 +30,7 @@ _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
+_C.TASK.GOAL_SENSOR_UUID = "pointgoal"
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -145,21 +146,10 @@ _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
 _C.DATASET.NUM_EPISODE_SAMPLE = -1
-# -----------------------------------------------------------------------------
-# MP3DEQAV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.MP3DEQAV1 = CN()
-_C.DATASET.MP3DEQAV1.DATA_PATH = (
-    "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-)
-# -----------------------------------------------------------------------------
-# POINTNAVV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.POINTNAVV1 = CN()
-_C.DATASET.POINTNAVV1.DATA_PATH = (
+_C.DATASET.CONTENT_SCENES = ["*"]
+_C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
-_C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 
 
 # -----------------------------------------------------------------------------
