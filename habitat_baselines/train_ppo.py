@@ -123,19 +123,18 @@ def construct_envs(args):
         )
         scene_split_size = int(np.floor(len(scenes) / args.num_processes))
 
+    scene_splits = [[] for _ in range(args.num_processes)]
+    for j, s in enumerate(scenes):
+        scene_splits[j % len(scene_splits)].append(s)
+
+    assert sum(map(len, scene_splits)) == len(scenes)
+
     for i in range(args.num_processes):
         config_env = cfg_env(config_paths=args.task_config, opts=args.opts)
         config_env.defrost()
 
         if len(scenes) > 0:
-            if i < args.num_processes - 1:
-                config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
-                    i * scene_split_size : (i + 1) * scene_split_size
-                ]
-            else:
-                config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scenes[
-                    i * scene_split_size : len(scenes)
-                ]
+            config_env.DATASET.POINTNAVV1.CONTENT_SCENES = scene_splits[i]
 
         config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
