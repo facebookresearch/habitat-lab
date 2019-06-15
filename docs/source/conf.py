@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 # -*- coding: utf-8 -*-
 #
 # habitat-api documentation build configuration file, created by
@@ -32,10 +37,9 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 
-import sphinx_rtd_theme
 import recommonmark
+import sphinx_rtd_theme
 from recommonmark.transform import AutoStructify
-
 
 extensions = [
     "sphinx.ext.autodoc",

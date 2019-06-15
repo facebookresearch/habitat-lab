@@ -67,8 +67,14 @@ python -u habitat_baselines/evaluate_ppo.py \
 
 ```
 
+We also provide trained RGB, RGBD, Blind PPO models. 
+To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v1.zip) and unzip and specify model path [here](agents/ppo_agents.py#L132).
+
 Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
 
 ### Classic
 
-**SLAM** (coming soon)
+**SLAM based**
+
+- [Handcrafted agent baseline](slambased/README.md) adopted from the paper 
+"Benchmarking Classic and Learned Navigation in Complex 3D Environments".

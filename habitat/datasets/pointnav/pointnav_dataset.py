@@ -34,8 +34,8 @@ class PointNavDatasetV1(Dataset):
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
-            config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
-        )
+            config.DATA_PATH.format(split=config.SPLIT)
+        ) and os.path.exists(config.SCENES_DIR)
 
     @staticmethod
     def get_scenes_to_load(config: Config) -> List[str]:
@@ -44,12 +44,12 @@ class PointNavDatasetV1(Dataset):
         """
         assert PointNavDatasetV1.check_config_paths_exist(config)
         dataset_dir = os.path.dirname(
-            config.POINTNAVV1.DATA_PATH.format(split=config.SPLIT)
+            config.DATA_PATH.format(split=config.SPLIT)
         )
 
         cfg = config.clone()
         cfg.defrost()
-        cfg.POINTNAVV1.CONTENT_SCENES = []
+        cfg.CONTENT_SCENES = []
         dataset = PointNavDatasetV1(cfg)
         return PointNavDatasetV1._get_scenes_from_folder(
             content_scenes_path=dataset.content_scenes_path,
@@ -78,15 +78,13 @@ class PointNavDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.POINTNAVV1.DATA_PATH.format(
-            split=config.SPLIT
-        )
+        datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(datasetfile_path, "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
-        scenes = config.POINTNAVV1.CONTENT_SCENES
+        scenes = config.CONTENT_SCENES
         if ALL_SCENES_MASK in scenes:
             scenes = PointNavDatasetV1._get_scenes_from_folder(
                 content_scenes_path=self.content_scenes_path,
