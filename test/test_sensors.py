@@ -15,16 +15,6 @@ from habitat.config.default import get_config
 from habitat.core.simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
-NON_STOP_ACTIONS = [
-    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP
-]
-
-MOVEMENT_ACTIONS = [
-    SimulatorActions.MOVE_FORWARD,
-    SimulatorActions.TURN_LEFT,
-    SimulatorActions.TURN_RIGHT,
-]
-
 
 def _random_episode(env, config):
     random_location = env._sim.sample_navigable_point()
@@ -187,9 +177,14 @@ def test_static_pointgoal_sensor():
         )
     ]
 
+    non_stop_actions = [
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
+    ]
     env.reset()
     for _ in range(100):
-        obs = env.step(np.random.choice(NON_STOP_ACTIONS))
+        obs = env.step(np.random.choice(non_stop_actions))
         static_pointgoal = obs["static_pointgoal"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(static_pointgoal, expected_static_pointgoal)
@@ -225,13 +220,18 @@ def test_get_observations_at():
             goals=[NavigationGoal(position=goal_position)],
         )
     ]
+    non_stop_actions = [
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
+    ]
 
     obs = env.reset()
     start_state = env.sim.get_agent_state()
     for _ in range(100):
         # Note, this test will not currently work for camera change actions
         # (look up/down), only for movement actions.
-        new_obs = env.step(np.random.choice(MOVEMENT_ACTIONS))
+        new_obs = env.step(np.random.choice(non_stop_actions))
         for key, val in new_obs.items():
             agent_state = env.sim.get_agent_state()
             if not (

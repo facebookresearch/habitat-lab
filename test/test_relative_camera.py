@@ -1,3 +1,4 @@
+import gc
 import os
 
 import pytest
@@ -28,3 +29,7 @@ def test_demo_notebook():
                 "notebooks/relative_camera_views_transform_and_warping_demo.ipynb",
             ]
         )
+
+        # Force a gc collect run as it can take a little bit for the cleanup
+        # to happen after the notebook and we get a coule context crash!
+        gc.collect()

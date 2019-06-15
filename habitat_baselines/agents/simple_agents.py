@@ -13,10 +13,6 @@ import numpy as np
 import habitat
 from habitat import SimulatorActions
 
-NON_STOP_ACTIONS = [
-    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP
-]
-
 
 class RandomAgent(habitat.Agent):
     def __init__(self, success_distance):
@@ -33,7 +29,13 @@ class RandomAgent(habitat.Agent):
         if self.is_goal_reached(observations):
             action = SimulatorActions.STOP
         else:
-            action = np.random.choice(NON_STOP_ACTIONS)
+            action = np.random.choice(
+                [
+                    SimulatorActions.MOVE_FORWARD,
+                    SimulatorActions.TURN_LEFT,
+                    SimulatorActions.TURN_RIGHT,
+                ]
+            )
         return action
 
 
