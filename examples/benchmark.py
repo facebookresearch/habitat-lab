@@ -7,7 +7,7 @@
 import argparse
 
 import habitat
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat import SimulatorActions
 
 
 class ForwardOnlyAgent(habitat.Agent):
@@ -15,7 +15,7 @@ class ForwardOnlyAgent(habitat.Agent):
         pass
 
     def act(self, observations):
-        action = SimulatorActions.MOVE_FORWARD.value
+        action = SimulatorActions.MOVE_FORWARD
         return action
 
 

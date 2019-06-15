@@ -70,7 +70,7 @@ def test_multiple_files_scene_path():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.SCENES_DIR = os.path.join(
         os.getcwd(), DEFAULT_SCENE_PATH_PREFIX
     )
@@ -98,7 +98,7 @@ def test_multiple_files_pointnav_dataset():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.freeze()
     partial_dataset = make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config

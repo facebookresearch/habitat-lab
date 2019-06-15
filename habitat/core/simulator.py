@@ -4,14 +4,101 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import abc
 from collections import OrderedDict
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import attr
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
+from habitat.core.utils import Singleton
+
+
+@attr.s(auto_attribs=True)
+class ActionSpaceConfiguration(abc.ABC):
+    config: Config
+
+    @abc.abstractmethod
+    def get(self):
+        pass
+
+
+class _DefaultSimulatorActions(Enum):
+    STOP = 0
+    MOVE_FORWARD = 1
+    TURN_LEFT = 2
+    TURN_RIGHT = 3
+    LOOK_UP = 4
+    LOOK_DOWN = 5
+
+
+@attr.s(auto_attribs=True, slots=True)
+class SimulatorActionsSingleton(metaclass=Singleton):
+    r"""Implements an extendable Enum for the mapping of action names
+    to their integer values.  
+
+    This means that new action names can be added, but old action names cannot be
+    removed nor can their mapping be altered.  This also ensures that all actions
+    are always contigously mapped in ``[0, len(SimulatorActions) - 1]``
+
+    This accesible as the global singleton SimulatorActions
+    """
+
+    _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
+
+    def __attrs_post_init__(self):
+        for action in _DefaultSimulatorActions:
+            self._known_actions[action.name] = action.value
+
+    def extend_action_space(self, name: str) -> int:
+        r"""Extends the action space to accomidate a new action with
+        the name ``name``
+
+        Args
+            name (str): The name of the new action
+
+        Returns
+            int: The number the action is registered on
+
+        Usage::
+
+            from habitat import SimulatorActions
+            SimulatorActions.extend_action_space("MY_ACTION")
+            print(SimulatorActions.MY_ACTION)
+        """
+        assert (
+            name not in self._known_actions
+        ), "Cannot register an action name twice"
+        self._known_actions[name] = len(self._known_actions)
+
+        return self._known_actions[name]
+
+    def has_action(self, name: str) -> bool:
+        r"""Checks to see if action ``name`` is already register
+
+        Args
+            name (str): The name to check
+
+        Returns
+            bool: Whether or not ``name`` already exists
+        """
+
+        return name in self._known_actions
+
+    def __getattr__(self, name):
+        return self._known_actions[name]
+
+    def __getitem__(self, name):
+        return self._known_actions[name]
+
+    def __len__(self):
+        return len(self._known_actions)
+
+
+SimulatorActions = SimulatorActionsSingleton()
 
 
 class SensorTypes(Enum):
@@ -368,6 +455,13 @@ class Simulator:
         raise NotImplementedError
 
     @property
+    def index_stop_action(self):
+        return SimulatorActions.STOP
+
+    @property
+    def index_forward_action(self):
+        return SimulatorActions.MOVE_FORWARD
+
     def previous_step_collided(self):
         r"""Whether or not the previous step resulted in a collision
 

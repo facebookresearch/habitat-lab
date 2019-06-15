@@ -14,10 +14,9 @@ import torch
 
 import habitat
 from config.default import get_config as cfg_baseline
-from habitat import logger
+from habitat import SimulatorActions, logger
 from habitat.config.default import get_config as cfg_env
 from habitat.datasets.registration import make_dataset
-from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
 
@@ -73,7 +72,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action == SimulatorActions.STOP.value
+            self._previous_action == SimulatorActions.STOP
             and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True

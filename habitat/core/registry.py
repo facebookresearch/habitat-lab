@@ -26,8 +26,10 @@ Various decorators for registry different kind of classes with unique keys
 import collections
 from typing import Optional
 
+from habitat.core.utils import Singleton
 
-class _Registry:
+
+class Registry(metaclass=Singleton):
     mapping = collections.defaultdict(dict)
 
     @classmethod
@@ -161,6 +163,25 @@ class _Registry:
         )
 
     @classmethod
+    def register_action_space_configuration(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        r"""Register a action space configuration to registry with key 'name'
+
+        Args:
+            name: Key with which the action space will be registered.
+                If None will use the name of the class
+        """
+        from habitat.core.simulator import ActionSpaceConfiguration
+
+        return cls._register_impl(
+            "action_space_config",
+            to_register,
+            name,
+            assert_type=ActionSpaceConfiguration,
+        )
+
+    @classmethod
     def _get_impl(cls, _type, name):
         return cls.mapping[_type].get(name, None)
 
@@ -184,5 +205,9 @@ class _Registry:
     def get_dataset(cls, name):
         return cls._get_impl("dataset", name)
 
+    @classmethod
+    def get_action_space_configuration(cls, name):
+        return cls._get_impl("action_space_config", name)
 
-registry = _Registry()
+
+registry = Registry()

@@ -7,8 +7,7 @@
 from typing import List
 
 from habitat.core.logging import logger
-from habitat.core.simulator import ShortestPathPoint
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.core.simulator import ShortestPathPoint, SimulatorActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
@@ -30,17 +29,17 @@ def get_action_shortest_path(
     shortest_path = []
     action = None
     step_count = 0
-    while action != SimulatorActions.STOP and step_count < max_episode_steps:
+    while action != sim.index_stop_action and step_count < max_episode_steps:
         action = follower.get_next_action(goal_position)
         state = sim.get_agent_state()
         shortest_path.append(
             ShortestPathPoint(
                 state.position.tolist(),
                 quaternion_to_list(state.rotation),
-                action.value,
+                action,
             )
         )
-        sim.step(action.value)
+        sim.step(action)
         step_count += 1
     if step_count == max_episode_steps:
         logger.warning("Shortest path wasn't found.")
