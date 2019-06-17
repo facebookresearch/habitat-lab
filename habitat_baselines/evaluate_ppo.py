@@ -17,9 +17,8 @@ from habitat.utils.visualizations.utils import images_to_video
 from config.default import get_config as cfg_baseline
 from habitat.config.default import get_config
 from rl.ppo import PPO, Policy
-from rl.ppo.utils import batch_obs
+from rl.ppo.utils import batch_obs, frames_to_tb_video, generate_frame
 from train_ppo import make_env_fn
-from habitat.utils.visualizations import maps
 
 
 def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
@@ -30,28 +29,6 @@ def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
     if ind < len(models):
         return os.path.join(checkpoint_folder, models[ind])
     return None
-
-
-def images_to_tb_video(video_name, step_idx, frames, writer, fps=10):
-    frame_tensors = [
-        torch.from_numpy(np_arr).unsqueeze(0) for np_arr in frames
-    ]
-    video_tensor = torch.cat(tuple(frame_tensors))
-    video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(
-        0
-    )  # Shape (N,T,C,H,W)
-    writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
-
-
-def draw_collision(view):
-    size = view.shape[0]
-    strip_width = int(size / 20)
-    mask = np.ones((size, size))
-    mask[strip_width:-strip_width, strip_width:-strip_width] = 0
-    mask = mask == 1
-    alpha = 0.4
-    view[mask] = (alpha * np.array([255, 0, 0]) + (1.0 - alpha) * view)[mask]
-    return view
 
 
 def main():
@@ -189,12 +166,11 @@ def eval_checkpoint(checkpoint_path, args, writer):
     )
     not_done_masks = torch.zeros(args.num_processes, 1, device=device)
     stats_episodes = set()
+
+    rgb_frames = None
     if args.video == 1:
         rgb_frames = [[]] * args.num_processes
-        if not os.path.exists(args.out_dir_video):
-            os.makedirs(args.out_dir_video)
-    else:
-        rgb_frames = None
+        os.makedirs(args.out_dir_video, exist_ok=True)
 
     while episode_counts.sum() < args.count_test_episodes:
         current_episodes = envs.current_episodes()
@@ -243,83 +219,35 @@ def eval_checkpoint(checkpoint_path, args, writer):
                 envs_to_pause.append(i)
 
             if not_done_masks[i].item() == 0:
-                # new episode ended, record stats
+                # episode ended, record and generate videos
                 stats_episodes.add(current_episodes[i].episode_id)
                 if args.video == 1 and len(rgb_frames[i]) > 0:
-
-                    video_name = "{}{}_{}{}_{}{:.2f}".format(
-                        "episode",
+                    video_name = "episode{}_ckpt{}_spl{:.2f}".format(
                         current_episodes[i].episode_id,
-                        "ckpt",
                         checkpoint_idx,
-                        "spl",
                         infos[i]["spl"],
                     )
-
                     images_to_video(
                         rgb_frames[i], args.out_dir_video, video_name
                     )
-
-                    images_to_tb_video(
+                    frames_to_tb_video(
                         "episode{}".format(current_episodes[i].episode_id),
                         checkpoint_idx,
                         rgb_frames[i],
                         writer,
                         fps=10,
                     )
-
                     rgb_frames[i] = []
 
             elif args.video == 1:
-                observation_size = observations[i]["rgb"].shape[0]
-                egocentric_view = observations[i]["rgb"][:, :, :3]
-                # draw collision
-                if infos[i]["collisions"]["is_collision"]:
-                    egocentric_view = draw_collision(egocentric_view)
-
-                # draw depth map if observation has depth info
-                if "depth" in observations[i].keys():
-                    depth_map = (
-                        observations[i]["depth"].squeeze() * 255
-                    ).astype(np.uint8)
-                    depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-
-                    egocentric_view = np.concatenate(
-                        (egocentric_view, depth_map), axis=1
-                    )
-
-                top_down_map = infos[i]["top_down_map"]["map"]
-                top_down_map = maps.colorize_topdown_map(top_down_map)
-                map_agent_pos = infos[i]["top_down_map"]["agent_map_coord"]
-
-                top_down_map = maps.draw_agent(
-                    image=top_down_map,
-                    agent_center_coord=map_agent_pos,
-                    agent_rotation=infos[i]["top_down_map"]["agent_angle"],
-                    agent_radius_px=8,
-                )
-
-                if top_down_map.shape[0] > top_down_map.shape[1]:
-                    top_down_map = np.rot90(top_down_map, 1)
-
-                # scale top down map to align with rgb view
-                old_h, old_w, _ = top_down_map.shape
-                top_down_height = observation_size
-                top_down_width = int(float(top_down_height) / old_h * old_w)
-                # cv2 resize dsize is width first
-                top_down_map = cv2.resize(
-                    top_down_map,
-                    (top_down_width, top_down_height),
-                    interpolation=cv2.INTER_CUBIC,
-                )
-
-                frame = np.concatenate((egocentric_view, top_down_map), axis=1)
-
+                # episode continues, record current frame
+                frame = generate_frame(observations[i], infos[i])
                 rgb_frames[i].append(frame)
 
         if len(envs_to_pause) > 0:
-            state_index = list(range(envs.num_envs))
+            # stop tracking ended episodes
 
+            state_index = list(range(envs.num_envs))
             for idx in reversed(envs_to_pause):
                 state_index.pop(idx)
                 envs.pause_at(idx)
@@ -335,7 +263,6 @@ def eval_checkpoint(checkpoint_path, args, writer):
                 batch[k] = v[state_index]
 
             if args.video == 1:
-
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
     episode_reward_mean = (episode_rewards / episode_counts).mean().item()

@@ -394,12 +394,10 @@ class Collisions(Measure):
     def update_metric(self, episode, action):
         if self._metric is None:
             self._metric = dict(count=0, is_collision=False)
+        self._metric["is_collision"] = False
         if self._sim.previous_step_collided:
             self._metric["count"] += 1
             self._metric["is_collision"] = True
-        else:
-            self._metric["is_collision"] = False
-
 
 @registry.register_measure
 class TopDownMap(Measure):
@@ -421,10 +419,13 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
-        self._shortest_path_points = None
+        self._optimal_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
+        self.line_thickness = int(
+                np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+            )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -433,7 +434,7 @@ class TopDownMap(Measure):
     def _check_valid_nav_point(self, point: List[float]):
         self._sim.is_navigable(point)
 
-    def get_original_map(self, episode):
+    def get_original_map(self):
         top_down_map = maps.get_topdown_map(
             self._sim,
             self._map_resolution,
@@ -449,6 +450,9 @@ class TopDownMap(Measure):
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
 
+        return top_down_map
+
+    def draw_source_and_target(self, episode):
         if self._config.DRAW_SOURCE_AND_TARGET:
             # mark source point
             s_x, s_y = maps.to_grid(
@@ -461,7 +465,7 @@ class TopDownMap(Measure):
             point_padding = 2 * int(
                 np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
             )
-            top_down_map[
+            self._top_down_map[
                 s_x - point_padding : s_x + point_padding + 1,
                 s_y - point_padding : s_y + point_padding + 1,
             ] = maps.MAP_SOURCE_POINT_INDICATOR
@@ -474,32 +478,27 @@ class TopDownMap(Measure):
                 self._coordinate_max,
                 self._map_resolution,
             )
-            top_down_map[
+            self._top_down_map[
                 t_x - point_padding : t_x + point_padding + 1,
                 t_y - point_padding : t_y + point_padding + 1,
             ] = maps.MAP_TARGET_POINT_INDICATOR
 
-        return top_down_map
-
     def reset_metric(self, episode):
         self._step_count = 0
         self._metric = None
-        self._top_down_map = self.get_original_map(episode)
-        self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+        self._top_down_map = self.get_original_map()
+        self._optimal_path_points = self._sim.get_straight_shortest_path_points(
             self._sim.get_agent_state().position, episode.goals[0].position
         )
-        self._shortest_path_points = [
+        self._optimal_path_points = [
             maps.to_grid(
                 p[0],
                 p[2],
                 self._coordinate_min,
                 self._coordinate_max,
                 self._map_resolution,
-            )
-            for p in self._shortest_path_points
-        ]
-        self._shortest_path_points = [
-            (y, x) for (x, y) in self._shortest_path_points
+            )[::-1]
+            for p in self._optimal_path_points
         ]
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
@@ -510,29 +509,15 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        self._draw_shortest_path()
-
-    def _draw_shortest_path(self):
-        for prev_pt, next_pt in zip(
-            self._shortest_path_points[:-1], self._shortest_path_points[1:]
-        ):
-            if (
-                self._top_down_map[prev_pt[0], prev_pt[1]]
-                != maps.MAP_SOURCE_POINT_INDICATOR
-            ):
-                color = 7
-                thickness = int(
-                    np.round(
-                        self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR
-                    )
-                )
-                cv2.line(
-                    self._top_down_map,
-                    prev_pt,
-                    next_pt,
-                    color,
-                    thickness=thickness,
-                )
+        # draw optimal path
+        maps.draw_path(
+            self._top_down_map,
+            self._optimal_path_points,
+            maps.MAP_OPTIMAL_PATH_COLOR,
+            self.line_thickness
+        )
+        # draw source adn target points last to avoid blocking
+        self.draw_source_and_target(episode)
 
     def update_metric(self, episode, action):
         self._step_count += 1
@@ -544,10 +529,10 @@ class TopDownMap(Measure):
         # only return the occupied part (plus some padding).
         house_map = house_map[
             self._ind_x_min
-            - self._grid_delta : self._ind_x_max
+            - self._grid_delta: self._ind_x_max
             + self._grid_delta,
             self._ind_y_min
-            - self._grid_delta : self._ind_y_max
+            - self._grid_delta: self._ind_y_max
             + self._grid_delta,
         ]
 

@@ -125,3 +125,21 @@ def images_to_video(
     for im in tqdm.tqdm(images):
         writer.append_data(im)
     writer.close()
+
+
+def draw_collision(view: np.ndarray, alpha=0.4) -> np.ndarray:
+    r"""draw translucent red strips on the border of input view to indicate
+    a collision has taken place.
+    Args:
+        view: input view of size HxWx3 in RGB order.
+        alpha: Opacity of red collision strip. 1 is completely non-transparent.
+    Returns:
+        A view with collision effect drawn.
+    """
+    size = view.shape[0]
+    strip_width = size // 20
+    mask = np.ones((size, size))
+    mask[strip_width:-strip_width, strip_width:-strip_width] = 0
+    mask = mask == 1
+    view[mask] = (alpha * np.array([255, 0, 0]) + (1.0 - alpha) * view)[mask]
+    return view
