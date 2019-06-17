@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 from habitat.utils.visualizations import maps, utils
 
+
 class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
@@ -447,9 +448,7 @@ def frames_to_tb_video(video_name, step_idx, frames, writer, fps=10):
         torch.from_numpy(np_arr).unsqueeze(0) for np_arr in frames
     ]
     video_tensor = torch.cat(tuple(frame_tensors))
-    video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(
-        0
-    )
+    video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)
     # final shape of video tensor: (1, n, 3, H, W)
     writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
 
@@ -463,14 +462,10 @@ def generate_frame(observation, info):
 
     # draw depth map if observation has depth info
     if "depth" in observation.keys():
-        depth_map = (
-            observation["depth"].squeeze() * 255
-        ).astype(np.uint8)
+        depth_map = (observation["depth"].squeeze() * 255).astype(np.uint8)
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
 
-        egocentric_view = np.concatenate(
-            (egocentric_view, depth_map), axis=1
-        )
+        egocentric_view = np.concatenate((egocentric_view, depth_map), axis=1)
 
     top_down_map = info["top_down_map"]["map"]
     top_down_map = maps.colorize_topdown_map(top_down_map)

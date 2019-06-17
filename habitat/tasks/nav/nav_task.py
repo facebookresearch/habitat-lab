@@ -399,6 +399,7 @@ class Collisions(Measure):
             self._metric["count"] += 1
             self._metric["is_collision"] = True
 
+
 @registry.register_measure
 class TopDownMap(Measure):
     r"""Top Down Map measure
@@ -424,8 +425,8 @@ class TopDownMap(Measure):
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
         self.line_thickness = int(
-                np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
-            )
+            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+        )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -514,7 +515,7 @@ class TopDownMap(Measure):
             self._top_down_map,
             self._optimal_path_points,
             maps.MAP_OPTIMAL_PATH_COLOR,
-            self.line_thickness
+            self.line_thickness,
         )
         # draw source adn target points last to avoid blocking
         self.draw_source_and_target(episode)
@@ -529,10 +530,10 @@ class TopDownMap(Measure):
         # only return the occupied part (plus some padding).
         house_map = house_map[
             self._ind_x_min
-            - self._grid_delta: self._ind_x_max
+            - self._grid_delta : self._ind_x_max
             + self._grid_delta,
             self._ind_y_min
-            - self._grid_delta: self._ind_y_max
+            - self._grid_delta : self._ind_y_max
             + self._grid_delta,
         ]
 

@@ -337,7 +337,12 @@ def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
     return TOP_DOWN_MAP_COLORS[top_down_map]
 
 
-def draw_path(top_down_map: np.ndarray, path_points: List[Tuple], color: int, thickness: int = 2) -> np.ndarray:
+def draw_path(
+    top_down_map: np.ndarray,
+    path_points: List[Tuple],
+    color: int,
+    thickness: int = 2,
+) -> np.ndarray:
     r"""Draw path on top_down_map (in place) with specified color.
         Args:
             top_down_map: A colored version of the map.
@@ -346,10 +351,4 @@ def draw_path(top_down_map: np.ndarray, path_points: List[Tuple], color: int, th
             thickness: thickness of the path.
     """
     for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
-        cv2.line(
-            top_down_map,
-            prev_pt,
-            next_pt,
-            color,
-            thickness=thickness,
-        )
+        cv2.line(top_down_map, prev_pt, next_pt, color, thickness=thickness)
