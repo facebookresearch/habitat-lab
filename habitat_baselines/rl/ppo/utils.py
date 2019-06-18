@@ -7,11 +7,11 @@
 import argparse
 from collections import defaultdict
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
 
-import cv2
 from habitat.utils.visualizations import maps, utils
 
 

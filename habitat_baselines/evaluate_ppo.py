@@ -8,11 +8,11 @@ import argparse
 import os
 import time
 
+import cv2
 import numpy as np
 import torch
 from torch.utils import tensorboard
 
-import cv2
 import habitat
 from config.default import get_config as cfg_baseline
 from habitat import logger
