@@ -6,12 +6,10 @@
 
 import argparse
 from collections import defaultdict
-
 import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-
 from habitat.utils.visualizations import maps, utils
 
 
@@ -472,12 +470,11 @@ def generate_frame(observation, info):
     top_down_map = info["top_down_map"]["map"]
     top_down_map = maps.colorize_topdown_map(top_down_map)
     map_agent_pos = info["top_down_map"]["agent_map_coord"]
-
     top_down_map = maps.draw_agent(
         image=top_down_map,
         agent_center_coord=map_agent_pos,
         agent_rotation=info["top_down_map"]["agent_angle"],
-        agent_radius_px=8,
+        agent_radius_px=top_down_map.shape[0] // 16,
     )
 
     if top_down_map.shape[0] > top_down_map.shape[1]:

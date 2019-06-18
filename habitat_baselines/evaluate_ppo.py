@@ -56,8 +56,15 @@ def main():
         default="configs/tasks/pointnav.yaml",
         help="path to config yaml containing information about task",
     )
-    parser.add_argument("--video", type=int, default=0, choices=[0, 1])
-    parser.add_argument("--out-dir-video", type=str)
+    parser.add_argument(
+        "--video-option",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3],
+        help="option for video generation. 0: no video; 1: save videos in video-dir;"
+        " 2: upload video to tensorboard; 3: both save in video-dir and upload to tensorboard",
+    )
+    parser.add_argument("--video-dir", type=str)
     parser.add_argument("--tensorboard-dir", type=str, default="tb_eval")
 
     args = parser.parse_args()
@@ -106,7 +113,7 @@ def eval_checkpoint(checkpoint_path, args, writer):
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
-        if args.video == 1:
+        if args.video_option != 0:
             config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config_env.TASK.MEASUREMENTS.append("COLLISIONS")
         config_env.freeze()
@@ -170,9 +177,9 @@ def eval_checkpoint(checkpoint_path, args, writer):
     stats_episodes = set()
 
     rgb_frames = None
-    if args.video == 1:
+    if args.video_option != 0:
         rgb_frames = [[]] * args.num_processes
-        os.makedirs(args.out_dir_video, exist_ok=True)
+        os.makedirs(args.video_dir, exist_ok=True)
 
     while episode_counts.sum() < args.count_test_episodes:
         current_episodes = envs.current_episodes()
@@ -221,27 +228,29 @@ def eval_checkpoint(checkpoint_path, args, writer):
                 envs_to_pause.append(i)
 
             if not_done_masks[i].item() == 0:
-                # episode ended, record and generate videos
+                # episode ended, record and generate videos as specified
                 stats_episodes.add(current_episodes[i].episode_id)
-                if args.video == 1 and len(rgb_frames[i]) > 0:
+                if args.video_option != 0 and len(rgb_frames[i]) > 0:
                     video_name = "episode{}_ckpt{}_spl{:.2f}".format(
                         current_episodes[i].episode_id,
                         checkpoint_idx,
                         infos[i]["spl"],
                     )
-                    images_to_video(
-                        rgb_frames[i], args.out_dir_video, video_name
-                    )
-                    frames_to_tb_video(
-                        "episode{}".format(current_episodes[i].episode_id),
-                        checkpoint_idx,
-                        rgb_frames[i],
-                        writer,
-                        fps=10,
-                    )
+                    if args.video_option in [1, 3]:
+                        images_to_video(
+                            rgb_frames[i], args.video_dir, video_name
+                        )
+                    if args.video_option in [2, 3]:
+                        frames_to_tb_video(
+                            "episode{}".format(current_episodes[i].episode_id),
+                            checkpoint_idx,
+                            rgb_frames[i],
+                            writer,
+                            fps=10,
+                        )
                     rgb_frames[i] = []
 
-            elif args.video == 1:
+            elif args.video_option != 0:
                 # episode continues, record current frame
                 frame = generate_frame(observations[i], infos[i])
                 rgb_frames[i].append(frame)
@@ -264,7 +273,7 @@ def eval_checkpoint(checkpoint_path, args, writer):
             for k, v in batch.items():
                 batch[k] = v[state_index]
 
-            if args.video == 1:
+            if args.video_option != 0:
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
     episode_reward_mean = (episode_rewards / episode_counts).mean().item()
@@ -275,8 +284,17 @@ def eval_checkpoint(checkpoint_path, args, writer):
     logger.info("Average episode success: {:.6f}".format(episode_success_mean))
     logger.info("Average episode SPL: {:.6f}".format(episode_spl_mean))
 
-    writer.add_scalar("Average reward", episode_reward_mean, checkpoint_idx)
-    writer.add_scalar("SPL", episode_spl_mean, checkpoint_idx)
+    writer.add_scalars(
+        "eval_reward", {"average reward": episode_reward_mean}, checkpoint_idx
+    )
+    writer.add_scalars(
+        "eval_SPL", {"average SPL": episode_spl_mean}, checkpoint_idx
+    )
+    writer.add_scalars(
+        "eval_success",
+        {"average success": episode_success_mean},
+        checkpoint_idx,
+    )
 
 
 if __name__ == "__main__":

@@ -325,12 +325,7 @@ def run_training():
             pth_time += time() - t_update_model
 
             # add tensorboard support
-            key_spl = "spl"
-            losses = torch.tensor(
-                [value_loss, action_loss, dist_entropy],
-                device=device,
-                dtype=torch.float32,
-            )
+            losses = [value_loss, action_loss]
             stats = zip(
                 ["count", "reward"],
                 [window_episode_counts, window_episode_reward],
@@ -352,10 +347,8 @@ def run_training():
             writer.add_scalars(
                 "losses",
                 {
-                    k: l.item() * s
-                    for l, k, s in zip(
-                        losses, ["value", "policy", "entropy"], [1, 1, 0.1]
-                    )
+                    k: l * s
+                    for l, k, s in zip(losses, ["value", "policy"], [1, 1])
                 },
                 count_steps,
             )

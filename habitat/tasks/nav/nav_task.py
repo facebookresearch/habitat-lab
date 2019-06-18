@@ -420,6 +420,7 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
+        self._draw_optimal_path = config.DRAW_OPTIMAL_PATH
         self._optimal_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
@@ -450,7 +451,6 @@ class TopDownMap(Measure):
         self._ind_x_max = range_x[-1]
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
-
         return top_down_map
 
     def draw_source_and_target(self, episode):
@@ -488,19 +488,6 @@ class TopDownMap(Measure):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map()
-        self._optimal_path_points = self._sim.get_straight_shortest_path_points(
-            self._sim.get_agent_state().position, episode.goals[0].position
-        )
-        self._optimal_path_points = [
-            maps.to_grid(
-                p[0],
-                p[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )[::-1]
-            for p in self._optimal_path_points
-        ]
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
             agent_position[0],
@@ -510,14 +497,28 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        # draw optimal path
-        maps.draw_path(
-            self._top_down_map,
-            self._optimal_path_points,
-            maps.MAP_OPTIMAL_PATH_COLOR,
-            self.line_thickness,
-        )
-        # draw source adn target points last to avoid blocking
+        if self._draw_optimal_path:
+            # draw optimal path
+            self._optimal_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
+            )
+            self._optimal_path_points = [
+                maps.to_grid(
+                    p[0],
+                    p[2],
+                    self._coordinate_min,
+                    self._coordinate_max,
+                    self._map_resolution,
+                )[::-1]
+                for p in self._optimal_path_points
+            ]
+            maps.draw_path(
+                self._top_down_map,
+                self._optimal_path_points,
+                maps.MAP_OPTIMAL_PATH_COLOR,
+                self.line_thickness,
+            )
+        # draw source and target points last to avoid blocking
         self.draw_source_and_target(episode)
 
     def update_metric(self, episode, action):
