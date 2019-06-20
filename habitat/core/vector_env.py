@@ -188,8 +188,7 @@ class VectorEnv:
                         result = getattr(env, function_name)(*function_args)
                     connection_write_fn(result)
                 elif command == EPISODE_COMMAND:
-                    current_episode = env.current_episode
-                    connection_write_fn(current_episode)
+                    connection_write_fn(env.current_episode)
                 else:
                     raise NotImplementedError
 

@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import contextlib
 import os
 import random
 from collections import deque
@@ -225,12 +226,13 @@ def run_training():
     count_steps = 0
     count_checkpoints = 0
 
-    tensorboard_dir = args.tensorboard_dir
-
-    writer_kwargs = dict(
-        log_dir=tensorboard_dir, purge_step=count_steps, flush_secs=30
-    )
-    with (tensorboard.SummaryWriter(**writer_kwargs)) as writer:
+    with (
+        tensorboard.SummaryWriter(
+            log_dir=args.tensorboard_dir, purge_step=count_steps, flush_secs=30
+        )
+        if args.tensorboard_dir is not None
+        else contextlib.suppress()
+    ) as writer:
         for update in range(args.num_updates):
             if args.use_linear_lr_decay:
                 update_linear_schedule(
@@ -340,18 +342,19 @@ def run_training():
             }
             deltas["count"] = max(deltas["count"], 1.0)
 
-            writer.add_scalar(
-                "reward", deltas["reward"] / deltas["count"], count_steps
-            )
+            with contextlib.suppress(AttributeError):
+                writer.add_scalar(
+                    "reward", deltas["reward"] / deltas["count"], count_steps
+                )
 
-            writer.add_scalars(
-                "losses",
-                {
-                    k: l * s
-                    for l, k, s in zip(losses, ["value", "policy"], [1, 1])
-                },
-                count_steps,
-            )
+                writer.add_scalars(
+                    "losses",
+                    {
+                        k: l * s
+                        for l, k, s in zip(losses, ["value", "policy"], [1, 1])
+                    },
+                    count_steps,
+                )
 
             # log stats
             if update > 0 and update % args.log_interval == 0:

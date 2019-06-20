@@ -428,22 +428,23 @@ def ppo_args():
     parser.add_argument(
         "--tensorboard-dir",
         type=str,
-        default="tb_train",
-        help="path to logging dir for Tensorboard",
+        help="path to tensorboard logging directory",
     )
     return parser
 
 
 def frames_to_tb_video(video_name, step_idx, frames, writer, fps=10):
-    """
-    write video into tensorboard from images frames
-    :param video_name: name of video string
-    :param step_idx: int of checkpoint index to be displayed
-    :param frames: list of n frames. Each frame is a np.ndarray of shape
-        (H, W, 3) where 3 is the RGB channels
-    :param writer: tensorboard summary writer
-    :param fps: frame per second for output video
-    :return: None
+    r"""Write video into tensorboard from images frames.
+
+    Args:
+        video_name: name of video string.
+        step_idx: int of checkpoint index to be displayed.
+        frames: list of n frames. Each frame is a np.ndarray of shape.
+        writer: tensorboard summary writer.
+        fps: frame per second for output video.
+
+    Returns:
+        None.
     """
     # initial shape of np.ndarray list: N * (H, W, 3)
     frame_tensors = [
@@ -456,6 +457,16 @@ def frames_to_tb_video(video_name, step_idx, frames, writer, fps=10):
 
 
 def generate_frame(observation, info):
+    r"""Generate image of single frame from observation and info
+    returned from a single environment step().
+
+    Args:
+        observation: observation returned from an environment step().
+        info: info returned from an environment step().
+
+    Returns:
+        generated image of a single frame.
+    """
     observation_size = observation["rgb"].shape[0]
     egocentric_view = observation["rgb"][:, :, :3]
     # draw collision

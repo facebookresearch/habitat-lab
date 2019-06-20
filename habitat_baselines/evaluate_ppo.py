@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import contextlib
+import glob
 import os
 import time
 
-import cv2
-import numpy as np
 import torch
 from torch.utils import tensorboard
 
@@ -24,78 +24,59 @@ from train_ppo import make_env_fn
 
 
 def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
+    r""" Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
+    (sorted by time of last modification).
+
+    Args:
+        checkpoint_folder: directory to look for checkpoints.
+        previous_ckpt_ind: index of checkpoint last returned.
+
+    Returns:
+        return checkpoint path if (previous_ckpt_ind + 1)th checkpoint is found
+        else return None.
+    """
     assert os.path.isdir(checkpoint_folder), "invalid checkpoint folder path"
-    models = os.listdir(checkpoint_folder)
-    models.sort(key=lambda x: int(x.strip().split(".")[1]))
+    models_paths = list(
+        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
+    )
+    models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
-    if ind < len(models):
-        return os.path.join(checkpoint_folder, models[ind])
+    if ind < len(models_paths):
+        return models_paths[ind]
     return None
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", type=str, required=False)
-    parser.add_argument("--tracking-model-dir", type=str, required=False)
-    parser.add_argument("--sim-gpu-id", type=int, required=True)
-    parser.add_argument("--pth-gpu-id", type=int, required=True)
-    parser.add_argument("--num-processes", type=int, required=True)
-    parser.add_argument("--hidden-size", type=int, default=512)
-    parser.add_argument("--count-test-episodes", type=int, default=100)
-    parser.add_argument(
-        "--sensors",
-        type=str,
-        default="RGB_SENSOR,DEPTH_SENSOR",
-        help="comma separated string containing different"
-        "sensors to use, currently 'RGB_SENSOR' and"
-        "'DEPTH_SENSOR' are supported",
-    )
-    parser.add_argument(
-        "--task-config",
-        type=str,
-        default="configs/tasks/pointnav.yaml",
-        help="path to config yaml containing information about task",
-    )
-    parser.add_argument(
-        "--video-option",
-        type=int,
-        default=0,
-        choices=[0, 1, 2, 3],
-        help="option for video generation. 0: no video; 1: save videos in video-dir;"
-        " 2: upload video to tensorboard; 3: both save in video-dir and upload to tensorboard",
-    )
-    parser.add_argument("--video-dir", type=str)
-    parser.add_argument("--tensorboard-dir", type=str, default="tb_eval")
+def generate_video(
+    args, rgb_frame, episode_id, checkpoint_idx, spl, tb_writer
+):
+    r"""Generate video according to specified information.
 
-    args = parser.parse_args()
-    assert (args.model_path is not None) != (
-        args.tracking_model_dir is not None
-    ), "Must specify a single model or a directory of models, but not both"
+    Args:
+        args: contains args.video_option and args.video_dir.
+        rgb_frame: list of images to be converted to video.
+        episode_id: episode id for video naming.
+        checkpoint_idx: checkpoint index for video naming.
+        spl: SPL for this episode for video naming.
+        tb_writer: tensorboard writer object for uploading video
 
-    writer_kwargs = dict(
-        log_dir=args.tensorboard_dir, purge_step=0, flush_secs=30
-    )
-    with (tensorboard.SummaryWriter(**writer_kwargs)) as writer:
-
-        if args.model_path is not None:
-            eval_checkpoint(args.model_path, args, writer)
-        else:  # track model progression
-            prev_ckpt_ind = -1
-            while True:
-                current_ckpt = None
-                while current_ckpt is None:
-                    current_ckpt = poll_checkpoint_folder(
-                        args.tracking_model_dir, prev_ckpt_ind
-                    )
-                    time.sleep(2)  # sleep for 2 seconds before polling again
-
-                logger.warning(
-                    "=============current_ckpt: {}=============".format(
-                        current_ckpt
-                    )
+    Returns:
+        None
+    """
+    if args.video_option != "no_video" and len(rgb_frame) > 0:
+        video_name = "episode{}_ckpt{}_spl{:.2f}".format(
+            episode_id, checkpoint_idx, spl
+        )
+        if args.video_option in ["video_dir", "video_both"]:
+            images_to_video(rgb_frame, args.video_dir, video_name)
+        if args.video_option in ["video_tb", "video_both"]:
+            with contextlib.suppress(AttributeError):
+                frames_to_tb_video(
+                    "episode{}".format(episode_id),
+                    checkpoint_idx,
+                    rgb_frame,
+                    tb_writer,
+                    fps=10,
                 )
-                eval_checkpoint(current_ckpt, args, writer)
-                prev_ckpt_ind += 1
 
 
 def eval_checkpoint(checkpoint_path, args, writer):
@@ -113,7 +94,7 @@ def eval_checkpoint(checkpoint_path, args, writer):
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
-        if args.video_option != 0:
+        if args.video_option != "no_video":
             config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config_env.TASK.MEASUREMENTS.append("COLLISIONS")
         config_env.freeze()
@@ -177,7 +158,7 @@ def eval_checkpoint(checkpoint_path, args, writer):
     stats_episodes = set()
 
     rgb_frames = None
-    if args.video_option != 0:
+    if args.video_option != "no_video":
         rgb_frames = [[]] * args.num_processes
         os.makedirs(args.video_dir, exist_ok=True)
 
@@ -219,7 +200,6 @@ def eval_checkpoint(checkpoint_path, args, writer):
         episode_counts += 1 - not_done_masks
         current_episode_reward *= not_done_masks
 
-        # added for video support
         next_episodes = envs.current_episodes()
         envs_to_pause = []
         n_envs = envs.num_envs
@@ -227,37 +207,26 @@ def eval_checkpoint(checkpoint_path, args, writer):
             if next_episodes[i].episode_id in stats_episodes:
                 envs_to_pause.append(i)
 
+            # episode ended
             if not_done_masks[i].item() == 0:
-                # episode ended, record and generate videos as specified
                 stats_episodes.add(current_episodes[i].episode_id)
-                if args.video_option != 0 and len(rgb_frames[i]) > 0:
-                    video_name = "episode{}_ckpt{}_spl{:.2f}".format(
-                        current_episodes[i].episode_id,
-                        checkpoint_idx,
-                        infos[i]["spl"],
-                    )
-                    if args.video_option in [1, 3]:
-                        images_to_video(
-                            rgb_frames[i], args.video_dir, video_name
-                        )
-                    if args.video_option in [2, 3]:
-                        frames_to_tb_video(
-                            "episode{}".format(current_episodes[i].episode_id),
-                            checkpoint_idx,
-                            rgb_frames[i],
-                            writer,
-                            fps=10,
-                        )
-                    rgb_frames[i] = []
+                generate_video(
+                    args,
+                    rgb_frames[i],
+                    current_episodes[i].episode_id,
+                    checkpoint_idx,
+                    infos[i]["spl"],
+                    writer,
+                )
+                rgb_frames[i] = []
 
-            elif args.video_option != 0:
-                # episode continues, record current frame
+            # episode continues
+            elif args.video_option != "no_video":
                 frame = generate_frame(observations[i], infos[i])
                 rgb_frames[i].append(frame)
 
+        # stop tracking ended episodes if they exist
         if len(envs_to_pause) > 0:
-            # stop tracking ended episodes
-
             state_index = list(range(envs.num_envs))
             for idx in reversed(envs_to_pause):
                 state_index.pop(idx)
@@ -273,7 +242,7 @@ def eval_checkpoint(checkpoint_path, args, writer):
             for k, v in batch.items():
                 batch[k] = v[state_index]
 
-            if args.video_option != 0:
+            if args.video_option != "no_video":
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
     episode_reward_mean = (episode_rewards / episode_counts).mean().item()
@@ -284,17 +253,100 @@ def eval_checkpoint(checkpoint_path, args, writer):
     logger.info("Average episode success: {:.6f}".format(episode_success_mean))
     logger.info("Average episode SPL: {:.6f}".format(episode_spl_mean))
 
-    writer.add_scalars(
-        "eval_reward", {"average reward": episode_reward_mean}, checkpoint_idx
+    with contextlib.suppress(AttributeError):
+        writer.add_scalars(
+            "eval_reward",
+            {"average reward": episode_reward_mean},
+            checkpoint_idx,
+        )
+        writer.add_scalars(
+            "eval_SPL", {"average SPL": episode_spl_mean}, checkpoint_idx
+        )
+        writer.add_scalars(
+            "eval_success",
+            {"average success": episode_success_mean},
+            checkpoint_idx,
+        )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-path", type=str)
+    parser.add_argument("--tracking-model-dir", type=str)
+    parser.add_argument("--sim-gpu-id", type=int, required=True)
+    parser.add_argument("--pth-gpu-id", type=int, required=True)
+    parser.add_argument("--num-processes", type=int, required=True)
+    parser.add_argument("--hidden-size", type=int, default=512)
+    parser.add_argument("--count-test-episodes", type=int, default=100)
+    parser.add_argument(
+        "--sensors",
+        type=str,
+        default="RGB_SENSOR,DEPTH_SENSOR",
+        help="comma separated string containing different"
+        "sensors to use, currently 'RGB_SENSOR' and"
+        "'DEPTH_SENSOR' are supported",
     )
-    writer.add_scalars(
-        "eval_SPL", {"average SPL": episode_spl_mean}, checkpoint_idx
+    parser.add_argument(
+        "--task-config",
+        type=str,
+        default="configs/tasks/pointnav.yaml",
+        help="path to config yaml containing information about task",
     )
-    writer.add_scalars(
-        "eval_success",
-        {"average success": episode_success_mean},
-        checkpoint_idx,
+    parser.add_argument(
+        "--video-option",
+        type=str,
+        default="no_video",
+        choices=["no_video", "video_dir", "video_tb", "video_both"],
+        help="option for video generation. no_video (default): do not generate vidoe at all; "
+        "video_dir: generate videos and save in video-dir; "
+        "video_tb: generate videos, save in tensorboard-dir and upload videos to tensorboard ; "
+        "video_both: both save in video-dir and upload to tensorboard",
     )
+    parser.add_argument(
+        "--video-dir", type=str, help="directory for storing videos"
+    )
+    parser.add_argument(
+        "--tensorboard-dir",
+        type=str,
+        help="directory for storing tensorboard statistics",
+    )
+
+    args = parser.parse_args()
+    assert (args.model_path is not None) != (
+        args.tracking_model_dir is not None
+    ), "Must specify a single model or a directory of models, but not both"
+    if args.video_option in ["video_tb", "video_both"]:
+        assert (
+            args.tensorboard_dir is not None
+        ), "Must specify a tensorboard directory for video display"
+
+    with (
+        tensorboard.SummaryWriter(
+            log_dir=args.tensorboard_dir, purge_step=0, flush_secs=30
+        )
+        if args.tensorboard_dir is not None
+        else contextlib.suppress()
+    ) as writer:
+        if args.model_path is not None:
+            # evaluate singe checkpoint
+            eval_checkpoint(args.model_path, args, writer)
+        else:
+            # evaluate multiple checkpoints in order
+            prev_ckpt_ind = -1
+            while True:
+                current_ckpt = None
+                while current_ckpt is None:
+                    current_ckpt = poll_checkpoint_folder(
+                        args.tracking_model_dir, prev_ckpt_ind
+                    )
+                    time.sleep(2)  # sleep for 2 seconds before polling again
+                logger.warning(
+                    "=============current_ckpt: {}=============".format(
+                        current_ckpt
+                    )
+                )
+                eval_checkpoint(current_ckpt, args, writer)
+                prev_ckpt_ind += 1
 
 
 if __name__ == "__main__":

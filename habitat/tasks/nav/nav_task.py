@@ -393,7 +393,7 @@ class Collisions(Measure):
 
     def update_metric(self, episode, action):
         if self._metric is None:
-            self._metric = dict(count=0, is_collision=False)
+            self._metric = {"count": 0, "is_collision": False}
         self._metric["is_collision"] = False
         if self._sim.previous_step_collided:
             self._metric["count"] += 1
@@ -420,7 +420,6 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
-        self._draw_optimal_path = config.DRAW_OPTIMAL_PATH
         self._optimal_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
@@ -454,35 +453,34 @@ class TopDownMap(Measure):
         return top_down_map
 
     def draw_source_and_target(self, episode):
-        if self._config.DRAW_SOURCE_AND_TARGET:
-            # mark source point
-            s_x, s_y = maps.to_grid(
-                episode.start_position[0],
-                episode.start_position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            point_padding = 2 * int(
-                np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
-            )
-            self._top_down_map[
-                s_x - point_padding : s_x + point_padding + 1,
-                s_y - point_padding : s_y + point_padding + 1,
-            ] = maps.MAP_SOURCE_POINT_INDICATOR
+        # mark source point
+        s_x, s_y = maps.to_grid(
+            episode.start_position[0],
+            episode.start_position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        point_padding = 2 * int(
+            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+        )
+        self._top_down_map[
+            s_x - point_padding : s_x + point_padding + 1,
+            s_y - point_padding : s_y + point_padding + 1,
+        ] = maps.MAP_SOURCE_POINT_INDICATOR
 
-            # mark target point
-            t_x, t_y = maps.to_grid(
-                episode.goals[0].position[0],
-                episode.goals[0].position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            self._top_down_map[
-                t_x - point_padding : t_x + point_padding + 1,
-                t_y - point_padding : t_y + point_padding + 1,
-            ] = maps.MAP_TARGET_POINT_INDICATOR
+        # mark target point
+        t_x, t_y = maps.to_grid(
+            episode.goals[0].position[0],
+            episode.goals[0].position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        self._top_down_map[
+            t_x - point_padding : t_x + point_padding + 1,
+            t_y - point_padding : t_y + point_padding + 1,
+        ] = maps.MAP_TARGET_POINT_INDICATOR
 
     def reset_metric(self, episode):
         self._step_count = 0
@@ -497,7 +495,7 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        if self._draw_optimal_path:
+        if self._config.DRAW_OPTIMAL_PATH:
             # draw optimal path
             self._optimal_path_points = self._sim.get_straight_shortest_path_points(
                 agent_position, episode.goals[0].position
@@ -519,7 +517,8 @@ class TopDownMap(Measure):
                 self.line_thickness,
             )
         # draw source and target points last to avoid blocking
-        self.draw_source_and_target(episode)
+        if self._config.DRAW_SOURCE_AND_TARGET:
+            self.draw_source_and_target(episode)
 
     def update_metric(self, episode, action):
         self._step_count += 1
@@ -549,7 +548,7 @@ class TopDownMap(Measure):
 
     def get_polar_angle(self):
         agent_state = self._sim.get_agent_state()
-        # Quaternion is in x, y, z, w format
+        # quaternion is in x, y, z, w format
         ref_rotation = agent_state.rotation
 
         heading_vector = quaternion_rotate_vector(
