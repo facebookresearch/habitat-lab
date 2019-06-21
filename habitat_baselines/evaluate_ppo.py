@@ -79,8 +79,7 @@ def generate_video(
                 )
 
 
-def eval_checkpoint(checkpoint_path, args, writer):
-    checkpoint_idx = int(checkpoint_path.strip().split(".")[1])
+def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     env_configs = []
     baseline_configs = []
     device = torch.device("cuda:{}".format(args.pth_gpu_id))
@@ -207,6 +206,10 @@ def eval_checkpoint(checkpoint_path, args, writer):
             if next_episodes[i].episode_id in stats_episodes:
                 envs_to_pause.append(i)
 
+            if args.video_option != "no_video":
+                frame = generate_frame(observations[i], infos[i])
+                rgb_frames[i].append(frame)
+
             # episode ended
             if not_done_masks[i].item() == 0:
                 stats_episodes.add(current_episodes[i].episode_id)
@@ -214,16 +217,11 @@ def eval_checkpoint(checkpoint_path, args, writer):
                     args,
                     rgb_frames[i],
                     current_episodes[i].episode_id,
-                    checkpoint_idx,
+                    cur_ckpt_idx,
                     infos[i]["spl"],
                     writer,
                 )
                 rgb_frames[i] = []
-
-            # episode continues
-            elif args.video_option != "no_video":
-                frame = generate_frame(observations[i], infos[i])
-                rgb_frames[i].append(frame)
 
         # stop tracking ended episodes if they exist
         if len(envs_to_pause) > 0:
@@ -257,15 +255,15 @@ def eval_checkpoint(checkpoint_path, args, writer):
         writer.add_scalars(
             "eval_reward",
             {"average reward": episode_reward_mean},
-            checkpoint_idx,
+            cur_ckpt_idx,
         )
         writer.add_scalars(
-            "eval_SPL", {"average SPL": episode_spl_mean}, checkpoint_idx
+            "eval_SPL", {"average SPL": episode_spl_mean}, cur_ckpt_idx
         )
         writer.add_scalars(
             "eval_success",
             {"average success": episode_success_mean},
-            checkpoint_idx,
+            cur_ckpt_idx,
         )
 
 
@@ -345,7 +343,9 @@ def main():
                         current_ckpt
                     )
                 )
-                eval_checkpoint(current_ckpt, args, writer)
+                eval_checkpoint(
+                    current_ckpt, args, writer, cur_ckpt_idx=prev_ckpt_ind + 1
+                )
                 prev_ckpt_ind += 1
 
 
