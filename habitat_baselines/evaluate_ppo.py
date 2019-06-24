@@ -206,10 +206,6 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             if next_episodes[i].episode_id in stats_episodes:
                 envs_to_pause.append(i)
 
-            if args.video_option != "no_video":
-                frame = generate_frame(observations[i], infos[i])
-                rgb_frames[i].append(frame)
-
             # episode ended
             if not_done_masks[i].item() == 0:
                 stats_episodes.add(current_episodes[i].episode_id)
@@ -222,6 +218,11 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
                     writer,
                 )
                 rgb_frames[i] = []
+
+            # episode continues
+            elif args.video_option != "no_video":
+                frame = generate_frame(observations[i], infos[i])
+                rgb_frames[i].append(frame)
 
         # stop tracking ended episodes if they exist
         if len(envs_to_pause) > 0:
