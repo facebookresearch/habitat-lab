@@ -7,12 +7,9 @@
 import argparse
 from collections import defaultdict
 
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-
-from habitat.utils.visualizations import maps, utils
 
 
 class Flatten(nn.Module):
@@ -431,77 +428,3 @@ def ppo_args():
         help="path to tensorboard logging directory",
     )
     return parser
-
-
-def frames_to_tb_video(video_name, step_idx, frames, writer, fps=10):
-    r"""Write video into tensorboard from images frames.
-
-    Args:
-        video_name: name of video string.
-        step_idx: int of checkpoint index to be displayed.
-        frames: list of n frames. Each frame is a np.ndarray of shape.
-        writer: tensorboard summary writer.
-        fps: frame per second for output video.
-
-    Returns:
-        None.
-    """
-    # initial shape of np.ndarray list: N * (H, W, 3)
-    frame_tensors = [
-        torch.from_numpy(np_arr).unsqueeze(0) for np_arr in frames
-    ]
-    video_tensor = torch.cat(tuple(frame_tensors))
-    video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)
-    # final shape of video tensor: (1, n, 3, H, W)
-    writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
-
-
-def generate_frame(observation, info):
-    r"""Generate image of single frame from observation and info
-    returned from a single environment step().
-
-    Args:
-        observation: observation returned from an environment step().
-        info: info returned from an environment step().
-
-    Returns:
-        generated image of a single frame.
-    """
-    observation_size = observation["rgb"].shape[0]
-    egocentric_view = observation["rgb"][:, :, :3]
-    # draw collision
-    if info["collisions"]["is_collision"]:
-        egocentric_view = utils.draw_collision(egocentric_view)
-
-    # draw depth map if observation has depth info
-    if "depth" in observation.keys():
-        depth_map = (observation["depth"].squeeze() * 255).astype(np.uint8)
-        depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-
-        egocentric_view = np.concatenate((egocentric_view, depth_map), axis=1)
-
-    top_down_map = info["top_down_map"]["map"]
-    top_down_map = maps.colorize_topdown_map(top_down_map)
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    top_down_map = maps.draw_agent(
-        image=top_down_map,
-        agent_center_coord=map_agent_pos,
-        agent_rotation=info["top_down_map"]["agent_angle"],
-        agent_radius_px=top_down_map.shape[0] // 16,
-    )
-
-    if top_down_map.shape[0] > top_down_map.shape[1]:
-        top_down_map = np.rot90(top_down_map, 1)
-
-    # scale top down map to align with rgb view
-    old_h, old_w, _ = top_down_map.shape
-    top_down_height = observation_size
-    top_down_width = int(float(top_down_height) / old_h * old_w)
-    # cv2 resize dsize is width first
-    top_down_map = cv2.resize(
-        top_down_map,
-        (top_down_width, top_down_height),
-        interpolation=cv2.INTER_CUBIC,
-    )
-    frame = np.concatenate((egocentric_view, top_down_map), axis=1)
-    return frame

@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import contextlib
 import os
 import random
 from collections import deque
@@ -12,7 +11,6 @@ from time import time
 
 import numpy as np
 import torch
-from torch.utils import tensorboard
 
 import habitat
 from config.default import get_config as cfg_baseline
@@ -22,6 +20,7 @@ from habitat.datasets.registration import make_dataset
 from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
+from tensorboard_utils import get_tensorboard_writer
 
 
 class NavRLEnv(habitat.RLEnv):
@@ -227,11 +226,9 @@ def run_training():
     count_checkpoints = 0
 
     with (
-        tensorboard.SummaryWriter(
+        get_tensorboard_writer(
             log_dir=args.tensorboard_dir, purge_step=count_steps, flush_secs=30
         )
-        if args.tensorboard_dir is not None
-        else contextlib.suppress()
     ) as writer:
         for update in range(args.num_updates):
             if args.use_linear_lr_decay:
@@ -326,7 +323,6 @@ def run_training():
             rollouts.after_update()
             pth_time += time() - t_update_model
 
-            # add tensorboard support
             losses = [value_loss, action_loss]
             stats = zip(
                 ["count", "reward"],
@@ -342,19 +338,15 @@ def run_training():
             }
             deltas["count"] = max(deltas["count"], 1.0)
 
-            with contextlib.suppress(AttributeError):
-                writer.add_scalar(
-                    "reward", deltas["reward"] / deltas["count"], count_steps
-                )
+            writer.add_scalar(
+                "reward", deltas["reward"] / deltas["count"], count_steps
+            )
 
-                writer.add_scalars(
-                    "losses",
-                    {
-                        k: l * s
-                        for l, k, s in zip(losses, ["value", "policy"], [1, 1])
-                    },
-                    count_steps,
-                )
+            writer.add_scalars(
+                "losses",
+                {k: l for l, k in zip(losses, ["value", "policy"])},
+                count_steps,
+            )
 
             # log stats
             if update > 0 and update % args.log_interval == 0:

@@ -420,7 +420,7 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
-        self._optimal_path_points = None
+        self._shortest_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
@@ -495,12 +495,12 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        if self._config.DRAW_OPTIMAL_PATH:
-            # draw optimal path
-            self._optimal_path_points = self._sim.get_straight_shortest_path_points(
+        if self._config.DRAW_SHORTEST_PATH:
+            # draw shortest path
+            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
                 agent_position, episode.goals[0].position
             )
-            self._optimal_path_points = [
+            self._shortest_path_points = [
                 maps.to_grid(
                     p[0],
                     p[2],
@@ -508,15 +508,15 @@ class TopDownMap(Measure):
                     self._coordinate_max,
                     self._map_resolution,
                 )[::-1]
-                for p in self._optimal_path_points
+                for p in self._shortest_path_points
             ]
             maps.draw_path(
                 self._top_down_map,
-                self._optimal_path_points,
-                maps.MAP_OPTIMAL_PATH_COLOR,
+                self._shortest_path_points,
+                maps.MAP_SHORTEST_PATH_COLOR,
                 self.line_thickness,
             )
-        # draw source and target points last to avoid blocking
+        # draw source and target points last to avoid overlap
         if self._config.DRAW_SOURCE_AND_TARGET:
             self.draw_source_and_target(episode)
 
@@ -556,7 +556,8 @@ class TopDownMap(Measure):
         )
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        return np.array(phi) - np.pi / 2
+        x_y_flip = -np.pi / 2
+        return np.array(phi) + x_y_flip
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(

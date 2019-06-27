@@ -5,21 +5,23 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import contextlib
 import glob
 import os
 import time
 
 import torch
-from torch.utils import tensorboard
 
 import habitat
 from config.default import get_config as cfg_baseline
 from habitat import logger
 from habitat.config.default import get_config
-from habitat.utils.visualizations.utils import images_to_video
+from habitat.utils.visualizations.utils import (
+    images_to_video,
+    observations_to_image,
+)
 from rl.ppo import PPO, Policy
-from rl.ppo.utils import batch_obs, frames_to_tb_video, generate_frame
+from rl.ppo.utils import batch_obs
+from tensorboard_utils import get_tensorboard_writer
 from train_ppo import make_env_fn
 
 
@@ -47,36 +49,30 @@ def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
 
 
 def generate_video(
-    args, rgb_frame, episode_id, checkpoint_idx, spl, tb_writer
+    args, images, episode_id, checkpoint_idx, spl, tb_writer, fps=10
 ):
     r"""Generate video according to specified information.
 
     Args:
         args: contains args.video_option and args.video_dir.
-        rgb_frame: list of images to be converted to video.
+        images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
         spl: SPL for this episode for video naming.
         tb_writer: tensorboard writer object for uploading video
+        fps: fps for generated video
 
     Returns:
         None
     """
-    if args.video_option != "no_video" and len(rgb_frame) > 0:
-        video_name = "episode{}_ckpt{}_spl{:.2f}".format(
-            episode_id, checkpoint_idx, spl
-        )
-        if args.video_option in ["video_dir", "video_both"]:
-            images_to_video(rgb_frame, args.video_dir, video_name)
-        if args.video_option in ["video_tb", "video_both"]:
-            with contextlib.suppress(AttributeError):
-                frames_to_tb_video(
-                    "episode{}".format(episode_id),
-                    checkpoint_idx,
-                    rgb_frame,
-                    tb_writer,
-                    fps=10,
-                )
+    if args.video_option and len(images) > 0:
+        video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
+        if "disk" in args.video_option:
+            images_to_video(images, args.video_dir, video_name)
+        if "tensorboard" in args.video_option:
+            tb_writer.add_video_from_np_images(
+                f"episode{episode_id}", checkpoint_idx, images, fps=fps
+            )
 
 
 def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
@@ -93,7 +89,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config_env.SIMULATOR.AGENT_0.SENSORS = agent_sensors
-        if args.video_option != "no_video":
+        if args.video_option:
             config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config_env.TASK.MEASUREMENTS.append("COLLISIONS")
         config_env.freeze()
@@ -157,7 +153,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     stats_episodes = set()
 
     rgb_frames = None
-    if args.video_option != "no_video":
+    if args.video_option:
         rgb_frames = [[]] * args.num_processes
         os.makedirs(args.video_dir, exist_ok=True)
 
@@ -209,19 +205,20 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             # episode ended
             if not_done_masks[i].item() == 0:
                 stats_episodes.add(current_episodes[i].episode_id)
-                generate_video(
-                    args,
-                    rgb_frames[i],
-                    current_episodes[i].episode_id,
-                    cur_ckpt_idx,
-                    infos[i]["spl"],
-                    writer,
-                )
-                rgb_frames[i] = []
+                if args.video_option:
+                    generate_video(
+                        args,
+                        rgb_frames[i],
+                        current_episodes[i].episode_id,
+                        cur_ckpt_idx,
+                        infos[i]["spl"],
+                        writer,
+                    )
+                    rgb_frames[i] = []
 
             # episode continues
-            elif args.video_option != "no_video":
-                frame = generate_frame(observations[i], infos[i])
+            elif args.video_option:
+                frame = observations_to_image(observations[i], infos[i])
                 rgb_frames[i].append(frame)
 
         # stop tracking ended episodes if they exist
@@ -241,7 +238,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             for k, v in batch.items():
                 batch[k] = v[state_index]
 
-            if args.video_option != "no_video":
+            if args.video_option:
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
     episode_reward_mean = (episode_rewards / episode_counts).mean().item()
@@ -252,20 +249,15 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     logger.info("Average episode success: {:.6f}".format(episode_success_mean))
     logger.info("Average episode SPL: {:.6f}".format(episode_spl_mean))
 
-    with contextlib.suppress(AttributeError):
-        writer.add_scalars(
-            "eval_reward",
-            {"average reward": episode_reward_mean},
-            cur_ckpt_idx,
-        )
-        writer.add_scalars(
-            "eval_SPL", {"average SPL": episode_spl_mean}, cur_ckpt_idx
-        )
-        writer.add_scalars(
-            "eval_success",
-            {"average success": episode_success_mean},
-            cur_ckpt_idx,
-        )
+    writer.add_scalars(
+        "eval_reward", {"average reward": episode_reward_mean}, cur_ckpt_idx
+    )
+    writer.add_scalars(
+        "eval_SPL", {"average SPL": episode_spl_mean}, cur_ckpt_idx
+    )
+    writer.add_scalars(
+        "eval_success", {"average success": episode_success_mean}, cur_ckpt_idx
+    )
 
 
 def main():
@@ -294,12 +286,11 @@ def main():
     parser.add_argument(
         "--video-option",
         type=str,
-        default="no_video",
-        choices=["no_video", "video_dir", "video_tb", "video_both"],
-        help="option for video generation. no_video (default): do not generate vidoe at all; "
-        "video_dir: generate videos and save in video-dir; "
-        "video_tb: generate videos, save in tensorboard-dir and upload videos to tensorboard ; "
-        "video_both: both save in video-dir and upload to tensorboard",
+        default="",
+        choices=["tensorboard", "disk"],
+        nargs="*",
+        help="Options for video output, leave empty for no video. "
+        "Videos can be saved to disk, uploaded to tensorboard, or both.",
     )
     parser.add_argument(
         "--video-dir", type=str, help="directory for storing videos"
@@ -311,20 +302,21 @@ def main():
     )
 
     args = parser.parse_args()
+
     assert (args.model_path is not None) != (
         args.tracking_model_dir is not None
     ), "Must specify a single model or a directory of models, but not both"
-    if args.video_option in ["video_tb", "video_both"]:
+    if "tensorboard" in args.video_option:
         assert (
             args.tensorboard_dir is not None
         ), "Must specify a tensorboard directory for video display"
+    if "disk" in args.video_option:
+        assert (
+            args.video_dir is not None
+        ), "Must specify a directory for storing videos on disk"
 
-    with (
-        tensorboard.SummaryWriter(
-            log_dir=args.tensorboard_dir, purge_step=0, flush_secs=30
-        )
-        if args.tensorboard_dir is not None
-        else contextlib.suppress()
+    with get_tensorboard_writer(
+        args.tensorboard_dir, purge_step=0, flush_secs=30
     ) as writer:
         if args.model_path is not None:
             # evaluate singe checkpoint
@@ -344,10 +336,10 @@ def main():
                         current_ckpt
                     )
                 )
-                eval_checkpoint(
-                    current_ckpt, args, writer, cur_ckpt_idx=prev_ckpt_ind + 1
-                )
                 prev_ckpt_ind += 1
+                eval_checkpoint(
+                    current_ckpt, args, writer, cur_ckpt_idx=prev_ckpt_ind
+                )
 
 
 if __name__ == "__main__":

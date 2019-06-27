@@ -33,7 +33,7 @@ MAP_VALID_POINT = 1
 MAP_BORDER_INDICATOR = 2
 MAP_SOURCE_POINT_INDICATOR = 4
 MAP_TARGET_POINT_INDICATOR = 6
-MAP_OPTIMAL_PATH_COLOR = 7
+MAP_SHORTEST_PATH_COLOR = 7
 TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
 TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
     np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
@@ -43,7 +43,7 @@ TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]
 TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]
 TOP_DOWN_MAP_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]
 TOP_DOWN_MAP_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]
-TOP_DOWN_MAP_COLORS[MAP_OPTIMAL_PATH_COLOR] = [0, 200, 0]
+TOP_DOWN_MAP_COLORS[MAP_SHORTEST_PATH_COLOR] = [0, 200, 0]
 
 
 def draw_agent(
@@ -342,7 +342,7 @@ def draw_path(
     path_points: List[Tuple],
     color: int,
     thickness: int = 2,
-) -> np.ndarray:
+):
     r"""Draw path on top_down_map (in place) with specified color.
         Args:
             top_down_map: A colored version of the map.
