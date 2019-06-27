@@ -16,7 +16,7 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
-from habitat_baselines.rl.ppo import Policy
+from habitat_baselines.rl.ppo import PointNavBaselinePolicy
 from habitat_baselines.rl.ppo.utils import batch_obs
 
 
@@ -75,7 +75,7 @@ class PPOAgent(Agent):
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
 
-        self.actor_critic = Policy(
+        self.actor_critic = PointNavBaselinePolicy(
             observation_space=observation_spaces,
             action_space=action_spaces,
             hidden_size=self.hidden_size,
@@ -88,7 +88,7 @@ class PPOAgent(Agent):
             #  Filter only actor_critic weights
             self.actor_critic.load_state_dict(
                 {
-                    k.replace("actor_critic.", ""): v
+                    k[len("actor_critic.") :]: v
                     for k, v in ckpt["state_dict"].items()
                     if "actor_critic" in k
                 }
@@ -101,12 +101,19 @@ class PPOAgent(Agent):
 
         self.test_recurrent_hidden_states = None
         self.not_done_masks = None
+        self.prev_actions = None
 
     def reset(self):
         self.test_recurrent_hidden_states = torch.zeros(
-            1, self.hidden_size, device=self.device
+            self.actor_critic.net.num_recurrent_layers,
+            1,
+            self.hidden_size,
+            device=self.device,
         )
         self.not_done_masks = torch.zeros(1, 1, device=self.device)
+        self.prev_actions = torch.zeros(
+            1, 1, dtype=torch.long, device=self.device
+        )
 
     def act(self, observations):
         batch = batch_obs([observations])
@@ -117,11 +124,13 @@ class PPOAgent(Agent):
             _, actions, _, self.test_recurrent_hidden_states = self.actor_critic.act(
                 batch,
                 self.test_recurrent_hidden_states,
+                self.prev_actions,
                 self.not_done_masks,
                 deterministic=False,
             )
             #  Make masks not done till reset (end of episode) will be called
             self.not_done_masks = torch.ones(1, 1, device=self.device)
+            self.prev_actions.copy_(actions)
 
         return actions[0][0].item()
 

@@ -13,12 +13,20 @@ import numpy as np
 import torch
 
 import habitat
-from config.default import get_config as cfg_baseline
 from habitat import SimulatorActions, logger
 from habitat.config.default import get_config as cfg_env
 from habitat.datasets.registration import make_dataset
-from rl.ppo import PPO, Policy, RolloutStorage
-from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
+from habitat_baselines.config.default import get_config as cfg_baseline
+from habitat_baselines.rl.ppo import (
+    PPO,
+    PointNavBaselinePolicy,
+    RolloutStorage,
+)
+from habitat_baselines.rl.ppo.utils import (
+    batch_obs,
+    ppo_args,
+    update_linear_schedule,
+)
 
 
 class NavRLEnv(habitat.RLEnv):
@@ -156,13 +164,127 @@ def construct_envs(args):
     return envs
 
 
+def roll_forward(
+    args,
+    envs,
+    agent,
+    rollouts,
+    current_episode_reward,
+    episode_rewards,
+    episode_counts,
+):
+    actor_critic = agent.actor_critic
+    actor_critic.eval()
+
+    pth_time = 0
+    env_time = 0
+    count_steps = 0
+    for step in range(args.num_steps):
+        t_sample_action = time()
+        # sample actions
+        with torch.no_grad():
+            step_observation = {
+                k: v[step] for k, v in rollouts.observations.items()
+            }
+
+            (
+                values,
+                actions,
+                actions_log_probs,
+                recurrent_hidden_states,
+            ) = actor_critic.act(
+                step_observation,
+                rollouts.recurrent_hidden_states[step],
+                rollouts.prev_actions[step],
+                rollouts.masks[step],
+            )
+        pth_time += time() - t_sample_action
+
+        t_step_env = time()
+
+        outputs = envs.step([a[0].item() for a in actions])
+        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+
+        env_time += time() - t_step_env
+
+        t_update_stats = time()
+        batch = batch_obs(observations)
+        rewards = torch.tensor(rewards, dtype=torch.float)
+        rewards = rewards.unsqueeze(1)
+
+        masks = torch.tensor(
+            [[0.0] if done else [1.0] for done in dones], dtype=torch.float
+        )
+
+        device = current_episode_reward.device
+        rewards = rewards.to(device)
+        masks = masks.to(device)
+        current_episode_reward += rewards
+        episode_rewards += (1 - masks) * current_episode_reward
+        episode_counts += 1 - masks
+        current_episode_reward *= masks
+
+        rollouts.insert(
+            batch,
+            recurrent_hidden_states,
+            actions,
+            actions_log_probs,
+            values,
+            rewards,
+            masks,
+        )
+
+        count_steps += envs.num_envs
+        pth_time += time() - t_update_stats
+
+    return pth_time, env_time, count_steps
+
+
+def update_agent(args, agent, rollouts):
+    actor_critic = agent.actor_critic
+    actor_critic.train()
+
+    t_update_model = time()
+    with torch.no_grad():
+        last_observation = {k: v[-1] for k, v in rollouts.observations.items()}
+        next_value = actor_critic.get_value(
+            last_observation,
+            rollouts.recurrent_hidden_states[-1],
+            rollouts.prev_actions[-1],
+            rollouts.masks[-1],
+        ).detach()
+
+    rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
+
+    value_loss, action_loss, dist_entropy = agent.update(rollouts)
+
+    rollouts.after_update()
+    return time() - t_update_model
+
+
 def run_training():
     parser = ppo_args()
+    parser.add_argument(
+        "--sim-gpu-id",
+        type=int,
+        required=True,
+        help="gpu id on which scenes are loaded",
+    )
+    parser.add_argument(
+        "--pth-gpu-id",
+        type=int,
+        required=True,
+        help="gpu id on which pytorch runs",
+    )
     args = parser.parse_args()
 
     random.seed(args.seed)
 
-    device = torch.device("cuda:{}".format(args.pth_gpu_id))
+    device = (
+        torch.device("cuda", args.pth_gpu_id)
+        if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
 
     logger.add_filehandler(args.log_file)
 
@@ -174,7 +296,7 @@ def run_training():
 
     envs = construct_envs(args)
     task_cfg = cfg_env(config_paths=args.task_config)
-    actor_critic = Policy(
+    actor_critic = PointNavBaselinePolicy(
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=args.hidden_size,
@@ -235,61 +357,18 @@ def run_training():
 
         agent.clip_param = args.clip_param * (1 - update / args.num_updates)
 
-        for step in range(args.num_steps):
-            t_sample_action = time()
-            # sample actions
-            with torch.no_grad():
-                step_observation = {
-                    k: v[step] for k, v in rollouts.observations.items()
-                }
-
-                (
-                    values,
-                    actions,
-                    actions_log_probs,
-                    recurrent_hidden_states,
-                ) = actor_critic.act(
-                    step_observation,
-                    rollouts.recurrent_hidden_states[step],
-                    rollouts.masks[step],
-                )
-            pth_time += time() - t_sample_action
-
-            t_step_env = time()
-
-            outputs = envs.step([a[0].item() for a in actions])
-            observations, rewards, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
-
-            env_time += time() - t_step_env
-
-            t_update_stats = time()
-            batch = batch_obs(observations)
-            rewards = torch.tensor(rewards, dtype=torch.float)
-            rewards = rewards.unsqueeze(1)
-
-            masks = torch.tensor(
-                [[0.0] if done else [1.0] for done in dones], dtype=torch.float
-            )
-
-            current_episode_reward += rewards
-            episode_rewards += (1 - masks) * current_episode_reward
-            episode_counts += 1 - masks
-            current_episode_reward *= masks
-
-            rollouts.insert(
-                batch,
-                recurrent_hidden_states,
-                actions,
-                actions_log_probs,
-                values,
-                rewards,
-                masks,
-            )
-
-            count_steps += envs.num_envs
-            pth_time += time() - t_update_stats
+        delta_pth_time, delta_env_time, delta_steps = roll_forward(
+            args,
+            envs,
+            agent,
+            rollouts,
+            current_episode_reward,
+            episode_rewards,
+            episode_counts,
+        )
+        pth_time += delta_pth_time
+        env_time += delta_env_time
+        count_steps += delta_steps
 
         if len(window_episode_reward) == args.reward_window_size:
             window_episode_reward.popleft()
@@ -297,25 +376,7 @@ def run_training():
         window_episode_reward.append(episode_rewards.clone())
         window_episode_counts.append(episode_counts.clone())
 
-        t_update_model = time()
-        with torch.no_grad():
-            last_observation = {
-                k: v[-1] for k, v in rollouts.observations.items()
-            }
-            next_value = actor_critic.get_value(
-                last_observation,
-                rollouts.recurrent_hidden_states[-1],
-                rollouts.masks[-1],
-            ).detach()
-
-        rollouts.compute_returns(
-            next_value, args.use_gae, args.gamma, args.tau
-        )
-
-        value_loss, action_loss, dist_entropy = agent.update(rollouts)
-
-        rollouts.after_update()
-        pth_time += time() - t_update_model
+        pth_time += update_agent(args, agent, rollouts)
 
         # log stats
         if update > 0 and update % args.log_interval == 0:

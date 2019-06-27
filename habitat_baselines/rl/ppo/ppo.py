@@ -24,6 +24,7 @@ class PPO(nn.Module):
         eps=None,
         max_grad_norm=None,
         use_clipped_value_loss=True,
+        use_normalized_advantage=True,
     ):
 
         super().__init__()
@@ -41,15 +42,21 @@ class PPO(nn.Module):
         self.use_clipped_value_loss = use_clipped_value_loss
 
         self.optimizer = optim.Adam(actor_critic.parameters(), lr=lr, eps=eps)
+        self.device = next(actor_critic.parameters()).device
+        self.use_normalized_advantage = use_normalized_advantage
 
     def forward(self, *x):
         raise NotImplementedError
 
-    def update(self, rollouts):
+    def get_advantages(self, rollouts):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-        advantages = (advantages - advantages.mean()) / (
-            advantages.std() + EPS_PPO
-        )
+        if not self.use_normalized_advantage:
+            return advantages
+
+        return (advantages - advantages.mean()) / (advantages.std() + EPS_PPO)
+
+    def update(self, rollouts):
+        advantages = self.get_advantages(rollouts)
 
         value_loss_epoch = 0
         action_loss_epoch = 0
@@ -65,6 +72,7 @@ class PPO(nn.Module):
                     obs_batch,
                     recurrent_hidden_states_batch,
                     actions_batch,
+                    prev_actions_batch,
                     value_preds_batch,
                     return_batch,
                     masks_batch,
@@ -81,6 +89,7 @@ class PPO(nn.Module):
                 ) = self.actor_critic.evaluate_actions(
                     obs_batch,
                     recurrent_hidden_states_batch,
+                    prev_actions_batch,
                     masks_batch,
                     actions_batch,
                 )
@@ -113,15 +122,23 @@ class PPO(nn.Module):
                     value_loss = 0.5 * (return_batch - values).pow(2).mean()
 
                 self.optimizer.zero_grad()
-                (
+                total_loss = (
                     value_loss * self.value_loss_coef
                     + action_loss
                     - dist_entropy * self.entropy_coef
-                ).backward()
+                )
+
+                self.before_backward(total_loss)
+                total_loss.backward()
+                self.after_backward(total_loss)
+
                 nn.utils.clip_grad_norm_(
                     self.actor_critic.parameters(), self.max_grad_norm
                 )
+
+                self.before_step()
                 self.optimizer.step()
+                self.after_step()
 
                 value_loss_epoch += value_loss.item()
                 action_loss_epoch += action_loss.item()
@@ -134,3 +151,15 @@ class PPO(nn.Module):
         dist_entropy_epoch /= num_updates
 
         return value_loss_epoch, action_loss_epoch, dist_entropy_epoch
+
+    def before_backward(self, loss):
+        pass
+
+    def after_backward(self, loss):
+        pass
+
+    def before_step(self):
+        pass
+
+    def after_step(self):
+        pass

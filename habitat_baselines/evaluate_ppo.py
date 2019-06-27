@@ -11,7 +11,7 @@ import torch
 import habitat
 from config.default import get_config as cfg_baseline
 from habitat.config.default import get_config
-from rl.ppo import PPO, Policy
+from rl.ppo import PPO, PointNavBaselinePolicy
 from rl.ppo.utils import batch_obs
 from train_ppo import make_env_fn
 
@@ -73,7 +73,7 @@ def main():
 
     ckpt = torch.load(args.model_path, map_location=device)
 
-    actor_critic = Policy(
+    actor_critic = PointNavBaselinePolicy(
         observation_space=envs.observation_spaces[0],
         action_space=envs.action_spaces[0],
         hidden_size=512,
@@ -109,7 +109,7 @@ def main():
     current_episode_reward = torch.zeros(envs.num_envs, 1, device=device)
 
     test_recurrent_hidden_states = torch.zeros(
-        args.num_processes, args.hidden_size, device=device
+        1, args.num_processes, args.hidden_size, device=device
     )
     not_done_masks = torch.zeros(args.num_processes, 1, device=device)
 
