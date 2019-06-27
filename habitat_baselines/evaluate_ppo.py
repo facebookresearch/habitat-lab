@@ -40,7 +40,11 @@ def main():
     )
     args = parser.parse_args()
 
-    device = torch.device("cuda:{}".format(args.pth_gpu_id))
+    device = (
+        torch.device("cuda", args.pth_gpu_id)
+        if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
 
     env_configs = []
     baseline_configs = []
@@ -109,7 +113,13 @@ def main():
     current_episode_reward = torch.zeros(envs.num_envs, 1, device=device)
 
     test_recurrent_hidden_states = torch.zeros(
-        1, args.num_processes, args.hidden_size, device=device
+        actor_critic.net.num_recurrent_layers,
+        args.num_processes,
+        args.hidden_size,
+        device=device,
+    )
+    prev_actions = torch.zeros(
+        args.num_processes, 1, device=device, dtype=torch.long
     )
     not_done_masks = torch.zeros(args.num_processes, 1, device=device)
 
@@ -118,9 +128,11 @@ def main():
             _, actions, _, test_recurrent_hidden_states = actor_critic.act(
                 batch,
                 test_recurrent_hidden_states,
+                prev_actions,
                 not_done_masks,
                 deterministic=False,
             )
+            prev_actions.copy_(actions)
 
         outputs = envs.step([a[0].item() for a in actions])
 
