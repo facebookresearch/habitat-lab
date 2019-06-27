@@ -152,12 +152,12 @@ class PPO(nn.Module):
         pass
 
     def after_backward(self, loss):
+        pass
+
+    def before_step(self):
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(), self.max_grad_norm
         )
-
-    def before_step(self):
-        pass
 
     def after_step(self):
         pass
