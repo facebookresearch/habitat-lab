@@ -14,10 +14,9 @@ import torch
 
 import habitat
 from config.default import get_config as cfg_baseline
-from habitat import logger
+from habitat import SimulatorActions, logger
 from habitat.config.default import get_config as cfg_env
 from habitat.datasets.registration import make_dataset
-from habitat.sims.habitat_simulator import SimulatorActions
 from rl.ppo import PPO, Policy, RolloutStorage
 from rl.ppo.utils import batch_obs, ppo_args, update_linear_schedule
 from tensorboard_utils import get_tensorboard_writer
@@ -74,7 +73,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action == SimulatorActions.STOP.value
+            self._previous_action == SimulatorActions.STOP
             and self._distance_target() < self._config_env.SUCCESS_DISTANCE
         ):
             return True
@@ -119,14 +118,18 @@ def construct_envs(args):
         )
         scene_split_size = int(np.floor(len(scenes) / args.num_processes))
 
+    scene_splits = [[] for _ in range(args.num_processes)]
+    for j, s in enumerate(scenes):
+        scene_splits[j % len(scene_splits)].append(s)
+
+    assert sum(map(len, scene_splits)) == len(scenes)
+
     for i in range(args.num_processes):
         config_env = cfg_env(config_paths=args.task_config, opts=args.opts)
         config_env.defrost()
 
         if len(scenes) > 0:
-            config_env.DATASET.CONTENT_SCENES = scenes[
-                i * scene_split_size : (i + 1) * scene_split_size
-            ]
+            config_env.DATASET.CONTENT_SCENES = scene_splits[i]
 
         config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 

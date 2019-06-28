@@ -70,7 +70,8 @@ Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [Matt
 
 **SLAM based**
 
-- [Handcrafted agent baseline adopted from the paper "Benchmarking Classic and Learned Navigation in Complex 3D Environments"](habitat_baselines/slambased/README.md)
+- [Handcrafted agent baseline](slambased/README.md) adopted from the paper 
+"Benchmarking Classic and Learned Navigation in Complex 3D Environments".
 ### Additional Utilities
 
 **single-episode training**: 
@@ -96,4 +97,3 @@ The above command should generate navigation episode recordings and display them
 <p align="center">
   <img src="../res/img/tensorboard_video_demo.gif"  height="500">
 </p>
-

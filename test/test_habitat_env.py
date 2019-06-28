@@ -12,9 +12,8 @@ import pytest
 
 import habitat
 from habitat.config.default import get_config
-from habitat.core.simulator import AgentState
+from habitat.core.simulator import AgentState, SimulatorActions
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
@@ -81,9 +80,9 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
     )
     envs.reset()
     non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
+        act
+        for act in range(envs.action_spaces[0].n)
+        if act != SimulatorActions.STOP
     ]
 
     for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -135,9 +134,9 @@ def test_threaded_vectorized_env():
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
+        act
+        for act in range(envs.action_spaces[0].n)
+        if act != SimulatorActions.STOP
     ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -167,9 +166,9 @@ def test_env():
     env.reset()
 
     non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         act = np.random.choice(non_stop_actions)
@@ -182,7 +181,7 @@ def test_env():
 
     env.reset()
 
-    env.step(SimulatorActions.STOP.value)
+    env.step(SimulatorActions.STOP)
     # check for STOP action
     assert env.episode_over is True, (
         "episode should be over after STOP " "action"
@@ -211,9 +210,9 @@ def test_rl_vectorized_envs():
     envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
     envs.reset()
     non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
+        act
+        for act in range(envs.action_spaces[0].n)
+        if act != SimulatorActions.STOP
     ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
@@ -263,9 +262,9 @@ def test_rl_env():
     observation = env.reset()
 
     non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
     ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         observation, reward, done, info = env.step(
@@ -276,7 +275,7 @@ def test_rl_env():
     assert done is True, "episodes should be over after max_episode_steps"
 
     env.reset()
-    observation, reward, done, info = env.step(SimulatorActions.STOP.value)
+    observation, reward, done, info = env.step(SimulatorActions.STOP)
     assert done is True, "done should be true after STOP action"
 
     env.close()
@@ -381,10 +380,10 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.sim.action_space_shortest_path(source, targets)
+    shortest_path1 = env.action_space_shortest_path(source, targets)
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.sim.action_space_shortest_path(source, targets)
+    shortest_path2 = env.action_space_shortest_path(source, targets)
     assert shortest_path2 == []
     env.close()

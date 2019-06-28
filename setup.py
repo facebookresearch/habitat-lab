@@ -35,7 +35,9 @@ BASELINE_PATH = ["habitat_baselines", "habitat_baselines.*"]
 DEFAULT_EXCLUSION = ["test", "examples"]
 FULL_REQUIREMENTS = set()
 # collect requirements.txt file in all subdirectories
-for file_name in glob.glob("**/requirements.txt", recursive=True):
+for file_name in ["requirements.txt"] + glob.glob(
+    "habitat_baselines/**/requirements.txt", recursive=True
+):
     with open(file_name) as f:
         reqs = f.read()
         FULL_REQUIREMENTS.update(reqs.strip().split("\n"))

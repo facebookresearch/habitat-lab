@@ -82,6 +82,7 @@ _C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
+_C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/" "van-gogh-room.glb"
