@@ -342,7 +342,7 @@ def draw_path(
     path_points: List[Tuple],
     color: int,
     thickness: int = 2,
-):
+) -> None:
     r"""Draw path on top_down_map (in place) with specified color.
         Args:
             top_down_map: A colored version of the map.

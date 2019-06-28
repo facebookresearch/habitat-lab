@@ -1,3 +1,6 @@
+from typing import Optional, Union
+
+import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -6,7 +9,9 @@ class TensorboardWriter(SummaryWriter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def add_video_from_np_images(self, video_name, step_idx, images, fps=10):
+    def add_video_from_np_images(
+        self, video_name: str, step_idx: int, images: np.ndarray, fps: int = 10
+    ) -> None:
         r"""Write video into tensorboard from images frames.
 
         Args:
@@ -45,7 +50,20 @@ class DummyWriter:
         return lambda *args, **kwargs: None
 
 
-def get_tensorboard_writer(log_dir, *args, **kwargs):
+def get_tensorboard_writer(
+    log_dir: str, *args, **kwargs
+) -> Union[DummyWriter, TensorboardWriter]:
+    r"""Get tensorboard writer if log_dir is specified, otherwise,
+        return dummy writer instead.
+
+    Args:
+        log_dir: log directory path for tensorboard SummaryWriter.
+        *args: additional positional args.
+        **kwargs: additional keyword args.
+
+    Returns:
+        Either the created tensorboard writer or a dummy writer.
+    """
     if log_dir:
         return TensorboardWriter(log_dir, *args, **kwargs)
     else:

@@ -187,6 +187,8 @@ class VectorEnv:
                     else:
                         result = getattr(env, function_name)(*function_args)
                     connection_write_fn(result)
+
+                # TODO: update CALL_COMMAND for getting attribute like this
                 elif command == EPISODE_COMMAND:
                     connection_write_fn(env.current_episode)
                 else:

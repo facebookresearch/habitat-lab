@@ -8,6 +8,7 @@ import argparse
 import glob
 import os
 import time
+from typing import Optional
 
 import torch
 
@@ -25,7 +26,9 @@ from tensorboard_utils import get_tensorboard_writer
 from train_ppo import make_env_fn
 
 
-def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
+def poll_checkpoint_folder(
+    checkpoint_folder: str, previous_ckpt_ind: int
+) -> Optional[str]:
     r""" Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
     (sorted by time of last modification).
 
@@ -50,7 +53,7 @@ def poll_checkpoint_folder(checkpoint_folder, previous_ckpt_ind):
 
 def generate_video(
     args, images, episode_id, checkpoint_idx, spl, tb_writer, fps=10
-):
+) -> None:
     r"""Generate video according to specified information.
 
     Args:
@@ -78,7 +81,7 @@ def generate_video(
 def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     env_configs = []
     baseline_configs = []
-    device = torch.device("cuda:{}".format(args.pth_gpu_id))
+    device = torch.device("cuda", args.pth_gpu_id)
 
     for _ in range(args.num_processes):
         config_env = get_config(config_paths=args.task_config)

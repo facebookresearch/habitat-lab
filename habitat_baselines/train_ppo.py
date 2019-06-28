@@ -160,7 +160,7 @@ def run_training():
 
     random.seed(args.seed)
 
-    device = torch.device("cuda:{}".format(args.pth_gpu_id))
+    device = torch.device("cuda", args.pth_gpu_id)
 
     logger.add_filehandler(args.log_file)
 
@@ -216,8 +216,8 @@ def run_training():
     episode_rewards = torch.zeros(envs.num_envs, 1)
     episode_counts = torch.zeros(envs.num_envs, 1)
     current_episode_reward = torch.zeros(envs.num_envs, 1)
-    window_episode_reward = deque()
-    window_episode_counts = deque()
+    window_episode_reward = deque(maxlen=args.reward_window_size)
+    window_episode_counts = deque(maxlen=args.reward_window_size)
 
     t_start = time()
     env_time = 0
@@ -297,9 +297,6 @@ def run_training():
                 count_steps += envs.num_envs
                 pth_time += time() - t_update_stats
 
-            if len(window_episode_reward) == args.reward_window_size:
-                window_episode_reward.popleft()
-                window_episode_counts.popleft()
             window_episode_reward.append(episode_rewards.clone())
             window_episode_counts.append(episode_counts.clone())
 
