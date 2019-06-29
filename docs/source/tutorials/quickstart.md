@@ -50,16 +50,16 @@ def example():
         keystroke = cv2.waitKey(0)
 
         if keystroke == ord(FORWARD_KEY):
-            action = 0
+            action = habitat.SimulatorActions.MOVE_FORWARD
             print("action: FORWARD")
         elif keystroke == ord(LEFT_KEY):
-            action = 1
+            action = habitat.SimulatorActions.TURN_LEFT
             print("action: LEFT")
         elif keystroke == ord(RIGHT_KEY):
-            action = 2
+            action = habitat.SimulatorActions.TURN_RIGHT
             print("action: RIGHT")
         elif keystroke == ord(FINISH):
-            action = 3
+            action = habitat.SimulatorActions.STOP
             print("action: FINISH")
         else:
             print("INVALID KEY")
