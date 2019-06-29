@@ -422,4 +422,9 @@ def ppo_args():
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
+    parser.add_argument(
+        "--tensorboard-dir",
+        type=str,
+        help="path to tensorboard logging directory",
+    )
     return parser
