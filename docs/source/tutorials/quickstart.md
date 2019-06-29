@@ -74,7 +74,7 @@ def example():
 
     print("Episode finished after {} steps.".format(count_steps))
 
-    if action == 3 and observations["pointgoal"][0] < 0.2:
+    if action == habitat.SimulatorActions.STOP and observations["pointgoal"][0] < 0.2:
         print("you successfully navigated to destination point")
     else:
         print("your navigation was unsuccessful")
