@@ -1,4 +1,4 @@
-# Quickstart 
+# Quickstart
 
 In this quickstart we will briefly introduce the habitat stack using which we will setup the pointnav task and step around in the environment.
 
@@ -6,7 +6,7 @@ In this quickstart we will briefly introduce the habitat stack using which we wi
 
 Habitat is a platform for embodied AI research that consists of:
 1. **Habitat-Sim**: A flexible, high-performance 3D simulator with configurable agents, multiple sensors, and generic 3D dataset handling (with built-in support for [MatterPort3D](https://niessner.github.io/Matterport/), [Gibson](http://gibsonenv.stanford.edu/database/) and other datasets). [[github-repo](https://github.com/facebookresearch/habitat-sim)]
-    
+
 1. **Habitat-API**: A modular high-level library for end-to-end development in embodied AI -- defining embodied AI tasks (e.g. navigation, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in classical SLAM), and benchmarking their performance on the defined tasks using standard metrics. [[github-repo](https://github.com/facebookresearch/habitat-api)]
 
 For installing Habitat-Sim and Habitat-API follow instructions [here](https://github.com/facebookresearch/habitat-api#installation).
@@ -49,18 +49,18 @@ def example():
     while not env.episode_over:
         keystroke = cv2.waitKey(0)
 
-        if keystroke == ord(FORWARD_KEY):
+        if keystroke == ord(FINISH):
             action = 0
+            print("action: FINISH")
+        elif keystroke == ord(FORWARD_KEY):
+            action = 1
             print("action: FORWARD")
         elif keystroke == ord(LEFT_KEY):
-            action = 1
+            action = 2
             print("action: LEFT")
         elif keystroke == ord(RIGHT_KEY):
-            action = 2
-            print("action: RIGHT")
-        elif keystroke == ord(FINISH):
             action = 3
-            print("action: FINISH")
+            print("action: RIGHT")
         else:
             print("INVALID KEY")
             continue
@@ -74,7 +74,7 @@ def example():
 
     print("Episode finished after {} steps.".format(count_steps))
 
-    if action == 3 and observations["pointgoal"][0] < 0.2:
+    if action == 0 and observations["pointgoal"][0] < 0.2:
         print("you successfully navigated to destination point")
     else:
         print("your navigation was unsuccessful")
