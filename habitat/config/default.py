@@ -71,6 +71,7 @@ _C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
 _C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
 _C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
 _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
+_C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
 # -----------------------------------------------------------------------------
 # # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------

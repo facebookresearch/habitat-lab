@@ -393,10 +393,11 @@ class Collisions(Measure):
 
     def update_metric(self, episode, action):
         if self._metric is None:
-            self._metric = 0
-
+            self._metric = {"count": 0, "is_collision": False}
+        self._metric["is_collision"] = False
         if self._sim.previous_step_collided:
-            self._metric += 1
+            self._metric["count"] += 1
+            self._metric["is_collision"] = True
 
 
 @registry.register_measure
@@ -419,9 +420,13 @@ class TopDownMap(Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
+        self._shortest_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
+        self.line_thickness = int(
+            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+        )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -430,7 +435,7 @@ class TopDownMap(Measure):
     def _check_valid_nav_point(self, point: List[float]):
         self._sim.is_navigable(point)
 
-    def get_original_map(self, episode):
+    def get_original_map(self):
         top_down_map = maps.get_topdown_map(
             self._sim,
             self._map_resolution,
@@ -445,43 +450,42 @@ class TopDownMap(Measure):
         self._ind_x_max = range_x[-1]
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
-
-        if self._config.DRAW_SOURCE_AND_TARGET:
-            # mark source point
-            s_x, s_y = maps.to_grid(
-                episode.start_position[0],
-                episode.start_position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            point_padding = 2 * int(
-                np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
-            )
-            top_down_map[
-                s_x - point_padding : s_x + point_padding + 1,
-                s_y - point_padding : s_y + point_padding + 1,
-            ] = maps.MAP_SOURCE_POINT_INDICATOR
-
-            # mark target point
-            t_x, t_y = maps.to_grid(
-                episode.goals[0].position[0],
-                episode.goals[0].position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            top_down_map[
-                t_x - point_padding : t_x + point_padding + 1,
-                t_y - point_padding : t_y + point_padding + 1,
-            ] = maps.MAP_TARGET_POINT_INDICATOR
-
         return top_down_map
+
+    def draw_source_and_target(self, episode):
+        # mark source point
+        s_x, s_y = maps.to_grid(
+            episode.start_position[0],
+            episode.start_position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        point_padding = 2 * int(
+            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+        )
+        self._top_down_map[
+            s_x - point_padding : s_x + point_padding + 1,
+            s_y - point_padding : s_y + point_padding + 1,
+        ] = maps.MAP_SOURCE_POINT_INDICATOR
+
+        # mark target point
+        t_x, t_y = maps.to_grid(
+            episode.goals[0].position[0],
+            episode.goals[0].position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        self._top_down_map[
+            t_x - point_padding : t_x + point_padding + 1,
+            t_y - point_padding : t_y + point_padding + 1,
+        ] = maps.MAP_TARGET_POINT_INDICATOR
 
     def reset_metric(self, episode):
         self._step_count = 0
         self._metric = None
-        self._top_down_map = self.get_original_map(episode)
+        self._top_down_map = self.get_original_map()
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
             agent_position[0],
@@ -491,6 +495,30 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
+        if self._config.DRAW_SHORTEST_PATH:
+            # draw shortest path
+            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
+            )
+            self._shortest_path_points = [
+                maps.to_grid(
+                    p[0],
+                    p[2],
+                    self._coordinate_min,
+                    self._coordinate_max,
+                    self._map_resolution,
+                )[::-1]
+                for p in self._shortest_path_points
+            ]
+            maps.draw_path(
+                self._top_down_map,
+                self._shortest_path_points,
+                maps.MAP_SHORTEST_PATH_COLOR,
+                self.line_thickness,
+            )
+        # draw source and target points last to avoid overlap
+        if self._config.DRAW_SOURCE_AND_TARGET:
+            self.draw_source_and_target(episode)
 
     def update_metric(self, episode, action):
         self._step_count += 1
@@ -515,7 +543,21 @@ class TopDownMap(Measure):
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
             ),
+            "agent_angle": self.get_polar_angle(),
         }
+
+    def get_polar_angle(self):
+        agent_state = self._sim.get_agent_state()
+        # quaternion is in x, y, z, w format
+        ref_rotation = agent_state.rotation
+
+        heading_vector = quaternion_rotate_vector(
+            ref_rotation.inverse(), np.array([0, 0, -1])
+        )
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        x_y_flip = -np.pi / 2
+        return np.array(phi) + x_y_flip
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(

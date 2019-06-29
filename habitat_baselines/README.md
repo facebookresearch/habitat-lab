@@ -48,12 +48,6 @@ python -u habitat_baselines/train_ppo.py \
 
 ```
 
-**single-episode training**: 
-Algorithms can be trained with a single-episode option. This option can be used as a sanity check since good algorithms should overfit one episode relatively fast. To enable this option, add `DATASET.NUM_EPISODE_SAMPLE 1` *at the end* of the training command, or include the single-episode yaml file in `--task-config` like this:
-```
-   --task-config "configs/tasks/pointnav.yaml,configs/datasets/single_episode.yaml"
-```
-
 **test**:
 ```bash
 python -u habitat_baselines/evaluate_ppo.py \
@@ -78,3 +72,28 @@ Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [Matt
 
 - [Handcrafted agent baseline](slambased/README.md) adopted from the paper 
 "Benchmarking Classic and Learned Navigation in Complex 3D Environments".
+### Additional Utilities
+
+**single-episode training**: 
+Algorithms can be trained with a single-episode option. This option can be used as a sanity check since good algorithms should overfit one episode relatively fast. To enable this option, add `DATASET.NUM_EPISODE_SAMPLE 1` *at the end* of the training command, or include the single-episode yaml file in `--task-config` like this:
+```
+   --task-config "configs/tasks/pointnav.yaml,configs/datasets/single_episode.yaml"
+```
+
+**tensorboard and video generation support**
+
+Enable tensorboard logging by adding `--tensorboard-dir logdir` when running `train_ppo.py` or `evaluate_ppo.py`
+
+Enable video generation for `evaluate_ppo.py` using `--video-option`: specifying `tensorboard`(for displaying on tensorboard) or `disk` (for saving videos on disk), for example:
+```
+python -u habitat_baselines/evaluate_ppo.py   
+...
+--count-test-episodes 2 \
+--video-option tensorboard \
+--tensorboard-dir tb_eval \
+--model-path data/checkpoints/ckpt.xx.pth
+```
+The above command should generate navigation episode recordings and display them on tensorboard like this:
+<p align="center">
+  <img src="../res/img/tensorboard_video_demo.gif"  height="500">
+</p>

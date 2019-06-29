@@ -27,6 +27,7 @@ CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
 CALL_COMMAND = "call"
+EPISODE_COMMAND = "current_episode"
 
 
 def _make_env_fn(
@@ -186,6 +187,10 @@ class VectorEnv:
                     else:
                         result = getattr(env, function_name)(*function_args)
                     connection_write_fn(result)
+
+                # TODO: update CALL_COMMAND for getting attribute like this
+                elif command == EPISODE_COMMAND:
+                    connection_write_fn(env.current_episode)
                 else:
                     raise NotImplementedError
 
@@ -230,6 +235,16 @@ class VectorEnv:
             [p.recv for p in parent_connections],
             [p.send for p in parent_connections],
         )
+
+    def current_episodes(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((EPISODE_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
 
     def reset(self):
         r"""Reset all the vectorized environments

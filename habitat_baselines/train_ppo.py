@@ -27,6 +27,7 @@ from habitat_baselines.rl.ppo.utils import (
     ppo_args,
     update_linear_schedule,
 )
+from habitat_baselines.tensorboard_utils import get_tensorboard_writer
 
 
 class NavRLEnv(habitat.RLEnv):
@@ -340,8 +341,8 @@ def run_training():
     episode_rewards = torch.zeros(envs.num_envs, 1)
     episode_counts = torch.zeros(envs.num_envs, 1)
     current_episode_reward = torch.zeros(envs.num_envs, 1)
-    window_episode_reward = deque()
-    window_episode_counts = deque()
+    window_episode_reward = deque(maxlen=args.reward_window_size)
+    window_episode_counts = deque(maxlen=args.reward_window_size)
 
     t_start = time()
     env_time = 0
@@ -349,76 +350,107 @@ def run_training():
     count_steps = 0
     count_checkpoints = 0
 
-    for update in range(args.num_updates):
-        if args.use_linear_lr_decay:
-            update_linear_schedule(
-                agent.optimizer, update, args.num_updates, args.lr
-            )
-
-        agent.clip_param = args.clip_param * (1 - update / args.num_updates)
-
-        delta_pth_time, delta_env_time, delta_steps = roll_forward(
-            args,
-            envs,
-            agent,
-            rollouts,
-            current_episode_reward,
-            episode_rewards,
-            episode_counts,
+    with (
+        get_tensorboard_writer(
+            log_dir=args.tensorboard_dir, purge_step=count_steps, flush_secs=30
         )
-        pth_time += delta_pth_time
-        env_time += delta_env_time
-        count_steps += delta_steps
-
-        if len(window_episode_reward) == args.reward_window_size:
-            window_episode_reward.popleft()
-            window_episode_counts.popleft()
-        window_episode_reward.append(episode_rewards.clone())
-        window_episode_counts.append(episode_counts.clone())
-
-        pth_time += update_agent(args, agent, rollouts)
-
-        # log stats
-        if update > 0 and update % args.log_interval == 0:
-            logger.info(
-                "update: {}\tfps: {:.3f}\t".format(
-                    update, count_steps / (time() - t_start)
+    ) as writer:
+        for update in range(args.num_updates):
+            if args.use_linear_lr_decay:
+                update_linear_schedule(
+                    agent.optimizer, update, args.num_updates, args.lr
                 )
+
+            agent.clip_param = args.clip_param * (
+                1 - update / args.num_updates
             )
 
-            logger.info(
-                "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                "frames: {}".format(update, env_time, pth_time, count_steps)
+            delta_pth_time, delta_env_time, delta_steps = roll_forward(
+                args,
+                envs,
+                agent,
+                rollouts,
+                current_episode_reward,
+                episode_rewards,
+                episode_counts,
+            )
+            pth_time += delta_pth_time
+            env_time += delta_env_time
+            count_steps += delta_steps
+
+            window_episode_reward.append(episode_rewards.clone())
+            window_episode_counts.append(episode_counts.clone())
+
+            pth_time += update_agent(args, agent, rollouts)
+
+            losses = [value_loss, action_loss]
+            stats = zip(
+                ["count", "reward"],
+                [window_episode_counts, window_episode_reward],
+            )
+            deltas = {
+                k: (
+                    (v[-1] - v[0]).sum().item()
+                    if len(v) > 1
+                    else v[0].sum().item()
+                )
+                for k, v in stats
+            }
+            deltas["count"] = max(deltas["count"], 1.0)
+
+            writer.add_scalar(
+                "reward", deltas["reward"] / deltas["count"], count_steps
             )
 
-            window_rewards = (
-                window_episode_reward[-1] - window_episode_reward[0]
-            ).sum()
-            window_counts = (
-                window_episode_counts[-1] - window_episode_counts[0]
-            ).sum()
+            writer.add_scalars(
+                "losses",
+                {k: l for l, k in zip(losses, ["value", "policy"])},
+                count_steps,
+            )
 
-            if window_counts > 0:
+            # log stats
+            if update > 0 and update % args.log_interval == 0:
                 logger.info(
-                    "Average window size {} reward: {:3f}".format(
-                        len(window_episode_reward),
-                        (window_rewards / window_counts).item(),
+                    "update: {}\tfps: {:.3f}\t".format(
+                        update, count_steps / (time() - t_start)
                     )
                 )
-            else:
-                logger.info("No episodes finish in current window")
 
-        # checkpoint model
-        if update % args.checkpoint_interval == 0:
-            checkpoint = {"state_dict": agent.state_dict()}
-            torch.save(
-                checkpoint,
-                os.path.join(
-                    args.checkpoint_folder,
-                    "ckpt.{}.pth".format(count_checkpoints),
-                ),
-            )
-            count_checkpoints += 1
+                logger.info(
+                    "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
+                    "frames: {}".format(
+                        update, env_time, pth_time, count_steps
+                    )
+                )
+
+                window_rewards = (
+                    window_episode_reward[-1] - window_episode_reward[0]
+                ).sum()
+                window_counts = (
+                    window_episode_counts[-1] - window_episode_counts[0]
+                ).sum()
+
+                if window_counts > 0:
+                    logger.info(
+                        "Average window size {} reward: {:3f}".format(
+                            len(window_episode_reward),
+                            (window_rewards / window_counts).item(),
+                        )
+                    )
+                else:
+                    logger.info("No episodes finish in current window")
+
+            # checkpoint model
+            if update % args.checkpoint_interval == 0:
+                checkpoint = {"state_dict": agent.state_dict(), "args": args}
+                torch.save(
+                    checkpoint,
+                    os.path.join(
+                        args.checkpoint_folder,
+                        "ckpt.{}.pth".format(count_checkpoints),
+                    ),
+                )
+                count_checkpoints += 1
 
 
 if __name__ == "__main__":

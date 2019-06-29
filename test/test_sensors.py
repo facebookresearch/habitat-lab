@@ -127,7 +127,7 @@ def test_collisions():
         for _ in range(50):
             action = np.random.choice(actions)
             env.step(action)
-            collisions = env.get_metrics()["collisions"]
+            collisions = env.get_metrics()["collisions"]["count"]
 
             loc = env.sim.get_agent_state().position
             if (
