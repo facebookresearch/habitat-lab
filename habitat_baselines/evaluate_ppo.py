@@ -10,20 +10,21 @@ import os
 import time
 from typing import Optional
 
+import numpy as np
 import torch
 
 import habitat
-from config.default import get_config as cfg_baseline
 from habitat import logger
 from habitat.config.default import get_config
 from habitat.utils.visualizations.utils import (
     images_to_video,
     observations_to_image,
 )
+from habitat_baselines.config.default import get_config as cfg_baseline
 from habitat_baselines.rl.ppo import PPO, PointNavBaselinePolicy
-from rl.ppo.utils import batch_obs
-from tensorboard_utils import get_tensorboard_writer
-from train_ppo import make_env_fn
+from habitat_baselines.rl.ppo.utils import batch_obs
+from habitat_baselines.tensorboard_utils import get_tensorboard_writer
+from habitat_baselines.train_ppo import make_env_fn
 
 
 def poll_checkpoint_folder(
@@ -81,16 +82,12 @@ def generate_video(
 def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     env_configs = []
     baseline_configs = []
-    device = (
-        torch.device("cuda", args.pth_gpu_id)
-        if torch.cuda.is_available()
-        else torch.device("cpu")
-    )
 
     for _ in range(args.num_processes):
         config_env = get_config(config_paths=args.task_config)
         config_env.defrost()
         config_env.DATASET.SPLIT = "val"
+        config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = args.sim_gpu_id
 
         agent_sensors = args.sensors.strip().split(",")
         for sensor in agent_sensors:
@@ -116,6 +113,11 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
         ),
     )
 
+    device = (
+        torch.device("cuda", args.pth_gpu_id)
+        if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
     ckpt = torch.load(checkpoint_path, map_location=device)
 
     actor_critic = PointNavBaselinePolicy(
@@ -147,10 +149,6 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     for sensor in batch:
         batch[sensor] = batch[sensor].to(device)
 
-    episode_rewards = torch.zeros(envs.num_envs, 1, device=device)
-    episode_spls = torch.zeros(envs.num_envs, 1, device=device)
-    episode_success = torch.zeros(envs.num_envs, 1, device=device)
-    episode_counts = torch.zeros(envs.num_envs, 1, device=device)
     current_episode_reward = torch.zeros(envs.num_envs, 1, device=device)
 
     test_recurrent_hidden_states = torch.zeros(
@@ -163,14 +161,14 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
         args.num_processes, 1, device=device, dtype=torch.long
     )
     not_done_masks = torch.zeros(args.num_processes, 1, device=device)
-    stats_episodes = set()
+    stats_episodes = {}
 
     rgb_frames = None
     if args.video_option:
         rgb_frames = [[]] * args.num_processes
         os.makedirs(args.video_dir, exist_ok=True)
 
-    while episode_counts.sum() < args.count_test_episodes:
+    while len(stats_episodes) < args.count_test_episodes and envs.num_envs > 0:
         current_episodes = envs.current_episodes()
 
         with torch.no_grad():
@@ -196,18 +194,10 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             device=device,
         )
 
-        for i in range(not_done_masks.shape[0]):
-            if not_done_masks[i].item() == 0:
-                episode_spls[i] += infos[i]["spl"]
-                if infos[i]["spl"] > 0:
-                    episode_success[i] += 1
-
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=device
         ).unsqueeze(1)
         current_episode_reward += rewards
-        episode_rewards += (1 - not_done_masks) * current_episode_reward
-        episode_counts += 1 - not_done_masks
         current_episode_reward *= not_done_masks
 
         next_episodes = envs.current_episodes()
@@ -219,7 +209,11 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
 
             # episode ended
             if not_done_masks[i].item() == 0:
-                stats_episodes.add(current_episodes[i].episode_id)
+                stats_episodes[current_episodes[i].episode_id] = dict(
+                    spl=infos[i]["spl"],
+                    reward=current_episode_reward[i, 0].item(),
+                )
+
                 if args.video_option:
                     generate_video(
                         args,
@@ -249,6 +243,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             ]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
+            prev_actions = prev_actions[state_index]
 
             for k, v in batch.items():
                 batch[k] = v[state_index]
@@ -256,9 +251,15 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             if args.video_option:
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
-    episode_reward_mean = (episode_rewards / episode_counts).mean().item()
-    episode_spl_mean = (episode_spls / episode_counts).mean().item()
-    episode_success_mean = (episode_success / episode_counts).mean().item()
+    episode_reward_mean = np.array(
+        [v["reward"] for v in stats_episodes.values()]
+    ).mean()
+    episode_spl_mean = np.array(
+        [v["spl"] for v in stats_episodes.values()]
+    ).mean()
+    episode_success_mean = (
+        np.array([v["spl"] for v in stats_episodes.values()]) > 0
+    ).mean()
 
     logger.info("Average episode reward: {:.6f}".format(episode_reward_mean))
     logger.info("Average episode success: {:.6f}".format(episode_success_mean))
