@@ -143,21 +143,20 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
     for sensor in batch:
         batch[sensor] = batch[sensor].to(device)
 
-    episode_rewards, episode_success, episode_counts = 0, 0, 0
     current_episode_reward = torch.zeros(envs.num_envs, 1, device=device)
 
     test_recurrent_hidden_states = torch.zeros(
         args.num_processes, args.hidden_size, device=device
     )
     not_done_masks = torch.zeros(args.num_processes, 1, device=device)
-    stats_episodes = dict()
+    stats_episodes = dict()  # dict of dicts that stores stats per episode
 
     rgb_frames = None
     if args.video_option:
         rgb_frames = [[]] * args.num_processes
         os.makedirs(args.video_dir, exist_ok=True)
 
-    while episode_counts < args.count_test_episodes:
+    while len(stats_episodes) < args.count_test_episodes:
         current_episodes = envs.current_episodes()
 
         with torch.no_grad():
@@ -194,14 +193,12 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
 
             # episode ended
             if not_done_masks[i].item() == 0:
-                stats_episodes[current_episodes[i].episode_id] = infos[i][
-                    "spl"
-                ]
-                if infos[i]["spl"] > 0:
-                    episode_success += 1
-                episode_counts += 1
-                episode_rewards += current_episode_reward[i].item()
+                episode_stats = dict()
+                episode_stats["spl"] = infos[i]["spl"]
+                episode_stats["success"] = int(infos[i]["spl"] > 0)
+                episode_stats["reward"] = current_episode_reward[i].item()
                 current_episode_reward[i] = 0
+                stats_episodes[current_episodes[i].episode_id] = episode_stats
 
                 if args.video_option:
                     generate_video(
@@ -219,7 +216,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
                 frame = observations_to_image(observations[i], infos[i])
                 rgb_frames[i].append(frame)
 
-        # stop tracking ended episodes if they exist
+        # pausing envs with no new episode
         if len(envs_to_pause) > 0:
             state_index = list(range(envs.num_envs))
             for idx in reversed(envs_to_pause):
@@ -239,9 +236,16 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
             if args.video_option:
                 rgb_frames = [rgb_frames[i] for i in state_index]
 
-    episode_reward_mean = episode_rewards / episode_counts
-    episode_spl_mean = sum(stats_episodes.values()) / episode_counts
-    episode_success_mean = episode_success / episode_counts
+    aggregated_stats = dict()
+    for stat_key in next(iter(stats_episodes.values())).keys():
+        aggregated_stats[stat_key] = sum(
+            [v[stat_key] for v in stats_episodes.values()]
+        )
+    num_episodes = len(stats_episodes)
+
+    episode_reward_mean = aggregated_stats["reward"] / num_episodes
+    episode_spl_mean = aggregated_stats["spl"] / num_episodes
+    episode_success_mean = aggregated_stats["success"] / num_episodes
 
     logger.info("Average episode reward: {:.6f}".format(episode_reward_mean))
     logger.info("Average episode success: {:.6f}".format(episode_success_mean))
