@@ -188,7 +188,10 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
         envs_to_pause = []
         n_envs = envs.num_envs
         for i in range(n_envs):
-            if next_episodes[i].episode_id in stats_episodes:
+            if (
+                next_episodes[i].scene_id,
+                next_episodes[i].episode_id,
+            ) in stats_episodes:
                 envs_to_pause.append(i)
 
             # episode ended
@@ -200,7 +203,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
                 current_episode_reward[i] = 0
                 # use scene_id + episode_id as unique id for storing stats
                 stats_episodes[
-                    "{}:{}".format(
+                    (
                         current_episodes[i].scene_id,
                         current_episodes[i].episode_id,
                     )
