@@ -7,12 +7,11 @@
 import numpy as np
 import quaternion
 
-
 EPSILON = 1e-8
 
 
 def angle_between_quaternions(q1: np.quaternion, q2: np.quaternion) -> float:
-    """Returns the angle (in radians) between two quaternions. This angle will
+    r"""Returns the angle (in radians) between two quaternions. This angle will
     always be positive.
     """
     q1_inv = np.conjugate(q1)
@@ -22,7 +21,8 @@ def angle_between_quaternions(q1: np.quaternion, q2: np.quaternion) -> float:
 
 
 def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
-    """Computes the quaternion representation of v1 using v0 as the origin."""
+    r"""Computes the quaternion representation of v1 using v0 as the origin.
+    """
     v0 = v0 / np.linalg.norm(v0)
     v1 = v1 / np.linalg.norm(v1)
     c = v0.dot(v1)

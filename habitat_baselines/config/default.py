@@ -4,8 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 from typing import List, Optional, Union
+
+import numpy as np
+
 from habitat import get_config
 from habitat.config import Config as CN
 
@@ -65,8 +67,7 @@ def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:
-    """
-    Create a unified config with default values overwritten by values from
+    r"""Create a unified config with default values overwritten by values from
     `config_paths` and overwritten by options from `opts`.
     Args:
         config_paths: List of config paths or string that contains comma

@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from yacs.config import CfgNode as Config
+
 from habitat.config.default import get_config
 
 __all__ = ["Config", "get_config"]

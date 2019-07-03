@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
-import matplotlib.pyplot as plt
+import torch.nn.functional as F
+
 from habitat_baselines.slambased.utils import generate_2dgrid
 
 

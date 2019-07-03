@@ -6,35 +6,31 @@
 
 from typing import Dict, Optional
 
+import attr
 import numpy as np
 from gym import spaces
+
+from habitat.core.registry import registry
 from habitat.core.simulator import (
-    Sensor,
-    SensorTypes,
-    SensorSuite,
     Observations,
+    Sensor,
+    SensorSuite,
+    SensorTypes,
 )
+from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
+@attr.s(auto_attribs=True)
 class QuestionData:
     question_text: str
-    answer_text: Optional[str]
-    question_type: Optional[str]
-
-    def __init__(
-        self,
-        question_text: str,
-        question_type: str,
-        answer_text: Optional[str] = None,
-    ) -> None:
-        self.question_text = question_text
-        self.answer_text = answer_text
-        self.question_type = question_type
+    answer_text: str
+    question_type: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class EQAEpisode(NavigationEpisode):
-    """Specification of episode that includes initial position and rotation of
+    r"""Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
 
     Args:
@@ -47,11 +43,9 @@ class EQAEpisode(NavigationEpisode):
         question: question related to goal object.
     """
 
-    question: QuestionData
-
-    def __init__(self, question: QuestionData, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.question = question
+    question: QuestionData = attr.ib(
+        default=None, validator=not_none_validator
+    )
 
 
 class QuestionSensor(Sensor):
@@ -119,6 +113,7 @@ class RewardSensor(Sensor):
         return self._get_observation(**kwargs)
 
 
+@registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     _sensor_suite: SensorSuite
 

@@ -1,8 +1,6 @@
-<p align="center">
-  <img width = "50%" src='docs/img/habitat_logo_with_text_horizontal_blue.png' />
-  </p>
-  
---------------------------------------------------------------------------------
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-api/blob/master/LICENSE)
+[![CircleCI](https://circleci.com/gh/facebookresearch/habitat-api.svg?style=shield)](https://circleci.com/gh/facebookresearch/habitat-api)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebookresearch/habitat-api/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 Habitat-API
 ==============================
@@ -13,7 +11,7 @@ defining embodied AI tasks (e.g. navigation, instruction following, question ans
 Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
 
 <p align="center">
-  <img src="docs/img/habitat_compressed.gif"  height="400">
+  <img src="res/img/habitat_compressed.gif"  height="400">
 </p>
 
 ---
@@ -40,8 +38,8 @@ To this end, we aim to standardize the entire ‘software stack’ for training 
 If you use the Habitat platform in your research, please cite the following [technical report](https://arxiv.org/abs/1904.01201):
 ```
 @article{habitat19arxiv,
-  title =   {Habitat: A Platform for Embodied AI Research},
-  author =  {{Manolis Savva*}, {Abhishek Kadian*}, {Oleksandr Maksymets*}, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh and Dhruv Batra},
+  title =   {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
+  author =  {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
   journal = {arXiv preprint arXiv:1904.01201},
   year =    {2019}
 }
@@ -49,11 +47,20 @@ If you use the Habitat platform in your research, please cite the following [tec
 
 ## Installation
 
-1. Clone the github repository and install using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-```bash
-cd habitat-api
-pip install -e .
-```
+1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+  
+    ```bash
+    cd habitat-api
+    pip install -e .
+    ```
+  
+    The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
+  
+    ```bash
+    cd habitat-api
+    pip install -r requirements.txt
+    python setup.py develop --all # install habitat and habitat_baselines
+    ```
 
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
 
@@ -84,6 +91,8 @@ while not env.episode_over:
 
 ```
 
+See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures) for an example of how to extend habitat-api from _outside_ the source code
+
 ## Docker Setup
 We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:
 
@@ -110,7 +119,7 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='docs/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
+  <img src='res/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat-API</i></p>
 </p>
 
@@ -144,10 +153,10 @@ Download the Habitat related Gibson dataset following the instructions [here](ht
 | Point goal navigtaion | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | Point goal navigtaion | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
 
-To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](baselines/README.md#reinforcement-learning-rl).
+To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](habitat_baselines/README.md#reinforcement-learning-rl).
 
 ## Baselines
-Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [baselines/README.md](baselines/README.md).
+Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat_baselines/README.md).
 
 ## Acknowledgments
 The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
@@ -157,3 +166,4 @@ Habitat-API is MIT licensed. See the LICENSE file for details.
 
 ## References
 1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019. 
+

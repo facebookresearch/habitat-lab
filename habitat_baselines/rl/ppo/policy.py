@@ -4,21 +4,28 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat_baselines.rl.ppo.utils import Flatten, CategoricalNet
-
-import numpy as np
+from habitat_baselines.rl.ppo.utils import CategoricalNet, Flatten
 
 
 class Policy(nn.Module):
-    def __init__(self, observation_space, action_space, hidden_size=512):
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        goal_sensor_uuid,
+        hidden_size=512,
+    ):
         super().__init__()
         self.dim_actions = action_space.n
-
+        self.goal_sensor_uuid = goal_sensor_uuid
         self.net = Net(
-            observation_space=observation_space, hidden_size=hidden_size
+            observation_space=observation_space,
+            hidden_size=hidden_size,
+            goal_sensor_uuid=goal_sensor_uuid,
         )
 
         self.action_distribution = CategoricalNet(
@@ -60,14 +67,16 @@ class Policy(nn.Module):
 
 
 class Net(nn.Module):
-    """Network which passes the input image through CNN and concatenates
+    r"""Network which passes the input image through CNN and concatenates
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size):
+    def __init__(self, observation_space, hidden_size, goal_sensor_uuid):
         super().__init__()
-
-        self._n_input_goal = observation_space.spaces["pointgoal"].shape[0]
+        self.goal_sensor_uuid = goal_sensor_uuid
+        self._n_input_goal = observation_space.spaces[
+            self.goal_sensor_uuid
+        ].shape[0]
         self._hidden_size = hidden_size
 
         self.cnn = self._init_perception_model(observation_space)
@@ -153,7 +162,7 @@ class Net(nn.Module):
     def _conv_output_dim(
         self, dimension, padding, dilation, kernel_size, stride
     ):
-        """Calculates the output height and width based on the input
+        r"""Calculates the output height and width based on the input
         height and width to the convolution layer.
 
         ref: https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d
@@ -276,7 +285,7 @@ class Net(nn.Module):
         return self.cnn(cnn_input)
 
     def forward(self, observations, rnn_hidden_states, masks):
-        x = observations["pointgoal"]
+        x = observations[self.goal_sensor_uuid]
 
         if not self.is_blind:
             perception_embed = self.forward_perception_model(observations)

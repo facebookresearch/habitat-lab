@@ -21,3 +21,5 @@ SIMULATOR:
 DATASET:
   TYPE: MP3DEQA-v1
   SPLIT: val
+  DATA_PATH: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
+

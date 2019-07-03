@@ -1,39 +1,40 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import argparse
-import numpy as np
-import torch
-import random
-import time
 import os
-import PIL
+import random
+import sys
+import time
 from math import pi
+
+import numpy as np
+import PIL
+import requests
+import torch
 import torch.nn.functional as F
-import orbslam2
+
 import habitat
-from habitat_baselines.slambased.utils import generate_2dgrid
-from habitat_baselines.slambased.reprojection import (
-    homogenize_p,
-    get_distance,
-    project_tps_into_worldmap,
-    get_direction,
-    habitat_goalpos_to_mapgoal_pos,
-    planned_path2tps,
-    angle_to_pi_2_minus_pi_2,
-)
+import orbslam2
+from habitat import SimulatorActions
+from habitat.config.default import get_config
+from habitat_baselines.config.default import get_config as cfg_baseline
+from habitat_baselines.slambased.mappers import DirectDepthMapper
+from habitat_baselines.slambased.monodepth import MonoDepthEstimator
+from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
     angle_to_pi_2_minus_pi_2 as norm_ang,
+    get_direction,
+    get_distance,
+    habitat_goalpos_to_mapgoal_pos,
+    homogenize_p,
+    planned_path2tps,
+    project_tps_into_worldmap,
 )
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat_baselines.slambased.mappers import DirectDepthMapper
-from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
-
-from habitat_baselines.config.default import get_config as cfg_baseline
-from habitat.config.default import get_config
-
-from habitat_baselines.slambased.monodepth import MonoDepthEstimator
-
-# https://sumit-ghosh.com/articles/python-download-progress-bar/
-import sys
-import requests
+from habitat_baselines.slambased.utils import generate_2dgrid
 
 
 def download(url, filename):
@@ -114,7 +115,7 @@ class RandomAgent(object):
         # Act
         # Check if we are done
         if self.is_goal_reached():
-            action = SimulatorActions.STOP.value
+            action = SimulatorActions.STOP
         else:
             action = random.randint(0, self.num_actions - 1)
         return action
@@ -131,20 +132,20 @@ class BlindAgent(RandomAgent):
     def decide_what_to_do(self):
         distance_to_goal = self.obs["pointgoal"][0]
         angle_to_goal = norm_ang(np.array(self.obs["pointgoal"][1]))
-        command = SimulatorActions.STOP.value
+        command = SimulatorActions.STOP
         if distance_to_goal <= self.pos_th:
             return command
         if abs(angle_to_goal) < self.angle_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT
             elif angle_to_goal > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT
             elif (angle_to_goal < 0) and (angle_to_goal > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT
 
         return command
 
@@ -152,7 +153,7 @@ class BlindAgent(RandomAgent):
         self.update_internal_state(habitat_observation)
         # Act
         if self.is_goal_reached():
-            return SimulatorActions.STOP.value
+            return SimulatorActions.STOP
         command = self.decide_what_to_do()
         random_action = random.randint(0, self.num_actions - 1)
         act_randomly = np.random.uniform(0, 1, 1) < random_prob
@@ -265,7 +266,7 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if self.action_history[-1] == SimulatorActions.FORWARD.value:
+                if self.action_history[-1] == SimulatorActions.MOVE_FORWARD:
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
@@ -329,7 +330,7 @@ class ORBSLAM2Agent(RandomAgent):
         )
         success = self.is_goal_reached()
         if success:
-            action = SimulatorActions.STOP.value
+            action = SimulatorActions.STOP
             self.action_history.append(action)
             return action
         # Plan action
@@ -481,7 +482,7 @@ class ORBSLAM2Agent(RandomAgent):
         return path, planned_waypoints
 
     def planner_prediction_to_command(self, p_next):
-        command = SimulatorActions.STOP.value
+        command = SimulatorActions.STOP
         p_init = self.pose6D.squeeze()
         d_angle_rot_th = self.angle_th
         pos_th = self.pos_th
@@ -491,27 +492,27 @@ class ORBSLAM2Agent(RandomAgent):
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
-            command = SimulatorActions.FORWARD.value
+            command = SimulatorActions.MOVE_FORWARD
         else:
             if (d_angle > 0) and (d_angle < pi):
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT
             elif d_angle > pi:
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT
             elif (d_angle < 0) and (d_angle > -pi):
-                command = SimulatorActions.RIGHT.value
+                command = SimulatorActions.TURN_RIGHT
             else:
-                command = SimulatorActions.LEFT.value
+                command = SimulatorActions.TURN_LEFT
         return command
 
     def decide_what_to_do(self):
         action = None
         if self.is_goal_reached():
-            action = SimulatorActions.STOP.value
+            action = SimulatorActions.STOP
             return action
         if self.unseen_obstacle:
-            command = SimulatorActions.RIGHT.value
+            command = SimulatorActions.TURN_RIGHT
             return command
-        command = SimulatorActions.STOP.value
+        command = SimulatorActions.STOP
         command = self.planner_prediction_to_command(self.waypointPose6D)
         return command
 

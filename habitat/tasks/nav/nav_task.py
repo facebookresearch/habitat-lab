@@ -6,24 +6,26 @@
 
 from typing import Any, List, Optional, Type
 
+import attr
 import cv2
 import numpy as np
 from gym import spaces
 
-import habitat
 from habitat.config import Config
-from habitat.core.dataset import Episode, Dataset
-from habitat.core.embodied_task import Measurements
+from habitat.core.dataset import Dataset, Episode
+from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
+from habitat.core.registry import registry
 from habitat.core.simulator import (
-    Simulator,
-    ShortestPathPoint,
-    SensorTypes,
+    Sensor,
     SensorSuite,
+    SensorTypes,
+    ShortestPathPoint,
+    Simulator,
 )
+from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 from habitat.utils.visualizations import maps
 
-COLLISION_PROXIMITY_TOLERANCE: float = 1e-3
 MAP_THICKNESS_SCALAR: int = 1250
 
 
@@ -47,65 +49,40 @@ def merge_sim_episode_config(
     return sim_config
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
-    """Base class for a goal specification hierarchy.
+    r"""Base class for a goal specification hierarchy.
     """
 
-    position: List[float]
-    radius: Optional[float]
-
-    def __init__(
-        self, position: List[float], radius: Optional[float] = None, **kwargs
-    ) -> None:
-        self.position = position
-        self.radius = radius
+    position: List[float] = attr.ib(default=None, validator=not_none_validator)
+    radius: Optional[float] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class ObjectGoal(NavigationGoal):
-    """Object goal that can be specified by object_id or position or object
+    r"""Object goal that can be specified by object_id or position or object
     category.
     """
 
-    object_id: str
-    object_name: Optional[str]
-    object_category: Optional[str]
-    room_id: Optional[str]
-    room_name: Optional[str]
-
-    def __init__(
-        self,
-        object_id: str,
-        room_id: Optional[str] = None,
-        object_name: Optional[str] = None,
-        object_category: Optional[str] = None,
-        room_name: Optional[str] = None,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.object_id = object_id
-        self.object_name = object_name
-        self.object_category = object_category
-        self.room_id = room_id
-        self.room_name = room_name
+    object_id: str = attr.ib(default=None, validator=not_none_validator)
+    object_name: Optional[str] = None
+    object_category: Optional[str] = None
+    room_id: Optional[str] = None
+    room_name: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class RoomGoal(NavigationGoal):
-    """Room goal that can be specified by room_id or position with radius.
+    r"""Room goal that can be specified by room_id or position with radius.
     """
 
-    room_id: str
-    room_name: Optional[str]
-
-    def __init__(
-        self, room_id: str, room_name: Optional[str] = None, **kwargs
-    ) -> None:
-        super().__init__(**kwargs)  # type: ignore
-        self.room_id = room_id
-        self.room_name = room_name
+    room_id: str = attr.ib(default=None, validator=not_none_validator)
+    room_name: Optional[str] = None
 
 
+@attr.s(auto_attribs=True, kw_only=True)
 class NavigationEpisode(Episode):
-    """Class for episode specification that includes initial position and
+    r"""Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
     episode is a description of one task instance for the agent.
 
@@ -121,26 +98,16 @@ class NavigationEpisode(Episode):
         shortest_paths: list containing shortest paths to goals
     """
 
-    goals: List[NavigationGoal]
-    start_room: Optional[str]
-    shortest_paths: Optional[List[ShortestPathPoint]]
-
-    def __init__(
-        self,
-        goals: List[NavigationGoal],
-        start_room: Optional[str] = None,
-        shortest_paths: Optional[List[ShortestPathPoint]] = None,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.goals = goals
-        self.shortest_paths = shortest_paths
-        self.start_room = start_room
+    goals: List[NavigationGoal] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    start_room: Optional[str] = None
+    shortest_paths: Optional[List[ShortestPathPoint]] = None
 
 
-class PointGoalSensor(habitat.Sensor):
-    """
-    Sensor for PointGoal observations which are used in the PointNav task.
+@registry.register_sensor
+class PointGoalSensor(Sensor):
+    r"""Sensor for PointGoal observations which are used in the PointNav task.
     For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
 
@@ -204,9 +171,9 @@ class PointGoalSensor(habitat.Sensor):
         return direction_vector_agent
 
 
-class StaticPointGoalSensor(habitat.Sensor):
-    """
-    Sensor for PointGoal observations which are used in the StaticPointNav
+@registry.register_sensor
+class StaticPointGoalSensor(Sensor):
+    r"""Sensor for PointGoal observations which are used in the StaticPointNav
     task. For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
     Args:
@@ -276,9 +243,10 @@ class StaticPointGoalSensor(habitat.Sensor):
         return self._initial_vector
 
 
-class HeadingSensor(habitat.Sensor):
-    """
-    Sensor for observing the agent's heading in the global coordinate frame.
+@registry.register_sensor
+class HeadingSensor(Sensor):
+    r"""Sensor for observing the agent's heading in the global coordinate
+    frame.
 
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -312,9 +280,9 @@ class HeadingSensor(habitat.Sensor):
         return np.array(phi)
 
 
-class ProximitySensor(habitat.Sensor):
-    """
-    Sensor for observing the distance to the closest obstacle
+@registry.register_sensor
+class ProximitySensor(Sensor):
+    r"""Sensor for observing the distance to the closest obstacle
 
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -350,8 +318,9 @@ class ProximitySensor(habitat.Sensor):
         )
 
 
-class SPL(habitat.Measure):
-    """SPL (Success weighted by Path Length)
+@registry.register_measure
+class SPL(Measure):
+    r"""SPL (Success weighted by Path Length)
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf
@@ -408,7 +377,8 @@ class SPL(habitat.Measure):
         )
 
 
-class Collisions(habitat.Measure):
+@registry.register_measure
+class Collisions(Measure):
     def __init__(self, sim, config):
         self._sim = sim
         self._config = config
@@ -423,19 +393,16 @@ class Collisions(habitat.Measure):
 
     def update_metric(self, episode, action):
         if self._metric is None:
-            self._metric = 0
-
-        current_position = self._sim.get_agent_state().position
-        if (
-            action == self._sim.index_forward_action
-            and self._sim.distance_to_closest_obstacle(current_position)
-            < COLLISION_PROXIMITY_TOLERANCE
-        ):
-            self._metric += 1
+            self._metric = {"count": 0, "is_collision": False}
+        self._metric["is_collision"] = False
+        if self._sim.previous_step_collided:
+            self._metric["count"] += 1
+            self._metric["is_collision"] = True
 
 
-class TopDownMap(habitat.Measure):
-    """Top Down Map measure
+@registry.register_measure
+class TopDownMap(Measure):
+    r"""Top Down Map measure
     """
 
     def __init__(self, sim: Simulator, config: Config):
@@ -453,9 +420,13 @@ class TopDownMap(habitat.Measure):
         self._coordinate_min = maps.COORDINATE_MIN
         self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
+        self._shortest_path_points = None
         self._cell_scale = (
             self._coordinate_max - self._coordinate_min
         ) / self._map_resolution[0]
+        self.line_thickness = int(
+            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+        )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -464,7 +435,7 @@ class TopDownMap(habitat.Measure):
     def _check_valid_nav_point(self, point: List[float]):
         self._sim.is_navigable(point)
 
-    def get_original_map(self, episode):
+    def get_original_map(self):
         top_down_map = maps.get_topdown_map(
             self._sim,
             self._map_resolution,
@@ -479,43 +450,42 @@ class TopDownMap(habitat.Measure):
         self._ind_x_max = range_x[-1]
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
-
-        if self._config.DRAW_SOURCE_AND_TARGET:
-            # mark source point
-            s_x, s_y = maps.to_grid(
-                episode.start_position[0],
-                episode.start_position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            point_padding = 2 * int(
-                np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
-            )
-            top_down_map[
-                s_x - point_padding : s_x + point_padding + 1,
-                s_y - point_padding : s_y + point_padding + 1,
-            ] = maps.MAP_SOURCE_POINT_INDICATOR
-
-            # mark target point
-            t_x, t_y = maps.to_grid(
-                episode.goals[0].position[0],
-                episode.goals[0].position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
-            )
-            top_down_map[
-                t_x - point_padding : t_x + point_padding + 1,
-                t_y - point_padding : t_y + point_padding + 1,
-            ] = maps.MAP_TARGET_POINT_INDICATOR
-
         return top_down_map
+
+    def draw_source_and_target(self, episode):
+        # mark source point
+        s_x, s_y = maps.to_grid(
+            episode.start_position[0],
+            episode.start_position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        point_padding = 2 * int(
+            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+        )
+        self._top_down_map[
+            s_x - point_padding : s_x + point_padding + 1,
+            s_y - point_padding : s_y + point_padding + 1,
+        ] = maps.MAP_SOURCE_POINT_INDICATOR
+
+        # mark target point
+        t_x, t_y = maps.to_grid(
+            episode.goals[0].position[0],
+            episode.goals[0].position[2],
+            self._coordinate_min,
+            self._coordinate_max,
+            self._map_resolution,
+        )
+        self._top_down_map[
+            t_x - point_padding : t_x + point_padding + 1,
+            t_y - point_padding : t_y + point_padding + 1,
+        ] = maps.MAP_TARGET_POINT_INDICATOR
 
     def reset_metric(self, episode):
         self._step_count = 0
         self._metric = None
-        self._top_down_map = self.get_original_map(episode)
+        self._top_down_map = self.get_original_map()
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
             agent_position[0],
@@ -525,6 +495,30 @@ class TopDownMap(habitat.Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
+        if self._config.DRAW_SHORTEST_PATH:
+            # draw shortest path
+            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
+            )
+            self._shortest_path_points = [
+                maps.to_grid(
+                    p[0],
+                    p[2],
+                    self._coordinate_min,
+                    self._coordinate_max,
+                    self._map_resolution,
+                )[::-1]
+                for p in self._shortest_path_points
+            ]
+            maps.draw_path(
+                self._top_down_map,
+                self._shortest_path_points,
+                maps.MAP_SHORTEST_PATH_COLOR,
+                self.line_thickness,
+            )
+        # draw source and target points last to avoid overlap
+        if self._config.DRAW_SOURCE_AND_TARGET:
+            self.draw_source_and_target(episode)
 
     def update_metric(self, episode, action):
         self._step_count += 1
@@ -549,7 +543,21 @@ class TopDownMap(habitat.Measure):
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
             ),
+            "agent_angle": self.get_polar_angle(),
         }
+
+    def get_polar_angle(self):
+        agent_state = self._sim.get_agent_state()
+        # quaternion is in x, y, z, w format
+        ref_rotation = agent_state.rotation
+
+        heading_vector = quaternion_rotate_vector(
+            ref_rotation.inverse(), np.array([0, 0, -1])
+        )
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        x_y_flip = -np.pi / 2
+        return np.array(phi) + x_y_flip
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(
@@ -580,7 +588,8 @@ class TopDownMap(habitat.Measure):
         return self._top_down_map, a_x, a_y
 
 
-class NavigationTask(habitat.EmbodiedTask):
+@registry.register_task(name="Nav-v0")
+class NavigationTask(EmbodiedTask):
     def __init__(
         self,
         task_config: Config,
@@ -591,35 +600,21 @@ class NavigationTask(habitat.EmbodiedTask):
         task_measurements = []
         for measurement_name in task_config.MEASUREMENTS:
             measurement_cfg = getattr(task_config, measurement_name)
-            is_valid_measurement = hasattr(
-                habitat.tasks.nav.nav_task,  # type: ignore
-                measurement_cfg.TYPE,
-            )
-            assert is_valid_measurement, "invalid measurement type {}".format(
-                measurement_cfg.TYPE
-            )
-            task_measurements.append(
-                getattr(
-                    habitat.tasks.nav.nav_task,  # type: ignore
-                    measurement_cfg.TYPE,
-                )(sim, measurement_cfg)
-            )
+            measure_type = registry.get_measure(measurement_cfg.TYPE)
+            assert (
+                measure_type is not None
+            ), "invalid measurement type {}".format(measurement_cfg.TYPE)
+            task_measurements.append(measure_type(sim, measurement_cfg))
         self.measurements = Measurements(task_measurements)
 
         task_sensors = []
         for sensor_name in task_config.SENSORS:
             sensor_cfg = getattr(task_config, sensor_name)
-            is_valid_sensor = hasattr(
-                habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
-            )
-            assert is_valid_sensor, "invalid sensor type {}".format(
+            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
+            assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            task_sensors.append(
-                getattr(
-                    habitat.tasks.nav.nav_task, sensor_cfg.TYPE  # type: ignore
-                )(sim, sensor_cfg)
-            )
+            task_sensors.append(sensor_type(sim, sensor_cfg))
 
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)

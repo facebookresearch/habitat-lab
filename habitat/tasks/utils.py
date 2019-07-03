@@ -9,7 +9,7 @@ import quaternion  # noqa # pylint: disable=unused-import
 
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
-    """
+    r"""
     ref: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
     """
     s = 1  # unit quaternion

@@ -18,8 +18,8 @@ from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.pointnav.pointnav_dataset import (
-    PointNavDatasetV1,
     DEFAULT_SCENE_PATH_PREFIX,
+    PointNavDatasetV1,
 )
 from habitat.utils.geometry_utils import quaternion_xyzw_to_wxyz
 
@@ -70,7 +70,7 @@ def test_multiple_files_scene_path():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.SCENES_DIR = os.path.join(
         os.getcwd(), DEFAULT_SCENE_PATH_PREFIX
     )
@@ -98,7 +98,7 @@ def test_multiple_files_pointnav_dataset():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.freeze()
     partial_dataset = make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config
@@ -141,6 +141,8 @@ def test_pointnav_episode_generator():
     config.DATASET.SPLIT = "val"
     config.ENVIRONMENT.MAX_EPISODE_STEPS = 500
     config.freeze()
+    if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+        pytest.skip("Test skipped as dataset files are missing.")
     env = habitat.Env(config)
     env.seed(config.SEED)
     random.seed(config.SEED)

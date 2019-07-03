@@ -1,22 +1,26 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Optional
 
 import numpy as np
 
 from habitat.core.simulator import Simulator
 from habitat.datasets.utils import get_action_shortest_path
-from habitat.tasks.nav.nav_task import NavigationGoal, NavigationEpisode
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
-"""
-    A minimum radius of a plane that a point should be part of to be
-    considered  as a target or source location. Used to filter isolated points
-    that aren't part of a floor.
+r"""A minimum radius of a plane that a point should be part of to be
+considered  as a target or source location. Used to filter isolated points
+that aren't part of a floor.
 """
 ISLAND_RADIUS_LIMIT = 1.5
 
 
 def _ratio_sample_rate(ratio: float, ratio_threshold: float) -> float:
-    """
-    Sampling function for aggressive filtering of straight-line
+    r"""Sampling function for aggressive filtering of straight-line
     episodes with shortest path geodesic distance to Euclid distance ratio
     threshold.
 
@@ -85,8 +89,7 @@ def generate_pointnav_episode(
     geodesic_to_euclid_min_ratio: float = 1.1,
     number_retries_per_target: int = 10,
 ) -> NavigationEpisode:
-    """
-    Generator function that generates PointGoal navigation episodes.
+    r"""Generator function that generates PointGoal navigation episodes.
 
     An episode is trivial if there is an obstacle-free, straight line between
     the start and goal positions. A good measure of the navigation

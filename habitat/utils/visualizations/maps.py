@@ -5,12 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 import cv2
 import imageio
 import numpy as np
 import scipy.ndimage
+
 from habitat.core.simulator import Simulator
 from habitat.utils.visualizations import utils
 
@@ -32,7 +33,7 @@ MAP_VALID_POINT = 1
 MAP_BORDER_INDICATOR = 2
 MAP_SOURCE_POINT_INDICATOR = 4
 MAP_TARGET_POINT_INDICATOR = 6
-
+MAP_SHORTEST_PATH_COLOR = 7
 TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
 TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
     np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
@@ -42,6 +43,7 @@ TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]
 TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]
 TOP_DOWN_MAP_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]
 TOP_DOWN_MAP_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]
+TOP_DOWN_MAP_COLORS[MAP_SHORTEST_PATH_COLOR] = [0, 200, 0]
 
 
 def draw_agent(
@@ -50,7 +52,7 @@ def draw_agent(
     agent_rotation: float,
     agent_radius_px: int = 5,
 ) -> np.ndarray:
-    """Return an image with the agent image composited onto it.
+    r"""Return an image with the agent image composited onto it.
     Args:
         image: the image onto which to put the agent.
         agent_center_coord: the image coordinates where to paste the agent.
@@ -90,7 +92,7 @@ def pointnav_draw_target_birdseye_view(
     target_band_radii: Optional[List[float]] = None,
     target_band_colors: Optional[List[Tuple[int, int, int]]] = None,
 ) -> np.ndarray:
-    """Return an image of agent w.r.t. centered target location for pointnav
+    r"""Return an image of agent w.r.t. centered target location for pointnav
     tasks.
 
     Args:
@@ -182,7 +184,7 @@ def to_grid(
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
 ) -> Tuple[int, int]:
-    """Return gridworld index of realworld coordinates assuming top-left corner
+    r"""Return gridworld index of realworld coordinates assuming top-left corner
     is the origin. The real world coordinates of lower left corner are
     (coordinate_min, coordinate_min) and of top right corner are
     (coordinate_max, coordinate_max)
@@ -203,7 +205,7 @@ def from_grid(
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
 ) -> Tuple[float, float]:
-    """Inverse of _to_grid function. Return real world coordinate from
+    r"""Inverse of _to_grid function. Return real world coordinate from
     gridworld assuming top-left corner is the origin. The real world
     coordinates of lower left corner are (coordinate_min, coordinate_min) and
     of top right corner are (coordinate_max, coordinate_max)
@@ -245,7 +247,7 @@ def get_topdown_map(
     num_samples: int = 20000,
     draw_border: bool = True,
 ) -> np.ndarray:
-    """Return a top-down occupancy map for a sim. Note, this only returns valid
+    r"""Return a top-down occupancy map for a sim. Note, this only returns valid
     values for whatever floor the agent is currently on.
 
     Args:
@@ -326,10 +328,27 @@ def get_topdown_map(
 
 
 def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
-    """Convert the top down map to RGB based on the indicator values.
+    r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
         Returns:
             A colored version of the top-down map.
     """
     return TOP_DOWN_MAP_COLORS[top_down_map]
+
+
+def draw_path(
+    top_down_map: np.ndarray,
+    path_points: List[Tuple],
+    color: int,
+    thickness: int = 2,
+) -> None:
+    r"""Draw path on top_down_map (in place) with specified color.
+        Args:
+            top_down_map: A colored version of the map.
+            color: color code of the path, from TOP_DOWN_MAP_COLORS.
+            path_points: list of points that specify the path to be drawn
+            thickness: thickness of the path.
+    """
+    for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
+        cv2.line(top_down_map, prev_pt, next_pt, color, thickness=thickness)

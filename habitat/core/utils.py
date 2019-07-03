@@ -10,7 +10,7 @@ import numpy as np
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    """Tile multiple images into single image
+    r"""Tile multiple images into single image
 
     Args:
         images: list of images where each image has dimension
@@ -40,3 +40,19 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
         new_height * height, new_width * width, n_channels
     )
     return out_image
+
+
+def not_none_validator(self, attribute, value):
+    if value is None:
+        raise ValueError(f"Argument '{attribute.name}' must be set")
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(
+                *args, **kwargs
+            )
+        return cls._instances[cls]

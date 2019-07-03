@@ -30,6 +30,7 @@ _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
+_C.TASK.GOAL_SENSOR_UUID = "pointgoal"
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -70,6 +71,7 @@ _C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
 _C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
 _C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
 _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
+_C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
 # -----------------------------------------------------------------------------
 # # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -80,12 +82,14 @@ _C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
+_C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/" "van-gogh-room.glb"
 )
 _C.SIMULATOR.SEED = _C.SEED
-_C.SIMULATOR.TURN_ANGLE = 10  # in degrees
+_C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
+_C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 # -----------------------------------------------------------------------------
 # # SENSORS
@@ -142,21 +146,11 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
-# -----------------------------------------------------------------------------
-# MP3DEQAV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.MP3DEQAV1 = CN()
-_C.DATASET.MP3DEQAV1.DATA_PATH = (
-    "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-)
-# -----------------------------------------------------------------------------
-# POINTNAVV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.POINTNAVV1 = CN()
-_C.DATASET.POINTNAVV1.DATA_PATH = (
+_C.DATASET.NUM_EPISODE_SAMPLE = -1
+_C.DATASET.CONTENT_SCENES = ["*"]
+_C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
-_C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
 
 
 # -----------------------------------------------------------------------------
@@ -166,8 +160,7 @@ def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:
-    """
-    Create a unified config with default values overwritten by values from
+    r"""Create a unified config with default values overwritten by values from
     `config_paths` and overwritten by options from `opts`.
     Args:
         config_paths: List of config paths or string that contains comma
