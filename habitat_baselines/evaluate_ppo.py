@@ -198,8 +198,13 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
                 episode_stats["success"] = int(infos[i]["spl"] > 0)
                 episode_stats["reward"] = current_episode_reward[i].item()
                 current_episode_reward[i] = 0
-                stats_episodes[current_episodes[i].episode_id] = episode_stats
-
+                # use scene_id + episode_id as unique id for storing stats
+                stats_episodes[
+                    "{}:{}".format(
+                        current_episodes[i].scene_id,
+                        current_episodes[i].episode_id,
+                    )
+                ] = episode_stats
                 if args.video_option:
                     generate_video(
                         args,
