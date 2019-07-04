@@ -156,7 +156,7 @@ def eval_checkpoint(checkpoint_path, args, writer, cur_ckpt_idx=0):
         rgb_frames = [[]] * args.num_processes
         os.makedirs(args.video_dir, exist_ok=True)
 
-    while len(stats_episodes) < args.count_test_episodes:
+    while len(stats_episodes) < args.count_test_episodes and envs.num_envs > 0:
         current_episodes = envs.current_episodes()
 
         with torch.no_grad():
