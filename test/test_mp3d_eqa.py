@@ -249,16 +249,18 @@ def test_eqa_task():
 
     for i in range(3):
         env.reset()
-        env.step(1 + np.random.choice(2))
+        env.step(habitat.EnvAction(sim_action=1 + np.random.choice(2),
+                                   task_action=None))
         metrics = env.get_metrics()
         del metrics["episode_info"]
         print(metrics)
     correct_answer_id = dataset.get_answers_vocabulary()[
         env.current_episode.question.answer_text
     ]
-    env.step(0)
-    env.task.answer_question(correct_answer_id, env.episode_over)
+    env.step(habitat.EnvAction(sim_action=0, task_action=correct_answer_id))
+    #env.task.answer_question(correct_answer_id, env.episode_over)
     metrics = env.get_metrics()
-    assert metrics["answer_accuracy"] == 1
     del metrics["episode_info"]
     print(metrics)
+    assert metrics["answer_accuracy"] == 1
+

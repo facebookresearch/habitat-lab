@@ -4,12 +4,23 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import attr
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Type
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.simulator import SensorSuite, Simulator
+from habitat.core.simulator import SensorSuite, Simulator, Observations
+from habitat.core.utils import not_none_validator
+
+
+@attr.s(auto_attribs=True, kw_only=True)
+class EnvAction:
+    """Base class for Environment Action
+    """
+
+    sim_action: int = attr.ib(default=None)
+    task_action: object = attr.ib(default=None)
 
 
 class Measure:
@@ -127,6 +138,9 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+
+    def step(self, action: EnvAction) -> Observations:
+        return {}
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]

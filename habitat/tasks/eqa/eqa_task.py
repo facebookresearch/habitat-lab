@@ -150,13 +150,13 @@ class AnswerAccuracy(Measure):
         self,
         answer_id=None,
         episode=None,
-        prev_action=None,
+        sim_action=None,
         episode_over=None,
         *args: Any,
         **kwargs: Any,
     ):
         if (
-            prev_action is None
+            sim_action is None
             or answer_id is None
             or episode is None
             or episode_over is None
@@ -166,9 +166,9 @@ class AnswerAccuracy(Measure):
             "Question can be answered only " "once per episode."
         )
         self._answer_received = True
-        if prev_action == SimulatorActions.STOP.value:
+        if sim_action == SimulatorActions.STOP.value:
             assert episode_over, "Episode should be over after stop action."
-        if prev_action == SimulatorActions.STOP.value and episode_over:
+        if sim_action == SimulatorActions.STOP.value and episode_over:
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
@@ -249,22 +249,31 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    def step(self, action):
-        pass
+    # def step(self, action):
+    #     pass
 
-    def answer_question(self, answer_id: int, episode_over: bool):
+    def step(self, action: int, sim_observations, episode, episode_over:
+    bool = True):
+        if action.task_action is None:
+            return self.sensor_suite.get_observations(
+                observations=sim_observations, episode=episode
+            )
         required_measures = {"episode_info", "action_stats", "answer_accuracy"}
         assert (
             required_measures <= self.measurements.measures.keys()
         ), f"{required_measures} are required to be enabled for EQA task"
         episode = self.measurements.measures["episode_info"].get_metric()
-        prev_action = self.measurements.measures["action_stats"].get_metric()[
+        sim_action = self.measurements.measures["action_stats"].get_metric()[
             "previous_action"
         ]
 
         self.measurements.measures["answer_accuracy"].update_metric(
-            answer_id=answer_id,
-            prev_action=prev_action,
+            answer_id=action.task_action,
+            sim_action=action.sim_action,
             episode=episode,
             episode_over=episode_over,
+        )
+
+        return self.sensor_suite.get_observations(
+            observations=sim_observations, episode=episode
         )

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import gym
 import numpy as np
@@ -13,7 +13,7 @@ from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Metrics
+from habitat.core.embodied_task import EmbodiedTask, EnvAction, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
@@ -202,7 +202,7 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
-    def step(self, action: int) -> Observations:
+    def step(self, action: Union[EnvAction, int]) -> Observations:
         """Perform an action in the environment and return observations
 
         Args:
@@ -220,12 +220,23 @@ class Env:
             "Episode over, call reset " "before calling step"
         )
 
-        observations = self._sim.step(action)
-        observations.update(
-            self._task.sensor_suite.get_observations(
-                observations=observations, episode=self.current_episode
+        if isinstance(action, (int, np.integer)):
+            observations = self._sim.step(action)
+        else:
+            observations = self._sim.step(action.sim_action)
+
+        if not isinstance(action, (int, np.integer)):
+            observations.update(
+                    self._task.step(action=action,
+                                    sim_observations=observations,
+                                    episode=self.current_episode)
             )
-        )
+        else:
+            observations.update(
+                self._task.sensor_suite.get_observations(
+                    observations=observations, episode=self.current_episode
+                )
+            )
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action
