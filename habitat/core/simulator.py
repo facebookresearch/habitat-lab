@@ -97,6 +97,9 @@ class SimulatorActionsSingleton(metaclass=Singleton):
     def __len__(self):
         return len(self._known_actions)
 
+    def __iter__(self):
+        return iter(self._known_actions)
+
 
 SimulatorActions = SimulatorActionsSingleton()
 
