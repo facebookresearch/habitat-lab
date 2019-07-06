@@ -184,7 +184,7 @@ def rollout_step(
     # sample actions
     with torch.no_grad():
         step_observation = {
-            k: v[step] for k, v in rollouts.observations.items()
+            k: v[rollouts.step] for k, v in rollouts.observations.items()
         }
 
         (
@@ -194,10 +194,11 @@ def rollout_step(
             recurrent_hidden_states,
         ) = actor_critic.act(
             step_observation,
-            rollouts.recurrent_hidden_states[step],
-            rollouts.prev_actions[step],
-            rollouts.masks[step],
+            rollouts.recurrent_hidden_states[rollouts.step],
+            rollouts.prev_actions[rollouts.step],
+            rollouts.masks[rollouts.step],
         )
+
     pth_time += time() - t_sample_action
 
     t_step_env = time()
@@ -259,7 +260,7 @@ def update_agent(args, agent, rollouts):
     value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
     rollouts.after_update()
-    return time() - t_update_model
+    return time() - t_update_model, value_loss, action_loss, dist_entropy
 
 
 def run_training():
@@ -383,7 +384,10 @@ def run_training():
             window_episode_reward.append(episode_rewards.clone())
             window_episode_counts.append(episode_counts.clone())
 
-            pth_time += update_agent(args, agent, rollouts)
+            delta_pth_time, value_loss, action_loss, _ = update_agent(
+                args, agent, rollouts
+            )
+            pth_time += delta_pth_time
 
             losses = [value_loss, action_loss]
             stats = zip(
