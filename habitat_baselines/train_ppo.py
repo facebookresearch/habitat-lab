@@ -165,7 +165,7 @@ def construct_envs(args):
     return envs
 
 
-def roll_forward(
+def rollout_step(
     args,
     envs,
     agent,
@@ -174,69 +174,68 @@ def roll_forward(
     episode_rewards,
     episode_counts,
 ):
-    actor_critic = agent.actor_critic
-    actor_critic.eval()
 
     pth_time = 0
     env_time = 0
     count_steps = 0
-    for step in range(args.num_steps):
-        t_sample_action = time()
-        # sample actions
-        with torch.no_grad():
-            step_observation = {
-                k: v[step] for k, v in rollouts.observations.items()
-            }
+    actor_critic = agent.actor_critic
 
-            (
-                values,
-                actions,
-                actions_log_probs,
-                recurrent_hidden_states,
-            ) = actor_critic.act(
-                step_observation,
-                rollouts.recurrent_hidden_states[step],
-                rollouts.prev_actions[step],
-                rollouts.masks[step],
-            )
-        pth_time += time() - t_sample_action
+    t_sample_action = time()
+    # sample actions
+    with torch.no_grad():
+        step_observation = {
+            k: v[step] for k, v in rollouts.observations.items()
+        }
 
-        t_step_env = time()
-
-        outputs = envs.step([a[0].item() for a in actions])
-        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
-
-        env_time += time() - t_step_env
-
-        t_update_stats = time()
-        batch = batch_obs(observations)
-        rewards = torch.tensor(rewards, dtype=torch.float)
-        rewards = rewards.unsqueeze(1)
-
-        masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones], dtype=torch.float
-        )
-
-        device = current_episode_reward.device
-        rewards = rewards.to(device)
-        masks = masks.to(device)
-        current_episode_reward += rewards
-        episode_rewards += (1 - masks) * current_episode_reward
-        episode_counts += 1 - masks
-        current_episode_reward *= masks
-
-        rollouts.insert(
-            batch,
-            recurrent_hidden_states,
+        (
+            values,
             actions,
             actions_log_probs,
-            values,
-            rewards,
-            masks,
+            recurrent_hidden_states,
+        ) = actor_critic.act(
+            step_observation,
+            rollouts.recurrent_hidden_states[step],
+            rollouts.prev_actions[step],
+            rollouts.masks[step],
         )
+    pth_time += time() - t_sample_action
 
-        count_steps += envs.num_envs
-        pth_time += time() - t_update_stats
+    t_step_env = time()
+
+    outputs = envs.step([a[0].item() for a in actions])
+    observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+
+    env_time += time() - t_step_env
+
+    t_update_stats = time()
+    batch = batch_obs(observations)
+    rewards = torch.tensor(rewards, dtype=torch.float)
+    rewards = rewards.unsqueeze(1)
+
+    masks = torch.tensor(
+        [[0.0] if done else [1.0] for done in dones], dtype=torch.float
+    )
+
+    device = current_episode_reward.device
+    rewards = rewards.to(device)
+    masks = masks.to(device)
+    current_episode_reward += rewards
+    episode_rewards += (1 - masks) * current_episode_reward
+    episode_counts += 1 - masks
+    current_episode_reward *= masks
+
+    rollouts.insert(
+        batch,
+        recurrent_hidden_states,
+        actions,
+        actions_log_probs,
+        values,
+        rewards,
+        masks,
+    )
+
+    count_steps += envs.num_envs
+    pth_time += time() - t_update_stats
 
     return pth_time, env_time, count_steps
 
@@ -365,18 +364,21 @@ def run_training():
                 1 - update / args.num_updates
             )
 
-            delta_pth_time, delta_env_time, delta_steps = roll_forward(
-                args,
-                envs,
-                agent,
-                rollouts,
-                current_episode_reward,
-                episode_rewards,
-                episode_counts,
-            )
-            pth_time += delta_pth_time
-            env_time += delta_env_time
-            count_steps += delta_steps
+            agent.actor_critic.eval()
+            for step in range(args.num_steps):
+                delta_pth_time, delta_env_time, delta_steps = rollout_step(
+                    args,
+                    envs,
+                    agent,
+                    rollouts,
+                    current_episode_reward,
+                    episode_rewards,
+                    episode_counts,
+                )
+
+                pth_time += delta_pth_time
+                env_time += delta_env_time
+                count_steps += delta_steps
 
             window_episode_reward.append(episode_rewards.clone())
             window_episode_counts.append(episode_counts.clone())
