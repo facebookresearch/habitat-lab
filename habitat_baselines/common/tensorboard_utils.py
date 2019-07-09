@@ -1,8 +1,30 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
+
+
+class DummyWriter:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def close(self):
+        pass
+
+    def __getattr__(self, item):
+        return lambda *args, **kwargs: None
+
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ImportError:
+    SummaryWriter = DummyWriter
 
 
 class TensorboardWriter(SummaryWriter):
@@ -31,23 +53,6 @@ class TensorboardWriter(SummaryWriter):
         video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)
         # final shape of video tensor: (1, n, 3, H, W)
         self.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
-
-
-class DummyWriter:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    def close(self):
-        pass
-
-    def __getattr__(self, item):
-        return lambda *args, **kwargs: None
 
 
 def get_tensorboard_writer(
