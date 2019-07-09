@@ -11,6 +11,7 @@ from habitat.utils.visualizations.utils import (
 )
 from habitat_baselines.common.base_model import BaseRLModel
 from habitat_baselines.common.env_utils import NavRLEnv, construct_envs
+from habitat_baselines.common.tensorboard_utils import get_tensorboard_writer
 from habitat_baselines.common.trainer_registry import train_registry
 from habitat_baselines.common.utils import (
     _flatten_helper,
@@ -19,7 +20,6 @@ from habitat_baselines.common.utils import (
     update_linear_schedule,
 )
 from habitat_baselines.rl.ppo import PPO, Policy
-from tensorboard_utils import get_tensorboard_writer
 
 
 @train_registry.register_trainer(name="ppo")
