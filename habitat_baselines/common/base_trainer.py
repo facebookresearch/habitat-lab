@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from habitat_baselines.common.trainer_registry import train_registry
+from habitat_baselines.common.trainer_registry import trainer_registry
 
 
-class BaseModel(ABC):
+class BaseTrainer(ABC):
     def __init__(self):
         pass
 
@@ -24,13 +24,13 @@ class BaseModel(ABC):
         pass
 
 
-def get_model(trainer_name, trainer_cfg):
-    trainer = train_registry.get_trainer(trainer_name)
+def get_trainer(trainer_name, trainer_cfg):
+    trainer = trainer_registry.get_trainer(trainer_name)
     assert trainer is not None, f"{trainer_name} is not supported"
     return trainer(trainer_cfg)
 
 
-class BaseRLModel(BaseModel):
+class BaseRLTrainer(BaseTrainer):
     def __init__(self, config):
         super().__init__()
         self.config = config

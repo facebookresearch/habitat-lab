@@ -13,10 +13,10 @@ class TrainRegistry(Registry):
                 If None will use the name of the class
 
         """
-        from habitat_baselines.common.base_model import BaseModel
+        from habitat_baselines.common.base_trainer import BaseTrainer
 
         return cls._register_impl(
-            "trainer", to_register, name, assert_type=BaseModel
+            "trainer", to_register, name, assert_type=BaseTrainer
         )
 
     @classmethod
@@ -24,4 +24,4 @@ class TrainRegistry(Registry):
         return cls._get_impl("trainer", name)
 
 
-train_registry = TrainRegistry()
+trainer_registry = TrainRegistry()

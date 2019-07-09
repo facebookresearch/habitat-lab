@@ -9,10 +9,10 @@ from habitat.utils.visualizations.utils import (
     images_to_video,
     observations_to_image,
 )
-from habitat_baselines.common.base_model import BaseRLModel
+from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.env_utils import NavRLEnv, construct_envs
 from habitat_baselines.common.tensorboard_utils import get_tensorboard_writer
-from habitat_baselines.common.trainer_registry import train_registry
+from habitat_baselines.common.trainer_registry import trainer_registry
 from habitat_baselines.common.utils import (
     _flatten_helper,
     batch_obs,
@@ -22,8 +22,8 @@ from habitat_baselines.common.utils import (
 from habitat_baselines.rl.ppo import PPO, Policy
 
 
-@train_registry.register_trainer(name="ppo")
-class PPOTrainer(BaseRLModel):
+@trainer_registry.register_trainer(name="ppo")
+class PPOTrainer(BaseRLTrainer):
     def __init__(self, config=None):
         super().__init__(config)
         print(config)
