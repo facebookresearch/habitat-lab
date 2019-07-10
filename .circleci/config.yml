@@ -163,7 +163,7 @@ jobs:
               touch ~/miniconda/pip_deps_installed
               python setup.py test
               python setup.py develop --all
-              python -u habitat_baselines/train_ppo.py --log-file "train.log" --checkpoint-folder "data/checkpoints" --sim-gpu-id 0 --pth-gpu-id 0 --num-processes 1 --num-mini-batch 1 --num-updates 10
+              python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo_train_test.yaml --run-type train
       - save_cache:
           key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
           paths:

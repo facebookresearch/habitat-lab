@@ -32,6 +32,7 @@ _C.BASELINE.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
+# TODO move general options out of PPO
 _C.BASELINE.RL.PPO = CN()
 _C.BASELINE.RL.PPO.clip_param = 0.2
 _C.BASELINE.RL.PPO.ppo_epoch = 4
@@ -51,7 +52,7 @@ _C.BASELINE.RL.PPO.gamma = 0.99
 _C.BASELINE.RL.PPO.tau = 0.95
 _C.BASELINE.RL.PPO.log_file = "train.log"
 _C.BASELINE.RL.PPO.reward_window_size = 50
-_C.BASELINE.RL.PPO.log_interval = 1
+_C.BASELINE.RL.PPO.log_interval = 50
 _C.BASELINE.RL.PPO.checkpoint_interval = 50
 _C.BASELINE.RL.PPO.checkpoint_folder = "data/checkpoints"
 _C.BASELINE.RL.PPO.sim_gpu_id = 0
