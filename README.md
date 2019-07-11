@@ -48,14 +48,14 @@ If you use the Habitat platform in your research, please cite the following [tec
 ## Installation
 
 1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-  
+
     ```bash
     cd habitat-api
     pip install -e .
     ```
-  
+
     The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
-  
+
     ```bash
     cd habitat-api
     pip install -r requirements.txt
@@ -119,7 +119,7 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='res/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
+  <img src='res/img/habitat_api_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat-API</i></p>
 </p>
 
@@ -165,5 +165,5 @@ The Habitat project would not have been possible without the support and contrib
 Habitat-API is MIT licensed. See the LICENSE file for details.
 
 ## References
-1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019. 
+1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019.
 
