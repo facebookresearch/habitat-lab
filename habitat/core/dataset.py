@@ -10,7 +10,18 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
-from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
+from itertools import groupby
+from random import shuffle
+from typing import (
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 import attr
 import numpy as np
@@ -52,12 +63,21 @@ T = TypeVar("T", Episode, Type[Episode])
 
 class Dataset(Generic[T]):
     r"""Base class for dataset specification.
-
-    Attributes:
-        episodes: list of episodes containing instance information.
     """
 
-    episodes: List[T]
+    def __init__(self, config=None):
+        self._episodes = []
+        self._episode_iterator = None
+        self.group_by_scene = True
+        self.max_scene_repeat = -1
+        self.shuffle_scene = False
+        self.num_episode_sample = -1
+
+        if config is not None:
+            self.group_by_scene = config.GROUP_BY_SCENE
+            self.max_scene_repeat = config.MAX_SCENE_REPEAT
+            self.shuffle_scene = config.SHUFFLE_SCENE
+            self.num_episode_sample = config.NUM_EPISODE_SAMPLE
 
     @property
     def scene_ids(self) -> List[str]:
@@ -66,6 +86,14 @@ class Dataset(Generic[T]):
             unique scene ids present in the dataset.
         """
         return sorted(list({episode.scene_id for episode in self.episodes}))
+
+    @property
+    def episodes(self) -> List[T]:
+        return self._episodes
+
+    @episodes.setter
+    def episodes(self, episodes) -> None:
+        self._episodes = episodes
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
         r"""
@@ -88,6 +116,22 @@ class Dataset(Generic[T]):
             list of episodes corresponding to indexes.
         """
         return [self.episodes[episode_id] for episode_id in indexes]
+
+    @property
+    def episode_iterator(self) -> Iterator:
+        if self._episode_iterator is None:
+            self._episode_iterator = EpisodeIterator(
+                self.episodes,
+                group_by_scene=self.group_by_scene,
+                max_scene_repeat=self.max_scene_repeat,
+                shuffle_scene=self.shuffle_scene,
+                num_episode_sample=self.num_episode_sample,
+            )
+        return self._episode_iterator
+
+    @episode_iterator.setter
+    def episode_iterator(self, iterator: Iterator) -> None:
+        self._episode_iterator = iterator
 
     def to_json(self) -> str:
         class DatasetJSONEncoder(json.JSONEncoder):
@@ -242,3 +286,70 @@ class Dataset(Generic[T]):
         self.episodes = np.random.choice(
             self.episodes, num_episodes, replace=False
         )
+
+
+class EpisodeIterator:
+    def __init__(
+        self,
+        episodes,
+        group_by_scene=True,
+        max_scene_repeat=-1,
+        shuffle_scene=False,
+        num_episode_sample=-1,
+    ):
+        if num_episode_sample != -1:
+            if num_episode_sample < -1:
+                raise ValueError(
+                    f"Invalid number for episodes to sample: {num_episode_sample}"
+                )
+            episodes = np.random.choice(
+                episodes, num_episode_sample, replace=False
+            )
+        self.episodes = episodes
+
+        self.group_by_scene = group_by_scene
+        if group_by_scene:
+            num_scene_groups = len(
+                list(groupby(episodes, key=lambda x: x.scene_id))
+            )
+            num_unique_scenes = len(set([e.scene_id for e in episodes]))
+            if num_scene_groups >= num_unique_scenes:
+                self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+        self.max_scene_repetition = max_scene_repeat
+        self.shuffle_epoch = shuffle_scene
+        self.rep_count = 0
+        self._iterator = None
+        self.prev_scene_id = None
+        self._iterator = iter(self.episodes)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            next_episode = next(self._iterator)
+        except StopIteration:
+            self._iterator = iter(self.episodes)
+            if self.shuffle_epoch:
+                self.shuffle_iterator_scene()
+            next_episode = next(self._iterator)
+
+        if self.prev_scene_id == next_episode.scene_id:
+            self.rep_count += 1
+        if (
+            self.max_scene_repetition > 0
+            and self.rep_count >= self.max_scene_repetition - 1
+        ):
+            self.shuffle_iterator_scene()
+            self.rep_count = 0
+
+        self.prev_scene_id = next_episode.scene_id
+        return next_episode
+
+    def shuffle_iterator_scene(self):
+        grouped_episodes = [
+            list(g)
+            for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+        ]
+        shuffle(grouped_episodes)
+        self._iterator = iter(sum(grouped_episodes, []))

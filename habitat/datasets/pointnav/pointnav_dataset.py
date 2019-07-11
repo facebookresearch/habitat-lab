@@ -73,10 +73,7 @@ class PointNavDatasetV1(Dataset):
         return scenes
 
     def __init__(self, config: Optional[Config] = None) -> None:
-        self.episodes = []
-
-        if config is None:
-            return
+        super().__init__(config)
 
         datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(datasetfile_path, "rt") as f:

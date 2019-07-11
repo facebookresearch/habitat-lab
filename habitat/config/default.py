@@ -151,6 +151,9 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+_C.DATASET.GROUP_BY_SCENE = True
+_C.DATASET.MAX_SCENE_REPEAT = -1
+_C.DATASET.SHUFFLE_SCENE = False
 
 
 # -----------------------------------------------------------------------------
