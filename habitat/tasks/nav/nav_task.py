@@ -572,7 +572,8 @@ class NavigationTask(EmbodiedTask):
                 measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
             task_measurements.append(
-                measure_type(sim=sim, config=measurement_cfg, dataset=dataset)
+                measure_type(sim=sim, config=measurement_cfg,
+                             dataset=dataset, task=self)
             )
         self.measurements = Measurements(task_measurements)
 

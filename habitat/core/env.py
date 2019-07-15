@@ -202,7 +202,7 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
-    def step(self, action: Union[EnvAction, int]) -> Observations:
+    def step(self, action: Union[EnvAction, Dict, int]) -> Observations:
         """Perform an action in the environment and return observations
 
         Args:
@@ -221,22 +221,18 @@ class Env:
         )
 
         if isinstance(action, (int, np.integer)):
-            observations = self._sim.step(action)
-        else:
-            observations = self._sim.step(action.sim_action)
+            action = EnvAction(sim_action=action)
 
-        if not isinstance(action, (int, np.integer)):
-            observations.update(
-                    self._task.step(action=action,
-                                    sim_observations=observations,
-                                    episode=self.current_episode)
-            )
-        else:
-            observations.update(
-                self._task.sensor_suite.get_observations(
-                    observations=observations, episode=self.current_episode
-                )
-            )
+        if isinstance(action, Dict):
+            action = EnvAction(**action)
+
+        observations = self._sim.step(action.sim_action)
+
+        observations.update(
+                self._task.step(action=action,
+                                sim_observations=observations,
+                                episode=self.current_episode)
+        )
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action

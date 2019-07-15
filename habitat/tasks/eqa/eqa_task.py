@@ -134,8 +134,9 @@ class AnswerAccuracy(Measure):
     """AnswerAccuracy
     """
 
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset, task, **kwargs):
         self._dataset = dataset
+        self._task = task
         self._answer_received = False
         super().__init__(**kwargs)
 
@@ -148,33 +149,28 @@ class AnswerAccuracy(Measure):
 
     def update_metric(
         self,
-        answer_id=None,
+        action=None,
         episode=None,
-        sim_action=None,
-        episode_over=None,
         *args: Any,
         **kwargs: Any,
     ):
         if (
-            sim_action is None
-            or answer_id is None
+            action.sim_action is None
+            or action.task_action is None
             or episode is None
-            or episode_over is None
         ):
             return
         assert not self._answer_received, (
             "Question can be answered only " "once per episode."
         )
         self._answer_received = True
-        if sim_action == SimulatorActions.STOP.value:
-            assert episode_over, "Episode should be over after stop action."
-        if sim_action == SimulatorActions.STOP.value and episode_over:
+        if action.sim_action == SimulatorActions.STOP.value:
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
                     episode.question.answer_text
                 ]
-                == answer_id
+                == action.task_action
                 else 0
             )
         else:
@@ -249,11 +245,7 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    # def step(self, action):
-    #     pass
-
-    def step(self, action: int, sim_observations, episode, episode_over:
-    bool = True):
+    def step(self, action: int, sim_observations, episode):
         if action.task_action is None:
             return self.sensor_suite.get_observations(
                 observations=sim_observations, episode=episode
@@ -271,7 +263,6 @@ class EQATask(NavigationTask):
             answer_id=action.task_action,
             sim_action=action.sim_action,
             episode=episode,
-            episode_over=episode_over,
         )
 
         return self.sensor_suite.get_observations(

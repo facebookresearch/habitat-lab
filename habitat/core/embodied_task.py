@@ -139,8 +139,10 @@ class EmbodiedTask:
         self._sim = sim
         self._dataset = dataset
 
-    def step(self, action: EnvAction) -> Observations:
-        return {}
+    def step(self, action: EnvAction, sim_observations, episode) -> Observations:
+        return self.sensor_suite.get_observations(
+            observations=sim_observations, episode=episode
+        )
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
