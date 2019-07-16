@@ -39,7 +39,8 @@ def _strafe_impl(
     noise_amount: float,
 ):
     forward_ax = (
-        scene_node.absolute_transformation()[0:3, 0:3] @ habitat_sim.geo.FRONT
+        np.array(scene_node.absolute_transformation().rotation_scaling())
+        @ habitat_sim.geo.FRONT
     )
     strafe_angle = np.deg2rad(strafe_angle)
     strafe_angle = np.random.uniform(
