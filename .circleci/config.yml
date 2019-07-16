@@ -117,11 +117,13 @@ jobs:
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git
                 cd habitat-sim
+                pip install -r requirements.txt --progress-bar off
                 python setup.py install --headless
               else
                 if [ ! -f ~/miniconda/pip_deps_installed ]
                 then
                   cd habitat-sim
+                  pip install -r requirements.txt --progress-bar off
                   python setup.py install --headless
                 fi
               fi
