@@ -1,48 +1,55 @@
-from abc import ABC, abstractmethod
+#!/usr/bin/env python3
 
-from habitat_baselines.common.trainer_registry import trainer_registry
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import ClassVar, Dict, List
 
 
-class BaseTrainer(ABC):
+class BaseTrainer:
+    """
+    Most generic trainer class that serves as a base template for more
+    specific trainer classes like RL trainer, SLAM or imitation learner.
+    Includes only the most basic functionality.
+    """
+
+    supported_tasks: ClassVar[List[str]]
+
     def __init__(self):
         pass
 
-    @abstractmethod
-    def train(self):
-        pass
+    def train(self) -> None:
+        raise NotImplementedError
 
-    @abstractmethod
-    def eval(self):
-        pass
+    def eval(self) -> None:
+        raise NotImplementedError
 
-    @abstractmethod
-    def save_checkpoint(self, file_name):
-        pass
+    def save_checkpoint(self, file_name) -> None:
+        raise NotImplementedError
 
-    @abstractmethod
-    def load_checkpoint(self):
-        pass
-
-
-def get_trainer(trainer_name, trainer_cfg):
-    trainer = trainer_registry.get_trainer(trainer_name)
-    assert trainer is not None, f"{trainer_name} is not supported"
-    return trainer(trainer_cfg)
+    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
+        raise NotImplementedError
 
 
 class BaseRLTrainer(BaseTrainer):
+    """
+    Base trainer class for RL based trainers. Future RL-specific
+    methods should be hosted here.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.config = config
 
-    def train(self):
+    def train(self) -> None:
         raise NotImplementedError
 
-    def eval(self):
+    def eval(self) -> None:
         raise NotImplementedError
 
-    def save_checkpoint(self, file_name):
+    def save_checkpoint(self, file_name) -> None:
         raise NotImplementedError
 
-    def load_checkpoint(self):
+    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
         raise NotImplementedError

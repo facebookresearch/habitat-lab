@@ -1,24 +1,79 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import argparse
 import glob
 import os
 from collections import defaultdict
-from typing import Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat import Config, get_config, make_dataset
+from habitat import Config, get_config
+from habitat.utils.visualizations.utils import images_to_video
+from habitat_baselines import BaseTrainer
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config as baseline_cfg
+from habitat_baselines.tensorboard_utils import DummyWriter, TensorboardWriter
+
+
+def get_trainer(trainer_name: str, trainer_cfg: Config) -> BaseTrainer:
+    r"""
+    Create specific trainer instance according to name.
+    Args:
+        trainer_name: name of registered trainer .
+        trainer_cfg: config file for trainer.
+
+    Returns:
+        an instance of the specified trainer.
+    """
+    trainer = baseline_registry.get_trainer(trainer_name)
+    assert trainer is not None, f"{trainer_name} is not supported"
+    return trainer(trainer_cfg)
+
+
+def get_exp_config(cfg_path: str, opts: List[str] = None) -> Config:
+    r"""
+    Create config object from path for a specific experiment run.
+    Args:
+        cfg_path: yaml config file path.
+        opts: list additional options or options to be overwritten.
+
+    Returns:
+        config object created.
+    """
+
+    config = Config(new_allowed=True)
+    config.merge_from_other_cfg(baseline_cfg(cfg_path))
+    print(config)
+    config.merge_from_other_cfg(get_config(config.BASELINE.RL.PPO.task_config))
+    if opts is not None:
+        config.merge_from_list(opts)
+    return config
+
+
+def flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
+    r"""
+    Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
+    Args:
+        t: first dimension of tensor.
+        n: second dimension of tensor.
+        tensor: target tensor to be flattened.
+
+    Returns:
+        flattened tensor of size (t*n, ...)
+    """
+    return tensor.view(t * n, *tensor.size()[2:])
 
 
 class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
-
-
-def _flatten_helper(t, n, tensor):
-    return tensor.view(t * n, *tensor.size()[2:])
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):
@@ -52,10 +107,6 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
-def _flatten_helper(t, n, tensor):
-    return tensor.view(t * n, *tensor.size()[2:])
-
-
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
     r"""Decreases the learning rate linearly
     """
@@ -87,29 +138,16 @@ def experiment_args():
     return parser
 
 
-def get_exp_config(cfg_path, opts=None):
-    config = Config(new_allowed=True)
-    config.merge_from_other_cfg(baseline_cfg(cfg_path))
-    print(config)
-    config.merge_from_other_cfg(get_config(config.BASELINE.RL.PPO.task_config))
-    if opts is not None:
-        config.merge_from_list(opts)
-    return config
+def batch_obs(observations: List[Dict]) -> Dict:
+    r"""
+    Transpose a batch of observation dicts to a dict of batched
+    observations.
+    Args:
+        observations:  list of dicts of observations.
 
-
-def make_env_fn(config, env_class, rank):
-    dataset = make_dataset(config.DATASET.TYPE, config=config.DATASET)
-    config.defrost()
-    config.SIMULATOR.SCENE = dataset.episodes[0].scene_id
-    config.freeze()
-    env = env_class(
-        config_env=config, config_baseline=config.BASELINE, dataset=dataset
-    )
-    env.seed(rank)
-    return env
-
-
-def batch_obs(observations):
+    Returns:
+        transposed dict of lists of observations.
+    """
     batch = defaultdict(list)
 
     for obs in observations:
@@ -146,3 +184,36 @@ def poll_checkpoint_folder(
     if ind < len(models_paths):
         return models_paths[ind]
     return None
+
+
+def generate_video(
+    config: Config,
+    images: List[np.ndarray],
+    episode_id: int,
+    checkpoint_idx: int,
+    spl: float,
+    tb_writer: Union[DummyWriter, TensorboardWriter],
+    fps: int = 10,
+) -> None:
+    r"""Generate video according to specified information.
+
+    ppo_cfg:
+        ppo_cfg: contains ppo_cfg.video_option and ppo_cfg.video_dir.
+        images: list of images to be converted to video.
+        episode_id: episode id for video naming.
+        checkpoint_idx: checkpoint index for video naming.
+        spl: SPL for this episode for video naming.
+        tb_writer: tensorboard writer object for uploading video
+        fps: fps for generated video
+
+    Returns:
+        None
+    """
+    if config.video_option and len(images) > 0:
+        video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
+        if "disk" in config.video_option:
+            images_to_video(images, config.video_dir, video_name)
+        if "tensorboard" in config.video_option:
+            tb_writer.add_video_from_np_images(
+                f"episode{episode_id}", checkpoint_idx, images, fps=fps
+            )

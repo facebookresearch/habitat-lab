@@ -3,7 +3,6 @@ BASELINE:
   RL:
     PPO:
       # general options
-      # TODO refactor these out of PPO
       tensorboard_dir: "tb"
       num_processes: 1
       log_interval: 10
@@ -16,7 +15,7 @@ BASELINE:
       # eval specific:
       count_test_episodes: 2
       video_option: ["disk", "tensorboard"]
-      video_dir: "video_Dir"
+      video_dir: "video_dir"
       model_path: "data/checkpoints/ckpt.123.pth"
       tracking_model_dir: ""
       # 1 of the above 2 options needs to be empty

@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import Union
 
 import numpy as np
@@ -67,7 +73,7 @@ def get_tensorboard_writer(
         **kwargs: additional keyword args.
 
     Returns:
-        Either the created tensorboard writer or a dummy writer.
+        either the created tensorboard writer or a dummy writer.
     """
     if log_dir:
         return TensorboardWriter(log_dir, *args, **kwargs)

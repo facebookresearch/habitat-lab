@@ -1,29 +1,32 @@
 import os
 import time
 from collections import defaultdict, deque
+from typing import Dict, List
 
+import numpy as np
 import torch
 
 from habitat import logger
-from habitat.utils.visualizations.utils import (
-    images_to_video,
-    observations_to_image,
-)
+from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
-from habitat_baselines.common.env_utils import NavRLEnv, construct_envs
+from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.env_utils import construct_envs
+from habitat_baselines.common.environments import NavRLEnv
 from habitat_baselines.common.tensorboard_utils import get_tensorboard_writer
-from habitat_baselines.common.trainer_registry import trainer_registry
 from habitat_baselines.common.utils import (
-    _flatten_helper,
     batch_obs,
+    flatten_helper,
+    generate_video,
     poll_checkpoint_folder,
     update_linear_schedule,
 )
 from habitat_baselines.rl.ppo import PPO, Policy
 
 
-@trainer_registry.register_trainer(name="ppo")
+@baseline_registry.register_trainer(name="ppo")
 class PPOTrainer(BaseRLTrainer):
+    supported_tasks = ["Nav-v0"]
+
     def __init__(self, config=None):
         super().__init__(config)
         print(config)
@@ -73,8 +76,8 @@ class PPOTrainer(BaseRLTrainer):
             ),
         )
 
-    def load_checkpoint(self):
-        pass
+    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
+        return torch.load(checkpoint_path, map_location=self.device)
 
     def train(self):
         assert (
@@ -383,9 +386,8 @@ class PPOTrainer(BaseRLTrainer):
         not_done_masks = torch.zeros(args.num_processes, 1, device=device)
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
-        rgb_frames = None
+        rgb_frames = [[]] * args.num_processes  # type: List[List[np.ndarray]]
         if args.video_option:
-            rgb_frames = [[]] * args.num_processes
             os.makedirs(args.video_dir, exist_ok=True)
 
         while (
@@ -513,33 +515,6 @@ class PPOTrainer(BaseRLTrainer):
             {"average success": episode_success_mean},
             cur_ckpt_idx,
         )
-
-
-def generate_video(
-    ppo_cfg, images, episode_id, checkpoint_idx, spl, tb_writer, fps=10
-) -> None:
-    r"""Generate video according to specified information.
-
-    ppo_cfg:
-        ppo_cfg: contains ppo_cfg.video_option and ppo_cfg.video_dir.
-        images: list of images to be converted to video.
-        episode_id: episode id for video naming.
-        checkpoint_idx: checkpoint index for video naming.
-        spl: SPL for this episode for video naming.
-        tb_writer: tensorboard writer object for uploading video
-        fps: fps for generated video
-
-    Returns:
-        None
-    """
-    if ppo_cfg.video_option and len(images) > 0:
-        video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
-        if "disk" in ppo_cfg.video_option:
-            images_to_video(images, ppo_cfg.video_dir, video_name)
-        if "tensorboard" in ppo_cfg.video_option:
-            tb_writer.add_video_from_np_images(
-                f"episode{episode_id}", checkpoint_idx, images, fps=fps
-            )
 
 
 class RolloutStorage:
@@ -713,18 +688,18 @@ class RolloutStorage:
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
-                observations_batch[sensor] = _flatten_helper(
+                observations_batch[sensor] = flatten_helper(
                     T, N, observations_batch[sensor]
                 )
 
-            actions_batch = _flatten_helper(T, N, actions_batch)
-            value_preds_batch = _flatten_helper(T, N, value_preds_batch)
-            return_batch = _flatten_helper(T, N, return_batch)
-            masks_batch = _flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = _flatten_helper(
+            actions_batch = flatten_helper(T, N, actions_batch)
+            value_preds_batch = flatten_helper(T, N, value_preds_batch)
+            return_batch = flatten_helper(T, N, return_batch)
+            masks_batch = flatten_helper(T, N, masks_batch)
+            old_action_log_probs_batch = flatten_helper(
                 T, N, old_action_log_probs_batch
             )
-            adv_targ = _flatten_helper(T, N, adv_targ)
+            adv_targ = flatten_helper(T, N, adv_targ)
 
             yield (
                 observations_batch,
