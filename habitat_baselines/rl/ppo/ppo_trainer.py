@@ -40,7 +40,7 @@ class PPOTrainer(BaseRLTrainer):
             self._setup()
 
     def _setup(self):
-        ppo_cfg = self.config.BASELINE.RL.PPO
+        ppo_cfg = self.config.TRAINER.RL.PPO
         self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
         logger.add_filehandler(ppo_cfg.log_file)
 
@@ -72,7 +72,7 @@ class PPOTrainer(BaseRLTrainer):
         torch.save(
             checkpoint,
             os.path.join(
-                self.config.BASELINE.RL.PPO.checkpoint_folder, file_name
+                self.config.TRAINER.RL.PPO.checkpoint_folder, file_name
             ),
         )
 
@@ -84,7 +84,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config is not None
         ), "trainer is not properly initialized, need to specify config file"
 
-        ppo_cfg = self.config.BASELINE.RL.PPO
+        ppo_cfg = self.config.TRAINER.RL.PPO
         logger.info(
             "agent number of parameters: {}".format(
                 sum(param.numel() for param in self.agent.parameters())
@@ -284,7 +284,7 @@ class PPOTrainer(BaseRLTrainer):
                     count_checkpoints += 1
 
     def eval(self):
-        ppo_cfg = self.config.BASELINE.RL.PPO
+        ppo_cfg = self.config.TRAINER.RL.PPO
 
         assert (len(ppo_cfg.model_path) > 0) != (
             len(ppo_cfg.tracking_model_dir) > 0

@@ -17,7 +17,7 @@ def main():
     random.seed(config.SEED)
     np.random.seed(config.SEED)
 
-    trainer = get_trainer(config.BASELINE.TRAINER_NAME, config)
+    trainer = get_trainer(config.TRAINER.TRAINER_NAME, config)
     if args.run_type == "train":
         trainer.train()
     elif args.run_type == "eval":

@@ -47,7 +47,7 @@ def construct_envs(config: Config, env_class: Type) -> VectorEnv:
     Returns:
         vectorEnv object created according to specification.
     """
-    baseline_cfg = config.BASELINE.RL.PPO
+    baseline_cfg = config.TRAINER.RL.PPO
     env_configs = []
     env_classes = [env_class for _ in range(baseline_cfg.num_processes)]
     dataset = make_dataset(config.DATASET.TYPE)

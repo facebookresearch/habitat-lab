@@ -1,4 +1,4 @@
-BASELINE:
+TRAINER:
   TRAINER_NAME: "ppo"
   RL:
     PPO:

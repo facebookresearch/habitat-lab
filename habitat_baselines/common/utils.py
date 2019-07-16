@@ -51,7 +51,7 @@ def get_exp_config(cfg_path: str, opts: List[str] = None) -> Config:
     config = Config(new_allowed=True)
     config.merge_from_other_cfg(baseline_cfg(cfg_path))
     print(config)
-    config.merge_from_other_cfg(get_config(config.BASELINE.RL.PPO.task_config))
+    config.merge_from_other_cfg(get_config(config.TRAINER.RL.PPO.task_config))
     if opts is not None:
         config.merge_from_list(opts)
     return config
