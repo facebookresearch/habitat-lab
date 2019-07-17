@@ -108,7 +108,6 @@ def _draw_loop(
     angles,
 ):
     for angle in angles:
-        angle = np.deg2rad(angle)
         draw_fog_of_war_line(
             top_down_map,
             fog_of_war_mask,
@@ -145,8 +144,11 @@ def reveal_fog_of_war(
     Returns:
         The updated fog_of_war_mask
     """
+    fov = np.deg2rad(fov)
+
+    # Set the angle step to a value such that delta_angle * max_line_len = 1
     angles = np.arange(
-        -fov / 2, fov / 2, step=50.0 / max_line_len, dtype=np.float32
+        -fov / 2, fov / 2, step=1.0 / max_line_len, dtype=np.float32
     )
 
     fog_of_war_mask = current_fog_of_war_mask.copy()
