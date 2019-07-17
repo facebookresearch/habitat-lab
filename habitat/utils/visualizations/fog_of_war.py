@@ -11,16 +11,11 @@ from habitat.utils.visualizations import maps
 
 
 @numba.jit(nopython=True)
-def _draw(fog_of_war_mask, x, y):
-    fog_of_war_mask[x, y] = 1
-
-
-@numba.jit(nopython=True)
-def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
-    r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2
-
-    Based on http://eugen.dedu.free.fr/projects/bresenham/
+def bresenham_supercover_line(pt1, pt2):
+    r"""Line drawing algo based 
+    on http://eugen.dedu.free.fr/projects/bresenham/
     """
+
     x1, y1 = pt1
     x2, y2 = pt2
     ystep = xstep = 1
@@ -36,7 +31,7 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
         xstep *= -1
         dx *= -1
 
-    _draw(fog_of_war_mask, x, y)
+    line_pts = [[x, y]]
 
     ddx, ddy = 2 * dx, 2 * dy
     if ddx > ddy:
@@ -46,30 +41,20 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
             x += xstep
             error += ddy
 
-            if top_down_map[x, y] == maps.MAP_INVALID_POINT:
-                break
-
-            if x <= 0 or x >= (fog_of_war_mask.shape[0] - 1):
-                break
-
-            if y <= 0 or y >= (fog_of_war_mask.shape[1] - 1):
-                break
-
             if error > ddx:
                 y += ystep
                 error -= ddx
                 if error + errorprev < ddx:
-                    _draw(fog_of_war_mask, x, y - ystep)
+                    line_pts.append([x, y - ystep])
                 elif error + errorprev > ddx:
-                    _draw(fog_of_war_mask, x - xstep, y)
+                    line_pts.append([x - xstep, y])
                 else:
-                    _draw(fog_of_war_mask, x - xstep, y)
-                    _draw(fog_of_war_mask, x, y - ystep)
+                    line_pts.append([x - xstep, y])
+                    line_pts.append([x, y - ystep])
 
-            _draw(fog_of_war_mask, x, y)
+            line_pts.append([x, y])
 
             errorprev = error
-
     else:
         errorprev = dx
         error = dx
@@ -77,29 +62,42 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
             y += ystep
             error += ddx
 
-            if top_down_map[x, y] == maps.MAP_INVALID_POINT:
-                break
-
-            if x <= 0 or x >= (fog_of_war_mask.shape[0] - 1):
-                break
-
-            if y <= 0 or y >= (fog_of_war_mask.shape[1] - 1):
-                break
-
             if error > ddy:
                 x += xstep
                 error -= ddy
                 if error + errorprev < ddy:
-                    _draw(fog_of_war_mask, x - xstep, y)
+                    line_pts.append([x - xstep, y])
                 elif error + errorprev > ddy:
-                    _draw(fog_of_war_mask, x, y - ystep)
+                    line_pts.append([x, y - ystep])
                 else:
-                    _draw(fog_of_war_mask, x - xstep, y)
-                    _draw(fog_of_war_mask, x, y - ystep)
+                    line_pts.append([x - xstep, y])
+                    line_pts.append([x, y - ystep])
 
-            _draw(fog_of_war_mask, x, y)
+            line_pts.append([x, y])
 
             errorprev = error
+
+    return line_pts
+
+
+@numba.jit(nopython=True)
+def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
+    r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2
+    """
+
+    for pt in bresenham_supercover_line(pt1, pt2):
+        x, y = pt
+
+        if x < 0 or x >= fog_of_war_mask.shape[0]:
+            break
+
+        if y < 0 or y >= fog_of_war_mask.shape[1]:
+            break
+
+        if top_down_map[x, y] == maps.MAP_INVALID_POINT:
+            break
+
+        fog_of_war_mask[x, y] = 1
 
 
 @numba.jit(nopython=True)
