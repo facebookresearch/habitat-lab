@@ -73,7 +73,10 @@ class PointNavDatasetV1(Dataset):
         return scenes
 
     def __init__(self, config: Optional[Config] = None) -> None:
-        super().__init__(config)
+        self.episodes = []
+
+        if config is None:
+            return
 
         datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(datasetfile_path, "rt") as f:
@@ -94,8 +97,6 @@ class PointNavDatasetV1(Dataset):
             )
             with gzip.open(scene_filename, "rt") as f:
                 self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
-
-        self.sample_episodes(config.NUM_EPISODE_SAMPLE)
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

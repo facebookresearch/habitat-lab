@@ -11,9 +11,7 @@ import pytest
 from habitat.core.dataset import Dataset, Episode
 
 
-def _construct_dataset(
-    num_episodes, num_groups=10, max_repeat=-1, shuffle=False
-):
+def _construct_dataset(num_episodes, num_groups=10):
     episodes = []
     for ii in range(num_episodes):
         episode = Episode(
@@ -24,9 +22,6 @@ def _construct_dataset(
         )
         episodes.append(episode)
     dataset = Dataset()
-    dataset.shuffle_scene = shuffle
-    dataset.group_by_scene = True
-    dataset.max_scene_repeat = max_repeat
     dataset.episodes = episodes
     return dataset
 
@@ -189,45 +184,47 @@ def test_get_uneven_splits():
 
 def test_sample_episodes():
     dataset = _construct_dataset(1000)
-    dataset.sample_episodes(-1)
-    assert len(dataset.episodes) == 1000
+    ep_iter = dataset.get_episode_iterator(
+        num_episode_sample=1000, cycle=False
+    )
+    assert len(list(ep_iter)) == 1000
 
-    dataset = _construct_dataset(1000)
-    dataset.sample_episodes(0)
-    assert len(dataset.episodes) == 0
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=0, cycle=False)
+    assert len(list(ep_iter)) == 0
 
-    dataset = _construct_dataset(1000)
     with pytest.raises(ValueError):
-        dataset.sample_episodes(1001)
+        dataset.get_episode_iterator(num_episode_sample=1001, cycle=False)
 
-    dataset = _construct_dataset(1000)
-    dataset.num_episode_sample = 100
-    ep_iter = dataset.episode_iterator
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=100, cycle=True)
     ep_id_list = [e.episode_id for e in list(islice(ep_iter, 100))]
-
     assert len(set(ep_id_list)) == 100
     next_episode = next(ep_iter)
     assert next_episode.episode_id in ep_id_list
 
-    dataset = _construct_dataset(1000)
-    dataset.num_episode_sample = 0
-    ep_iter = dataset.episode_iterator
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=0, cycle=False)
     with pytest.raises(StopIteration):
         next(ep_iter)
 
 
-def test_iterator_loop_around():
+def test_iterator_cycle():
     dataset = _construct_dataset(100)
-    dataset.group_by_scene = False
-    episode_iter = dataset.episode_iterator
+    ep_iter = dataset.get_episode_iterator(
+        cycle=True, shuffle_scene_when_cycle=False, group_by_scene=False
+    )
     for i in range(200):
-        episode = next(episode_iter)
+        episode = next(ep_iter)
         assert episode.episode_id == dataset.episodes[i % 100].episode_id
 
+    ep_iter = dataset.get_episode_iterator(cycle=True, num_episode_sample=20)
+    episodes = list(islice(ep_iter, 20))
+    for i in range(200):
+        episode = next(ep_iter)
+        assert episode.episode_id == episodes[i % 20].episode_id
 
-def test_iterator_shuffle_looping():
-    dataset = _construct_dataset(100, shuffle=True)
-    episode_iter = dataset.episode_iterator
+
+def test_iterator_shuffle_when_cycle():
+    dataset = _construct_dataset(100)
+    episode_iter = dataset.get_episode_iterator(shuffle_scene_when_cycle=True)
     first_round_episodes = list(islice(episode_iter, 100))
     second_round_episodes = list(islice(episode_iter, 100))
 
@@ -249,11 +246,9 @@ def test_iterator_shuffle_looping():
 def test_iterator_scene_switching():
     total_ep = 1000
     max_repeat = 25
-    dataset = _construct_dataset(
-        total_ep, num_groups=20, max_repeat=max_repeat
-    )
+    dataset = _construct_dataset(total_ep)
 
-    episode_iter = dataset.episode_iterator
+    episode_iter = dataset.get_episode_iterator(max_scene_repeat=max_repeat)
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 
     # episodes before max_repeat reached should be identical
