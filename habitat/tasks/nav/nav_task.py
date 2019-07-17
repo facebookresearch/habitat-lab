@@ -24,7 +24,7 @@ from habitat.core.simulator import (
 )
 from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
-from habitat.utils.visualizations import maps
+from habitat.utils.visualizations import fog_of_war, maps
 
 MAP_THICKNESS_SCALAR: int = 1250
 
@@ -450,6 +450,11 @@ class TopDownMap(Measure):
         self._ind_x_max = range_x[-1]
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
+
+        if self._config.FOG_OF_WAR.DRAW:
+            self._fog_of_war_mask = np.zeros_like(top_down_map)
+            #  self._fog_of_war_mask[top_down_map == maps.MAP_INVALID_POINT] = 1
+
         return top_down_map
 
     def draw_source_and_target(self, episode):
@@ -516,6 +521,19 @@ class TopDownMap(Measure):
                 maps.MAP_SHORTEST_PATH_COLOR,
                 self.line_thickness,
             )
+
+        if self._config.FOG_OF_WAR.DRAW:
+            self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
+                self._top_down_map,
+                self._fog_of_war_mask,
+                np.array([a_x, a_y]),
+                self.get_polar_angle(),
+                fov=self._config.FOG_OF_WAR.FOV,
+                max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
+                * max(self._map_resolution)
+                / (self._coordinate_max - self._coordinate_min),
+            )
+
         # draw source and target points last to avoid overlap
         if self._config.DRAW_SOURCE_AND_TARGET:
             self.draw_source_and_target(episode)
@@ -536,9 +554,19 @@ class TopDownMap(Measure):
             - self._grid_delta : self._ind_y_max
             + self._grid_delta,
         ]
+        if self._config.FOG_OF_WAR.DRAW:
+            mask = self._fog_of_war_mask[
+                self._ind_x_min
+                - self._grid_delta : self._ind_x_max
+                + self._grid_delta,
+                self._ind_y_min
+                - self._grid_delta : self._ind_y_max
+                + self._grid_delta,
+            ]
 
         self._metric = {
             "map": house_map,
+            "fog_of_war_mask": mask if self._config.FOG_OF_WAR.DRAW else None,
             "agent_map_coord": (
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
@@ -582,6 +610,18 @@ class TopDownMap(Measure):
                 (a_y, a_x),
                 color,
                 thickness=thickness,
+            )
+
+        if self._config.FOG_OF_WAR.DRAW:
+            self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
+                self._top_down_map,
+                self._fog_of_war_mask,
+                np.array([a_x, a_y]),
+                self.get_polar_angle(),
+                fov=self._config.FOG_OF_WAR.FOV,
+                max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
+                * max(self._map_resolution)
+                / (self._coordinate_max - self._coordinate_min),
             )
 
         self._previous_xy_location = (a_y, a_x)

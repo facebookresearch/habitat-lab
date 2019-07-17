@@ -35,7 +35,9 @@ class SimpleRLEnv(habitat.RLEnv):
 
 
 def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(info["top_down_map"]["map"])
+    top_down_map = maps.colorize_topdown_map(
+        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+    )
     original_map_size = top_down_map.shape[:2]
     map_scale = np.array(
         (1, original_map_size[1] * 1.0 / original_map_size[0])
@@ -58,9 +60,16 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def shortest_path_example(mode):
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_paths="configs/tasks/pointnav_gibson.yaml"
+    )
+    config.defrost()
+    config.SIMULATOR.RGB_SENSOR.WIDTH = 1024
+    config.SIMULATOR.RGB_SENSOR.HEIGHT = 1024
+    config.DATASET.SPLIT = "val"
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.freeze()
     env = SimpleRLEnv(config=config)
     goal_radius = env.episodes[0].goals[0].radius
     if goal_radius is None:
@@ -69,7 +78,7 @@ def shortest_path_example(mode):
     follower.mode = mode
 
     print("Environment creation successful")
-    for episode in range(3):
+    for episode in range(1):
         env.reset()
         dirname = os.path.join(
             IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
@@ -96,7 +105,7 @@ def shortest_path_example(mode):
 
 def main():
     shortest_path_example("geodesic_path")
-    shortest_path_example("greedy")
+    #  shortest_path_example("greedy")
 
 
 if __name__ == "__main__":
