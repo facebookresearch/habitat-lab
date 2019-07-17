@@ -521,21 +521,21 @@ class TopDownMap(Measure):
                 self.line_thickness,
             )
 
-        if self._config.FOG_OF_WAR.DRAW:
-            self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
-                self._top_down_map,
-                self._fog_of_war_mask,
-                np.array([a_x, a_y]),
-                self.get_polar_angle(),
-                fov=self._config.FOG_OF_WAR.FOV,
-                max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                * max(self._map_resolution)
-                / (self._coordinate_max - self._coordinate_min),
-            )
+        self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
         # draw source and target points last to avoid overlap
         if self._config.DRAW_SOURCE_AND_TARGET:
             self.draw_source_and_target(episode)
+
+    def _clip_map(self, _map):
+        return _map[
+            self._ind_x_min
+            - self._grid_delta : self._ind_x_max
+            + self._grid_delta,
+            self._ind_y_min
+            - self._grid_delta : self._ind_y_max
+            + self._grid_delta,
+        ]
 
     def update_metric(self, episode, action):
         self._step_count += 1
@@ -545,27 +545,15 @@ class TopDownMap(Measure):
 
         # Rather than return the whole map which may have large empty regions,
         # only return the occupied part (plus some padding).
-        house_map = house_map[
-            self._ind_x_min
-            - self._grid_delta : self._ind_x_max
-            + self._grid_delta,
-            self._ind_y_min
-            - self._grid_delta : self._ind_y_max
-            + self._grid_delta,
-        ]
+        clipped_house_map = self._clip_map(house_map)
+
+        clipped_fog_of_war_map = None
         if self._config.FOG_OF_WAR.DRAW:
-            mask = self._fog_of_war_mask[
-                self._ind_x_min
-                - self._grid_delta : self._ind_x_max
-                + self._grid_delta,
-                self._ind_y_min
-                - self._grid_delta : self._ind_y_max
-                + self._grid_delta,
-            ]
+            clipped_fog_of_war_map = self._clip_map(self._fog_of_war_mask)
 
         self._metric = {
-            "map": house_map,
-            "fog_of_war_mask": mask if self._config.FOG_OF_WAR.DRAW else None,
+            "map": clipped_house_map,
+            "fog_of_war_mask": clipped_fog_of_war_map,
             "agent_map_coord": (
                 map_agent_x - (self._ind_x_min - self._grid_delta),
                 map_agent_y - (self._ind_y_min - self._grid_delta),
@@ -611,20 +599,23 @@ class TopDownMap(Measure):
                 thickness=thickness,
             )
 
+        self.update_fog_of_war_mask(np.array([a_x, a_y]))
+
+        self._previous_xy_location = (a_y, a_x)
+        return self._top_down_map, a_x, a_y
+
+    def update_fog_of_war_mask(self, agent_position):
         if self._config.FOG_OF_WAR.DRAW:
             self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
                 self._top_down_map,
                 self._fog_of_war_mask,
-                np.array([a_x, a_y]),
+                agent_position,
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
                 * max(self._map_resolution)
                 / (self._coordinate_max - self._coordinate_min),
             )
-
-        self._previous_xy_location = (a_y, a_x)
-        return self._top_down_map, a_x, a_y
 
 
 @registry.register_task(name="Nav-v0")

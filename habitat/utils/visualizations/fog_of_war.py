@@ -102,7 +102,7 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
 def _draw_loop(
     top_down_map,
     fog_of_war_mask,
-    current_pt,
+    current_point,
     current_angle,
     max_line_len,
     angles,
@@ -111,8 +111,8 @@ def _draw_loop(
         draw_fog_of_war_line(
             top_down_map,
             fog_of_war_mask,
-            current_pt,
-            current_pt
+            current_point,
+            current_point
             + max_line_len
             * np.array(
                 [np.cos(current_angle + angle), np.sin(current_angle + angle)]
@@ -123,7 +123,7 @@ def _draw_loop(
 def reveal_fog_of_war(
     top_down_map: np.ndarray,
     current_fog_of_war_mask: np.ndarray,
-    current_pt: np.ndarray,
+    current_point: np.ndarray,
     current_angle: float,
     fov: float = 90,
     max_line_len: float = 100,
@@ -136,7 +136,7 @@ def reveal_fog_of_war(
     Args:
         top_down_map: The current top down map.  Used for respecting walls when revealing
         current_fog_of_war_mask: The current fog-of-war mask to reveal the fog-of-war on
-        current_pt: The current location of the agent on the fog_of_war_mask
+        current_point: The current location of the agent on the fog_of_war_mask
         current_angle: The current look direction of the agent on the fog_of_war_mask
         fov: The feild of view of the agent
         max_line_len: The maximum length of the lines used to reveal the fog-of-war
@@ -155,7 +155,7 @@ def reveal_fog_of_war(
     _draw_loop(
         top_down_map,
         fog_of_war_mask,
-        current_pt,
+        current_point,
         current_angle,
         max_line_len,
         angles,
