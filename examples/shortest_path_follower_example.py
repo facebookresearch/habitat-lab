@@ -60,13 +60,8 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def shortest_path_example(mode):
-    config = habitat.get_config(
-        config_paths="configs/tasks/pointnav_gibson.yaml"
-    )
+    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
-    config.SIMULATOR.RGB_SENSOR.WIDTH = 1024
-    config.SIMULATOR.RGB_SENSOR.HEIGHT = 1024
-    config.DATASET.SPLIT = "val"
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
@@ -105,7 +100,7 @@ def shortest_path_example(mode):
 
 def main():
     shortest_path_example("geodesic_path")
-    #  shortest_path_example("greedy")
+    shortest_path_example("greedy")
 
 
 if __name__ == "__main__":
