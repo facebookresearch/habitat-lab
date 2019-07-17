@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import numba
 import numpy as np
 
@@ -12,6 +18,8 @@ def _draw(fog_of_war_mask, x, y):
 @numba.jit(nopython=True)
 def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
     r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2
+
+    Based on http://eugen.dedu.free.fr/projects/bresenham/
     """
     x1, y1 = pt1
     x2, y2 = pt2
