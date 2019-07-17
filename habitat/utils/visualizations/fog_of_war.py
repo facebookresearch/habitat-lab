@@ -16,11 +16,9 @@ def bresenham_supercover_line(pt1, pt2):
     on http://eugen.dedu.free.fr/projects/bresenham/
     """
 
-    x1, y1 = pt1
-    x2, y2 = pt2
-    ystep = xstep = 1
+    ystep, xstep = 1, 1
 
-    x, y = x1, y1
+    x, y = pt1
     dx, dy = pt2 - pt1
 
     if dy < 0:
