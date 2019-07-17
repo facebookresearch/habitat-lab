@@ -124,7 +124,7 @@ def check_shortest_path(env, episode):
         len(episode.shortest_paths) == 1
     ), "Episode has no shortest paths or more than one."
 
-    env.episodes = [episode]
+    env.episode_iterator = iter([episode])
     env.reset()
     start_state = env.sim.get_agent_state()
     check_state(start_state, episode.start_position, episode.start_rotation)
@@ -165,7 +165,7 @@ def test_pointnav_episode_generator():
     ):
         episodes.append(episode)
     assert len(episodes) == 2 * NUM_EPISODES
-    env.episodes = episodes
+    env.episode_iterator = iter(episodes)
 
     for episode in episodes:
         check_shortest_path(env, episode)

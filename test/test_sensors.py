@@ -25,15 +25,17 @@ def _random_episode(env, config):
         0,
         np.cos(random_heading / 2),
     ]
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=random_location,
-            start_rotation=random_rotation,
-            goals=[],
-        )
-    ]
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=random_location,
+                start_rotation=random_rotation,
+                goals=[],
+            )
+        ]
+    )
 
 
 def test_heading_sensor():
@@ -56,15 +58,17 @@ def test_heading_sensor():
             0,
             np.cos(random_heading / 2),
         ]
-        env.episodes = [
-            NavigationEpisode(
-                episode_id="0",
-                scene_id=config.SIMULATOR.SCENE,
-                start_position=[03.00611, 0.072447, -2.67867],
-                start_rotation=random_rotation,
-                goals=[],
-            )
-        ]
+        env.episode_iterator = iter(
+            [
+                NavigationEpisode(
+                    episode_id="0",
+                    scene_id=config.SIMULATOR.SCENE,
+                    start_position=[03.00611, 0.072447, -2.67867],
+                    start_rotation=random_rotation,
+                    goals=[],
+                )
+            ]
+        )
 
         obs = env.reset()
         heading = obs["heading"]
@@ -167,15 +171,17 @@ def test_static_pointgoal_sensor():
     # corresponds to simulator using z-negative as forward action
     start_rotation = [0, 0, 0, 1]
 
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=valid_start_position,
-            start_rotation=start_rotation,
-            goals=[NavigationGoal(position=goal_position)],
-        )
-    ]
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
 
     non_stop_actions = [
         act
@@ -211,15 +217,17 @@ def test_get_observations_at():
     # corresponds to simulator using z-negative as forward action
     start_rotation = [0, 0, 0, 1]
 
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=valid_start_position,
-            start_rotation=start_rotation,
-            goals=[NavigationGoal(position=goal_position)],
-        )
-    ]
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
     non_stop_actions = [
         act
         for act in range(env.action_space.n)

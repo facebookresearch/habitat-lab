@@ -10,6 +10,7 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
+from itertools import cycle
 from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
 
 import attr
@@ -88,6 +89,16 @@ class Dataset(Generic[T]):
             list of episodes corresponding to indexes.
         """
         return [self.episodes[episode_id] for episode_id in indexes]
+
+    def get_episode_iterator(self):
+        r"""
+        Creates and returns an iterator that iterates through self.episodes
+        in the desirable way specified.
+        Returns:
+            iterator for episodes
+        """
+        # TODO: support shuffling between epoch and  scene switching
+        return cycle(self.episodes)
 
     def to_json(self) -> str:
         class DatasetJSONEncoder(json.JSONEncoder):
