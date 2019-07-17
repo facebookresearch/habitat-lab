@@ -43,6 +43,8 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.TRAINER.RL.PPO
         self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
         logger.add_filehandler(ppo_cfg.log_file)
+        if not os.path.isdir(ppo_cfg.checkpoint_folder):
+            os.makedirs(ppo_cfg.checkpoint_folder)
 
         self.actor_critic = Policy(
             observation_space=self.envs.observation_spaces[0],
