@@ -346,9 +346,7 @@ def colorize_topdown_map(
 
     if fog_of_war_mask is not None:
         # Only desaturate things that are valid points as only valid points get revealed
-        desat_mask = np.tile(
-            (top_down_map != MAP_INVALID_POINT)[:, :, np.newaxis], (1, 1, 3)
-        )
+        desat_mask = top_down_map != MAP_INVALID_POINT
 
         _map[desat_mask] = (
             _map * FOG_OF_WAR_COLOR_DESAT[fog_of_war_mask]
