@@ -109,7 +109,7 @@ jobs:
             - habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
-            - ccache-{{ arch }}-{{ .Branch }}-{{ epoch }}
+            - ccache-{{ arch }}-master
           paths:
             - /home/circleci/.ccache
       - run:
@@ -141,7 +141,7 @@ jobs:
                 fi
               fi
       - run:
-          name: ccache stats
+          name: Ccache stats
           when: always
           command: |
             export PATH=$HOME/miniconda/bin:$PATH
@@ -171,12 +171,12 @@ jobs:
           paths:
             - ./habitat-sim
       - save_cache:
-          key: ccache-{{ arch }}-{{ .Branch }}-{{ epoch }}
+          key: ccache-{{ arch }}-master
           background: true
           paths:
             - /home/circleci/.ccache
       - run:
-          name: Run api tests
+          name: Install api
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api
@@ -184,13 +184,20 @@ jobs:
               ln -s ../habitat-sim/data data
               pip install -r requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
+      - save_cache:
+          key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+          background: true
+          paths:
+            - ~/miniconda
+      - run:
+          name: Run api tests
+          command: |
+              export PATH=$HOME/miniconda/bin:$PATH
+              . activate habitat; cd habitat-api
               python setup.py test
               python setup.py develop --all
               python -u habitat_baselines/train_ppo.py --log-file "train.log" --checkpoint-folder "data/checkpoints" --sim-gpu-id 0 --pth-gpu-id 0 --num-processes 1 --num-mini-batch 1 --num-updates 10
-      - save_cache:
-          key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
-          paths:
-            - ~/miniconda
+
 
 workflows:
   version: 2
