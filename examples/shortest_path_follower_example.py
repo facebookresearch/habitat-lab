@@ -73,7 +73,7 @@ def shortest_path_example(mode):
     follower.mode = mode
 
     print("Environment creation successful")
-    for episode in range(1):
+    for episode in range(3):
         env.reset()
         dirname = os.path.join(
             IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode

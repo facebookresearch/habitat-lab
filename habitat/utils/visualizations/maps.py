@@ -336,7 +336,8 @@ def colorize_topdown_map(
     r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
-            fog_of_war_mask: A mask of which parts of the top-down-map are visible
+            fog_of_war_mask: A mask used to determine which parts of the 
+                top_down_map are visible
                 Non-visible parts will be desaturated
         Returns:
             A colored version of the top-down map.
@@ -344,6 +345,7 @@ def colorize_topdown_map(
     _map = TOP_DOWN_MAP_COLORS[top_down_map]
 
     if fog_of_war_mask is not None:
+        # Only desaturate things that are valid points as only valid points get revealed
         desat_mask = np.tile(
             (top_down_map != MAP_INVALID_POINT)[:, :, np.newaxis], (1, 1, 3)
         )

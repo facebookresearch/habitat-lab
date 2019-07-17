@@ -453,7 +453,6 @@ class TopDownMap(Measure):
 
         if self._config.FOG_OF_WAR.DRAW:
             self._fog_of_war_mask = np.zeros_like(top_down_map)
-            #  self._fog_of_war_mask[top_down_map == maps.MAP_INVALID_POINT] = 1
 
         return top_down_map
 

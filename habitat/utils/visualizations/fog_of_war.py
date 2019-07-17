@@ -131,6 +131,7 @@ def reveal_fog_of_war(
     and stopping once a wall is hit
 
     Args:
+        top_down_map: The current top down map.  Used for respecting walls when revealing
         current_fog_of_war_mask: The current fog-of-war mask to reveal the fog-of-war on
         current_pt: The current location of the agent on the fog_of_war_mask
         current_angle: The current look direction of the agent on the fog_of_war_mask
