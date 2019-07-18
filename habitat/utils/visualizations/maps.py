@@ -339,6 +339,8 @@ def colorize_topdown_map(
                 top_down_map are visible
                 Non-visible parts will be desaturated
             fog_of_war_desat_amount: Amount to desaturate the color of unexplored areas
+                Decreasing this value will make unexplored areas darker
+                Default: 0.5
         Returns:
             A colored version of the top-down map.
     """
