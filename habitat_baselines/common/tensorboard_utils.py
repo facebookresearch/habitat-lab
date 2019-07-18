@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 
+# TODO Add checks to replace DummyWriter
 class DummyWriter:
     def __init__(self, *args, **kwargs):
         pass

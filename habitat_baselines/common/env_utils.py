@@ -45,7 +45,7 @@ def construct_envs(config: Config, env_class: Type) -> VectorEnv:
         env_class: class type of the envs to be created.
 
     Returns:
-        vectorEnv object created according to specification.
+        VectorEnv object created according to specification.
     """
     baseline_cfg = config.TRAINER.RL.PPO
     env_configs = []
@@ -59,9 +59,6 @@ def construct_envs(config: Config, env_class: Type) -> VectorEnv:
         assert len(scenes) >= baseline_cfg.num_processes, (
             "reduce the number of processes as there "
             "aren't enough number of scenes"
-        )
-        scene_split_size = int(
-            np.floor(len(scenes) / baseline_cfg.num_processes)
         )
 
     scene_splits = [[] for _ in range(baseline_cfg.num_processes)]

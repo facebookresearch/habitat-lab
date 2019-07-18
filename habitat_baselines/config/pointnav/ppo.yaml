@@ -9,16 +9,15 @@ TRAINER:
       pth_gpu_id: 0
       sim_gpu_id: 0
       checkpoint_interval: 50
-      checkpoint_folder: "data/new_checkpoints"
+      checkpoint_folder: "data/checkpoints"
       task_config: "configs/tasks/pointnav.yaml"
       num_updates: 10000
       # eval specific:
       count_test_episodes: 2
-      video_option: ["disk", "tensorboard"]
+      video_option: "disk,tensorboard"
       video_dir: "video_dir"
-      model_path: "data/checkpoints/ckpt.123.pth"
-      tracking_model_dir: ""
-      # 1 of the above 2 options needs to be empty
+      eval_ckpt_path_or_dir: "data/checkpoints/"
+
 
       # ppo params
       clip_param: 0.1

@@ -24,6 +24,8 @@ from habitat_baselines.common.tensorboard_utils import (
 )
 from habitat_baselines.config.default import get_config as baseline_cfg
 
+# TODO distribute utilities in this file to separate files
+
 
 def get_trainer(trainer_name: str, trainer_cfg: Config) -> BaseTrainer:
     r"""
@@ -96,6 +98,7 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
+# TODO make this a  LRScheduler class
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
     r"""Decreases the learning rate linearly
     """
@@ -197,11 +200,14 @@ def generate_video(
     Returns:
         None
     """
+    print("======generating video======")
+    print(f"vidoe option: {config}")
     if config.video_option and len(images) > 0:
         video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
         if "disk" in config.video_option:
             images_to_video(images, config.video_dir, video_name)
         if "tensorboard" in config.video_option:
+            print("writing to TB")
             tb_writer.add_video_from_np_images(
                 f"episode{episode_id}", checkpoint_idx, images, fps=fps
             )

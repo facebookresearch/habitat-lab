@@ -62,10 +62,9 @@ _C.TRAINER.RL.PPO.sensors = "RGB_SENSOR,DEPTH_SENSOR"
 _C.TRAINER.RL.PPO.task_config = "configs/tasks/pointnav.yaml"
 _C.TRAINER.RL.PPO.tensorboard_dir = "tb"
 _C.TRAINER.RL.PPO.count_test_episodes = 2
-_C.TRAINER.RL.PPO.video_option = ["disk", "tensorboard"]
+_C.TRAINER.RL.PPO.video_option = "disk,tensorboard"
 _C.TRAINER.RL.PPO.video_dir = "video_Dir"
-_C.TRAINER.RL.PPO.tracking_model_dir = ""
-_C.TRAINER.RL.PPO.model_path = ""
+_C.TRAINER.RL.PPO.eval_ckpt_path_or_dir = "data/checkpoints"
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE
 # -----------------------------------------------------------------------------

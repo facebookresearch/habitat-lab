@@ -6,7 +6,7 @@ from typing import Dict, List
 import numpy as np
 import torch
 
-from habitat import logger
+from habitat import Config, logger
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -29,22 +29,16 @@ class PPOTrainer(BaseRLTrainer):
 
     def __init__(self, config=None):
         super().__init__(config)
-        print(config)
         self.actor_critic = None
         self.agent = None
         self.envs = None
         self.device = None
+        self.video_option = []
         if config is not None:
-            logger.info(f"env config: {config}")
-            self.envs = construct_envs(config, NavRLEnv)
-            self._setup()
+            logger.info(f"config: {config}")
 
-    def _setup(self):
-        ppo_cfg = self.config.TRAINER.RL.PPO
-        self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
+    def _setup_actor_critic_agent(self, ppo_cfg):
         logger.add_filehandler(ppo_cfg.log_file)
-        if not os.path.isdir(ppo_cfg.checkpoint_folder):
-            os.makedirs(ppo_cfg.checkpoint_folder)
 
         self.actor_critic = Policy(
             observation_space=self.envs.observation_spaces[0],
@@ -55,12 +49,12 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic.to(self.device)
 
         self.agent = PPO(
-            self.actor_critic,
-            ppo_cfg.clip_param,
-            ppo_cfg.ppo_epoch,
-            ppo_cfg.num_mini_batch,
-            ppo_cfg.value_loss_coef,
-            ppo_cfg.entropy_coef,
+            actor_critic=self.actor_critic,
+            clip_param=ppo_cfg.clip_param,
+            ppo_epoch=ppo_cfg.ppo_epoch,
+            num_mini_batch=ppo_cfg.num_mini_batch,
+            value_loss_coef=ppo_cfg.value_loss_coef,
+            entropy_coef=ppo_cfg.entropy_coef,
             lr=ppo_cfg.lr,
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
@@ -69,7 +63,7 @@ class PPOTrainer(BaseRLTrainer):
     def save_checkpoint(self, file_name: str):
         checkpoint = {
             "state_dict": self.agent.state_dict(),
-            "config_str": str(self.config),
+            "config": self.config,
         }
         torch.save(
             checkpoint,
@@ -86,7 +80,12 @@ class PPOTrainer(BaseRLTrainer):
             self.config is not None
         ), "trainer is not properly initialized, need to specify config file"
 
+        self.envs = construct_envs(self.config, NavRLEnv)
         ppo_cfg = self.config.TRAINER.RL.PPO
+        self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
+        if not os.path.isdir(ppo_cfg.checkpoint_folder):
+            os.makedirs(ppo_cfg.checkpoint_folder)
+        self._setup_actor_critic_agent(ppo_cfg)
         logger.info(
             "agent number of parameters: {}".format(
                 sum(param.numel() for param in self.agent.parameters())
@@ -94,7 +93,6 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         observations = self.envs.reset()
-
         batch = batch_obs(observations)
 
         rollouts = RolloutStorage(
@@ -136,9 +134,10 @@ class PPOTrainer(BaseRLTrainer):
                         ppo_cfg.lr,
                     )
 
-                self.agent.clip_param = ppo_cfg.clip_param * (
-                    1 - update / ppo_cfg.num_updates
-                )
+                if ppo_cfg.use_linear_clip_decay:
+                    self.agent.clip_param = ppo_cfg.clip_param * (
+                        1 - update / ppo_cfg.num_updates
+                    )
 
                 for step in range(ppo_cfg.num_steps):
                     t_sample_action = time.time()
@@ -287,15 +286,14 @@ class PPOTrainer(BaseRLTrainer):
 
     def eval(self):
         ppo_cfg = self.config.TRAINER.RL.PPO
+        self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
+        self.video_option = ppo_cfg.video_option.strip().split(",")
 
-        assert (len(ppo_cfg.model_path) > 0) != (
-            len(ppo_cfg.tracking_model_dir) > 0
-        ), "Must specify a single model or a directory of models, but not both"
-        if "tensorboard" in ppo_cfg.video_option:
+        if "tensorboard" in self.video_option:
             assert (
                 ppo_cfg.tensorboard_dir is not None
             ), "Must specify a tensorboard directory for video display"
-        if "disk" in ppo_cfg.video_option:
+        if "disk" in self.video_option:
             assert (
                 ppo_cfg.video_dir is not None
             ), "Must specify a directory for storing videos on disk"
@@ -303,9 +301,9 @@ class PPOTrainer(BaseRLTrainer):
         with get_tensorboard_writer(
             ppo_cfg.tensorboard_dir, purge_step=0, flush_secs=30
         ) as writer:
-            if len(ppo_cfg.model_path) > 0:
+            if os.path.isfile(ppo_cfg.eval_ckpt_path_or_dir):
                 # evaluate singe checkpoint
-                self._eval_checkpoint(ppo_cfg.model_path, ppo_cfg, writer)
+                self._eval_checkpoint(ppo_cfg.eval_ckpt_path_or_dir, writer)
             else:
                 # evaluate multiple checkpoints in order
                 prev_ckpt_ind = -1
@@ -313,7 +311,7 @@ class PPOTrainer(BaseRLTrainer):
                     current_ckpt = None
                     while current_ckpt is None:
                         current_ckpt = poll_checkpoint_folder(
-                            ppo_cfg.tracking_model_dir, prev_ckpt_ind
+                            ppo_cfg.eval_ckpt_path_or_dir, prev_ckpt_ind
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
                     logger.warning(
@@ -323,83 +321,67 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     prev_ckpt_ind += 1
                     self._eval_checkpoint(
-                        current_ckpt,
-                        ppo_cfg,
-                        writer,
+                        checkpoint_path=current_ckpt,
+                        writer=writer,
                         cur_ckpt_idx=prev_ckpt_ind,
                     )
 
-    def _eval_checkpoint(self, checkpoint_path, args, writer, cur_ckpt_idx=0):
-        device = torch.device("cuda", args.pth_gpu_id)
+    def _eval_checkpoint(self, checkpoint_path, writer, cur_ckpt_idx=0):
+        ckpt_dict = self.load_checkpoint(
+            checkpoint_path, map_location=self.device
+        )
         config = self.config.clone()
+        # TODO merge saved config with eval config
+        ppo_cfg = config.TRAINER.RL.PPO
         config.defrost()
         config.DATASET.SPLIT = "val"
-        agent_sensors = args.sensors.strip().split(",")
+        agent_sensors = ppo_cfg.sensors.strip().split(",")
         for sensor in agent_sensors:
             assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
         config.SIMULATOR.AGENT_0.SENSORS = agent_sensors
-        if args.video_option:
+        if self.video_option:
             config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK.MEASUREMENTS.append("COLLISIONS")
         config.freeze()
 
         logger.info(f"env config: {config}")
         self.envs = construct_envs(config, NavRLEnv)
+        self._setup_actor_critic_agent(ppo_cfg)
 
-        ckpt = torch.load(checkpoint_path, map_location=device)
-
-        actor_critic = Policy(
-            observation_space=self.envs.observation_spaces[0],
-            action_space=self.envs.action_spaces[0],
-            hidden_size=512,
-            goal_sensor_uuid=config.TASK.GOAL_SENSOR_UUID,
-        )
-        actor_critic.to(device)
-
-        # TODO read ppo params from saved config
-        ppo = PPO(
-            actor_critic=actor_critic,
-            clip_param=0.1,
-            ppo_epoch=4,
-            num_mini_batch=32,
-            value_loss_coef=0.5,
-            entropy_coef=0.01,
-            lr=2.5e-4,
-            eps=1e-5,
-            max_grad_norm=0.5,
-        )
-
-        ppo.load_state_dict(ckpt["state_dict"])
-
-        actor_critic = ppo.actor_critic
+        self.agent.load_state_dict(ckpt_dict["state_dict"])
+        self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
         batch = batch_obs(observations)
         for sensor in batch:
-            batch[sensor] = batch[sensor].to(device)
+            batch[sensor] = batch[sensor].to(self.device)
 
         current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=device
+            self.envs.num_envs, 1, device=self.device
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            args.num_processes, args.hidden_size, device=device
+            ppo_cfg.num_processes, ppo_cfg.hidden_size, device=self.device
         )
-        not_done_masks = torch.zeros(args.num_processes, 1, device=device)
+        not_done_masks = torch.zeros(
+            ppo_cfg.num_processes, 1, device=self.device
+        )
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
-        rgb_frames = [[]] * args.num_processes  # type: List[List[np.ndarray]]
-        if args.video_option:
-            os.makedirs(args.video_dir, exist_ok=True)
+        rgb_frames = [
+            []
+        ] * ppo_cfg.num_processes  # type: List[List[np.ndarray]]
+        if self.video_option:
+            os.makedirs(ppo_cfg.video_dir, exist_ok=True)
 
         while (
-            len(stats_episodes) < args.count_test_episodes
+            len(stats_episodes) < ppo_cfg.count_test_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                _, actions, _, test_recurrent_hidden_states = actor_critic.act(
+                _, actions, _, test_recurrent_hidden_states = self.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
                     not_done_masks,
@@ -413,16 +395,16 @@ class PPOTrainer(BaseRLTrainer):
             ]
             batch = batch_obs(observations)
             for sensor in batch:
-                batch[sensor] = batch[sensor].to(device)
+                batch[sensor] = batch[sensor].to(self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
                 dtype=torch.float,
-                device=device,
+                device=self.device,
             )
 
             rewards = torch.tensor(
-                rewards, dtype=torch.float, device=device
+                rewards, dtype=torch.float, device=self.device
             ).unsqueeze(1)
             current_episode_reward += rewards
             next_episodes = self.envs.current_episodes()
@@ -449,9 +431,9 @@ class PPOTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
-                    if args.video_option:
+                    if self.video_option:
                         generate_video(
-                            args,
+                            ppo_cfg,
                             rgb_frames[i],
                             current_episodes[i].episode_id,
                             cur_ckpt_idx,
@@ -461,7 +443,7 @@ class PPOTrainer(BaseRLTrainer):
                         rgb_frames[i] = []
 
                 # episode continues
-                elif args.video_option:
+                elif self.video_option:
                     frame = observations_to_image(observations[i], infos[i])
                     rgb_frames[i].append(frame)
 
@@ -482,7 +464,7 @@ class PPOTrainer(BaseRLTrainer):
                 for k, v in batch.items():
                     batch[k] = v[state_index]
 
-                if args.video_option:
+                if self.video_option:
                     rgb_frames = [rgb_frames[i] for i in state_index]
 
         aggregated_stats = dict()

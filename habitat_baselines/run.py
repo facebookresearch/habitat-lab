@@ -12,7 +12,7 @@ from habitat_baselines.common.utils import (
 def main():
     parser = experiment_args()
     args = parser.parse_args()
-    config = get_exp_config(args.exp_config)
+    config = get_exp_config(args.exp_config, args.opts)
 
     random.seed(config.SEED)
     np.random.seed(config.SEED)

@@ -16,9 +16,6 @@ class BaseTrainer:
 
     supported_tasks: ClassVar[List[str]]
 
-    def __init__(self):
-        pass
-
     def train(self) -> None:
         raise NotImplementedError
 
