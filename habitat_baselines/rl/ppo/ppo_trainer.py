@@ -12,9 +12,12 @@ from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import NavRLEnv
-from habitat_baselines.common.tensorboard_utils import get_tensorboard_writer
+from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_tensorboard_writer,
+)
 from habitat_baselines.common.utils import (
-    RolloutStorage,
     batch_obs,
     generate_video,
     poll_checkpoint_folder,
@@ -25,6 +28,10 @@ from habitat_baselines.rl.ppo import PPO, Policy
 
 @baseline_registry.register_trainer(name="ppo")
 class PPOTrainer(BaseRLTrainer):
+    r"""
+    Trainer class for PPO algorithm
+    Paper: https://arxiv.org/abs/1707.06347
+    """
     supported_tasks = ["Nav-v0"]
 
     def __init__(self, config=None):
@@ -37,14 +44,22 @@ class PPOTrainer(BaseRLTrainer):
         if config is not None:
             logger.info(f"config: {config}")
 
-    def _setup_actor_critic_agent(self, ppo_cfg):
+    def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
+        r"""
+        Sets up actor critic and agent for PPO
+        Args:
+            ppo_cfg: config node with relevant params
+
+        Returns:
+            None
+        """
         logger.add_filehandler(ppo_cfg.log_file)
 
         self.actor_critic = Policy(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=512,
-            goal_sensor_uuid=self.config.TASK.GOAL_SENSOR_UUID,
+            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
         )
         self.actor_critic.to(self.device)
 
@@ -60,7 +75,15 @@ class PPOTrainer(BaseRLTrainer):
             max_grad_norm=ppo_cfg.max_grad_norm,
         )
 
-    def save_checkpoint(self, file_name: str):
+    def save_checkpoint(self, file_name: str) -> None:
+        r"""
+        Save checkpoint with specified name
+        Args:
+            file_name: file name for checkpoint
+
+        Returns:
+            None
+        """
         checkpoint = {
             "state_dict": self.agent.state_dict(),
             "config": self.config,
@@ -72,15 +95,31 @@ class PPOTrainer(BaseRLTrainer):
             ),
         )
 
-    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
+    def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
+        r"""
+        Load checkpoint of specified path as a dict
+        Args:
+            checkpoint_path: path of target checkpoint
+            *args: additional positional args
+            **kwargs: additional keyword args
+
+        Returns:
+            dict containing checkpoint info
+        """
         return torch.load(checkpoint_path, map_location=self.device)
 
-    def train(self):
+    def train(self) -> None:
+        r"""
+        Main method for training PPO
+        Returns:
+            None
+        """
         assert (
             self.config is not None
         ), "trainer is not properly initialized, need to specify config file"
 
         self.envs = construct_envs(self.config, NavRLEnv)
+
         ppo_cfg = self.config.TRAINER.RL.PPO
         self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
         if not os.path.isdir(ppo_cfg.checkpoint_folder):
@@ -284,7 +323,12 @@ class PPOTrainer(BaseRLTrainer):
                     self.save_checkpoint(f"ckpt.{count_checkpoints}.pth")
                     count_checkpoints += 1
 
-    def eval(self):
+    def eval(self) -> None:
+        r"""
+        Main method of evaluating PPO
+        Returns:
+            None
+        """
         ppo_cfg = self.config.TRAINER.RL.PPO
         self.device = torch.device("cuda", ppo_cfg.pth_gpu_id)
         self.video_option = ppo_cfg.video_option.strip().split(",")
@@ -326,22 +370,45 @@ class PPOTrainer(BaseRLTrainer):
                         cur_ckpt_idx=prev_ckpt_ind,
                     )
 
-    def _eval_checkpoint(self, checkpoint_path, writer, cur_ckpt_idx=0):
+    def _eval_checkpoint(
+        self,
+        checkpoint_path: str,
+        writer: TensorboardWriter,
+        cur_ckpt_idx: int = 0,
+    ) -> None:
+        r"""
+        Evaluates a single checkpoint
+        Args:
+            checkpoint_path: path of checkpoint
+            writer: tensorboard writer object for logging to tensorboard
+            cur_ckpt_idx: index of cur checkpoint for logging
+
+        Returns:
+            None
+        """
         ckpt_dict = self.load_checkpoint(
             checkpoint_path, map_location=self.device
         )
+
+        ckpt_config = ckpt_dict["config"]
         config = self.config.clone()
-        # TODO merge saved config with eval config
+        ckpt_cmd_opts = ckpt_config.CMD_TRAILING_OPTS
+        eval_cmd_opts = config.CMD_TRAILING_OPTS
+
+        # config priority: eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
+        ckpt_config.merge_from_other_cfg(config)
+        config = ckpt_config
+        config.merge_from_list(ckpt_cmd_opts)
+        config.merge_from_list(eval_cmd_opts)
+
         ppo_cfg = config.TRAINER.RL.PPO
-        config.defrost()
-        config.DATASET.SPLIT = "val"
+        config.TASK_CONFIG.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = "val"
         agent_sensors = ppo_cfg.sensors.strip().split(",")
-        for sensor in agent_sensors:
-            assert sensor in ["RGB_SENSOR", "DEPTH_SENSOR"]
-        config.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = agent_sensors
         if self.video_option:
-            config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-            config.TASK.MEASUREMENTS.append("COLLISIONS")
+            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+            config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
         config.freeze()
 
         logger.info(f"env config: {config}")

@@ -41,19 +41,19 @@ class NavRLEnv(habitat.RLEnv):
 
     def get_reward_range(self):
         return (
-            self._config_baseline.TRAINER.RL.SLACK_REWARD - 1.0,
-            self._config_baseline.TRAINER.RL.SUCCESS_REWARD + 1.0,
+            self._config_baseline.SLACK_REWARD - 1.0,
+            self._config_baseline.SUCCESS_REWARD + 1.0,
         )
 
     def get_reward(self, observations):
-        reward = self._config_baseline.TRAINER.RL.SLACK_REWARD
+        reward = self._config_baseline.SLACK_REWARD
 
         current_target_distance = self._distance_target()
         reward += self._previous_target_distance - current_target_distance
         self._previous_target_distance = current_target_distance
 
         if self._episode_success():
-            reward += self._config_baseline.TRAINER.RL.SUCCESS_REWARD
+            reward += self._config_baseline.SUCCESS_REWARD
 
         return reward
 

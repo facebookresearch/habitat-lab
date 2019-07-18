@@ -1,3 +1,4 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
 TRAINER:
   TRAINER_NAME: "ppo"
   RL:
@@ -16,8 +17,7 @@ TRAINER:
       count_test_episodes: 2
       video_option: "disk,tensorboard"
       video_dir: "video_dir"
-      eval_ckpt_path_or_dir: "data/checkpoints/"
-
+      eval_ckpt_path_or_dir: "data/checkpoints"
 
       # ppo params
       clip_param: 0.1

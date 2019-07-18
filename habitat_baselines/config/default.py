@@ -17,7 +17,9 @@ CONFIG_FILE_SEPARATOR = ","
 # Config definition
 # -----------------------------------------------------------------------------
 _C = CN()
-_C.SEED = 100
+_C.BASE_TASK_CONFIG_PATH = "configs/tasks/pointnav.yaml"
+_C.TASK_CONFIG = get_config()  # task_config will be stored as a config node
+_C.CMD_TRAILING_OPTS = ""  # store command line options"
 # -----------------------------------------------------------------------------
 # TRAINER ALGORITHMS
 # -----------------------------------------------------------------------------
@@ -63,7 +65,7 @@ _C.TRAINER.RL.PPO.task_config = "configs/tasks/pointnav.yaml"
 _C.TRAINER.RL.PPO.tensorboard_dir = "tb"
 _C.TRAINER.RL.PPO.count_test_episodes = 2
 _C.TRAINER.RL.PPO.video_option = "disk,tensorboard"
-_C.TRAINER.RL.PPO.video_dir = "video_Dir"
+_C.TRAINER.RL.PPO.video_dir = "video_dir"
 _C.TRAINER.RL.PPO.eval_ckpt_path_or_dir = "data/checkpoints"
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE
