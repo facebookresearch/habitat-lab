@@ -3,7 +3,24 @@ import torch.nn as nn
 
 
 class RNNStateEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, rnn_type="GRU"):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        rnn_type: str = "GRU",
+    ):
+        r"""An RNN for encoding the state in RL.
+
+        Supports masking the hidden state during various timesteps in the forward lass
+
+        Args:
+            input_size: The input size of the RNN
+            hidden_size: The hidden size
+            num_layers: The number of recurrent layers
+            rnn_type: The RNN cell type.  Must be GRU or LSTM
+        """
+
         super().__init__()
         self._num_recurrent_layers = num_layers
         self._rnn_type = rnn_type
@@ -55,6 +72,8 @@ class RNNStateEncoder(nn.Module):
         return hidden_states
 
     def single_forward(self, x, hidden_states, masks):
+        r"""Forward for a non-sequence input
+        """
         hidden_states = self._unpack_hidden(hidden_states)
         x, hidden_states = self.rnn(
             x.unsqueeze(0),
@@ -65,6 +84,14 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def seq_forward(self, x, hidden_states, masks):
+        r"""Forward for a sequence of length T
+
+        Args:
+            x: (T, N, -1) Tensor that has been flattened to (T * N, -1)
+            hidden_states: The starting hidden state.
+            masks: The masks to be applied to hidden state at every timestep.
+                A (T, N) tensor flatten to (T * N)
+        """
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
         n = hidden_states.size(1)
         t = int(x.size(0) / n)

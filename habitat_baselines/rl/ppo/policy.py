@@ -156,12 +156,12 @@ class PointNavBaselineNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def get_tgt_encoding(self, observations):
+    def get_target_encoding(self, observations):
         return observations[self.goal_sensor_uuid]
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        tgt_encoding = self.get_tgt_encoding(observations)
-        x = [tgt_encoding]
+        target_encoding = self.get_target_encoding(observations)
+        x = [target_encoding]
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)

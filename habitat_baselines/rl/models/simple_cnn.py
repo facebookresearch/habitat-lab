@@ -6,6 +6,15 @@ from habitat_baselines.rl.ppo.utils import Flatten
 
 
 class SimpleCNN(nn.Module):
+    r"""A Simple 3-Conv CNN followed by a fully connected layer
+
+    Takes in observations and produces an embedding of the rgb and/or depth components
+
+    Args:
+        observation_space: The observation_space of the agent
+        output_size: The size of the embedding vector
+    """
+
     def __init__(self, observation_space, output_size):
         super().__init__()
         if "rgb" in observation_space.spaces:
