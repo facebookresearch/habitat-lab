@@ -327,14 +327,32 @@ def get_topdown_map(
     return top_down_map
 
 
-def colorize_topdown_map(top_down_map: np.ndarray) -> np.ndarray:
+FOG_OF_WAR_COLOR_DESAT = np.array([[0.7], [1.0]])
+
+
+def colorize_topdown_map(
+    top_down_map: np.ndarray, fog_of_war_mask: Optional[np.ndarray] = None
+) -> np.ndarray:
     r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
+            fog_of_war_mask: A mask used to determine which parts of the 
+                top_down_map are visible
+                Non-visible parts will be desaturated
         Returns:
             A colored version of the top-down map.
     """
-    return TOP_DOWN_MAP_COLORS[top_down_map]
+    _map = TOP_DOWN_MAP_COLORS[top_down_map]
+
+    if fog_of_war_mask is not None:
+        # Only desaturate things that are valid points as only valid points get revealed
+        desat_mask = top_down_map != MAP_INVALID_POINT
+
+        _map[desat_mask] = (
+            _map * FOG_OF_WAR_COLOR_DESAT[fog_of_war_mask]
+        ).astype(np.uint8)[desat_mask]
+
+    return _map
 
 
 def draw_path(

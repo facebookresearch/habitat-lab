@@ -72,6 +72,10 @@ _C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
 _C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
 _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
 _C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR = CN()
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
 # -----------------------------------------------------------------------------
 # # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
