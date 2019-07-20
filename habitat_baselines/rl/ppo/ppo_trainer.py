@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import time
 from collections import deque
@@ -395,9 +401,10 @@ class PPOTrainer(BaseRLTrainer):
         ckpt_cmd_opts = ckpt_config.CMD_TRAILING_OPTS
         eval_cmd_opts = config.CMD_TRAILING_OPTS
 
-        # config priority: eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
-        ckpt_config.merge_from_other_cfg(config)
-        config = ckpt_config
+        # config merge priority: eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
+        # first line for old checkpoint compatibility
+        config.merge_from_other_cfg(ckpt_config)
+        config.merge_from_other_cfg(self.config)
         config.merge_from_list(ckpt_cmd_opts)
         config.merge_from_list(eval_cmd_opts)
 

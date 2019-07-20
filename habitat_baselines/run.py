@@ -1,33 +1,15 @@
-import argparse
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import random
-from typing import List
 
 import numpy as np
-
-from habitat import Config, get_config
+import argparse
 from habitat_baselines.common.utils import get_trainer
-from habitat_baselines.config.default import get_config as baseline_cfg
-
-
-def get_exp_config(cfg_path: str, opts: List[str] = None) -> Config:
-    r"""
-    Create config object from path for a specific experiment run.
-    Args:
-        cfg_path: yaml config file path.
-        opts: list additional options or options to be overwritten.
-
-    Returns:
-        config object created.
-    """
-
-    config = Config(new_allowed=True)
-    config.merge_from_other_cfg(baseline_cfg(cfg_path))
-    task_config = get_config(config.BASE_TASK_CONFIG_PATH)
-    config.TASK_CONFIG = task_config
-    config.CMD_TRAILING_OPTS = opts
-    if opts is not None:
-        config.merge_from_list(opts)
-    return config
+from habitat_baselines.config.default import get_config
 
 
 def main():
@@ -51,7 +33,7 @@ def main():
         help="Modify config options from command line",
     )
     args = parser.parse_args()
-    config = get_exp_config(args.exp_config, args.opts)
+    config = get_config(args.exp_config, args.opts)
 
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)

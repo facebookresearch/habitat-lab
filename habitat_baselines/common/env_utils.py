@@ -51,11 +51,11 @@ def construct_envs(config: Config, env_class: Type) -> VectorEnv:
     """
     trainer_config = config.TRAINER.RL.PPO
     rl_env_config = config.TRAINER.RL
-    config = config.TASK_CONFIG  # exclude trainer-specific configs
+    task_config = config.TASK_CONFIG  # excluding trainer-specific configs
     env_configs, rl_env_configs = [], []
     env_classes = [env_class for _ in range(trainer_config.num_processes)]
-    dataset = make_dataset(config.DATASET.TYPE)
-    scenes = dataset.get_scenes_to_load(config.DATASET)
+    dataset = make_dataset(task_config.DATASET.TYPE)
+    scenes = dataset.get_scenes_to_load(task_config.DATASET)
 
     if len(scenes) > 0:
         random.shuffle(scenes)
@@ -73,7 +73,7 @@ def construct_envs(config: Config, env_class: Type) -> VectorEnv:
 
     for i in range(trainer_config.num_processes):
 
-        env_config = config.clone()
+        env_config = task_config.clone()
         env_config.defrost()
         if len(scenes) > 0:
             env_config.DATASET.CONTENT_SCENES = scene_splits[i]
