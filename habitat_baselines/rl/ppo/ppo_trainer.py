@@ -34,9 +34,8 @@ from habitat_baselines.rl.ppo import PPO, Policy
 
 @baseline_registry.register_trainer(name="ppo")
 class PPOTrainer(BaseRLTrainer):
-    r"""
-    Trainer class for PPO algorithm
-    Paper: https://arxiv.org/abs/1707.06347
+    r"""Trainer class for PPO algorithm
+    Paper: https://arxiv.org/abs/1707.06347.
     """
     supported_tasks = ["Nav-v0"]
 
@@ -51,8 +50,8 @@ class PPOTrainer(BaseRLTrainer):
             logger.info(f"config: {config}")
 
     def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
-        r"""
-        Sets up actor critic and agent for PPO
+        r"""Sets up actor critic and agent for PPO.
+
         Args:
             ppo_cfg: config node with relevant params
 
@@ -82,8 +81,8 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def save_checkpoint(self, file_name: str) -> None:
-        r"""
-        Save checkpoint with specified name
+        r"""Save checkpoint with specified name.
+
         Args:
             file_name: file name for checkpoint
 
@@ -102,8 +101,8 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
-        r"""
-        Load checkpoint of specified path as a dict
+        r"""Load checkpoint of specified path as a dict.
+
         Args:
             checkpoint_path: path of target checkpoint
             *args: additional positional args
@@ -115,8 +114,8 @@ class PPOTrainer(BaseRLTrainer):
         return torch.load(checkpoint_path, map_location=self.device)
 
     def train(self) -> None:
-        r"""
-        Main method for training PPO
+        r"""Main method for training PPO.
+
         Returns:
             None
         """
@@ -330,8 +329,8 @@ class PPOTrainer(BaseRLTrainer):
                     count_checkpoints += 1
 
     def eval(self) -> None:
-        r"""
-        Main method of evaluating PPO
+        r"""Main method of evaluating PPO.
+
         Returns:
             None
         """
@@ -382,8 +381,8 @@ class PPOTrainer(BaseRLTrainer):
         writer: TensorboardWriter,
         cur_ckpt_idx: int = 0,
     ) -> None:
-        r"""
-        Evaluates a single checkpoint
+        r"""Evaluates a single checkpoint.
+
         Args:
             checkpoint_path: path of checkpoint
             writer: tensorboard writer object for logging to tensorboard

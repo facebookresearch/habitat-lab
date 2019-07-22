@@ -27,8 +27,8 @@ from habitat_baselines.common.tensorboard_utils import (
 
 
 def get_trainer(trainer_name: str, trainer_cfg: Config) -> BaseTrainer:
-    r"""
-    Create specific trainer instance according to name.
+    r"""Create specific trainer instance according to name.
+
     Args:
         trainer_name: name of registered trainer .
         trainer_cfg: config file for trainer.
@@ -79,7 +79,8 @@ class CategoricalNet(nn.Module):
 
 # TODO make this a  LRScheduler class
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
-    r"""Decreases the learning rate linearly
+    r"""Decreases the learning rate linearly.
+
     """
     lr = initial_lr - (initial_lr * (epoch / float(total_num_epochs)))
     for param_group in optimizer.param_groups:
@@ -87,9 +88,9 @@ def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
 
 
 def batch_obs(observations: List[Dict]) -> Dict:
-    r"""
-    Transpose a batch of observation dicts to a dict of batched
+    r"""Transpose a batch of observation dicts to a dict of batched
     observations.
+
     Args:
         observations:  list of dicts of observations.
 
@@ -143,8 +144,8 @@ def generate_video(
     tb_writer: Union[DummyWriter, TensorboardWriter],
     fps: int = 10,
 ) -> None:
-    r"""
-    Generate video according to specified information.
+    r"""Generate video according to specified information.
+    
     Args:
         config: config object that contains video_option and video_dir.
         images: list of images to be converted to video.
