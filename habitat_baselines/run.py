@@ -4,10 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import argparse
 import random
 
 import numpy as np
-import argparse
+
 from habitat_baselines.common.utils import get_trainer
 from habitat_baselines.config.default import get_config
 
