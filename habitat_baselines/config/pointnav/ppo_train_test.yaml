@@ -1,0 +1,12 @@
+TRAINER:
+  TRAINER_NAME: "ppo"
+  RL:
+    PPO:
+      num_processes: 1
+      pth_gpu_id: 0
+      sim_gpu_id: 0
+      checkpoint_interval: 50
+      checkpoint_folder: "data/checkpoints"
+      task_config: "configs/tasks/pointnav.yaml"
+      num_updates: 10
+      num_mini_batch: 1

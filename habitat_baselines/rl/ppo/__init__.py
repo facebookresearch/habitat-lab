@@ -6,6 +6,5 @@
 
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.rl.ppo.ppo import PPO
-from habitat_baselines.rl.ppo.utils import RolloutStorage
 
-__all__ = ["PPO", "Policy", "RolloutStorage"]
+__all__ = ["PPO", "Policy"]
