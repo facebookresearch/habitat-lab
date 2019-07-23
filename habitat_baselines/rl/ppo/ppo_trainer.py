@@ -174,7 +174,7 @@ class PPOTrainer(BaseRLTrainer):
 
         pth_time += time.time() - t_update_stats
 
-        return delta_pth_time, delta_pth_time, self.envs.num_envs
+        return pth_time, env_time, self.envs.num_envs
 
     def _update_agent(self, ppo_cfg, rollouts):
         t_update_model = time.time()
