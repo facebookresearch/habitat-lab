@@ -18,12 +18,7 @@ from habitat import Config
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines import BaseTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.tensorboard_utils import (
-    DummyWriter,
-    TensorboardWriter,
-)
-
-# TODO distribute utilities in this file to separate files
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 
 def get_trainer(trainer_name: str, trainer_cfg: Config) -> BaseTrainer:
@@ -77,14 +72,17 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
-# TODO make this a  LRScheduler class
-def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
-    r"""Decreases the learning rate linearly.
+def linear_decay(epoch: int, total_num_updates: int) -> float:
+    r"""Returns a multiplicative factor for linear learning rate decay
 
+    Args:
+        epoch: current epoch number
+        total_num_updates: total number of epochs
+
+    Returns:
+        multiplicative factor that decreases lr linearly
     """
-    lr = initial_lr - (initial_lr * (epoch / float(total_num_epochs)))
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
+    return 1 - (epoch / float(total_num_updates))
 
 
 def batch_obs(observations: List[Dict]) -> Dict:
@@ -141,11 +139,11 @@ def generate_video(
     episode_id: int,
     checkpoint_idx: int,
     spl: float,
-    tb_writer: Union[DummyWriter, TensorboardWriter],
+    tb_writer: TensorboardWriter,
     fps: int = 10,
 ) -> None:
     r"""Generate video according to specified information.
-    
+
     Args:
         config: config object that contains video_option and video_dir.
         images: list of images to be converted to video.

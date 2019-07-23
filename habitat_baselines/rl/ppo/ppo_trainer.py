@@ -11,6 +11,7 @@ from typing import Dict, List
 
 import numpy as np
 import torch
+from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
 from habitat.utils.visualizations.utils import observations_to_image
@@ -19,15 +20,12 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import NavRLEnv
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensorboard_utils import (
-    TensorboardWriter,
-    get_tensorboard_writer,
-)
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
     batch_obs,
     generate_video,
+    linear_decay,
     poll_checkpoint_folder,
-    update_linear_schedule,
 )
 from habitat_baselines.rl.ppo import PPO, Policy
 
@@ -162,21 +160,17 @@ class PPOTrainer(BaseRLTrainer):
         count_steps = 0
         count_checkpoints = 0
 
-        with (
-            get_tensorboard_writer(
-                log_dir=ppo_cfg.tensorboard_dir,
-                purge_step=count_steps,
-                flush_secs=30,
-            )
+        lr_scheduler = LambdaLR(
+            optimizer=self.agent.optimizer,
+            lr_lambda=lambda x: linear_decay(x, ppo_cfg.num_updates),
+        )
+
+        with TensorboardWriter(
+            ppo_cfg.tensorboard_dir, purge_step=count_steps, flush_secs=30
         ) as writer:
             for update in range(ppo_cfg.num_updates):
                 if ppo_cfg.use_linear_lr_decay:
-                    update_linear_schedule(
-                        self.agent.optimizer,
-                        update,
-                        ppo_cfg.num_updates,
-                        ppo_cfg.lr,
-                    )
+                    lr_scheduler.step()
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * (
@@ -340,14 +334,14 @@ class PPOTrainer(BaseRLTrainer):
 
         if "tensorboard" in self.video_option:
             assert (
-                ppo_cfg.tensorboard_dir is not None
+                len(ppo_cfg.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
         if "disk" in self.video_option:
             assert (
-                ppo_cfg.video_dir is not None
+                len(ppo_cfg.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"
 
-        with get_tensorboard_writer(
+        with TensorboardWriter(
             ppo_cfg.tensorboard_dir, purge_step=0, flush_secs=30
         ) as writer:
             if os.path.isfile(ppo_cfg.eval_ckpt_path_or_dir):
@@ -363,11 +357,7 @@ class PPOTrainer(BaseRLTrainer):
                             ppo_cfg.eval_ckpt_path_or_dir, prev_ckpt_ind
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
-                    logger.warning(
-                        "=============current_ckpt: {}=============".format(
-                            current_ckpt
-                        )
-                    )
+                    logger.info(f"=======current_ckpt: {current_ckpt}=======")
                     prev_ckpt_ind += 1
                     self._eval_checkpoint(
                         checkpoint_path=current_ckpt,
@@ -551,13 +541,9 @@ class PPOTrainer(BaseRLTrainer):
         episode_spl_mean = aggregated_stats["spl"] / num_episodes
         episode_success_mean = aggregated_stats["success"] / num_episodes
 
-        logger.info(
-            "Average episode reward: {:.6f}".format(episode_reward_mean)
-        )
-        logger.info(
-            "Average episode success: {:.6f}".format(episode_success_mean)
-        )
-        logger.info("Average episode SPL: {:.6f}".format(episode_spl_mean))
+        logger.info(f"Average episode reward: {episode_reward_mean:.6f}")
+        logger.info(f"Average episode success: {episode_success_mean:.6f}")
+        logger.info(f"Average episode SPL: {episode_spl_mean:.6f}")
 
         writer.add_scalars(
             "eval_reward",
