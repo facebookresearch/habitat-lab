@@ -13,10 +13,10 @@ from habitat.core.dataset import Dataset, Episode
 
 def _construct_dataset(num_episodes, num_groups=10):
     episodes = []
-    for ii in range(num_episodes):
+    for i in range(num_episodes):
         episode = Episode(
-            episode_id=str(ii),
-            scene_id="scene_id_" + str(ii % num_groups),
+            episode_id=str(i),
+            scene_id="scene_id_" + str(i % num_groups),
             start_position=[0, 0, 0],
             start_rotation=[0, 0, 0, 1],
         )

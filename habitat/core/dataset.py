@@ -97,8 +97,7 @@ class Dataset(Generic[T]):
         return [self.episodes[episode_id] for episode_id in indexes]
 
     def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
-        r"""
-        Gets episode iterator with options. Options are specified in
+        r"""Gets episode iterator with options. Options are specified in
         EpisodeIterator documentation. To further customize iterator behavior
         for your Dataset subclass, create a customized iterator class like
         EpisodeIterator and override this method.
@@ -123,8 +122,7 @@ class Dataset(Generic[T]):
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
-        r"""
-        Creates dataset from ``json_str``. Directory containing relevant 
+        r"""Creates dataset from ``json_str``. Directory containing relevant
         graphical assets of scenes is passed through ``scenes_dir``.
 
         Args:
@@ -135,8 +133,7 @@ class Dataset(Generic[T]):
         raise NotImplementedError
 
     def filter_episodes(self, filter_fn: Callable[[T], bool]) -> "Dataset":
-        r"""
-        Returns a new dataset with only the filtered episodes from the 
+        r"""Returns a new dataset with only the filtered episodes from the
         original dataset.
 
         Args:
@@ -248,8 +245,7 @@ class Dataset(Generic[T]):
 
 
 class EpisodeIterator(Iterator):
-    r"""
-    Episode Iterator class that gives options for how a list of episodes
+    r"""Episode Iterator class that gives options for how a list of episodes
     should be iterated. Some of those options are desirable for the internal
     simulator to get higher performance. More context: simulator suffers
     overhead when switching between scenes, therefore episodes of the same
@@ -257,6 +253,7 @@ class EpisodeIterator(Iterator):
     episodes from same scene are feed into RL model, the model will risk to
     overfit that scene. Therefore it's better to load same scene consecutively
     and switch once a number threshold is reached.
+
     Currently supports the following features:
         Cycling: when all episodes are iterated, cycle back to start instead of
             throwing StopIteration.
@@ -279,7 +276,6 @@ class EpisodeIterator(Iterator):
         num_episode_sample: int = -1,
     ):
         r"""
-        Initialize episode iterator,
         Args:
             episodes: list of episodes.
             cycle: if true, cycle back to first episodes when StopIteration.
@@ -313,29 +309,29 @@ class EpisodeIterator(Iterator):
         self.shuffle_scene_when_cycle = shuffle_scene_when_cycle
         self.rep_count = 0
         self._iterator = None
-        self.prev_scene_id = None
+        self._prev_scene_id = None
         self._iterator = iter(self.episodes)
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        r"""
-        The main logic for handling how episodes will be iterated.
+        r"""The main logic for handling how episodes will be iterated.
+
         Returns:
             next episode.
         """
         try:
             next_episode = next(self._iterator)
-        except StopIteration:
+        except StopIteration as e:
             if not self.cycle:
-                raise StopIteration
+                raise e
             self._iterator = iter(self.episodes)
             if self.shuffle_scene_when_cycle:
                 self._shuffle_iterator_scene()
             next_episode = next(self._iterator)
 
-        if self.prev_scene_id == next_episode.scene_id:
+        if self._prev_scene_id == next_episode.scene_id:
             self.rep_count += 1
         if (
             self.max_scene_repetition > 0
@@ -344,12 +340,12 @@ class EpisodeIterator(Iterator):
             self._shuffle_iterator_scene()
             self.rep_count = 0
 
-        self.prev_scene_id = next_episode.scene_id
+        self._prev_scene_id = next_episode.scene_id
         return next_episode
 
     def _shuffle_iterator_scene(self) -> None:
-        r"""
-        Internal method that shuffles the remaining episodes by scene
+        r"""Internal method that shuffles the remaining episodes by scene.
+
         Returns:
             None.
         """
