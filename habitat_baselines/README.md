@@ -25,46 +25,18 @@ For training on sample data please follow steps in the repository README. You sh
 
 **train**:
 ```bash
-python -u habitat_baselines/train_ppo.py \
-    --use-gae \
-    --sim-gpu-id 0 \
-    --pth-gpu-id 0 \
-    --lr 2.5e-4 \
-    --clip-param 0.1 \
-    --value-loss-coef 0.5 \
-    --num-processes 4 \
-    --num-steps 128 \
-    --num-mini-batch 4 \
-    --num-updates 100000 \
-    --use-linear-lr-decay \
-    --use-linear-clip-decay \
-    --entropy-coef 0.01 \
-    --log-file "train.log" \
-    --log-interval 5 \
-    --checkpoint-folder "data/checkpoints" \
-    --checkpoint-interval 50 \
-    --task-config "configs/tasks/pointnav.yaml" \
-
-
+python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo.yaml --run-type train
 ```
 
 **test**:
 ```bash
-python -u habitat_baselines/evaluate_ppo.py \
-    --model-path "/path/to/checkpoint" \
-    --sim-gpu-id 0 \
-    --pth-gpu-id 0 \
-    --num-processes 4 \
-    --count-test-episodes 100 \
-    --task-config "configs/tasks/pointnav.yaml" \
-
-
+python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo.yaml --run-type eval
 ```
 
 We also provide trained RGB, RGBD, Blind PPO models. 
 To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v1.zip) and unzip and specify model path [here](agents/ppo_agents.py#L132).
 
-Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
+Change field `task_config` in `habitat_baselines/config/pointnav/ppo.yaml` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
 
 ### Classic
 
@@ -74,26 +46,16 @@ Set argument `--task-config` to `tasks/pointnav_mp3d.yaml` for training on [Matt
 "Benchmarking Classic and Learned Navigation in Complex 3D Environments".
 ### Additional Utilities
 
-**single-episode training**: 
-Algorithms can be trained with a single-episode option. This option can be used as a sanity check since good algorithms should overfit one episode relatively fast. To enable this option, add `DATASET.NUM_EPISODE_SAMPLE 1` *at the end* of the training command, or include the single-episode yaml file in `--task-config` like this:
-```
-   --task-config "configs/tasks/pointnav.yaml,configs/datasets/single_episode.yaml"
-```
+**Episode iterator options**:
+Coming very soon 
 
-**tensorboard and video generation support**
+**Tensorboard and video generation support**
 
-Enable tensorboard logging by adding `--tensorboard-dir logdir` when running `train_ppo.py` or `evaluate_ppo.py`
+Enable tensorboard by changing `tensorboard_dir` field in `habitat_baselines/config/pointnav/ppo.yaml`. 
 
-Enable video generation for `evaluate_ppo.py` using `--video-option`: specifying `tensorboard`(for displaying on tensorboard) or `disk` (for saving videos on disk), for example:
-```
-python -u habitat_baselines/evaluate_ppo.py   
-...
---count-test-episodes 2 \
---video-option tensorboard \
---tensorboard-dir tb_eval \
---model-path data/checkpoints/ckpt.xx.pth
-```
-The above command should generate navigation episode recordings and display them on tensorboard like this:
+Enable video generation for `eval` mode by changing `video_option`: `tensorboard,disk` (for displaying on tensorboard and for saving videos on disk, respectively)
+
+Generated navigation episode recordings should look like this on tensorboard:
 <p align="center">
   <img src="../res/img/tensorboard_video_demo.gif"  height="500">
 </p>

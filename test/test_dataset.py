@@ -200,3 +200,11 @@ def test_sample_episodes():
     dataset = _construct_dataset(10000)
     with pytest.raises(Exception):
         dataset.sample_episodes(10001)
+
+
+def test_iterator_looping():
+    dataset = _construct_dataset(100)
+    episode_iter = dataset.get_episode_iterator()
+    for i in range(200):
+        episode = next(episode_iter)
+        assert episode.episode_id == dataset.episodes[i % 100].episode_id

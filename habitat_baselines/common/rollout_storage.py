@@ -4,63 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import argparse
 from collections import defaultdict
 
-import numpy as np
 import torch
-import torch.nn as nn
-
-
-class Flatten(nn.Module):
-    def forward(self, x):
-        return x.view(x.size(0), -1)
-
-
-class CustomFixedCategorical(torch.distributions.Categorical):
-    def sample(self, sample_shape=torch.Size()):
-        return super().sample(sample_shape).unsqueeze(-1)
-
-    def log_probs(self, actions):
-        return (
-            super()
-            .log_prob(actions.squeeze(-1))
-            .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
-        )
-
-    def mode(self):
-        return self.probs.argmax(dim=-1, keepdim=True)
-
-
-class CategoricalNet(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
-        super().__init__()
-
-        self.linear = nn.Linear(num_inputs, num_outputs)
-
-        nn.init.orthogonal_(self.linear.weight, gain=0.01)
-        nn.init.constant_(self.linear.bias, 0)
-
-    def forward(self, x):
-        x = self.linear(x)
-        return CustomFixedCategorical(logits=x)
-
-
-def _flatten_helper(t, n, tensor):
-    return tensor.view(t * n, *tensor.size()[2:])
-
-
-def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
-    r"""Decreases the learning rate linearly
-    """
-    lr = initial_lr - (initial_lr * (epoch / float(total_num_epochs)))
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
 
 
 class RolloutStorage:
+    r"""
+    Class for storing rollout information for RL trainers
+    """
+
     def __init__(
         self,
         num_steps,
@@ -76,7 +29,7 @@ class RolloutStorage:
             self.observations[sensor] = torch.zeros(
                 num_steps + 1,
                 num_envs,
-                *observation_space.spaces[sensor].shape
+                *observation_space.spaces[sensor].shape,
             )
 
         self.recurrent_hidden_states = torch.zeros(
@@ -177,9 +130,9 @@ class RolloutStorage:
     def recurrent_generator(self, advantages, num_mini_batch):
         num_processes = self.rewards.size(1)
         assert num_processes >= num_mini_batch, (
-            "PPO requires the number of processes ({}) "
+            "Trainer requires the number of processes ({}) "
             "to be greater than or equal to the number of "
-            "PPO mini batches ({}).".format(num_processes, num_mini_batch)
+            "trainer mini batches ({}).".format(num_processes, num_mini_batch)
         )
         num_envs_per_batch = num_processes // num_mini_batch
         perm = torch.randperm(num_processes)
@@ -243,19 +196,18 @@ class RolloutStorage:
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
-                observations_batch[sensor] = _flatten_helper(
+                observations_batch[sensor] = self._flatten_helper(
                     T, N, observations_batch[sensor]
                 )
 
-            actions_batch = _flatten_helper(T, N, actions_batch)
-            prev_actions_batch = _flatten_helper(T, N, prev_actions_batch)
-            value_preds_batch = _flatten_helper(T, N, value_preds_batch)
-            return_batch = _flatten_helper(T, N, return_batch)
-            masks_batch = _flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = _flatten_helper(
+            actions_batch = self._flatten_helper(T, N, actions_batch)
+            value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
+            return_batch = self._flatten_helper(T, N, return_batch)
+            masks_batch = self._flatten_helper(T, N, masks_batch)
+            old_action_log_probs_batch = self._flatten_helper(
                 T, N, old_action_log_probs_batch
             )
-            adv_targ = _flatten_helper(T, N, adv_targ)
+            adv_targ = self._flatten_helper(T, N, adv_targ)
 
             yield (
                 observations_batch,
@@ -269,164 +221,16 @@ class RolloutStorage:
                 adv_targ,
             )
 
+    @staticmethod
+    def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
+        r"""
+        Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
+        Args:
+            t: first dimension of tensor.
+            n: second dimension of tensor.
+            tensor: target tensor to be flattened.
 
-def batch_obs(observations):
-    batch = defaultdict(list)
-
-    for obs in observations:
-        for sensor in obs:
-            batch[sensor].append(obs[sensor])
-
-    for sensor in batch:
-        batch[sensor] = torch.tensor(
-            np.array(batch[sensor]), dtype=torch.float
-        )
-    return batch
-
-
-def ppo_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--clip-param",
-        type=float,
-        default=0.2,
-        help="ppo clip parameter (default: 0.2)",
-    )
-    parser.add_argument(
-        "--ppo-epoch",
-        type=int,
-        default=4,
-        help="number of ppo epochs (default: 4)",
-    )
-    parser.add_argument(
-        "--num-mini-batch",
-        type=int,
-        default=16,
-        help="number of batches for ppo (default: 16)",
-    )
-    parser.add_argument(
-        "--value-loss-coef",
-        type=float,
-        default=0.5,
-        help="value loss coefficient (default: 0.5)",
-    )
-    parser.add_argument(
-        "--entropy-coef",
-        type=float,
-        default=0.01,
-        help="entropy term coefficient (default: 0.01)",
-    )
-    parser.add_argument(
-        "--lr", type=float, default=7e-4, help="learning rate (default: 7e-4)"
-    )
-    parser.add_argument(
-        "--eps",
-        type=float,
-        default=1e-5,
-        help="RMSprop optimizer epsilon (default: 1e-5)",
-    )
-    parser.add_argument(
-        "--max-grad-norm",
-        type=float,
-        default=0.5,
-        help="max norm of gradients (default: 0.5)",
-    )
-    parser.add_argument(
-        "--num-steps",
-        type=int,
-        default=5,
-        help="number of forward steps in A2C (default: 5)",
-    )
-    parser.add_argument("--hidden-size", type=int, default=512)
-    parser.add_argument(
-        "--num-processes",
-        type=int,
-        default=16,
-        help="number of training processes " "to use (default: 16)",
-    )
-    parser.add_argument(
-        "--use-gae",
-        action="store_true",
-        default=False,
-        help="use generalized advantage estimation",
-    )
-    parser.add_argument(
-        "--use-linear-lr-decay",
-        action="store_true",
-        default=False,
-        help="use a linear schedule on the learning rate",
-    )
-    parser.add_argument(
-        "--use-linear-clip-decay",
-        action="store_true",
-        default=False,
-        help="use a linear schedule on the " "ppo clipping parameter",
-    )
-    parser.add_argument(
-        "--gamma",
-        type=float,
-        default=0.99,
-        help="discount factor for rewards (default: 0.99)",
-    )
-    parser.add_argument(
-        "--tau", type=float, default=0.95, help="gae parameter (default: 0.95)"
-    )
-    parser.add_argument(
-        "--log-file", type=str, required=True, help="path for log file"
-    )
-    parser.add_argument(
-        "--reward-window-size",
-        type=int,
-        default=50,
-        help="logging window for rewards",
-    )
-    parser.add_argument(
-        "--log-interval",
-        type=int,
-        default=1,
-        help="number of updates after which metrics are logged",
-    )
-    parser.add_argument(
-        "--checkpoint-interval",
-        type=int,
-        default=50,
-        help="number of updates after which models are checkpointed",
-    )
-    parser.add_argument(
-        "--checkpoint-folder",
-        type=str,
-        required=True,
-        help="folder for storing checkpoints",
-    )
-    parser.add_argument(
-        "--num-updates",
-        type=int,
-        default=10000,
-        help="number of PPO updates to run",
-    )
-    parser.add_argument(
-        "--sensors",
-        type=str,
-        default="RGB_SENSOR,DEPTH_SENSOR",
-        help="comma separated string containing different sensors to use,"
-        "currently 'RGB_SENSOR' and 'DEPTH_SENSOR' are supported",
-    )
-    parser.add_argument(
-        "--task-config",
-        type=str,
-        default="configs/tasks/pointnav.yaml",
-        help="path to config yaml containing information about task",
-    )
-    parser.add_argument("--seed", type=int, default=100)
-    parser.add_argument(
-        "opts",
-        default=None,
-        nargs=argparse.REMAINDER,
-        help="Modify config options from command line",
-    )
-    parser.add_argument(
-        "--tensorboard-dir",
-        type=str,
-        help="path to tensorboard logging directory",
-    )
-    return parser
+        Returns:
+            flattened tensor of size (t*n, ...)
+        """
+        return tensor.view(t * n, *tensor.size()[2:])

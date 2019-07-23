@@ -1,8 +1,37 @@
-from typing import Optional, Union
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import Union
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
+
+
+# TODO Add checks to replace DummyWriter
+class DummyWriter:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def close(self):
+        pass
+
+    def __getattr__(self, item):
+        return lambda *args, **kwargs: None
+
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ImportError:
+    SummaryWriter = DummyWriter
 
 
 class TensorboardWriter(SummaryWriter):
@@ -33,23 +62,6 @@ class TensorboardWriter(SummaryWriter):
         self.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
 
 
-class DummyWriter:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    def close(self):
-        pass
-
-    def __getattr__(self, item):
-        return lambda *args, **kwargs: None
-
-
 def get_tensorboard_writer(
     log_dir: str, *args, **kwargs
 ) -> Union[DummyWriter, TensorboardWriter]:
@@ -62,7 +74,7 @@ def get_tensorboard_writer(
         **kwargs: additional keyword args.
 
     Returns:
-        Either the created tensorboard writer or a dummy writer.
+        either the created tensorboard writer or a dummy writer.
     """
     if log_dir:
         return TensorboardWriter(log_dir, *args, **kwargs)

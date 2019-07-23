@@ -70,16 +70,16 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.BASELINE.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
+    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
         1
     ]
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MIN = (
-        0.3 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
+        0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MAX = (
-        1.0 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MAX = (
+        1.0 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
-    config.BASELINE.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
+    config.TRAINER.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
         config.SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
     )
     return
@@ -607,11 +607,11 @@ def main():
     make_good_config_for_orbslam2(config)
 
     if args.agent_type == "blind":
-        agent = BlindAgent(config.BASELINE.ORBSLAM2)
+        agent = BlindAgent(config.TRAINER.ORBSLAM2)
     elif args.agent_type == "orbslam2-rgbd":
-        agent = ORBSLAM2Agent(config.BASELINE.ORBSLAM2)
+        agent = ORBSLAM2Agent(config.TRAINER.ORBSLAM2)
     elif args.agent_type == "orbslam2-rgb-monod":
-        agent = ORBSLAM2MonodepthAgent(config.BASELINE.ORBSLAM2)
+        agent = ORBSLAM2MonodepthAgent(config.TRAINER.ORBSLAM2)
     else:
         raise ValueError(args.agent_type, "is unknown type of agent")
     benchmark = habitat.Benchmark(args.task_config)
