@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat_baselines.rl.ppo.utils import Flatten
+from habitat_baselines.common.utils import Flatten
 
 
 class SimpleCNN(nn.Module):
