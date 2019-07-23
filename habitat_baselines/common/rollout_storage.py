@@ -201,6 +201,7 @@ class RolloutStorage:
                 )
 
             actions_batch = self._flatten_helper(T, N, actions_batch)
+            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
             value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
             return_batch = self._flatten_helper(T, N, return_batch)
             masks_batch = self._flatten_helper(T, N, masks_batch)
