@@ -197,7 +197,7 @@ class PPOTrainer(BaseRLTrainer):
 
         rollouts.after_update()
 
-        return time() - t_update_model, value_loss, action_loss, dist_entropy
+        return time.time() - t_update_model, value_loss, action_loss, dist_entropy
 
     def train(self) -> None:
         r"""
