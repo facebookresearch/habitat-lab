@@ -8,7 +8,7 @@ import multiprocessing as mp
 from multiprocessing.connection import Connection
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union
 
 import gym
 import numpy as np
@@ -68,8 +68,8 @@ class VectorEnv:
             any other GPU useage.
     """
 
-    observation_spaces: SpaceDict
-    action_spaces: SpaceDict
+    observation_spaces: List[SpaceDict]
+    action_spaces: List[SpaceDict]
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_envs: int
@@ -81,7 +81,7 @@ class VectorEnv:
     def __init__(
         self,
         make_env_fn: Callable[..., Env] = _make_env_fn,
-        env_fn_args: Tuple[Tuple] = None,
+        env_fn_args: Sequence[Tuple] = None,
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
     ) -> None:
@@ -205,7 +205,7 @@ class VectorEnv:
 
     def _spawn_workers(
         self,
-        env_fn_args: Iterable[Tuple[Any, ...]],
+        env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
@@ -474,7 +474,7 @@ class ThreadedVectorEnv(VectorEnv):
 
     def _spawn_workers(
         self,
-        env_fn_args: Iterable[Tuple[Any, ...]],
+        env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_read_queues, parent_write_queues = zip(

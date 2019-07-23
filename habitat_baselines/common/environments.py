@@ -10,20 +10,24 @@ in habitat. Customized environments should be registered using
 ``@baseline_registry.register_env(name="myEnv")` for reusability
 """
 
+from typing import Optional
+
 import habitat
-from habitat import SimulatorActions
+from habitat import Config, Dataset, SimulatorActions
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 
 @baseline_registry.register_env(name="NavRLEnv")
 class NavRLEnv(habitat.RLEnv):
-    def __init__(self, config_env, config_baseline, dataset):
-        self._config_env = config_env.TASK
-        self._config_baseline = config_baseline
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None):
+        self._rl_config = config.RL
+        self._core_env_config = config.TASK_CONFIG
+
         self._previous_target_distance = None
         self._previous_action = None
         self._episode_distance_covered = None
-        super().__init__(config_env, dataset)
+        self._success_distance = self._core_env_config.TASK.SUCCESS_DISTANCE
+        super().__init__(self._core_env_config, dataset)
 
     def reset(self):
         self._previous_action = None
@@ -41,19 +45,19 @@ class NavRLEnv(habitat.RLEnv):
 
     def get_reward_range(self):
         return (
-            self._config_baseline.SLACK_REWARD - 1.0,
-            self._config_baseline.SUCCESS_REWARD + 1.0,
+            self._rl_config.SLACK_REWARD - 1.0,
+            self._rl_config.SUCCESS_REWARD + 1.0,
         )
 
     def get_reward(self, observations):
-        reward = self._config_baseline.SLACK_REWARD
+        reward = self._rl_config.SLACK_REWARD
 
         current_target_distance = self._distance_target()
         reward += self._previous_target_distance - current_target_distance
         self._previous_target_distance = current_target_distance
 
         if self._episode_success():
-            reward += self._config_baseline.SUCCESS_REWARD
+            reward += self._rl_config.SUCCESS_REWARD
 
         return reward
 
@@ -68,7 +72,7 @@ class NavRLEnv(habitat.RLEnv):
     def _episode_success(self):
         if (
             self._previous_action == SimulatorActions.STOP
-            and self._distance_target() < self._config_env.SUCCESS_DISTANCE
+            and self._distance_target() < self._success_distance
         ):
             return True
         return False

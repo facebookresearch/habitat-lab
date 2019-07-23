@@ -366,7 +366,7 @@ class RLEnv(gym.Env):
 
         return observations, reward, done, info
 
-    def seed(self, seed: int) -> None:
+    def seed(self, seed: Optional[int] = None) -> None:
         self._env.seed(seed)
 
     def render(self, mode: str = "rgb") -> np.ndarray:

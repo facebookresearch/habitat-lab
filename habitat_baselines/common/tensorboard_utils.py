@@ -25,7 +25,7 @@ class TensorboardWriter:
         """
         self.writer = None
         if log_dir is not None and len(log_dir) > 0:
-            self.writer = SummaryWriter(self.log_dir, *args, **kwargs)
+            self.writer = SummaryWriter(log_dir, *args, **kwargs)
 
     def __getattr__(self, item):
         if self.writer:

@@ -9,7 +9,7 @@ import random
 
 import numpy as np
 
-from habitat_baselines.common.utils import get_trainer
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
 
 
@@ -39,7 +39,10 @@ def main():
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
 
-    trainer = get_trainer(config.TRAINER.TRAINER_NAME, config)
+    trainer_class = baseline_registry.get_trainer(config.TRAINER_NAME)
+    assert trainer_class is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer = trainer_class(config)
+
     if args.run_type == "train":
         trainer.train()
     elif args.run_type == "eval":
