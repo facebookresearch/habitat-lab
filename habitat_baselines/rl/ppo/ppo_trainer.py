@@ -124,7 +124,7 @@ class PPOTrainer(BaseRLTrainer):
         # sample actions
         with torch.no_grad():
             step_observation = {
-                k: v[step] for k, v in rollouts.observations.items()
+                k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
 
             (
@@ -134,9 +134,9 @@ class PPOTrainer(BaseRLTrainer):
                 recurrent_hidden_states,
             ) = self.actor_critic.act(
                 step_observation,
-                rollouts.recurrent_hidden_states[step],
+                rollouts.recurrent_hidden_states[rollouts.step],
                 rollouts.prev_actions[rollouts.step],
-                rollouts.masks[step],
+                rollouts.masks[rollouts.step],
             )
 
         pth_time += time.time() - t_sample_action
