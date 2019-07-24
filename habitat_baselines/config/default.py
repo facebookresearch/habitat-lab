@@ -34,6 +34,7 @@ _C.SENSORS = "RGB_SENSOR,DEPTH_SENSOR"
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
 _C.LOG_INTERVAL = 10
+_C.LOG_FILE = "train.log"
 _C.CHECKPOINT_INTERVAL = 50
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
@@ -60,7 +61,6 @@ _C.RL.PPO.use_linear_lr_decay = False
 _C.RL.PPO.use_linear_clip_decay = False
 _C.RL.PPO.gamma = 0.99
 _C.RL.PPO.tau = 0.95
-_C.RL.PPO.log_file = "train.log"
 _C.RL.PPO.reward_window_size = 50
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE

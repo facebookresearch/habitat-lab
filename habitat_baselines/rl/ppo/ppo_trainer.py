@@ -54,7 +54,7 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-        logger.add_filehandler(ppo_cfg.log_file)
+        logger.add_filehandler(self.config.LOG_FILE)
 
         self.actor_critic = Policy(
             observation_space=self.envs.observation_spaces[0],
