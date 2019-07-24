@@ -39,9 +39,9 @@ def main():
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
 
-    trainer_class = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_class is not None, f"{config.TRAINER_NAME} is not supported"
-    trainer = trainer_class(config)
+    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
+    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer = trainer_init(config)
 
     if args.run_type == "train":
         trainer.train()

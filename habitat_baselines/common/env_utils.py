@@ -5,13 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Type
+from typing import Type, Union
 
 import habitat
-from habitat import Config, RLEnv, ThreadedVectorEnv as VectorEnv, make_dataset
+from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
 
 
-def make_env_fn(config: Config, env_class: Type[RLEnv], rank: int) -> RLEnv:
+def make_env_fn(
+    config: Config, env_class: Type[Union[Env, RLEnv]], rank: int
+) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
 
@@ -32,7 +34,9 @@ def make_env_fn(config: Config, env_class: Type[RLEnv], rank: int) -> RLEnv:
     return env
 
 
-def construct_envs(config: Config, env_class: Type[RLEnv]) -> VectorEnv:
+def construct_envs(
+    config: Config, env_class: Type[Union[Env, RLEnv]]
+) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
@@ -47,8 +51,8 @@ def construct_envs(config: Config, env_class: Type[RLEnv]) -> VectorEnv:
     """
 
     num_processes = config.NUM_PROCESSES
-    config_list = []
-    env_class_list = [env_class for _ in range(num_processes)]
+    configs = []
+    env_classes = [env_class for _ in range(num_processes)]
     dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
     scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
@@ -84,12 +88,12 @@ def construct_envs(config: Config, env_class: Type[RLEnv]) -> VectorEnv:
         config.defrost()
         config.TASK_CONFIG = task_config
         config.freeze()
-        config_list.append(config)
+        configs.append(config)
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
         env_fn_args=tuple(
-            tuple(zip(config_list, env_class_list, range(num_processes)))
+            tuple(zip(configs, env_classes, range(num_processes)))
         ),
     )
     return envs

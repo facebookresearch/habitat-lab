@@ -16,7 +16,7 @@ from gym.spaces.dict_space import Dict as SpaceDict
 
 import habitat
 from habitat.config import Config
-from habitat.core.env import Env, Observations
+from habitat.core.env import Env, Observations, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 
@@ -80,7 +80,7 @@ class VectorEnv:
 
     def __init__(
         self,
-        make_env_fn: Callable[..., Env] = _make_env_fn,
+        make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
         env_fn_args: Sequence[Tuple] = None,
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
@@ -206,7 +206,7 @@ class VectorEnv:
     def _spawn_workers(
         self,
         env_fn_args: Sequence[Tuple],
-        make_env_fn: Callable[..., Env] = _make_env_fn,
+        make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
