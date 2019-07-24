@@ -8,7 +8,7 @@ from typing import ClassVar, Dict, List
 
 
 class BaseTrainer:
-    r"""Most generic trainer class that serves as a base template for more
+    r"""Generic trainer class that serves as a base template for more
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
@@ -29,7 +29,7 @@ class BaseTrainer:
 
 
 class BaseRLTrainer(BaseTrainer):
-    r"""Base trainer class for RL based trainers. Future RL-specific
+    r"""Base trainer class for RL trainers. Future RL-specific
     methods should be hosted here.
     """
 
