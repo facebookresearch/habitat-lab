@@ -1,6 +1,6 @@
-# habitat-api demo
+# Habitat-API Demo
 
-[download notebook]() [TODO(akadian): insert link]
+[[Download notebook](https://dl.fbaipublicfiles.com/habitat/notebooks/habitat-api-demo.ipynb)]
 
 ```python
 import habitat

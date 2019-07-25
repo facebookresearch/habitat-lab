@@ -1,6 +1,6 @@
-# view, transform and warp
+# View, Transform and Warp
 
-[download notebook]() [TODO(akadian): insert link]
+[[Download Notebook](https://dl.fbaipublicfiles.com/habitat/notebooks/relative_camera_views_transform_and_warping_demo.ipynb)]
 
 Demonstrates how to extract camera parameters in the scene and how these camera parameters relate to the given views. We create 2 cameras and use RGB and Depth information to construct transformation from a view of camera 1 to camera 2 and validate that transformation comparing projected and original views.
 
