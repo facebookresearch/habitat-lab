@@ -13,7 +13,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat import Config
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
