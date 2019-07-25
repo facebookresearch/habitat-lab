@@ -37,7 +37,8 @@ class TensorboardWriter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.writer.close()
+        if self.writer:
+            self.writer.close()
 
     def add_video_from_np_images(
         self, video_name: str, step_idx: int, images: np.ndarray, fps: int = 10
