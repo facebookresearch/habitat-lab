@@ -14,9 +14,9 @@ from habitat import Config, Env, VectorEnv, make_dataset
 def make_env_fn(
     task_config: Config, rl_env_config: Config, env_class: Type, rank: int
 ) -> Env:
-    r"""
-    Creates an env of type env_class with specified config and rank.
+    r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
+
     Args:
         task_config: task config file for creating env.
         rl_env_config: RL env config for creating env.
@@ -37,10 +37,10 @@ def make_env_fn(
 
 
 def construct_envs(config: Config, env_class: Type) -> VectorEnv:
-    r"""
-    Create VectorEnv object with specified config and env class type.
+    r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
+
     Args:
         config: configs that contain num_processes as well as information
         necessary to create individual environments.

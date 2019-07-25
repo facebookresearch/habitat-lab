@@ -47,6 +47,7 @@ class BaselineRegistry(Registry):
     def register_env(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a environment to registry with key 'name'
             currently only support subclass of RLEnv.
+
         Args:
             name: Key with which the env will be registered.
                 If None will use the name of the class.

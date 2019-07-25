@@ -8,6 +8,7 @@ from typing import Union
 
 import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 
 # TODO Add checks to replace DummyWriter
@@ -26,12 +27,6 @@ class DummyWriter:
 
     def __getattr__(self, item):
         return lambda *args, **kwargs: None
-
-
-try:
-    from torch.utils.tensorboard import SummaryWriter
-except ImportError:
-    SummaryWriter = DummyWriter
 
 
 class TensorboardWriter(SummaryWriter):
