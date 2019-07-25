@@ -184,6 +184,6 @@ out:
 ```
 
 <p align="center">
-  <img src='https://i.imgur.com/5763SS5.png' alt="view-transform-warp" width="100%"/>
+  <img src='https://dl.fbaipublicfiles.com/habitat/notebooks/images/view-transform-warp.png' alt="view-transform-warp" width="100%"/>
   <p align="center"><i>actions and sensors</i></p>
 </p>

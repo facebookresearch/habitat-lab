@@ -89,7 +89,7 @@ Running the above code will initialize an agent inside an environment, you can m
 Below is a demo of what the example output will look like:
 
 <p align="center">
-  <img src="https://i.imgur.com/5EaQUnf.png"  height="400">
+  <img src="https://dl.fbaipublicfiles.com/habitat/notebooks/images/quickstart.png"  height="400">
 </p>
 
 For more examples refer to [Habitat-API examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples) and [Habitat-Sim examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples).

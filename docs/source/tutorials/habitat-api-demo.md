@@ -164,6 +164,6 @@ env.close()
 out:
 
 <p align="center">
-  <img src='https://i.imgur.com/bANLQkh.png' alt="actions and sensors" width="100%"/>
+  <img src='https://dl.fbaipublicfiles.com/habitat/notebooks/images/habitat-api-demo.png' alt="actions and sensors" width="100%"/>
   <p align="center"><i>actions and sensors</i></p>
 </p>
