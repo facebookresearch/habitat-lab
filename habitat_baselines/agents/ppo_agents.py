@@ -16,8 +16,8 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
+from habitat_baselines.common.utils import batch_obs
 from habitat_baselines.rl.ppo import Policy
-from habitat_baselines.rl.ppo.utils import batch_obs
 
 
 def get_default_config():

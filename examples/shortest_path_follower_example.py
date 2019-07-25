@@ -35,7 +35,9 @@ class SimpleRLEnv(habitat.RLEnv):
 
 
 def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(info["top_down_map"]["map"])
+    top_down_map = maps.colorize_topdown_map(
+        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+    )
     original_map_size = top_down_map.shape[:2]
     map_scale = np.array(
         (1, original_map_size[1] * 1.0 / original_map_size[0])
@@ -59,8 +61,10 @@ def draw_top_down_map(info, heading, output_size):
 
 def shortest_path_example(mode):
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.freeze()
     env = SimpleRLEnv(config=config)
     goal_radius = env.episodes[0].goals[0].radius
     if goal_radius is None:

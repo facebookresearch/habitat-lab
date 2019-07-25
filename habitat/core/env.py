@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
 
 import gym
 import numpy as np
@@ -46,6 +46,8 @@ class Env:
     _dataset: Optional[Dataset]
     _episodes: List[Type[Episode]]
     _current_episode_index: Optional[int]
+    _current_episode: Optional[Type[Episode]]
+    _episode_iterator: Optional[Iterator]
     _sim: Simulator
     _task: EmbodiedTask
     _max_episode_seconds: int
@@ -69,6 +71,8 @@ class Env:
                 id_dataset=config.DATASET.TYPE, config=config.DATASET
             )
         self._episodes = self._dataset.episodes if self._dataset else []
+        self._current_episode = None
+        self._episode_iterator = self._dataset.get_episode_iterator()
 
         # load the first scene if dataset is present
         if self._dataset:
@@ -105,11 +109,20 @@ class Env:
 
     @property
     def current_episode(self) -> Type[Episode]:
-        assert (
-            self._current_episode_index is not None
-            and self._current_episode_index < len(self._episodes)
-        )
-        return self._episodes[self._current_episode_index]
+        assert self._current_episode is not None
+        return self._current_episode
+
+    @current_episode.setter
+    def current_episode(self, episode: Type[Episode]) -> None:
+        self._current_episode = episode
+
+    @property
+    def episode_iterator(self) -> Iterator:
+        return self._episode_iterator
+
+    @episode_iterator.setter
+    def episode_iterator(self, new_iter: Iterator) -> None:
+        self._episode_iterator = new_iter
 
     @property
     def episodes(self) -> List[Type[Episode]]:
@@ -176,13 +189,7 @@ class Env:
 
         assert len(self.episodes) > 0, "Episodes list is empty"
 
-        # Switch to next episode in a loop
-        if self._current_episode_index is None:
-            self._current_episode_index = 0
-        else:
-            self._current_episode_index = (
-                self._current_episode_index + 1
-            ) % len(self._episodes)
+        self.current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
 
         observations = self._sim.reset()

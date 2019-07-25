@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat_baselines.rl.ppo.utils import CategoricalNet, Flatten
+from habitat_baselines.common.utils import CategoricalNet, Flatten
 
 
 class Policy(nn.Module):
