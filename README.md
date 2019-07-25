@@ -1,6 +1,5 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-api/blob/master/LICENSE)
 [![CircleCI](https://circleci.com/gh/facebookresearch/habitat-api.svg?style=shield)](https://circleci.com/gh/facebookresearch/habitat-api)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebookresearch/habitat-api/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 Habitat-API
 ==============================
@@ -8,7 +7,7 @@ Habitat-API
 Habitat-API is a modular high-level library for end-to-end development in embodied AI --
 defining embodied AI tasks (e.g. navigation, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in classical SLAM), and benchmarking their performance on the defined tasks using standard metrics.
 
-Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
+Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators. For documentation refer to [docs](https://aihabitat.org/habitat-api/).
 
 <p align="center">
   <img src="res/img/habitat_compressed.gif"  height="400">
