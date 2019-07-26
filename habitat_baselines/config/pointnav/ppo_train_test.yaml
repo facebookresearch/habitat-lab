@@ -10,3 +10,4 @@ TRAINER:
       task_config: "configs/tasks/pointnav.yaml"
       num_updates: 10
       num_mini_batch: 1
+      tensorboard_dir: ""
