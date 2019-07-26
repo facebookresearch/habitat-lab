@@ -107,7 +107,7 @@ class Dataset(Generic[T]):
             **kwargs: keyword args for iterator constructor
 
         Returns:
-            episode iterator with specified behavior
+            Iterator: episode iterator with specified behavior
         """
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
@@ -259,7 +259,7 @@ class EpisodeIterator(Iterator):
             throwing StopIteration.
         Cycling with shuffle: when cycling back, shuffle episodes groups
             grouped by scene.
-        Group by scene: episodes of same scene by grouped and will be loaded
+        Group by scene: episodes of same scene will be grouped and loaded
             consecutively.
         Set max scene repeat: set a number threshold on how many episodes from
         the same scene can be loaded consecutively.
@@ -280,6 +280,7 @@ class EpisodeIterator(Iterator):
             episodes: list of episodes.
             cycle: if true, cycle back to first episodes when StopIteration.
             shuffle_scene_when_cycle: if true, shuffle scene groups when cycle.
+                No effect if cycle is set to false.
             group_by_scene: if true, group episodes from same scene.
             max_scene_repeat: threshold of how many episodes from the same
                 scene can be loaded consecutively. -1 for no limit
@@ -287,11 +288,7 @@ class EpisodeIterator(Iterator):
                 -1 for no sampling.
         """
         # sample episodes
-        if num_episode_sample != -1:
-            if num_episode_sample < -1:
-                raise ValueError(
-                    f"Invalid episode number to sample: {num_episode_sample}"
-                )
+        if num_episode_sample >= 0:
             episodes = np.random.choice(
                 episodes, num_episode_sample, replace=False
             )
@@ -307,8 +304,7 @@ class EpisodeIterator(Iterator):
                 self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
         self.max_scene_repetition = max_scene_repeat
         self.shuffle_scene_when_cycle = shuffle_scene_when_cycle
-        self.rep_count = 0
-        self._iterator = None
+        self._rep_count = 0
         self._prev_scene_id = None
         self._iterator = iter(self.episodes)
 
@@ -332,13 +328,13 @@ class EpisodeIterator(Iterator):
             next_episode = next(self._iterator)
 
         if self._prev_scene_id == next_episode.scene_id:
-            self.rep_count += 1
+            self._rep_count += 1
         if (
             self.max_scene_repetition > 0
-            and self.rep_count >= self.max_scene_repetition - 1
+            and self._rep_count >= self.max_scene_repetition - 1
         ):
             self._shuffle_iterator_scene()
-            self.rep_count = 0
+            self._rep_count = 0
 
         self._prev_scene_id = next_episode.scene_id
         return next_episode
@@ -349,9 +345,14 @@ class EpisodeIterator(Iterator):
         Returns:
             None.
         """
-        grouped_episodes = [
-            list(g)
-            for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
-        ]
-        shuffle(grouped_episodes)
-        self._iterator = iter(sum(grouped_episodes, []))
+        if self.group_by_scene:
+            grouped_episodes = [
+                list(g)
+                for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+            ]
+            shuffle(grouped_episodes)
+            self._iterator = iter(sum(grouped_episodes, []))
+        else:
+            episodes = list(self._iterator)
+            shuffle(episodes)
+            self._iterator = iter(episodes)
