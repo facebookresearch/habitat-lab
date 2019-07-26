@@ -15,6 +15,9 @@ A modular high-level library to train embodied AI agents across a variety of tas
    :caption: Tutorials
 
    tutorials/quickstart
+   tutorials/habitat-sim-demo
+   tutorials/habitat-api-demo
+   tutorials/view-transform-warp
 
 .. toctree::
    :maxdepth: 1
