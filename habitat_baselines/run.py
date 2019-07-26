@@ -35,7 +35,6 @@ def main():
     )
     args = parser.parse_args()
     config = get_config(args.exp_config, args.opts)
-
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
 

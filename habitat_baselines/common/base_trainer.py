@@ -61,13 +61,12 @@ class BaseRLTrainer(BaseTrainer):
             None
         """
         self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
-        self.video_option = self.config.VIDEO_OPTION.strip().split(",")
 
-        if "tensorboard" in self.video_option:
+        if "tensorboard" in self.config.VIDEO_OPTION:
             assert (
                 len(self.config.TENSORBOARD_DIR) > 0
             ), "Must specify a tensorboard directory for video display"
-        if "disk" in self.video_option:
+        if "disk" in self.config.VIDEO_OPTION:
             assert (
                 len(self.config.VIDEO_DIR) > 0
             ), "Must specify a directory for storing videos on disk"

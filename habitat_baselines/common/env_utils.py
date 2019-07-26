@@ -81,8 +81,7 @@ def construct_envs(
             config.SIMULATOR_GPU_ID
         )
 
-        agent_sensors = config.SENSORS.strip().split(",")
-        task_config.SIMULATOR.AGENT_0.SENSORS = agent_sensors
+        task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
         task_config.freeze()
 
         config.defrost()

@@ -356,9 +356,8 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
         config.TASK_CONFIG.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = "val"
-        agent_sensors = self.config.SENSORS.strip().split(",")
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = agent_sensors
-        if len(self.video_option) > 0:
+        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
+        if len(self.config.VIDEO_OPTION) > 0:
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
         config.freeze()
@@ -390,7 +389,7 @@ class PPOTrainer(BaseRLTrainer):
         rgb_frames = [
             []
         ] * self.config.NUM_PROCESSES  # type: List[List[np.ndarray]]
-        if len(self.video_option) > 0:
+        if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
         while (
@@ -451,9 +450,9 @@ class PPOTrainer(BaseRLTrainer):
                         )
                     ] = episode_stats
 
-                    if len(self.video_option) > 0:
+                    if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
-                            video_option=self.video_option,
+                            video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
@@ -465,7 +464,7 @@ class PPOTrainer(BaseRLTrainer):
                         rgb_frames[i] = []
 
                 # episode continues
-                elif len(self.video_option) > 0:
+                elif len(self.config.VIDEO_OPTION) > 0:
                     frame = observations_to_image(observations[i], infos[i])
                     rgb_frames[i].append(frame)
 
@@ -486,7 +485,7 @@ class PPOTrainer(BaseRLTrainer):
                 for k, v in batch.items():
                     batch[k] = v[state_index]
 
-                if len(self.video_option) > 0:
+                if len(self.config.VIDEO_OPTION) > 0:
                     rgb_frames = [rgb_frames[i] for i in state_index]
 
         aggregated_stats = dict()
