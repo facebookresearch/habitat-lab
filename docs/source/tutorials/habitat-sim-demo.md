@@ -1,6 +1,6 @@
 # Habitat-Sim Demo
 
-[[Download notebook]]() TODO(akadian): insert link
+[[Download notebook](https://dl.fbaipublicfiles.com/habitat/notebooks/habitat-sim-demo.ipynb)]
 
 ```python
 import habitat_sim
