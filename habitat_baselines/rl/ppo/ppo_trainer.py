@@ -18,7 +18,7 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs
-from habitat_baselines.common.environments import NavRLEnv
+from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
@@ -203,8 +203,9 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
 
-        env_class = baseline_registry.get_env(self.config.ENV_NAME)
-        self.envs = construct_envs(self.config, env_class)
+        self.envs = construct_envs(
+            self.config, get_env_class(self.config.ENV_NAME)
+        )
 
         ppo_cfg = self.config.RL.PPO
         self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
@@ -389,7 +390,9 @@ class PPOTrainer(BaseRLTrainer):
         config.freeze()
 
         logger.info(f"env config: {config}")
-        self.envs = construct_envs(config, NavRLEnv)
+        self.envs = construct_envs(
+            self.config, get_env_class(self.config.ENV_NAME)
+        )
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])

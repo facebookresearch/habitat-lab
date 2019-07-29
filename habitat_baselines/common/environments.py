@@ -10,11 +10,23 @@ in habitat. Customized environments should be registered using
 ``@baseline_registry.register_env(name="myEnv")` for reusability
 """
 
-from typing import Optional
+from typing import Optional, Type
 
 import habitat
 from habitat import Config, Dataset, SimulatorActions
 from habitat_baselines.common.baseline_registry import baseline_registry
+
+
+def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
+    r"""Return environment class based on name.
+
+    Args:
+        env_name: name of the environment.
+
+    Returns:
+        Type[habitat.RLEnv]: env class.
+    """
+    return baseline_registry.get_env(env_name)
 
 
 @baseline_registry.register_env(name="NavRLEnv")
