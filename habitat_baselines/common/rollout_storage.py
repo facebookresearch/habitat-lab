@@ -21,6 +21,7 @@ class RolloutStorage:
         observation_space,
         action_space,
         recurrent_hidden_state_size,
+        num_recurrent_layers=1,
     ):
         self.observations = {}
 
@@ -32,7 +33,10 @@ class RolloutStorage:
             )
 
         self.recurrent_hidden_states = torch.zeros(
-            num_steps + 1, num_envs, recurrent_hidden_state_size
+            num_steps + 1,
+            num_recurrent_layers,
+            num_envs,
+            recurrent_hidden_state_size,
         )
 
         self.rewards = torch.zeros(num_steps, num_envs, 1)
@@ -46,8 +50,10 @@ class RolloutStorage:
             action_shape = action_space.shape[0]
 
         self.actions = torch.zeros(num_steps, num_envs, action_shape)
+        self.prev_actions = torch.zeros(num_steps + 1, num_envs, action_shape)
         if action_space.__class__.__name__ == "Discrete":
             self.actions = self.actions.long()
+            self.prev_actions = self.prev_actions.long()
 
         self.masks = torch.ones(num_steps + 1, num_envs, 1)
 
@@ -64,6 +70,7 @@ class RolloutStorage:
         self.returns = self.returns.to(device)
         self.action_log_probs = self.action_log_probs.to(device)
         self.actions = self.actions.to(device)
+        self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
     def insert(
@@ -84,6 +91,7 @@ class RolloutStorage:
             recurrent_hidden_states
         )
         self.actions[self.step].copy_(actions)
+        self.prev_actions[self.step + 1].copy_(actions)
         self.action_log_probs[self.step].copy_(action_log_probs)
         self.value_preds[self.step].copy_(value_preds)
         self.rewards[self.step].copy_(rewards)
@@ -97,6 +105,7 @@ class RolloutStorage:
 
         self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
         self.masks[0].copy_(self.masks[-1])
+        self.prev_actions[0].copy_(self.prev_actions[-1])
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
@@ -132,6 +141,7 @@ class RolloutStorage:
 
             recurrent_hidden_states_batch = []
             actions_batch = []
+            prev_actions_batch = []
             value_preds_batch = []
             return_batch = []
             masks_batch = []
@@ -147,10 +157,11 @@ class RolloutStorage:
                     )
 
                 recurrent_hidden_states_batch.append(
-                    self.recurrent_hidden_states[0:1, ind]
+                    self.recurrent_hidden_states[0, :, ind]
                 )
 
                 actions_batch.append(self.actions[:, ind])
+                prev_actions_batch.append(self.prev_actions[:-1, ind])
                 value_preds_batch.append(self.value_preds[:-1, ind])
                 return_batch.append(self.returns[:-1, ind])
                 masks_batch.append(self.masks[:-1, ind])
@@ -169,6 +180,7 @@ class RolloutStorage:
                 )
 
             actions_batch = torch.stack(actions_batch, 1)
+            prev_actions_batch = torch.stack(prev_actions_batch, 1)
             value_preds_batch = torch.stack(value_preds_batch, 1)
             return_batch = torch.stack(return_batch, 1)
             masks_batch = torch.stack(masks_batch, 1)
@@ -177,10 +189,10 @@ class RolloutStorage:
             )
             adv_targ = torch.stack(adv_targ, 1)
 
-            # States is just a (N, -1) tensor
+            # States is just a (num_recurrent_layers, N, -1) tensor
             recurrent_hidden_states_batch = torch.stack(
                 recurrent_hidden_states_batch, 1
-            ).view(N, -1)
+            )
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
@@ -189,6 +201,7 @@ class RolloutStorage:
                 )
 
             actions_batch = self._flatten_helper(T, N, actions_batch)
+            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
             value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
             return_batch = self._flatten_helper(T, N, return_batch)
             masks_batch = self._flatten_helper(T, N, masks_batch)
@@ -201,6 +214,7 @@ class RolloutStorage:
                 observations_batch,
                 recurrent_hidden_states_batch,
                 actions_batch,
+                prev_actions_batch,
                 value_preds_batch,
                 return_batch,
                 masks_batch,

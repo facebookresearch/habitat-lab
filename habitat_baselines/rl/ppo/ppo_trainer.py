@@ -26,7 +26,7 @@ from habitat_baselines.common.utils import (
     generate_video,
     linear_decay,
 )
-from habitat_baselines.rl.ppo import PPO, Policy
+from habitat_baselines.rl.ppo import PPO, PointNavBaselinePolicy
 
 
 @baseline_registry.register_trainer(name="ppo")
@@ -56,7 +56,7 @@ class PPOTrainer(BaseRLTrainer):
         """
         logger.add_filehandler(self.config.LOG_FILE)
 
-        self.actor_critic = Policy(
+        self.actor_critic = PointNavBaselinePolicy(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,
@@ -105,6 +105,96 @@ class PPOTrainer(BaseRLTrainer):
             dict containing checkpoint info
         """
         return torch.load(checkpoint_path, map_location=self.device)
+
+    def _collect_rollout_step(
+        self, rollouts, current_episode_reward, episode_rewards, episode_counts
+    ):
+        pth_time = 0.0
+        env_time = 0.0
+
+        t_sample_action = time.time()
+        # sample actions
+        with torch.no_grad():
+            step_observation = {
+                k: v[rollouts.step] for k, v in rollouts.observations.items()
+            }
+
+            (
+                values,
+                actions,
+                actions_log_probs,
+                recurrent_hidden_states,
+            ) = self.actor_critic.act(
+                step_observation,
+                rollouts.recurrent_hidden_states[rollouts.step],
+                rollouts.prev_actions[rollouts.step],
+                rollouts.masks[rollouts.step],
+            )
+
+        pth_time += time.time() - t_sample_action
+
+        t_step_env = time.time()
+
+        outputs = self.envs.step([a[0].item() for a in actions])
+        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+
+        env_time += time.time() - t_step_env
+
+        t_update_stats = time.time()
+        batch = batch_obs(observations)
+        rewards = torch.tensor(rewards, dtype=torch.float)
+        rewards = rewards.unsqueeze(1)
+
+        masks = torch.tensor(
+            [[0.0] if done else [1.0] for done in dones], dtype=torch.float
+        )
+
+        current_episode_reward += rewards
+        episode_rewards += (1 - masks) * current_episode_reward
+        episode_counts += 1 - masks
+        current_episode_reward *= masks
+
+        rollouts.insert(
+            batch,
+            recurrent_hidden_states,
+            actions,
+            actions_log_probs,
+            values,
+            rewards,
+            masks,
+        )
+
+        pth_time += time.time() - t_update_stats
+
+        return pth_time, env_time, self.envs.num_envs
+
+    def _update_agent(self, ppo_cfg, rollouts):
+        t_update_model = time.time()
+        with torch.no_grad():
+            last_observation = {
+                k: v[-1] for k, v in rollouts.observations.items()
+            }
+            next_value = self.actor_critic.get_value(
+                last_observation,
+                rollouts.recurrent_hidden_states[-1],
+                rollouts.prev_actions[-1],
+                rollouts.masks[-1],
+            ).detach()
+
+        rollouts.compute_returns(
+            next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
+        )
+
+        value_loss, action_loss, dist_entropy = self.agent.update(rollouts)
+
+        rollouts.after_update()
+
+        return (
+            time.time() - t_update_model,
+            value_loss,
+            action_loss,
+            dist_entropy,
+        )
 
     def train(self) -> None:
         r"""Main method for training PPO.
@@ -171,87 +261,23 @@ class PPOTrainer(BaseRLTrainer):
                     )
 
                 for step in range(ppo_cfg.num_steps):
-                    t_sample_action = time.time()
-                    # sample actions
-                    with torch.no_grad():
-                        step_observation = {
-                            k: v[step]
-                            for k, v in rollouts.observations.items()
-                        }
-
-                        (
-                            values,
-                            actions,
-                            actions_log_probs,
-                            recurrent_hidden_states,
-                        ) = self.actor_critic.act(
-                            step_observation,
-                            rollouts.recurrent_hidden_states[step],
-                            rollouts.masks[step],
-                        )
-                    pth_time += time.time() - t_sample_action
-
-                    t_step_env = time.time()
-
-                    outputs = self.envs.step([a[0].item() for a in actions])
-                    observations, rewards, dones, infos = [
-                        list(x) for x in zip(*outputs)
-                    ]
-
-                    env_time += time.time() - t_step_env
-
-                    t_update_stats = time.time()
-                    batch = batch_obs(observations)
-                    rewards = torch.tensor(rewards, dtype=torch.float)
-                    rewards = rewards.unsqueeze(1)
-
-                    masks = torch.tensor(
-                        [[0.0] if done else [1.0] for done in dones],
-                        dtype=torch.float,
+                    delta_pth_time, delta_env_time, delta_steps = self._collect_rollout_step(
+                        rollouts,
+                        current_episode_reward,
+                        episode_rewards,
+                        episode_counts,
                     )
+                    pth_time += delta_pth_time
+                    env_time += delta_env_time
+                    count_steps += delta_steps
 
-                    current_episode_reward += rewards
-                    episode_rewards += (1 - masks) * current_episode_reward
-                    episode_counts += 1 - masks
-                    current_episode_reward *= masks
-
-                    rollouts.insert(
-                        batch,
-                        recurrent_hidden_states,
-                        actions,
-                        actions_log_probs,
-                        values,
-                        rewards,
-                        masks,
-                    )
-
-                    count_steps += self.envs.num_envs
-                    pth_time += time.time() - t_update_stats
+                delta_pth_time, value_loss, action_loss, dist_entropy = self._update_agent(
+                    ppo_cfg, rollouts
+                )
+                pth_time += delta_pth_time
 
                 window_episode_reward.append(episode_rewards.clone())
                 window_episode_counts.append(episode_counts.clone())
-
-                t_update_model = time.time()
-                with torch.no_grad():
-                    last_observation = {
-                        k: v[-1] for k, v in rollouts.observations.items()
-                    }
-                    next_value = self.actor_critic.get_value(
-                        last_observation,
-                        rollouts.recurrent_hidden_states[-1],
-                        rollouts.masks[-1],
-                    ).detach()
-
-                rollouts.compute_returns(
-                    next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
-                )
-
-                value_loss, action_loss, dist_entropy = self.agent.update(
-                    rollouts
-                )
-
-                rollouts.after_update()
-                pth_time += time.time() - t_update_model
 
                 losses = [value_loss, action_loss]
                 stats = zip(
@@ -379,7 +405,13 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.NUM_PROCESSES, ppo_cfg.hidden_size, device=self.device
+            self.actor_critic.net.num_recurrent_layers,
+            self.config.NUM_PROCESSES,
+            ppo_cfg.hidden_size,
+            device=self.device,
+        )
+        prev_actions = torch.zeros(
+            self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
         )
         not_done_masks = torch.zeros(
             self.config.NUM_PROCESSES, 1, device=self.device
@@ -402,9 +434,12 @@ class PPOTrainer(BaseRLTrainer):
                 _, actions, _, test_recurrent_hidden_states = self.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
+                    prev_actions,
                     not_done_masks,
                     deterministic=False,
                 )
+
+                prev_actions.copy_(actions)
 
             outputs = self.envs.step([a[0].item() for a in actions])
 
@@ -481,6 +516,7 @@ class PPOTrainer(BaseRLTrainer):
                 ]
                 not_done_masks = not_done_masks[state_index]
                 current_episode_reward = current_episode_reward[state_index]
+                prev_actions = prev_actions[state_index]
 
                 for k, v in batch.items():
                     batch[k] = v[state_index]
