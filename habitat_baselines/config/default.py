@@ -19,7 +19,7 @@ CONFIG_FILE_SEPARATOR = ","
 _C = CN()
 _C.BASE_TASK_CONFIG_PATH = "configs/tasks/pointnav.yaml"
 _C.TASK_CONFIG = CN()  # task_config will be stored as a config node
-_C.CMD_TRAILING_OPTS = ""  # store command line options"
+_C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"
 _C.ENV_NAME = "NavRLEnv"
 _C.SIMULATOR_GPU_ID = 0
@@ -118,8 +118,8 @@ def get_config(
             config.merge_from_file(config_path)
 
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
-    config.CMD_TRAILING_OPTS = opts
     if opts:
+        config.CMD_TRAILING_OPTS = opts
         config.merge_from_list(opts)
 
     config.freeze()
