@@ -13,6 +13,7 @@ import numpy as np
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
+from examples.agent_demo.demo_blind_agent import DemoBlindAgent
 
 from time import sleep
 from typing import List, NamedTuple, Tuple
@@ -135,7 +136,7 @@ def draw_top_down_map(info, heading, output_size):
 
 class Viewer:
     def __init__(self, initial_observations, 
-            overlay_goal_radar=None,            
+            overlay_goal_radar=None,
             goal_display_size=128,
             show_map=False):
         self.overlay_goal_radar = overlay_goal_radar
@@ -159,10 +160,10 @@ class Viewer:
             self.side_img = np.zeros((side_img_height, goal_display_size, 3), np.uint8)
             self.draw_info["pointgoal"] = { "image": self.side_img, "region": Rect(0,0,goal_display_size,goal_display_size) }
             total_width += goal_display_size
-        self.window_size = (total_height, total_width)  
+        self.window_size = (total_height, total_width)
 
 
-    def draw_observations(self, observations, info=None):    
+    def draw_observations(self, observations, info=None):
         active_image_observations = [observations[s] for s in self.active_image_sensors]
         for i,img in enumerate(active_image_observations):
             if img.shape[2] == 1:
@@ -172,7 +173,7 @@ class Viewer:
                 active_image_observations[i] = transform_rgb_bgr(img)
 
         # draw pointgoal
-        goal_draw_surface = self.draw_info['pointgoal']        
+        goal_draw_surface = self.draw_info['pointgoal']
         draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
         if self.overlay_goal_radar:    
             goal_region = goal_draw_surface['region']
@@ -305,6 +306,24 @@ class Demo:
         print("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
 
+    def get_agent_actions(self, agent):
+        # NOTE: Action space for agent is hard coded (need to match our scenario)
+        env = self.env
+        observations = env.reset(keep_current_episode=True)
+        goal_radius = env.current_episode.goals[0].radius
+        #if goal_radius is None:
+        #    goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
+        agent.reset()
+        actions = []
+        while not env.episode_over:
+            action = agent(observations)
+            actions.append(action)
+            observations = env.step(action)
+            info = env.get_metrics()
+
+        print("Episode finished after {} steps.".format(len(actions)))
+        return actions, info, observations
+
 
     def replay(self, actions, overlay_goal_radar=False, delay=1, video_writer=None):
         # Set delay to 0 to wait for key presses before advancing
@@ -337,11 +356,14 @@ class Demo:
         print("Episode finished after {} steps.".format(count_steps))
 
 
-    def get_comparisons(self):
+    def get_comparisons(self, agents=None):
         comparisons = {}
         comparisons['Shortest'] = self.get_follower_actions(mode="geodesic_path")
-        # TODO: Get agent performance and other famouse people
-        return comparisons    
+        if agents is not None:
+            for name, agent in agents.items():
+                comparisons[name] = self.get_agent_actions(agent)
+        # TODO: Get performance from other famous people
+        return comparisons
 
     def show_comparisons(self, comparisons):
         imgs = []
@@ -365,7 +387,10 @@ class Demo:
         video_writer = None
         #video_writer = VideoWriter('test1.avi') if args.save_video else None
         actions, info, observations = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
-        comparisons = self.get_comparisons()
+        agents = {
+            "Blind": DemoBlindAgent()
+        }
+        comparisons = self.get_comparisons(agents)
         comparisons['Yours'] = actions, info, observations
         #if video_writer is not None:
         #    video_writer.release()
@@ -387,7 +412,7 @@ class Demo:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Habitat API Example")
+    parser = argparse.ArgumentParser(description="Habitat API Demo")
     parser.add_argument("--task-config",
                         default="configs/tasks/pointnav.yaml",
                         help='Task configuration file for initializing a Habitat environment')
