@@ -134,6 +134,13 @@ def draw_top_down_map(info, heading, output_size):
     return top_down_map
 
 
+def get_goal_radius(env):
+    goal_radius = env.current_episode.goals[0].radius
+    #if goal_radius is None:
+    #    goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
+    return goal_radius
+
+
 class Viewer:
     def __init__(self, initial_observations, 
             overlay_goal_radar=None,
@@ -241,7 +248,7 @@ class Demo:
         print("Environment creation successful")
 
 
-    def update(self, img, textlines=[], video_writer=None):
+    def update(self, img, video_writer=None):
         self.window_shape = img.shape
         if video_writer is not None:
             video_writer.write(img)
@@ -256,8 +263,10 @@ class Demo:
         info = env.get_metrics()
         viewer = Viewer(observations, overlay_goal_radar=overlay_goal_radar, show_map=show_map)
         img = viewer.draw_observations(observations, info)
-        self.update(add_text(img, self.instructions))
-        print(env.current_episode)
+        goal_radius = get_goal_radius(env)
+        distance = observations['pointgoal'][0]
+        self.update(add_text(img, [f'Distance {distance:.5}/{goal_radius:.5}'] + self.instructions))
+        # print(env.current_episode)
 
         print("Agent stepping around inside environment.")
         actions = []
@@ -280,7 +289,8 @@ class Demo:
             info = env.get_metrics()
 
             img = viewer.draw_observations(observations, info)
-            self.update(add_text(img, self.instructions), video_writer)
+            distance = observations['pointgoal'][0]
+            self.update(add_text(img, [f'Distance {distance:.5}/{goal_radius:.5}'] + self.instructions), video_writer)
 
         print("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
@@ -289,9 +299,7 @@ class Demo:
     def get_follower_actions(self, mode="geodesic_path"):
         env = self.env
         observations = env.reset(keep_current_episode=True)
-        goal_radius = env.current_episode.goals[0].radius
-        #if goal_radius is None:
-        #    goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
+        goal_radius = get_goal_radius(env)
         follower = ShortestPathFollower(env.sim, goal_radius, False)
         follower.mode = mode
         actions = []
@@ -306,13 +314,11 @@ class Demo:
         print("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
 
+
     def get_agent_actions(self, agent):
         # NOTE: Action space for agent is hard coded (need to match our scenario)
         env = self.env
         observations = env.reset(keep_current_episode=True)
-        goal_radius = env.current_episode.goals[0].radius
-        #if goal_radius is None:
-        #    goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
         agent.reset()
         actions = []
         while not env.episode_over:
@@ -325,7 +331,7 @@ class Demo:
         return actions, info, observations
 
 
-    def replay(self, actions, overlay_goal_radar=False, delay=1, video_writer=None):
+    def replay(self, name, actions, overlay_goal_radar=False, delay=1, video_writer=None):
         # Set delay to 0 to wait for key presses before advancing
         env = self.env
         action_keys_map = self.action_keys_map
@@ -334,7 +340,7 @@ class Demo:
         info = env.get_metrics()
         viewer = Viewer(observations, overlay_goal_radar=overlay_goal_radar, show_map=True)
         img = viewer.draw_observations(observations, info)
-        self.update(img)
+        self.update(add_text(img, [name]))
 
         count_steps = 0
         for action_id in actions:
@@ -351,7 +357,7 @@ class Demo:
             count_steps += 1
 
             img = viewer.draw_observations(observations, info)
-            self.update(img, video_writer)
+            self.update(add_text(img, [name]), video_writer)
 
         print("Episode finished after {} steps.".format(count_steps))
 
@@ -365,22 +371,28 @@ class Demo:
         # TODO: Get performance from other famous people
         return comparisons
 
+
     def show_comparisons(self, comparisons):
         imgs = []
+        shortcut_keys = {}
+        key = ord('1')
         for name, (actions, info, observations) in comparisons.items():
             top_down_map = draw_top_down_map(info, observations['heading'], 256)
             spl = info['spl']
             success = spl > 0
             distance = observations['pointgoal'][0]
             textlines = [
-                name,
+                f'({chr(key)}) {name}',
                 'Success' if success else 'Failed',
-                f'{len(actions)} steps, SPL={spl}',
-                f'dist={distance}'
+                f'{len(actions)} steps, SPL={spl:.5}',
+                f'dist={distance:.5}'
             ]
             imgs.append(add_text(top_down_map, textlines))
+            shortcut_keys[key] = name
+            key = key + 1
         stacked = np.hstack(imgs)
         cv2.imshow(self.window_name, stacked)
+        return shortcut_keys
 
 
     def demo(self, args):
@@ -394,21 +406,29 @@ class Demo:
         comparisons['Yours'] = actions, info, observations
         #if video_writer is not None:
         #    video_writer.release()
-        if not self.is_quit:
+        while not self.is_quit:
             # Display info about how well you did
             viewer = Viewer(observations, overlay_goal_radar=args.overlay, show_map=True)
 
             # Show other people's route
-            self.show_comparisons(comparisons)
+            shortcut_keys = self.show_comparisons(comparisons)
 
             # Hack to get size of video 
             keystroke = cv2.waitKey(0)
-            video_writer = VideoWriter('output.avi') if args.save_video else None
-            self.replay(actions, overlay_goal_radar=args.overlay, delay=1, video_writer=video_writer)
-            if video_writer is not None:
-                video_writer.release()
-        if not self.is_quit:
-            keystroke = cv2.waitKey(0)
+            selected_name = shortcut_keys.get(keystroke)
+            if selected_name is not None:
+                (actions, info, observations) = comparisons[selected_name]
+                print(f'Selected {selected_name}')
+                video_writer = VideoWriter(f'{selected_name}.avi') if args.save_video else None
+                self.replay(selected_name, actions, overlay_goal_radar=args.overlay, delay=1, video_writer=video_writer)
+                if video_writer is not None:
+                    video_writer.release()
+            else:
+                action = self.action_keys_map.get(keystroke)
+                if action is not None and action.is_quit:
+                   self.is_quit = True
+                   break
+
 
 
 if __name__ == "__main__":
@@ -444,7 +464,7 @@ if __name__ == "__main__":
         config.DATASET.SCENES_DIR = args.scenes_dir
         config.freeze()
 
-    print(config)
+    # print(config)
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
     demo.demo(args)
     cv2.destroyAllWindows()
