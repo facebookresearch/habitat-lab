@@ -87,12 +87,29 @@ def add_text(img, textlines=[], fontsize=0.8, top=False):
             combined = np.vstack((img, text_img))
     return combined
 
+def draw_gradient_circle(img, center, size, color, bgcolor):
+   #cv2.circle(img, center, size, color, 2)
+   for i in range(1,size):
+     a = 1-i/size
+     c = np.add(np.multiply(color[0:3], a), np.multiply(bgcolor[0:3], 1-a))
+     cv2.circle(img, center, i, c, 2);
+
+
+def draw_gradient_wedge(img, center, size, color, bgcolor, offset, angle):
+   #cv2.circle(img, center, size, color, 2)
+   for i in range(1,size):
+     a = 1-i/size
+     c = np.add(np.multiply(color, a), np.multiply(bgcolor, 1-a))
+     #cv2.circle(img, center, i, c, 2);
+     cv2.ellipse(img, center, (i,i), offset, -angle/2, angle/2, c, 2) 
+
 
 def draw_goal_radar(pointgoal, img, 
                     r: Rect, 
                     fov=0,
-                    color=(0,0,255), wincolor=(0,0,0,0), 
-                    overlaycolor=(128,128,128), bgcolor=(255,255,255)):
+                    color=(0,0,255,255), wincolor=(0,0,0,0), 
+                    maskcolor=(128,128,128,255), bgcolor=(255,255,255,255),
+                    gradientcolor=(174,112,80,255)):
     angle = pointgoal[1]
     mag = pointgoal[0]
     nm = mag/(mag+1)
@@ -100,14 +117,20 @@ def draw_goal_radar(pointgoal, img,
     size = int(round(0.45*min(r.width, r.height)))
     center = r.center
     target = (int(round(center[0]+xy[0]*size*nm)), int(round(center[1]+xy[1]*size*nm)))
-    cv2.rectangle(img,(r.left,r.top), (r.right,r.bottom), wincolor, -1)    # Fill with window color 
+    if wincolor is not None:
+        cv2.rectangle(img,(r.left,r.top), (r.right,r.bottom), wincolor, -1)    # Fill with window color 
     cv2.circle(img, center, size, bgcolor, -1)  # Circle with background color
     if fov > 0:
         masked = 360-fov
-        cv2.ellipse(img, center, (size,size), 90, -masked/2, masked/2, overlaycolor, -1) 
+        cv2.ellipse(img, center, (size,size), 90, -masked/2, masked/2, maskcolor, -1) 
+    if gradientcolor is not None:
+        if fov > 0:
+            draw_gradient_wedge(img, center, size, gradientcolor, bgcolor, -90, fov)
+        else:
+            draw_gradient_circle(img, center, size, gradientcolor, bgcolor)
     #print(center)
     #print(target)
-    cv2.line(img, center, target, color, 1)
+    #cv2.line(img, center, target, color, 1)
     cv2.circle(img, target, 4, color, -1)
 
 
@@ -160,7 +183,7 @@ class Viewer:
 
         self.draw_info = {}
         if self.overlay_goal_radar:
-            img = np.zeros((goal_display_size, goal_display_size, 3), np.uint8)
+            img = np.zeros((goal_display_size, goal_display_size, 4), np.uint8)
             self.draw_info["pointgoal"] = { "image": img, "region": Rect(0,0,goal_display_size,goal_display_size) }
         else:
             side_img_height = max(total_height, goal_display_size)
@@ -181,7 +204,6 @@ class Viewer:
 
         # draw pointgoal
         goal_draw_surface = self.draw_info['pointgoal']
-        draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
         if self.overlay_goal_radar:    
             goal_region = goal_draw_surface['region']
             bottom = self.window_size[0]
@@ -189,11 +211,18 @@ class Viewer:
             left = self.window_size[1]//2 - goal_region.width//2
             right = left + goal_region.width
             stacked = np.hstack(active_image_observations)
-            overlay=cv2.addWeighted(stacked[top:bottom, left:right],0.5,goal_draw_surface['image'],0.5,0)
-            distance = observations['pointgoal'][0]
-            mag_img = draw_text([f'{distance}'])
+            draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], 
+                    fov=90, maskcolor=(32,32,32,255))
+            alpha = 0.5*(goal_draw_surface['image'][:,:,3]/255)
+            rgb = goal_draw_surface['image'][:,:,0:3]
+            overlay = np.add(
+                np.multiply(stacked[top:bottom, left:right], np.expand_dims(1-alpha, axis=2)),
+                np.multiply(rgb, np.expand_dims(alpha, axis=2))
+            )
+            #overlay=cv2.addWeighted(stacked[top:bottom, left:right],0.5,rgb,0.5,0)
             stacked[top:bottom, left:right] = overlay
         else:
+            draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
             stacked = np.hstack(active_image_observations + [self.side_img])
         if info is not None:
             if self.show_map and info.get('top_down_map') is not None and 'heading' in observations: 
@@ -399,11 +428,12 @@ class Demo:
         video_writer = None
         #video_writer = VideoWriter('test1.avi') if args.save_video else None
         actions, info, observations = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
-        agents = {
-            "Blind": DemoBlindAgent()
-        }
-        comparisons = self.get_comparisons(agents)
-        comparisons['Yours'] = actions, info, observations
+        if not self.is_quit:
+            agents = {
+                "Blind": DemoBlindAgent()
+            }
+            comparisons = self.get_comparisons(agents)
+            comparisons['Yours'] = actions, info, observations
         #if video_writer is not None:
         #    video_writer.release()
         while not self.is_quit:
