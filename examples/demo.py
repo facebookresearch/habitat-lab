@@ -7,6 +7,7 @@
 import argparse
 import cv2
 import habitat
+import json
 import math
 import numpy as np
 
@@ -95,20 +96,23 @@ def draw_gradient_circle(img, center, size, color, bgcolor):
      cv2.circle(img, center, i, c, 2);
 
 
-def draw_gradient_wedge(img, center, size, color, bgcolor, offset, angle):
+def draw_gradient_wedge(img, center, size, color, bgcolor, start_angle, delta_angle):
    #cv2.circle(img, center, size, color, 2)
    for i in range(1,size):
      a = 1-i/size
      c = np.add(np.multiply(color, a), np.multiply(bgcolor, 1-a))
      #cv2.circle(img, center, i, c, 2);
-     cv2.ellipse(img, center, (i,i), offset, -angle/2, angle/2, c, 2) 
+     cv2.ellipse(img, center, (i,i), start_angle, -delta_angle/2, delta_angle/2, c, 2) 
 
 
 def draw_goal_radar(pointgoal, img, 
                     r: Rect, 
-                    fov=0,
-                    color=(0,0,255,255), wincolor=(0,0,0,0), 
-                    maskcolor=(128,128,128,255), bgcolor=(255,255,255,255),
+                    start_angle=0, fov=0,
+                    goalcolor=(50,0,184,255), 
+                    wincolor=(0,0,0,0), 
+                    #maskcolor=(128,128,128,255), 
+                    maskcolor=(85,75,70,255),
+                    bgcolor=(255,255,255,255),
                     gradientcolor=(174,112,80,255)):
     angle = pointgoal[1]
     mag = pointgoal[0]
@@ -122,16 +126,16 @@ def draw_goal_radar(pointgoal, img,
     cv2.circle(img, center, size, bgcolor, -1)  # Circle with background color
     if fov > 0:
         masked = 360-fov
-        cv2.ellipse(img, center, (size,size), 90, -masked/2, masked/2, maskcolor, -1) 
+        cv2.ellipse(img, center, (size,size), start_angle+90, -masked/2, masked/2, maskcolor, -1) 
     if gradientcolor is not None:
         if fov > 0:
-            draw_gradient_wedge(img, center, size, gradientcolor, bgcolor, -90, fov)
+            draw_gradient_wedge(img, center, size, gradientcolor, bgcolor, start_angle-90, fov)
         else:
             draw_gradient_circle(img, center, size, gradientcolor, bgcolor)
     #print(center)
     #print(target)
-    #cv2.line(img, center, target, color, 1)
-    cv2.circle(img, target, 4, color, -1)
+    #cv2.line(img, center, target, goalcolor, 1)
+    cv2.circle(img, target, 4, goalcolor, -1)
 
 
 def draw_top_down_map(info, heading, output_size):
@@ -204,6 +208,9 @@ class Viewer:
 
         # draw pointgoal
         goal_draw_surface = self.draw_info['pointgoal']
+        # TODO: get fov from agent
+        draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'],
+                        start_angle=0, fov=90)
         if self.overlay_goal_radar:    
             goal_region = goal_draw_surface['region']
             bottom = self.window_size[0]
@@ -211,8 +218,6 @@ class Viewer:
             left = self.window_size[1]//2 - goal_region.width//2
             right = left + goal_region.width
             stacked = np.hstack(active_image_observations)
-            draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], 
-                    fov=90, maskcolor=(32,32,32,255))
             alpha = 0.5*(goal_draw_surface['image'][:,:,3]/255)
             rgb = goal_draw_surface['image'][:,:,0:3]
             overlay = np.add(
@@ -222,7 +227,6 @@ class Viewer:
             #overlay=cv2.addWeighted(stacked[top:bottom, left:right],0.5,rgb,0.5,0)
             stacked[top:bottom, left:right] = overlay
         else:
-            draw_goal_radar(observations['pointgoal'], goal_draw_surface['image'], goal_draw_surface['region'], fov=90)
             stacked = np.hstack(active_image_observations + [self.side_img])
         if info is not None:
             if self.show_map and info.get('top_down_map') is not None and 'heading' in observations: 
@@ -423,6 +427,20 @@ class Demo:
         cv2.imshow(self.window_name, stacked)
         return shortcut_keys
 
+    def save_comparisons(self, comparisons, filename, save_info={}):
+        save_info['traces'] = []
+        for name, (actions, info, observations) in comparisons.items():
+            m =  {k: info[k] for k in ['spl'] if k in info}
+            m['success'] = 1 if info['spl'] > 0 else 0 
+            m['pointgoal'] = observations['pointgoal'].tolist()
+            save_info['traces'].append({
+                'name': name,
+                'summary': m,
+                'actions': actions
+            })
+        with open(filename, 'w') as file:
+            json.dump(save_info, file)
+
 
     def demo(self, args):
         video_writer = None
@@ -434,6 +452,18 @@ class Demo:
             }
             comparisons = self.get_comparisons(agents)
             comparisons['Yours'] = actions, info, observations
+        else:
+            comparisons = {
+                'Yours': (actions, info, observations)
+            }
+
+        # Save the actions
+        if args.save_actions is not None:
+            save_info = {
+                'config': args.task_config,
+            }
+            self.save_comparisons(comparisons, args.save_actions, save_info)
+
         #if video_writer is not None:
         #    video_writer.release()
         while not self.is_quit:
@@ -480,6 +510,9 @@ if __name__ == "__main__":
                         default=False,
                         action="store_true",
                         help='Save video as agent is stepping')
+    parser.add_argument("--save-actions",
+                        default=None,
+                        help='File to save actions to')
     args = parser.parse_args()
     opts = []
     config = habitat.get_config(args.task_config.split(","), opts)
