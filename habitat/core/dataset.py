@@ -318,14 +318,14 @@ class EpisodeIterator(Iterator):
         Returns:
             next episode.
         """
-        try:
-            next_episode = next(self._iterator)
-        except StopIteration as e:
+
+        next_episode = next(self._iterator, None)
+        if next_episode is None:
             if not self.cycle:
-                raise e
+                raise StopIteration
             self._iterator = iter(self.episodes)
             if self.shuffle:
-                self._shuffle_iterator_scene()
+                self._shuffle_iterator()
             next_episode = next(self._iterator)
 
         if self._prev_scene_id == next_episode.scene_id:
@@ -334,14 +334,15 @@ class EpisodeIterator(Iterator):
             self.max_scene_repetition > 0
             and self._rep_count >= self.max_scene_repetition - 1
         ):
-            self._shuffle_iterator_scene()
+            self._shuffle_iterator()
             self._rep_count = 0
 
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
-    def _shuffle_iterator_scene(self) -> None:
-        r"""Internal method that shuffles the remaining episodes by scene.
+    def _shuffle_iterator(self) -> None:
+        r"""Internal method that shuffles the remaining episodes.
+            If self.group_by_scene is true, then shuffle groups of scenes.
 
         Returns:
             None.
