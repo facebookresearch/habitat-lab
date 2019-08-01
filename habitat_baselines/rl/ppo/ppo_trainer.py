@@ -41,7 +41,6 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = None
         self.agent = None
         self.envs = None
-        self.device = None
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -250,7 +249,7 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         with TensorboardWriter(
-            self.config.TENSORBOARD_DIR, purge_step=count_steps, flush_secs=30
+            self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
             for update in range(self.config.NUM_UPDATES):
                 if ppo_cfg.use_linear_lr_decay:
@@ -362,32 +361,14 @@ class PPOTrainer(BaseRLTrainer):
             checkpoint_path, map_location=self.device
         )
 
-        ckpt_config = ckpt_dict["config"]
-        config = self.config.clone()
-
-        ckpt_cmd_opts = ckpt_config.CMD_TRAILING_OPTS
-        eval_cmd_opts = config.CMD_TRAILING_OPTS
-
-        # config merge priority: eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
-        # will skip merging outdated config for backward compatibility
-        try:
-            config.merge_from_other_cfg(ckpt_config)
-            config.merge_from_other_cfg(self.config)
-            config.merge_from_list(ckpt_cmd_opts)
-            config.merge_from_list(eval_cmd_opts)
-        except KeyError:
-            logger.info("Saved config is outdated, using solely eval config")
-            config = self.config.clone()
-            config.merge_from_list(eval_cmd_opts)
-
+        config = self._setup_eval_config(ckpt_dict["config"])
         ppo_cfg = config.RL.PPO
-        config.TASK_CONFIG.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = "val"
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
+
         if len(self.config.VIDEO_OPTION) > 0:
+            config.defrost()
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
-        config.freeze()
+            config.freeze()
 
         logger.info(f"env config: {config}")
         self.envs = construct_envs(
