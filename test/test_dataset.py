@@ -209,7 +209,7 @@ def test_sample_episodes():
 def test_iterator_cycle():
     dataset = _construct_dataset(100)
     ep_iter = dataset.get_episode_iterator(
-        cycle=True, shuffle_scene_when_cycle=False, group_by_scene=False
+        cycle=True, shuffle=False, group_by_scene=False
     )
     for i in range(200):
         episode = next(ep_iter)
@@ -222,9 +222,9 @@ def test_iterator_cycle():
         assert episode.episode_id == episodes[i % 20].episode_id
 
 
-def test_iterator_shuffle_when_cycle():
+def test_iterator_shuffle():
     dataset = _construct_dataset(100)
-    episode_iter = dataset.get_episode_iterator(shuffle_scene_when_cycle=True)
+    episode_iter = dataset.get_episode_iterator(shuffle=True)
     first_round_episodes = list(islice(episode_iter, 100))
     second_round_episodes = list(islice(episode_iter, 100))
 

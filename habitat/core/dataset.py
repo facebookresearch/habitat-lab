@@ -10,8 +10,8 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
+import random
 from itertools import groupby
-from random import shuffle
 from typing import (
     Any,
     Callable,
@@ -270,7 +270,7 @@ class EpisodeIterator(Iterator):
         self,
         episodes: List[T],
         cycle: bool = True,
-        shuffle_scene_when_cycle: bool = False,
+        shuffle: bool = False,
         group_by_scene: bool = True,
         max_scene_repeat: int = -1,
         num_episode_sample: int = -1,
@@ -279,8 +279,9 @@ class EpisodeIterator(Iterator):
         Args:
             episodes: list of episodes.
             cycle: if true, cycle back to first episodes when StopIteration.
-            shuffle_scene_when_cycle: if true, shuffle scene groups when cycle.
-                No effect if cycle is set to false.
+            shuffle: if true, shuffle scene groups when cycle.
+                No effect if cycle is set to false. Will shuffle grouped
+                scenes if group_by_scene is true.
             group_by_scene: if true, group episodes from same scene.
             max_scene_repeat: threshold of how many episodes from the same
                 scene can be loaded consecutively. -1 for no limit
@@ -303,7 +304,7 @@ class EpisodeIterator(Iterator):
             if num_scene_groups >= num_unique_scenes:
                 self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
         self.max_scene_repetition = max_scene_repeat
-        self.shuffle_scene_when_cycle = shuffle_scene_when_cycle
+        self.shuffle = shuffle
         self._rep_count = 0
         self._prev_scene_id = None
         self._iterator = iter(self.episodes)
@@ -323,7 +324,7 @@ class EpisodeIterator(Iterator):
             if not self.cycle:
                 raise e
             self._iterator = iter(self.episodes)
-            if self.shuffle_scene_when_cycle:
+            if self.shuffle:
                 self._shuffle_iterator_scene()
             next_episode = next(self._iterator)
 
@@ -350,9 +351,9 @@ class EpisodeIterator(Iterator):
                 list(g)
                 for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
             ]
-            shuffle(grouped_episodes)
+            random.shuffle(grouped_episodes)
             self._iterator = iter(sum(grouped_episodes, []))
         else:
             episodes = list(self._iterator)
-            shuffle(episodes)
+            random.shuffle(episodes)
             self._iterator = iter(episodes)
