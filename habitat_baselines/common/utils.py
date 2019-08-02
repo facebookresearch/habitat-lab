@@ -4,41 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import argparse
 import glob
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat import Config
 from habitat.utils.visualizations.utils import images_to_video
-from habitat_baselines import BaseTrainer
-from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.tensorboard_utils import (
-    DummyWriter,
-    TensorboardWriter,
-)
-
-# TODO distribute utilities in this file to separate files
-
-
-def get_trainer(trainer_name: str, trainer_cfg: Config) -> BaseTrainer:
-    r"""Create specific trainer instance according to name.
-
-    Args:
-        trainer_name: name of registered trainer .
-        trainer_cfg: config file for trainer.
-
-    Returns:
-        an instance of the specified trainer.
-    """
-    trainer = baseline_registry.get_trainer(trainer_name)
-    assert trainer is not None, f"{trainer_name} is not supported"
-    return trainer(trainer_cfg)
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 
 class Flatten(nn.Module):
@@ -77,14 +53,17 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
-# TODO make this a  LRScheduler class
-def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
-    r"""Decreases the learning rate linearly.
+def linear_decay(epoch: int, total_num_updates: int) -> float:
+    r"""Returns a multiplicative factor for linear value decay
 
+    Args:
+        epoch: current epoch number
+        total_num_updates: total number of epochs
+
+    Returns:
+        multiplicative factor that decreases param value linearly
     """
-    lr = initial_lr - (initial_lr * (epoch / float(total_num_epochs)))
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
+    return 1 - (epoch / float(total_num_updates))
 
 
 def batch_obs(observations: List[Dict]) -> Dict:
@@ -136,32 +115,37 @@ def poll_checkpoint_folder(
 
 
 def generate_video(
-    config: Config,
+    video_option: List[str],
+    video_dir: Optional[str],
     images: List[np.ndarray],
     episode_id: int,
     checkpoint_idx: int,
     spl: float,
-    tb_writer: Union[DummyWriter, TensorboardWriter],
+    tb_writer: TensorboardWriter,
     fps: int = 10,
 ) -> None:
     r"""Generate video according to specified information.
-    
+
     Args:
-        config: config object that contains video_option and video_dir.
+        video_option: string list of "tensorboard" or "disk" or both.
+        video_dir: path to target video directory.
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
         spl: SPL for this episode for video naming.
-        tb_writer: tensorboard writer object for uploading video
-        fps: fps for generated video
+        tb_writer: tensorboard writer object for uploading video.
+        fps: fps for generated video.
     Returns:
         None
     """
-    if config.video_option and len(images) > 0:
-        video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
-        if "disk" in config.video_option:
-            images_to_video(images, config.video_dir, video_name)
-        if "tensorboard" in config.video_option:
-            tb_writer.add_video_from_np_images(
-                f"episode{episode_id}", checkpoint_idx, images, fps=fps
-            )
+    if len(images) < 1:
+        return
+
+    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
+    if "disk" in video_option:
+        assert video_dir is not None
+        images_to_video(images, video_dir, video_name)
+    if "tensorboard" in video_option:
+        tb_writer.add_video_from_np_images(
+            f"episode{episode_id}", checkpoint_idx, images, fps=fps
+        )
