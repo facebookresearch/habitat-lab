@@ -22,6 +22,12 @@ _C.SEED = 100
 _C.ENVIRONMENT = CN()
 _C.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
 _C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
+_C.ENVIRONMENT.ITERATOR_OPTIONS = CN()
+_C.ENVIRONMENT.ITERATOR_OPTIONS.CYCLE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = False
+_C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
+_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = -1
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
@@ -150,7 +156,6 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
-_C.DATASET.NUM_EPISODE_SAMPLE = -1
 _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"

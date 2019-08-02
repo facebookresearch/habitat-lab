@@ -52,8 +52,6 @@ class Matterport3dDatasetV1(Dataset):
         with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read())
 
-        self.sample_episodes(config.NUM_EPISODE_SAMPLE)
-
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
