@@ -150,13 +150,7 @@ class PointGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        if self._goal_format == "CARTESIAN":
-            sensor_shape = (2,)
-        else:
-            sensor_shape = (2,)
-
-        if self._dimensionality == 3:
-            sensor_shape = (sensor_shape[0] + 1,)
+        sensor_shape = (self._dimensionality,)
 
         return spaces.Box(
             low=np.finfo(np.float32).min,
