@@ -183,8 +183,9 @@ class PointGoalSensor(Sensor):
                 _, phi = cartesian_to_polar(
                     -direction_vector_agent[2], direction_vector_agent[0]
                 )
-                _, theta = cartesian_to_polar(
-                    direction_vector_agent[1], direction_vector_agent[2]
+                theta = np.arccos(
+                    direction_vector_agent[1]
+                    / np.linalg.norm(direction_vector_agent)
                 )
                 rho = np.linalg.norm(direction_vector_agent)
 
