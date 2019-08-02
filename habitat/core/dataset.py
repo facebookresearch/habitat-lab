@@ -10,8 +10,18 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
-from itertools import cycle
-from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar
+import random
+from itertools import groupby
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+)
 
 import attr
 import numpy as np
@@ -48,16 +58,12 @@ class Episode:
     info: Optional[Dict[str, str]] = None
 
 
-T = TypeVar("T", Episode, Type[Episode])
+T = TypeVar("T", bound=Episode)
 
 
 class Dataset(Generic[T]):
     r"""Base class for dataset specification.
-
-    Attributes:
-        episodes: list of episodes containing instance information.
     """
-
     episodes: List[T]
 
     @property
@@ -90,15 +96,20 @@ class Dataset(Generic[T]):
         """
         return [self.episodes[episode_id] for episode_id in indexes]
 
-    def get_episode_iterator(self):
-        r"""
-        Creates and returns an iterator that iterates through self.episodes
-        in the desirable way specified.
+    def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
+        r"""Gets episode iterator with options. Options are specified in
+        EpisodeIterator documentation. To further customize iterator behavior
+        for your Dataset subclass, create a customized iterator class like
+        EpisodeIterator and override this method.
+
+        Args:
+            *args: positional args for iterator constructor
+            **kwargs: keyword args for iterator constructor
+
         Returns:
-            iterator for episodes
+            Iterator: episode iterator with specified behavior
         """
-        # TODO: support shuffling between epoch and  scene switching
-        return cycle(self.episodes)
+        return EpisodeIterator(self.episodes, *args, **kwargs)
 
     def to_json(self) -> str:
         class DatasetJSONEncoder(json.JSONEncoder):
@@ -111,8 +122,7 @@ class Dataset(Generic[T]):
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
-        r"""
-        Creates dataset from ``json_str``. Directory containing relevant 
+        r"""Creates dataset from ``json_str``. Directory containing relevant
         graphical assets of scenes is passed through ``scenes_dir``.
 
         Args:
@@ -122,11 +132,8 @@ class Dataset(Generic[T]):
         """
         raise NotImplementedError
 
-    def filter_episodes(
-        self, filter_fn: Callable[[Episode], bool]
-    ) -> "Dataset":
-        r"""
-        Returns a new dataset with only the filtered episodes from the 
+    def filter_episodes(self, filter_fn: Callable[[T], bool]) -> "Dataset":
+        r"""Returns a new dataset with only the filtered episodes from the
         original dataset.
 
         Args:
@@ -236,20 +243,118 @@ class Dataset(Generic[T]):
             self.episodes = new_episodes
         return new_datasets
 
-    def sample_episodes(self, num_episodes: int) -> None:
-        """
-        Sample from existing episodes a list of episodes of size num_episodes,
-        and replace self.episodes with the list of sampled episodes.
+
+class EpisodeIterator(Iterator):
+    r"""Episode Iterator class that gives options for how a list of episodes
+    should be iterated. Some of those options are desirable for the internal
+    simulator to get higher performance. More context: simulator suffers
+    overhead when switching between scenes, therefore episodes of the same
+    scene should be loaded consecutively. However, if too many consecutive
+    episodes from same scene are feed into RL model, the model will risk to
+    overfit that scene. Therefore it's better to load same scene consecutively
+    and switch once a number threshold is reached.
+
+    Currently supports the following features:
+        Cycling: when all episodes are iterated, cycle back to start instead of
+            throwing StopIteration.
+        Cycling with shuffle: when cycling back, shuffle episodes groups
+            grouped by scene.
+        Group by scene: episodes of same scene will be grouped and loaded
+            consecutively.
+        Set max scene repeat: set a number threshold on how many episodes from
+        the same scene can be loaded consecutively.
+        Sample episodes: sample the specified number of episodes.
+    """
+
+    def __init__(
+        self,
+        episodes: List[T],
+        cycle: bool = True,
+        shuffle: bool = False,
+        group_by_scene: bool = True,
+        max_scene_repeat: int = -1,
+        num_episode_sample: int = -1,
+    ):
+        r"""
         Args:
-            num_episodes: number of episodes to sample, input -1 to use
-            whole episodes
+            episodes: list of episodes.
+            cycle: if true, cycle back to first episodes when StopIteration.
+            shuffle: if true, shuffle scene groups when cycle.
+                No effect if cycle is set to false. Will shuffle grouped
+                scenes if group_by_scene is true.
+            group_by_scene: if true, group episodes from same scene.
+            max_scene_repeat: threshold of how many episodes from the same
+                scene can be loaded consecutively. -1 for no limit
+            num_episode_sample: number of episodes to be sampled.
+                -1 for no sampling.
         """
-        if num_episodes == -1:
-            return
-        if num_episodes < -1:
-            raise ValueError(
-                f"Invalid number for episodes to sample: {num_episodes}"
+        # sample episodes
+        if num_episode_sample >= 0:
+            episodes = np.random.choice(
+                episodes, num_episode_sample, replace=False
             )
-        self.episodes = np.random.choice(
-            self.episodes, num_episodes, replace=False
-        )
+        self.episodes = episodes
+        self.cycle = cycle
+        self.group_by_scene = group_by_scene
+        if group_by_scene:
+            num_scene_groups = len(
+                list(groupby(episodes, key=lambda x: x.scene_id))
+            )
+            num_unique_scenes = len(set([e.scene_id for e in episodes]))
+            if num_scene_groups >= num_unique_scenes:
+                self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+        self.max_scene_repetition = max_scene_repeat
+        self.shuffle = shuffle
+        self._rep_count = 0
+        self._prev_scene_id = None
+        self._iterator = iter(self.episodes)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        r"""The main logic for handling how episodes will be iterated.
+
+        Returns:
+            next episode.
+        """
+
+        next_episode = next(self._iterator, None)
+        if next_episode is None:
+            if not self.cycle:
+                raise StopIteration
+            self._iterator = iter(self.episodes)
+            if self.shuffle:
+                self._shuffle_iterator()
+            next_episode = next(self._iterator)
+
+        if self._prev_scene_id == next_episode.scene_id:
+            self._rep_count += 1
+        if (
+            self.max_scene_repetition > 0
+            and self._rep_count >= self.max_scene_repetition - 1
+        ):
+            self._shuffle_iterator()
+            self._rep_count = 0
+
+        self._prev_scene_id = next_episode.scene_id
+        return next_episode
+
+    def _shuffle_iterator(self) -> None:
+        r"""Internal method that shuffles the remaining episodes.
+            If self.group_by_scene is true, then shuffle groups of scenes.
+
+        Returns:
+            None.
+        """
+        if self.group_by_scene:
+            grouped_episodes = [
+                list(g)
+                for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+            ]
+            random.shuffle(grouped_episodes)
+            self._iterator = iter(sum(grouped_episodes, []))
+        else:
+            episodes = list(self._iterator)
+            random.shuffle(episodes)
+            self._iterator = iter(episodes)
