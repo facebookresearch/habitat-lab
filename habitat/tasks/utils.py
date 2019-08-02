@@ -51,6 +51,15 @@ def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
     return (quat * vq * quat.inverse()).imag
 
 
+def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
+    r"""Creates a quaternions from coeffs in [x, y, z, w] format
+    """
+    quat = np.quaternion(0, 0, 0, 0)
+    quat.real = coeffs[3]
+    quat.imag = coeffs[0:3]
+    return quat
+
+
 def cartesian_to_polar(x, y):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(y, x)

@@ -43,17 +43,30 @@ _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
 _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+_C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
-# # STATIC POINTGOAL SENSOR
+# # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
-_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
-_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+    "PointGoalWithGPSCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
 _C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+# -----------------------------------------------------------------------------
+# # COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.COMPASS_SENSOR = CN()
+_C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
+# -----------------------------------------------------------------------------
+# # GPS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GPS_SENSOR = CN()
+_C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
+_C.TASK.GPS_SENSOR.DIMENSIONALITY = 3
 # -----------------------------------------------------------------------------
 # # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------

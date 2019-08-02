@@ -9,11 +9,13 @@ import random
 
 import numpy as np
 import pytest
+import quaternion
 
 import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.utils import quaternion_rotate_vector
 
 
 def _random_episode(env, config):
@@ -38,12 +40,12 @@ def _random_episode(env, config):
     )
 
 
-def test_heading_sensor():
+def test_state_sensors():
     config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
     config.defrost()
-    config.TASK.SENSORS = ["HEADING_SENSOR"]
+    config.TASK.SENSORS = ["HEADING_SENSOR", "COMPASS_SENSOR", "GPS_SENSOR"]
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
@@ -73,6 +75,8 @@ def test_heading_sensor():
         obs = env.reset()
         heading = obs["heading"]
         assert np.allclose(heading, random_heading)
+        assert np.allclose(obs["compass"], [0.0])
+        assert np.allclose(obs["gps"], [0.0, 0.0])
 
     env.close()
 
@@ -153,19 +157,21 @@ def test_collisions():
     env.close()
 
 
-def test_static_pointgoal_sensor():
+def test_pointgoal_sensor():
     config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
     config.defrost()
-    config.TASK.SENSORS = ["STATIC_POINTGOAL_SENSOR"]
+    config.TASK.SENSORS = ["POINTGOAL_SENSOR"]
+    config.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 3
+    config.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
 
     # start position is checked for validity for the specific test scene
     valid_start_position = [-1.3731, 0.08431, 8.60692]
-    expected_static_pointgoal = [0.1, 0.2, 0.3]
-    goal_position = np.add(valid_start_position, expected_static_pointgoal)
+    expected_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_pointgoal)
 
     # starting quaternion is rotated 180 degree along z-axis, which
     # corresponds to simulator using z-negative as forward action
@@ -191,9 +197,78 @@ def test_static_pointgoal_sensor():
     env.reset()
     for _ in range(100):
         obs = env.step(np.random.choice(non_stop_actions))
-        static_pointgoal = obs["static_pointgoal"]
+        pointgoal = obs["pointgoal"]
         # check to see if taking non-stop actions will affect static point_goal
-        assert np.allclose(static_pointgoal, expected_static_pointgoal)
+        assert np.allclose(pointgoal, expected_pointgoal)
+
+    env.close()
+
+
+def test_pointgoal_with_gps_compass_sensor():
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    config.defrost()
+    config.TASK.SENSORS = [
+        "POINTGOAL_WITH_GPS_COMPASS_SENSOR",
+        "COMPASS_SENSOR",
+        "GPS_SENSOR",
+        "POINTGOAL_SENSOR",
+    ]
+    config.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 3
+    config.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "CARTESIAN"
+
+    config.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 3
+    config.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+
+    config.TASK.GPS_SENSOR.DIMENSIONALITY = 3
+
+    config.freeze()
+    env = habitat.Env(config=config, dataset=None)
+
+    # start position is checked for validity for the specific test scene
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+    expected_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
+
+    non_stop_actions = [
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
+    ]
+    env.reset()
+    for _ in range(100):
+        obs = env.step(np.random.choice(non_stop_actions))
+        pointgoal = obs["pointgoal"]
+        pointgoal_with_gps_compass = obs["pointgoal_with_gps_compass"]
+        comapss = obs["compass"]
+        gps = obs["gps"]
+        # check to see if taking non-stop actions will affect static point_goal
+        assert np.allclose(
+            pointgoal_with_gps_compass,
+            quaternion_rotate_vector(
+                quaternion.from_rotation_vector(
+                    comapss * np.array([0, 1, 0])
+                ).inverse(),
+                pointgoal - gps,
+            ),
+        )
 
     env.close()
 
@@ -210,8 +285,8 @@ def test_get_observations_at():
 
     # start position is checked for validity for the specific test scene
     valid_start_position = [-1.3731, 0.08431, 8.60692]
-    expected_static_pointgoal = [0.1, 0.2, 0.3]
-    goal_position = np.add(valid_start_position, expected_static_pointgoal)
+    expected_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_pointgoal)
 
     # starting quaternion is rotated 180 degree along z-axis, which
     # corresponds to simulator using z-negative as forward action
