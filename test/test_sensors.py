@@ -75,8 +75,8 @@ def test_state_sensors():
         obs = env.reset()
         heading = obs["heading"]
         assert np.allclose(heading, random_heading)
-        assert np.allclose(obs["compass"], [0.0])
-        assert np.allclose(obs["gps"], [0.0, 0.0])
+        assert np.allclose(obs["compass"], [0.0], atol=1e-5)
+        assert np.allclose(obs["gps"], [0.0, 0.0], atol=1e-5)
 
     env.close()
 
