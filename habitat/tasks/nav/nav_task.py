@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Type
+from typing import Any, List, Optional, Tuple, Type
 
 import attr
 import cv2
@@ -75,9 +75,11 @@ class ObjectGoal(NavigationGoal):
 class RoomGoal(NavigationGoal):
     r"""Room goal that can be specified by room_id or position with radius.
     """
-
-    room_id: str = attr.ib(default=None, validator=not_none_validator)
-    room_name: Optional[str] = None
+    room_aabb: Tuple[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    # room_id: str = attr.ib(default=None, validator=not_none_validator)
+    room_name: str = attr.ib(default=None, validator=not_none_validator)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -103,6 +105,26 @@ class NavigationEpisode(Episode):
     )
     start_room: Optional[str] = None
     shortest_paths: Optional[List[ShortestPathPoint]] = None
+
+
+@attr.s(auto_attribs=True, kw_only=True)
+class RoomNavigationEpisode(NavigationEpisode):
+    r"""Class for episode specification that includes initial position and
+    rotation of agent, scene name, goal and optional shortest paths. An
+    episode is a description of one task instance for the agent.
+    Args:
+        episode_id: id of episode in the dataset, usually episode number
+        scene_id: id of scene in scene dataset
+        start_position: numpy ndarray containing 3 entries for (x, y, z)
+        start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
+            elements of unit quaternion (versor) representing agent 3D
+            orientation. ref: https://en.wikipedia.org/wiki/Versor
+        goals: list of goals specifications
+        start_room: room id
+        shortest_paths: list containing shortest paths to goals
+    """
+
+    goals: List[RoomGoal] = attr.ib(default=None, validator=not_none_validator)
 
 
 @registry.register_sensor
@@ -244,6 +266,52 @@ class StaticPointGoalSensor(Sensor):
 
 
 @registry.register_sensor
+class RoomGoalSensor(Sensor):
+    r"""Sensor for RoomGoal observations which are used in the RoomNav task.
+    For the agent in simulator the forward direction is along negative-z.
+    In polar coordinate format the angle returned is azimuth to the goal.
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the RoomGoal sensor. Can contain field for
+            GOAL_FORMAT which can be used to specify the format in which
+            the roomgoal is specified. Current options for goal format are
+            cartesian and polar.
+    Attributes:
+        _goal_format: format for specifying the goal which can be done
+            in cartesian or polar coordinates.
+    """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._sim = sim
+        self.room_name_to_id = {
+            "bathroom": 0,
+            "bedroom": 1,
+            "dining room": 2,
+            "kitchen": 3,
+            "living room": 4,
+        }
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "roomgoal"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.PATH
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=min(self.room_name_to_id.values()),
+            high=max(self.room_name_to_id.values()),
+            shape=(1,),
+            dtype=np.int64,
+        )
+
+    def get_observation(self, observations, episode):
+        return np.array([self.room_name_to_id[episode.goals[0].room_name]])
+
+
+@registry.register_sensor
 class HeadingSensor(Sensor):
     r"""Sensor for observing the agent's heading in the global coordinate
     frame.
@@ -360,6 +428,81 @@ class SPL(Measure):
         if (
             action == self._sim.index_stop_action
             and distance_to_target < self._config.SUCCESS_DISTANCE
+        ):
+            ep_success = 1
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = ep_success * (
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
+
+
+@registry.register_measure
+class RoomNavMetric(Measure):
+    r"""RoomNavMetric - SPL but for RoomNav
+    """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "roomnavmetric"
+
+    def nearest_point_in_room(self, start_position, room_aabb):
+        x_axes = np.arange(room_aabb[0], room_aabb[2], 0.1)
+        y_axes = np.arange(room_aabb[1], room_aabb[3], 0.1)
+
+        shortest_distance = 100000.0
+        for i in x_axes:
+            for j in y_axes:
+                if self._sim.is_navigable([i, start_position[1], j]):
+                    dist = self._sim.geodesic_distance(
+                        start_position, [i, start_position[1], j]
+                    )
+                    shortest_distance = min(dist, shortest_distance)
+
+        return shortest_distance
+
+    def reset_metric(self, episode):
+        self._previous_position = self._sim.get_agent_state().position.tolist()
+        self._start_end_episode_distance = self.nearest_point_in_room(
+            episode.start_position, episode.goals[0].room_aabb
+        )
+        self._agent_episode_distance = 0.0
+        self._metric = None
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    @staticmethod
+    def in_room(position, room_aabb):
+        return (
+            room_aabb[0] + 0.5 < position[0] < room_aabb[2] - 0.5
+            and room_aabb[1] + 0.5 < position[2] < room_aabb[3] - 0.5
+        )
+
+    def update_metric(self, episode, action):
+        ep_success = 0
+        current_position = self._sim.get_agent_state().position.tolist()
+
+        if action == self._sim.index_stop_action and self.in_room(
+            current_position, episode.goals[0].room_aabb
         ):
             ep_success = 1
 

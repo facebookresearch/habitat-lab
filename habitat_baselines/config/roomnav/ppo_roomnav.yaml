@@ -1,17 +1,19 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/roomnav_toy_data.yaml"
 TRAINER_NAME: "ppo"
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RoomNavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+VIDEO_DIR: ""
+TEST_EPISODE_COUNT: 2
+EVAL_CKPT_PATH_DIR: "data/checkpoints/roomnav/ckpt.0.pth"
 NUM_PROCESSES: 1
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 10
-LOG_INTERVAL: 1
-CHECKPOINT_INTERVAL: 1
-
+SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
+CHECKPOINT_FOLDER: "data/checkpoints/roomnav"
+NUM_UPDATES: 10000
+LOG_INTERVAL: 10
+CHECKPOINT_INTERVAL: 50
 RL:
   PPO:
     # ppo params

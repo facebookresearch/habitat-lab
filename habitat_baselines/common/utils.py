@@ -120,7 +120,8 @@ def generate_video(
     images: List[np.ndarray],
     episode_id: int,
     checkpoint_idx: int,
-    spl: float,
+    metric_name: str,
+    metric_value: float,
     tb_writer: TensorboardWriter,
     fps: int = 10,
 ) -> None:
@@ -132,7 +133,8 @@ def generate_video(
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
-        spl: SPL for this episode for video naming.
+        metric_name: name of the performance metric, e.g. "spl".
+        metric_value: value of metric.
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.
     Returns:
@@ -141,7 +143,7 @@ def generate_video(
     if len(images) < 1:
         return
 
-    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
+    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_{metric_name}{metric_value:.2f}"
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name)
