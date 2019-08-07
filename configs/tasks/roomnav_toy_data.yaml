@@ -1,0 +1,27 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 2000
+SIMULATOR:
+  AGENT_0:
+    SENSORS: ['DEPTH_SENSOR']
+  HABITAT_SIM_V0:
+    GPU_DEVICE_ID: 0
+  RGB_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+  DEPTH_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+TASK:
+  TYPE: Nav-v0
+  GOAL_SENSOR_UUID: "roomgoal"
+  SENSORS: ['ROOMGOAL_SENSOR']
+  ROOMGOAL_SENSOR:
+    TYPE: RoomGoalSensor
+  MEASUREMENTS: ['ROOMNAVMETRIC']
+  ROOMNAVMETRIC:
+    TYPE: RoomNavMetric
+
+DATASET:
+  TYPE: RoomNav-v1
+  SPLIT: train
+  DATA_PATH: data/datasets/roomnav/roomnav_mp3d_tiny/v1/{split}/{split}.json.gz

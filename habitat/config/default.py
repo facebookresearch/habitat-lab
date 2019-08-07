@@ -44,6 +44,11 @@ _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
 # -----------------------------------------------------------------------------
+# # ROOMGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ROOMGOAL_SENSOR = CN()
+_C.TASK.ROOMGOAL_SENSOR.TYPE = "RoomGoalSensor"
+# -----------------------------------------------------------------------------
 # # STATIC POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.STATIC_POINTGOAL_SENSOR = CN()
@@ -66,6 +71,11 @@ _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# # ROOMNAVMETRIC MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ROOMNAVMETRIC = CN()
+_C.TASK.ROOMNAVMETRIC.TYPE = "RoomNavMetric"
 # -----------------------------------------------------------------------------
 # # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------

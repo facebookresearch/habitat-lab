@@ -33,18 +33,33 @@ def main():
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
+
     args = parser.parse_args()
-    config = get_config(args.exp_config, args.opts)
+    run_exp(**vars(args))
+
+
+def run_exp(exp_config: str, run_type: str, opts=None) -> None:
+    r"""Runs experiment given mode and config
+
+    Args:
+        exp_config: path to config file.
+        run_type: "train" or "eval.
+        opts: list of strings of additional config options.
+
+    Returns:
+        None.
+    """
+    config = get_config(exp_config, opts)
+
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
-
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
     trainer = trainer_init(config)
 
-    if args.run_type == "train":
+    if run_type == "train":
         trainer.train()
-    elif args.run_type == "eval":
+    elif run_type == "eval":
         trainer.eval()
 
 
