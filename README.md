@@ -36,13 +36,14 @@ While there has been significant progress in the vision and language communities
 To this end, we aim to standardize the entire ‘software stack’ for training embodied agents – scanning the world and creating highly photorealistic 3D assets, developing the next generation of highly efficient and parallelizable simulators, specifying embodied AI tasks that enable us to benchmark scientific progress, and releasing modular high-level libraries to train and deploy embodied agents.
 
 ## Citing Habitat
-If you use the Habitat platform in your research, please cite the following [technical report](https://arxiv.org/abs/1904.01201):
+If you use the Habitat platform in your research, please cite the following [paper](https://arxiv.org/abs/1904.01201):
+
 ```
-@article{habitat19arxiv,
-  title =   {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
-  author =  {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
-  journal = {arXiv preprint arXiv:1904.01201},
-  year =    {2019}
+@inproceedings{habitat19iccv,
+  title     =     {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
+  author    =     {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
+  booktitle =     {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      =     {2019}
 }
 ```
 
@@ -165,6 +166,5 @@ The Habitat project would not have been possible without the support and contrib
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.
 
-## References
-1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019.
-
+## References and Citation
+1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.
