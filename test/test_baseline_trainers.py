@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from glob import glob
 
 import pytest
@@ -30,6 +31,13 @@ except ImportError:
     ],
 )
 def test_trainers(test_cfg_path, mode):
+    config = get_config(test_cfg_path).TASK_CONFIG
+    dataset_path = config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)
+    if not os.path.exists(dataset_path):
+        pytest.skip(
+            f'No dataset "{config.DATASET.TYPE}",'
+            f'task "{config.TASK.TYPE}" skipped'
+        )
     run_exp(test_cfg_path, mode)
 
 

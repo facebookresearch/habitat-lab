@@ -156,10 +156,7 @@ jobs:
                 cd habitat-sim
                 wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
                 unzip habitat-test-scenes.zip
-                wget http://dl.fbaipublicfiles.com/habitat/roomnav.zip
-                unzip roomnav.zip -d data/datasets/
                 rm habitat-test-scenes.zip
-                rm roomnav.zip
               fi
       - run:
           name: Run sim benchmark
