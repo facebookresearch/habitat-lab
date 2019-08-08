@@ -341,6 +341,8 @@ class PPOTrainer(BaseRLTrainer):
                     self.save_checkpoint(f"ckpt.{count_checkpoints}.pth")
                     count_checkpoints += 1
 
+            self.envs.close()
+
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -536,3 +538,5 @@ class PPOTrainer(BaseRLTrainer):
             {"average success": episode_success_mean},
             checkpoint_index,
         )
+
+        self.envs.close()
