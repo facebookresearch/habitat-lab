@@ -6,10 +6,11 @@
 
 from typing import Union
 
-import habitat_sim
 import numpy as np
 
-from habitat.sims.habitat_simulator import HabitatSim, SimulatorActions
+import habitat_sim
+from habitat.core.simulator import SimulatorActions
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_two_vectors,
@@ -25,7 +26,7 @@ def action_to_one_hot(action: int) -> np.array:
 
 
 class ShortestPathFollower:
-    """Utility class for extracting the action on the shortest path to the
+    r"""Utility class for extracting the action on the shortest path to the
         goal.
     Args:
         sim: HabitatSim instance.
@@ -58,18 +59,15 @@ class ShortestPathFollower:
         )
         self._return_one_hot = return_one_hot
 
-    def _get_return_value(
-        self, action: SimulatorActions
-    ) -> Union[SimulatorActions, np.array]:
+    def _get_return_value(self, action) -> Union[int, np.array]:
         if self._return_one_hot:
-            return action_to_one_hot(action.value)
+            return action_to_one_hot(action)
         else:
             return action
 
-    def get_next_action(
-        self, goal_pos: np.array
-    ) -> Union[SimulatorActions, np.array]:
-        """Returns the next action along the shortest path."""
+    def get_next_action(self, goal_pos: np.array) -> Union[int, np.array]:
+        """Returns the next action along the shortest path.
+        """
         if (
             np.linalg.norm(goal_pos - self._sim.get_agent_state().position)
             <= self._goal_radius
@@ -83,13 +81,13 @@ class ShortestPathFollower:
 
     def _step_along_grad(
         self, grad_dir: np.quaternion
-    ) -> Union[SimulatorActions, np.array]:
+    ) -> Union[int, np.array]:
         current_state = self._sim.get_agent_state()
         alpha = angle_between_quaternions(grad_dir, current_state.rotation)
         if alpha <= np.deg2rad(self._sim.config.TURN_ANGLE) + EPSILON:
             return self._get_return_value(SimulatorActions.MOVE_FORWARD)
         else:
-            sim_action = SimulatorActions.TURN_LEFT.value
+            sim_action = SimulatorActions.TURN_LEFT
             self._sim.step(sim_action)
             best_turn = (
                 SimulatorActions.TURN_LEFT
@@ -143,7 +141,7 @@ class ShortestPathFollower:
             best_geodesic_delta = -2 * self._max_delta
             best_rotation = current_rotation
             for _ in range(0, 360, self._sim.config.TURN_ANGLE):
-                sim_action = SimulatorActions.MOVE_FORWARD.value
+                sim_action = SimulatorActions.MOVE_FORWARD
                 self._sim.step(sim_action)
                 new_delta = current_dist - self._geo_dist(goal_pos)
 
@@ -167,7 +165,7 @@ class ShortestPathFollower:
                     reset_sensors=False,
                 )
 
-                sim_action = SimulatorActions.TURN_LEFT.value
+                sim_action = SimulatorActions.TURN_LEFT
                 self._sim.step(sim_action)
 
             self._reset_agent_state(current_state)
@@ -182,7 +180,7 @@ class ShortestPathFollower:
 
     @mode.setter
     def mode(self, new_mode: str):
-        """Sets the mode for how the greedy follower determines the best next
+        r"""Sets the mode for how the greedy follower determines the best next
             step.
         Args:
             new_mode: geodesic_path indicates using the simulator's shortest

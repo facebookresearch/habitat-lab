@@ -15,15 +15,18 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black isort
+              sudo pip install black isort numpy
+              sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black . --line-length 79 --check  --diff
+              black . --line-length 79 setup.py  --diff
+              black . --line-length 79 setup.py --check
       - run:
           name: run isort
           command: |
-              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as
+              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --diff
+              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --check-only
 
   install_and_test_ubuntu:
     <<: *gpu
@@ -86,7 +89,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:$PATH
                 conda create -y -n habitat python=3.6
                 . activate habitat
-                conda install -q -y -c conda-forge ninja numpy pytest
+                conda install -q -y -c conda-forge ninja ccache numpy pytest
               fi
       - run:
           name: Install pytorch
@@ -104,6 +107,19 @@ jobs:
       - restore_cache:
           keys:
             - habitat-sim-{{ checksum "./hsim_sha" }}
+      - restore_cache:
+          keys:
+            - ccache-{{ arch }}-master
+          paths:
+            - /home/circleci/.ccache
+      - run:
+          name: CCache initialization
+          command: |
+            export PATH=$HOME/miniconda/bin:$PATH
+            . activate habitat;
+            ccache --show-stats
+            ccache --zero-stats
+            ccache --max-size=10.0G
       - run:
           name: Build, install habitat-sim and run benchmark
           no_output_timeout: 20m
@@ -114,19 +130,23 @@ jobs:
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git
                 cd habitat-sim
+                pip install -r requirements.txt --progress-bar off
                 python setup.py install --headless
               else
                 if [ ! -f ~/miniconda/pip_deps_installed ]
                 then
                   cd habitat-sim
+                  pip install -r requirements.txt --progress-bar off
                   python setup.py install --headless
                 fi
               fi
-      - save_cache:
-          key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
-          background: true
-          paths:
-            - ~/miniconda
+      - run:
+          name: Ccache stats
+          when: always
+          command: |
+            export PATH=$HOME/miniconda/bin:$PATH
+            . activate habitat;
+            ccache --show-stats
       - run:
           name: Download test data
           command: |
@@ -147,10 +167,16 @@ jobs:
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
           key: habitat-sim-{{ checksum "./hsim_sha" }}
+          background: true
           paths:
             - ./habitat-sim
+      - save_cache:
+          key: ccache-{{ arch }}-master
+          background: true
+          paths:
+            - /home/circleci/.ccache
       - run:
-          name: Run api tests
+          name: Install api
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api
@@ -158,13 +184,20 @@ jobs:
               ln -s ../habitat-sim/data data
               pip install -r requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
-              python setup.py test
-              python setup.py develop --all
-              python -u habitat_baselines/train_ppo.py --log-file "train.log" --checkpoint-folder "data/checkpoints" --sim-gpu-id 0 --pth-gpu-id 0 --num-processes 1 --num-mini-batch 1 --num-updates 10
       - save_cache:
           key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+          background: true
           paths:
             - ~/miniconda
+      - run:
+          name: Run api tests
+          command: |
+              export PATH=$HOME/miniconda/bin:$PATH
+              . activate habitat; cd habitat-api
+              python setup.py develop --all
+              python setup.py test
+              python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo_train_test.yaml --run-type train
+
 
 workflows:
   version: 2

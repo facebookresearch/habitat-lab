@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,7 +16,7 @@ from habitat_baselines.slambased.reprojection import (
 
 
 def depth2local3d(depth, fx, fy, cx, cy):
-    """Projects depth map to 3d point cloud
+    r"""Projects depth map to 3d point cloud
     with origin in the camera focus
     """
     device = depth.device
@@ -30,7 +36,7 @@ def depth2local3d(depth, fx, fy, cx, cy):
 
 
 def pcl_to_obstacles(pts3d, map_size=40, cell_size=0.2, min_pts=10):
-    """Counts number of 3d points in 2d map cell.
+    r"""Counts number of 3d points in 2d map cell.
     Height is sum-pooled.
     """
     device = pts3d.device
@@ -56,7 +62,7 @@ def pcl_to_obstacles(pts3d, map_size=40, cell_size=0.2, min_pts=10):
 
 
 class DirectDepthMapper(nn.Module):
-    """Estimates obstacle map given the depth image
+    r"""Estimates obstacle map given the depth image
     ToDo: replace numpy histogram counting with differentiable
     pytorch soft count like in
     https://papers.nips.cc/paper/7545-unsupervised-learning-of-shape-and-pose-with-differentiable-point-clouds.pdf

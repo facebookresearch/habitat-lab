@@ -12,22 +12,8 @@ import pytest
 
 import habitat
 from habitat.config.default import get_config
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat.tasks.nav.nav_task import (
-    COLLISION_PROXIMITY_TOLERANCE,
-    NavigationEpisode,
-    NavigationGoal,
-)
-
-NON_STOP_ACTIONS = [
-    v for v in range(len(SimulatorActions)) if v != SimulatorActions.STOP.value
-]
-
-MOVEMENT_ACTIONS = [
-    SimulatorActions.MOVE_FORWARD.value,
-    SimulatorActions.TURN_LEFT.value,
-    SimulatorActions.TURN_RIGHT.value,
-]
+from habitat.core.simulator import SimulatorActions
+from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 
 
 def _random_episode(env, config):
@@ -39,15 +25,17 @@ def _random_episode(env, config):
         0,
         np.cos(random_heading / 2),
     ]
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=random_location,
-            start_rotation=random_rotation,
-            goals=[],
-        )
-    ]
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=random_location,
+                start_rotation=random_rotation,
+                goals=[],
+            )
+        ]
+    )
 
 
 def test_heading_sensor():
@@ -70,15 +58,17 @@ def test_heading_sensor():
             0,
             np.cos(random_heading / 2),
         ]
-        env.episodes = [
-            NavigationEpisode(
-                episode_id="0",
-                scene_id=config.SIMULATOR.SCENE,
-                start_position=[03.00611, 0.072447, -2.67867],
-                start_rotation=random_rotation,
-                goals=[],
-            )
-        ]
+        env.episode_iterator = iter(
+            [
+                NavigationEpisode(
+                    episode_id="0",
+                    scene_id=config.SIMULATOR.SCENE,
+                    start_position=[03.00611, 0.072447, -2.67867],
+                    start_rotation=random_rotation,
+                    goals=[],
+                )
+            ]
+        )
 
         obs = env.reset()
         heading = obs["heading"]
@@ -93,7 +83,6 @@ def test_tactile():
         pytest.skip("Please download Habitat test data to data folder.")
     config.defrost()
     config.TASK.SENSORS = ["PROXIMITY_SENSOR"]
-    config.TASK.MEASUREMENTS = ["COLLISIONS"]
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
@@ -102,18 +91,13 @@ def test_tactile():
     for _ in range(20):
         _random_episode(env, config)
         env.reset()
-        assert env.get_metrics()["collisions"] is None
 
-        my_collisions_count = 0
         action = env._sim.index_forward_action
         for _ in range(10):
             obs = env.step(action)
-            collisions = env.get_metrics()["collisions"]
             proximity = obs["proximity"]
-            if proximity < COLLISION_PROXIMITY_TOLERANCE:
-                my_collisions_count += 1
-
-            assert my_collisions_count == collisions
+            assert 0.0 <= proximity
+            assert 2.0 >= proximity
 
     env.close()
 
@@ -131,9 +115,9 @@ def test_collisions():
     np.random.seed(123)
 
     actions = [
-        SimulatorActions.MOVE_FORWARD.value,
-        SimulatorActions.TURN_LEFT.value,
-        SimulatorActions.TURN_RIGHT.value,
+        SimulatorActions.MOVE_FORWARD,
+        SimulatorActions.TURN_LEFT,
+        SimulatorActions.TURN_RIGHT,
     ]
 
     for _ in range(20):
@@ -147,7 +131,7 @@ def test_collisions():
         for _ in range(50):
             action = np.random.choice(actions)
             env.step(action)
-            collisions = env.get_metrics()["collisions"]
+            collisions = env.get_metrics()["collisions"]["count"]
 
             loc = env.sim.get_agent_state().position
             if (
@@ -158,6 +142,10 @@ def test_collisions():
                 # Check to see if the new method of doing collisions catches
                 # all the same collisions as the old method
                 assert collisions == prev_collisions + 1
+
+            # We can _never_ collide with standard turn actions
+            if action != actions[0]:
+                assert collisions == prev_collisions
 
             prev_loc = loc
             prev_collisions = collisions
@@ -183,19 +171,26 @@ def test_static_pointgoal_sensor():
     # corresponds to simulator using z-negative as forward action
     start_rotation = [0, 0, 0, 1]
 
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=valid_start_position,
-            start_rotation=start_rotation,
-            goals=[NavigationGoal(position=goal_position)],
-        )
-    ]
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
 
+    non_stop_actions = [
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
+    ]
     env.reset()
     for _ in range(100):
-        obs = env.step(np.random.choice(NON_STOP_ACTIONS))
+        obs = env.step(np.random.choice(non_stop_actions))
         static_pointgoal = obs["static_pointgoal"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(static_pointgoal, expected_static_pointgoal)
@@ -222,14 +217,21 @@ def test_get_observations_at():
     # corresponds to simulator using z-negative as forward action
     start_rotation = [0, 0, 0, 1]
 
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=valid_start_position,
-            start_rotation=start_rotation,
-            goals=[NavigationGoal(position=goal_position)],
-        )
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
+    non_stop_actions = [
+        act
+        for act in range(env.action_space.n)
+        if act != SimulatorActions.STOP
     ]
 
     obs = env.reset()
@@ -237,7 +239,7 @@ def test_get_observations_at():
     for _ in range(100):
         # Note, this test will not currently work for camera change actions
         # (look up/down), only for movement actions.
-        new_obs = env.step(np.random.choice(MOVEMENT_ACTIONS))
+        new_obs = env.step(np.random.choice(non_stop_actions))
         for key, val in new_obs.items():
             agent_state = env.sim.get_agent_state()
             if not (

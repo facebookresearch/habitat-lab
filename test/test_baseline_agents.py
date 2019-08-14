@@ -9,27 +9,25 @@ import os
 import pytest
 
 import habitat
-from habitat_baselines.agents import simple_agents
 
 try:
-    import torch  # noqa # pylint: disable=unused-import
-
-    has_torch = True
-except ImportError:
-    has_torch = False
-
-if has_torch:
     from habitat_baselines.agents import ppo_agents
+    from habitat_baselines.agents import simple_agents
+
+    baseline_installed = True
+except ImportError:
+    baseline_installed = False
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
 
-@pytest.mark.skipif(not has_torch, reason="Test needs torch")
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 def test_ppo_agents():
-    config = ppo_agents.get_defaut_config()
-    config.MODEL_PATH = ""
+    agent_config = ppo_agents.get_default_config()
+    agent_config.MODEL_PATH = ""
     config_env = habitat.get_config(config_paths=CFG_TEST)
-    config_env.defrost()
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -45,12 +43,15 @@ def test_ppo_agents():
         config_env.freeze()
         del benchmark._env
         benchmark._env = habitat.Env(config=config_env)
-        config.INPUT_TYPE = input_type
+        agent_config.INPUT_TYPE = input_type
 
-        agent = ppo_agents.PPOAgent(config)
+        agent = ppo_agents.PPOAgent(agent_config)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
 
 
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 def test_simple_agents():
     config_env = habitat.get_config(config_paths=CFG_TEST)
 
@@ -65,6 +66,8 @@ def test_simple_agents():
         simple_agents.RandomAgent,
         simple_agents.RandomForwardAgent,
     ]:
-        agent = agent_class(config_env.TASK.SUCCESS_DISTANCE)
+        agent = agent_class(
+            config_env.TASK.SUCCESS_DISTANCE, config_env.TASK.GOAL_SENSOR_UUID
+        )
         habitat.logger.info(agent_class.__name__)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=100))

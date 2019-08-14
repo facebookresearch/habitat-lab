@@ -22,19 +22,113 @@ _C.SEED = 100
 _C.ENVIRONMENT = CN()
 _C.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
 _C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
+_C.ENVIRONMENT.ITERATOR_OPTIONS = CN()
+_C.ENVIRONMENT.ITERATOR_OPTIONS.CYCLE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = False
+_C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
+_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = -1
 # -----------------------------------------------------------------------------
 # TASK
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # NAVIGATION TASK
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
+_C.TASK.GOAL_SENSOR_UUID = "pointgoal"
+# -----------------------------------------------------------------------------
+# # POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.POINTGOAL_SENSOR = CN()
+_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
+_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+# -----------------------------------------------------------------------------
+# # STATIC POINTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
+_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
+_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+# -----------------------------------------------------------------------------
+# # HEADING SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.HEADING_SENSOR = CN()
+_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+# -----------------------------------------------------------------------------
+# # PROXIMITY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.PROXIMITY_SENSOR = CN()
+_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
+_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
+# -----------------------------------------------------------------------------
+# # SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.SPL = CN()
+_C.TASK.SPL.TYPE = "SPL"
+_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# # TopDownMap MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.TOP_DOWN_MAP = CN()
+_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
+_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
+_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
+_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
+_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
+_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
+_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
+_C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR = CN()
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
+_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
+# -----------------------------------------------------------------------------
+# # COLLISIONS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.COLLISIONS = CN()
+_C.TASK.COLLISIONS.TYPE = "Collisions"
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # EQA TASK
+# -----------------------------------------------------------------------------
+# # EQA TASK QUESTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.QUESTION_SENSOR = CN()
+_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+# -----------------------------------------------------------------------------
+# # EQA TASK CORRECT_ANSWER measure for training
+# -----------------------------------------------------------------------------
+_C.TASK.CORRECT_ANSWER = CN()
+_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.EPISODE_INFO = CN()
+_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ACTION_STAS = CN()
+_C.TASK.ACTION_STAS.TYPE = "ActionStats"
+# -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL = CN()
+_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+# -----------------------------------------------------------------------------
+# # ANSWER_ACCURACY MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ANSWER_ACCURACY = CN()
+_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
+_C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/" "van-gogh-room.glb"
@@ -98,119 +192,17 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
-# -----------------------------------------------------------------------------
-# MP3DEQAV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.MP3DEQAV1 = CN()
-_C.DATASET.MP3DEQAV1.DATA_PATH = (
-    "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-)
-# -----------------------------------------------------------------------------
-# POINTNAVV1 DATASET
-# -----------------------------------------------------------------------------
-_C.DATASET.POINTNAVV1 = CN()
-_C.DATASET.POINTNAVV1.DATA_PATH = (
+_C.DATASET.CONTENT_SCENES = ["*"]
+_C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
-_C.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
-
-# -----------------------------------------------------------------------------
-# # NAVIGATION TASK
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# # POINTGOAL SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_SENSOR = CN()
-_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
-_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
-# -----------------------------------------------------------------------------
-# # STATIC POINTGOAL SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
-_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
-_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# -----------------------------------------------------------------------------
-# # HEADING SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.HEADING_SENSOR = CN()
-_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
-# -----------------------------------------------------------------------------
-# # PROXIMITY SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.PROXIMITY_SENSOR = CN()
-_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
-_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
-# -----------------------------------------------------------------------------
-# # SPL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
-_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
-# -----------------------------------------------------------------------------
-# # TopDownMap MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.TOP_DOWN_MAP = CN()
-_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
-_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
-_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
-_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
-_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
-_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
-_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
-# -----------------------------------------------------------------------------
-# # COLLISIONS MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.COLLISIONS = CN()
-_C.TASK.COLLISIONS.TYPE = "Collisions"
-# -----------------------------------------------------------------------------
-# # SPL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
-_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
-
-# -----------------------------------------------------------------------------
-# # EQA TASK
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# # EQA TASK QUESTION SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.QUESTION_SENSOR = CN()
-_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
-# -----------------------------------------------------------------------------
-# # EQA TASK CORRECT_ANSWER measure for training
-# -----------------------------------------------------------------------------
-_C.TASK.CORRECT_ANSWER = CN()
-_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.EPISODE_INFO = CN()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.ACTION_STAS = CN()
-_C.TASK.ACTION_STAS.TYPE = "ActionStats"
-# -----------------------------------------------------------------------------
-# # DISTANCE_TO_GOAL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.DISTANCE_TO_GOAL = CN()
-_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
-# -----------------------------------------------------------------------------
-# # ANSWER_ACCURACY MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.ANSWER_ACCURACY = CN()
-_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
-# -----------------------------------------------------------------------------
 
 
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:
-    """
-    Create a unified config with default values overwritten by values from
+    r"""Create a unified config with default values overwritten by values from
     `config_paths` and overwritten by options from `opts`.
     Args:
         config_paths: List of config paths or string that contains comma

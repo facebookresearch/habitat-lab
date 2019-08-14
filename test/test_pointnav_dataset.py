@@ -70,7 +70,7 @@ def test_multiple_files_scene_path():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.SCENES_DIR = os.path.join(
         os.getcwd(), DEFAULT_SCENE_PATH_PREFIX
     )
@@ -98,7 +98,7 @@ def test_multiple_files_pointnav_dataset():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.POINTNAVV1.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.freeze()
     partial_dataset = make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config
@@ -124,7 +124,7 @@ def check_shortest_path(env, episode):
         len(episode.shortest_paths) == 1
     ), "Episode has no shortest paths or more than one."
 
-    env.episodes = [episode]
+    env.episode_iterator = iter([episode])
     env.reset()
     start_state = env.sim.get_agent_state()
     check_state(start_state, episode.start_position, episode.start_rotation)
@@ -141,6 +141,8 @@ def test_pointnav_episode_generator():
     config.DATASET.SPLIT = "val"
     config.ENVIRONMENT.MAX_EPISODE_STEPS = 500
     config.freeze()
+    if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+        pytest.skip("Test skipped as dataset files are missing.")
     env = habitat.Env(config)
     env.seed(config.SEED)
     random.seed(config.SEED)
@@ -163,7 +165,7 @@ def test_pointnav_episode_generator():
     ):
         episodes.append(episode)
     assert len(episodes) == 2 * NUM_EPISODES
-    env.episodes = episodes
+    env.episode_iterator = iter(episodes)
 
     for episode in episodes:
         check_shortest_path(env, episode)

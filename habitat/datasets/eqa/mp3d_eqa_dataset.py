@@ -29,7 +29,7 @@ def get_default_mp3d_v1_config(split: str = "val"):
 
 @registry.register_dataset(name="MP3DEQA-v1")
 class Matterport3dDatasetV1(Dataset):
-    """Class inherited from Dataset that loads Matterport3D
+    r"""Class inherited from Dataset that loads Matterport3D
     Embodied Question Answering dataset.
 
     This class can then be used as follows::
@@ -47,9 +47,7 @@ class Matterport3dDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
-        return os.path.exists(
-            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT)
-        )
+        return os.path.exists(config.DATA_PATH.format(split=config.SPLIT))
 
     def __init__(self, config: Config = None) -> None:
         self.episodes = []
@@ -57,9 +55,7 @@ class Matterport3dDatasetV1(Dataset):
         if config is None:
             return
 
-        with gzip.open(
-            config.MP3DEQAV1.DATA_PATH.format(split=config.SPLIT), "rt"
-        ) as f:
+        with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read())
 
         questions_vocabulary = {
