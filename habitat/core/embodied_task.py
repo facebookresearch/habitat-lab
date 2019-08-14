@@ -6,6 +6,7 @@
 
 import attr
 from collections import OrderedDict
+from gym import Space
 from typing import Any, Dict, List, Optional, Type
 
 from habitat.config import Config
@@ -15,7 +16,7 @@ from habitat.core.utils import not_none_validator
 
 
 @attr.s(auto_attribs=True, kw_only=True)
-class EnvAction:
+class TaskAction:
     """Base class for Environment Action
     """
 
@@ -139,10 +140,12 @@ class EmbodiedTask:
         self._sim = sim
         self._dataset = dataset
 
-    def step(self, action: EnvAction, sim_observations, episode) -> Observations:
-        return self.sensor_suite.get_observations(
-            observations=sim_observations, episode=episode
-        )
+    def step(self, action: TaskAction, episode) -> Observations:
+        raise NotImplementedError
+
+    @property
+    def action_space(self) -> Space:
+        raise NotImplementedError
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]

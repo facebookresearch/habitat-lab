@@ -9,7 +9,7 @@ from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
 from habitat.core.challenge import Challenge
 from habitat.core.dataset import Dataset
-from habitat.core.embodied_task import EmbodiedTask, EnvAction, Measure, \
+from habitat.core.embodied_task import EmbodiedTask, TaskAction, Measure, \
     Measurements
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
@@ -27,7 +27,7 @@ __all__ = [
     "Dataset",
     "EmbodiedTask",
     "Env",
-    "EnvAction",
+    "TaskAction",
     "get_config",
     "logger",
     "make_dataset",

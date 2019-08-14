@@ -13,7 +13,7 @@ from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, EnvAction, Metrics
+from habitat.core.embodied_task import EmbodiedTask, TaskAction, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
@@ -94,7 +94,7 @@ class Env:
                 **self._task.sensor_suite.observation_spaces.spaces,
             }
         )
-        self.action_space = self._sim.action_space
+        self.action_space = self._task.action_space
         self._max_episode_seconds = (
             self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         )
@@ -202,7 +202,7 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
-    def step(self, action: Union[EnvAction, Dict, int]) -> Observations:
+    def step(self, action: Union[TaskAction, Dict, int]) -> Observations:
         """Perform an action in the environment and return observations
 
         Args:
@@ -220,19 +220,7 @@ class Env:
             "Episode over, call reset " "before calling step"
         )
 
-        if isinstance(action, (int, np.integer)):
-            action = EnvAction(sim_action=action)
-
-        if isinstance(action, Dict):
-            action = EnvAction(**action)
-
-        observations = self._sim.step(action.sim_action)
-
-        observations.update(
-                self._task.step(action=action,
-                                sim_observations=observations,
-                                episode=self.current_episode)
-        )
+        observations = self._task.step(action=action, episode=self.current_episode)
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action

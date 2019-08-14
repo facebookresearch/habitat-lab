@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import attr
 import numpy as np
-from gym import spaces
+from gym import spaces, Space
 
 from habitat.config import Config
 from habitat.core.embodied_task import Measure
@@ -245,26 +245,40 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    def step(self, action: int, sim_observations, episode):
+    def step(self, action: int, episode):
+        if action.sim_action is None:
+            observations = super().step(action=action, episode=episode)
+        else:
+            observations = {}
+
         if action.task_action is None:
-            return self.sensor_suite.get_observations(
-                observations=sim_observations, episode=episode
-            )
-        required_measures = {"episode_info", "action_stats", "answer_accuracy"}
-        assert (
-            required_measures <= self.measurements.measures.keys()
-        ), f"{required_measures} are required to be enabled for EQA task"
-        episode = self.measurements.measures["episode_info"].get_metric()
-        sim_action = self.measurements.measures["action_stats"].get_metric()[
-            "previous_action"
-        ]
+            observations.update(self.sensor_suite.get_observations(
+                observations=observations, episode=episode
+            ))
+        return observations
 
-        self.measurements.measures["answer_accuracy"].update_metric(
-            answer_id=action.task_action,
-            sim_action=action.sim_action,
-            episode=episode,
-        )
+        # required_measures = {"episode_info", "action_stats", "answer_accuracy"}
+        # assert (
+        #     required_measures <= self.measurements.measures.keys()
+        # ), f"{required_measures} are required to be enabled for EQA task"
+        # episode = self.measurements.measures["episode_info"].get_metric()
+        # sim_action = self.measurements.measures["action_stats"].get_metric()[
+        #     "previous_action"
+        # ]
+        #
+        # self.measurements.measures["answer_accuracy"].update_metric(
+        #     answer_id=action.task_action,
+        #     sim_action=action.sim_action,
+        #     episode=episode,
+        # )
+        #
+        # return self.sensor_suite.get_observations(
+        #     observations=sim_observations, episode=episode
+        # )
 
-        return self.sensor_suite.get_observations(
-            observations=sim_observations, episode=episode
-        )
+    @property
+    def action_space(self) -> Space:
+        return spaces.Dict({
+            "sim_action": self._sim.action_space,
+            "task_action": self._sim.action_space,
+        })
