@@ -28,7 +28,7 @@ def get_default_config():
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal"
+    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
 
 
