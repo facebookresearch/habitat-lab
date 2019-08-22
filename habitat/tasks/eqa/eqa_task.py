@@ -15,7 +15,6 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
-from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
 
@@ -94,10 +93,9 @@ class EpisodeInfo(Measure):
     """Episode Info
     """
 
-    def __init__(self, sim, config, dataset, **kwargs):
+    def __init__(self, sim, config, **kwargs):
         self._sim = sim
         self._config = config
-        self._dataset = dataset
 
         super().__init__(**kwargs)
 
@@ -148,11 +146,7 @@ class AnswerAccuracy(Measure):
         self._answer_received = False
 
     def update_metric(
-        self,
-        action=None,
-        episode=None,
-        *args: Any,
-        **kwargs: Any,
+        self, action=None, episode=None, *args: Any, **kwargs: Any
     ):
         if (
             action.sim_action is None
@@ -245,6 +239,10 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
+    @registry.register_task_action(name="move_forward")
+    def move_forward(self):
+        self.sim.step(0)
+
     def step(self, action: int, episode):
         if action.sim_action is None:
             observations = super().step(action=action, episode=episode)
@@ -252,9 +250,11 @@ class EQATask(NavigationTask):
             observations = {}
 
         if action.task_action is None:
-            observations.update(self.sensor_suite.get_observations(
-                observations=observations, episode=episode
-            ))
+            observations.update(
+                self.sensor_suite.get_observations(
+                    observations=observations, episode=episode
+                )
+            )
         return observations
 
         # required_measures = {"episode_info", "action_stats", "answer_accuracy"}
@@ -278,7 +278,9 @@ class EQATask(NavigationTask):
 
     @property
     def action_space(self) -> Space:
-        return spaces.Dict({
-            "sim_action": self._sim.action_space,
-            "task_action": self._sim.action_space,
-        })
+        return spaces.Dict(
+            {
+                "sim_action": self._sim.action_space,
+                "task_action": self._sim.action_space,
+            }
+        )

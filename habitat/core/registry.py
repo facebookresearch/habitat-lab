@@ -148,6 +148,21 @@ class Registry(metaclass=Singleton):
         )
 
     @classmethod
+    def register_task_action(cls, to_register=None, *, name: Optional[str] =
+    None):
+        r"""Register a measure to registry with key 'name'
+
+        Args:
+            name: Key with which the measure will be registered.
+                If None will use the name of the class
+
+        """
+
+        return cls._register_impl(
+            "task_action", to_register, name,
+        )
+
+    @classmethod
     def register_dataset(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a dataset to registry with key 'name'
 

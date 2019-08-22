@@ -249,8 +249,11 @@ def test_eqa_task():
 
     for i in range(3):
         env.reset()
-        env.step(habitat.TaskAction(sim_action=1 + np.random.choice(2),
-                                   task_action=None))
+        env.step(
+            habitat.TaskAction(
+                sim_action=1 + np.random.choice(2), task_action=None
+            )
+        )
         metrics = env.get_metrics()
         del metrics["episode_info"]
         print(metrics)
@@ -258,9 +261,8 @@ def test_eqa_task():
         env.current_episode.question.answer_text
     ]
     env.step(habitat.TaskAction(sim_action=0, task_action=correct_answer_id))
-    #env.task.answer_question(correct_answer_id, env.episode_over)
+    # env.task.answer_question(correct_answer_id, env.episode_over)
     metrics = env.get_metrics()
     del metrics["episode_info"]
     print(metrics)
     assert metrics["answer_accuracy"] == 1
-

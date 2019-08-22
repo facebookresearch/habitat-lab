@@ -9,8 +9,12 @@ from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
 from habitat.core.challenge import Challenge
 from habitat.core.dataset import Dataset
-from habitat.core.embodied_task import EmbodiedTask, TaskAction, Measure, \
-    Measurements
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    TaskAction,
+    Measure,
+    Measurements,
+)
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.registry import registry

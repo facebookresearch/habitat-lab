@@ -634,7 +634,11 @@ class NavigationTask(EmbodiedTask):
             assert (
                 measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
-            task_measurements.append(measure_type(sim, measurement_cfg))
+            task_measurements.append(
+                measure_type(
+                    sim=sim, config=measurement_cfg, dataset=dataset, task=self
+                )
+            )
         self.measurements = Measurements(task_measurements)
 
         task_sensors = []
@@ -644,7 +648,9 @@ class NavigationTask(EmbodiedTask):
             assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            task_sensors.append(sensor_type(sim, sensor_cfg))
+            task_sensors.append(
+                sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
+            )
 
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
