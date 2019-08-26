@@ -165,21 +165,25 @@ def test_get_splits_sort_by_episode_id():
                 assert ep.episode_id >= split.episodes[ii - 1].episode_id
 
 
+def check_uneven_splits(num_episodes: int, num_splits: int):
+    dataset = _construct_dataset(num_episodes)
+    splits = dataset.get_splits(num_splits, allow_uneven_splits=True)
+    assert len(splits) == num_splits
+    assert sum([len(split.episodes) for split in splits]) == num_episodes
+
+
 def test_get_uneven_splits():
+    check_uneven_splits(994, 64)
+    check_uneven_splits(1023, 64)
+    check_uneven_splits(1024, 64)
+    check_uneven_splits(1025, 64)
+    check_uneven_splits(10000, 9)
+    check_uneven_splits(10000, 10)
+
     dataset = _construct_dataset(10000)
     splits = dataset.get_splits(9, allow_uneven_splits=False)
     assert len(splits) == 9
     assert sum([len(split.episodes) for split in splits]) == (10000 // 9) * 9
-
-    dataset = _construct_dataset(10000)
-    splits = dataset.get_splits(9, allow_uneven_splits=True)
-    assert len(splits) == 9
-    assert sum([len(split.episodes) for split in splits]) == 10000
-
-    dataset = _construct_dataset(10000)
-    splits = dataset.get_splits(10, allow_uneven_splits=True)
-    assert len(splits) == 10
-    assert sum([len(split.episodes) for split in splits]) == 10000
 
 
 def test_sample_episodes():

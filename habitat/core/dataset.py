@@ -67,6 +67,14 @@ class Dataset(Generic[T]):
     episodes: List[T]
 
     @property
+    def num_episodes(self) -> int:
+        r"""
+        Returns:
+            number of episodes in the dataset.
+        """
+        return len(self.episodes)
+
+    @property
     def scene_ids(self) -> List[str]:
         r"""
         Returns:
@@ -180,7 +188,7 @@ class Dataset(Generic[T]):
                 same scene.
             sort_by_episode_id: if true, sequences are sorted by their episode
                 ID in the returned splits.
-            allow_uneven_splits: if true, the last split can be shorter than
+            allow_uneven_splits: if true, the last splits can be shorter than
                 the others. This is especially useful for splitting over
                 validation/test datasets in order to make sure that all
                 episodes are copied but none are duplicated.
@@ -188,35 +196,40 @@ class Dataset(Generic[T]):
         Returns:
             a list of new datasets, each with their own subset of episodes.
         """
-        assert (
-            len(self.episodes) >= num_splits
-        ), "Not enough episodes to create this many splits."
-        if episodes_per_split is not None:
-            assert not allow_uneven_splits, (
-                "You probably don't want to specify allow_uneven_splits"
-                " and episodes_per_split."
+        if self.num_episodes <= num_splits:
+            raise ValueError(
+                "Not enough episodes to create those many splits."
             )
-            assert num_splits * episodes_per_split <= len(self.episodes)
+
+        if episodes_per_split is not None:
+            if allow_uneven_splits:
+                raise ValueError(
+                    "You probably don't want to specify allow_uneven_splits"
+                    " and episodes_per_split."
+                )
+
+            if num_splits * episodes_per_split >= self.num_episodes:
+                raise ValueError(
+                    "Not enough episodes to create those many splits."
+                )
 
         new_datasets = []
 
-        if allow_uneven_splits:
-            stride = int(np.ceil(len(self.episodes) * 1.0 / num_splits))
-            split_lengths = [stride] * (num_splits - 1)
-            split_lengths.append(
-                (len(self.episodes) - stride * (num_splits - 1))
-            )
+        if episodes_per_split is not None:
+            stride = episodes_per_split
         else:
-            if episodes_per_split is not None:
-                stride = episodes_per_split
-            else:
-                stride = len(self.episodes) // num_splits
-            split_lengths = [stride] * num_splits
+            stride = self.num_episodes // num_splits
+        split_lengths = [stride] * num_splits
+
+        if allow_uneven_splits:
+            episodes_left = self.num_episodes - stride * num_splits
+            split_lengths[:episodes_left] = [stride + 1] * episodes_left
+            assert sum(split_lengths) == self.num_episodes
 
         num_episodes = sum(split_lengths)
 
         rand_items = np.random.choice(
-            len(self.episodes), num_episodes, replace=False
+            self.num_episodes, num_episodes, replace=False
         )
         if collate_scene_ids:
             scene_ids = {}
