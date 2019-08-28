@@ -196,7 +196,7 @@ class Dataset(Generic[T]):
         Returns:
             a list of new datasets, each with their own subset of episodes.
         """
-        if self.num_episodes <= num_splits:
+        if self.num_episodes < num_splits:
             raise ValueError(
                 "Not enough episodes to create those many splits."
             )
@@ -208,7 +208,7 @@ class Dataset(Generic[T]):
                     " and episodes_per_split."
                 )
 
-            if num_splits * episodes_per_split >= self.num_episodes:
+            if num_splits * episodes_per_split > self.num_episodes:
                 raise ValueError(
                     "Not enough episodes to create those many splits."
                 )
