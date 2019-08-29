@@ -4,39 +4,40 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-# To run the demo
-# 1. Simple demo on test scenes
-# - Download test scenes (http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip)
-#   and unzip into ${HABITAT_API_REPO}/data
-# - Update `configs/tasks/pointnav.yaml` to have higher resolution if you want bigger pictures
-# - `python examples/demo.py --task-config configs/tasks/pointnav.yaml --overlay`
-# 2. Simple demo on test scenes with depth
-# - `python examples/demo.py --task-config configs/tasks/pointnav_rgbd.yaml --overlay`
-# 3. Demo on replica scene with blind agent, with saving actions and videos
-# - Download pretrained blind agent 
-#   (get blind_agent_state.pth from https://www.dropbox.com/s/e63uf6joerkf7pe/agent_demo.zip?dl=0 and put into examples/agent_demo)
-# - Download replica dataset (https://github.com/facebookresearch/Replica-Dataset)
-#   (put under data/replica)
-# - Generate episodes for a replica scene (this takes a while to run)
-#   `mkdir data/replica_demo/pointnav`
-#   `python examples/gen_episodes.py -o data/replica_demo/pointnav/test.json --scenes data/replica/apartment_0/habitat/mesh_semantic.ply`
-#   `gzip data/replica_demo/pointnav/test.json`
-# - Create yaml config file for replica and put in `data/replica_demo/replica_test.yaml`
-#   DATASET:
-#   TYPE: PointNav-v1
-#   SPLIT: test
-#   POINTNAVV1:
-#     DATA_PATH: data/replica_demo/pointnav/{split}.json.gz 
-# - Run demo 
-#   `python examples/demo.py --task-config configs/tasks/pointnav.yaml,data/replica_demo/replica_test.yaml --agent blind --overlay --scenes-dir . --save-video --save-actions test.json`
-#   NOTE: video is saved to xyz.avi if you select to replay actions (select 1/2/3 for the agent to replay)
-#   NOTE: actions are save to simple json file
+"""
+To run the demo
+1. Simple demo on test scenes
+- Download test scenes (http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip)
+  and unzip into ${HABITAT_API_REPO}/data
+- Update `configs/tasks/pointnav.yaml` to have higher resolution if you want bigger pictures
+- `python examples/demo.py --task-config configs/tasks/pointnav.yaml --overlay`
+2. Simple demo on test scenes with depth
+- `python examples/demo.py --task-config configs/tasks/pointnav_rgbd.yaml --overlay`
+3. Demo on replica scene with blind agent, with saving actions and videos
+- Download pretrained blind agent 
+  (get blind_agent_state.pth from https://www.dropbox.com/s/e63uf6joerkf7pe/agent_demo.zip?dl=0 and put into examples/agent_demo)
+- Download replica dataset (https://github.com/facebookresearch/Replica-Dataset)
+  (put under data/replica)
+- Generate episodes for a replica scene (this takes a while to run)
+  `mkdir data/replica_demo/pointnav`
+  `python examples/gen_episodes.py -o data/replica_demo/pointnav/test.json --scenes data/replica/apartment_0/habitat/mesh_semantic.ply`
+  `gzip data/replica_demo/pointnav/test.json`
+- Create yaml config file for replica and put in `data/replica_demo/replica_test.yaml`
+  DATASET:
+  TYPE: PointNav-v1
+  SPLIT: test
+  POINTNAVV1:
+    DATA_PATH: data/replica_demo/pointnav/{split}.json.gz 
+- Run demo 
+  `python examples/demo.py --task-config configs/tasks/pointnav.yaml,data/replica_demo/replica_test.yaml --agent blind --overlay --scenes-dir . --save-video --save-actions test.json`
+  NOTE: video is saved to xyz.avi if you select to replay actions (select 1/2/3 for the agent to replay)
+  NOTE: actions are save to simple json file
 
-# Future improvements to demo:
-# 1. Selection of episodes
-# 2. Precompute episodes for replica dataset and save action trace for shortest path follower / blind agents
-# 3. Support new episodes (random/user specified)
-
+Future improvements to demo:
+1. Selection of episodes
+2. Precompute episodes for replica dataset and save action trace for shortest path follower / blind agents
+3. Support new episodes (random/user specified)
+"""
 
 import argparse
 import cv2
