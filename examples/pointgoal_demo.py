@@ -50,6 +50,7 @@ import numpy as np
 import cv2
 import habitat
 from examples.agent_demo.demo_blind_agent import DemoBlindAgent
+from habitat.core.logging import logger
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
@@ -367,7 +368,7 @@ class VideoWriter:
         else:
             res = (frame.shape[1], frame.shape[0])
             if res != self.resolution:
-                print(
+                logger.info(
                     f"Warning: video resolution mismatch expected={self.resolution}, frame={res}"
                 )
         self.writer.write(frame)
@@ -393,7 +394,7 @@ class Demo:
         self.is_quit = False
 
         self.env = habitat.Env(config=self.config)
-        print("Environment creation successful")
+        logger.info("Environment creation successful")
 
     def update(self, img, video_writer=None):
         self.window_shape = img.shape
@@ -401,7 +402,7 @@ class Demo:
             video_writer.write(img)
         cv2.imshow(self.window_name, img)
 
-    def run(self, overlay_goal_radar=False, show_map=False, video_writer=None):
+    def do_episode(self, overlay_goal_radar=False, show_map=False, video_writer=None):
         env = self.env
         action_keys_map = self.action_keys_map
 
@@ -423,19 +424,19 @@ class Demo:
             )
         )
 
-        print("Agent stepping around inside environment.")
+        logger.info("Agent stepping around inside environment.")
         actions = []
         while not env.episode_over:
             keystroke = cv2.waitKey(0)
 
             action = action_keys_map.get(keystroke)
             if action is not None:
-                print(action.name)
+                logger.info(action.name)
                 if action.is_quit:
                     self.is_quit = True
                     break
             else:
-                print("INVALID KEY")
+                logger.info("INVALID KEY")
                 continue
 
             actions.append(action.action_id)
@@ -453,7 +454,7 @@ class Demo:
                 video_writer,
             )
 
-        print("Episode finished after {} steps.".format(len(actions)))
+        logger.info("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
 
     def get_follower_actions(self, mode="geodesic_path"):
@@ -471,7 +472,7 @@ class Demo:
             observations = env.step(best_action.value)
             info = env.get_metrics()
 
-        print("Episode finished after {} steps.".format(len(actions)))
+        logger.info("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
 
     def get_agent_actions(self, agent):
@@ -486,7 +487,7 @@ class Demo:
             observations = env.step(action)
             info = env.get_metrics()
 
-        print("Episode finished after {} steps.".format(len(actions)))
+        logger.info("Episode finished after {} steps.".format(len(actions)))
         return actions, info, observations
 
     def replay(
@@ -526,7 +527,7 @@ class Demo:
             img = viewer.draw_observations(observations, info)
             self.update(add_text(img, [name]), video_writer)
 
-        print("Episode finished after {} steps.".format(count_steps))
+        logger.info("Episode finished after {} steps.".format(count_steps))
 
     def get_comparisons(self, agents=None):
         comparisons = {}
@@ -577,7 +578,7 @@ class Demo:
 
     def demo(self, args):
         video_writer = None
-        actions, info, observations = self.run(
+        actions, info, observations = self.do_episode(
             overlay_goal_radar=args.overlay,
             show_map=args.show_map,
             video_writer=video_writer,
@@ -610,7 +611,7 @@ class Demo:
             selected_name = shortcut_keys.get(keystroke)
             if selected_name is not None:
                 (actions, info, observations) = comparisons[selected_name]
-                print(f"Selected {selected_name}")
+                logger.info(f"Selected {selected_name}")
                 video_writer = (
                     VideoWriter(f"{selected_name}.avi")
                     if args.save_video
