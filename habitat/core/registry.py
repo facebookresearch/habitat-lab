@@ -17,6 +17,7 @@ Import the global registry object using
 Various decorators for registry different kind of classes with unique keys
 
 - Register a task: ``@registry.register_task``
+- Register a task action: ``@registry.register_task_action``
 - Register a simulator: ``@registry.register_simulator``
 - Register a sensor: ``@registry.register_sensor``
 - Register a measure: ``@registry.register_measure``
@@ -148,7 +149,8 @@ class Registry(metaclass=Singleton):
         )
 
     @classmethod
-    def register_task_action(cls, to_register=None, *, name: Optional[str] =
+    def register_task_action(cls, to_register=None, *,
+    name: Optional[str] =
     None):
         r"""Register a measure to registry with key 'name'
 
@@ -203,6 +205,10 @@ class Registry(metaclass=Singleton):
     @classmethod
     def get_task(cls, name):
         return cls._get_impl("task", name)
+
+    @classmethod
+    def get_task_action(cls, name):
+        return cls._get_impl("task_action", name)
 
     @classmethod
     def get_simulator(cls, name):

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Type
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import SensorSuite, Simulator, Observations
+from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 
 
@@ -142,8 +143,36 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+        self._possible_actions = OrderedDict()
+        for action in config.POSSIBLE_ACTIONS:
+            assert action in registry.mapping["task_action"]
+            self._possible_actions[action] = registry.mapping["task_action"][action]
+        # self._possible_actions = [registry.mapping[action] for action
+        #                          in
+        #                           config.TASK.POSSIBLE_ACTIONS]
 
-    def step(self, action: TaskAction, episode) -> Observations:
+    def _step(self, action: TaskAction, episode, action_args) -> Observations:
+        if isinstance(action, int):
+            action = self._possible_actions[action]
+        return self._step(action, episode, action_args)
+
+    def step(self, action: int, episode, action_args=None):
+        if action_args is None:
+            action_args = {}
+        if isinstance(action, int):
+            action = list(self._possible_actions.keys())[action]
+        assert action in self._possible_actions.keys()
+        action_method = self._possible_actions[action]
+        observations = action_method(self, **action_args)
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations, episode=episode
+            )
+        )
+
+        return observations
+
+    def _step(self, action: TaskAction, episode, action_args) -> Observations:
         raise NotImplementedError
 
     @property

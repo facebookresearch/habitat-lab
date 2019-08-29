@@ -149,16 +149,14 @@ class AnswerAccuracy(Measure):
         self, action=None, episode=None, *args: Any, **kwargs: Any
     ):
         if (
-            action.sim_action is None
-            or action.task_action is None
-            or episode is None
+            episode is None
         ):
             return
         assert not self._answer_received, (
             "Question can be answered only " "once per episode."
         )
-        self._answer_received = True
-        if action.sim_action == SimulatorActions.STOP.value:
+        if action == "stop":
+            self._answer_received = True
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
@@ -224,7 +222,6 @@ class DistanceToGoal(Measure):
             "agent_path_length": self._agent_episode_distance,
         }
 
-
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     """
@@ -239,22 +236,33 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    @registry.register_task_action(name="move_forward")
-    def move_forward(self):
-        self.sim.step(0)
+    @registry.register_task_action(name="answer")
+    def answer(self, answer):
+        self._answer_received = True
+        self._answer = answer
+        return {}
 
-    def step(self, action: int, episode):
-        if action.sim_action is None:
-            observations = super().step(action=action, episode=episode)
-        else:
-            observations = {}
+    @property
+    def possible_actions(self):
+        return registry.mapping["task_action"]
 
-        if action.task_action is None:
-            observations.update(
-                self.sensor_suite.get_observations(
-                    observations=observations, episode=episode
-                )
+    def _step(self, action: int, episode, action_args=None):
+        assert action in self.possible_actions.keys()
+        action_method = self.possible_actions[action]
+        observations = action_method(self, **action_args)
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations, episode=episode
             )
+        )
+
+        # if action.sim_action is None:
+        #     observations = super().step(action=action, episode=episode)
+        # else:
+        #     observations = {}
+
+        # if action.task_action is None:
+
         return observations
 
         # required_measures = {"episode_info", "action_stats", "answer_accuracy"}
