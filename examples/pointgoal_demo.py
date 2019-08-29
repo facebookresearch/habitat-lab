@@ -124,7 +124,6 @@ def add_text(img, textlines=[], fontsize=0.8, top=False):
     return combined
 
 def draw_gradient_circle(img, center, size, color, bgcolor):
-   #cv2.circle(img, center, size, color, 2)
    for i in range(1,size):
      a = 1-i/size
      c = np.add(np.multiply(color[0:3], a), np.multiply(bgcolor[0:3], 1-a))
@@ -132,11 +131,9 @@ def draw_gradient_circle(img, center, size, color, bgcolor):
 
 
 def draw_gradient_wedge(img, center, size, color, bgcolor, start_angle, delta_angle):
-   #cv2.circle(img, center, size, color, 2)
    for i in range(1,size):
      a = 1-i/size
      c = np.add(np.multiply(color, a), np.multiply(bgcolor, 1-a))
-     #cv2.circle(img, center, i, c, 2);
      cv2.ellipse(img, center, (i,i), start_angle, -delta_angle/2, delta_angle/2, c, 2) 
 
 
@@ -167,9 +164,6 @@ def draw_goal_radar(pointgoal, img,
             draw_gradient_wedge(img, center, size, gradientcolor, bgcolor, start_angle-90, fov)
         else:
             draw_gradient_circle(img, center, size, gradientcolor, bgcolor)
-    #print(center)
-    #print(target)
-    #cv2.line(img, center, target, goalcolor, 1)
     cv2.circle(img, target, 4, goalcolor, -1)
 
 
@@ -259,7 +253,6 @@ class Viewer:
                 np.multiply(stacked[top:bottom, left:right], np.expand_dims(1-alpha, axis=2)),
                 np.multiply(rgb, np.expand_dims(alpha, axis=2))
             )
-            #overlay=cv2.addWeighted(stacked[top:bottom, left:right],0.5,rgb,0.5,0)
             stacked[top:bottom, left:right] = overlay
         else:
             stacked = np.hstack(active_image_observations + [self.side_img])
@@ -312,7 +305,6 @@ class Demo:
         self.env = habitat.Env(
             config=self.config
         )
-        #self.env.reset()
         print("Environment creation successful")
 
 
@@ -334,12 +326,10 @@ class Demo:
         goal_radius = get_goal_radius(env)
         distance = observations['pointgoal'][0]
         self.update(add_text(img, [f'Distance {distance:.5}/{goal_radius:.5}'] + self.instructions))
-        # print(env.current_episode)
 
         print("Agent stepping around inside environment.")
         actions = []
         while not env.episode_over:
-            # observations = env.step(env.action_space.sample())
             keystroke = cv2.waitKey(0)
 
             action = action_keys_map.get(keystroke)
@@ -479,7 +469,6 @@ class Demo:
 
     def demo(self, args):
         video_writer = None
-        #video_writer = VideoWriter('test1.avi') if args.save_video else None
         actions, info, observations = self.run(overlay_goal_radar=args.overlay, show_map=args.show_map, video_writer=video_writer)
         if not self.is_quit:
             agents = {}
@@ -499,8 +488,6 @@ class Demo:
             }
             self.save_comparisons(comparisons, args.save_actions, save_info)
 
-        #if video_writer is not None:
-        #    video_writer.release()
         while not self.is_quit:
             # Display info about how well you did
             viewer = Viewer(observations, overlay_goal_radar=args.overlay, show_map=True)
@@ -567,7 +554,6 @@ if __name__ == "__main__":
         config.DATASET.SCENES_DIR = args.scenes_dir
         config.freeze()
 
-    # print(config)
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
     demo.demo(args)
     cv2.destroyAllWindows()
