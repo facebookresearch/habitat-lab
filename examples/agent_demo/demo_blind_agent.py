@@ -1,6 +1,7 @@
+import os.path as osp
+
 import torch
 import torch.nn as nn
-import os.path as osp
 
 
 class DemoBlindAgent(nn.Module):
@@ -14,7 +15,9 @@ class DemoBlindAgent(nn.Module):
         self.reset()
 
         self.load_state_dict(
-            torch.load(osp.join(osp.dirname(__file__), "blind_agent_state.pth"))
+            torch.load(
+                osp.join(osp.dirname(__file__), "blind_agent_state.pth")
+            )
         )
 
     def reset(self):
@@ -23,7 +26,9 @@ class DemoBlindAgent(nn.Module):
             torch.zeros(2, 1, 512, device=device),
             torch.zeros(2, 1, 512, device=device),
         )
-        self.prev_action = torch.full((1,), -1, dtype=torch.long, device=device)
+        self.prev_action = torch.full(
+            (1,), -1, dtype=torch.long, device=device
+        )
 
     def forward(self, obs):
         if isinstance(obs, dict):
@@ -40,10 +45,15 @@ class DemoBlindAgent(nn.Module):
             pg = pg.unsqueeze(0)
 
         with torch.no_grad():
-            pg = torch.stack([pg[:, 0], torch.cos(-pg[:, 1]), torch.sin(-pg[:, 1])], -1)
+            pg = torch.stack(
+                [pg[:, 0], torch.cos(-pg[:, 1]), torch.sin(-pg[:, 1])], -1
+            )
 
             x = torch.cat(
-                [self.tgt_embed(pg), self.prev_action_embedding(self.prev_action + 1)],
+                [
+                    self.tgt_embed(pg),
+                    self.prev_action_embedding(self.prev_action + 1),
+                ],
                 -1,
             )
             x = x.unsqueeze(0)
