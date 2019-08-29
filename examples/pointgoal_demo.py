@@ -10,9 +10,9 @@ To run the demo
 - Download test scenes (http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip)
   and unzip into ${HABITAT_API_REPO}/data
 - Update `configs/tasks/pointnav.yaml` to have higher resolution if you want bigger pictures
-- `python examples/demo.py --task-config configs/tasks/pointnav.yaml --overlay`
+- `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav.yaml --overlay`
 2. Simple demo on test scenes with depth
-- `python examples/demo.py --task-config configs/tasks/pointnav_rgbd.yaml --overlay`
+- `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav_rgbd.yaml --overlay`
 3. Demo on replica scene with blind agent, with saving actions and videos
 - Download pretrained blind agent 
   (get blind_agent_state.pth from https://www.dropbox.com/s/e63uf6joerkf7pe/agent_demo.zip?dl=0 and put into examples/agent_demo)
@@ -29,7 +29,7 @@ To run the demo
   POINTNAVV1:
     DATA_PATH: data/replica_demo/pointnav/{split}.json.gz 
 - Run demo 
-  `python examples/demo.py --task-config configs/tasks/pointnav.yaml,data/replica_demo/replica_test.yaml --agent blind --overlay --scenes-dir . --save-video --save-actions test.json`
+  `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav.yaml,data/replica_demo/replica_test.yaml --agent blind --overlay --scenes-dir . --save-video --save-actions test.json`
   NOTE: video is saved to xyz.avi if you select to replay actions (select 1/2/3 for the agent to replay)
   NOTE: actions are save to simple json file
 
