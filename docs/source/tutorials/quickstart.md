@@ -1,4 +1,4 @@
-# Quickstart 
+# Quickstart
 
 In this quickstart we will briefly introduce the habitat stack using which we will setup the pointnav task and step around in the environment.
 
@@ -6,7 +6,7 @@ In this quickstart we will briefly introduce the habitat stack using which we wi
 
 Habitat is a platform for embodied AI research that consists of:
 1. **Habitat-Sim**: A flexible, high-performance 3D simulator with configurable agents, multiple sensors, and generic 3D dataset handling (with built-in support for [MatterPort3D](https://niessner.github.io/Matterport/), [Gibson](http://gibsonenv.stanford.edu/database/) and other datasets). [[github-repo](https://github.com/facebookresearch/habitat-sim)]
-    
+
 1. **Habitat-API**: A modular high-level library for end-to-end development in embodied AI -- defining embodied AI tasks (e.g. navigation, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in classical SLAM), and benchmarking their performance on the defined tasks using standard metrics. [[github-repo](https://github.com/facebookresearch/habitat-api)]
 
 For installing Habitat-Sim and Habitat-API follow instructions [here](https://github.com/facebookresearch/habitat-api#installation).
@@ -89,7 +89,7 @@ Running the above code will initialize an agent inside an environment, you can m
 Below is a demo of what the example output will look like:
 
 <p align="center">
-  <img src="https://i.imgur.com/5EaQUnf.png"  height="400">
+  <img src="https://dl.fbaipublicfiles.com/habitat/notebooks/images/quickstart.png"  height="400">
 </p>
 
 For more examples refer to [Habitat-API examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples) and [Habitat-Sim examples](https://github.com/facebookresearch/habitat-sim/tree/master/examples).

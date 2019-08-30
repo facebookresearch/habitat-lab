@@ -36,6 +36,8 @@ from habitat_baselines.slambased.reprojection import (
 )
 from habitat_baselines.slambased.utils import generate_2dgrid
 
+GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+
 
 def download(url, filename):
     with open(filename, "wb") as f:
@@ -70,16 +72,16 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.BASELINE.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
+    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
         1
     ]
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MIN = (
-        0.3 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
+        0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
-    config.BASELINE.ORBSLAM2.H_OBSTACLE_MAX = (
-        1.0 * config.BASELINE.ORBSLAM2.CAMERA_HEIGHT
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MAX = (
+        1.0 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
-    config.BASELINE.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
+    config.TRAINER.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
         config.SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
     )
     return
@@ -107,7 +109,7 @@ class RandomAgent(object):
         return
 
     def is_goal_reached(self):
-        dist = self.obs["pointgoal"][0]
+        dist = self.obs[GOAL_SENSOR_UUID][0]
         return dist <= self.dist_threshold_to_stop
 
     def act(self, habitat_observation=None, random_prob=1.0):
@@ -130,8 +132,8 @@ class BlindAgent(RandomAgent):
         return
 
     def decide_what_to_do(self):
-        distance_to_goal = self.obs["pointgoal"][0]
-        angle_to_goal = norm_ang(np.array(self.obs["pointgoal"][1]))
+        distance_to_goal = self.obs[GOAL_SENSOR_UUID][0]
+        angle_to_goal = norm_ang(np.array(self.obs[GOAL_SENSOR_UUID][1]))
         command = SimulatorActions.STOP
         if distance_to_goal <= self.pos_th:
             return command
@@ -400,7 +402,9 @@ class ORBSLAM2Agent(RandomAgent):
 
     def set_offset_to_goal(self, observation):
         self.offset_to_goal = (
-            torch.from_numpy(observation["pointgoal"]).float().to(self.device)
+            torch.from_numpy(observation[GOAL_SENSOR_UUID])
+            .float()
+            .to(self.device)
         )
         self.estimatedGoalPos2D = habitat_goalpos_to_mapgoal_pos(
             self.offset_to_goal,
@@ -607,11 +611,11 @@ def main():
     make_good_config_for_orbslam2(config)
 
     if args.agent_type == "blind":
-        agent = BlindAgent(config.BASELINE.ORBSLAM2)
+        agent = BlindAgent(config.TRAINER.ORBSLAM2)
     elif args.agent_type == "orbslam2-rgbd":
-        agent = ORBSLAM2Agent(config.BASELINE.ORBSLAM2)
+        agent = ORBSLAM2Agent(config.TRAINER.ORBSLAM2)
     elif args.agent_type == "orbslam2-rgb-monod":
-        agent = ORBSLAM2MonodepthAgent(config.BASELINE.ORBSLAM2)
+        agent = ORBSLAM2MonodepthAgent(config.TRAINER.ORBSLAM2)
     else:
         raise ValueError(args.agent_type, "is unknown type of agent")
     benchmark = habitat.Benchmark(args.task_config)

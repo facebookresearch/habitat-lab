@@ -22,6 +22,12 @@ _C.SEED = 100
 _C.ENVIRONMENT = CN()
 _C.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
 _C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
+_C.ENVIRONMENT.ITERATOR_OPTIONS = CN()
+_C.ENVIRONMENT.ITERATOR_OPTIONS.CYCLE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = False
+_C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
+_C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
+_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = -1
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
@@ -37,17 +43,30 @@ _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
 _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+_C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
-# # STATIC POINTGOAL SENSOR
+# # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
-_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
-_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+    "PointGoalWithGPSCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
 _C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+# -----------------------------------------------------------------------------
+# # COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.COMPASS_SENSOR = CN()
+_C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
+# -----------------------------------------------------------------------------
+# # GPS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GPS_SENSOR = CN()
+_C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
+_C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
 # # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
@@ -151,7 +170,6 @@ _C.DATASET = CN()
 _C.DATASET.TYPE = "PointNav-v1"
 _C.DATASET.SPLIT = "train"
 _C.DATASET.SCENES_DIR = "data/scene_datasets"
-_C.DATASET.NUM_EPISODE_SAMPLE = -1
 _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"

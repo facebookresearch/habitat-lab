@@ -72,7 +72,13 @@ class Env:
             )
         self._episodes = self._dataset.episodes if self._dataset else []
         self._current_episode = None
-        self._episode_iterator = self._dataset.get_episode_iterator()
+        iter_option_dict = {
+            k.lower(): v
+            for k, v in config.ENVIRONMENT.ITERATOR_OPTIONS.items()
+        }
+        self._episode_iterator = self._dataset.get_episode_iterator(
+            **iter_option_dict
+        )
 
         # load the first scene if dataset is present
         if self._dataset:
@@ -366,7 +372,7 @@ class RLEnv(gym.Env):
 
         return observations, reward, done, info
 
-    def seed(self, seed: int) -> None:
+    def seed(self, seed: Optional[int] = None) -> None:
         self._env.seed(seed)
 
     def render(self, mode: str = "rgb") -> np.ndarray:

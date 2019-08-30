@@ -4,17 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from itertools import groupby, islice
+
 import pytest
 
 from habitat.core.dataset import Dataset, Episode
 
 
-def _construct_dataset(num_episodes):
+def _construct_dataset(num_episodes, num_groups=10):
     episodes = []
-    for ii in range(num_episodes):
+    for i in range(num_episodes):
         episode = Episode(
-            episode_id=str(ii),
-            scene_id="scene_id_" + str(ii % 10),
+            episode_id=str(i),
+            scene_id="scene_id_" + str(i % num_groups),
             start_position=[0, 0, 0],
             start_rotation=[0, 0, 0, 1],
         )
@@ -89,11 +91,8 @@ def test_get_splits_num_episodes_specified():
     assert len(dataset.episodes) == 30
 
     dataset = _construct_dataset(100)
-    try:
+    with pytest.raises(ValueError):
         splits = dataset.get_splits(10, 20)
-        assert False
-    except AssertionError:
-        pass
 
 
 def test_get_splits_collate_scenes():
@@ -163,48 +162,102 @@ def test_get_splits_sort_by_episode_id():
                 assert ep.episode_id >= split.episodes[ii - 1].episode_id
 
 
-def test_get_uneven_splits():
-    dataset = _construct_dataset(10000)
-    splits = dataset.get_splits(9, allow_uneven_splits=False)
-    assert len(splits) == 9
-    assert sum([len(split.episodes) for split in splits]) == (10000 // 9) * 9
-
-    dataset = _construct_dataset(10000)
-    splits = dataset.get_splits(9, allow_uneven_splits=True)
-    assert len(splits) == 9
-    assert sum([len(split.episodes) for split in splits]) == 10000
-
-    dataset = _construct_dataset(10000)
-    splits = dataset.get_splits(10, allow_uneven_splits=True)
-    assert len(splits) == 10
-    assert sum([len(split.episodes) for split in splits]) == 10000
+@pytest.mark.parametrize(
+    "num_episodes,num_splits",
+    [(994, 64), (1023, 64), (1024, 64), (1025, 64), (10000, 9), (10000, 10)],
+)
+def test_get_splits_func(num_episodes: int, num_splits: int):
+    dataset = _construct_dataset(num_episodes)
+    splits = dataset.get_splits(num_splits, allow_uneven_splits=True)
+    assert len(splits) == num_splits
+    assert sum([len(split.episodes) for split in splits]) == num_episodes
+    splits = dataset.get_splits(num_splits, allow_uneven_splits=False)
+    assert len(splits) == num_splits
+    assert (
+        sum(map(lambda s: s.num_episodes, splits))
+        == (num_episodes // num_splits) * num_splits
+    )
 
 
 def test_sample_episodes():
-    dataset = _construct_dataset(10000)
-    dataset.sample_episodes(-1)
-    assert len(dataset.episodes) == 10000
+    dataset = _construct_dataset(1000)
+    ep_iter = dataset.get_episode_iterator(
+        num_episode_sample=1000, cycle=False
+    )
+    assert len(list(ep_iter)) == 1000
 
-    dataset = _construct_dataset(10000)
-    dataset.sample_episodes(0)
-    assert len(dataset.episodes) == 0
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=0, cycle=False)
+    assert len(list(ep_iter)) == 0
 
-    dataset = _construct_dataset(10000)
-    dataset.sample_episodes(1)
-    assert len(dataset.episodes) == 1
+    with pytest.raises(ValueError):
+        dataset.get_episode_iterator(num_episode_sample=1001, cycle=False)
 
-    dataset = _construct_dataset(10000)
-    dataset.sample_episodes(10000)
-    assert len(dataset.episodes) == 10000
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=100, cycle=True)
+    ep_id_list = [e.episode_id for e in list(islice(ep_iter, 100))]
+    assert len(set(ep_id_list)) == 100
+    next_episode = next(ep_iter)
+    assert next_episode.episode_id in ep_id_list
 
-    dataset = _construct_dataset(10000)
-    with pytest.raises(Exception):
-        dataset.sample_episodes(10001)
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=0, cycle=False)
+    with pytest.raises(StopIteration):
+        next(ep_iter)
 
 
-def test_iterator_looping():
+def test_iterator_cycle():
     dataset = _construct_dataset(100)
-    episode_iter = dataset.get_episode_iterator()
+    ep_iter = dataset.get_episode_iterator(
+        cycle=True, shuffle=False, group_by_scene=False
+    )
     for i in range(200):
-        episode = next(episode_iter)
+        episode = next(ep_iter)
         assert episode.episode_id == dataset.episodes[i % 100].episode_id
+
+    ep_iter = dataset.get_episode_iterator(cycle=True, num_episode_sample=20)
+    episodes = list(islice(ep_iter, 20))
+    for i in range(200):
+        episode = next(ep_iter)
+        assert episode.episode_id == episodes[i % 20].episode_id
+
+
+def test_iterator_shuffle():
+    dataset = _construct_dataset(100)
+    episode_iter = dataset.get_episode_iterator(shuffle=True)
+    first_round_episodes = list(islice(episode_iter, 100))
+    second_round_episodes = list(islice(episode_iter, 100))
+
+    # both rounds should have same episodes but in different order
+    assert sorted(first_round_episodes) == sorted(second_round_episodes)
+    assert first_round_episodes != second_round_episodes
+
+    # both rounds should be grouped by scenes
+    first_round_scene_groups = [
+        k for k, g in groupby(first_round_episodes, key=lambda x: x.scene_id)
+    ]
+    second_round_scene_groups = [
+        k for k, g in groupby(second_round_episodes, key=lambda x: x.scene_id)
+    ]
+    assert len(first_round_scene_groups) == len(second_round_scene_groups)
+    assert len(first_round_scene_groups) == len(set(first_round_scene_groups))
+
+
+def test_iterator_scene_switching():
+    total_ep = 1000
+    max_repeat = 25
+    dataset = _construct_dataset(total_ep)
+
+    episode_iter = dataset.get_episode_iterator(max_scene_repeat=max_repeat)
+    episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
+
+    # episodes before max_repeat reached should be identical
+    for i in range(max_repeat):
+        episode = next(episode_iter)
+        assert episode.episode_id == episodes.pop(0).episode_id
+
+    remaining_episodes = list(islice(episode_iter, total_ep - max_repeat))
+    # remaining episodes should be same but in different order
+    assert len(remaining_episodes) == len(episodes)
+    assert remaining_episodes != episodes
+    assert sorted(remaining_episodes) == sorted(episodes)
+
+    # next episodes should still be grouped by scene (before next switching)
+    assert len(set([e.scene_id for e in remaining_episodes[:max_repeat]])) == 1

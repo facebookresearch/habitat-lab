@@ -1,6 +1,5 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-api/blob/master/LICENSE)
 [![CircleCI](https://circleci.com/gh/facebookresearch/habitat-api.svg?style=shield)](https://circleci.com/gh/facebookresearch/habitat-api)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebookresearch/habitat-api/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 Habitat-API
 ==============================
@@ -8,7 +7,9 @@ Habitat-API
 Habitat-API is a modular high-level library for end-to-end development in embodied AI --
 defining embodied AI tasks (e.g. navigation, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in classical SLAM), and benchmarking their performance on the defined tasks using standard metrics.
 
-Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators.
+Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators. For documentation refer [here](https://aihabitat.org/habitat-api/).
+
+We also have a dev slack channel, please follow this [link](https://join.slack.com/t/ai-habitat/shared_invite/enQtNjY1MzM1NDE4MTk2LTZhMzdmYWMwODZlNjg5MjZiZjExOTBjOTg5MmRiZTVhOWQyNzk0OTMyN2E1ZTEzZTNjMWM0MjBkN2VhMjQxMDI) to get added to the channel. If you want to contribute PRs or face issues with habitat please reach out to us either through github issues or slack channel.
 
 <p align="center">
   <img src="res/img/habitat_compressed.gif"  height="400">
@@ -35,27 +36,28 @@ While there has been significant progress in the vision and language communities
 To this end, we aim to standardize the entire ‘software stack’ for training embodied agents – scanning the world and creating highly photorealistic 3D assets, developing the next generation of highly efficient and parallelizable simulators, specifying embodied AI tasks that enable us to benchmark scientific progress, and releasing modular high-level libraries to train and deploy embodied agents.
 
 ## Citing Habitat
-If you use the Habitat platform in your research, please cite the following [technical report](https://arxiv.org/abs/1904.01201):
+If you use the Habitat platform in your research, please cite the following [paper](https://arxiv.org/abs/1904.01201):
+
 ```
-@article{habitat19arxiv,
-  title =   {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
-  author =  {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
-  journal = {arXiv preprint arXiv:1904.01201},
-  year =    {2019}
+@inproceedings{habitat19iccv,
+  title     =     {Habitat: {A} {P}latform for {E}mbodied {AI} {R}esearch},
+  author    =     {{Manolis Savva*} and {Abhishek Kadian*} and {Oleksandr Maksymets*} and Yili Zhao and Erik Wijmans and Bhavana Jain and Julian Straub and Jia Liu and Vladlen Koltun and Jitendra Malik and Devi Parikh and Dhruv Batra},
+  booktitle =     {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      =     {2019}
 }
 ```
 
 ## Installation
 
 1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
-  
+
     ```bash
     cd habitat-api
     pip install -e .
     ```
-  
+
     The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
-  
+
     ```bash
     cd habitat-api
     pip install -r requirements.txt
@@ -119,7 +121,7 @@ An important objective of Habitat-API is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='res/img/habitat-api_structure.png' alt="teaser results" width="100%"/>
+  <img src='res/img/habitat_api_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat-API</i></p>
 </p>
 
@@ -164,6 +166,5 @@ The Habitat project would not have been possible without the support and contrib
 ## License
 Habitat-API is MIT licensed. See the LICENSE file for details.
 
-## References
-1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. Tech report, arXiv:1904.01201, 2019. 
-
+## References and Citation
+1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.

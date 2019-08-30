@@ -9,22 +9,21 @@ import os
 import pytest
 
 import habitat
-from habitat_baselines.agents import simple_agents
 
 try:
-    import torch  # noqa # pylint: disable=unused-import
-
-    has_torch = True
-except ImportError:
-    has_torch = False
-
-if has_torch:
     from habitat_baselines.agents import ppo_agents
+    from habitat_baselines.agents import simple_agents
+
+    baseline_installed = True
+except ImportError:
+    baseline_installed = False
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 
 
-@pytest.mark.skipif(not has_torch, reason="Test needs torch")
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 def test_ppo_agents():
     agent_config = ppo_agents.get_default_config()
     agent_config.MODEL_PATH = ""
@@ -50,6 +49,9 @@ def test_ppo_agents():
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
 
 
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 def test_simple_agents():
     config_env = habitat.get_config(config_paths=CFG_TEST)
 
