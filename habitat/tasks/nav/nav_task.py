@@ -21,6 +21,7 @@ from habitat.core.simulator import (
     SensorTypes,
     ShortestPathPoint,
     Simulator,
+    SimulatorActions,
 )
 from habitat.core.utils import not_none_validator
 from habitat.tasks.utils import (
@@ -718,6 +719,30 @@ class NavigationTask(EmbodiedTask):
 
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
+
+    @registry.register_task_action(name="move_forward")
+    def move_forward(self):
+        return self._sim.step(SimulatorActions.MOVE_FORWARD)
+
+    @registry.register_task_action(name="turn_left")
+    def turn_left(self):
+        return self._sim.step(SimulatorActions.TURN_LEFT)
+
+    @registry.register_task_action(name="turn_right")
+    def turn_right(self):
+        return self._sim.step(SimulatorActions.TURN_RIGHT)
+
+    @registry.register_task_action(name="look_up")
+    def look_up(self):
+        return self._sim.step(SimulatorActions.LOOK_UP)
+
+    @registry.register_task_action(name="look_down")
+    def look_down(self):
+        return self._sim.step(SimulatorActions.LOOK_DOWN)
+
+    @registry.register_task_action(name="stop")
+    def stop(self):
+        return self._sim.step(SimulatorActions.STOP)
 
     def overwrite_sim_config(
         self, sim_config: Any, episode: Type[Episode]

@@ -176,6 +176,7 @@ jobs:
             - /home/circleci/.ccache
       - run:
           name: Install api
+          no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api

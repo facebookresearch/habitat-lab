@@ -37,6 +37,7 @@ _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
+_C.TASK.POSSIBLE_ACTIONS = ["stop", "move_forward", "turn_left", "turn_right"]
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
