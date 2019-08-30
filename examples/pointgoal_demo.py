@@ -79,6 +79,8 @@ INSTRUCTIONS = [
 
 LINE_SPACING = 50
 
+# TODO: Some of the functions below are potentially useful across other examples/demos
+#       and should be moved to habitat/utils/visualizations
 
 class Rect(NamedTuple):
     left: int
@@ -101,10 +103,8 @@ class Rect(NamedTuple):
             self.top + int(self.height / 2),
         )
 
-
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
-
 
 def write_textlines(
     output, textlines, size=1, offset=(0, 0), fontcolor=(255, 255, 255)
@@ -137,6 +137,9 @@ def add_text(img, textlines=[], fontsize=0.8, top=False):
 
 
 def draw_gradient_circle(img, center, size, color, bgcolor):
+    ''' Draws a circle that fades from color (at the center)
+        to bgcolor (at the boundaries)
+    '''
     for i in range(1, size):
         a = 1 - i / size
         c = np.add(
@@ -148,6 +151,9 @@ def draw_gradient_circle(img, center, size, color, bgcolor):
 def draw_gradient_wedge(
     img, center, size, color, bgcolor, start_angle, delta_angle
 ):
+    ''' Draws a wedge that fades from color (at the center)
+        to bgcolor (at the boundaries)
+    '''
     for i in range(1, size):
         a = 1 - i / size
         c = np.add(np.multiply(color, a), np.multiply(bgcolor, 1 - a))
@@ -171,14 +177,15 @@ def draw_goal_radar(
     fov=0,
     goalcolor=(50, 0, 184, 255),
     wincolor=(0, 0, 0, 0),
-    # maskcolor=(128,128,128,255),
     maskcolor=(85, 75, 70, 255),
     bgcolor=(255, 255, 255, 255),
     gradientcolor=(174, 112, 80, 255),
 ):
-    angle = pointgoal[1]
-    mag = pointgoal[0]
-    nm = mag / (mag + 1)
+    ''' Draws a radar that shows the goal as a dot
+    '''
+    angle = pointgoal[1]  # angle
+    mag = pointgoal[0]    # magnitude (>=0)
+    nm = mag / (mag + 1)  # normalized magnitude (0 to 1)
     xy = (-math.sin(angle), -math.cos(angle))
     size = int(round(0.45 * min(r.width, r.height)))
     center = r.center
@@ -403,6 +410,8 @@ class Demo:
         cv2.imshow(self.window_name, img)
 
     def do_episode(self, overlay_goal_radar=False, show_map=False, video_writer=None):
+        ''' Have human controlled navigation for one episode
+        '''
         env = self.env
         action_keys_map = self.action_keys_map
 
@@ -458,6 +467,8 @@ class Demo:
         return actions, info, observations
 
     def get_follower_actions(self, mode="geodesic_path"):
+        ''' Get shortest path actions
+        '''
         env = self.env
         observations = env.reset(keep_current_episode=True)
         goal_radius = get_goal_radius(env)
@@ -476,6 +487,8 @@ class Demo:
         return actions, info, observations
 
     def get_agent_actions(self, agent):
+        ''' Get actions for trained agent
+        '''
         # NOTE: Action space for agent is hard coded (need to match our scenario)
         env = self.env
         observations = env.reset(keep_current_episode=True)
@@ -498,6 +511,8 @@ class Demo:
         delay=1,
         video_writer=None,
     ):
+        ''' Replay actions and show video
+        '''
         # Set delay to 0 to wait for key presses before advancing
         env = self.env
         action_keys_map = self.action_keys_map
@@ -576,7 +591,7 @@ class Demo:
         with open(filename, "w") as file:
             json.dump(save_info, file)
 
-    def demo(self, args):
+    def run(self, args):
         video_writer = None
         actions, info, observations = self.do_episode(
             overlay_goal_radar=args.overlay,
@@ -687,5 +702,5 @@ if __name__ == "__main__":
         config.freeze()
 
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
-    demo.demo(args)
+    demo.run(args)
     cv2.destroyAllWindows()
