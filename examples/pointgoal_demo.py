@@ -51,10 +51,10 @@ import cv2
 import habitat
 from examples.agent_demo.demo_blind_agent import DemoBlindAgent
 from habitat.core.logging import logger
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
-
 
 class ActionKeyMapping(NamedTuple):
     name: str
@@ -64,10 +64,10 @@ class ActionKeyMapping(NamedTuple):
 
 
 AGENT_ACTION_KEYS = [
-    ActionKeyMapping("FORWARD", ord("w"), 0),
-    ActionKeyMapping("LEFT", ord("a"), 1),
-    ActionKeyMapping("RIGHT", ord("d"), 2),
-    ActionKeyMapping("DONE", ord(" "), 3),
+    ActionKeyMapping("FORWARD", ord("w"), SimulatorActions.FORWARD.value),
+    ActionKeyMapping("LEFT", ord("a"), SimulatorActions.LEFT.value),
+    ActionKeyMapping("RIGHT", ord("d"), SimulatorActions.RIGHT.value),
+    ActionKeyMapping("DONE", ord(" "), SimulatorActions.STOP.value),
     ActionKeyMapping("QUIT", ord("q"), -1, True),
 ]
 
