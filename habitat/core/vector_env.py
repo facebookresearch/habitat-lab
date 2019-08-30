@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import multiprocessing as mp
 from multiprocessing.connection import Connection
+from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
 from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
@@ -19,6 +19,11 @@ from habitat.config import Config
 from habitat.core.env import Env, Observations
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
+
+try:
+    import torch.multiprocessing as mp
+except ImportError:
+    import multiprocessing as mp
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -74,7 +79,7 @@ class VectorEnv:
     _is_waiting: bool
     _num_envs: int
     _auto_reset_done: bool
-    _mp_ctx: mp.context.BaseContext
+    _mp_ctx: BaseContext
     _connection_read_fns: List[Callable[[], Any]]
     _connection_write_fns: List[Callable[[Any], None]]
 

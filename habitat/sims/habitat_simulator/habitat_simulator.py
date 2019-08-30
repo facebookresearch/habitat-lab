@@ -98,12 +98,18 @@ class HabitatSimDepthSensor(DepthSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
-        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+        if isinstance(obs, np.ndarray):
+            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
+        else:
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = obs.unsqueeze(-1)
+
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
-
-        obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
 
         return obs
 
@@ -171,22 +177,19 @@ class HabitatSim(Simulator):
         sim_config.scene.id = self.config.SCENE
         sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
         agent_config = habitat_sim.AgentConfiguration()
-        overwrite_config(
-            config_from=self._get_agent_config(), config_to=agent_config
-        )
+        overwrite_config(config_from=self._get_agent_config(), config_to=agent_config)
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
             sim_sensor_cfg.uuid = sensor.uuid
-            sim_sensor_cfg.resolution = list(
-                sensor.observation_space.shape[:2]
-            )
+            sim_sensor_cfg.resolution = list(sensor.observation_space.shape[:2])
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
             sim_sensor_cfg.position = sensor.config.POSITION
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
+            sim_sensor_cfg.gpu2gpu_transfer = self.config.HABITAT_SIM_V0.GPU_GPU
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
@@ -214,9 +217,7 @@ class HabitatSim(Simulator):
             agent_cfg = self._get_agent_config(agent_id)
             if agent_cfg.IS_SET_START_STATE:
                 self.set_agent_state(
-                    agent_cfg.START_POSITION,
-                    agent_cfg.START_ROTATION,
-                    agent_id,
+                    agent_cfg.START_POSITION, agent_cfg.START_ROTATION, agent_id
                 )
                 is_updated = True
 
@@ -437,9 +438,7 @@ class HabitatSim(Simulator):
             observations = self._sensor_suite.get_observations(sim_obs)
             if not keep_agent_at_new_pose:
                 self.set_agent_state(
-                    current_state.position,
-                    current_state.rotation,
-                    reset_sensors=False,
+                    current_state.position, current_state.rotation, reset_sensors=False
                 )
             return observations
         else:
