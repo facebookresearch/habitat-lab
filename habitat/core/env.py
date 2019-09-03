@@ -227,7 +227,7 @@ class Env:
                 inside the environment. Action is a name or index of allowed
                 task's action.
             action_args: action arguments (belonging to action's
-            ``action_space``) to support parametrized and continues actions.
+            ``action_space``) to support parametrized and continuous actions.
 
         Returns:
             observations after taking action in environment.

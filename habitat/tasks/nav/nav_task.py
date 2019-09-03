@@ -13,7 +13,12 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    EmptySpace,
+    Measure,
+    Measurements,
+)
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Sensor,
@@ -720,29 +725,72 @@ class NavigationTask(EmbodiedTask):
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
 
-    @registry.register_task_action(name="move_forward")
+    @registry.register_task_action(
+        name="move_forward", action_space=EmptySpace()
+    )
     def move_forward(self):
         return self._sim.step(SimulatorActions.MOVE_FORWARD)
 
-    @registry.register_task_action(name="turn_left")
+    @registry.register_task_action(name="turn_left", action_space=EmptySpace())
     def turn_left(self):
         return self._sim.step(SimulatorActions.TURN_LEFT)
 
-    @registry.register_task_action(name="turn_right")
+    @registry.register_task_action(
+        name="turn_right", action_space=EmptySpace()
+    )
     def turn_right(self):
         return self._sim.step(SimulatorActions.TURN_RIGHT)
 
-    @registry.register_task_action(name="look_up")
+    @registry.register_task_action(name="look_up", action_space=EmptySpace())
     def look_up(self):
         return self._sim.step(SimulatorActions.LOOK_UP)
 
-    @registry.register_task_action(name="look_down")
+    @registry.register_task_action(name="look_down", action_space=EmptySpace())
     def look_down(self):
         return self._sim.step(SimulatorActions.LOOK_DOWN)
 
-    @registry.register_task_action(name="stop")
+    @registry.register_task_action(name="stop", action_space=EmptySpace())
     def stop(self):
         return self._sim.step(SimulatorActions.STOP)
+
+    @registry.register_task_action(
+        name="teleport",
+        action_space=spaces.Dict(
+            {
+                "position": spaces.Box(
+                    low=np.array([-10.0, -10.0, -10.0]),
+                    high=np.array([10.0, 10.0, 10.0]),
+                    dtype=np.float32,
+                ),
+                "rotation": spaces.Box(
+                    low=np.array([-1.0, -1.0, -1.0, -1.0]),
+                    high=np.array([1.0, 1.0, 1.0, 1.0]),
+                    dtype=np.float32,
+                ),
+                # "position": spaces.Box(
+                #     low=[-10.0, -10.0, -10.0],
+                #     high=[10.0, 10.0, 10.0],
+                #     dtype=float
+                # ),
+                # "rotation": spaces.Box(
+                #     low=[-1.0, -1.0, -1.0, -1.0],
+                #     high=[1.0, 1.0, 1.0, 1.0],
+                #     dtype=float
+                # ),
+            }
+        ),
+    )
+    def teleport(self, position: List[float], rotation: List[float]):
+        if not isinstance(rotation, list):
+            rotation = list(rotation)
+        # if not isinstance(position, list):
+        #     position = list(position)
+        if not self._sim.is_navigable(position):
+            return {}
+
+        return self._sim.get_observations_at(
+            position=position, rotation=rotation, keep_agent_at_new_pose=True
+        )
 
     def overwrite_sim_config(
         self, sim_config: Any, episode: Type[Episode]

@@ -108,6 +108,14 @@ class Measurements:
         return Metrics(self.measures)
 
 
+class EmptySpace(Space):
+    def sample(self):
+        return None
+
+    def contains(self, x):
+        return False
+
+
 class EmbodiedTask:
     r"""Base class for embodied tasks. When subclassing the user has to
     define the attributes ``measurements`` and ``sensor_suite``.
@@ -137,10 +145,8 @@ class EmbodiedTask:
 
         self._possible_actions = OrderedDict()
         for action in config.POSSIBLE_ACTIONS:
-            assert action in registry.mapping["task_action"]
-            self._possible_actions[action] = registry.mapping["task_action"][
-                action
-            ]
+            action_method = registry.get_task_action(action)
+            self._possible_actions[action] = action_method
 
     def step(
         self,
@@ -155,7 +161,7 @@ class EmbodiedTask:
                 raise ValueError(f"Action index '{action}' is out of range.")
             action = list(self._possible_actions.keys())[action]
         assert (
-            action in self._possible_actions.keys()
+            action in self._possible_actions
         ), f"Can't find '{action}' action in {self._possible_actions.keys()}."
 
         action_method = self._possible_actions[action]
@@ -168,9 +174,18 @@ class EmbodiedTask:
 
         return observations
 
-    @property
-    def action_space(self) -> Space:
-        return spaces.Discrete(len(self._possible_actions))
+    def get_action_by_index(self, action_index: int):
+        if action_index >= len(self._possible_actions):
+            raise ValueError(f"Action index '{action}' is out of range.")
+        return list(self._possible_actions.keys())[action_index]
+
+    def action_space(self, action: Union[int, str] = None) -> Space:
+        if action is None:
+            return spaces.Discrete(len(self._possible_actions))
+        else:
+            if isinstance(action, (int, np.integer)):
+                action = self.get_action_by_index(action)
+            return registry.get_task_action_spec(name=action)
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
