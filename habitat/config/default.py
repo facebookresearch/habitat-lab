@@ -162,6 +162,12 @@ _C.SIMULATOR.AGENTS = ["AGENT_0"]
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.HABITAT_SIM_V0 = CN()
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
+# Use Habitat-Sim's GPU->GPU copy mode to return rendering results
+# in PyTorch tensors.  Requires Habitat-Sim to be built
+# with --with-cuda
+# This will generally imply sharing CUDA tensors between processes.
+# Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
+# for the caveats that results in
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
 # -----------------------------------------------------------------------------
 # DATASET

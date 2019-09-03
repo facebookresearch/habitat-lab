@@ -217,9 +217,6 @@ class PPOTrainer(BaseRLTrainer):
             )
         )
 
-        observations = self.envs.reset()
-        batch = batch_obs(observations)
-
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
@@ -227,9 +224,19 @@ class PPOTrainer(BaseRLTrainer):
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
         )
+        rollouts.to(self.device)
+
+        observations = self.envs.reset()
+        batch = batch_obs(observations)
+
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
-        rollouts.to(self.device)
+
+        # batch and observations may contain shared PyTorch CUDA
+        # tensors.  We must explicitly clear them here otherwise
+        # they will be kept in memory for the entire duration of training!
+        batch = None
+        observations = None
 
         episode_rewards = torch.zeros(self.envs.num_envs, 1)
         episode_counts = torch.zeros(self.envs.num_envs, 1)
@@ -391,9 +398,7 @@ class PPOTrainer(BaseRLTrainer):
         self.metric_uuid = measure_type(None, None)._get_uuid()
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
-        for sensor in batch:
-            batch[sensor] = batch[sensor].to(self.device)
+        batch = batch_obs(observations, self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -441,9 +446,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations)
-            for sensor in batch:
-                batch[sensor] = batch[sensor].to(self.device)
+            batch = batch_obs(observations, self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],

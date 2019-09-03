@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from glob import glob
+import itertools
 
 import pytest
 
@@ -22,15 +23,28 @@ except ImportError:
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,mode",
-    [
-        (cfg, mode)
-        for mode in ("train", "eval")
-        for cfg in glob("habitat_baselines/config/test/*")
-    ],
+    "test_cfg_path,mode,gpu2gpu",
+    itertools.product(
+        glob("habitat_baselines/config/test/*"),
+        ["train", "eval"],
+        [True, False],
+    ),
 )
-def test_trainers(test_cfg_path, mode):
-    run_exp(test_cfg_path, mode)
+def test_trainers(test_cfg_path, mode, gpu2gpu):
+    if gpu2gpu:
+        try:
+            import habitat_sim
+        except ImportError:
+            pytest.skip("GPU-GPU requires Habitat-Sim")
+
+        if not habitat_sim.cuda_enabled:
+            pytest.skip("GPU-GPU requires CUDA")
+
+    run_exp(
+        test_cfg_path,
+        mode,
+        ["TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU", str(gpu2gpu)],
+    )
 
 
 @pytest.mark.skipif(
