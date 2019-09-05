@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import abc
 from collections import OrderedDict
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -18,12 +17,11 @@ from habitat.core.utils import Singleton
 
 
 @attr.s(auto_attribs=True)
-class ActionSpaceConfiguration(abc.ABC):
+class ActionSpaceConfiguration:
     config: Config
 
-    @abc.abstractmethod
     def get(self):
-        pass
+        raise NotImplementedError
 
 
 class _DefaultSimulatorActions(Enum):

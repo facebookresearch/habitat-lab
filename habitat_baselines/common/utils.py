@@ -66,12 +66,25 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-def batch_obs(observations: List[Dict]) -> Dict:
+def _to_tensor(v):
+    if torch.is_tensor(v):
+        return v
+    elif isinstance(v, np.ndarray):
+        return torch.from_numpy(v)
+    else:
+        return torch.tensor(v, dtype=torch.float)
+
+
+def batch_obs(
+    observations: List[Dict], device: Optional[torch.device] = None
+) -> Dict[str, torch.Tensor]:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
 
     Args:
         observations:  list of dicts of observations.
+        device: The torch.device to put the resulting tensors on.
+            Will not move the tensors if None
 
     Returns:
         transposed dict of lists of observations.
@@ -80,12 +93,13 @@ def batch_obs(observations: List[Dict]) -> Dict:
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(obs[sensor])
+            batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
-        batch[sensor] = torch.tensor(
-            np.array(batch[sensor]), dtype=torch.float
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(
+            device=device, dtype=torch.float
         )
+
     return batch
 
 
@@ -120,7 +134,8 @@ def generate_video(
     images: List[np.ndarray],
     episode_id: int,
     checkpoint_idx: int,
-    spl: float,
+    metric_name: str,
+    metric_value: float,
     tb_writer: TensorboardWriter,
     fps: int = 10,
 ) -> None:
@@ -132,7 +147,8 @@ def generate_video(
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
-        spl: SPL for this episode for video naming.
+        metric_name: name of the performance metric, e.g. "spl".
+        metric_value: value of metric.
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.
     Returns:
@@ -141,7 +157,7 @@ def generate_video(
     if len(images) < 1:
         return
 
-    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_spl{spl:.2f}"
+    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_{metric_name}{metric_value:.2f}"
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name)

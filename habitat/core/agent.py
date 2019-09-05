@@ -8,6 +8,8 @@ the user should subclass ``habitat.Agent`` and implement the ``act()``
 and ``reset()`` methods.
 """
 
+from typing import Any, Dict, Optional
+
 from habitat.core.simulator import Observations
 
 
@@ -21,7 +23,9 @@ class Agent:
         """
         raise NotImplementedError
 
-    def act(self, observations: Observations) -> int:
+    def act(
+        self, observations: Observations
+    ) -> (int, Optional[Dict[str, Any]]):
         r"""
 
         Args:
@@ -29,6 +33,7 @@ class Agent:
                 by agent to decide action.
 
         Returns:
-            action to be taken inside the environment.
+            action to be taken inside the environment and optional action
+            arguments.
         """
         raise NotImplementedError

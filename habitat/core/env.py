@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import gym
 import numpy as np
@@ -104,7 +104,7 @@ class Env:
                 **self._task.sensor_suite.observation_spaces.spaces,
             }
         )
-        self.action_space = self._sim.action_space
+        self.action_space = self._task.action_space
         self._max_episode_seconds = (
             self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         )
@@ -215,12 +215,23 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
+<<<<<<< HEAD
     def step(self, action: int, action_args: Dict = None) -> Observations:
+=======
+    def step(
+        self,
+        action: Union[int, str],
+        action_args: Optional[Dict[str, Any]] = None,
+    ) -> Observations:
+>>>>>>> task_actions
         r"""Perform an action in the environment and return observations.
 
         Args:
             action: action (belonging to ``action_space``) to be performed 
-                inside the environment.
+                inside the environment. Action is a name or index of allowed
+                task's action.
+            action_args: action arguments (belonging to action's
+            ``action_space``) to support parametrized and continuous actions.
 
         Returns:
             observations after taking action in environment.
@@ -233,6 +244,7 @@ class Env:
             self._episode_over is False
         ), "Episode over, call reset before calling step"
 
+<<<<<<< HEAD
         observations = self.task.step(action=action,
                                       episode=self.current_episode,
                                       action_args=action_args)
@@ -241,6 +253,13 @@ class Env:
         #         observations=observations, episode=self.current_episode
         #     )
         # )
+=======
+        observations = self.task.step(
+            action=action,
+            episode=self.current_episode,
+            action_args=action_args,
+        )
+>>>>>>> task_actions
 
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action
@@ -355,7 +374,11 @@ class RLEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
+    def step(
+        self,
+        action: Union[int, str],
+        action_args: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment and return
         ``(observations, reward, done, info)``.
 
@@ -367,7 +390,7 @@ class RLEnv(gym.Env):
             ``(observations, reward, done, info)``.
         """
 
-        observations = self._env.step(action)
+        observations = self._env.step(action, action_args)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)

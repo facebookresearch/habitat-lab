@@ -36,6 +36,8 @@ from habitat_baselines.slambased.reprojection import (
 )
 from habitat_baselines.slambased.utils import generate_2dgrid
 
+GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+
 
 def download(url, filename):
     with open(filename, "wb") as f:
@@ -107,7 +109,7 @@ class RandomAgent(object):
         return
 
     def is_goal_reached(self):
-        dist = self.obs["pointgoal"][0]
+        dist = self.obs[GOAL_SENSOR_UUID][0]
         return dist <= self.dist_threshold_to_stop
 
     def act(self, habitat_observation=None, random_prob=1.0):
@@ -118,7 +120,7 @@ class RandomAgent(object):
             action = SimulatorActions.STOP
         else:
             action = random.randint(0, self.num_actions - 1)
-        return action
+        return action, None
 
 
 class BlindAgent(RandomAgent):
@@ -130,8 +132,8 @@ class BlindAgent(RandomAgent):
         return
 
     def decide_what_to_do(self):
-        distance_to_goal = self.obs["pointgoal"][0]
-        angle_to_goal = norm_ang(np.array(self.obs["pointgoal"][1]))
+        distance_to_goal = self.obs[GOAL_SENSOR_UUID][0]
+        angle_to_goal = norm_ang(np.array(self.obs[GOAL_SENSOR_UUID][1]))
         command = SimulatorActions.STOP
         if distance_to_goal <= self.pos_th:
             return command
@@ -161,7 +163,7 @@ class BlindAgent(RandomAgent):
             action = random_action
         else:
             action = command
-        return action
+        return action, None
 
 
 class ORBSLAM2Agent(RandomAgent):
@@ -332,7 +334,7 @@ class ORBSLAM2Agent(RandomAgent):
         if success:
             action = SimulatorActions.STOP
             self.action_history.append(action)
-            return action
+            return action, None
         # Plan action
         t = time.time()
         self.planned2Dpath, self.planned_waypoints = self.plan_path()
@@ -357,7 +359,7 @@ class ORBSLAM2Agent(RandomAgent):
         if self.timing:
             print(time.time() - t, " s, get action")
         self.action_history.append(action)
-        return action
+        return action, None
 
     def is_waypoint_good(self, pose6d):
         p_init = self.pose6D.squeeze()
@@ -400,7 +402,9 @@ class ORBSLAM2Agent(RandomAgent):
 
     def set_offset_to_goal(self, observation):
         self.offset_to_goal = (
-            torch.from_numpy(observation["pointgoal"]).float().to(self.device)
+            torch.from_numpy(observation[GOAL_SENSOR_UUID])
+            .float()
+            .to(self.device)
         )
         self.estimatedGoalPos2D = habitat_goalpos_to_mapgoal_pos(
             self.offset_to_goal,
@@ -508,7 +512,7 @@ class ORBSLAM2Agent(RandomAgent):
         action = None
         if self.is_goal_reached():
             action = SimulatorActions.STOP
-            return action
+            return action, None
         if self.unseen_obstacle:
             command = SimulatorActions.TURN_RIGHT
             return command

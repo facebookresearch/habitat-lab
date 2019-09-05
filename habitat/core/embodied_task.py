@@ -7,25 +7,16 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
-import attr
 from collections import OrderedDict
-from gym import Space
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
+
+import numpy as np
+from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.simulator import SensorSuite, Simulator, Observations
 from habitat.core.registry import registry
-from habitat.core.utils import not_none_validator
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class TaskAction:
-    """Base class for Environment Action
-    """
-
-    sim_action: int = attr.ib(default=None)
-    task_action: object = attr.ib(default=None)
+from habitat.core.simulator import SensorSuite, Simulator
 
 
 class Measure:
@@ -117,6 +108,14 @@ class Measurements:
         return Metrics(self.measures)
 
 
+class EmptySpace(Space):
+    def sample(self):
+        return None
+
+    def contains(self, x):
+        return False
+
+
 class EmbodiedTask:
     r"""Base class for embodied tasks. When subclassing the user has to
     define the attributes ``measurements`` and ``sensor_suite``.
@@ -147,14 +146,6 @@ class EmbodiedTask:
         for action in config.POSSIBLE_ACTIONS:
             assert action in registry.mapping["task_action"]
             self._possible_actions[action] = registry.mapping["task_action"][action]
-        # self._possible_actions = [registry.mapping[action] for action
-        #                          in
-        #                           config.TASK.POSSIBLE_ACTIONS]
-
-    def _step(self, action: TaskAction, episode, action_args) -> Observations:
-        if isinstance(action, int):
-            action = self._possible_actions[action]
-        return self._step(action, episode, action_args)
 
     def step(self, action: int, episode, action_args=None):
         if action_args is None:
@@ -172,12 +163,44 @@ class EmbodiedTask:
 
         return observations
 
-    def _step(self, action: TaskAction, episode, action_args) -> Observations:
-        raise NotImplementedError
+    def step(
+        self,
+        action: Union[str, int],
+        episode: Type[Episode],
+        action_args: Dict[str, Any] = None,
+    ):
+        if action_args is None:
+            action_args = {}
+        if isinstance(action, (int, np.integer)):
+            if action >= len(self._possible_actions):
+                raise ValueError(f"Action index '{action}' is out of range.")
+            action = list(self._possible_actions.keys())[action]
+        assert (
+            action in self._possible_actions
+        ), f"Can't find '{action}' action in {self._possible_actions.keys()}."
 
-    @property
-    def action_space(self) -> Space:
-        raise NotImplementedError
+        action_method = self._possible_actions[action]
+        observations = action_method(self, **action_args)
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations, episode=episode
+            )
+        )
+
+        return observations
+
+    def get_action_by_index(self, action_index: int):
+        if action_index >= len(self._possible_actions):
+            raise ValueError(f"Action index '{action}' is out of range.")
+        return list(self._possible_actions.keys())[action_index]
+
+    def action_space(self, action: Union[int, str] = None) -> Space:
+        if action is None:
+            return spaces.Discrete(len(self._possible_actions))
+        else:
+            if isinstance(action, (int, np.integer)):
+                action = self.get_action_by_index(action)
+            return registry.get_task_action_spec(name=action)
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]

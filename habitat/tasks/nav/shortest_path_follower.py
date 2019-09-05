@@ -69,7 +69,9 @@ class ShortestPathFollower:
         """Returns the next action along the shortest path.
         """
         if (
-            np.linalg.norm(goal_pos - self._sim.get_agent_state().position)
+            self._sim.geodesic_distance(
+                self._sim.get_agent_state().position, goal_pos
+            )
             <= self._goal_radius
         ):
             return self._get_return_value(SimulatorActions.STOP)

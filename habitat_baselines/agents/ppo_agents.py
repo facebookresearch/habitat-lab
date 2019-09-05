@@ -28,7 +28,7 @@ def get_default_config():
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal"
+    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
 
 
@@ -132,7 +132,7 @@ class PPOAgent(Agent):
             self.not_done_masks = torch.ones(1, 1, device=self.device)
             self.prev_actions.copy_(actions)
 
-        return actions[0][0].item()
+        return actions[0][0].item(), None
 
 
 def main():

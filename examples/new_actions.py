@@ -126,19 +126,39 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         return config
 
 
+@habitat.registry.register_task(name="NavTaskWithStrafe-v0")
+class NavigationTaskWithStrafe(habitat.tasks.nav.nav_task.NavigationTask):
+    @habitat.registry.register_task_action(
+        name="strafe_left", action_space=None
+    )
+    def strafe_left(self):
+        return self._sim.step(habitat.SimulatorActions.STRAFE_LEFT)
+
+    @habitat.registry.register_task_action(
+        name="strafe_right", action_space=None
+    )
+    def strafe_right(self):
+        return self._sim.step(habitat.SimulatorActions.STRAFE_RIGHT)
+
+
 def main():
     habitat.SimulatorActions.extend_action_space("STRAFE_LEFT")
     habitat.SimulatorActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
+    config.TASK.TYPE = "NavTaskWithStrafe-v0"
+    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
+        "strafe_left",
+        "strafe_right",
+    ]
     config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
     config.freeze()
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("strafe_left")
+    env.step("strafe_right")
     env.close()
 
     config.defrost()
@@ -147,8 +167,8 @@ def main():
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("strafe_left")
+    env.step("strafe_right")
     env.close()
 
 

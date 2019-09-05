@@ -62,8 +62,8 @@ class Benchmark:
             observations = self._env.reset()
 
             while not self._env.episode_over:
-                action = agent.act(observations)
-                observations = self._env.step(action)
+                action, action_args = agent.act(observations)
+                observations = self._env.step(action, action_args)
 
             metrics = self._env.get_metrics()
             for m, v in metrics.items():

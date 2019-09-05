@@ -47,17 +47,30 @@ _C.TASK.POSSIBLE_ACTIONS = ["stop", "move_forward", "turn_left", "turn_right"]
 _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+_C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
-# # STATIC POINTGOAL SENSOR
+# # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.STATIC_POINTGOAL_SENSOR = CN()
-_C.TASK.STATIC_POINTGOAL_SENSOR.TYPE = "StaticPointGoalSensor"
-_C.TASK.STATIC_POINTGOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+    "PointGoalWithGPSCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
 _C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+# -----------------------------------------------------------------------------
+# # COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.COMPASS_SENSOR = CN()
+_C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
+# -----------------------------------------------------------------------------
+# # GPS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GPS_SENSOR = CN()
+_C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
+_C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
 # # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
@@ -186,6 +199,13 @@ _C.SIMULATOR.AGENTS = ["AGENT_0"]
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.HABITAT_SIM_V0 = CN()
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
+# Use Habitat-Sim's GPU->GPU copy mode to return rendering results
+# in PyTorch tensors.  Requires Habitat-Sim to be built
+# with --with-cuda
+# This will generally imply sharing CUDA tensors between processes.
+# Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
+# for the caveats that results in
+_C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
 # -----------------------------------------------------------------------------
 # DATASET
 # -----------------------------------------------------------------------------

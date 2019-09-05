@@ -13,7 +13,12 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    EmptySpace,
+    Measure,
+    Measurements,
+)
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Sensor,
@@ -24,7 +29,11 @@ from habitat.core.simulator import (
     SimulatorActions,
 )
 from habitat.core.utils import not_none_validator
-from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
+from habitat.tasks.utils import (
+    cartesian_to_polar,
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
 from habitat.utils.visualizations import fog_of_war, maps
 
 MAP_THICKNESS_SCALAR: int = 1250
@@ -108,7 +117,8 @@ class NavigationEpisode(Episode):
 
 @registry.register_sensor
 class PointGoalSensor(Sensor):
-    r"""Sensor for PointGoal observations which are used in the PointNav task.
+    r"""Sensor for PointGoal observations which are used in PointGoal Navigation.
+
     For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
 
@@ -119,9 +129,13 @@ class PointGoalSensor(Sensor):
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
 
+            Also contains a DIMENSIONALITY field which specifes the number
+            of dimensions ued to specify the goal, must be in [2, 3]
+
     Attributes:
         _goal_format: format for specifying the goal which can be done
             in cartesian or polar coordinates.
+        _dimensionality: number of dimensions used to specify the goal
     """
 
     def __init__(self, sim: Simulator, config: Config):
@@ -129,6 +143,9 @@ class PointGoalSensor(Sensor):
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
         assert self._goal_format in ["CARTESIAN", "POLAR"]
+
+        self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
+        assert self._dimensionality in [2, 3]
 
         super().__init__(config=config)
 
@@ -139,10 +156,8 @@ class PointGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        if self._goal_format == "CARTESIAN":
-            sensor_shape = (3,)
-        else:
-            sensor_shape = (2,)
+        sensor_shape = (self._dimensionality,)
+
         return spaces.Box(
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
@@ -150,98 +165,85 @@ class PointGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, observations, episode):
-        agent_state = self._sim.get_agent_state()
-        ref_position = agent_state.position
-        rotation_world_agent = agent_state.rotation
-
-        direction_vector = (
-            np.array(episode.goals[0].position, dtype=np.float32)
-            - ref_position
-        )
+    def _compute_pointgoal(
+        self, source_position, source_rotation, goal_position
+    ):
+        direction_vector = goal_position - source_position
         direction_vector_agent = quaternion_rotate_vector(
-            rotation_world_agent.inverse(), direction_vector
+            source_rotation.inverse(), direction_vector
         )
 
         if self._goal_format == "POLAR":
-            rho, phi = cartesian_to_polar(
-                -direction_vector_agent[2], direction_vector_agent[0]
-            )
-            direction_vector_agent = np.array([rho, -phi], dtype=np.float32)
+            if self._dimensionality == 2:
+                rho, phi = cartesian_to_polar(
+                    -direction_vector_agent[2], direction_vector_agent[0]
+                )
+                return np.array([rho, -phi], dtype=np.float32)
+            else:
+                _, phi = cartesian_to_polar(
+                    -direction_vector_agent[2], direction_vector_agent[0]
+                )
+                theta = np.arccos(
+                    direction_vector_agent[1]
+                    / np.linalg.norm(direction_vector_agent)
+                )
+                rho = np.linalg.norm(direction_vector_agent)
 
-        return direction_vector_agent
+                return np.array([rho, -phi, theta], dtype=np.float32)
+        else:
+            if self._dimensionality == 2:
+                return np.array(
+                    [-direction_vector_agent[2], direction_vector_agent[0]],
+                    dtype=np.float32,
+                )
+            else:
+                return direction_vector_agent
+
+    def get_observation(self, observations, episode: Episode):
+        source_position = np.array(episode.start_position, dtype=np.float32)
+        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
+        goal_position = np.array(episode.goals[0].position, dtype=np.float32)
+
+        return self._compute_pointgoal(
+            source_position, rotation_world_start, goal_position
+        )
 
 
-@registry.register_sensor
-class StaticPointGoalSensor(Sensor):
-    r"""Sensor for PointGoal observations which are used in the StaticPointNav
-    task. For the agent in simulator the forward direction is along negative-z.
+@registry.register_sensor(name="PointGoalWithGPSCompassSensor")
+class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
+    r"""Sensor that integrates PointGoals observations (which are used PointGoal Navigation) and GPS+Compass.
+
+    For the agent in simulator the forward direction is along negative-z.
     In polar coordinate format the angle returned is azimuth to the goal.
+
     Args:
         sim: reference to the simulator for calculating task observations.
         config: config for the PointGoal sensor. Can contain field for
             GOAL_FORMAT which can be used to specify the format in which
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
+
+            Also contains a DIMENSIONALITY field which specifes the number
+            of dimensions ued to specify the goal, must be in [2, 3]
+
     Attributes:
         _goal_format: format for specifying the goal which can be done
             in cartesian or polar coordinates.
+        _dimensionality: number of dimensions used to specify the goal
     """
 
-    def __init__(self, sim: Simulator, config: Config):
-        self._sim = sim
-        self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
-        assert self._goal_format in ["CARTESIAN", "POLAR"]
-
-        super().__init__(sim, config)
-        self._initial_vector = None
-        self.current_episode_id = None
-
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "static_pointgoal"
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.PATH
-
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
-        if self._goal_format == "CARTESIAN":
-            sensor_shape = (3,)
-        else:
-            sensor_shape = (2,)
-        return spaces.Box(
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            shape=sensor_shape,
-            dtype=np.float32,
-        )
+        return "pointgoal_with_gps_compass"
 
     def get_observation(self, observations, episode):
-        episode_id = (episode.episode_id, episode.scene_id)
-        if self.current_episode_id != episode_id:
-            # Only compute the direction vector when a new episode is started.
-            self.current_episode_id = episode_id
-            agent_state = self._sim.get_agent_state()
-            ref_position = agent_state.position
-            rotation_world_agent = agent_state.rotation
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+        rotation_world_agent = agent_state.rotation
+        goal_position = np.array(episode.goals[0].position, dtype=np.float32)
 
-            direction_vector = (
-                np.array(episode.goals[0].position, dtype=np.float32)
-                - ref_position
-            )
-            direction_vector_agent = quaternion_rotate_vector(
-                rotation_world_agent.inverse(), direction_vector
-            )
-
-            if self._goal_format == "POLAR":
-                rho, phi = cartesian_to_polar(
-                    -direction_vector_agent[2], direction_vector_agent[0]
-                )
-                direction_vector_agent = np.array(
-                    [rho, -phi], dtype=np.float32
-                )
-
-            self._initial_vector = direction_vector_agent
-        return self._initial_vector
+        return self._compute_pointgoal(
+            agent_position, rotation_world_agent, goal_position
+        )
 
 
 @registry.register_sensor
@@ -267,18 +269,91 @@ class HeadingSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float)
 
+    def _quat_to_xy_heading(self, quat):
+        direction_vector = np.array([0, 0, -1])
+
+        heading_vector = quaternion_rotate_vector(quat, direction_vector)
+
+        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        return np.array(phi)
+
     def get_observation(self, observations, episode):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
 
-        direction_vector = np.array([0, 0, -1])
+        return self._quat_to_xy_heading(rotation_world_agent.inverse())
 
-        heading_vector = quaternion_rotate_vector(
-            rotation_world_agent.inverse(), direction_vector
+
+@registry.register_sensor(name="CompassSensor")
+class EpisodicCompassSensor(HeadingSensor):
+    r"""The agents heading in the coordinate frame defined by the epiosde, 
+    theta=0 is defined by the agents state at t=0
+    """
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "compass"
+
+    def get_observation(self, observations, episode):
+        agent_state = self._sim.get_agent_state()
+        rotation_world_agent = agent_state.rotation
+        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
+
+        return self._quat_to_xy_heading(
+            rotation_world_agent.inverse() * rotation_world_start
         )
 
-        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        return np.array(phi)
+
+@registry.register_sensor(name="GPSSensor")
+class EpisodicGPSSensor(Sensor):
+    r"""The agents current location in the coordinate frame defined by the episode,
+    i.e. the axis it faces along and the origin is defined by its state at t=0
+
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: Contains the DIMENSIONALITY field for the number of dimensions to express the agents position
+    Attributes:
+        _dimensionality: number of dimensions used to specify the agents position
+    """
+
+    def __init__(self, sim: Simulator, config: Config):
+        self._sim = sim
+
+        self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
+        assert self._dimensionality in [2, 3]
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "gps"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.POSITION
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (self._dimensionality,)
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode):
+        agent_state = self._sim.get_agent_state()
+
+        origin = np.array(episode.start_position, dtype=np.float32)
+        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
+
+        agent_position = agent_state.position
+
+        agent_position = quaternion_rotate_vector(
+            rotation_world_start.inverse(), agent_position - origin
+        )
+        if self._dimensionality == 2:
+            return np.array(
+                [-agent_position[2], agent_position[0]], dtype=np.float32
+            )
+        else:
+            return agent_position.astype(np.float32)
 
 
 @registry.register_sensor
@@ -656,29 +731,73 @@ class NavigationTask(EmbodiedTask):
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
 
-    @registry.register_task_action(name="move_forward")
+
+    @registry.register_task_action(
+        name="move_forward", action_space=EmptySpace()
+    )
     def move_forward(self):
         return self._sim.step(SimulatorActions.MOVE_FORWARD)
 
-    @registry.register_task_action(name="turn_left")
+    @registry.register_task_action(name="turn_left", action_space=EmptySpace())
     def turn_left(self):
         return self._sim.step(SimulatorActions.TURN_LEFT)
 
-    @registry.register_task_action(name="turn_right")
+    @registry.register_task_action(
+        name="turn_right", action_space=EmptySpace()
+    )
     def turn_right(self):
         return self._sim.step(SimulatorActions.TURN_RIGHT)
 
-    @registry.register_task_action(name="look_up")
+    @registry.register_task_action(name="look_up", action_space=EmptySpace())
     def look_up(self):
         return self._sim.step(SimulatorActions.LOOK_UP)
 
-    @registry.register_task_action(name="look_down")
+    @registry.register_task_action(name="look_down", action_space=EmptySpace())
     def look_down(self):
         return self._sim.step(SimulatorActions.LOOK_DOWN)
 
-    @registry.register_task_action(name="stop")
+    @registry.register_task_action(name="stop", action_space=EmptySpace())
     def stop(self):
         return self._sim.step(SimulatorActions.STOP)
+
+    @registry.register_task_action(
+        name="teleport",
+        action_space=spaces.Dict(
+            {
+                "position": spaces.Box(
+                    low=np.array([-10.0, -10.0, -10.0]),
+                    high=np.array([10.0, 10.0, 10.0]),
+                    dtype=np.float32,
+                ),
+                "rotation": spaces.Box(
+                    low=np.array([-1.0, -1.0, -1.0, -1.0]),
+                    high=np.array([1.0, 1.0, 1.0, 1.0]),
+                    dtype=np.float32,
+                ),
+                # "position": spaces.Box(
+                #     low=[-10.0, -10.0, -10.0],
+                #     high=[10.0, 10.0, 10.0],
+                #     dtype=float
+                # ),
+                # "rotation": spaces.Box(
+                #     low=[-1.0, -1.0, -1.0, -1.0],
+                #     high=[1.0, 1.0, 1.0, 1.0],
+                #     dtype=float
+                # ),
+            }
+        ),
+    )
+    def teleport(self, position: List[float], rotation: List[float]):
+        if not isinstance(rotation, list):
+            rotation = list(rotation)
+        # if not isinstance(position, list):
+        #     position = list(position)
+        if not self._sim.is_navigable(position):
+            return {}
+
+        return self._sim.get_observations_at(
+            position=position, rotation=rotation, keep_agent_at_new_pose=True
+        )
 
     def overwrite_sim_config(
         self, sim_config: Any, episode: Type[Episode]

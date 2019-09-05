@@ -217,9 +217,6 @@ class PPOTrainer(BaseRLTrainer):
             )
         )
 
-        observations = self.envs.reset()
-        batch = batch_obs(observations)
-
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
@@ -227,9 +224,19 @@ class PPOTrainer(BaseRLTrainer):
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
         )
+        rollouts.to(self.device)
+
+        observations = self.envs.reset()
+        batch = batch_obs(observations)
+
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
-        rollouts.to(self.device)
+
+        # batch and observations may contain shared PyTorch CUDA
+        # tensors.  We must explicitly clear them here otherwise
+        # they will be kept in memory for the entire duration of training!
+        batch = None
+        observations = None
 
         episode_rewards = torch.zeros(self.envs.num_envs, 1)
         episode_counts = torch.zeros(self.envs.num_envs, 1)
@@ -341,6 +348,8 @@ class PPOTrainer(BaseRLTrainer):
                     self.save_checkpoint(f"ckpt.{count_checkpoints}.pth")
                     count_checkpoints += 1
 
+            self.envs.close()
+
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -379,10 +388,17 @@ class PPOTrainer(BaseRLTrainer):
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
+        # get name of performance metric, e.g. "spl"
+        metric_name = self.config.TASK_CONFIG.TASK.MEASUREMENTS[0]
+        metric_cfg = getattr(self.config.TASK_CONFIG.TASK, metric_name)
+        measure_type = baseline_registry.get_measure(metric_cfg.TYPE)
+        assert measure_type is not None, "invalid measurement type {}".format(
+            metric_cfg.TYPE
+        )
+        self.metric_uuid = measure_type(None, None)._get_uuid()
+
         observations = self.envs.reset()
-        batch = batch_obs(observations)
-        for sensor in batch:
-            batch[sensor] = batch[sensor].to(self.device)
+        batch = batch_obs(observations, self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -430,9 +446,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations)
-            for sensor in batch:
-                batch[sensor] = batch[sensor].to(self.device)
+            batch = batch_obs(observations, self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -457,8 +471,12 @@ class PPOTrainer(BaseRLTrainer):
                 # episode ended
                 if not_done_masks[i].item() == 0:
                     episode_stats = dict()
-                    episode_stats["spl"] = infos[i]["spl"]
-                    episode_stats["success"] = int(infos[i]["spl"] > 0)
+                    episode_stats[self.metric_uuid] = infos[i][
+                        self.metric_uuid
+                    ]
+                    episode_stats["success"] = int(
+                        infos[i][self.metric_uuid] > 0
+                    )
                     episode_stats["reward"] = current_episode_reward[i].item()
                     current_episode_reward[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
@@ -476,7 +494,8 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            spl=infos[i]["spl"],
+                            metric_name=self.metric_uuid,
+                            metric_value=infos[i][self.metric_uuid],
                             tb_writer=writer,
                         )
 
@@ -516,12 +535,14 @@ class PPOTrainer(BaseRLTrainer):
         num_episodes = len(stats_episodes)
 
         episode_reward_mean = aggregated_stats["reward"] / num_episodes
-        episode_spl_mean = aggregated_stats["spl"] / num_episodes
+        episode_metric_mean = aggregated_stats[self.metric_uuid] / num_episodes
         episode_success_mean = aggregated_stats["success"] / num_episodes
 
         logger.info(f"Average episode reward: {episode_reward_mean:.6f}")
         logger.info(f"Average episode success: {episode_success_mean:.6f}")
-        logger.info(f"Average episode SPL: {episode_spl_mean:.6f}")
+        logger.info(
+            f"Average episode {self.metric_uuid}: {episode_metric_mean:.6f}"
+        )
 
         writer.add_scalars(
             "eval_reward",
@@ -529,10 +550,14 @@ class PPOTrainer(BaseRLTrainer):
             checkpoint_index,
         )
         writer.add_scalars(
-            "eval_SPL", {"average SPL": episode_spl_mean}, checkpoint_index
+            f"eval_{self.metric_uuid}",
+            {f"average {self.metric_uuid}": episode_metric_mean},
+            checkpoint_index,
         )
         writer.add_scalars(
             "eval_success",
             {"average success": episode_success_mean},
             checkpoint_index,
         )
+
+        self.envs.close()
