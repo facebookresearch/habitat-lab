@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import multiprocessing as mp
 import os
 
@@ -71,8 +72,13 @@ def _load_test_data():
     return configs, datasets
 
 
-def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
+def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
     num_envs = len(configs)
+    for cfg in configs:
+        cfg.defrost()
+        cfg.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        cfg.freeze()
+
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.VectorEnv(
         env_fn_args=env_fn_args,
@@ -90,29 +96,35 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
         assert len(observations) == num_envs
 
 
-def test_vectorized_envs_forkserver():
+@pytest.mark.parametrize(
+    "multiprocessing_start_method,gpu2gpu",
+    itertools.product(["forkserver", "spawn", "fork"], [True, False]),
+)
+def test_vectorized_envs(multiprocessing_start_method, gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     configs, datasets = _load_test_data()
-    _vec_env_test_fn(configs, datasets, "forkserver")
+    if multiprocessing_start_method == "fork":
+        if gpu2gpu:
+            pytest.skip("Fork does not support gpu2gpu")
 
-
-def test_vectorized_envs_spawn():
-    configs, datasets = _load_test_data()
-    _vec_env_test_fn(configs, datasets, "spawn")
-
-
-def _fork_test_target(configs, datasets):
-    _vec_env_test_fn(configs, datasets, "fork")
-
-
-def test_vectorized_envs_fork():
-    configs, datasets = _load_test_data()
-    # 'fork' works in a process that has yet to use the GPU
-    # this test uses spawns a new python instance, which allows us to fork
-    mp_ctx = mp.get_context("spawn")
-    p = mp_ctx.Process(target=_fork_test_target, args=(configs, datasets))
-    p.start()
-    p.join()
-    assert p.exitcode == 0
+        # 'fork' works in a process that has yet to use the GPU
+        # this test uses spawns a new python instance, which allows us to fork
+        mp_ctx = mp.get_context("spawn")
+        p = mp_ctx.Process(
+            target=_vec_env_test_fn,
+            args=(configs, datasets, multiprocessing_start_method, gpu2gpu),
+        )
+        p.start()
+        p.join()
+        assert p.exitcode == 0
+    else:
+        _vec_env_test_fn(
+            configs, datasets, multiprocessing_start_method, gpu2gpu
+        )
 
 
 def test_with_scope():
@@ -146,10 +158,20 @@ def test_threaded_vectorized_env():
     envs.close()
 
 
-def test_env():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_env(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
+
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -202,8 +224,18 @@ def make_rl_env(config, dataset, rank: int = 0):
     return env
 
 
-def test_rl_vectorized_envs():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_rl_vectorized_envs(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     configs, datasets = _load_test_data()
+    for config in configs:
+        config.defrost()
+        config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        config.freeze()
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
@@ -239,10 +271,20 @@ def test_rl_vectorized_envs():
     envs.close()
 
 
-def test_rl_env():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_rl_env(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
+
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.freeze()
 
     env = DummyRLEnv(config=config, dataset=None)
     env.episodes = [

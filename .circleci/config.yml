@@ -124,6 +124,7 @@ jobs:
           name: Build, install habitat-sim and run benchmark
           no_output_timeout: 20m
           command: |
+              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat;
               if [ ! -d ./habitat-sim ]
@@ -131,13 +132,13 @@ jobs:
                 git clone https://github.com/facebookresearch/habitat-sim.git
                 cd habitat-sim
                 pip install -r requirements.txt --progress-bar off
-                python setup.py install --headless
+                python setup.py install --headless --with-cuda
               else
                 if [ ! -f ~/miniconda/pip_deps_installed ]
                 then
                   cd habitat-sim
                   pip install -r requirements.txt --progress-bar off
-                  python setup.py install --headless
+                  python setup.py install --headless --with-cuda
                 fi
               fi
       - run:
