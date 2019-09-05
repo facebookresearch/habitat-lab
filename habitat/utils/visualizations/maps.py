@@ -7,7 +7,13 @@
 import os
 from typing import List, Optional, Tuple
 
-import cv2
+# TODO(akadian): remove the below pyrobot hack
+import sys
+ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
+if ros_path in sys.path:
+    sys.path.remove(ros_path)
+    import cv2
+sys.path.append(ros_path)
 import imageio
 import numpy as np
 import scipy.ndimage
