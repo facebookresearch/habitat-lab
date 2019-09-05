@@ -29,7 +29,7 @@ class RolloutStorage:
             self.observations[sensor] = torch.zeros(
                 num_steps + 1,
                 num_envs,
-                *observation_space.spaces[sensor].shape,
+                *observation_space.spaces[sensor].shape
             )
 
         self.recurrent_hidden_states = torch.zeros(
