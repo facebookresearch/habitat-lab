@@ -66,12 +66,25 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-def batch_obs(observations: List[Dict]) -> Dict:
+def _to_tensor(v):
+    if torch.is_tensor(v):
+        return v
+    elif isinstance(v, np.ndarray):
+        return torch.from_numpy(v)
+    else:
+        return torch.tensor(v, dtype=torch.float)
+
+
+def batch_obs(
+    observations: List[Dict], device: Optional[torch.device] = None
+) -> Dict[str, torch.Tensor]:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
 
     Args:
         observations:  list of dicts of observations.
+        device: The torch.device to put the resulting tensors on.
+            Will not move the tensors if None
 
     Returns:
         transposed dict of lists of observations.
@@ -80,12 +93,13 @@ def batch_obs(observations: List[Dict]) -> Dict:
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(obs[sensor])
+            batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
-        batch[sensor] = torch.tensor(
-            np.array(batch[sensor]), dtype=torch.float
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(
+            device=device, dtype=torch.float
         )
+
     return batch
 
 
