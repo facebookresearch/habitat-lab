@@ -11,7 +11,7 @@ import numpy as np
 from gym import spaces, Space
 
 from habitat.config import Config
-from habitat.core.embodied_task import Measure
+from habitat.core.embodied_task import Measure, EmptySpace
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
@@ -236,59 +236,27 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    @registry.register_task_action(name="answer")
-    def answer(self, answer):
-        self._answer_received = True
-        self._answer = answer
-        return {}
-
     @property
     def possible_actions(self):
         return registry.mapping["task_action"]
 
-    def _step(self, action: int, episode, action_args=None):
-        assert action in self.possible_actions.keys()
-        action_method = self.possible_actions[action]
-        observations = action_method(self, **action_args)
-        observations.update(
-            self.sensor_suite.get_observations(
-                observations=observations, episode=episode
-            )
-        )
+    @registry.register_task_action(name="stop", action_space=EmptySpace())
+    def stop(self):
+        self.is_stop_called = True
+        return self._sim.step(SimulatorActions.STOP)
 
-        # if action.sim_action is None:
-        #     observations = super().step(action=action, episode=episode)
-        # else:
-        #     observations = {}
+    @registry.register_task_action(action_space=spaces.Dict({
+        "answer": spaces.Discrete(32000),
+    }))
+    def answer(self, answer: int):
+        if self.is_stop_called:
+            self.answer = answer
+        else:
+            self.is_task_invalid = True
 
-        # if action.task_action is None:
+    def __init__(self, **kwargs) -> None:
+        self.is_stop_called = False
+        self.answer = None
+        self.is_task_invalid = False
 
-        return observations
-
-        # required_measures = {"episode_info", "action_stats", "answer_accuracy"}
-        # assert (
-        #     required_measures <= self.measurements.measures.keys()
-        # ), f"{required_measures} are required to be enabled for EQA task"
-        # episode = self.measurements.measures["episode_info"].get_metric()
-        # sim_action = self.measurements.measures["action_stats"].get_metric()[
-        #     "previous_action"
-        # ]
-        #
-        # self.measurements.measures["answer_accuracy"].update_metric(
-        #     answer_id=action.task_action,
-        #     sim_action=action.sim_action,
-        #     episode=episode,
-        # )
-        #
-        # return self.sensor_suite.get_observations(
-        #     observations=sim_observations, episode=episode
-        # )
-
-    @property
-    def action_space(self) -> Space:
-        return spaces.Dict(
-            {
-                "sim_action": self._sim.action_space,
-                "task_action": self._sim.action_space,
-            }
-        )
+        super().__init__(**kwargs)

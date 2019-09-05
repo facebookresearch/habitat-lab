@@ -11,7 +11,6 @@ from habitat.core.challenge import Challenge
 from habitat.core.dataset import Dataset
 from habitat.core.embodied_task import (
     EmbodiedTask,
-    TaskAction,
     Measure,
     Measurements,
 )
@@ -37,7 +36,6 @@ __all__ = [
     "Dataset",
     "EmbodiedTask",
     "Env",
-    "TaskAction",
     "get_config",
     "logger",
     "make_dataset",
