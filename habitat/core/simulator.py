@@ -457,6 +457,7 @@ class Simulator:
     def close(self) -> None:
         raise NotImplementedError
 
+    # TODO(akadian): move the below away from abstract class to HabitatSim class
     @property
     def index_stop_action(self):
         return SimulatorActions.STOP
