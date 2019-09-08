@@ -9,7 +9,8 @@ from typing import Dict, List, Optional, Tuple
 
 # TODO(akadian): remove the below pyrobot hack
 import sys
-ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
+
+ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
 if ros_path in sys.path:
     sys.path.remove(ros_path)
     import cv2

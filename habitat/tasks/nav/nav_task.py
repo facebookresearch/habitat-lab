@@ -7,9 +7,11 @@
 from typing import Any, List, Optional, Type
 
 import attr
+
 # TODO(akadian): remove the below pyrobot hack
 import sys
-ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
+
+ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
 if ros_path in sys.path:
     sys.path.remove(ros_path)
     import cv2
