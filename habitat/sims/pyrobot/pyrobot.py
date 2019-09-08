@@ -133,9 +133,6 @@ class PyRobot(Simulator):
             self._config.ROBOT, base_config=config_pyrobot
         )
 
-    def _degree_to_radian(self, degrees):
-        return (degrees / 180) * np.pi
-
     def _robot_obs(self):
         return {
             "rgb": self._robot.camera.get_rgb(),
