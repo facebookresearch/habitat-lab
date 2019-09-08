@@ -22,4 +22,3 @@ def make_sim(id_sim, **kwargs):
 
 _try_register_habitat_sim()
 _try_register_pyrobot()
-g
