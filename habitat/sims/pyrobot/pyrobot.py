@@ -20,7 +20,8 @@ import numpy as np
 
 # TODO(akadian): remove the below pyrobot hack
 import sys
-ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
+
+ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
 if ros_path in sys.path:
     sys.path.remove(ros_path)
     import cv2
@@ -41,12 +42,20 @@ class PyRobotRGBSensor(RGBSensor):
         )
 
     def get_observation(self, robot_obs):
-        obs = robot_obs.get(self.uuid, None) 
+        obs = robot_obs.get(self.uuid, None)
 
-        assert obs is not None, "Invalid observation for {} sensor".format(self.uuid)
+        assert obs is not None, "Invalid observation for {} sensor".format(
+            self.uuid
+        )
 
         if obs.shape != self.observation_space.shape:
-            obs = cv2.resize(obs, (self.observation_space.shape[1], self.observation_space.shape[0]))
+            obs = cv2.resize(
+                obs,
+                (
+                    self.observation_space.shape[1],
+                    self.observation_space.shape[0],
+                ),
+            )
 
         return obs
 
@@ -74,10 +83,18 @@ class PyRobotDepthSensor(DepthSensor):
     def get_observation(self, robot_obs):
         obs = robot_obs.get(self.uuid, None)
 
-        assert obs is not None, "Invalid observation for {} sensor".format(self.uuid)
+        assert obs is not None, "Invalid observation for {} sensor".format(
+            self.uuid
+        )
 
         if obs.shape != self.observation_space.shape:
-            obs = cv2.resize(obs, (self.observation_space.shape[1], self.observation_space.shape[0]))
+            obs = cv2.resize(
+                obs,
+                (
+                    self.observation_space.shape[1],
+                    self.observation_space.shape[0],
+                ),
+            )
 
         obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         if self.config.NORMALIZE_DEPTH:
@@ -93,11 +110,11 @@ class PyRobotDepthSensor(DepthSensor):
 class PyRobot(Simulator):
     def __init__(self, config: Config) -> None:
         self._config = config
-        
+
         robot_sensors = []
         for sensor_name in self._config.SENSORS:
             sensor_cfg = getattr(self._config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)     
+            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
@@ -105,17 +122,16 @@ class PyRobot(Simulator):
             robot_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(robot_sensors)
 
-        config_pyrobot = {
-            "base_controller": self._config.BASE_CONTROLLER
-        }
+        config_pyrobot = {"base_controller": self._config.BASE_CONTROLLER}
 
-        assert self._config.ROBOT in self._config.ROBOTS, "Invalid robot type {}".format(self._config.ROBOT)
-        self._robot_config = getattr(
-            self._config, 
-            self._config.ROBOT.upper()
+        assert (
+            self._config.ROBOT in self._config.ROBOTS
+        ), "Invalid robot type {}".format(self._config.ROBOT)
+        self._robot_config = getattr(self._config, self._config.ROBOT.upper())
+
+        self._robot = pyrobot.Robot(
+            self._config.ROBOT, base_config=config_pyrobot
         )
-
-        self._robot = pyrobot.Robot(self._config.ROBOT, base_config=config_pyrobot)
 
     def _degree_to_radian(self, degrees):
         return (degrees / 180) * np.pi
