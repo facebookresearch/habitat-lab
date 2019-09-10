@@ -18,6 +18,7 @@ from habitat.core.embodied_task import (
     EmptySpace,
     Measure,
     Measurements,
+    TaskAction,
 )
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -138,7 +139,9 @@ class PointGoalSensor(Sensor):
         _dimensionality: number of dimensions used to specify the goal
     """
 
-    def __init__(self, sim: Simulator, config: Config):
+    def __init__(
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+    ):
         self._sim = sim
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
@@ -199,7 +202,9 @@ class PointGoalSensor(Sensor):
             else:
                 return direction_vector_agent
 
-    def get_observation(self, observations, episode: Episode):
+    def get_observation(
+        self, *args: Any, observations, episode: Episode, **kwargs: Any
+    ):
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
@@ -235,7 +240,9 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "pointgoal_with_gps_compass"
 
-    def get_observation(self, observations, episode):
+    def get_observation(
+        self, *args: Any, observations, episode, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
@@ -402,7 +409,9 @@ class SPL(Measure):
     https://arxiv.org/pdf/1807.06757.pdf
     """
 
-    def __init__(self, sim: Simulator, config: Config):
+    def __init__(
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+    ):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
@@ -414,7 +423,7 @@ class SPL(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "spl"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, *args: Any, episode, **kwargs: Any):
         self._previous_position = self._sim.get_agent_state().position.tolist()
         self._start_end_episode_distance = episode.info["geodesic_distance"]
         self._agent_episode_distance = 0.0
@@ -425,7 +434,7 @@ class SPL(Measure):
             np.array(position_b) - np.array(position_a), ord=2
         )
 
-    def update_metric(self, episode, action):
+    def update_metric(self, *args: Any, episode, action, **kwargs: Any):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
 
@@ -710,7 +719,12 @@ class NavigationTask(EmbodiedTask):
             assert (
                 measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
-            task_measurements.append(measure_type(sim, measurement_cfg))
+            print("measurement type {}".format(measurement_cfg.TYPE))
+            task_measurements.append(
+                measure_type(
+                    sim=sim, config=measurement_cfg, dataset=dataset, task=self
+                )
+            )
         self.measurements = Measurements(task_measurements)
 
         task_sensors = []
@@ -720,67 +734,177 @@ class NavigationTask(EmbodiedTask):
             assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.TYPE
             )
-            task_sensors.append(sensor_type(sim, sensor_cfg))
+            print("sensor type {}".format(sensor_cfg.TYPE))
+            task_sensors.append(
+                sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
+            )
 
         self.sensor_suite = SensorSuite(task_sensors)
         super().__init__(config=task_config, sim=sim, dataset=dataset)
 
-    @registry.register_task_action(
-        name="move_forward", action_space=EmptySpace()
-    )
-    def move_forward(self):
+    # @registry.register_task_action(
+    #     name="move_forward", action_space=EmptySpace()
+    # )
+    # def move_forward(self):
+    #     return self._sim.step(SimulatorActions.MOVE_FORWARD)
+    #
+    # @registry.register_task_action(name="turn_left", action_space=EmptySpace())
+    # def turn_left(self):
+    #     return self._sim.step(SimulatorActions.TURN_LEFT)
+    #
+    # @registry.register_task_action(
+    #     name="turn_right", action_space=EmptySpace()
+    # )
+    # def turn_right(self):
+    #     return self._sim.step(SimulatorActions.TURN_RIGHT)
+    #
+    # @registry.register_task_action(name="look_up", action_space=EmptySpace())
+    # def look_up(self):
+    #     return self._sim.step(SimulatorActions.LOOK_UP)
+    #
+    # @registry.register_task_action(name="look_down", action_space=EmptySpace())
+    # def look_down(self):
+    #     return self._sim.step(SimulatorActions.LOOK_DOWN)
+    #
+    # @registry.register_task_action(name="stop", action_space=EmptySpace())
+    # def stop(self):
+    #     return self._sim.step(SimulatorActions.STOP)
+
+    # @registry.register_task_action(
+    #     name="teleport",
+    #     action_space=spaces.Dict(
+    #         {
+    #             "position": spaces.Box(
+    #                 low=np.array([-10.0, -10.0, -10.0]),
+    #                 high=np.array([10.0, 10.0, 10.0]),
+    #                 dtype=np.float32,
+    #             ),
+    #             "rotation": spaces.Box(
+    #                 low=np.array([-1.0, -1.0, -1.0, -1.0]),
+    #                 high=np.array([1.0, 1.0, 1.0, 1.0]),
+    #                 dtype=np.float32,
+    #             ),
+    #         }
+    #     ),
+    # )
+    # def teleport(self, position: List[float], rotation: List[float]):
+    #     if not isinstance(rotation, list):
+    #         rotation = list(rotation)
+    #     # if not isinstance(position, list):
+    #     #     position = list(position)
+    #     if not self._sim.is_navigable(position):
+    #         return {}
+    #
+    #     return self._sim.get_observations_at(
+    #         position=position, rotation=rotation, keep_agent_at_new_pose=True
+    #     )
+
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
+        return merge_sim_episode_config(sim_config, episode)
+
+
+class SimulatorAction(TaskAction):
+    def __init__(self, *args: Any, sim, task, **kwargs: Any) -> None:
+        self._task = task
+        self._sim = sim
+
+    def get_action_space(self):
+        return EmptySpace()
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+@registry.register_task_action(name="move_forward", action_space=EmptySpace())
+class MoveForwardAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "move_forward"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
         return self._sim.step(SimulatorActions.MOVE_FORWARD)
 
-    @registry.register_task_action(name="turn_left", action_space=EmptySpace())
-    def turn_left(self):
+
+@registry.register_task_action(name="turn_left", action_space=EmptySpace())
+class TurnLeftAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "turn_left"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
         return self._sim.step(SimulatorActions.TURN_LEFT)
 
-    @registry.register_task_action(
-        name="turn_right", action_space=EmptySpace()
-    )
-    def turn_right(self):
+
+@registry.register_task_action(name="turn_right", action_space=EmptySpace())
+class TurnRightAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "turn_right"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
         return self._sim.step(SimulatorActions.TURN_RIGHT)
 
-    @registry.register_task_action(name="look_up", action_space=EmptySpace())
-    def look_up(self):
-        return self._sim.step(SimulatorActions.LOOK_UP)
 
-    @registry.register_task_action(name="look_down", action_space=EmptySpace())
-    def look_down(self):
-        return self._sim.step(SimulatorActions.LOOK_DOWN)
+@registry.register_task_action(name="stop", action_space=EmptySpace())
+class StopAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "stop"
 
-    @registry.register_task_action(name="stop", action_space=EmptySpace())
-    def stop(self):
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
         return self._sim.step(SimulatorActions.STOP)
 
-    @registry.register_task_action(
-        name="teleport",
-        action_space=spaces.Dict(
-            {
-                "position": spaces.Box(
-                    low=np.array([-10.0, -10.0, -10.0]),
-                    high=np.array([10.0, 10.0, 10.0]),
-                    dtype=np.float32,
-                ),
-                "rotation": spaces.Box(
-                    low=np.array([-1.0, -1.0, -1.0, -1.0]),
-                    high=np.array([1.0, 1.0, 1.0, 1.0]),
-                    dtype=np.float32,
-                ),
-                # "position": spaces.Box(
-                #     low=[-10.0, -10.0, -10.0],
-                #     high=[10.0, 10.0, 10.0],
-                #     dtype=float
-                # ),
-                # "rotation": spaces.Box(
-                #     low=[-1.0, -1.0, -1.0, -1.0],
-                #     high=[1.0, 1.0, 1.0, 1.0],
-                #     dtype=float
-                # ),
-            }
-        ),
-    )
-    def teleport(self, position: List[float], rotation: List[float]):
+
+@registry.register_task_action(name="look_up", action_space=EmptySpace())
+class LookUpAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "look_up"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(SimulatorActions.LOOK_UP)
+
+
+@registry.register_task_action(name="look_down", action_space=EmptySpace())
+class LookDownAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "look_down"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(SimulatorActions.LOOK_DOWN)
+
+
+@registry.register_task_action(name="teleport", action_space=EmptySpace())
+class TeleportAction(SimulatorAction):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "teleport"
+
+    def step(
+        self,
+        *args: Any,
+        position: List[float],
+        rotation: List[float],
+        **kwargs: Any
+    ):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+
         if not isinstance(rotation, list):
             rotation = list(rotation)
         # if not isinstance(position, list):
@@ -792,7 +916,18 @@ class NavigationTask(EmbodiedTask):
             position=position, rotation=rotation, keep_agent_at_new_pose=True
         )
 
-    def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
-    ) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
+    def get_action_space(self):
+        return spaces.Dict(
+            {
+                "position": spaces.Box(
+                    low=np.array([-10.0, -10.0, -10.0]),
+                    high=np.array([10.0, 10.0, 10.0]),
+                    dtype=np.float32,
+                ),
+                "rotation": spaces.Box(
+                    low=np.array([-1.0, -1.0, -1.0, -1.0]),
+                    high=np.array([1.0, 1.0, 1.0, 1.0]),
+                    dtype=np.float32,
+                ),
+            }
+        )
