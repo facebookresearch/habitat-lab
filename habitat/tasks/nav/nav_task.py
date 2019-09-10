@@ -41,14 +41,14 @@ MAP_THICKNESS_SCALAR: int = 1250
 
 
 def merge_sim_episode_config(
-    sim_config: Config, episode: Type[Episode]
+        sim_config: Config, episode: Type[Episode]
 ) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
     if (
-        episode.start_position is not None
-        and episode.start_rotation is not None
+            episode.start_position is not None
+            and episode.start_rotation is not None
     ):
         agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
         agent_cfg = getattr(sim_config, agent_name)
@@ -139,9 +139,8 @@ class PointGoalSensor(Sensor):
         _dimensionality: number of dimensions used to specify the goal
     """
 
-    def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
-    ):
+    def __init__(self, *args: Any, sim: Simulator, config: Config, **kwargs:
+    Any):
         self._sim = sim
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
@@ -169,7 +168,7 @@ class PointGoalSensor(Sensor):
         )
 
     def _compute_pointgoal(
-        self, source_position, source_rotation, goal_position
+            self, source_position, source_rotation, goal_position
     ):
         direction_vector = goal_position - source_position
         direction_vector_agent = quaternion_rotate_vector(
@@ -202,9 +201,8 @@ class PointGoalSensor(Sensor):
             else:
                 return direction_vector_agent
 
-    def get_observation(
-        self, *args: Any, observations, episode: Episode, **kwargs: Any
-    ):
+    def get_observation(self, *args: Any, observations, episode: Episode,
+                        **kwargs: Any):
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
@@ -240,9 +238,8 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "pointgoal_with_gps_compass"
 
-    def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
-    ):
+    def get_observation(self, *args: Any, observations, episode,
+                        **kwargs: Any):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
@@ -263,7 +260,7 @@ class HeadingSensor(Sensor):
         config: config for the sensor.
     """
 
-    def __init__(self, sim: Simulator, config: Config):
+    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
         self._sim = sim
         super().__init__(config=config)
 
@@ -284,7 +281,7 @@ class HeadingSensor(Sensor):
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
         return np.array(phi)
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
 
@@ -322,7 +319,7 @@ class EpisodicGPSSensor(Sensor):
         _dimensionality: number of dimensions used to specify the agents position
     """
 
-    def __init__(self, sim: Simulator, config: Config):
+    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
         self._sim = sim
 
         self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
@@ -372,7 +369,7 @@ class ProximitySensor(Sensor):
         config: config for the sensor.
     """
 
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._max_detection_radius = getattr(
             config, "MAX_DETECTION_RADIUS", 2.0
@@ -393,7 +390,7 @@ class ProximitySensor(Sensor):
             dtype=np.float,
         )
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
 
         return self._sim.distance_to_closest_obstacle(
@@ -409,9 +406,8 @@ class SPL(Measure):
     https://arxiv.org/pdf/1807.06757.pdf
     """
 
-    def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
-    ):
+    def __init__(self, *args: Any, sim: Simulator, config: Config, **kwargs:
+    Any):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
@@ -443,8 +439,8 @@ class SPL(Measure):
         )
 
         if (
-            action == self._sim.index_stop_action
-            and distance_to_target < self._config.SUCCESS_DISTANCE
+                action == self._sim.index_stop_action
+                and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
 
@@ -455,16 +451,16 @@ class SPL(Measure):
         self._previous_position = current_position
 
         self._metric = ep_success * (
-            self._start_end_episode_distance
-            / max(
-                self._start_end_episode_distance, self._agent_episode_distance
-            )
+                self._start_end_episode_distance
+                / max(
+            self._start_end_episode_distance, self._agent_episode_distance
+        )
         )
 
 
 @registry.register_measure
 class Collisions(Measure):
-    def __init__(self, sim, config):
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
         self._metric = None
@@ -473,10 +469,10 @@ class Collisions(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "collisions"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = None
 
-    def update_metric(self, episode, action):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         if self._metric is None:
             self._metric = {"count": 0, "is_collision": False}
         self._metric["is_collision"] = False
@@ -490,7 +486,7 @@ class TopDownMap(Measure):
     r"""Top Down Map measure
     """
 
-    def __init__(self, sim: Simulator, config: Config):
+    def __init__(self, *args: Any, sim: Simulator, config: Config, **kwargs: Any):
         self._sim = sim
         self._config = config
         self._grid_delta = config.MAP_PADDING
@@ -507,8 +503,8 @@ class TopDownMap(Measure):
         self._top_down_map = None
         self._shortest_path_points = None
         self._cell_scale = (
-            self._coordinate_max - self._coordinate_min
-        ) / self._map_resolution[0]
+                                   self._coordinate_max - self._coordinate_min
+                           ) / self._map_resolution[0]
         self.line_thickness = int(
             np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
         )
@@ -554,8 +550,8 @@ class TopDownMap(Measure):
             np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
         )
         self._top_down_map[
-            s_x - point_padding : s_x + point_padding + 1,
-            s_y - point_padding : s_y + point_padding + 1,
+        s_x - point_padding: s_x + point_padding + 1,
+        s_y - point_padding: s_y + point_padding + 1,
         ] = maps.MAP_SOURCE_POINT_INDICATOR
 
         # mark target point
@@ -567,11 +563,11 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._top_down_map[
-            t_x - point_padding : t_x + point_padding + 1,
-            t_y - point_padding : t_y + point_padding + 1,
+        t_x - point_padding: t_x + point_padding + 1,
+        t_y - point_padding: t_y + point_padding + 1,
         ] = maps.MAP_TARGET_POINT_INDICATOR
 
-    def reset_metric(self, episode):
+    def reset_metric(self, *args: Any, episode, **kwargs: Any):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map()
@@ -614,15 +610,15 @@ class TopDownMap(Measure):
 
     def _clip_map(self, _map):
         return _map[
-            self._ind_x_min
-            - self._grid_delta : self._ind_x_max
-            + self._grid_delta,
-            self._ind_y_min
-            - self._grid_delta : self._ind_y_max
-            + self._grid_delta,
-        ]
+               self._ind_x_min
+               - self._grid_delta: self._ind_x_max
+                                   + self._grid_delta,
+               self._ind_y_min
+               - self._grid_delta: self._ind_y_max
+                                   + self._grid_delta,
+               ]
 
-    def update_metric(self, episode, action):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
         house_map, map_agent_x, map_agent_y = self.update_map(
             self._sim.get_agent_state().position
@@ -698,18 +694,18 @@ class TopDownMap(Measure):
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                * max(self._map_resolution)
-                / (self._coordinate_max - self._coordinate_min),
+                             * max(self._map_resolution)
+                             / (self._coordinate_max - self._coordinate_min),
             )
 
 
 @registry.register_task(name="Nav-v0")
 class NavigationTask(EmbodiedTask):
     def __init__(
-        self,
-        task_config: Config,
-        sim: Simulator,
-        dataset: Optional[Dataset] = None,
+            self,
+            task_config: Config,
+            sim: Simulator,
+            dataset: Optional[Dataset] = None,
     ) -> None:
 
         task_measurements = []
@@ -717,7 +713,7 @@ class NavigationTask(EmbodiedTask):
             measurement_cfg = getattr(task_config, measurement_name)
             measure_type = registry.get_measure(measurement_cfg.TYPE)
             assert (
-                measure_type is not None
+                    measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
             print("measurement type {}".format(measurement_cfg.TYPE))
             task_measurements.append(
@@ -743,30 +739,30 @@ class NavigationTask(EmbodiedTask):
         super().__init__(config=task_config, sim=sim, dataset=dataset)
 
     # @registry.register_task_action(
-    #     name="move_forward", action_space=EmptySpace()
+    #     name="move_forward"
     # )
     # def move_forward(self):
     #     return self._sim.step(SimulatorActions.MOVE_FORWARD)
     #
-    # @registry.register_task_action(name="turn_left", action_space=EmptySpace())
+    # @registry.register_task_action(name="turn_left")
     # def turn_left(self):
     #     return self._sim.step(SimulatorActions.TURN_LEFT)
     #
     # @registry.register_task_action(
-    #     name="turn_right", action_space=EmptySpace()
+    #     name="turn_right"
     # )
     # def turn_right(self):
     #     return self._sim.step(SimulatorActions.TURN_RIGHT)
     #
-    # @registry.register_task_action(name="look_up", action_space=EmptySpace())
+    # @registry.register_task_action(name="look_up")
     # def look_up(self):
     #     return self._sim.step(SimulatorActions.LOOK_UP)
     #
-    # @registry.register_task_action(name="look_down", action_space=EmptySpace())
+    # @registry.register_task_action(name="look_down")
     # def look_down(self):
     #     return self._sim.step(SimulatorActions.LOOK_DOWN)
     #
-    # @registry.register_task_action(name="stop", action_space=EmptySpace())
+    # @registry.register_task_action(name="stop")
     # def stop(self):
     #     return self._sim.step(SimulatorActions.STOP)
 
@@ -800,7 +796,7 @@ class NavigationTask(EmbodiedTask):
     #     )
 
     def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
+            self, sim_config: Any, episode: Type[Episode]
     ) -> Any:
         return merge_sim_episode_config(sim_config, episode)
 
@@ -817,7 +813,7 @@ class SimulatorAction(TaskAction):
         return None
 
 
-@registry.register_task_action(name="move_forward", action_space=EmptySpace())
+@registry.register_task_action(name="move_forward")
 class MoveForwardAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "move_forward"
@@ -829,7 +825,7 @@ class MoveForwardAction(SimulatorAction):
         return self._sim.step(SimulatorActions.MOVE_FORWARD)
 
 
-@registry.register_task_action(name="turn_left", action_space=EmptySpace())
+@registry.register_task_action(name="turn_left")
 class TurnLeftAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "turn_left"
@@ -841,7 +837,7 @@ class TurnLeftAction(SimulatorAction):
         return self._sim.step(SimulatorActions.TURN_LEFT)
 
 
-@registry.register_task_action(name="turn_right", action_space=EmptySpace())
+@registry.register_task_action(name="turn_right")
 class TurnRightAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "turn_right"
@@ -853,7 +849,7 @@ class TurnRightAction(SimulatorAction):
         return self._sim.step(SimulatorActions.TURN_RIGHT)
 
 
-@registry.register_task_action(name="stop", action_space=EmptySpace())
+@registry.register_task_action(name="stop")
 class StopAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "stop"
@@ -865,7 +861,7 @@ class StopAction(SimulatorAction):
         return self._sim.step(SimulatorActions.STOP)
 
 
-@registry.register_task_action(name="look_up", action_space=EmptySpace())
+@registry.register_task_action(name="look_up")
 class LookUpAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "look_up"
@@ -877,7 +873,7 @@ class LookUpAction(SimulatorAction):
         return self._sim.step(SimulatorActions.LOOK_UP)
 
 
-@registry.register_task_action(name="look_down", action_space=EmptySpace())
+@registry.register_task_action(name="look_down")
 class LookDownAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "look_down"
@@ -889,18 +885,15 @@ class LookDownAction(SimulatorAction):
         return self._sim.step(SimulatorActions.LOOK_DOWN)
 
 
-@registry.register_task_action(name="teleport", action_space=EmptySpace())
+@registry.register_task_action(
+    name="teleport"
+)
 class TeleportAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "teleport"
 
-    def step(
-        self,
-        *args: Any,
-        position: List[float],
-        rotation: List[float],
-        **kwargs: Any
-    ):
+    def step(self, *args: Any, position: List[float], rotation: List[float],
+             **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -931,3 +924,4 @@ class TeleportAction(SimulatorAction):
                 ),
             }
         )
+

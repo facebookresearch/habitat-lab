@@ -27,18 +27,15 @@ Various decorators for registry different kind of classes with unique keys
 import collections
 from typing import Optional
 
-from gym import spaces
-
 from habitat.core.utils import Singleton
 
 
 class Registry(metaclass=Singleton):
     mapping = collections.defaultdict(dict)
-    spec_mapping = collections.defaultdict(dict)
 
     @classmethod
     def _register_impl(
-        cls, _type, to_register, name, assert_type=None, spec=None
+        cls, _type, to_register, name, assert_type=None
     ):
         def wrap(to_register):
             if assert_type is not None:
@@ -48,8 +45,6 @@ class Registry(metaclass=Singleton):
                     to_register, assert_type
                 )
             register_name = to_register.__name__ if name is None else name
-            if spec is not None:
-                cls.spec_mapping[_type][register_name] = spec
 
             cls.mapping[_type][register_name] = to_register
             return to_register
@@ -158,7 +153,6 @@ class Registry(metaclass=Singleton):
         cls,
         to_register=None,
         *,
-        action_space: Optional[spaces.Dict],
         name: Optional[str] = None
     ):
         r"""Add a task action in this registry under key 'name'
@@ -169,11 +163,11 @@ class Registry(metaclass=Singleton):
                 If None then the task action's method takes no parameters.
             name: Key with which the task action will be registered.
                 If None will use the name of the task action's method.
-
         """
+        from habitat.core.embodied_task import TaskAction
 
         return cls._register_impl(
-            "task_action", to_register, name, spec=action_space
+            "task_action", to_register, name, assert_type=TaskAction
         )
 
     @classmethod
@@ -215,20 +209,12 @@ class Registry(metaclass=Singleton):
         return cls.mapping[_type].get(name, None)
 
     @classmethod
-    def _get_spec(cls, _type, name):
-        return cls.spec_mapping[_type].get(name, None)
-
-    @classmethod
     def get_task(cls, name):
         return cls._get_impl("task", name)
 
     @classmethod
     def get_task_action(cls, name):
         return cls._get_impl("task_action", name)
-
-    @classmethod
-    def get_task_action_spec(cls, name):
-        return cls._get_spec("task_action", name)
 
     @classmethod
     def get_simulator(cls, name):
