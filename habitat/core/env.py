@@ -104,7 +104,7 @@ class Env:
                 **self._task.sensor_suite.observation_spaces.spaces,
             }
         )
-        self.action_space = self._task.action_space
+        self.action_space = self._task.action_space()
         self._max_episode_seconds = (
             self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         )

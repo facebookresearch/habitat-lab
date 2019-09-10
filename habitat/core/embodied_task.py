@@ -19,6 +19,44 @@ from habitat.core.registry import registry
 from habitat.core.simulator import SensorSuite, Simulator
 
 
+class TaskAction:
+    r"""Represents a measure that provides measurement on top of environment
+    and task. This can be used for tracking statistics when running
+    experiments. The user of this class needs to implement the reset_metric
+    and update_metric method and the user is also required to set the below
+    attributes:
+
+    Attributes:
+        uuid: universally unique id.
+        _metric: metric for the ``Measure``, this has to be updated with each
+            ``step`` call on ``habitat.Env``.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.uuid = self._get_uuid(*args, **kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        raise NotImplementedError
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        r"""Reset ``_metric``, this method is called from ``Env`` on each reset.
+        """
+        raise NotImplementedError
+
+    def step(self, *args: Any, **kwargs: Any) -> None:
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        raise NotImplementedError
+
+    def get_action_space(self):
+        r"""
+        Returns:
+             the current metric for ``Measure``.
+        """
+        return None
+
+
 class Measure:
     r"""Represents a measure that provides measurement on top of environment
     and task. This can be used for tracking statistics when running
@@ -142,26 +180,14 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+
         self._possible_actions = OrderedDict()
         for action in config.POSSIBLE_ACTIONS:
-            assert action in registry.mapping["task_action"]
-            self._possible_actions[action] = registry.mapping["task_action"][action]
-
-    def step(self, action: int, episode, action_args=None):
-        if action_args is None:
-            action_args = {}
-        if isinstance(action, int):
-            action = list(self._possible_actions.keys())[action]
-        assert action in self._possible_actions.keys()
-        action_method = self._possible_actions[action]
-        observations = action_method(self, **action_args)
-        observations.update(
-            self.sensor_suite.get_observations(
-                observations=observations, episode=episode
+            action_class = registry.get_task_action(action)
+            print(action_class)
+            self._possible_actions[action] = action_class(
+                sim=self._sim, task=self
             )
-        )
-
-        return observations
 
     def step(
         self,
@@ -179,8 +205,8 @@ class EmbodiedTask:
             action in self._possible_actions
         ), f"Can't find '{action}' action in {self._possible_actions.keys()}."
 
-        action_method = self._possible_actions[action]
-        observations = action_method(self, **action_args)
+        task_action = self._possible_actions[action]
+        observations = task_action.step(self, **action_args)
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations, episode=episode
@@ -200,7 +226,7 @@ class EmbodiedTask:
         else:
             if isinstance(action, (int, np.integer)):
                 action = self.get_action_by_index(action)
-            return registry.get_task_action_spec(name=action)
+            return self._possible_actions[action].get_action_space()
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
