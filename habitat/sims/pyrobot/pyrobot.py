@@ -96,6 +96,8 @@ class PyRobotDepthSensor(DepthSensor):
                 ),
             )
 
+        obs = obs / 1000  # convert from mm to m
+
         obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observations to [0, 1]
