@@ -253,8 +253,6 @@ class PPOTrainer(BaseRLTrainer):
         pth_time = 0
         count_steps = 0
         count_checkpoints = 0
-        self.save_checkpoint(f"ckpt.{count_checkpoints}.pth")
-        exit()
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
