@@ -223,8 +223,8 @@ _C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
 # -----------------------------------------------------------------------------
 _C.PYROBOT.DEPTH_SENSOR = PYROBOT_SENSOR.clone()
 _C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
-_C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0
-_C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5
+_C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
+_C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
 _C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # ACTIONS LOCOBOT
