@@ -509,7 +509,15 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(observations[i], infos[i])
                     rgb_frames[i].append(frame)
 
-        self.envs, test_recurrent_hidden_states, not_done_masks, current_episode_reward, prev_actions, batch, rgb_frames = self._pause_envs(
+        (
+            self.envs,
+            test_recurrent_hidden_states,
+            not_done_masks,
+            current_episode_reward,
+            prev_actions,
+            batch,
+            rgb_frames,
+        ) = self._pause_envs(
             envs_to_pause,
             self.envs,
             test_recurrent_hidden_states,
