@@ -17,16 +17,22 @@ from habitat.core.simulator import SensorSuite, Simulator
 
 class Measure:
     r"""Represents a measure that provides measurement on top of environment
-    and task. This can be used for tracking statistics when running
-    experiments. The user of this class needs to implement the reset_metric
-    and update_metric method and the user is also required to set the below
-    attributes:
+    and task.
 
-    Attributes:
-        uuid: universally unique id.
-        _metric: metric for the ``Measure``, this has to be updated with each
-            ``step`` call on ``habitat.Env``.
+    :data uuid: universally unique id.
+    :data _metric: metric for the `Measure`, this has to be updated with
+        each `step() <env.Env.step()>` call on `env.Env`.
+
+    This can be used for tracking statistics when running experiments. The
+    user of this class needs to implement the `reset_metric()` and
+    `update_metric()` method and the user is also required to set the
+    `uuid <Measure.uuid>` and `_metric` attributes.
+
+    .. (uuid is a builtin Python module, so just `uuid` would link there)
     """
+
+    _metric: Any
+    uuid: str
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.uuid = self._get_uuid(*args, **kwargs)
@@ -36,32 +42,35 @@ class Measure:
         raise NotImplementedError
 
     def reset_metric(self, *args: Any, **kwargs: Any) -> None:
-        r"""Reset ``_metric``, this method is called from ``Env`` on each reset.
+        r"""Reset `_metric`, this method is called from `env.Env` on each
+        reset.
         """
         raise NotImplementedError
 
     def update_metric(self, *args: Any, **kwargs: Any) -> None:
-        r"""Update ``_metric``, this method is called from ``Env`` on each 
-        ``step``.
+        r"""Update `_metric`, this method is called from `env.Env` on each
+        `step() <env.Env.step()>`
         """
         raise NotImplementedError
 
     def get_metric(self):
-        r"""
-        Returns:
-             the current metric for ``Measure``.
+        r"""..
+
+        :return: the current metric for `Measure`.
         """
         return self._metric
 
 
 class Metrics(dict):
     r"""Dictionary containing measurements.
-
-    Args:
-        measures: list of ``Measure`` whose metrics are fetched and packaged.
     """
 
     def __init__(self, measures: Dict[str, Measure]) -> None:
+        """Constructor
+
+        :param measures: list of `Measure` whose metrics are fetched and
+            packaged.
+        """
         data = [
             (uuid, measure.get_metric()) for uuid, measure in measures.items()
         ]
@@ -69,17 +78,18 @@ class Metrics(dict):
 
 
 class Measurements:
-    r"""Represents a set of Measures, with each ``Measure`` being identified
+    r"""Represents a set of Measures, with each `Measure` being identified
     through a unique id.
-
-    Args:
-        measures: list containing ``Measure``, uuid of each
-            ``Measure`` must be unique.
     """
 
     measures: Dict[str, Measure]
 
     def __init__(self, measures: List[Measure]) -> None:
+        """Constructor
+
+        :param measures: list containing `Measure`, uuid of each
+            `Measure` must be unique.
+        """
         self.measures = OrderedDict()
         for measure in measures:
             assert (
@@ -96,26 +106,25 @@ class Measurements:
             measure.update_metric(*args, **kwargs)
 
     def get_metrics(self) -> Metrics:
-        r"""
-        Returns:
-            collect measurement from all Measures and return it packaged inside
-            Metrics.
+        r"""Collects measurement from all `Measure`\ s and returns it
+        packaged inside `Metrics`.
         """
         return Metrics(self.measures)
 
 
 class EmbodiedTask:
-    r"""Base class for embodied tasks. When subclassing the user has to
-    define the attributes ``measurements`` and ``sensor_suite``.
+    r"""Base class for embodied tasks.
 
     Args:
         config: config for the task.
         sim: reference to the simulator for calculating task observations.
         dataset: reference to dataset for task instance level information.
 
-    Attributes:
-        measurements: set of task measures.
-        sensor_suite: suite of task sensors.
+    When subclassing the user has to define the attributes `measurements` and
+    `sensor_suite`.
+
+    :data measurements: set of task measures.
+    :data sensor_suite: suite of task sensors.
     """
 
     _config: Any
@@ -134,13 +143,10 @@ class EmbodiedTask:
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
     ) -> Config:
-        r"""
-        Args:
-            sim_config: config for simulator.
-            episode: current episode.
+        r"""Update config merging information from :p:`sim_config` and
+        :p:`episode`.
 
-        Returns:
-            update config merging information from ``sim_config`` and 
-                ``episode``.
+        :param sim_config: config for simulator.
+        :param episode: current episode.
         """
         raise NotImplementedError

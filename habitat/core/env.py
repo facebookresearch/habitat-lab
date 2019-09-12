@@ -21,23 +21,16 @@ from habitat.tasks import make_task
 
 
 class Env:
-    r"""Fundamental environment class for ``habitat``. All the information 
-    needed for working on embodied tasks with simulator is abstracted inside
-    Env. Acts as a base for other derived environment classes. Env consists
-    of three major components: ``dataset`` (``episodes``), ``simulator`` and 
-    ``task`` and connects all the three components together.
+    r"""Fundamental environment class for `habitat`.
 
-    Args:
-        config: config for the environment. Should contain id for simulator and
-            ``task_name`` which are passed into ``make_sim`` and ``make_task``.
-        dataset: reference to dataset for task instance level information.
-            Can be defined as ``None`` in which case ``_episodes`` should be 
-            populated from outside.
+    :data observation_space: ``SpaceDict`` object corresponding to sensor in
+        sim and task.
+    :data action_space: ``gym.space`` object corresponding to valid actions.
 
-    Attributes:
-        observation_space: ``SpaceDict`` object corresponding to sensor in sim
-            and task.
-        action_space: ``gym.space`` object corresponding to valid actions.
+    All the information  needed for working on embodied tasks with simulator
+    is abstracted inside `Env`. Acts as a base for other derived environment
+    classes. `Env` consists of three major components: ``dataset`` (`episodes`), ``simulator`` (`sim`) and `task` and connects all the three components
+    together.
     """
 
     observation_space: SpaceDict
@@ -59,6 +52,16 @@ class Env:
     def __init__(
         self, config: Config, dataset: Optional[Dataset] = None
     ) -> None:
+        """Constructor
+
+        :param config: config for the environment. Should contain id for
+            simulator and ``task_name`` which are passed into ``make_sim`` and
+            ``make_task``.
+        :param dataset: reference to dataset for task instance level
+            information. Can be defined as :py:`None` in which case
+            ``_episodes`` should be populated from outside.
+        """
+
         assert config.is_frozen(), (
             "Freeze the config before creating the "
             "environment, use config.freeze()."
@@ -188,8 +191,7 @@ class Env:
     def reset(self) -> Observations:
         r"""Resets the environments and returns the initial observations.
 
-        Returns:
-            initial observations from the environment.
+        :return: initial observations from the environment.
         """
         self._reset_stats()
 
@@ -218,12 +220,9 @@ class Env:
     def step(self, action: int) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        Args:
-            action: action (belonging to ``action_space``) to be performed 
-                inside the environment.
-
-        Returns:
-            observations after taking action in environment.
+        :param action: action (belonging to `action_space`) to be performed
+            inside the environment.
+        :return: observations after taking action in environment.
         """
 
         assert (
@@ -270,16 +269,14 @@ class Env:
 
 
 class RLEnv(gym.Env):
-    r"""Reinforcement Learning (RL) environment class which subclasses gym.Env.
-    This is a wrapper over habitat.Env for RL users. To create custom RL
-    environments users should subclass RLEnv and define the following methods:
-    ``get_reward_range``, ``get_reward``, ``get_done``, ``get_info``.
+    r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
 
-    As this is a subclass of ``gym.Env``, it implements ``reset`` and ``step``.
+    This is a wrapper over `Env` for RL users. To create custom RL
+    environments users should subclass `RLEnv` and define the following
+    methods: `get_reward_range()`, `get_reward()`, `get_done()`, `get_info()`.
 
-    Args:
-        config: config to construct ``habitat.Env``.
-        dataset: dataset to construct ``habtiat.Env``.
+    As this is a subclass of ``gym.Env``, it implements `reset()` and
+    `step()`.
     """
 
     _env: Env
@@ -287,6 +284,12 @@ class RLEnv(gym.Env):
     def __init__(
         self, config: Config, dataset: Optional[Dataset] = None
     ) -> None:
+        """Constructor
+
+        :param config: config to construct `Env`
+        :param dataset: dataset to construct `Env`.
+        """
+
         self._env = Env(config, dataset)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
@@ -314,55 +317,45 @@ class RLEnv(gym.Env):
     def get_reward_range(self):
         r"""Get min, max range of reward.
 
-        Returns:
-             [min, max] range of reward.
+        :return: :py:`[min, max]` range of reward.
         """
         raise NotImplementedError
 
     def get_reward(self, observations: Observations) -> Any:
-        r"""Returns reward after action has been performed. This method
-        is called inside the step method.
+        r"""Returns reward after action has been performed.
 
-        Args:
-            observations: observations from simulator and task.
+        :param observations: observations from simulator and task.
+        :return: reward after performing the last action.
 
-        Returns:
-            reward after performing the last action.
+        This method is called inside the `step()` method.
         """
         raise NotImplementedError
 
     def get_done(self, observations: Observations) -> bool:
         r"""Returns boolean indicating whether episode is done after performing
-        the last action. This method is called inside the step method.
+        the last action.
 
-        Args:
-            observations: observations from simulator and task.
+        :param observations: observations from simulator and task.
+        :return: done boolean after performing the last action.
 
-        Returns:
-            done boolean after performing the last action.
+        This method is called inside the step method.
         """
         raise NotImplementedError
 
     def get_info(self, observations) -> Dict[Any, Any]:
-        r"""
-        Args:
-            observations: observations from simulator and task.
+        r"""..
 
-        Returns:
-            info after performing the last action.
+        :param observations: observations from simulator and task.
+        :return: info after performing the last action.
         """
         raise NotImplementedError
 
     def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
-        r"""Perform an action in the environment and return
-        ``(observations, reward, done, info)``.
+        r"""Perform an action in the environment.
 
-        Args:
-            action: action (belonging to ``action_space``) to be performed 
-                inside the environment.
-
-        Returns:
-            ``(observations, reward, done, info)``.
+        :param action: action (belonging to `action_space`) to be performed
+            inside the environment.
+        :return: :py:`(observations, reward, done, info)`
         """
 
         observations = self._env.step(action)

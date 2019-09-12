@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 r"""Implements evaluation of ``habitat.Agent`` inside ``habitat.Env``.
-``habitat.Benchmark`` creates a ``habitat.Env`` which is specified through 
-the ``config_env`` parameter in constructor. The evaluation is task agnostic 
+``habitat.Benchmark`` creates a ``habitat.Env`` which is specified through
+the ``config_env`` parameter in constructor. The evaluation is task agnostic
 and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 """
 
@@ -19,27 +19,25 @@ from habitat.core.env import Env
 
 class Benchmark:
     r"""Benchmark for evaluating agents in environments.
-
-
-    Args:
-        config_paths: file to be used for creating the environment.
     """
 
     def __init__(self, config_paths: Optional[str] = None) -> None:
+        r"""..
+
+        :param config_paths: file to be used for creating the environment
+        """
         config_env = get_config(config_paths)
         self._env = Env(config=config_env)
 
     def evaluate(
         self, agent: Agent, num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
-        r"""
-        Args:
-            agent: agent to be evaluated in environment.
-            num_episodes: count of number of episodes for which the evaluation
-                should be run.
+        r"""..
 
-        Returns:
-            dict containing metrics tracked by environment.
+        :param agent: agent to be evaluated in environment.
+        :param num_episodes: count of number of episodes for which the
+            evaluation should be run.
+        :return: dict containing metrics tracked by environment.
         """
 
         if num_episodes is None:
