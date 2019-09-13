@@ -25,7 +25,7 @@ habitat.core.__all__ = [
 habitat.config.__all__.remove("Config")
 
 PROJECT_TITLE = "Habitat"
-PROJECT_SUBTITLE = "API Python Docs"
+PROJECT_SUBTITLE = "API Docs"
 PROJECT_LOGO = "../../habitat-sim/docs/habitat.svg"
 FAVICON = "../../habitat-sim/docs/habitat-blue.png"
 MAIN_PROJECT_URL = "https://aihabitat.org"
@@ -76,7 +76,7 @@ LINKS_NAVBAR1 = [
 ]
 LINKS_NAVBAR2 = [
     ("Sim Docs", "../habitat-sim/index.html", []),
-    ("C++ Sim Docs", "../habitat-cpp/index.html", []),
+    ("Sim C++ Docs", "../habitat-cpp/index.html", []),
 ]
 
 FINE_PRINT = f"""
