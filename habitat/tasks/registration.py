@@ -8,6 +8,7 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.tasks.eqa.eqa_task import EQATask
 from habitat.tasks.nav.nav_task import NavigationTask
+from habitat.tasks.vln.vln_task import VLNTask
 
 
 def make_task(id_task, **kwargs):

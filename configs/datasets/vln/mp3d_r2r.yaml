@@ -1,0 +1,5 @@
+DATASET:
+  TYPE: R2RVLN-v1
+  SPLIT: train
+  DATA_PATH: data/R2R/habitat_R2R_{split}.json
+  SCENES_DIR: data/mp3d/scenes/
