@@ -15,7 +15,7 @@ import habitat
 # Define the measure and register it with habitat
 # By default, the things are registered with the class name
 @habitat.registry.register_measure
-class EpisodeInfo(habitat.Measure):
+class EpisodeInfoExample(habitat.Measure):
     def __init__(self, sim, config, **kwargs: Any):
         # This measure only needs the config
         self._config = config
@@ -78,13 +78,13 @@ def main():
     config.defrost()
 
     # Add things to the config to for the measure
-    config.TASK.EPISODE_INFO = habitat.Config()
+    config.TASK.EPISODE_INFO_EXAMPLE = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
-    config.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-    config.TASK.EPISODE_INFO.VALUE = 5
+    config.TASK.EPISODE_INFO_EXAMPLE.TYPE = "EpisodeInfoExample"
+    config.TASK.EPISODE_INFO_EXAMPLE.VALUE = 5
     # Add the measure to the list of measures in use
-    config.TASK.MEASUREMENTS.append("EPISODE_INFO")
+    config.TASK.MEASUREMENTS.append("EPISODE_INFO_EXAMPLE")
 
     # Now define the config for the sensor
     config.TASK.AGENT_POSITION_SENSOR = habitat.Config()

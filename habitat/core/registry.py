@@ -164,10 +164,10 @@ class Registry(metaclass=Singleton):
             name: Key with which the task action will be registered.
                 If None will use the name of the task action's method.
         """
-        from habitat.core.embodied_task import TaskAction
+        from habitat.core.embodied_task import Action
 
         return cls._register_impl(
-            "task_action", to_register, name, assert_type=TaskAction
+            "task_action", to_register, name, assert_type=Action
         )
 
     @classmethod

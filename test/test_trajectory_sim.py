@@ -68,8 +68,6 @@ def test_sim_trajectory():
         assert sim.action_space.contains(action)
 
         sim.step(action)
-        if i == len(test_trajectory["actions"]) - 1:  # STOP action
-            assert sim.is_episode_active is False
 
     sim.close()
 

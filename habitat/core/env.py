@@ -94,7 +94,7 @@ class Env:
         )
         self._task = make_task(
             self._config.TASK.TYPE,
-            task_config=self._config.TASK,
+            config=self._config.TASK,
             sim=self._sim,
             dataset=self._dataset,
         )
@@ -198,20 +198,14 @@ class Env:
         self.current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
 
-        observations = self._sim.reset()
-        observations.update(
-            self.task.sensor_suite.get_observations(
-                observations=observations, episode=self.current_episode
-            )
-        )
-
+        observations = self.task.reset(episode=self.current_episode)
         self._task.measurements.reset_measures(episode=self.current_episode)
 
         return observations
 
     def _update_step_stats(self) -> None:
         self._elapsed_steps += 1
-        self._episode_over = not self._sim.is_episode_active
+        self._episode_over = not self._task.is_episode_active
         if self._past_limit():
             self._episode_over = True
 
@@ -219,6 +213,7 @@ class Env:
         self,
         action: Union[int, str],
         action_args: Optional[Dict[str, Any]] = None,
+        **kwargs
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
@@ -256,6 +251,7 @@ class Env:
 
     def seed(self, seed: int) -> None:
         self._sim.seed(seed)
+        self._task.seed(seed)
 
     def reconfigure(self, config: Config) -> None:
         self._config = config
@@ -363,19 +359,23 @@ class RLEnv(gym.Env):
         self,
         action: Union[int, str],
         action_args: Optional[Dict[str, Any]] = None,
+        **kwargs
     ) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment and return
         ``(observations, reward, done, info)``.
 
         Args:
             action: action (belonging to ``action_space``) to be performed 
-                inside the environment.
+                inside the environment. Action is a name or index of allowed
+                task's action.
+            action_args: action arguments (belonging to action's
+            ``action_space``) to support parametrized and continuous actions.
 
         Returns:
             ``(observations, reward, done, info)``.
         """
 
-        observations = self._env.step(action, action_args)
+        observations = self._env.step(action, action_args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)

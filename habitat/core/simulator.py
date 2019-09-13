@@ -302,10 +302,6 @@ class Simulator:
     def action_space(self) -> Space:
         raise NotImplementedError
 
-    @property
-    def is_episode_active(self) -> bool:
-        raise NotImplementedError
-
     def reset(self) -> Observations:
         r"""resets the simulator and returns the initial observations.
 

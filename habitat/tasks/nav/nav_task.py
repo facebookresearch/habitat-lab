@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 import attr
 import cv2
@@ -18,7 +18,7 @@ from habitat.core.embodied_task import (
     EmptySpace,
     Measure,
     Measurements,
-    TaskAction,
+    Action,
 )
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -703,40 +703,11 @@ class TopDownMap(Measure):
 class NavigationTask(EmbodiedTask):
     def __init__(
             self,
-            task_config: Config,
+            config: Config,
             sim: Simulator,
             dataset: Optional[Dataset] = None,
     ) -> None:
-
-        task_measurements = []
-        for measurement_name in task_config.MEASUREMENTS:
-            measurement_cfg = getattr(task_config, measurement_name)
-            measure_type = registry.get_measure(measurement_cfg.TYPE)
-            assert (
-                    measure_type is not None
-            ), "invalid measurement type {}".format(measurement_cfg.TYPE)
-            print("measurement type {}".format(measurement_cfg.TYPE))
-            task_measurements.append(
-                measure_type(
-                    sim=sim, config=measurement_cfg, dataset=dataset, task=self
-                )
-            )
-        self.measurements = Measurements(task_measurements)
-
-        task_sensors = []
-        for sensor_name in task_config.SENSORS:
-            sensor_cfg = getattr(task_config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.TYPE
-            )
-            print("sensor type {}".format(sensor_cfg.TYPE))
-            task_sensors.append(
-                sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
-            )
-
-        self.sensor_suite = SensorSuite(task_sensors)
-        super().__init__(config=task_config, sim=sim, dataset=dataset)
+        super().__init__(config=config, sim=sim, dataset=dataset)
 
     # @registry.register_task_action(
     #     name="move_forward"
@@ -767,7 +738,7 @@ class NavigationTask(EmbodiedTask):
     #     return self._sim.step(SimulatorActions.STOP)
 
     # @registry.register_task_action(
-    #     name="teleport",
+    #     name="TELEPORT",
     #     action_space=spaces.Dict(
     #         {
     #             "position": spaces.Box(
@@ -800,8 +771,21 @@ class NavigationTask(EmbodiedTask):
     ) -> Any:
         return merge_sim_episode_config(sim_config, episode)
 
+    def _check_episode_is_active(
+            self,
+            *args: Any,
+            action: Union[str, int],
+            episode: Type[Episode],
+            action_args: Dict[str, Any] = None,
+            **kwargs: Any,
+    ) -> bool:
+        if not hasattr(self, "is_stop_called"):
+            return True
+        else:
+            return not self.is_stop_called
 
-class SimulatorAction(TaskAction):
+
+class SimulatorAction(Action):
     def __init__(self, *args: Any, sim, task, **kwargs: Any) -> None:
         self._task = task
         self._sim = sim
@@ -813,10 +797,12 @@ class SimulatorAction(TaskAction):
         return None
 
 
-@registry.register_task_action(name="move_forward")
+@registry.register_task_action
 class MoveForwardAction(SimulatorAction):
+    name: str = "MOVE_FORWARD"
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "move_forward"
+        return self.name
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -825,10 +811,10 @@ class MoveForwardAction(SimulatorAction):
         return self._sim.step(SimulatorActions.MOVE_FORWARD)
 
 
-@registry.register_task_action(name="turn_left")
+@registry.register_task_action
 class TurnLeftAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "turn_left"
+        return "TURN_LEFT"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -837,10 +823,10 @@ class TurnLeftAction(SimulatorAction):
         return self._sim.step(SimulatorActions.TURN_LEFT)
 
 
-@registry.register_task_action(name="turn_right")
+@registry.register_task_action
 class TurnRightAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "turn_right"
+        return "TURN_RIGHT"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -849,22 +835,28 @@ class TurnRightAction(SimulatorAction):
         return self._sim.step(SimulatorActions.TURN_RIGHT)
 
 
-@registry.register_task_action(name="stop")
+@registry.register_task_action
 class StopAction(SimulatorAction):
+    name: str = "STOP"
+
+    def reset(self, *args: Any, **kwargs: Any):
+        self._task.is_stop_called = False
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "stop"
+        return self.name
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.STOP)
+        self._task.is_stop_called = True
+        return self._sim.get_observations_at()
 
 
-@registry.register_task_action(name="look_up")
+@registry.register_task_action
 class LookUpAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "look_up"
+        return "LOOK_UP"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -873,10 +865,10 @@ class LookUpAction(SimulatorAction):
         return self._sim.step(SimulatorActions.LOOK_UP)
 
 
-@registry.register_task_action(name="look_down")
+@registry.register_task_action
 class LookDownAction(SimulatorAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "look_down"
+        return "LOOK_DOWN"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -885,12 +877,15 @@ class LookDownAction(SimulatorAction):
         return self._sim.step(SimulatorActions.LOOK_DOWN)
 
 
-@registry.register_task_action(
-    name="teleport"
-)
+@registry.register_task_action
 class TeleportAction(SimulatorAction):
+    # TODO @maksymets: Propagate through Simulator class
+    COORDINATE_EPSILON = 1e-6
+    COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
+    COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "teleport"
+        return "TELEPORT"
 
     def step(self, *args: Any, position: List[float], rotation: List[float],
              **kwargs: Any):
@@ -903,7 +898,7 @@ class TeleportAction(SimulatorAction):
         # if not isinstance(position, list):
         #     position = list(position)
         if not self._sim.is_navigable(position):
-            return {}
+            return self._sim.get_observations_at()
 
         return self._sim.get_observations_at(
             position=position, rotation=rotation, keep_agent_at_new_pose=True
@@ -913,8 +908,8 @@ class TeleportAction(SimulatorAction):
         return spaces.Dict(
             {
                 "position": spaces.Box(
-                    low=np.array([-10.0, -10.0, -10.0]),
-                    high=np.array([10.0, 10.0, 10.0]),
+                    low=np.array([self.COORDINATE_MIN] * 3),
+                    high=np.array([self.COORDINATE_MAX] * 3),
                     dtype=np.float32,
                 ),
                 "rotation": spaces.Box(

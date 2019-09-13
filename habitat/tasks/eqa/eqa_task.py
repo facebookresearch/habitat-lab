@@ -4,19 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import attr
 import numpy as np
 from gym import spaces
 
+from habitat.config import Config
+from habitat.core.embodied_task import Measure, Action
 from habitat.core.registry import registry
-from habitat.core.simulator import (
-    Observations,
-    Sensor,
-    SensorSuite,
-    SensorTypes,
-)
+from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 
@@ -48,77 +45,275 @@ class EQAEpisode(NavigationEpisode):
     )
 
 
+@registry.register_sensor
 class QuestionSensor(Sensor):
-    def __init__(self, **kwargs):
+    def __init__(self, dataset, **kwargs):
         self.uuid = "question"
         self.sensor_type = SensorTypes.TEXT
-        # TODO (maksymets) extend gym observation space for text and metadata
-        self.observation_space = spaces.Discrete(0)
+        self._dataset = dataset
 
-    def _get_observation(
-        self,
-        observations: Dict[str, Observations],
-        episode: EQAEpisode,
-        **kwargs
-    ):
-        return episode.question.question_text
-
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
-
-
-class AnswerSensor(Sensor):
-    def __init__(self, **kwargs):
-        self.uuid = "answer"
-        self.sensor_type = SensorTypes.TEXT
-        # TODO (maksymets) extend gym observation space for text and metadata
-        self.observation_space = spaces.Discrete(0)
-
-    def _get_observation(
-        self,
-        observations: Dict[str, Observations],
-        episode: EQAEpisode,
-        **kwargs
-    ):
-        return episode.question.answer_text
-
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
-
-
-# TODO (maksymets) Move reward to measurement class
-class RewardSensor(Sensor):
-    REWARD_MIN = -100
-    REWARD_MAX = -100
-
-    def __init__(self, **kwargs):
-        self.uuid = "reward"
-        self.sensor_type = SensorTypes.TENSOR
-        self.observation_space = spaces.Box(
-            low=RewardSensor.REWARD_MIN,
-            high=RewardSensor.REWARD_MAX,
-            shape=(1,),
-            dtype=np.float,
+        self.observation_space = spaces.Discrete(
+            len(dataset.get_questions_vocabulary())
         )
 
-    def _get_observation(
-        self,
-        observations: Dict[str, Observations],
-        episode: NavigationEpisode,
-        **kwargs
+    def get_observation(
+            self,
+            observations: Dict[str, Observations],
+            episode: EQAEpisode,
+            **kwargs,
     ):
-        return [0]
+        return self._dataset.get_questions_vocabulary()[
+            episode.question.question_text
+        ]
 
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
+
+@registry.register_measure
+class CorrectAnswer(Measure):
+    """CorrectAnswer
+    """
+
+    def __init__(self, dataset, **kwargs):
+        self._dataset = dataset
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "correct_answer"
+
+    def reset_metric(self, episode):
+        self._metric = self._dataset.get_answers_vocabulary()[
+            episode.question.answer_text
+        ]
+
+    def update_metric(self, *args: Any, **kwargs: Any):
+        pass
+
+
+@registry.register_measure
+class EpisodeInfo(Measure):
+    """Episode Info
+    """
+
+    def __init__(self, sim, config, **kwargs):
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "episode_info"
+
+    def reset_metric(self, episode):
+        self._metric = vars(episode).copy()
+
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
+        pass
+
+
+@registry.register_measure
+class ActionStats(Measure):
+    """Actions Statistic
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "action_stats"
+
+    def reset_metric(self, episode):
+        self._metric = None
+
+    def update_metric(self, episode, action):
+        self._metric = {"previous_action": action}
+
+
+@registry.register_measure
+class AnswerAccuracy(Measure):
+    """AnswerAccuracy
+    """
+
+    def __init__(self, dataset, task, **kwargs):
+        self._dataset = dataset
+        self._task = task
+        self._answer_received = False
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "answer_accuracy"
+
+    def reset_metric(self, episode):
+        self._metric = 0
+        self._answer_received = False
+
+    def update_metric(
+            self, action=None, episode=None, *args: Any, **kwargs: Any
+    ):
+        if (
+                episode is None
+        ):
+            return
+        assert not self._answer_received, (
+            "Question can be answered only " "once per episode."
+        )
+        if action == "stop":
+            self._answer_received = True
+            self._metric = (
+                1
+                if self._dataset.get_answers_vocabulary()[
+                       episode.question.answer_text
+                   ]
+                   == action.task_action
+                else 0
+            )
+        else:
+            # Episode wasn't finished, but to reflect unfinished episodes in
+            # average accuracy metric we report 0
+            self._metric = 0
+
+
+@registry.register_measure
+class DistanceToGoal(Measure):
+    """Distance To Goal metrics
+    """
+
+    def __init__(self, sim: Simulator, config: Config, **kwargs):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "distance_to_goal"
+
+    def reset_metric(self, episode):
+        self._previous_position = self._sim.get_agent_state().position.tolist()
+        self._start_end_episode_distance = self._sim.geodesic_distance(
+            self._previous_position, episode.goals[0].position
+        )
+        self._agent_episode_distance = 0.0
+        self._metric = None
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    def update_metric(self, episode, action):
+        current_position = self._sim.get_agent_state().position.tolist()
+
+        distance_to_target = self._sim.geodesic_distance(
+            current_position, episode.goals[0].position
+        )
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = {
+            "distance_to_target": distance_to_target,
+            "start_distance_to_target": self._start_end_episode_distance,
+            "distance_delta": self._start_end_episode_distance
+                              - distance_to_target,
+            "agent_path_length": self._agent_episode_distance,
+        }
 
 
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
-    _sensor_suite: SensorSuite
+    """
+        Embodied Question Answering Task
+        Usage example:
+            observations = self._env.reset()
+            while not env.episode_over:
+                action = agent.act(observations)
+                observations = env.step(action)
+            env.task.answer_question(
+                agent.answer_question(observations), env.episode_over)
+            metrics = self._env.get_metrics()
+    """
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self._sensor_suite = SensorSuite(
-            [QuestionSensor(), AnswerSensor(), RewardSensor()]
-        )
+    @property
+    def possible_actions(self):
+        return registry.mapping["task_action"]
+
+    def _check_episode_is_active(
+            self,
+            *args,
+            action,
+            episode,
+            action_args=None,
+            **kwargs,
+    ) -> bool:
+        return self.is_valid and self.answer is None
+
+
+    # @registry.register_task_action(name="stop", action_space=EmptySpace())
+    # def stop(self):
+    #     self.is_stop_called = True
+    #     return self._sim.step(SimulatorActions.STOP)
+
+    # @registry.register_task_action(action_space=spaces.Dict({
+    #     "answer2": spaces.Discrete(32000),
+    # }))
+    # def answer(self, answer: int):
+    #     if self.is_stop_called:
+    #         self.answer = answer
+    #     else:
+    #         self.is_task_invalid = True
+    #
+    # def __init__(self, **kwargs) -> None:
+    #     self.is_stop_called = False
+    #     self.answer = None
+    #     self.is_task_invalid = False
+    #
+    #     super().__init__(**kwargs)
+
+
+
+@registry.register_task_action
+class AnswerAction(Action):
+    _answer: Optional[str]
+    name: str = "answer"
+
+    def __init__(self, *args: Any, sim, task, dataset, **kwargs: Any) -> None:
+        self._task = task
+        self._sim = sim
+        self._task.answer = None
+        self._task.is_stopped = False
+        self._dataset = dataset
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.name
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        self._task.answer = None
+        self._task.is_stopped = False
+        self._task.is_valid = True
+        return
+
+    def step(self, *args: Any, answer_id: int, **kwargs: Any) -> \
+            Dict[str, Observations]:
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        self._task.answer = answer_id
+        if hasattr(self, "is_stop_called") and not self.is_stop_called:
+            self._task.is_valid = False
+            self._task.invalid_reason = "Answered before stopped."
+
+        return self._sim.get_observations_at()
+
+    def get_action_space(self):
+        r"""
+        Returns:
+             the current metric for ``Measure``.
+        """
+        return spaces.Dict({
+            "answer_id": spaces.Discrete(
+                n=len(self._dataset.get_answers_vocabulary()))
+        })

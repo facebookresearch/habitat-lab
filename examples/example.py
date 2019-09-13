@@ -16,7 +16,7 @@ def example():
     print("Agent stepping around inside environment.")
     count_steps = 0
     while not env.episode_over:
-        observations = env.step(env.action_space.sample())
+        observations = env.step(**env.action_space.sample())
         count_steps += 1
     print("Episode finished after {} steps.".format(count_steps))
 

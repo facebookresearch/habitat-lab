@@ -98,20 +98,12 @@ class HabitatSimDepthSensor(DepthSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
-        if isinstance(obs, np.ndarray):
-            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
-
-            obs = np.expand_dims(
-                obs, axis=2
-            )  # make depth observation a 3D array
-        else:
-            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
-
-            obs = obs.unsqueeze(-1)
-
+        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
+
+        obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
 
         return obs
 
@@ -169,8 +161,7 @@ class HabitatSim(Simulator):
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
-
-        self._is_episode_active = False
+        self._prev_sim_obs = None
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -195,9 +186,6 @@ class HabitatSim(Simulator):
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
-            sim_sensor_cfg.gpu2gpu_transfer = (
-                self.config.HABITAT_SIM_V0.GPU_GPU
-            )
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
@@ -214,10 +202,6 @@ class HabitatSim(Simulator):
     @property
     def action_space(self) -> Space:
         return self._action_space
-
-    @property
-    def is_episode_active(self) -> bool:
-        return self._is_episode_active
 
     def _update_agents_state(self) -> bool:
         is_updated = False
@@ -239,22 +223,14 @@ class HabitatSim(Simulator):
             sim_obs = self._sim.get_sensor_observations()
 
         self._prev_sim_obs = sim_obs
-        self._is_episode_active = True
         return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action):
-        assert self._is_episode_active, (
-            "episode is not active, environment not RESET or "
-            "STOP action called previously"
-        )
 
         if action == self.index_stop_action:
-            self._is_episode_active = False
             sim_obs = self._sim.get_sensor_observations()
         else:
             sim_obs = self._sim.step(action)
-
-        self._prev_sim_obs = sim_obs
 
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
@@ -273,10 +249,6 @@ class HabitatSim(Simulator):
 
         output = observations.get(mode)
         assert output is not None, "mode {} sensor is not active".format(mode)
-        if not isinstance(output, np.ndarray):
-            # If it is not a numpy array, it is a torch tensor
-            # The function expects the result to be a numpy array
-            output = output.to("cpu").numpy()
 
         return output
 
@@ -436,14 +408,16 @@ class HabitatSim(Simulator):
 
     def get_observations_at(
         self,
-        position: List[float],
-        rotation: List[float],
+        position: Optional[List[float]] = None,
+        rotation: Optional[List[float]] = None,
         keep_agent_at_new_pose: bool = False,
     ) -> Optional[Observations]:
-
         current_state = self.get_agent_state()
+        if position is None or rotation is None:
+            success = True
+        else:
+            success = self.set_agent_state(position, rotation, reset_sensors=False)
 
-        success = self.set_agent_state(position, rotation, reset_sensors=False)
         if success:
             sim_obs = self._sim.get_sensor_observations()
 

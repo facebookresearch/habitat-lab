@@ -31,13 +31,43 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = -1
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # NAVIGATION TASK
+# -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
-_C.TASK.POSSIBLE_ACTIONS = ["stop", "move_forward", "turn_left", "turn_right"]
+_C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT",
+                            "TURN_RIGHT"]
+# -----------------------------------------------------------------------------
+# # ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS = CN()
+ACTIONS.STOP = CN()
+# -----------------------------------------------------------------------------
+# # NAVIGATION ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS.STOP.TYPE = "StopAction"
+ACTIONS.MOVE_FORWARD = CN()
+ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
+ACTIONS.TURN_LEFT = CN()
+ACTIONS.TURN_LEFT.TYPE = "TurnLeftAction"
+ACTIONS.TURN_RIGHT = CN()
+ACTIONS.TURN_RIGHT.TYPE = "TurnRightAction"
+ACTIONS.LOOK_UP = CN()
+ACTIONS.LOOK_UP.TYPE = "LookUpAction"
+ACTIONS.LOOK_DOWN = CN()
+ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
+ACTIONS.TELEPORT = CN()
+ACTIONS.TELEPORT.TYPE = "TeleportAction"
+
+_C.TASK.ACTIONS = ACTIONS
+# -----------------------------------------------------------------------------
+# # TASK SENSORS
+# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -101,6 +131,41 @@ _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
 # -----------------------------------------------------------------------------
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # EQA TASK
+# -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ANSWER = CN()
+_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
+# # EQA TASK QUESTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.QUESTION_SENSOR = CN()
+_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+# -----------------------------------------------------------------------------
+# # EQA TASK CORRECT_ANSWER measure for training
+# -----------------------------------------------------------------------------
+_C.TASK.CORRECT_ANSWER = CN()
+_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.EPISODE_INFO = CN()
+_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ACTION_STATS = CN()
+_C.TASK.ACTION_STATS.TYPE = "ActionStats"
+# -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL = CN()
+_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+# -----------------------------------------------------------------------------
+# # ANSWER_ACCURACY MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ANSWER_ACCURACY = CN()
+_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
@@ -181,9 +246,6 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
-
-
-# -----------------------------------------------------------------------------
 
 
 def get_config(

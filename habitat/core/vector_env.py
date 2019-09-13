@@ -4,11 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import multiprocessing as mp
 from multiprocessing.connection import Connection
-from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, \
+                                     Union
 
 import gym
 import numpy as np
@@ -19,15 +20,6 @@ from habitat.config import Config
 from habitat.core.env import Env, Observations, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
-
-try:
-    # Use torch.multiprocessing if we can.
-    # We have yet to find a reason to not use it and
-    # you are required to use it when sending a torch.Tensor
-    # between processes
-    import torch.multiprocessing as mp
-except ImportError:
-    import multiprocessing as mp
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -83,7 +75,7 @@ class VectorEnv:
     _is_waiting: bool
     _num_envs: int
     _auto_reset_done: bool
-    _mp_ctx: BaseContext
+    _mp_ctx: mp.context.BaseContext
     _connection_read_fns: List[Callable[[], Any]]
     _connection_write_fns: List[Callable[[Any], None]]
 
@@ -156,6 +148,7 @@ class VectorEnv:
             parent_pipe.close()
         try:
             command, data = connection_read_fn()
+            # print(f"command, data: {command}, {data}")
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     # different step methods for habitat.RLEnv and habitat.Env
@@ -163,13 +156,14 @@ class VectorEnv:
                         env, gym.Env
                     ):
                         # habitat.RLEnv
-                        observations, reward, done, info = env.step(data)
+                        observations, reward, done, info = env.step(**data)
                         if auto_reset_done and done:
                             observations = env.reset()
                         connection_write_fn((observations, reward, done, info))
                     elif isinstance(env, habitat.Env):
                         # habitat.Env
-                        observations = env.step(data)
+                        print(f"STEP : {data}")
+                        observations = env.step(**data)
                         if auto_reset_done and env.episode_over:
                             observations = env.reset()
                         connection_write_fn(observations)
@@ -187,14 +181,15 @@ class VectorEnv:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    connection_write_fn(getattr(env, command))
+                    if isinstance(command, str):
+                        connection_write_fn(getattr(env, command))
 
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
                     if function_args is None or len(function_args) == 0:
                         result = getattr(env, function_name)()
                     else:
-                        result = getattr(env, function_name)(*function_args)
+                        result = getattr(env, function_name)(**function_args)
                     connection_write_fn(result)
 
                 # TODO: update CALL_COMMAND for getting attribute like this
@@ -285,30 +280,32 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action: int):
+    def step_at(self, index_env: int, action_opts: Dict[str, Any]):
         r"""Step in the index_env environment in the vector.
 
         Args:
             index_env: index of the environment to be stepped into
-            action: action to be taken
+            action_opts: list of size _num_envs containing action name and
+            action arguments to be taken in each environment.
 
         Returns:
             list containing the output of step method of indexed env.
         """
         self._is_waiting = True
-        self._connection_write_fns[index_env]((STEP_COMMAND, action))
+        self._connection_write_fns[index_env]((STEP_COMMAND, action_opts))
         results = [self._connection_read_fns[index_env]()]
         self._is_waiting = False
         return results
 
-    def async_step(self, actions: List[int]) -> None:
+    def async_step(self, actions_opts: List[Dict[str, Any]]) -> None:
         r"""Asynchronously step in the environments.
 
         Args:
-            actions: actions to be performed in the vectorized envs.
+            actions_opts: list of size _num_envs containing action name and
+            action arguments to be taken in each environment.
         """
         self._is_waiting = True
-        for write_fn, action in zip(self._connection_write_fns, actions):
+        for write_fn, action in zip(self._connection_write_fns, actions_opts):
             write_fn((STEP_COMMAND, action))
 
     def wait_step(self) -> List[Observations]:
@@ -320,17 +317,19 @@ class VectorEnv:
         self._is_waiting = False
         return observations
 
-    def step(self, actions: List[int]):
+    def step(self, actions_opts: Union[List[int], List[Dict[str, Any]]]):
         r"""Perform actions in the vectorized environments.
 
         Args:
-            actions: list of size _num_envs containing action to be taken
-                in each environment.
+            actions_opts: list of size _num_envs containing action name and
+            action arguments to be taken in each environment.
 
         Returns:
             list of outputs from the step method of envs.
         """
-        self.async_step(actions)
+        if isinstance(actions_opts[0], (int, np.integer)):
+            actions_opts = [{"action": action} for action in actions_opts]
+        self.async_step(actions_opts)
         return self.wait_step()
 
     def close(self) -> None:
@@ -386,7 +385,7 @@ class VectorEnv:
         self,
         index: int,
         function_name: str,
-        function_args: Optional[List[Any]] = None,
+        function_args: Optional[Dict[str, Any]] = None,
     ) -> Any:
         r"""Calls a function (which is passed by name) on the selected env and
         returns the result.
@@ -394,7 +393,7 @@ class VectorEnv:
         Args:
             index: which env to call the function on.
             function_name: the name of the function to call on the env.
-            function_args: optional function args.
+            function_args: optional function keyword args.
 
         Returns:
             result of calling the function.
