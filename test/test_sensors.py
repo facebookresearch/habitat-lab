@@ -14,8 +14,11 @@ import quaternion
 import habitat
 from habitat.config.default import get_config
 from habitat.tasks.utils import quaternion_rotate_vector
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal, \
-    MoveForwardAction
+from habitat.tasks.nav.nav_task import (
+    NavigationEpisode,
+    NavigationGoal,
+    MoveForwardAction,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 
 
@@ -127,10 +130,10 @@ def test_collisions():
         prev_collisions = 0
         prev_loc = env.sim.get_agent_state().position
         for _ in range(50):
-            action_opts = sample_non_stop_action(env.action_space)
-            action = action_opts["action"]
+            action = sample_non_stop_action(env.action_space)
+            action = action["action"]
             print(f"action: {action}")
-            env.step(**action_opts)
+            env.step(action)
             collisions = env.get_metrics()["collisions"]["count"]
 
             loc = env.sim.get_agent_state().position
@@ -187,7 +190,7 @@ def test_pointgoal_sensor():
 
     env.reset()
     for _ in range(100):
-        obs = env.step(**sample_non_stop_action(env.action_space))
+        obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(pointgoal, expected_pointgoal)
@@ -240,7 +243,7 @@ def test_pointgoal_with_gps_compass_sensor():
 
     env.reset()
     for _ in range(100):
-        obs = env.step(**sample_non_stop_action(env.action_space))
+        obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         pointgoal_with_gps_compass = obs["pointgoal_with_gps_compass"]
         comapss = obs["compass"]
@@ -295,7 +298,7 @@ def test_get_observations_at():
     for _ in range(100):
         # Note, this test will not currently work for camera change actions
         # (look up/down), only for movement actions.
-        new_obs = env.step(**sample_non_stop_action(env.action_space))
+        new_obs = env.step(sample_non_stop_action(env.action_space))
         for key, val in new_obs.items():
             agent_state = env.sim.get_agent_state()
             if not (

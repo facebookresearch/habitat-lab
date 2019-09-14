@@ -38,7 +38,7 @@ class RandomAgent(habitat.Agent):
                     SimulatorActions.TURN_RIGHT,
                 ]
             )
-        return action, None
+        return {"action": action}
 
 
 class ForwardOnlyAgent(RandomAgent):
@@ -47,7 +47,7 @@ class ForwardOnlyAgent(RandomAgent):
             action = SimulatorActions.STOP
         else:
             action = SimulatorActions.MOVE_FORWARD
-        return action, None
+        return {"action": action}
 
 
 class RandomForwardAgent(RandomAgent):
@@ -66,7 +66,7 @@ class RandomForwardAgent(RandomAgent):
                     [SimulatorActions.TURN_LEFT, SimulatorActions.TURN_RIGHT]
                 )
 
-        return action, None
+        return {"action": action}
 
 
 class GoalFollower(RandomAgent):
@@ -104,7 +104,7 @@ class GoalFollower(RandomAgent):
             else:
                 action = self.turn_towards_goal(angle_to_goal)
 
-        return action, None
+        return {"action": action}
 
 
 def get_all_subclasses(cls):

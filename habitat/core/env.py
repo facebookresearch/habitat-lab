@@ -210,18 +210,14 @@ class Env:
             self._episode_over = True
 
     def step(
-        self,
-        action: Union[int, str],
-        action_args: Optional[Dict[str, Any]] = None,
-        **kwargs
+        self, action: Union[int, str, Dict[str, Any]], **kwargs
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
         Args:
-            action: action (belonging to ``action_space``) to be performed 
+            data: action (belonging to ``action_space``) to be performed
                 inside the environment. Action is a name or index of allowed
-                task's action.
-            action_args: action arguments (belonging to action's
+                task's action and action arguments (belonging to action's
             ``action_space``) to support parametrized and continuous actions.
 
         Returns:
@@ -235,10 +231,12 @@ class Env:
             self._episode_over is False
         ), "Episode over, call reset before calling step"
 
+        # Support simpler interface as well
+        if isinstance(action, str) or isinstance(action, (int, np.integer)):
+            action = {"action": action}
+
         observations = self.task.step(
-            action=action,
-            episode=self.current_episode,
-            action_args=action_args,
+            action=action, episode=self.current_episode
         )
 
         self._task.measurements.update_measures(
@@ -357,8 +355,6 @@ class RLEnv(gym.Env):
 
     def step(
         self,
-        action: Union[int, str],
-        action_args: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment and return
@@ -375,7 +371,7 @@ class RLEnv(gym.Env):
             ``(observations, reward, done, info)``.
         """
 
-        observations = self._env.step(action, action_args, **kwargs)
+        observations = self._env.step(**kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)

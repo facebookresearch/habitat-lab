@@ -162,9 +162,10 @@ def test_get_splits_sort_by_episode_id():
                 assert ep.episode_id >= split.episodes[ii - 1].episode_id
 
 
-@pytest.mark.parametrize("num_episodes,num_splits",
-                         [(994, 64), (1023, 64), (1024, 64), (1025, 64),
-                          (10000, 9), (10000, 10)])
+@pytest.mark.parametrize(
+    "num_episodes,num_splits",
+    [(994, 64), (1023, 64), (1024, 64), (1025, 64), (10000, 9), (10000, 10)],
+)
 def test_get_splits_func(num_episodes: int, num_splits: int):
     dataset = _construct_dataset(num_episodes)
     splits = dataset.get_splits(num_splits, allow_uneven_splits=True)
@@ -172,8 +173,10 @@ def test_get_splits_func(num_episodes: int, num_splits: int):
     assert sum([len(split.episodes) for split in splits]) == num_episodes
     splits = dataset.get_splits(num_splits, allow_uneven_splits=False)
     assert len(splits) == num_splits
-    assert sum(map(lambda s: s.num_episodes, splits)) == (num_episodes //
-                                                          num_splits) * num_splits
+    assert (
+        sum(map(lambda s: s.num_episodes, splits))
+        == (num_episodes // num_splits) * num_splits
+    )
 
 
 def test_sample_episodes():

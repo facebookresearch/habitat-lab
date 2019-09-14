@@ -34,9 +34,7 @@ class Registry(metaclass=Singleton):
     mapping = collections.defaultdict(dict)
 
     @classmethod
-    def _register_impl(
-        cls, _type, to_register, name, assert_type=None
-    ):
+    def _register_impl(cls, _type, to_register, name, assert_type=None):
         def wrap(to_register):
             if assert_type is not None:
                 assert issubclass(
@@ -150,10 +148,7 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_task_action(
-        cls,
-        to_register=None,
-        *,
-        name: Optional[str] = None
+        cls, to_register=None, *, name: Optional[str] = None
     ):
         r"""Add a task action in this registry under key 'name'
 

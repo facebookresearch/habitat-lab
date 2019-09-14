@@ -15,7 +15,11 @@ import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState, SimulatorActions
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal, StopAction
+from habitat.tasks.nav.nav_task import (
+    NavigationEpisode,
+    NavigationGoal,
+    StopAction,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
@@ -89,7 +93,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
 
     for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         observations = envs.step(
-            actions_opts=sample_non_stop_action(envs.action_spaces[0], num_envs)
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
         )
         assert len(observations) == num_envs
 
@@ -145,7 +149,9 @@ def test_threaded_vectorized_env():
     envs.reset()
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        observations = envs.step(actions_opts=sample_non_stop_action(envs.action_spaces[0], num_envs))
+        observations = envs.step(
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
+        )
         assert len(observations) == num_envs
 
     envs.close()
@@ -181,7 +187,7 @@ def test_env(gpu2gpu):
     env.reset()
 
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        env.step(**sample_non_stop_action(env.action_space))
+        env.step(sample_non_stop_action(env.action_space))
 
     # check for steps limit on environment
     assert env.episode_over is True, (
@@ -190,7 +196,7 @@ def test_env(gpu2gpu):
 
     env.reset()
 
-    env.step(action=StopAction.name)
+    env.step(action={"action": StopAction.name})
     # check for STOP action
     assert env.episode_over is True, (
         "episode should be over after STOP " "action"
@@ -231,7 +237,7 @@ def test_rl_vectorized_envs(gpu2gpu):
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         outputs = envs.step(
-            actions_opts=sample_non_stop_action(envs.action_spaces[0], num_envs)
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
         )
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
         assert len(observations) == num_envs
@@ -289,8 +295,9 @@ def test_rl_env(gpu2gpu):
     env.reset()
 
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        observation, reward, done, info = env.step(**sample_non_stop_action(
-            env.action_space))
+        observation, reward, done, info = env.step(
+            sample_non_stop_action(env.action_space)
+        )
 
     # check for steps limit on environment
     assert done is True, "episodes should be over after max_episode_steps"

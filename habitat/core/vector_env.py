@@ -8,8 +8,17 @@ import multiprocessing as mp
 from multiprocessing.connection import Connection
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, \
-                                     Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import gym
 import numpy as np
@@ -280,33 +289,33 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action_opts: Dict[str, Any]):
+    def step_at(self, index_env: int, action: Dict[str, Any]):
         r"""Step in the index_env environment in the vector.
 
         Args:
             index_env: index of the environment to be stepped into
-            action_opts: list of size _num_envs containing action name and
+            action: list of size _num_envs containing action name and
             action arguments to be taken in each environment.
 
         Returns:
             list containing the output of step method of indexed env.
         """
         self._is_waiting = True
-        self._connection_write_fns[index_env]((STEP_COMMAND, action_opts))
+        self._connection_write_fns[index_env]((STEP_COMMAND, action))
         results = [self._connection_read_fns[index_env]()]
         self._is_waiting = False
         return results
 
-    def async_step(self, actions_opts: List[Dict[str, Any]]) -> None:
+    def async_step(self, data: List[Dict[str, Any]]) -> None:
         r"""Asynchronously step in the environments.
 
         Args:
-            actions_opts: list of size _num_envs containing action name and
+            data: list of size _num_envs containing action name and
             action arguments to be taken in each environment.
         """
         self._is_waiting = True
-        for write_fn, action in zip(self._connection_write_fns, actions_opts):
-            write_fn((STEP_COMMAND, action))
+        for write_fn, args in zip(self._connection_write_fns, data):
+            write_fn((STEP_COMMAND, args))
 
     def wait_step(self) -> List[Observations]:
         r"""Wait until all the asynchronized environments have synchronized.
@@ -317,19 +326,20 @@ class VectorEnv:
         self._is_waiting = False
         return observations
 
-    def step(self, actions_opts: Union[List[int], List[Dict[str, Any]]]):
+    def step(self, data: Union[List[int], List[Dict[str, Any]]]):
         r"""Perform actions in the vectorized environments.
 
         Args:
-            actions_opts: list of size _num_envs containing action name and
+            data: list of size _num_envs containing action name and
             action arguments to be taken in each environment.
 
         Returns:
             list of outputs from the step method of envs.
         """
-        if isinstance(actions_opts[0], (int, np.integer)):
-            actions_opts = [{"action": action} for action in actions_opts]
-        self.async_step(actions_opts)
+        # Backward compatibility
+        if isinstance(data[0], (int, np.integer)):
+            data = [{"action": {"action": action}} for action in data]
+        self.async_step(data)
         return self.wait_step()
 
     def close(self) -> None:

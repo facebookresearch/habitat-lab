@@ -11,7 +11,7 @@ import numpy as np
 from gym import spaces
 
 from habitat.config import Config
-from habitat.core.embodied_task import Measure, Action
+from habitat.core.embodied_task import Action, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
@@ -57,10 +57,10 @@ class QuestionSensor(Sensor):
         )
 
     def get_observation(
-            self,
-            observations: Dict[str, Observations],
-            episode: EQAEpisode,
-            **kwargs,
+        self,
+        observations: Dict[str, Observations],
+        episode: EQAEpisode,
+        **kwargs,
     ):
         return self._dataset.get_questions_vocabulary()[
             episode.question.question_text
@@ -146,11 +146,9 @@ class AnswerAccuracy(Measure):
         self._answer_received = False
 
     def update_metric(
-            self, action=None, episode=None, *args: Any, **kwargs: Any
+        self, action=None, episode=None, *args: Any, **kwargs: Any
     ):
-        if (
-                episode is None
-        ):
+        if episode is None:
             return
         assert not self._answer_received, (
             "Question can be answered only " "once per episode."
@@ -160,9 +158,9 @@ class AnswerAccuracy(Measure):
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
-                       episode.question.answer_text
-                   ]
-                   == action.task_action
+                    episode.question.answer_text
+                ]
+                == action.task_action
                 else 0
             )
         else:
@@ -218,7 +216,7 @@ class DistanceToGoal(Measure):
             "distance_to_target": distance_to_target,
             "start_distance_to_target": self._start_end_episode_distance,
             "distance_delta": self._start_end_episode_distance
-                              - distance_to_target,
+            - distance_to_target,
             "agent_path_length": self._agent_episode_distance,
         }
 
@@ -242,15 +240,9 @@ class EQATask(NavigationTask):
         return registry.mapping["task_action"]
 
     def _check_episode_is_active(
-            self,
-            *args,
-            action,
-            episode,
-            action_args=None,
-            **kwargs,
+        self, *args, action, episode, action_args=None, **kwargs
     ) -> bool:
         return self.is_valid and self.answer is None
-
 
     # @registry.register_task_action(name="stop", action_space=EmptySpace())
     # def stop(self):
@@ -274,7 +266,6 @@ class EQATask(NavigationTask):
     #     super().__init__(**kwargs)
 
 
-
 @registry.register_task_action
 class AnswerAction(Action):
     _answer: Optional[str]
@@ -296,8 +287,9 @@ class AnswerAction(Action):
         self._task.is_valid = True
         return
 
-    def step(self, *args: Any, answer_id: int, **kwargs: Any) -> \
-            Dict[str, Observations]:
+    def step(
+        self, *args: Any, answer_id: int, **kwargs: Any
+    ) -> Dict[str, Observations]:
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -313,7 +305,10 @@ class AnswerAction(Action):
         Returns:
              the current metric for ``Measure``.
         """
-        return spaces.Dict({
-            "answer_id": spaces.Discrete(
-                n=len(self._dataset.get_answers_vocabulary()))
-        })
+        return spaces.Dict(
+            {
+                "answer_id": spaces.Discrete(
+                    n=len(self._dataset.get_answers_vocabulary())
+                )
+            }
+        )

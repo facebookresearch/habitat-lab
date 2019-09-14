@@ -416,7 +416,9 @@ class HabitatSim(Simulator):
         if position is None or rotation is None:
             success = True
         else:
-            success = self.set_agent_state(position, rotation, reset_sensors=False)
+            success = self.set_agent_state(
+                position, rotation, reset_sensors=False
+            )
 
         if success:
             sim_obs = self._sim.get_sensor_observations()

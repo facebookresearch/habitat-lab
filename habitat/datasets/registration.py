@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.core.registry import registry
-from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
+from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
 def make_dataset(id_dataset, **kwargs):

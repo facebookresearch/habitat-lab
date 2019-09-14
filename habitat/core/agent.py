@@ -8,7 +8,7 @@ the user should subclass ``habitat.Agent`` and implement the ``act()``
 and ``reset()`` methods.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Union
 
 from habitat.core.simulator import Observations
 
@@ -25,7 +25,7 @@ class Agent:
 
     def act(
         self, observations: Observations
-    ) -> (int, Optional[Dict[str, Any]]):
+    ) -> Union[int, str, Dict[str, Any]]:
         r"""
 
         Args:

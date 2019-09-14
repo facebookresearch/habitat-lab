@@ -10,8 +10,8 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Type, Union
 
-import numpy as np
 import gym
+import numpy as np
 from gym import Space, spaces
 
 from habitat.config import Config
@@ -169,6 +169,7 @@ class ActionSpace(spaces.Dict):
         )
     )
     """
+
     def __init__(self, spaces):
         if isinstance(spaces, dict):
             self.spaces = OrderedDict(sorted(list(spaces.items())))
@@ -180,7 +181,7 @@ class ActionSpace(spaces.Dict):
         action_index = self.actions_select.sample()
         return {
             "action": list(self.spaces.keys())[action_index],
-            "action_args": list(self.spaces.values())[action_index].sample()
+            "action_args": list(self.spaces.values())[action_index].sample(),
         }
 
     def contains(self, x):
@@ -191,7 +192,11 @@ class ActionSpace(spaces.Dict):
         return True
 
     def __repr__(self):
-        return "ActionSpace(" + ", ". join([k + ":" + str(s) for k, s in self.spaces.items()]) + ")"
+        return (
+            "ActionSpace("
+            + ", ".join([k + ":" + str(s) for k, s in self.spaces.items()])
+            + ")"
+        )
 
 
 class EmbodiedTask:
@@ -221,13 +226,13 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
-        
+
         task_measurements = []
         for measurement_name in config.MEASUREMENTS:
             measurement_cfg = getattr(config, measurement_name)
             measure_type = registry.get_measure(measurement_cfg.TYPE)
             assert (
-                    measure_type is not None
+                measure_type is not None
             ), "invalid measurement type {}".format(measurement_cfg.TYPE)
             print("measurement type {}".format(measurement_cfg.TYPE))
             task_measurements.append(
@@ -254,7 +259,7 @@ class EmbodiedTask:
         self.actions = self._init_entities(
             entity_names=config.POSSIBLE_ACTIONS,
             register_func=registry.get_task_action,
-            entities_config=self._config.ACTIONS
+            entities_config=self._config.ACTIONS,
         )
 
         # for action_name in config.POSSIBLE_ACTIONS:
@@ -277,8 +282,9 @@ class EmbodiedTask:
         #         sim=self._sim, task=self, dataset=self._dataset
         #     )
 
-    def _init_entities(self, entity_names, register_func,
-                       entities_config=None):
+    def _init_entities(
+        self, entity_names, register_func, entities_config=None
+    ):
         if entities_config is None:
             entities_config = self._config
 
@@ -286,10 +292,15 @@ class EmbodiedTask:
         for entity_name in entity_names:
             entity_cfg = getattr(entities_config, entity_name)
             entity_type = register_func(entity_cfg.TYPE)
-            assert entity_type is not None, f"invalid {entity_name} type {entity_cfg.TYPE}"
+            assert (
+                entity_type is not None
+            ), f"invalid {entity_name} type {entity_cfg.TYPE}"
             entities[entity_name] = entity_type(
                 sim=self._sim,
-                config=entity_cfg, dataset=self._dataset, task=self)
+                config=entity_cfg,
+                dataset=self._dataset,
+                task=self,
+            )
         return entities
 
     def reset(self, episode):
@@ -305,34 +316,31 @@ class EmbodiedTask:
 
         return observations
 
-    def step(
-        self,
-        action: Union[str, int],
-        episode: Type[Episode],
-        action_args: Dict[str, Any] = None,
-    ):
-        if action_args is None:
-            action_args = {}
-        if isinstance(action, (int, np.integer)):
-            if action >= len(self.actions):
-                raise ValueError(f"Action index '{action}' is out of range.")
-            action = list(self.actions.keys())[action]
-        assert (
-            action in self.actions
-        ), f"Can't find '{action}' action in {self.actions.keys()}."
+    def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
 
-        task_action = self.actions[action]
-        observations = task_action.step(self, **action_args)
+        action_name = action["action"]
+        if isinstance(action_name, (int, np.integer)):
+            if action_name >= len(self.actions):
+                raise ValueError(
+                    f"Action index '{action_name}' is out of range."
+                )
+            action_name = list(self.actions.keys())[action_name]
+        assert (
+            action_name in self.actions
+        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
+
+        task_action = self.actions[action_name]
+        observations = task_action.step(self, **action["action_args"])
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations, episode=episode
+                observations=observations, episode=episode, action=action
             )
         )
 
         self._is_episode_active = self._check_episode_is_active(
-            action=action,
-            episode=episode,
-            action_args=action_args,
+            observations=observations, action=action, episode=episode
         )
 
         return observations
@@ -342,17 +350,13 @@ class EmbodiedTask:
             raise ValueError(f"Action index '{action}' is out of range.")
         return list(self.actions.keys())[action_index]
 
-    def action_space(self, action: Union[int, str] = None) -> Space:
-        return ActionSpace({action_name: action_instance.get_action_space()
-                            for action_name, action_instance
-                            in self.actions.items()})
-
-        # if action is None:
-        #     return spaces.Discrete(len(self.actions))
-        # else:
-        #     if isinstance(action, (int, np.integer)):
-        #         action = self.get_action_name(action)
-        #     return self.actions[action].get_action_space()
+    def action_space(self) -> Space:
+        return ActionSpace(
+            {
+                action_name: action_instance.get_action_space()
+                for action_name, action_instance in self.actions.items()
+            }
+        )
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
@@ -369,12 +373,11 @@ class EmbodiedTask:
         raise NotImplementedError
 
     def _check_episode_is_active(
-            self,
-            *args: Any,
-            action: Union[str, int],
-            episode: Type[Episode],
-            action_args: Dict[str, Any] = None,
-            **kwargs: Any,
+        self,
+        *args: Any,
+        action: Union[int, Dict[str, Any]],
+        episode: Type[Episode],
+        **kwargs: Any,
     ) -> bool:
         raise NotImplementedError
 

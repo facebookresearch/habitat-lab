@@ -132,7 +132,7 @@ class PPOAgent(Agent):
             self.not_done_masks = torch.ones(1, 1, device=self.device)
             self.prev_actions.copy_(actions)
 
-        return actions[0][0].item(), None
+        return {"action": actions[0][0].item()}
 
 
 def main():

@@ -114,6 +114,7 @@ def test_mp3d_eqa_sim():
             "Please download Matterport3D EQA dataset to " "data folder."
         )
     import numpy as np
+
     np.random.seed(1)
 
     dataset = make_dataset(
@@ -125,7 +126,7 @@ def test_mp3d_eqa_sim():
     assert env
     env.reset()
     while not env.episode_over:
-        obs = env.step(**env.task.action_space().sample())
+        obs = env.step(env.task.action_space().sample())
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
@@ -255,9 +256,9 @@ def test_eqa_task():
     env.reset()
 
     for i in range(3):
-        action_opts = sample_non_stop_action(env.action_space)
-        if action_opts["action"] != AnswerAction.name:
-            env.step(**action_opts)
+        action = sample_non_stop_action(env.action_space)
+        if action["action"] != AnswerAction.name:
+            env.step(action)
         metrics = env.get_metrics()
         # del metrics["episode_info"]
         print(metrics)
@@ -269,6 +270,6 @@ def test_eqa_task():
     # env.step(habitat.Action(sim_action=0, task_action=correct_answer_id))
     # env.task.answer_question(correct_answer_id, env.episode_over)
     metrics = env.get_metrics()
-    #del metrics["episode_info"]
+    # del metrics["episode_info"]
     print(metrics)
     # assert metrics["answer_accuracy"] == 1
