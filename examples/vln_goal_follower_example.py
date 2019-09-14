@@ -11,10 +11,9 @@ import cv2
 import numpy as np
 
 import habitat
-from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+from habitat_baselines.agents.simple_agents import GoalFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
-from habitat.core.simulator import SimulatorActions
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -60,7 +59,7 @@ def draw_top_down_map(info, heading, output_size):
     return top_down_map
 
 
-def shortest_path_example(mode):
+def goal_follower_example():
     config = habitat.get_config(config_paths="configs/tasks/vln_r2r_mp3d.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
@@ -68,18 +67,16 @@ def shortest_path_example(mode):
     config.freeze()
     env = SimpleRLEnv(config=config)
     goal_radius = env.episodes[0].goals[0].radius
-    # goal_radius = None
 
     if goal_radius is None:
         goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
-    follower = ShortestPathFollower(env.habitat_env.sim, goal_radius, False)
-    follower.mode = mode
+    follower = GoalFollower(config.TASK.SUCCESS_DISTANCE, config.TASK.GOAL_SENSOR_UUID)
 
     print("Environment creation successful")
-    for episode in range(1):
-        env.reset()
+    for episode in range(len(env.episodes)):
+        observations = env.reset()
         dirname = os.path.join(
-            IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
+            IMAGE_DIR, f"goal_follower_example"
         )
         if os.path.exists(dirname):
             shutil.rmtree(dirname)
@@ -87,48 +84,14 @@ def shortest_path_example(mode):
         print("Agent stepping around inside environment.")
         images = []
 
-        goal_pos = env.habitat_env.current_episode.goals[0].position
-        if not env.habitat_env.sim.is_navigable(goal_pos):
-            print('Goal is not navigable.')
-
+        print('Goal is navigable:', env.habitat_env.sim.is_navigable(env.habitat_env.current_episode.goals[0].position))
         while not env.habitat_env.episode_over:
             x = 0
-            
-            for path in env.habitat_env.current_episode.path:
-                # done = False
-                print("Path : " + str(0))
-
-                # if not env.habitat_env.sim.is_navigable(path):
-                #     print("Path not reachable : " + str(path))
-                #     continue
-                i = 0
-                while True:
-                    best_action = follower.get_next_action(
-                        path
-                    )
-                    if best_action == SimulatorActions.STOP or i > 20:
-                        print("Reached The end")
-                        break
-                    observations, reward, done, info = env.step(best_action)
-                    # print(observations, reward, done, info)
-                    im = observations["rgb"]
-                    top_down_map = draw_top_down_map(
-                        info, observations["heading"], im.shape[0]
-                    )
-                    output_im = np.concatenate((im, top_down_map), axis=1)
-                    # cv2.imwrite("examples/images/i.jpg", output_im)
-                    images.append(output_im)
-                    print("Iteration : " + str(i))
-                    i += 1
-                
-                images_to_video(images, dirname, "trajectory_" + str(x))
-                x += 1
             done = False
+            i = 0
             while not done:
-                best_action = follower.get_next_action(
-                        env.habitat_env.current_episode.goals[0].position
-                    )
-                observations, reward, done, info = env.step(best_action)
+                action = follower.act(observations)
+                observations, reward, done, info = env.step(action)
                 im = observations["rgb"]
                 top_down_map = draw_top_down_map(
                     info, observations["heading"], im.shape[0]
@@ -136,15 +99,11 @@ def shortest_path_example(mode):
                 output_im = np.concatenate((im, top_down_map), axis=1)
                 cv2.imwrite("examples/images/i.jpg", output_im)
                 images.append(output_im)
-                print("Iteration : " + str(i))
+                if i % 20 == 0:
+                    print("Iteration : " + str(i))
                 i += 1
         images_to_video(images, dirname, "trajectory_final")
 
 
-def main():
-    shortest_path_example("geodesic_path")
-    shortest_path_example("greedy")
-
-
 if __name__ == "__main__":
-    main()
+    goal_follower_example()
