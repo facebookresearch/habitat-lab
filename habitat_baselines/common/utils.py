@@ -117,8 +117,9 @@ def poll_checkpoint_folder(
         return checkpoint path if (previous_ckpt_ind + 1)th checkpoint is found
         else return None.
     """
-    assert os.path.isdir(checkpoint_folder), f"invalid checkpoint folder " \
-                                             f"path {checkpoint_folder}"
+    assert os.path.isdir(checkpoint_folder), (
+        f"invalid checkpoint folder " f"path {checkpoint_folder}"
+    )
     models_paths = list(
         filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
     )

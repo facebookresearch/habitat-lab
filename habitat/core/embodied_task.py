@@ -292,10 +292,8 @@ class EmbodiedTask:
         return observations
 
     def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
-        print(f"action: {action} \n")
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
-        print(f"after action: {action} \n")
         action_name = action["action"]
         if isinstance(action_name, (int, np.integer)):
             if action_name >= len(self.actions):

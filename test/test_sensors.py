@@ -118,8 +118,6 @@ def test_collisions():
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
-    random.seed(123)
-    np.random.seed(123)
 
     for _ in range(20):
         _random_episode(env, config)
@@ -131,23 +129,20 @@ def test_collisions():
         prev_loc = env.sim.get_agent_state().position
         for _ in range(50):
             action = sample_non_stop_action(env.action_space)
-            action = action["action"]
-            print(f"action: {action}")
             env.step(action)
             collisions = env.get_metrics()["collisions"]["count"]
-
             loc = env.sim.get_agent_state().position
             if (
                 np.linalg.norm(loc - prev_loc)
                 < 0.9 * config.SIMULATOR.FORWARD_STEP_SIZE
-                and action == MoveForwardAction.name
+                and action["action"] == MoveForwardAction.name
             ):
                 # Check to see if the new method of doing collisions catches
                 # all the same collisions as the old method
                 assert collisions == prev_collisions + 1
 
             # We can _never_ collide with standard turn actions
-            if action != MoveForwardAction.name:
+            if action["action"] != MoveForwardAction.name:
                 assert collisions == prev_collisions
 
             prev_loc = loc

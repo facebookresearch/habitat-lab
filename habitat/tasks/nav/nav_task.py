@@ -304,7 +304,9 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "compass"
 
-    def get_observation(self, *args: Any, observations, episode, **kwargs: Any):
+    def get_observation(
+        self, *args: Any, observations, episode, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
@@ -350,7 +352,9 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, *args: Any, observations, episode, **kwargs: Any):
+    def get_observation(
+        self, *args: Any, observations, episode, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
 
         origin = np.array(episode.start_position, dtype=np.float32)

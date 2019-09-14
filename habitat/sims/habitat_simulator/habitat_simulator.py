@@ -98,12 +98,20 @@ class HabitatSimDepthSensor(DepthSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
-        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+        if isinstance(obs, np.ndarray):
+            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = np.expand_dims(
+                obs, axis=2
+            )  # make depth observation a 3D array
+        else:
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = obs.unsqueeze(-1)
+
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
-
-        obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
 
         return obs
 
@@ -186,6 +194,9 @@ class HabitatSim(Simulator):
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
+            sim_sensor_cfg.gpu2gpu_transfer = (
+                self.config.HABITAT_SIM_V0.GPU_GPU
+            )
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
@@ -232,6 +243,7 @@ class HabitatSim(Simulator):
         else:
             sim_obs = self._sim.step(action)
 
+        self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
 
@@ -249,6 +261,10 @@ class HabitatSim(Simulator):
 
         output = observations.get(mode)
         assert output is not None, "mode {} sensor is not active".format(mode)
+        if not isinstance(output, np.ndarray):
+            # If it is not a numpy array, it is a torch tensor
+            # The function expects the result to be a numpy array
+            output = output.to("cpu").numpy()
 
         return output
 

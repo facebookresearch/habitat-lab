@@ -6,6 +6,7 @@
 
 import numpy as np
 import pytest
+import os
 
 import habitat
 from habitat.utils.test_utils import sample_non_stop_action
@@ -81,6 +82,10 @@ def test_task_actions_sampling_for_teleport():
 )
 def test_task_actions_sampling(config_file):
     config = habitat.get_config(config_paths=config_file)
+    if not os.path.exists(config.DATA_PATH.format(split=config.SPLIT)):
+        pytest.skip(
+            f"Please download dataset to data folder {config.DATA_PATH}."
+        )
 
     env = habitat.Env(config=config)
     env.reset()

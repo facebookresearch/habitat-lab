@@ -21,7 +21,6 @@ import habitat_sim.utils
 from habitat.sims.habitat_simulator.action_spaces import (
     HabitatSimV1ActionSpaceConfiguration,
 )
-
 from habitat.tasks.nav.nav_task import SimulatorAction
 from habitat_sim.agent.controls import register_move_fn
 

@@ -266,8 +266,9 @@ def test_eqa_task():
     correct_answer_id = dataset.get_answers_vocabulary()[
         env.current_episode.question.answer_text
     ]
-    obs = env.step({"action":"ANSWER", "action_args":{"answer_id":
-                                                    correct_answer_id}})
+    obs = env.step(
+        {"action": "ANSWER", "action_args": {"answer_id": correct_answer_id}}
+    )
     # obs = env.step("")
     # env.step(habitat.Action(sim_action=0, task_action=correct_answer_id))
     # env.task.answer_question(correct_answer_id, env.episode_over)

@@ -27,14 +27,14 @@ class EpisodeInfoExample(habitat.Measure):
         return "episode_info"
 
     # This is called whenver the environment is reset
-    def reset_metric(self, episode):
+    def reset_metric(self, *args: Any, episode, **kwargs: Any):
         # Our measure always contains all the attributes of the episode
         self._metric = vars(episode).copy()
         # But only on reset, it has an additional field of my_value
         self._metric["my_value"] = self._config.VALUE
 
     # This is called whenver an action is taken in the environment
-    def update_metric(self, episode, action):
+    def update_metric(self, *args: Any, episode, action, **kwargs: Any):
         # Now the measure will just have all the attributes of the episode
         self._metric = vars(episode).copy()
 
@@ -68,7 +68,9 @@ class AgentPositionSensor(habitat.Sensor):
         )
 
     # This is called whenver reset is called or an action is taken
-    def get_observation(self, observations, episode):
+    def get_observation(
+        self, observations, *args: Any, episode, **kwargs: Any
+    ):
         return self._sim.get_agent_state().position
 
 
