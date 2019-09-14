@@ -97,7 +97,7 @@ class PointNavBaselinePolicy(Policy):
                 hidden_size=hidden_size,
                 goal_sensor_uuid=goal_sensor_uuid,
             ),
-            len(action_space.spaces),
+            action_space.n,
         )
 
 

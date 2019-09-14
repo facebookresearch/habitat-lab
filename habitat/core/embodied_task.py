@@ -21,16 +21,7 @@ from habitat.core.simulator import SensorSuite, Simulator
 
 
 class Action:
-    r"""Represents a measure that provides measurement on top of environment
-    and task. This can be used for tracking statistics when running
-    experiments. The user of this class needs to implement the reset_metric
-    and update_metric method and the user is also required to set the below
-    attributes:
-
-    Attributes:
-        uuid: universally unique id.
-        _metric: metric for the ``Measure``, this has to be updated with each
-            ``step`` call on ``habitat.Env``.
+    r"""
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -40,20 +31,19 @@ class Action:
         raise NotImplementedError
 
     def reset(self, *args: Any, **kwargs: Any) -> None:
-        r"""Reset ``_metric``, this method is called from ``Env`` on each reset.
+        r"""Reset method is called from ``Env`` on each reset.
         """
         raise NotImplementedError
 
     def step(self, *args: Any, **kwargs: Any) -> None:
-        r"""Update ``_metric``, this method is called from ``Env`` on each
-        ``step``.
+        r"""Step method is called from ``Env`` on each ``step``.
         """
         raise NotImplementedError
 
     def get_action_space(self):
         r"""
         Returns:
-             the current metric for ``Measure``.
+             the current action space.
         """
         return None
 
@@ -177,6 +167,10 @@ class ActionSpace(spaces.Dict):
             self.spaces = OrderedDict(spaces)
         self.actions_select = gym.spaces.Discrete(len(self.spaces))
 
+    @property
+    def n(self):
+        return len(self.spaces)
+
     def sample(self):
         action_index = self.actions_select.sample()
         return {
@@ -256,31 +250,12 @@ class EmbodiedTask:
 
         self.sensor_suite = SensorSuite(task_sensors)
 
+        # TODO: move sensors and measures to `_init_entities`
         self.actions = self._init_entities(
             entity_names=config.POSSIBLE_ACTIONS,
             register_func=registry.get_task_action,
             entities_config=self._config.ACTIONS,
         )
-
-        # for action_name in config.POSSIBLE_ACTIONS:
-        #     sensor_cfg = getattr(config, action_name)
-        #     sensor_type = registry.get_sensor(sensor_cfg.TYPE)
-        #     assert sensor_type is not None, "invalid sensor type {}".format(
-        #         sensor_cfg.TYPE
-        #     )
-        #     print("sensor type {}".format(sensor_cfg.TYPE))
-        #     task_sensors.append(
-        #         sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
-        #     )
-        #
-        #
-        #
-        #     assert action in registry.mapping["task_action"]
-        #     action_class = registry.get_task_action(action)
-        #     print(action_class)
-        #     self.actions[action] = action_class(
-        #         sim=self._sim, task=self, dataset=self._dataset
-        #     )
 
     def _init_entities(
         self, entity_names, register_func, entities_config=None
@@ -317,9 +292,10 @@ class EmbodiedTask:
         return observations
 
     def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+        print(f"action: {action} \n")
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
-
+        print(f"after action: {action} \n")
         action_name = action["action"]
         if isinstance(action_name, (int, np.integer)):
             if action_name >= len(self.actions):

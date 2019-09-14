@@ -128,21 +128,6 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         return config
 
 
-# @habitat.registry.register_task(name="NavTaskWithStrafe-v0")
-# class NavigationTaskWithStrafe(habitat.tasks.nav.nav_task.NavigationTask):
-#     @habitat.registry.register_task_action(
-#         name="strafe_left", action_space=None
-#     )
-#     def strafe_left(self):
-#         return self._sim.step(habitat.SimulatorActions.STRAFE_LEFT)
-#
-#     @habitat.registry.register_task_action(
-#         name="strafe_right", action_space=None
-#     )
-#     def strafe_right(self):
-#         return self._sim.step(habitat.SimulatorActions.STRAFE_RIGHT)
-
-
 @habitat.registry.register_task_action
 class StrafeLeft(SimulatorAction):
     def _get_uuid(self, *args, **kwargs) -> str:

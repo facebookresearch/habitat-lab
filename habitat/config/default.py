@@ -46,10 +46,10 @@ _C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
 # -----------------------------------------------------------------------------
 ACTIONS = CN()
 ACTIONS.STOP = CN()
+ACTIONS.STOP.TYPE = "StopAction"
 # -----------------------------------------------------------------------------
 # # NAVIGATION ACTIONS
 # -----------------------------------------------------------------------------
-ACTIONS.STOP.TYPE = "StopAction"
 ACTIONS.MOVE_FORWARD = CN()
 ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
 ACTIONS.TURN_LEFT = CN()

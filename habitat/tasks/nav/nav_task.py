@@ -304,7 +304,7 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "compass"
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, *args: Any, observations, episode, **kwargs: Any):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
@@ -350,7 +350,7 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, observations, episode):
+    def get_observation(self, *args: Any, observations, episode, **kwargs: Any):
         agent_state = self._sim.get_agent_state()
 
         origin = np.array(episode.start_position, dtype=np.float32)
@@ -400,7 +400,7 @@ class ProximitySensor(Sensor):
         )
 
     def get_observation(
-        self, observations, episode, *args: Any, **kwargs: Any
+        self, observations, *args: Any, episode, **kwargs: Any
     ):
         current_position = self._sim.get_agent_state().position
 
@@ -719,63 +719,6 @@ class NavigationTask(EmbodiedTask):
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
-
-    # @registry.register_task_action(
-    #     name="move_forward"
-    # )
-    # def move_forward(self):
-    #     return self._sim.step(SimulatorActions.MOVE_FORWARD)
-    #
-    # @registry.register_task_action(name="turn_left")
-    # def turn_left(self):
-    #     return self._sim.step(SimulatorActions.TURN_LEFT)
-    #
-    # @registry.register_task_action(
-    #     name="turn_right"
-    # )
-    # def turn_right(self):
-    #     return self._sim.step(SimulatorActions.TURN_RIGHT)
-    #
-    # @registry.register_task_action(name="look_up")
-    # def look_up(self):
-    #     return self._sim.step(SimulatorActions.LOOK_UP)
-    #
-    # @registry.register_task_action(name="look_down")
-    # def look_down(self):
-    #     return self._sim.step(SimulatorActions.LOOK_DOWN)
-    #
-    # @registry.register_task_action(name="stop")
-    # def stop(self):
-    #     return self._sim.step(SimulatorActions.STOP)
-
-    # @registry.register_task_action(
-    #     name="TELEPORT",
-    #     action_space=spaces.Dict(
-    #         {
-    #             "position": spaces.Box(
-    #                 low=np.array([-10.0, -10.0, -10.0]),
-    #                 high=np.array([10.0, 10.0, 10.0]),
-    #                 dtype=np.float32,
-    #             ),
-    #             "rotation": spaces.Box(
-    #                 low=np.array([-1.0, -1.0, -1.0, -1.0]),
-    #                 high=np.array([1.0, 1.0, 1.0, 1.0]),
-    #                 dtype=np.float32,
-    #             ),
-    #         }
-    #     ),
-    # )
-    # def teleport(self, position: List[float], rotation: List[float]):
-    #     if not isinstance(rotation, list):
-    #         rotation = list(rotation)
-    #     # if not isinstance(position, list):
-    #     #     position = list(position)
-    #     if not self._sim.is_navigable(position):
-    #         return {}
-    #
-    #     return self._sim.get_observations_at(
-    #         position=position, rotation=rotation, keep_agent_at_new_pose=True
-    #     )
 
     def overwrite_sim_config(
         self, sim_config: Any, episode: Type[Episode]

@@ -7,9 +7,9 @@ def sample_non_stop_action(action_space, num_samples=1):
         action = action_space.sample()
         while action["action"] == StopAction.name:
             action = action_space.sample()
-        samples.append(action)
+        samples.append({"action": action})
     print(samples)
     if num_samples == 1:
-        return samples[0]
+        return samples[0]["action"]
     else:
         return samples

@@ -244,27 +244,6 @@ class EQATask(NavigationTask):
     ) -> bool:
         return self.is_valid and self.answer is None
 
-    # @registry.register_task_action(name="stop", action_space=EmptySpace())
-    # def stop(self):
-    #     self.is_stop_called = True
-    #     return self._sim.step(SimulatorActions.STOP)
-
-    # @registry.register_task_action(action_space=spaces.Dict({
-    #     "answer2": spaces.Discrete(32000),
-    # }))
-    # def answer(self, answer: int):
-    #     if self.is_stop_called:
-    #         self.answer = answer
-    #     else:
-    #         self.is_task_invalid = True
-    #
-    # def __init__(self, **kwargs) -> None:
-    #     self.is_stop_called = False
-    #     self.answer = None
-    #     self.is_task_invalid = False
-    #
-    #     super().__init__(**kwargs)
-
 
 @registry.register_task_action
 class AnswerAction(Action):

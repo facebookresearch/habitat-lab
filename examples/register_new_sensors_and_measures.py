@@ -98,7 +98,7 @@ def main():
     env = habitat.Env(config=config)
     print(env.reset()["agent_position"])
     print(env.get_metrics()["episode_info"])
-    print(env.step(habitat.SimulatorActions.MOVE_FORWARD)["agent_position"])
+    print(env.step("MOVE_FORWARD")["agent_position"])
     print(env.get_metrics()["episode_info"])
 
 

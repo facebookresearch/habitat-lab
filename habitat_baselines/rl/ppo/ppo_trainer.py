@@ -395,7 +395,7 @@ class PPOTrainer(BaseRLTrainer):
         assert measure_type is not None, "invalid measurement type {}".format(
             metric_cfg.TYPE
         )
-        self.metric_uuid = measure_type(None, None)._get_uuid()
+        self.metric_uuid = measure_type(sim=None, config=None)._get_uuid()
 
         observations = self.envs.reset()
         batch = batch_obs(observations, self.device)

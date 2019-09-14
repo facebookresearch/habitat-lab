@@ -296,7 +296,7 @@ def test_rl_env(gpu2gpu):
 
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         observation, reward, done, info = env.step(
-            sample_non_stop_action(env.action_space)
+            action=sample_non_stop_action(env.action_space)
         )
 
     # check for steps limit on environment

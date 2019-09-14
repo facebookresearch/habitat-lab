@@ -355,6 +355,7 @@ class RLEnv(gym.Env):
 
     def step(
         self,
+        *args,
         **kwargs
     ) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment and return
@@ -371,7 +372,7 @@ class RLEnv(gym.Env):
             ``(observations, reward, done, info)``.
         """
 
-        observations = self._env.step(**kwargs)
+        observations = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)

@@ -24,11 +24,13 @@ def test_task_actions():
     env = habitat.Env(config=config)
     env.reset()
     env.step(
-        action="TELEPORT",
-        action_args={
-            "position": TELEPORT_POSITION,
-            "rotation": TELEPORT_ROTATION,
-        },
+        action={
+            "action": "TELEPORT",
+            "action_args": {
+                "position": TELEPORT_POSITION,
+                "rotation": TELEPORT_ROTATION,
+            },
+        }
     )
     agent_state = env.sim.get_agent_state()
     assert (
