@@ -5,22 +5,25 @@
 # LICENSE file in the root directory of this source tree.
 
 r"""Registry is central source of truth in Habitat.
-Taken from Pythia, it is inspired from Redux's
-concept of global store. Registry maintains mappings of various information
-to unique keys. Special functions in registry can be used as decorators to
-register different kind of classes.
+
+Taken from Pythia, it is inspired from Redux's concept of global store.
+Registry maintains mappings of various information to unique keys. Special
+functions in registry can be used as decorators to register different kind of
+classes.
 
 Import the global registry object using
 
-``from habitat.core.registry import registry``
+.. code:: py
+
+    from habitat.core.registry import registry
 
 Various decorators for registry different kind of classes with unique keys
 
-- Register a task: ``@registry.register_task``
-- Register a simulator: ``@registry.register_simulator``
-- Register a sensor: ``@registry.register_sensor``
-- Register a measure: ``@registry.register_measure``
-- Register a dataset: ``@registry.register_dataset``
+-   Register a task: :py:`@registry.register_task`
+-   Register a simulator: :py:`@registry.register_simulator`
+-   Register a sensor: :py:`@registry.register_sensor`
+-   Register a measure: :py:`@registry.register_measure`
+-   Register a dataset: :py:`@registry.register_dataset`
 """
 
 import collections
@@ -55,14 +58,13 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_task(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a task to registry with key 'name'
+        r"""Register a task to registry with key :p:`name`
 
-        Args:
-            name: Key with which the task will be registered.
-                If None will use the name of the class
+        :param name: Key with which the task will be registered.
+            If :py:`None` will use the name of the class
 
+        .. code:: py
 
-        Usage::
             from habitat.core.registry import registry
             from habitat.core.embodied_task import EmbodiedTask
 
@@ -88,14 +90,13 @@ class Registry(metaclass=Singleton):
     def register_simulator(
         cls, to_register=None, *, name: Optional[str] = None
     ):
-        r"""Register a simulator to registry with key 'name'
+        r"""Register a simulator to registry with key :p:`name`
 
-        Args:
-            name: Key with which the simulator will be registered.
-                If None will use the name of the class
+        :param name: Key with which the simulator will be registered.
+            If :py:`None` will use the name of the class
 
+        .. code:: py
 
-        Usage::
             from habitat.core.registry import registry
             from habitat.core.simulator import Simulator
 
@@ -119,12 +120,10 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_sensor(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a sensor to registry with key 'name'
+        r"""Register a sensor to registry with key :p:`name`
 
-        Args:
-            name: Key with which the sensor will be registered.
-                If None will use the name of the class
-
+        :param name: Key with which the sensor will be registered.
+            If :py:`None` will use the name of the class
         """
         from habitat.core.simulator import Sensor
 
@@ -134,12 +133,10 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_measure(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a measure to registry with key 'name'
+        r"""Register a measure to registry with key :p:`name`
 
-        Args:
-            name: Key with which the measure will be registered.
-                If None will use the name of the class
-
+        :param name: Key with which the measure will be registered.
+            If :py:`None` will use the name of the class
         """
         from habitat.core.embodied_task import Measure
 
@@ -149,12 +146,10 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_dataset(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a dataset to registry with key 'name'
+        r"""Register a dataset to registry with key :p:`name`
 
-        Args:
-            name: Key with which the dataset will be registered.
-                If None will use the name of the class
-
+        :param name: Key with which the dataset will be registered.
+            If :py:`None` will use the name of the class
         """
         from habitat.core.dataset import Dataset
 
@@ -166,11 +161,10 @@ class Registry(metaclass=Singleton):
     def register_action_space_configuration(
         cls, to_register=None, *, name: Optional[str] = None
     ):
-        r"""Register a action space configuration to registry with key 'name'
+        r"""Register a action space configuration to registry with key :p:`name`
 
-        Args:
-            name: Key with which the action space will be registered.
-                If None will use the name of the class
+        :param name: Key with which the action space will be registered.
+            If :py:`None` will use the name of the class
         """
         from habitat.core.simulator import ActionSpaceConfiguration
 

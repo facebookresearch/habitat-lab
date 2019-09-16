@@ -38,13 +38,13 @@ class _DefaultSimulatorActions(Enum):
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorActionsSingleton(metaclass=Singleton):
     r"""Implements an extendable Enum for the mapping of action names
-    to their integer values.  
+    to their integer values.
 
-    This means that new action names can be added, but old action names cannot be
-    removed nor can their mapping be altered.  This also ensures that all actions
-    are always contigously mapped in ``[0, len(SimulatorActions) - 1]``
+    This means that new action names can be added, but old action names cannot
+    be removed nor can their mapping be altered. This also ensures that all
+    actions are always contigously mapped in :py:`[0, len(SimulatorActions) - 1]`
 
-    This accesible as the global singleton SimulatorActions
+    This accesible as the global singleton `SimulatorActions`
     """
 
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
@@ -55,15 +55,14 @@ class SimulatorActionsSingleton(metaclass=Singleton):
 
     def extend_action_space(self, name: str) -> int:
         r"""Extends the action space to accomidate a new action with
-        the name ``name``
+        the name :p:`name`
 
-        Args
-            name (str): The name of the new action
+        :param name: The name of the new action
+        :return: The number the action is registered on
 
-        Returns
-            int: The number the action is registered on
+        Usage:
 
-        Usage::
+        .. code:: py
 
             from habitat import SimulatorActions
             SimulatorActions.extend_action_space("MY_ACTION")
@@ -77,13 +76,10 @@ class SimulatorActionsSingleton(metaclass=Singleton):
         return self._known_actions[name]
 
     def has_action(self, name: str) -> bool:
-        r"""Checks to see if action ``name`` is already register
+        r"""Checks to see if action :p:`name` is already register
 
-        Args
-            name (str): The name to check
-
-        Returns
-            bool: Whether or not ``name`` already exists
+        :param name: The name to check
+        :return: Whether or not :p:`name` already exists
         """
 
         return name in self._known_actions
@@ -101,7 +97,7 @@ class SimulatorActionsSingleton(metaclass=Singleton):
         return iter(self._known_actions)
 
 
-SimulatorActions = SimulatorActionsSingleton()
+SimulatorActions: SimulatorActionsSingleton = SimulatorActionsSingleton()
 
 
 class SensorTypes(Enum):
@@ -125,15 +121,15 @@ class SensorTypes(Enum):
 
 class Sensor:
     r"""Represents a sensor that provides data from the environment to agent.
+
+    :data uuid: universally unique id.
+    :data sensor_type: type of Sensor, use SensorTypes enum if your sensor
+        comes under one of it's categories.
+    :data observation_space: ``gym.Space`` object corresponding to observation
+        of sensor.
+
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
-
-    Attributes:
-        uuid: universally unique id.
-        sensor_type: type of Sensor, use SensorTypes enum if your sensor
-            comes under one of it's categories.
-        observation_space: ``gym.Space`` object corresponding to observation of
-            sensor.
     """
 
     uuid: str
@@ -166,14 +162,17 @@ class Sensor:
 
 class Observations(dict):
     r"""Dictionary containing sensor observations
-
-    Args:
-        sensors: list of sensors whose observations are fetched and packaged.
     """
 
     def __init__(
         self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
     ) -> None:
+        """Constructor
+
+        :param sensors: list of sensors whose observations are fetched and
+            packaged.
+        """
+
         data = [
             (uuid, sensor.get_observation(*args, **kwargs))
             for uuid, sensor in sensors.items()
@@ -235,16 +234,17 @@ class SemanticSensor(Sensor):
 class SensorSuite:
     r"""Represents a set of sensors, with each sensor being identified
     through a unique id.
-
-    Args:
-        sensors: list containing sensors for the environment, uuid of each
-            sensor must be unique.
     """
 
     sensors: Dict[str, Sensor]
     observation_spaces: SpaceDict
 
     def __init__(self, sensors: List[Sensor]) -> None:
+        """Constructor
+
+        :param sensors: list containing sensors for the environment, uuid of
+            each sensor must be unique.
+        """
         self.sensors = OrderedDict()
         spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
@@ -259,10 +259,8 @@ class SensorSuite:
         return self.sensors[uuid]
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
-        r"""
-        Returns:
-            collect data from all sensors and return it packaged inside
-            Observation.
+        r"""Collects data from all sensors and returns it packaged inside
+            `Observations`.
         """
         return Observations(self.sensors, *args, **kwargs)
 
@@ -311,19 +309,15 @@ class Simulator:
     def reset(self) -> Observations:
         r"""resets the simulator and returns the initial observations.
 
-        Returns:
-            initial observations from simulator.
+        :return: initial observations from simulator.
         """
         raise NotImplementedError
 
     def step(self, action: int) -> Observations:
         r"""Perform an action in the simulator and return observations.
 
-        Args:
-            action: action to be performed inside the simulator.
-
-        Returns:
-            observations after taking action in simulator.
+        :param action: action to be performed inside the simulator.
+        :return: observations after taking action in simulator.
         """
         raise NotImplementedError
 
@@ -338,24 +332,20 @@ class Simulator:
     ) -> float:
         r"""Calculates geodesic distance between two points.
 
-        Args:
-            position_a: coordinates of first point.
-            position_b: coordinates of second point.
-
-        Returns:
+        :param position_a: coordinates of first point.
+        :param position_b: coordinates of second point.
+        :return:
             the geodesic distance in the cartesian space between points
-            position_a and position_b, if no path is found between the
-            points then infinity is returned.
+            :p:`position_a` and :p:`position_b`, if no path is found between
+            the points then `math.inf` is returned.
         """
         raise NotImplementedError
 
     def get_agent_state(self, agent_id: int = 0):
-        r"""
-        Args:
-            agent_id: id of agent.
+        r"""..
 
-        Returns:
-            state of agent corresponding to agent_id.
+        :param agent_id: id of agent.
+        :return: state of agent corresponding to :p:`agent_id`.
         """
         raise NotImplementedError
 
@@ -367,17 +357,14 @@ class Simulator:
     ) -> Optional[Observations]:
         """Returns the observation.
 
-        Args:
-            position: list containing 3 entries for (x, y, z).
-            rotation: list with 4 entries for (x, y, z, w) elements of unit
-                quaternion (versor) representing agent 3D orientation,
-                (https://en.wikipedia.org/wiki/Versor)
-            keep_agent_at_new_pose: If true, the agent will stay at the
-                requested location. Otherwise it will return to where it
-                started.
-
-        Returns:
-            The observations or None if it was unable to get valid
+        :param position: list containing 3 entries for :py:`(x, y, z)`.
+        :param rotation: list with 4 entries for :py:`(x, y, z, w)` elements
+            of unit quaternion (versor) representing agent 3D orientation,
+            (https://en.wikipedia.org/wiki/Versor)
+        :param keep_agent_at_new_pose: If true, the agent will stay at the
+            requested location. Otherwise it will return to where it started.
+        :return:
+            The observations or :py:`None` if it was unable to get valid
             observations.
 
         """
@@ -387,32 +374,27 @@ class Simulator:
         r"""Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
 
-        Returns:
-            navigable point.
+        :return: navigable point.
         """
         raise NotImplementedError
 
     def is_navigable(self, point: List[float]) -> bool:
-        r"""Return true if the agent can stand at the specified point.
+        r"""Return :py:`True` if the agent can stand at the specified point.
 
-        Args:
-            point: the point to check.
+        :param point: the point to check.
         """
         raise NotImplementedError
 
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        r"""Calculates the shortest path between source and target agent 
+        r"""Calculates the shortest path between source and target agent
         states.
 
-        Args:
-            source: source agent state for shortest path calculation.
-            targets: target agent state(s) for shortest path calculation.
-            agent_id: id for agent (relevant for multi-agent setup).
-
-        Returns:
-            list of agent states and actions along the shortest path from
+        :param source: source agent state for shortest path calculation.
+        :param targets: target agent state(s) for shortest path calculation.
+        :param agent_id: id for agent (relevant for multi-agent setup).
+        :return: list of agent states and actions along the shortest path from
             source to the nearest target (both included).
         """
         raise NotImplementedError
@@ -420,18 +402,15 @@ class Simulator:
     def get_straight_shortest_path_points(
         self, position_a: List[float], position_b: List[float]
     ) -> List[List[float]]:
-        r"""Returns points along the geodesic (shortest) path between two 
+        r"""Returns points along the geodesic (shortest) path between two
         points irrespective of the angles between the waypoints.
 
-         Args:
-            position_a: the start point. This will be the first point in the
-                returned list.
-            position_b: the end point. This will be the last point in the
-                returned list.
-
-        Returns:
-            a list of waypoints (x, y, z) on the geodesic path between the two
-            points.
+        :param position_a: the start point. This will be the first point in
+            the returned list.
+        :param position_b: the end point. This will be the last point in the
+            returned list.
+        :return: a list of waypoints :py:`(x, y, z)` on the geodesic path
+            between the two points.
         """
 
         raise NotImplementedError
@@ -465,11 +444,10 @@ class Simulator:
     def index_forward_action(self):
         return SimulatorActions.MOVE_FORWARD
 
-    def previous_step_collided(self):
+    def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
 
-        Returns:
-            bool: True if the previous step resulted in a collision, false otherwise
-
+        :return: :py:`True` if the previous step resulted in a collision,
+            :py:`False` otherwise
         """
         raise NotImplementedError
