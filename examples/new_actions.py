@@ -17,11 +17,9 @@ import numpy as np
 
 import habitat
 import habitat_sim
-import habitat_sim.utils
 from habitat.sims.habitat_simulator.action_spaces import (
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat_sim.agent.controls import register_move_fn
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -58,7 +56,7 @@ def _strafe_impl(
     scene_node.translate_local(move_ax * move_amount)
 
 
-@register_move_fn(body_action=True)
+@habitat_sim.registry.register_move_fn(body_action=True)
 class NoisyStrafeLeft(habitat_sim.SceneNodeControl):
     def __call__(
         self,
@@ -74,7 +72,7 @@ class NoisyStrafeLeft(habitat_sim.SceneNodeControl):
         )
 
 
-@register_move_fn(body_action=True)
+@habitat_sim.registry.register_move_fn(body_action=True)
 class NoisyStrafeRight(habitat_sim.SceneNodeControl):
     def __call__(
         self,
