@@ -102,7 +102,15 @@ def __do_pause_test(num_envs, envs_to_pause):
     }
     rgb_frames = [[idx] for idx in range(num_envs)]
 
-    envs, test_recurrent_hidden_states, not_done_masks, current_episode_reward, prev_actions, batch, rgb_frames = BaseRLTrainer._pause_envs(
+    (
+        envs,
+        test_recurrent_hidden_states,
+        not_done_masks,
+        current_episode_reward,
+        prev_actions,
+        batch,
+        rgb_frames,
+    ) = BaseRLTrainer._pause_envs(
         envs_to_pause,
         envs,
         test_recurrent_hidden_states,
