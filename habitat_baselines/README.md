@@ -21,22 +21,22 @@ This will also install additional requirements for each sub-module in `habitat_b
  
 **dependencies**: pytorch 1.0, for installing refer to [pytorch.org](https://pytorch.org/)
 
-For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat/`, extraction will create a data folder at `habitat/data`) and run the below training command.
+For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat-api/`, extraction will create a data folder at `habitat-api/data`) and run the below training command.
 
 **train**:
 ```bash
-python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo.yaml --run-type train
+python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo_pointnav.yaml --run-type train
 ```
 
 **test**:
 ```bash
-python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo.yaml --run-type eval
+python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo_pointnav.yaml --run-type eval
 ```
 
 We also provide trained RGB, RGBD, Blind PPO models. 
 To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v1.zip) and unzip and specify model path [here](agents/ppo_agents.py#L132).
 
-Change field `task_config` in `habitat_baselines/config/pointnav/ppo.yaml` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
+Change field `task_config` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `tasks/pointnav_mp3d.yaml` for training on [MatterPort3D point goal navigation dataset](/README.md#task-datasets).
 
 ### Classic
 
@@ -51,7 +51,7 @@ Coming very soon
 
 **Tensorboard and video generation support**
 
-Enable tensorboard by changing `tensorboard_dir` field in `habitat_baselines/config/pointnav/ppo.yaml`. 
+Enable tensorboard by changing `tensorboard_dir` field in `habitat_baselines/config/pointnav/ppo_pointnav.yaml`. 
 
 Enable video generation for `eval` mode by changing `video_option`: `tensorboard,disk` (for displaying on tensorboard and for saving videos on disk, respectively)
 

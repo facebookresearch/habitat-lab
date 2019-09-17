@@ -52,15 +52,12 @@ EPISODE_COMMAND = "current_episode"
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
-    r"""Constructor for default habitat Env.
+    """Constructor for default habitat `env.Env`.
 
-    Args:
-        config: configuration for environment.
-        dataset: dataset for environment.
-        rank: rank for setting seed of environment
-
-    Returns:
-        ``Env``/``RLEnv`` object
+    :param config: configuration for environment.
+    :param dataset: dataset for environment.
+    :param rank: rank for setting seed of environment
+    :return: `env.Env` / `env.RLEnv` object
     """
     habitat_env = Env(config=config, dataset=dataset)
     habitat_env.seed(config.SEED + rank)
@@ -69,22 +66,10 @@ def _make_env_fn(
 
 class VectorEnv:
     r"""Vectorized environment which creates multiple processes where each
-    process runs its own environment. All the environments are synchronized
-    on step and reset methods.
+    process runs its own environment.
 
-    Args:
-        make_env_fn: function which creates a single environment. An
-            environment can be of type Env or RLEnv
-        env_fn_args: tuple of tuple of args to pass to the make_env_fn.
-        auto_reset_done: automatically reset the environment when
-            done. This functionality is provided for seamless training
-            of vectorized environments.
-        multiprocessing_start_method: the multiprocessing method used to
-            spawn worker processes. Valid methods are
-            ``{'spawn', 'forkserver', 'fork'}`` ``'forkserver'`` is the
-            recommended method as it works well with CUDA. If
-            ``'fork'`` is used, the subproccess  must be started before
-            any other GPU useage.
+
+    All the environments are synchronized on step and reset methods.
     """
 
     observation_spaces: List[SpaceDict]
@@ -104,7 +89,21 @@ class VectorEnv:
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
     ) -> None:
+        """..
 
+        :param make_env_fn: function which creates a single environment. An
+            environment can be of type `env.Env` or `env.RLEnv`
+        :param env_fn_args: tuple of tuple of args to pass to the
+            `_make_env_fn`.
+        :param auto_reset_done: automatically reset the environment when
+            done. This functionality is provided for seamless training
+            of vectorized environments.
+        :param multiprocessing_start_method: the multiprocessing method used to
+            spawn worker processes. Valid methods are
+            :py:`{'spawn', 'forkserver', 'fork'}`; :py:`'forkserver'` is the
+            recommended method as it works well with CUDA. If :py:`'fork'` is
+            used, the subproccess  must be started before any other GPU useage.
+        """
         self._is_waiting = False
         self._is_closed = True
 
@@ -143,9 +142,7 @@ class VectorEnv:
 
     @property
     def num_envs(self):
-        r"""
-        Returns:
-             number of individual environments.
+        r"""number of individual environments.
         """
         return self._num_envs - len(self._paused)
 
@@ -166,7 +163,6 @@ class VectorEnv:
             parent_pipe.close()
         try:
             command, data = connection_read_fn()
-            # print(f"command, data: {command}, {data}")
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     # different step methods for habitat.RLEnv and habitat.Env
@@ -270,8 +266,7 @@ class VectorEnv:
     def reset(self):
         r"""Reset all the vectorized environments
 
-        Returns:
-            list of outputs from the reset method of envs.
+        :return: list of outputs from the reset method of envs.
         """
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
@@ -285,11 +280,8 @@ class VectorEnv:
     def reset_at(self, index_env: int):
         r"""Reset in the index_env environment in the vector.
 
-        Args:
-            index_env: index of the environment to be reset
-
-        Returns:
-            list containing the output of reset method of indexed env.
+        :param index_env: index of the environment to be reset
+        :return: list containing the output of reset method of indexed env.
         """
         self._is_waiting = True
         self._connection_write_fns[index_env]((RESET_COMMAND, None))
@@ -300,13 +292,9 @@ class VectorEnv:
     def step_at(self, index_env: int, action: Dict[str, Any]):
         r"""Step in the index_env environment in the vector.
 
-        Args:
-            index_env: index of the environment to be stepped into
-            action: list of size _num_envs containing action name and
-            action arguments to be taken in each environment.
-
-        Returns:
-            list containing the output of step method of indexed env.
+        :param index_env: index of the environment to be stepped into
+        :param action: action to be taken
+        :return: list containing the output of step method of indexed env.
         """
         self._is_waiting = True
         self._connection_write_fns[index_env]((STEP_COMMAND, action))
@@ -317,8 +305,7 @@ class VectorEnv:
     def async_step(self, data: List[Dict[str, Any]]) -> None:
         r"""Asynchronously step in the environments.
 
-        Args:
-            data: list of size _num_envs containing action name and
+        :param data: list of size _num_envs containing action name and
             action arguments to be taken in each environment.
         """
         self._is_waiting = True
@@ -337,12 +324,9 @@ class VectorEnv:
     def step(self, data: Union[List[int], List[Dict[str, Any]]]):
         r"""Perform actions in the vectorized environments.
 
-        Args:
-            data: list of size _num_envs containing action name and
+        :param data: list of size _num_envs containing action name and
             action arguments to be taken in each environment.
-
-        Returns:
-            list of outputs from the step method of envs.
+        :return: list of outputs from the step method of envs.
         """
         # Backward compatibility
         if isinstance(data[0], (int, np.integer, str)):
@@ -373,14 +357,14 @@ class VectorEnv:
         self._is_closed = True
 
     def pause_at(self, index: int) -> None:
-        r"""Pauses computation on this env without destroying the env. This is
-        useful for not needing to call steps on all environments when only
-        some are active (for example during the last episodes of running
-        eval episodes).
+        r"""Pauses computation on this env without destroying the env.
 
-        Args:
-            index: which env to pause. All indexes after this one will be
-                shifted down by one.
+        :param index: which env to pause. All indexes after this one will be
+            shifted down by one.
+
+        This is useful for not needing to call steps on all environments when
+        only some are active (for example during the last episodes of running
+        eval episodes).
         """
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
@@ -408,13 +392,10 @@ class VectorEnv:
         r"""Calls a function (which is passed by name) on the selected env and
         returns the result.
 
-        Args:
-            index: which env to call the function on.
-            function_name: the name of the function to call on the env.
-            function_args: optional function keyword args.
-
-        Returns:
-            result of calling the function.
+        :param index: which env to call the function on.
+        :param function_name: the name of the function to call on the env.
+        :param function_args: optional function args.
+        :return: result of calling the function.
         """
         self._is_waiting = True
         self._connection_write_fns[index](
@@ -432,14 +413,11 @@ class VectorEnv:
         r"""Calls a list of functions (which are passed by name) on the
         corresponding env (by index).
 
-        Args:
-            function_names: the name of the functions to call on the envs.
-            function_args_list: list of function args for each function. If
-                provided, len(function_args_list) should be as long as
-                len(function_names).
-
-        Returns:
-            result of calling the function.
+        :param function_names: the name of the functions to call on the envs.
+        :param function_args_list: list of function args for each function. If
+            provided, :py:`len(function_args_list)` should be as long as
+            :py:`len(function_names)`.
+        :return: result of calling the function.
         """
         self._is_waiting = True
         if function_args_list is None:
@@ -491,11 +469,12 @@ class VectorEnv:
 
 
 class ThreadedVectorEnv(VectorEnv):
-    r"""Provides same functionality as ``VectorEnv``, the only difference is it
-    runs in a multi-thread setup inside a single process. ``VectorEnv`` runs
-    in a multi-proc setup. This makes it much easier to debug when using 
-    ``VectorEnv`` because you can actually put break points in the environment 
-    methods. It should not be used for best performance.
+    r"""Provides same functionality as `VectorEnv`, the only difference is it
+    runs in a multi-thread setup inside a single process.
+
+    `VectorEnv` runs in a multi-proc setup. This makes it much easier to debug
+    when using `VectorEnv` because you can actually put break points in the
+    environment methods. It should not be used for best performance.
     """
 
     def _spawn_workers(

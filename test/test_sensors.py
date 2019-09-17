@@ -13,12 +13,12 @@ import quaternion
 
 import habitat
 from habitat.config.default import get_config
-from habitat.tasks.utils import quaternion_rotate_vector
 from habitat.tasks.nav.nav_task import (
+    MoveForwardAction,
     NavigationEpisode,
     NavigationGoal,
-    MoveForwardAction,
 )
+from habitat.tasks.utils import quaternion_rotate_vector
 from habitat.utils.test_utils import sample_non_stop_action
 
 

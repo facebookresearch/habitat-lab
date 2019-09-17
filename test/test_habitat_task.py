@@ -4,9 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import numpy as np
 import pytest
-import os
 
 import habitat
 from habitat.utils.test_utils import sample_non_stop_action
@@ -82,9 +83,12 @@ def test_task_actions_sampling_for_teleport():
 )
 def test_task_actions_sampling(config_file):
     config = habitat.get_config(config_paths=config_file)
-    if not os.path.exists(config.DATA_PATH.format(split=config.SPLIT)):
+    if not os.path.exists(
+        config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)
+    ):
         pytest.skip(
-            f"Please download dataset to data folder {config.DATA_PATH}."
+            f"Please download dataset to data folder "
+            f"{config.DATASET.DATA_PATH}."
         )
 
     env = habitat.Env(config=config)
