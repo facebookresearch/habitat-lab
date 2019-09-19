@@ -40,7 +40,33 @@ _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
-_C.TASK.POSSIBLE_ACTIONS = ["stop", "move_forward", "turn_left", "turn_right"]
+_C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
+# -----------------------------------------------------------------------------
+# # ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS = CN()
+ACTIONS.STOP = CN()
+ACTIONS.STOP.TYPE = "StopAction"
+# -----------------------------------------------------------------------------
+# # NAVIGATION ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS.MOVE_FORWARD = CN()
+ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
+ACTIONS.TURN_LEFT = CN()
+ACTIONS.TURN_LEFT.TYPE = "TurnLeftAction"
+ACTIONS.TURN_RIGHT = CN()
+ACTIONS.TURN_RIGHT.TYPE = "TurnRightAction"
+ACTIONS.LOOK_UP = CN()
+ACTIONS.LOOK_UP.TYPE = "LookUpAction"
+ACTIONS.LOOK_DOWN = CN()
+ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
+ACTIONS.TELEPORT = CN()
+ACTIONS.TELEPORT.TYPE = "TeleportAction"
+
+_C.TASK.ACTIONS = ACTIONS
+# -----------------------------------------------------------------------------
+# # TASK SENSORS
+# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -108,6 +134,8 @@ _C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
 # # EQA TASK
 # -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ANSWER = CN()
+_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
 # # EQA TASK QUESTION SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.QUESTION_SENSOR = CN()
@@ -224,13 +252,14 @@ def get_config(
     opts: Optional[list] = None,
 ) -> CN:
     r"""Create a unified config with default values overwritten by values from
-    `config_paths` and overwritten by options from `opts`.
-    Args:
-        config_paths: List of config paths or string that contains comma
+    :p:`config_paths` and overwritten by options from :p:`opts`.
+
+    :param config_paths: List of config paths or string that contains comma
         separated list of config paths.
-        opts: Config options (keys, values) in a list (e.g., passed from
-        command line into the config. For example, `opts = ['FOO.BAR',
-        0.5]`. Argument can be used for parameter sweeping or quick tests.
+    :param opts: Config options (keys, values) in a list (e.g., passed from
+        command line into the config. For example,
+        :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
+        sweeping or quick tests.
     """
     config = _C.clone()
     if config_paths:

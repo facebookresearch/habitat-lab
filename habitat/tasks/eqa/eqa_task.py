@@ -4,14 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Optional
 
 import attr
 import numpy as np
 from gym import spaces, Space
 
 from habitat.config import Config
-from habitat.core.embodied_task import Measure, EmptySpace
+from habitat.core.embodied_task import Action, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
@@ -103,7 +103,7 @@ class EpisodeInfo(Measure):
         return "episode_info"
 
     def reset_metric(self, episode):
-        self._metric = episode
+        self._metric = vars(episode).copy()
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         pass
@@ -135,7 +135,6 @@ class AnswerAccuracy(Measure):
     def __init__(self, dataset, task, **kwargs):
         self._dataset = dataset
         self._task = task
-        self._answer_received = False
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -143,33 +142,27 @@ class AnswerAccuracy(Measure):
 
     def reset_metric(self, episode):
         self._metric = 0
-        self._answer_received = False
 
     def update_metric(
         self, action=None, episode=None, *args: Any, **kwargs: Any
     ):
-        if (
-            episode is None
-        ):
+        if episode is None:
             return
-        assert not self._answer_received, (
-            "Question can be answered only " "once per episode."
-        )
-        if action == "stop":
-            self._answer_received = True
+
+        if action["action"] == AnswerAction.name:
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
                     episode.question.answer_text
                 ]
-                == action.task_action
+                == action["action_args"]["answer_id"]
                 else 0
             )
-        else:
-            # Episode wasn't finished, but to reflect unfinished episodes in
-            # average accuracy metric we report 0
-            self._metric = 0
 
+@registry.register_measure
+class DistanceToGoal(Measure):
+    """Distance To Goal metrics
+    """
 
 @registry.register_measure
 class DistanceToGoal(Measure):
@@ -222,6 +215,14 @@ class DistanceToGoal(Measure):
             "agent_path_length": self._agent_episode_distance,
         }
 
+        self._metric = {
+            "distance_to_target": distance_to_target,
+            "start_distance_to_target": self._start_end_episode_distance,
+            "distance_delta": self._start_end_episode_distance
+            - distance_to_target,
+            "agent_path_length": self._agent_episode_distance,
+        }
+
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     """
@@ -236,27 +237,55 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    @property
-    def possible_actions(self):
-        return registry.mapping["task_action"]
+    def _check_episode_is_active(
+        self, *args, action, episode, action_args=None, **kwargs
+    ) -> bool:
+        return self.is_valid and self.answer is None
 
-    @registry.register_task_action(name="stop", action_space=EmptySpace())
-    def stop(self):
-        self.is_stop_called = True
-        return self._sim.step(SimulatorActions.STOP)
 
-    @registry.register_task_action(action_space=spaces.Dict({
-        "answer": spaces.Discrete(32000),
-    }))
-    def answer(self, answer: int):
-        if self.is_stop_called:
-            self.answer = answer
-        else:
-            self.is_task_invalid = True
+@registry.register_task_action
+class AnswerAction(Action):
+    _answer: Optional[str]
+    name: str = "ANSWER"
 
-    def __init__(self, **kwargs) -> None:
-        self.is_stop_called = False
-        self.answer = None
-        self.is_task_invalid = False
+    def __init__(self, *args: Any, sim, task, dataset, **kwargs: Any) -> None:
+        self._task = task
+        self._sim = sim
+        self._task.answer = None
+        self._task.is_stopped = False
+        self._dataset = dataset
 
-        super().__init__(**kwargs)
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.name
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        self._task.answer = None
+        self._task.is_stopped = False
+        self._task.is_valid = True
+        return
+
+    def step(
+        self, *args: Any, answer_id: int, **kwargs: Any
+    ) -> Dict[str, Observations]:
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        if self._task.answer is not None:
+            self._task.is_valid = False
+            self._task.invalid_reason = "Agent answered question twice."
+
+        self._task.answer = answer_id
+        return self._sim.get_observations_at()
+
+    def get_action_space(self):
+        r"""
+        Returns:
+             the current metric for ``Measure``.
+        """
+        return spaces.Dict(
+            {
+                "answer_id": spaces.Discrete(
+                    n=len(self._dataset.get_answers_vocabulary())
+                )
+            }
+        )

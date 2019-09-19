@@ -169,8 +169,7 @@ class HabitatSim(Simulator):
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
-
-        self._is_episode_active = False
+        self._prev_sim_obs = None
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -215,10 +214,6 @@ class HabitatSim(Simulator):
     def action_space(self) -> Space:
         return self._action_space
 
-    @property
-    def is_episode_active(self) -> bool:
-        return self._is_episode_active
-
     def _update_agents_state(self) -> bool:
         is_updated = False
         for agent_id, _ in enumerate(self.config.AGENTS):
@@ -239,23 +234,11 @@ class HabitatSim(Simulator):
             sim_obs = self._sim.get_sensor_observations()
 
         self._prev_sim_obs = sim_obs
-        self._is_episode_active = True
         return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action):
-        assert self._is_episode_active, (
-            "episode is not active, environment not RESET or "
-            "STOP action called previously"
-        )
-
-        if action == self.index_stop_action:
-            self._is_episode_active = False
-            sim_obs = self._sim.get_sensor_observations()
-        else:
-            sim_obs = self._sim.step(action)
-
+        sim_obs = self._sim.step(action)
         self._prev_sim_obs = sim_obs
-
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
 
@@ -436,14 +419,18 @@ class HabitatSim(Simulator):
 
     def get_observations_at(
         self,
-        position: List[float],
-        rotation: List[float],
+        position: Optional[List[float]] = None,
+        rotation: Optional[List[float]] = None,
         keep_agent_at_new_pose: bool = False,
     ) -> Optional[Observations]:
-
         current_state = self.get_agent_state()
+        if position is None or rotation is None:
+            success = True
+        else:
+            success = self.set_agent_state(
+                position, rotation, reset_sensors=False
+            )
 
-        success = self.set_agent_state(position, rotation, reset_sensors=False)
         if success:
             sim_obs = self._sim.get_sensor_observations()
 

@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import numpy as np
 import pytest
 
 import habitat
+from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 TELEPORT_POSITION = [-3.2890449, 0.15067159, 11.124366]
@@ -17,17 +20,19 @@ TELEPORT_ROTATION = [0.92035, 0, -0.39109465, 0]
 def test_task_actions():
     config = habitat.get_config(config_paths=CFG_TEST)
     config.defrost()
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["teleport"]
+    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
     config.freeze()
 
     env = habitat.Env(config=config)
     env.reset()
     env.step(
-        action="teleport",
-        action_args={
-            "position": TELEPORT_POSITION,
-            "rotation": TELEPORT_ROTATION,
-        },
+        action={
+            "action": "TELEPORT",
+            "action_args": {
+                "position": TELEPORT_POSITION,
+                "rotation": TELEPORT_ROTATION,
+            },
+        }
     )
     agent_state = env.sim.get_agent_state()
     assert (
@@ -43,29 +48,26 @@ def test_task_actions():
         )
         is True
     ), "mismatch in rotation after teleport"
-    env.step("turn_right")
+    env.step("TURN_RIGHT")
     env.close()
 
 
 def test_task_actions_sampling_for_teleport():
     config = habitat.get_config(config_paths=CFG_TEST)
     config.defrost()
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["teleport"]
+    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
     config.freeze()
 
     env = habitat.Env(config=config)
     env.reset()
     while not env.episode_over:
-        action_index = env.task.action_space().sample()
-        if env.task.get_action_by_index(action_index) == "stop":
-            continue
-        action_arguments = env.task.action_space(action_index).sample()
+        action = sample_non_stop_action(env.action_space)
         habitat.logger.info(
-            f"Action index: "
-            f"{env.task.get_action_by_index(action_index)}, "
-            f"args: {action_arguments}."
+            f"Action : "
+            f"{action['action']}, "
+            f"args: {action['action_args']}."
         )
-        env.step(action=action_index, action_args=action_arguments)
+        env.step(action)
         agent_state = env.sim.get_agent_state()
         habitat.logger.info(agent_state)
     env.close()
@@ -81,20 +83,24 @@ def test_task_actions_sampling_for_teleport():
 )
 def test_task_actions_sampling(config_file):
     config = habitat.get_config(config_paths=config_file)
+    if not os.path.exists(
+        config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)
+    ):
+        pytest.skip(
+            f"Please download dataset to data folder "
+            f"{config.DATASET.DATA_PATH}."
+        )
 
     env = habitat.Env(config=config)
     env.reset()
     while not env.episode_over:
-        action_index = env.task.action_space().sample()
-        if env.task.get_action_by_index(action_index) == "stop":
-            continue
-        action_arguments = env.task.action_space(action_index).sample()
+        action = sample_non_stop_action(env.action_space)
         habitat.logger.info(
-            f"Action index: "
-            f"{env.task.get_action_by_index(action_index)}, "
-            f"args: {action_arguments}."
+            f"Action : "
+            f"{action['action']}, "
+            f"args: {action['action_args']}."
         )
-        env.step(action=action_index, action_args=action_arguments)
+        env.step(action)
         agent_state = env.sim.get_agent_state()
         habitat.logger.info(agent_state)
     env.close()

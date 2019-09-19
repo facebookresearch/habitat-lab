@@ -120,7 +120,7 @@ class RandomAgent(object):
             action = SimulatorActions.STOP
         else:
             action = random.randint(0, self.num_actions - 1)
-        return action, None
+        return {"action": action}
 
 
 class BlindAgent(RandomAgent):
@@ -163,7 +163,7 @@ class BlindAgent(RandomAgent):
             action = random_action
         else:
             action = command
-        return action, None
+        return {"action": action}
 
 
 class ORBSLAM2Agent(RandomAgent):
@@ -334,7 +334,7 @@ class ORBSLAM2Agent(RandomAgent):
         if success:
             action = SimulatorActions.STOP
             self.action_history.append(action)
-            return action, None
+            return {"action": action}
         # Plan action
         t = time.time()
         self.planned2Dpath, self.planned_waypoints = self.plan_path()
@@ -359,7 +359,7 @@ class ORBSLAM2Agent(RandomAgent):
         if self.timing:
             print(time.time() - t, " s, get action")
         self.action_history.append(action)
-        return action, None
+        return {"action": action}
 
     def is_waypoint_good(self, pose6d):
         p_init = self.pose6D.squeeze()
@@ -512,7 +512,7 @@ class ORBSLAM2Agent(RandomAgent):
         action = None
         if self.is_goal_reached():
             action = SimulatorActions.STOP
-            return action, None
+            return {"action": action}
         if self.unseen_obstacle:
             command = SimulatorActions.TURN_RIGHT
             return command
