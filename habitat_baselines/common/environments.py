@@ -51,13 +51,9 @@ class NavRLEnv(habitat.RLEnv):
         ]
         return observations
 
-    def step(
-        self,
-        action: Union[int, str],
-        action_args: Optional[Dict[str, Any]] = None,
-    ):
-        self._previous_action = action
-        return super().step(action=action, action_args=action_args)
+    def step(self, *args, **kwargs):
+        self._previous_action = kwargs["action"]
+        return super().step(*args, **kwargs)
 
     def get_reward_range(self):
         return (
@@ -87,7 +83,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action == SimulatorActions.STOP
+            self._env.task.is_stop_called
             and self._distance_target() < self._success_distance
         ):
             return True

@@ -237,12 +237,7 @@ class HabitatSim(Simulator):
         return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action):
-
-        if action == self.index_stop_action:
-            sim_obs = self._sim.get_sensor_observations()
-        else:
-            sim_obs = self._sim.step(action)
-
+        sim_obs = self._sim.step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations

@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import attr
 from gym import Space
@@ -237,7 +237,7 @@ class SensorSuite:
     sensors: Dict[str, Sensor]
     observation_spaces: SpaceDict
 
-    def __init__(self, sensors: List[Sensor]) -> None:
+    def __init__(self, sensors: Iterable[Sensor]) -> None:
         """Constructor
 
         :param sensors: list containing sensors for the environment, uuid of
@@ -429,14 +429,6 @@ class Simulator:
 
     def close(self) -> None:
         raise NotImplementedError
-
-    @property
-    def index_stop_action(self):
-        return SimulatorActions.STOP
-
-    @property
-    def index_forward_action(self):
-        return SimulatorActions.MOVE_FORWARD
 
     def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision

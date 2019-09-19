@@ -16,11 +16,11 @@ from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.tasks.eqa.eqa_task import AnswerAction
+from habitat.tasks.nav.nav_task import MoveForwardAction
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
-CLOSE_STEP_THRESHOLD = 0.03
-# CLOSE_STEP_THRESHOLD = 0.028
+CLOSE_STEP_THRESHOLD = 0.028
 
 
 # List of episodes each from unique house
@@ -113,9 +113,6 @@ def test_mp3d_eqa_sim():
         pytest.skip(
             "Please download Matterport3D EQA dataset to " "data folder."
         )
-    import numpy as np
-
-    np.random.seed(1)
 
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
@@ -126,7 +123,7 @@ def test_mp3d_eqa_sim():
     assert env
     env.reset()
     while not env.episode_over:
-        obs = env.step(env.task.action_space().sample())
+        obs = env.step(env.task.action_space.sample())
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
@@ -255,24 +252,28 @@ def test_eqa_task():
 
     env.reset()
 
-    for i in range(3):
+    for i in range(10):
         action = sample_non_stop_action(env.action_space)
-        print(action)
         if action["action"] != AnswerAction.name:
             env.step(action)
         metrics = env.get_metrics()
-        # del metrics["episode_info"]
-        print(metrics)
+        del metrics["episode_info"]
+        logger.info(metrics)
+
     correct_answer_id = dataset.get_answers_vocabulary()[
         env.current_episode.question.answer_text
     ]
-    obs = env.step(
-        {"action": "ANSWER", "action_args": {"answer_id": correct_answer_id}}
+    env.step(
+        {
+            "action": AnswerAction.name,
+            "action_args": {"answer_id": correct_answer_id},
+        }
     )
-    # obs = env.step("")
-    # env.step(habitat.Action(sim_action=0, task_action=correct_answer_id))
-    # env.task.answer_question(correct_answer_id, env.episode_over)
+
     metrics = env.get_metrics()
-    # del metrics["episode_info"]
-    print(metrics)
-    # assert metrics["answer_accuracy"] == 1
+    del metrics["episode_info"]
+    logger.info(metrics)
+    assert metrics["answer_accuracy"] == 1
+
+    with pytest.raises(AssertionError):
+        env.step({"action": MoveForwardAction.name})

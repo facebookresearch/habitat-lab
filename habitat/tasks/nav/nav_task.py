@@ -422,12 +422,18 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self,
+        *args: Any,
+        sim: Simulator,
+        task: EmbodiedTask,
+        config: Config,
+        **kwargs: Any
     ):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
         self._sim = sim
+        self._task = task
         self._config = config
 
         super().__init__()
@@ -455,7 +461,8 @@ class SPL(Measure):
         )
 
         if (
-            action == self._sim.index_stop_action
+            hasattr(self._task, "is_stop_called")
+            and self._task.is_stop_called
             and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
@@ -859,8 +866,7 @@ class TeleportAction(SimulatorAction):
 
         if not isinstance(rotation, list):
             rotation = list(rotation)
-        # if not isinstance(position, list):
-        #     position = list(position)
+
         if not self._sim.is_navigable(position):
             return self._sim.get_observations_at()
 

@@ -303,7 +303,9 @@ def test_rl_env(gpu2gpu):
     assert done is True, "episodes should be over after max_episode_steps"
 
     env.reset()
-    observation, reward, done, info = env.step(action=SimulatorActions.STOP)
+    observation, reward, done, info = env.step(
+        action={"action": StopAction.name}
+    )
     assert done is True, "done should be true after STOP action"
 
     env.close()

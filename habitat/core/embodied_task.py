@@ -8,7 +8,7 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Type, Union
 
 import gym
 import numpy as np
@@ -117,7 +117,7 @@ class Measurements:
 
     measures: Dict[str, Measure]
 
-    def __init__(self, measures: List[Measure]) -> None:
+    def __init__(self, measures: Iterable[Measure]) -> None:
         """Constructor
 
         :param measures: list containing `Measure`, uuid of each
@@ -230,45 +230,32 @@ class EmbodiedTask:
         self._sim = sim
         self._dataset = dataset
 
-        task_measurements = []
-        for measurement_name in config.MEASUREMENTS:
-            measurement_cfg = getattr(config, measurement_name)
-            measure_type = registry.get_measure(measurement_cfg.TYPE)
-            assert (
-                measure_type is not None
-            ), "invalid measurement type {}".format(measurement_cfg.TYPE)
-            print("measurement type {}".format(measurement_cfg.TYPE))
-            task_measurements.append(
-                measure_type(
-                    sim=sim, config=measurement_cfg, dataset=dataset, task=self
-                )
-            )
-        self.measurements = Measurements(task_measurements)
+        self.measurements = Measurements(
+            self._init_entities(
+                entity_names=config.MEASUREMENTS,
+                register_func=registry.get_measure,
+                entities_config=config,
+            ).values()
+        )
 
-        task_sensors = []
-        for sensor_name in config.SENSORS:
-            sensor_cfg = getattr(config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.TYPE
-            )
-            print("sensor type {}".format(sensor_cfg.TYPE))
-            task_sensors.append(
-                sensor_type(sim=sim, config=sensor_cfg, dataset=dataset)
-            )
+        self.sensor_suite = SensorSuite(
+            self._init_entities(
+                entity_names=config.SENSORS,
+                register_func=registry.get_sensor,
+                entities_config=config,
+            ).values()
+        )
 
-        self.sensor_suite = SensorSuite(task_sensors)
-
-        # TODO: move sensors and measures to `_init_entities`
         self.actions = self._init_entities(
             entity_names=config.POSSIBLE_ACTIONS,
             register_func=registry.get_task_action,
             entities_config=self._config.ACTIONS,
         )
+        self._action_keys = list(self.actions.keys())
 
     def _init_entities(
         self, entity_names, register_func, entities_config=None
-    ):
+    ) -> OrderedDict:
         if entities_config is None:
             entities_config = self._config
 
@@ -305,11 +292,7 @@ class EmbodiedTask:
             action["action_args"] = {}
         action_name = action["action"]
         if isinstance(action_name, (int, np.integer)):
-            if action_name >= len(self.actions):
-                raise ValueError(
-                    f"Action index '{action_name}' is out of range."
-                )
-            action_name = list(self.actions.keys())[action_name]
+            action_name = self.get_action_name(action_name)
         assert (
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
@@ -331,8 +314,9 @@ class EmbodiedTask:
     def get_action_name(self, action_index: int):
         if action_index >= len(self.actions):
             raise ValueError(f"Action index '{action}' is out of range.")
-        return list(self.actions.keys())[action_index]
+        return self._action_keys[action_index]
 
+    @property
     def action_space(self) -> Space:
         return ActionSpace(
             {

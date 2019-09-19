@@ -135,7 +135,6 @@ class AnswerAccuracy(Measure):
     def __init__(self, dataset, task, **kwargs):
         self._dataset = dataset
         self._task = task
-        self._answer_received = False
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -143,30 +142,22 @@ class AnswerAccuracy(Measure):
 
     def reset_metric(self, episode):
         self._metric = 0
-        self._answer_received = False
 
     def update_metric(
         self, action=None, episode=None, *args: Any, **kwargs: Any
     ):
         if episode is None:
             return
-        assert not self._answer_received, (
-            "Question can be answered only " "once per episode."
-        )
-        if action == "stop":
-            self._answer_received = True
+
+        if action["action"] == AnswerAction.name:
             self._metric = (
                 1
                 if self._dataset.get_answers_vocabulary()[
                     episode.question.answer_text
                 ]
-                == action.task_action
+                == action["action_args"]["answer_id"]
                 else 0
             )
-        else:
-            # Episode wasn't finished, but to reflect unfinished episodes in
-            # average accuracy metric we report 0
-            self._metric = 0
 
 
 @registry.register_measure
@@ -235,10 +226,6 @@ class EQATask(NavigationTask):
             metrics = self._env.get_metrics()
     """
 
-    @property
-    def possible_actions(self):
-        return registry.mapping["task_action"]
-
     def _check_episode_is_active(
         self, *args, action, episode, action_args=None, **kwargs
     ) -> bool:
@@ -248,7 +235,7 @@ class EQATask(NavigationTask):
 @registry.register_task_action
 class AnswerAction(Action):
     _answer: Optional[str]
-    name: str = "answer"
+    name: str = "ANSWER"
 
     def __init__(self, *args: Any, sim, task, dataset, **kwargs: Any) -> None:
         self._task = task
@@ -272,11 +259,11 @@ class AnswerAction(Action):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        self._task.answer = answer_id
-        if hasattr(self, "is_stop_called") and not self.is_stop_called:
+        if self._task.answer is not None:
             self._task.is_valid = False
-            self._task.invalid_reason = "Answered before stopped."
+            self._task.invalid_reason = "Agent answered question twice."
 
+        self._task.answer = answer_id
         return self._sim.get_observations_at()
 
     def get_action_space(self):

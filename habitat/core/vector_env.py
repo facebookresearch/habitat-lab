@@ -302,12 +302,17 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def async_step(self, data: List[Dict[str, Any]]) -> None:
+    def async_step(self, data: List[Union[int, str, Dict[str, Any]]]) -> None:
         r"""Asynchronously step in the environments.
 
-        :param data: list of size _num_envs containing action name and
-            action arguments to be taken in each environment.
+        :param data: list of size _num_envs containing keyword arguments to
+        pass to `step` method for each Environment. For example,
+        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
+        # Backward compatibility
+        if isinstance(data[0], (int, np.integer, str)):
+            data = [{"action": {"action": action}} for action in data]
+
         self._is_waiting = True
         for write_fn, args in zip(self._connection_write_fns, data):
             write_fn((STEP_COMMAND, args))
@@ -321,16 +326,14 @@ class VectorEnv:
         self._is_waiting = False
         return observations
 
-    def step(self, data: Union[List[int], List[Dict[str, Any]]]):
+    def step(self, data: List[Union[int, str, Dict[str, Any]]]) -> List[Any]:
         r"""Perform actions in the vectorized environments.
 
-        :param data: list of size _num_envs containing action name and
-            action arguments to be taken in each environment.
+        :param data: list of size _num_envs containing keyword arguments to
+        pass to `step` method for each Environment. For example,
+        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
-        # Backward compatibility
-        if isinstance(data[0], (int, np.integer, str)):
-            data = [{"action": {"action": action}} for action in data]
         self.async_step(data)
         return self.wait_step()
 

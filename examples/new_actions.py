@@ -151,7 +151,7 @@ def main():
 
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
-    # config.TASK.TYPE = "NavTaskWithStrafe-v0"
+
     config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
         "STRAFE_LEFT",
         "STRAFE_RIGHT",
