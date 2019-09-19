@@ -39,12 +39,6 @@ class Matterport3dDatasetV1(Dataset):
 
     episodes: List[EQAEpisode]
 
-    def get_questions_vocabulary(self):
-        return self.questions_vocabulary
-
-    def get_answers_vocabulary(self):
-        return self.answers_vocabulary
-
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(config.DATA_PATH.format(split=config.SPLIT))
@@ -57,19 +51,6 @@ class Matterport3dDatasetV1(Dataset):
 
         with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read())
-
-        questions_vocabulary = {
-            episode.question.question_text for episode in self.episodes
-        }
-        self.questions_vocabulary = {
-            question: id for id, question in enumerate(questions_vocabulary)
-        }
-        answers_vocabulary = {
-            episode.question.answer_text for episode in self.episodes
-        }
-        self.answers_vocabulary = {
-            answer: id for id, answer in enumerate(answers_vocabulary)
-        }
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

@@ -131,41 +131,6 @@ _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
 # -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# # EQA TASK
-# -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.ANSWER = CN()
-_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
-# # EQA TASK QUESTION SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.QUESTION_SENSOR = CN()
-_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
-# -----------------------------------------------------------------------------
-# # EQA TASK CORRECT_ANSWER measure for training
-# -----------------------------------------------------------------------------
-_C.TASK.CORRECT_ANSWER = CN()
-_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.EPISODE_INFO = CN()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-# -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.ACTION_STATS = CN()
-_C.TASK.ACTION_STATS.TYPE = "ActionStats"
-# -----------------------------------------------------------------------------
-# # DISTANCE_TO_GOAL MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.DISTANCE_TO_GOAL = CN()
-_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
-# -----------------------------------------------------------------------------
-# # ANSWER_ACCURACY MEASUREMENT
-# -----------------------------------------------------------------------------
-_C.TASK.ANSWER_ACCURACY = CN()
-_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
-# -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
@@ -245,6 +210,8 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+
+# -----------------------------------------------------------------------------
 
 
 def get_config(
