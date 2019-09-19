@@ -170,6 +170,7 @@ _C.PYROBOT.ROBOTS = ["locobot"]  # types of robots supported
 _C.PYROBOT.ROBOT = "locobot"
 _C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.PYROBOT.BASE_CONTROLLER = "proportional"
+_C.PYROBOT.BASE_PLANNER = "none"
 # -----------------------------------------------------------------------------
 # SENSORS
 # -----------------------------------------------------------------------------
