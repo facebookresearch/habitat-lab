@@ -197,11 +197,13 @@ class Env:
 
         assert len(self.episodes) > 0, "Episodes list is empty"
 
-        self.current_episode = next(self._episode_iterator)
+        self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
 
         observations = self.task.reset(episode=self.current_episode)
-        self._task.measurements.reset_measures(episode=self.current_episode)
+        self._task.measurements.reset_measures(
+            episode=self.current_episode, task=self.task
+        )
 
         return observations
 
@@ -239,7 +241,7 @@ class Env:
         )
 
         self._task.measurements.update_measures(
-            episode=self.current_episode, action=action
+            episode=self.current_episode, action=action, task=self.task
         )
 
         self._update_step_stats()

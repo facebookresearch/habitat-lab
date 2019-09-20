@@ -25,10 +25,7 @@ class Action:
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.uuid = self._get_uuid(*args, **kwargs)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        raise NotImplementedError
+        return
 
     def reset(self, *args: Any, **kwargs: Any) -> None:
         r"""Reset method is called from ``Env`` on each reset.
@@ -45,7 +42,7 @@ class Action:
         Returns:
              the current action space.
         """
-        return None
+        raise NotImplementedError
 
 
 class Measure:
@@ -278,12 +275,12 @@ class EmbodiedTask:
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations, episode=episode
+                observations=observations, episode=episode, task=self
             )
         )
 
         for action_instance in self.actions.values():
-            action_instance.reset(episode=episode)
+            action_instance.reset(episode=episode, task=self)
 
         return observations
 
@@ -298,10 +295,15 @@ class EmbodiedTask:
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
 
         task_action = self.actions[action_name]
-        observations = task_action.step(self, **action["action_args"])
+        observations = task_action.step(
+            self, **action["action_args"], task=self
+        )
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations, episode=episode, action=action
+                observations=observations,
+                episode=episode,
+                action=action,
+                task=self,
             )
         )
 
