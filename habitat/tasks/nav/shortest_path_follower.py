@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -65,7 +65,9 @@ class ShortestPathFollower:
         else:
             return action
 
-    def get_next_action(self, goal_pos: np.array) -> Union[int, np.array]:
+    def get_next_action(
+        self, goal_pos: np.array
+    ) -> Optional[Union[int, np.array]]:
         """Returns the next action along the shortest path.
         """
         if (
@@ -74,7 +76,7 @@ class ShortestPathFollower:
             )
             <= self._goal_radius
         ):
-            return self._get_return_value(SimulatorActions.STOP)
+            return None
 
         max_grad_dir = self._est_max_grad_dir(goal_pos)
         if max_grad_dir is None:

@@ -33,7 +33,8 @@ def test_sim_trajectory():
         rotation=test_trajectory["rotations"][0],
     )
 
-    for i, action in enumerate(test_trajectory["actions"]):
+    # remove last stop action as Sim has no stop action anymore
+    for i, action in enumerate(test_trajectory["actions"][:-1]):
         action = SimulatorActions[action]
         if i > 0:  # ignore first step as habitat-sim doesn't update
             # agent until then
@@ -68,8 +69,6 @@ def test_sim_trajectory():
         assert sim.action_space.contains(action)
 
         sim.step(action)
-        if i == len(test_trajectory["actions"]) - 1:  # STOP action
-            assert sim.is_episode_active is False
 
     sim.close()
 

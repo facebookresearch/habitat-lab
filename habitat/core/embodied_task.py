@@ -8,11 +8,79 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Iterable, List, Optional, Type, Union
+
+import gym
+import numpy as np
+from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.simulator import SensorSuite, Simulator
+from habitat.core.registry import registry
+from habitat.core.simulator import Observations, SensorSuite, Simulator
+
+
+class Action:
+    r"""
+     An action that can be performed by an agent solving a task in environment.
+     For example for navigation task action classes will be:
+     ``MoveForwardAction, TurnLeftAction, TurnRightAction``. The action can
+     use ``Task`` members to pass a state to another action, as well as keep
+    own state and reset when new episode starts.
+
+    :property Action's action space
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        return
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        r"""Reset method is called from ``Env`` on each reset for each new
+        episode. Goal of the method is to reset ``Action``'s state for each
+        episode.
+        """
+        raise NotImplementedError
+
+    def step(self, *args: Any, **kwargs: Any) -> Observations:
+        r"""Step method is called from ``Env`` on each ``step``. Can call
+        simulator or task method, change task's state.
+
+        :param kwargs: optional parameters for the action, like distance/force.
+        :return: observations after taking action in the task, including ones
+        coming from a simulator.
+        """
+        raise NotImplementedError
+
+    @property
+    def action_space(self) -> gym.Space:
+        r"""
+        :return: a current Action's action space.
+        """
+        raise NotImplementedError
+
+
+class SimulatorAction(Action):
+    r"""
+     An ``EmbodiedTask`` action that is wrapping simulator action.
+    """
+
+    def __init__(
+        self, *args: Any, config: Config, sim: Simulator, **kwargs: Any
+    ) -> None:
+        self._config = config
+        self._sim = sim
+
+    @property
+    def action_space(self):
+        return EmptySpace()
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+    def step(self, *args: Any, **kwargs: Any) -> None:
+        r"""Step method is called from ``Env`` on each ``step``.
+        """
+        raise NotImplementedError
 
 
 class Measure:
@@ -84,7 +152,7 @@ class Measurements:
 
     measures: Dict[str, Measure]
 
-    def __init__(self, measures: List[Measure]) -> None:
+    def __init__(self, measures: Iterable[Measure]) -> None:
         """Constructor
 
         :param measures: list containing `Measure`, uuid of each
@@ -112,16 +180,74 @@ class Measurements:
         return Metrics(self.measures)
 
 
+class EmptySpace(Space):
+    """
+    A ``gym.Space`` that reflects arguments space for action that doesn't have
+    arguments. Needed for consistency ang always samples `None` value.
+    """
+
+    def sample(self):
+        return None
+
+    def contains(self, x):
+        return False
+
+
+class ActionSpace(spaces.Dict):
+    """
+    A dictionary of ``EmbodiedTask`` actions and their argument spaces.
+
+    .. code:: py
+        self.observation_space = spaces.ActionSpace(
+            "move": spaces.Dict({
+                "position": spaces.Discrete(2),
+                "velocity": spaces.Discrete(3)
+                },
+            "move_forward": EmptySpace,
+            )
+        )
+    """
+
+    def __init__(self, spaces):
+        if isinstance(spaces, dict):
+            self.spaces = OrderedDict(sorted(list(spaces.items())))
+        if isinstance(spaces, list):
+            self.spaces = OrderedDict(spaces)
+        self.actions_select = gym.spaces.Discrete(len(self.spaces))
+
+    @property
+    def n(self):
+        return len(self.spaces)
+
+    def sample(self):
+        action_index = self.actions_select.sample()
+        return {
+            "action": list(self.spaces.keys())[action_index],
+            "action_args": list(self.spaces.values())[action_index].sample(),
+        }
+
+    def contains(self, x):
+        if not isinstance(x, dict) and {"action", "action_args"} not in x:
+            return False
+        if not self.spaces[x["action"]].contains(x["action_args"]):
+            return False
+        return True
+
+    def __repr__(self):
+        return (
+            "ActionSpace("
+            + ", ".join([k + ":" + str(s) for k, s in self.spaces.items()])
+            + ")"
+        )
+
+
 class EmbodiedTask:
-    r"""Base class for embodied tasks.
+    r"""Base class for embodied tasks. ``EmbodiedTask``
 
     Args:
         config: config for the task.
         sim: reference to the simulator for calculating task observations.
         dataset: reference to dataset for task instance level information.
-
-    When subclassing the user has to define the attributes `measurements` and
-    `sensor_suite`.
 
     :data measurements: set of task measures.
     :data sensor_suite: suite of task sensors.
@@ -130,6 +256,7 @@ class EmbodiedTask:
     _config: Any
     _sim: Optional[Simulator]
     _dataset: Optional[Dataset]
+    _is_episode_active: bool
     measurements: Measurements
     sensor_suite: SensorSuite
 
@@ -139,6 +266,106 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+
+        self.measurements = Measurements(
+            self._init_entities(
+                entity_names=config.MEASUREMENTS,
+                register_func=registry.get_measure,
+                entities_config=config,
+            ).values()
+        )
+
+        self.sensor_suite = SensorSuite(
+            self._init_entities(
+                entity_names=config.SENSORS,
+                register_func=registry.get_sensor,
+                entities_config=config,
+            ).values()
+        )
+
+        self.actions = self._init_entities(
+            entity_names=config.POSSIBLE_ACTIONS,
+            register_func=registry.get_task_action,
+            entities_config=self._config.ACTIONS,
+        )
+        self._action_keys = list(self.actions.keys())
+
+    def _init_entities(
+        self, entity_names, register_func, entities_config=None
+    ) -> OrderedDict:
+        if entities_config is None:
+            entities_config = self._config
+
+        entities = OrderedDict()
+        for entity_name in entity_names:
+            entity_cfg = getattr(entities_config, entity_name)
+            entity_type = register_func(entity_cfg.TYPE)
+            assert (
+                entity_type is not None
+            ), f"invalid {entity_name} type {entity_cfg.TYPE}"
+            entities[entity_name] = entity_type(
+                sim=self._sim,
+                config=entity_cfg,
+                dataset=self._dataset,
+                task=self,
+            )
+        return entities
+
+    def reset(self, episode):
+        observations = self._sim.reset()
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations, episode=episode, task=self
+            )
+        )
+
+        for action_instance in self.actions.values():
+            action_instance.reset(episode=episode, task=self)
+
+        return observations
+
+    def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
+        action_name = action["action"]
+        if isinstance(action_name, (int, np.integer)):
+            action_name = self.get_action_name(action_name)
+        assert (
+            action_name in self.actions
+        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
+
+        task_action = self.actions[action_name]
+        observations = task_action.step(
+            self, **action["action_args"], task=self
+        )
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations,
+                episode=episode,
+                action=action,
+                task=self,
+            )
+        )
+
+        self._is_episode_active = self._check_episode_is_active(
+            observations=observations, action=action, episode=episode
+        )
+
+        return observations
+
+    def get_action_name(self, action_index: int):
+        if action_index >= len(self.actions):
+            raise ValueError(f"Action index '{action}' is out of range.")
+        return self._action_keys[action_index]
+
+    @property
+    def action_space(self) -> Space:
+        return ActionSpace(
+            {
+                action_name: action_instance.action_space
+                for action_name, action_instance in self.actions.items()
+            }
+        )
 
     def overwrite_sim_config(
         self, sim_config: Config, episode: Type[Episode]
@@ -150,3 +377,19 @@ class EmbodiedTask:
         :param episode: current episode.
         """
         raise NotImplementedError
+
+    def _check_episode_is_active(
+        self,
+        *args: Any,
+        action: Union[int, Dict[str, Any]],
+        episode: Type[Episode],
+        **kwargs: Any,
+    ) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_episode_active(self):
+        return self._is_episode_active
+
+    def seed(self, seed: int) -> None:
+        return

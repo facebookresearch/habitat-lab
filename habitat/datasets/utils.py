@@ -27,10 +27,9 @@ def get_action_shortest_path(
     follower.mode = shortest_path_mode
 
     shortest_path = []
-    action = None
     step_count = 0
-    while action != sim.index_stop_action and step_count < max_episode_steps:
-        action = follower.get_next_action(goal_position)
+    action = follower.get_next_action(goal_position)
+    while action is not None and step_count < max_episode_steps:
         state = sim.get_agent_state()
         shortest_path.append(
             ShortestPathPoint(
@@ -41,6 +40,8 @@ def get_action_shortest_path(
         )
         sim.step(action)
         step_count += 1
+        action = follower.get_next_action(goal_position)
+
     if step_count == max_episode_steps:
         logger.warning("Shortest path wasn't found.")
     return shortest_path

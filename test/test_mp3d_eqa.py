@@ -15,9 +15,11 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
+
 
 # List of episodes each from unique house
 TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
@@ -119,9 +121,7 @@ def test_mp3d_eqa_sim():
     assert env
     env.reset()
     while not env.episode_over:
-        action = env.action_space.sample()
-        assert env.action_space.contains(action)
-        obs = env.step(action)
+        obs = env.step(env.task.action_space.sample())
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
@@ -211,7 +211,7 @@ def test_mp3d_eqa_sim_correspondence():
                 atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
             ), "Agent's path diverges from the shortest path."
 
-            obs = env.step(point.action)
+            obs = env.step(action=point.action)
 
             if not env.episode_over:
                 rgb_mean += obs["rgb"][:, :, :3].mean()
