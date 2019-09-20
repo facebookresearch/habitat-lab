@@ -198,9 +198,7 @@ def test_env(gpu2gpu):
 
     env.step(action={"action": StopAction.name})
     # check for STOP action
-    assert env.episode_over is True, (
-        "episode should be over after STOP " "action"
-    )
+    assert env.episode_over is True, "episode should be over after STOP action"
 
     env.close()
 

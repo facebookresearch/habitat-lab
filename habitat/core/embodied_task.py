@@ -17,30 +17,68 @@ from gym import Space, spaces
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.registry import registry
-from habitat.core.simulator import SensorSuite, Simulator
+from habitat.core.simulator import Observations, SensorSuite, Simulator
 
 
 class Action:
     r"""
+     An action that can be performed by an agent solving a task in environment.
+     For example for navigation task action classes will be:
+     ``MoveForwardAction, TurnLeftAction, TurnRightAction``. The action can
+     use ``Task`` members to pass a state to another action, as well as keep
+    own state and reset when new episode starts.
+
+    :property Action's action space
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         return
 
     def reset(self, *args: Any, **kwargs: Any) -> None:
-        r"""Reset method is called from ``Env`` on each reset.
+        r"""Reset method is called from ``Env`` on each reset for each new
+        episode. Goal of the method is to reset ``Action``'s state for each
+        episode.
         """
         raise NotImplementedError
+
+    def step(self, *args: Any, **kwargs: Any) -> Observations:
+        r"""Step method is called from ``Env`` on each ``step``. Can call
+        simulator or task method, change task's state.
+
+        :param kwargs: optional parameters for the action, like distance/force.
+        :return: observations after taking action in the task, including ones
+        coming from a simulator.
+        """
+        raise NotImplementedError
+
+    @property
+    def action_space(self) -> gym.Space:
+        r"""
+        :return: a current Action's action space.
+        """
+        raise NotImplementedError
+
+
+class SimulatorAction(Action):
+    r"""
+     An ``EmbodiedTask`` action that is wrapping simulator action.
+    """
+
+    def __init__(
+        self, *args: Any, config: Config, sim: Simulator, **kwargs: Any
+    ) -> None:
+        self._config = config
+        self._sim = sim
+
+    @property
+    def action_space(self):
+        return EmptySpace()
+
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        return None
 
     def step(self, *args: Any, **kwargs: Any) -> None:
         r"""Step method is called from ``Env`` on each ``step``.
-        """
-        raise NotImplementedError
-
-    def get_action_space(self):
-        r"""
-        Returns:
-             the current action space.
         """
         raise NotImplementedError
 
@@ -143,6 +181,11 @@ class Measurements:
 
 
 class EmptySpace(Space):
+    """
+    A ``gym.Space`` that reflects arguments space for action that doesn't have
+    arguments. Needed for consistency ang always samples `None` value.
+    """
+
     def sample(self):
         return None
 
@@ -152,17 +195,17 @@ class EmptySpace(Space):
 
 class ActionSpace(spaces.Dict):
     """
-    A dictionary of action and their argument spaces
+    A dictionary of ``EmbodiedTask`` actions and their argument spaces.
 
-    Example usage:
-    self.observation_space = spaces.ActionSpace(
-        "move": spaces.Dict({
-            "position": spaces.Discrete(2),
-            "velocity": spaces.Discrete(3)
-            },
-        "move_forward": EmptySpace,
+    .. code:: py
+        self.observation_space = spaces.ActionSpace(
+            "move": spaces.Dict({
+                "position": spaces.Discrete(2),
+                "velocity": spaces.Discrete(3)
+                },
+            "move_forward": EmptySpace,
+            )
         )
-    )
     """
 
     def __init__(self, spaces):
@@ -199,15 +242,12 @@ class ActionSpace(spaces.Dict):
 
 
 class EmbodiedTask:
-    r"""Base class for embodied tasks.
+    r"""Base class for embodied tasks. ``EmbodiedTask``
 
     Args:
         config: config for the task.
         sim: reference to the simulator for calculating task observations.
         dataset: reference to dataset for task instance level information.
-
-    When subclassing the user has to define the attributes `measurements` and
-    `sensor_suite`.
 
     :data measurements: set of task measures.
     :data sensor_suite: suite of task sensors.
@@ -322,7 +362,7 @@ class EmbodiedTask:
     def action_space(self) -> Space:
         return ActionSpace(
             {
-                action_name: action_instance.get_action_space()
+                action_name: action_instance.action_space
                 for action_name, action_instance in self.actions.items()
             }
         )

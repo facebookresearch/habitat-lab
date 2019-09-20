@@ -13,17 +13,10 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import (
-    Action,
-    EmbodiedTask,
-    EmptySpace,
-    Measure,
-    Measurements,
-)
+from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorAction
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Sensor,
-    SensorSuite,
     SensorTypes,
     ShortestPathPoint,
     Simulator,
@@ -720,36 +713,6 @@ class TopDownMap(Measure):
             )
 
 
-@registry.register_task(name="Nav-v0")
-class NavigationTask(EmbodiedTask):
-    def __init__(
-        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
-    ) -> None:
-        super().__init__(config=config, sim=sim, dataset=dataset)
-
-    def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
-    ) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
-
-    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
-        return not getattr(self, "_is_stop_called", False)
-
-
-class SimulatorAction(Action):
-    def __init__(
-        self, *args: Any, config: Config, sim: Simulator, **kwargs: Any
-    ) -> None:
-        self._config = config
-        self._sim = sim
-
-    def get_action_space(self):
-        return EmptySpace()
-
-    def reset(self, *args: Any, **kwargs: Any) -> None:
-        return None
-
-
 @registry.register_task_action
 class MoveForwardAction(SimulatorAction):
     name: str = "MOVE_FORWARD"
@@ -843,7 +806,8 @@ class TeleportAction(SimulatorAction):
             position=position, rotation=rotation, keep_agent_at_new_pose=True
         )
 
-    def get_action_space(self):
+    @property
+    def action_space(self):
         return spaces.Dict(
             {
                 "position": spaces.Box(
@@ -858,3 +822,19 @@ class TeleportAction(SimulatorAction):
                 ),
             }
         )
+
+
+@registry.register_task(name="Nav-v0")
+class NavigationTask(EmbodiedTask):
+    def __init__(
+        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
+    ) -> None:
+        super().__init__(config=config, sim=sim, dataset=dataset)
+
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
+        return merge_sim_episode_config(sim_config, episode)
+
+    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
+        return not getattr(self, "is_stop_called", False)
