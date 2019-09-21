@@ -91,3 +91,5 @@ pyproject.toml
 
 # vim
 *.swp
+
+*.zip

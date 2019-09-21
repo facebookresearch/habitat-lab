@@ -4,57 +4,32 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""
-To run the demo
-1. Simple demo on test scenes
-- Download test scenes (http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip)
-  and unzip into ${HABITAT_API_REPO}/data
-- Update `configs/tasks/pointnav.yaml` to have higher resolution if you want bigger pictures
-- `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav.yaml --overlay`
-2. Simple demo on test scenes with depth
-- `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav_rgbd.yaml --overlay`
-3. Demo on replica scene with blind agent, with saving actions and videos
-- Download pretrained blind agent 
-  (get blind_agent_state.pth from https://www.dropbox.com/s/e63uf6joerkf7pe/agent_demo.zip?dl=0 and put into examples/agent_demo)
-- Download replica dataset (https://github.com/facebookresearch/Replica-Dataset)
-  (put under data/replica)
-- Generate episodes for a replica scene (this takes a while to run)
-  `mkdir data/replica_demo/pointnav`
-  `python examples/gen_episodes.py -o data/replica_demo/pointnav/test.json --scenes data/replica/apartment_0/habitat/mesh_semantic.ply`
-  `gzip data/replica_demo/pointnav/test.json`
-- Create yaml config file for replica and put in `data/replica_demo/replica_test.yaml`
-  DATASET:
-  TYPE: PointNav-v1
-  SPLIT: test
-  POINTNAVV1:
-    DATA_PATH: data/replica_demo/pointnav/{split}.json.gz 
-- Run demo 
-  `python examples/pointgoal_demo.py --task-config configs/tasks/pointnav.yaml,data/replica_demo/replica_test.yaml --agent blind --overlay --scenes-dir . --save-video --save-actions test.json`
-  NOTE: video is saved to xyz.avi if you select to replay actions (select 1/2/3 for the agent to replay)
-  NOTE: actions are save to simple json file
-
-Future improvements to demo:
-1. Selection of episodes
-2. Precompute episodes for replica dataset and save action trace for shortest path follower / blind agents
-3. Support new episodes (random/user specified)
-"""
 
 import argparse
+import getpass
 import json
 import math
+import os.path as osp
+import random
+import socket
+import time
 from time import sleep
 from typing import List, NamedTuple, Tuple
 
+import cv2
 import numpy as np
 
-import cv2
 import habitat
 from examples.agent_demo.demo_blind_agent import DemoBlindAgent
 from habitat.core.logging import logger
-from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
+
+OUTPUT_FILE = "{}-{}-results.json".format(
+    socket.gethostname(), getpass.getuser()
+)
+
 
 class ActionKeyMapping(NamedTuple):
     name: str
@@ -64,10 +39,12 @@ class ActionKeyMapping(NamedTuple):
 
 
 AGENT_ACTION_KEYS = [
-    ActionKeyMapping("FORWARD", ord("w"), SimulatorActions.FORWARD.value),
-    ActionKeyMapping("LEFT", ord("a"), SimulatorActions.LEFT.value),
-    ActionKeyMapping("RIGHT", ord("d"), SimulatorActions.RIGHT.value),
-    ActionKeyMapping("DONE", ord(" "), SimulatorActions.STOP.value),
+    ActionKeyMapping(
+        "FORWARD", ord("w"), habitat.SimulatorActions.MOVE_FORWARD
+    ),
+    ActionKeyMapping("LEFT", ord("a"), habitat.SimulatorActions.TURN_LEFT),
+    ActionKeyMapping("RIGHT", ord("d"), habitat.SimulatorActions.TURN_RIGHT),
+    ActionKeyMapping("DONE", ord(" "), "STOP"),
     ActionKeyMapping("QUIT", ord("q"), -1, True),
 ]
 
@@ -81,6 +58,7 @@ LINE_SPACING = 50
 
 # TODO: Some of the functions below are potentially useful across other examples/demos
 #       and should be moved to habitat/utils/visualizations
+
 
 class Rect(NamedTuple):
     left: int
@@ -103,8 +81,10 @@ class Rect(NamedTuple):
             self.top + int(self.height / 2),
         )
 
+
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
+
 
 def write_textlines(
     output, textlines, size=1, offset=(0, 0), fontcolor=(255, 255, 255)
@@ -137,9 +117,9 @@ def add_text(img, textlines=[], fontsize=0.8, top=False):
 
 
 def draw_gradient_circle(img, center, size, color, bgcolor):
-    ''' Draws a circle that fades from color (at the center)
+    """ Draws a circle that fades from color (at the center)
         to bgcolor (at the boundaries)
-    '''
+    """
     for i in range(1, size):
         a = 1 - i / size
         c = np.add(
@@ -151,9 +131,9 @@ def draw_gradient_circle(img, center, size, color, bgcolor):
 def draw_gradient_wedge(
     img, center, size, color, bgcolor, start_angle, delta_angle
 ):
-    ''' Draws a wedge that fades from color (at the center)
+    """ Draws a wedge that fades from color (at the center)
         to bgcolor (at the boundaries)
-    '''
+    """
     for i in range(1, size):
         a = 1 - i / size
         c = np.add(np.multiply(color, a), np.multiply(bgcolor, 1 - a))
@@ -170,7 +150,7 @@ def draw_gradient_wedge(
 
 
 def draw_goal_radar(
-    pointgoal,
+    pointgoal_with_gps_compass,
     img,
     r: Rect,
     start_angle=0,
@@ -181,10 +161,10 @@ def draw_goal_radar(
     bgcolor=(255, 255, 255, 255),
     gradientcolor=(174, 112, 80, 255),
 ):
-    ''' Draws a radar that shows the goal as a dot
-    '''
-    angle = pointgoal[1]  # angle
-    mag = pointgoal[0]    # magnitude (>=0)
+    """ Draws a radar that shows the goal as a dot
+    """
+    angle = pointgoal_with_gps_compass[1]  # angle
+    mag = pointgoal_with_gps_compass[0]  # magnitude (>=0)
     nm = mag / (mag + 1)  # normalized magnitude (0 to 1)
     xy = (-math.sin(angle), -math.cos(angle))
     size = int(round(0.45 * min(r.width, r.height)))
@@ -281,7 +261,7 @@ class Viewer:
         self.draw_info = {}
         if self.overlay_goal_radar:
             img = np.zeros((goal_display_size, goal_display_size, 4), np.uint8)
-            self.draw_info["pointgoal"] = {
+            self.draw_info["pointgoal_with_gps_compass"] = {
                 "image": img,
                 "region": Rect(0, 0, goal_display_size, goal_display_size),
             }
@@ -290,7 +270,7 @@ class Viewer:
             self.side_img = np.zeros(
                 (side_img_height, goal_display_size, 3), np.uint8
             )
-            self.draw_info["pointgoal"] = {
+            self.draw_info["pointgoal_with_gps_compass"] = {
                 "image": self.side_img,
                 "region": Rect(0, 0, goal_display_size, goal_display_size),
             }
@@ -310,11 +290,11 @@ class Viewer:
             elif img.shape[2] == 3:
                 active_image_observations[i] = transform_rgb_bgr(img)
 
-        # draw pointgoal
-        goal_draw_surface = self.draw_info["pointgoal"]
+        # draw pointgoal_with_gps_compass
+        goal_draw_surface = self.draw_info["pointgoal_with_gps_compass"]
         # TODO: get fov from agent
         draw_goal_radar(
-            observations["pointgoal"],
+            observations["pointgoal_with_gps_compass"],
             goal_draw_surface["image"],
             goal_draw_surface["region"],
             start_angle=0,
@@ -352,40 +332,6 @@ class Viewer:
         return stacked
 
 
-def get_video_writer(filename="output.avi", fps=20.0, resolution=(640, 480)):
-    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-    writer = cv2.VideoWriter(filename, fourcc, fps, resolution)
-    return writer
-
-
-class VideoWriter:
-    # wrapper around video writer that will create video writer and
-    # initialize the resolution the first time write happens
-    def __init__(self, filename="output.avi", fps=20.0):
-        self.filename = filename
-        self.fps = fps
-        self.writer = None
-
-    def write(self, frame):
-        if self.writer is None:
-            self.resolution = (frame.shape[1], frame.shape[0])
-            self.writer = get_video_writer(
-                self.filename, self.fps, self.resolution
-            )
-        else:
-            res = (frame.shape[1], frame.shape[0])
-            if res != self.resolution:
-                logger.info(
-                    f"Warning: video resolution mismatch expected={self.resolution}, frame={res}"
-                )
-        self.writer.write(frame)
-
-    def release(self):
-        if self.writer is not None:
-            self.writer.release()
-            self.writer = None
-
-
 class Demo:
     def __init__(
         self,
@@ -409,13 +355,15 @@ class Demo:
             video_writer.write(img)
         cv2.imshow(self.window_name, img)
 
-    def do_episode(self, overlay_goal_radar=False, show_map=False, video_writer=None):
-        ''' Have human controlled navigation for one episode
-        '''
+    def do_episode(
+        self, overlay_goal_radar=False, show_map=False, video_writer=None
+    ):
+        """ Have human controlled navigation for one episode
+        """
         env = self.env
         action_keys_map = self.action_keys_map
 
-        observations = env.reset(keep_current_episode=False)
+        observations = env.reset()
         info = env.get_metrics()
         viewer = Viewer(
             observations,
@@ -424,7 +372,7 @@ class Demo:
         )
         img = viewer.draw_observations(observations, info)
         goal_radius = get_goal_radius(env)
-        distance = observations["pointgoal"][0]
+        distance = observations["pointgoal_with_gps_compass"][0]
         self.update(
             add_text(
                 img,
@@ -433,17 +381,20 @@ class Demo:
             )
         )
 
+        episode = env.current_episode
         logger.info("Agent stepping around inside environment.")
         actions = []
         while not env.episode_over:
-            keystroke = cv2.waitKey(0)
+            keystroke = -1
+            while keystroke == -1:
+                keystroke = cv2.waitKey(100)
 
             action = action_keys_map.get(keystroke)
             if action is not None:
                 logger.info(action.name)
                 if action.is_quit:
                     self.is_quit = True
-                    break
+                    return None
             else:
                 logger.info("INVALID KEY")
                 continue
@@ -453,7 +404,7 @@ class Demo:
             info = env.get_metrics()
 
             img = viewer.draw_observations(observations, info)
-            distance = observations["pointgoal"][0]
+            distance = observations["pointgoal_with_gps_compass"][0]
             self.update(
                 add_text(
                     img,
@@ -464,229 +415,47 @@ class Demo:
             )
 
         logger.info("Episode finished after {} steps.".format(len(actions)))
-        return actions, info, observations
-
-    def get_follower_actions(self, mode="geodesic_path"):
-        ''' Get shortest path actions
-        '''
-        env = self.env
-        observations = env.reset(keep_current_episode=True)
-        goal_radius = get_goal_radius(env)
-        follower = ShortestPathFollower(env.sim, goal_radius, False)
-        follower.mode = mode
-        actions = []
-        while not env.episode_over:
-            best_action = follower.get_next_action(
-                env.current_episode.goals[0].position
-            )
-            actions.append(best_action.value)
-            observations = env.step(best_action.value)
-            info = env.get_metrics()
-
-        logger.info("Episode finished after {} steps.".format(len(actions)))
-        return actions, info, observations
-
-    def get_agent_actions(self, agent):
-        ''' Get actions for trained agent
-        '''
-        # NOTE: Action space for agent is hard coded (need to match our scenario)
-        env = self.env
-        observations = env.reset(keep_current_episode=True)
-        agent.reset()
-        actions = []
-        while not env.episode_over:
-            action = agent(observations)
-            actions.append(action)
-            observations = env.step(action)
-            info = env.get_metrics()
-
-        logger.info("Episode finished after {} steps.".format(len(actions)))
-        return actions, info, observations
-
-    def replay(
-        self,
-        name,
-        actions,
-        overlay_goal_radar=False,
-        delay=1,
-        video_writer=None,
-    ):
-        ''' Replay actions and show video
-        '''
-        # Set delay to 0 to wait for key presses before advancing
-        env = self.env
-        action_keys_map = self.action_keys_map
-
-        observations = env.reset(keep_current_episode=True)
-        info = env.get_metrics()
-        viewer = Viewer(
-            observations, overlay_goal_radar=overlay_goal_radar, show_map=True
-        )
-        img = viewer.draw_observations(observations, info)
-        self.update(add_text(img, [name]))
-
-        count_steps = 0
-        for action_id in actions:
-            # wait for key before advancing
-            keystroke = cv2.waitKey(delay)
-            action = action_keys_map.get(keystroke)
-            if action is not None:
-                if action.is_quit:
-                    self.is_quit = True
-                    break
-
-            observations = env.step(action_id)
-            info = env.get_metrics()
-            count_steps += 1
-
-            img = viewer.draw_observations(observations, info)
-            self.update(add_text(img, [name]), video_writer)
-
-        logger.info("Episode finished after {} steps.".format(count_steps))
-
-    def get_comparisons(self, agents=None):
-        comparisons = {}
-        comparisons["Shortest"] = self.get_follower_actions(
-            mode="geodesic_path"
-        )
-        if agents is not None:
-            for name, agent in agents.items():
-                comparisons[name] = self.get_agent_actions(agent)
-        # TODO: Get performance from other famous people
-        return comparisons
-
-    def show_comparisons(self, comparisons):
-        imgs = []
-        shortcut_keys = {}
-        key = ord("1")
-        for name, (actions, info, observations) in comparisons.items():
-            top_down_map = draw_top_down_map(
-                info, observations["heading"], 256
-            )
-            spl = info["spl"]
-            success = spl > 0
-            distance = observations["pointgoal"][0]
-            textlines = [
-                f"({chr(key)}) {name}",
-                "Success" if success else "Failed",
-                f"{len(actions)} steps, SPL={spl:.5}",
-                f"dist={distance:.5}",
-            ]
-            imgs.append(add_text(top_down_map, textlines))
-            shortcut_keys[key] = name
-            key = key + 1
-        stacked = np.hstack(imgs)
-        cv2.imshow(self.window_name, stacked)
-        return shortcut_keys
-
-    def save_comparisons(self, comparisons, filename, save_info={}):
-        save_info["traces"] = []
-        for name, (actions, info, observations) in comparisons.items():
-            m = {k: info[k] for k in ["spl"] if k in info}
-            m["success"] = 1 if info["spl"] > 0 else 0
-            m["pointgoal"] = observations["pointgoal"].tolist()
-            save_info["traces"].append(
-                {"name": name, "summary": m, "actions": actions}
-            )
-        with open(filename, "w") as file:
-            json.dump(save_info, file)
+        return actions, info, observations, episode
 
     def run(self, args):
-        video_writer = None
-        actions, info, observations = self.do_episode(
-            overlay_goal_radar=args.overlay,
-            show_map=args.show_map,
-            video_writer=video_writer,
-        )
-        if not self.is_quit:
-            agents = {}
-            if "blind" in args.agent:
-                agents["Blind"] = DemoBlindAgent()
-            comparisons = self.get_comparisons(agents)
-            comparisons["Yours"] = actions, info, observations
-        else:
-            comparisons = {"Yours": (actions, info, observations)}
-
-        # Save the actions
-        if args.save_actions is not None:
-            save_info = {"config": args.task_config}
-            self.save_comparisons(comparisons, args.save_actions, save_info)
-
         while not self.is_quit:
-            # Display info about how well you did
-            viewer = Viewer(
-                observations, overlay_goal_radar=args.overlay, show_map=True
+            res = self.do_episode(
+                overlay_goal_radar=True, show_map=False, video_writer=None
             )
+            if self.is_quit:
+                self.env.close()
+                return
 
-            # Show other people's route
-            shortcut_keys = self.show_comparisons(comparisons)
-
-            # Hack to get size of video
-            keystroke = cv2.waitKey(0)
-            selected_name = shortcut_keys.get(keystroke)
-            if selected_name is not None:
-                (actions, info, observations) = comparisons[selected_name]
-                logger.info(f"Selected {selected_name}")
-                video_writer = (
-                    VideoWriter(f"{selected_name}.avi")
-                    if args.save_video
-                    else None
-                )
-                self.replay(
-                    selected_name,
-                    actions,
-                    overlay_goal_radar=args.overlay,
-                    delay=1,
-                    video_writer=video_writer,
-                )
-                if video_writer is not None:
-                    video_writer.release()
+            actions, info, observations, episode = res
+            if osp.exists(OUTPUT_FILE):
+                with open(OUTPUT_FILE, "r") as f:
+                    prev_res = json.load(f)
             else:
-                action = self.action_keys_map.get(keystroke)
-                if action is not None and action.is_quit:
-                    self.is_quit = True
-                    break
+                prev_res = []
+
+            logger.info("SPL: {}".format(info["spl"]))
+
+            result = dict(
+                spl=info["spl"],
+                episode=dict(
+                    scene_id=episode.scene_id,
+                    episode_id=episode.episode_id,
+                    geo_dist=episode.info["geodesic_distance"],
+                ),
+                actions=actions,
+            )
+            with open(OUTPUT_FILE, "w") as f:
+                json.dump(prev_res + [result], f)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Habitat API Demo")
     parser.add_argument(
         "--task-config",
-        default="configs/tasks/pointnav.yaml",
+        default="configs/tasks/pointnav_gibson.yaml",
         help="Task configuration file for initializing a Habitat environment",
     )
-    parser.add_argument(
-        "--overlay",
-        default=False,
-        action="store_true",
-        help="Overlay pointgoal",
-    )
-    parser.add_argument(
-        "-a",
-        "--agent",
-        default=[],
-        choices=["blind"],
-        action="append",
-        help="What agent to include",
-    )
-    parser.add_argument(
-        "--scenes-dir", help="Directory where scenes are found"
-    )
-    parser.add_argument(
-        "--show-map",
-        default=False,
-        action="store_true",
-        help="Show top down map as agent is stepping",
-    )
-    parser.add_argument(
-        "--save-video",
-        default=False,
-        action="store_true",
-        help="Save video as agent is stepping",
-    )
-    parser.add_argument(
-        "--save-actions", default=None, help="File to save actions to"
-    )
+
     args = parser.parse_args()
     opts = []
     config = habitat.get_config(args.task_config.split(","), opts)
@@ -694,13 +463,15 @@ if __name__ == "__main__":
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 6000
     config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.DATASET.SPLIT = "val"
+    config.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = True
+    config.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
+    config.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = 10
+    config.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = 150
+    config.SIMULATOR.RGB_SENSOR.WIDTH = 512
+    config.SIMULATOR.RGB_SENSOR.HEIGHT = 512
+    config.SEED = random.randint(0, int(1e5))
     config.freeze()
-
-    if args.scenes_dir is not None:
-        config.defrost()
-        config.DATASET.SCENES_DIR = args.scenes_dir
-        config.freeze()
 
     demo = Demo(config, AGENT_ACTION_KEYS, INSTRUCTIONS)
     demo.run(args)
-    cv2.destroyAllWindows()

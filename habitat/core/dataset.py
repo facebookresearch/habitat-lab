@@ -308,8 +308,14 @@ class EpisodeIterator(Iterator):
                 list(groupby(episodes, key=lambda x: x.scene_id))
             )
             num_unique_scenes = len(set([e.scene_id for e in episodes]))
+            scenes = list(set(e.scene_id for e in episodes))
+            random.shuffle(scenes)
+            scene_ordering = {k: v for v, k in enumerate(scenes)}
+
             if num_scene_groups >= num_unique_scenes:
-                self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+                self.episodes = sorted(
+                    self.episodes, key=lambda x: scene_ordering[x.scene_id]
+                )
         self.max_scene_repetition = max_scene_repeat
         self.shuffle = shuffle
         self._rep_count = 0
