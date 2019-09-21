@@ -66,7 +66,8 @@ def _make_env_fn(
 
 class VectorEnv:
     r"""Vectorized environment which creates multiple processes where each
-    process runs its own environment.
+    process runs its own environment. Main class for parallelization of
+    training and evaluation.
 
 
     All the environments are synchronized on step and reset methods.
