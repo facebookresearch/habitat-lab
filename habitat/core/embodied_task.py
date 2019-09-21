@@ -242,7 +242,14 @@ class ActionSpace(spaces.Dict):
 
 
 class EmbodiedTask:
-    r"""Base class for embodied tasks. ``EmbodiedTask``
+    r"""Base class for embodied tasks. ``EmbodiedTask`` holds definition of
+    a task that agent needs to solve: action space, observation space,
+    measures, simulator usage. ``EmbodiedTask`` has `reset` and `step`
+    methods that are called by ``Env``. ``EmbodiedTask`` is the one of main
+    dimensions for the framework extension. Once new embodied task is
+    introduced implementation of ``EmbodiedTask`` is a formal definition of
+    the task that opens opportunity for others to propose solutions and
+    include it into benchmark results.
 
     Args:
         config: config for the task.
@@ -311,7 +318,7 @@ class EmbodiedTask:
             )
         return entities
 
-    def reset(self, episode):
+    def reset(self, episode: Type[Episode]):
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
