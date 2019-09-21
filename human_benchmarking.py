@@ -230,6 +230,7 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def get_goal_radius(env):
+    return 0.2
     goal_radius = env.current_episode.goals[0].radius
     if goal_radius is None:
         goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
