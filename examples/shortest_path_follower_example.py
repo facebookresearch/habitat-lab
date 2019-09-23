@@ -7,13 +7,8 @@
 import os
 import shutil
 
-# TODO(akadian): remove the below pyrobot hack
-import sys
-ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
-if ros_path in sys.path:
-    sys.path.remove(ros_path)
-    import cv2
-sys.path.append(ros_path)
+from habitat.core.utils import try_cv2_import
+cv2 = try_cv2_import()
 import numpy as np
 
 import habitat

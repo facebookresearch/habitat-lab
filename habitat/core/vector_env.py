@@ -440,7 +440,8 @@ class VectorEnv:
         images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
-            import cv2
+            from habitat.core.utils import try_cv2_import
+            cv2 = try_cv2_import()
 
             cv2.imshow("vecenv", tile[:, :, ::-1])
             cv2.waitKey(1)
@@ -467,8 +468,8 @@ class VectorEnv:
 class ThreadedVectorEnv(VectorEnv):
     r"""Provides same functionality as ``VectorEnv``, the only difference is it
     runs in a multi-thread setup inside a single process. ``VectorEnv`` runs
-    in a multi-proc setup. This makes it much easier to debug when using 
-    ``VectorEnv`` because you can actually put break points in the environment 
+    in a multi-proc setup. This makes it much easier to debug when using
+    ``VectorEnv`` because you can actually put break points in the environment
     methods. It should not be used for best performance.
     """
 

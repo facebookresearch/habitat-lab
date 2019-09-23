@@ -7,14 +7,9 @@
 import os
 from typing import List, Optional, Tuple
 
-# TODO(akadian): remove the below pyrobot hack
-import sys
+from habitat.core.utils import try_cv2_import
+cv2 = try_cv2_import()
 
-ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
-if ros_path in sys.path:
-    sys.path.remove(ros_path)
-    import cv2
-sys.path.append(ros_path)
 import imageio
 import numpy as np
 import scipy.ndimage
@@ -342,7 +337,7 @@ def colorize_topdown_map(
     r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
-            fog_of_war_mask: A mask used to determine which parts of the 
+            fog_of_war_mask: A mask used to determine which parts of the
                 top_down_map are visible
                 Non-visible parts will be desaturated
             fog_of_war_desat_amount: Amount to desaturate the color of unexplored areas

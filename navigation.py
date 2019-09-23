@@ -51,6 +51,8 @@ class NavEnv:
 
 def main():
     env = NavEnv()
+    obs = env.reset()
+    print(obs.keys())
 
 
 if __name__ == "__main__":

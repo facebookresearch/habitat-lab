@@ -38,7 +38,7 @@ class _DefaultSimulatorActions(Enum):
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorActionsSingleton(metaclass=Singleton):
     r"""Implements an extendable Enum for the mapping of action names
-    to their integer values.  
+    to their integer values.
 
     This means that new action names can be added, but old action names cannot be
     removed nor can their mapping be altered.  This also ensures that all actions
@@ -232,6 +232,23 @@ class SemanticSensor(Sensor):
         raise NotImplementedError
 
 
+class BumpSensor(Sensor):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "bump"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        return SensorTypes.FORCE
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        raise NotImplementedError
+
+    def get_observation(self, *args: Any, **kwargs: Any):
+        raise NotImplementedError
+
+
 class SensorSuite:
     r"""Represents a set of sensors, with each sensor being identified
     through a unique id.
@@ -403,7 +420,7 @@ class Simulator:
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        r"""Calculates the shortest path between source and target agent 
+        r"""Calculates the shortest path between source and target agent
         states.
 
         Args:
@@ -420,7 +437,7 @@ class Simulator:
     def get_straight_shortest_path_points(
         self, position_a: List[float], position_b: List[float]
     ) -> List[List[float]]:
-        r"""Returns points along the geodesic (shortest) path between two 
+        r"""Returns points along the geodesic (shortest) path between two
         points irrespective of the angles between the waypoints.
 
          Args:

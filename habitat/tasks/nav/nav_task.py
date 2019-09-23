@@ -8,14 +8,9 @@ from typing import Any, List, Optional, Type
 
 import attr
 
-# TODO(akadian): remove the below pyrobot hack
-import sys
+from habitat.core.utils import try_cv2_import
+cv2 = try_cv2_import()
 
-ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
-if ros_path in sys.path:
-    sys.path.remove(ros_path)
-    import cv2
-sys.path.append(ros_path)
 import numpy as np
 from gym import spaces
 
@@ -288,7 +283,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor(name="CompassSensor")
 class EpisodicCompassSensor(HeadingSensor):
-    r"""The agents heading in the coordinate frame defined by the epiosde, 
+    r"""The agents heading in the coordinate frame defined by the epiosde,
     theta=0 is defined by the agents state at t=0
     """
 
