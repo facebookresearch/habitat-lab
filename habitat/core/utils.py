@@ -47,6 +47,27 @@ def not_none_validator(self, attribute, value):
         raise ValueError(f"Argument '{attribute.name}' must be set")
 
 
+def try_cv2_import():
+    try:
+        import cv2
+    except ImportError:
+        import sys
+        import os
+        ros_path = os.environ.get("ROS_PATH")
+        assert ros_path is not None, "If you are using PyRobot please specify ROS_PATH, this should look like " \
+                                    "/opt/ros/kinetic/lib/python2.7/dist-packages, if you are not using PyRobot " \
+                                    "please check that cv2 is installed properly"
+        if ros_path in sys.path:
+            sys.path.remove(ros_path)
+            try:
+                import cv2
+            except ImportError:
+                raise ImportError("cv2 package is not installed")
+            sys.path.append(ros_path)
+
+    return cv2
+
+
 class Singleton(type):
     _instances = {}
 

@@ -9,6 +9,7 @@ from gym import Space, spaces
 
 from habitat.core.registry import registry
 from habitat.core.simulator import (
+    BumpSensor,
     Config,
     DepthSensor,
     RGBSensor,
@@ -18,14 +19,8 @@ from habitat.core.simulator import (
 import pyrobot
 import numpy as np
 
-# TODO(akadian): remove the below pyrobot hack
-import sys
-
-ros_path = "/opt/ros/kinetic/lib/python2.7/dist-packages"
-if ros_path in sys.path:
-    sys.path.remove(ros_path)
-    import cv2
-sys.path.append(ros_path)
+from habitat.core.utils import try_cv2_import
+cv2 = try_cv2_import()
 
 
 @registry.register_sensor
@@ -108,6 +103,20 @@ class PyRobotDepthSensor(DepthSensor):
         return obs
 
 
+@registry.register_sensor
+class PyRobotBumpSensor(BumpSensor):
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=False,
+            high=True,
+            shape=(1,),
+            dtype=np.bool,
+        )
+
+    def get_observation(self, robot_obs):
+        return np.array(robot_obs["bump"])
+
+
 @registry.register_simulator(name="PyRobot-v0")
 class PyRobot(Simulator):
     def __init__(self, config: Config) -> None:
@@ -124,7 +133,10 @@ class PyRobot(Simulator):
             robot_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(robot_sensors)
 
-        config_pyrobot = {"base_controller": self._config.BASE_CONTROLLER}
+        config_pyrobot = {
+            "base_controller": self._config.BASE_CONTROLLER,
+            "base_planner": self._config.BASE_PLANNER
+        }
 
         assert (
             self._config.ROBOT in self._config.ROBOTS
@@ -139,6 +151,7 @@ class PyRobot(Simulator):
         return {
             "rgb": self._robot.camera.get_rgb(),
             "depth": self._robot.camera.get_depth(),
+            "bump": self._robot.base.base_state.bumper
         }
 
     @property

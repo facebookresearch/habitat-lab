@@ -205,27 +205,33 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
 _C.PYROBOT = CN()
 _C.PYROBOT.ROBOTS = ["locobot"]  # types of robots supported
 _C.PYROBOT.ROBOT = "locobot"
-_C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
+_C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR", "BUMP_SENSOR"]
 _C.PYROBOT.BASE_CONTROLLER = "proportional"
+_C.PYROBOT.BASE_PLANNER = "none"
 # -----------------------------------------------------------------------------
 # SENSORS
 # -----------------------------------------------------------------------------
-PYROBOT_SENSOR = CN()
-PYROBOT_SENSOR.HEIGHT = 480
-PYROBOT_SENSOR.WIDTH = 640
+PYROBOT_VISUAL_SENSOR = CN()
+PYROBOT_VISUAL_SENSOR.HEIGHT = 480
+PYROBOT_VISUAL_SENSOR.WIDTH = 640
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.RGB_SENSOR = PYROBOT_SENSOR.clone()
+_C.PYROBOT.RGB_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
 _C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.DEPTH_SENSOR = PYROBOT_SENSOR.clone()
+_C.PYROBOT.DEPTH_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
 _C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
 _C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
 _C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
 _C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
+# -----------------------------------------------------------------------------
+# BUMP SENSOR
+# -----------------------------------------------------------------------------
+_C.PYROBOT.BUMP_SENSOR = CN()
+_C.PYROBOT.BUMP_SENSOR.TYPE = "PyRobotBumpSensor"
 # -----------------------------------------------------------------------------
 # ACTIONS LOCOBOT
 # -----------------------------------------------------------------------------
