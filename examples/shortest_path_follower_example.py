@@ -17,7 +17,6 @@ from habitat.utils.visualizations.utils import images_to_video
 
 cv2 = try_cv2_import()
 
-
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
