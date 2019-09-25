@@ -324,7 +324,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def step(self, action: int) -> Observations:
+    def step(self, action, *args, **kwargs) -> Observations:
         r"""Perform an action in the simulator and return observations.
 
         :param action: action to be performed inside the simulator.

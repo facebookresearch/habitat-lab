@@ -23,6 +23,29 @@ from habitat.core.utils import try_cv2_import
 cv2 = try_cv2_import()
 
 
+def _locobot_base_action_space():
+    return spaces.Dict({
+        "go_to_relative": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
+        "go_to_absolute": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
+    })
+
+
+def _locobot_camera_action_space():
+    return spaces.Dict({
+        "set_pan": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
+        "set_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
+        "set_pan_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(2,))
+    })
+
+
+ACTION_SPACES = {
+    "LOCOBOT": {
+        "BASE_ACTIONS": _locobot_base_action_space(),
+        "CAMERA_ACTIONS": _locobot_camera_action_space(),
+    }
+}
+
+
 @registry.register_sensor
 class PyRobotRGBSensor(RGBSensor):
     def __init__(self, config):
@@ -143,11 +166,15 @@ class PyRobot(Simulator):
         ), "Invalid robot type {}".format(self._config.ROBOT)
         self._robot_config = getattr(self._config, self._config.ROBOT.upper())
 
+        action_spaces_dict = {}
+
+        self._action_space = self._robot_action_space(self._config.ROBOT, self._robot_config)
+
         self._robot = pyrobot.Robot(
             self._config.ROBOT, base_config=config_pyrobot
         )
 
-    def _robot_obs(self):
+    def get_robot_observations(self):
         return {
             "rgb": self._robot.camera.get_rgb(),
             "depth": self._robot.camera.get_depth(),
@@ -166,12 +193,21 @@ class PyRobot(Simulator):
     def camera(self):
         return self._robot.camera
 
-    # TODO(akadian): add action space support.
+    def _robot_action_space(self, robot_type, robot_config):
+        action_spaces_dict = {}
+        for action in robot_config.ACTIONS:
+            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][action]
+        return spaces.Dict(action_spaces_dict)
+
+    @property
+    def action_space(self) -> Space:
+        return self._action_space
 
     def reset(self):
         self._robot.camera.reset()
 
-        observations = self._sensor_suite.get_observations(self._robot_obs())
+        robot_obs = self.get_robot_observations()
+        observations = self._sensor_suite.get_observations(robot_obs)
         return observations
 
     def step(self, action, action_params):
@@ -182,9 +218,29 @@ class PyRobot(Simulator):
         else:
             raise ValueError("Invalid action {}".format(action))
 
-        observations = self._sensor_suite.get_observations(self._robot_obs())
+        observations = self._sensor_suite.get_observations(self.get_robot_observations())
 
         return observations
+
+    def render(self, mode: str = "rgb") -> Any:
+        robot_obs = self.get_robot_observations()
+        observations = self._sensor_suite.get_observations(robot_obs)
+
+        output = observations.get(mode)
+        assert output is not None, "mode {} sensor is not active".format(mode)
+
+        return output
+
+    def get_agent_state(self, agent_id: int = 0, base_state_type: str = "odom"):
+        assert agent_id == 0, "No support of multi agent in {} yet.".format(
+            self.__class__.__name__
+        )
+        state = {
+            "base": self._robot.base.get_state(base_state_type),
+            "camera": self._robot.camera.get_state(),
+        }
+        # TODO(akadian): add arm state when supported
+        return state
 
     def seed(self, seed: int) -> None:
         raise NotImplementedError("No support for seeding in reality")

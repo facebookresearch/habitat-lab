@@ -236,6 +236,7 @@ _C.PYROBOT.BUMP_SENSOR.TYPE = "PyRobotBumpSensor"
 # ACTIONS LOCOBOT
 # -----------------------------------------------------------------------------
 _C.PYROBOT.LOCOBOT = CN()
+_C.PYROBOT.LOCOBOT.ACTIONS = ["BASE_ACTIONS", "CAMERA_ACTIONS"]
 _C.PYROBOT.LOCOBOT.BASE_ACTIONS = ["go_to_relative", "go_to_absolute"]
 _C.PYROBOT.LOCOBOT.CAMERA_ACTIONS = ["set_pan", "set_tilt", "set_pan_tilt"]
 # TODO(akadian): add support for Arm actions
