@@ -5,8 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Any
+
+import numpy as np
 from gym import Space, spaces
 
+import pyrobot
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     BumpSensor,
@@ -16,26 +19,28 @@ from habitat.core.simulator import (
     SensorSuite,
     Simulator,
 )
-import pyrobot
-import numpy as np
-
 from habitat.core.utils import try_cv2_import
+
 cv2 = try_cv2_import()
 
 
 def _locobot_base_action_space():
-    return spaces.Dict({
-        "go_to_relative": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
-        "go_to_absolute": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
-    })
+    return spaces.Dict(
+        {
+            "go_to_relative": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
+            "go_to_absolute": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
+        }
+    )
 
 
 def _locobot_camera_action_space():
-    return spaces.Dict({
-        "set_pan": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
-        "set_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
-        "set_pan_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(2,))
-    })
+    return spaces.Dict(
+        {
+            "set_pan": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
+            "set_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
+            "set_pan_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(2,)),
+        }
+    )
 
 
 ACTION_SPACES = {
@@ -129,12 +134,7 @@ class PyRobotDepthSensor(DepthSensor):
 @registry.register_sensor
 class PyRobotBumpSensor(BumpSensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(
-            low=False,
-            high=True,
-            shape=(1,),
-            dtype=np.bool,
-        )
+        return spaces.Box(low=False, high=True, shape=(1,), dtype=np.bool)
 
     def get_observation(self, robot_obs):
         return np.array(robot_obs["bump"])
@@ -158,7 +158,7 @@ class PyRobot(Simulator):
 
         config_pyrobot = {
             "base_controller": self._config.BASE_CONTROLLER,
-            "base_planner": self._config.BASE_PLANNER
+            "base_planner": self._config.BASE_PLANNER,
         }
 
         assert (
@@ -168,7 +168,9 @@ class PyRobot(Simulator):
 
         action_spaces_dict = {}
 
-        self._action_space = self._robot_action_space(self._config.ROBOT, self._robot_config)
+        self._action_space = self._robot_action_space(
+            self._config.ROBOT, self._robot_config
+        )
 
         self._robot = pyrobot.Robot(
             self._config.ROBOT, base_config=config_pyrobot
@@ -178,7 +180,7 @@ class PyRobot(Simulator):
         return {
             "rgb": self._robot.camera.get_rgb(),
             "depth": self._robot.camera.get_depth(),
-            "bump": self._robot.base.base_state.bumper
+            "bump": self._robot.base.base_state.bumper,
         }
 
     @property
@@ -196,7 +198,9 @@ class PyRobot(Simulator):
     def _robot_action_space(self, robot_type, robot_config):
         action_spaces_dict = {}
         for action in robot_config.ACTIONS:
-            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][action]
+            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][
+                action
+            ]
         return spaces.Dict(action_spaces_dict)
 
     @property
@@ -218,7 +222,9 @@ class PyRobot(Simulator):
         else:
             raise ValueError("Invalid action {}".format(action))
 
-        observations = self._sensor_suite.get_observations(self.get_robot_observations())
+        observations = self._sensor_suite.get_observations(
+            self.get_robot_observations()
+        )
 
         return observations
 
@@ -231,7 +237,9 @@ class PyRobot(Simulator):
 
         return output
 
-    def get_agent_state(self, agent_id: int = 0, base_state_type: str = "odom"):
+    def get_agent_state(
+        self, agent_id: int = 0, base_state_type: str = "odom"
+    ):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )

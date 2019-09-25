@@ -7,10 +7,6 @@
 from typing import Any, Dict, List, Optional, Type, Union
 
 import attr
-
-from habitat.core.utils import try_cv2_import
-cv2 = try_cv2_import()
-
 import numpy as np
 from gym import spaces
 
@@ -25,13 +21,17 @@ from habitat.core.simulator import (
     Simulator,
     SimulatorActions,
 )
-from habitat.core.utils import not_none_validator
+from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
+
+cv2 = try_cv2_import()
+
+
 
 MAP_THICKNESS_SCALAR: int = 1250
 

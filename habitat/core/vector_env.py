@@ -449,6 +449,7 @@ class VectorEnv:
         tile = tile_images(images)
         if mode == "human":
             from habitat.core.utils import try_cv2_import
+
             cv2 = try_cv2_import()
 
             cv2.imshow("vecenv", tile[:, :, ::-1])
