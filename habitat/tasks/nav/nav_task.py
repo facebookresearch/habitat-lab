@@ -32,7 +32,6 @@ from habitat.utils.visualizations import fog_of_war, maps
 cv2 = try_cv2_import()
 
 
-
 MAP_THICKNESS_SCALAR: int = 1250
 
 

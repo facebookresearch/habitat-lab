@@ -17,8 +17,6 @@ from habitat.utils.visualizations import maps
 cv2 = try_cv2_import()
 
 
-
-
 def paste_overlapping_image(
     background: np.ndarray,
     foreground: np.ndarray,

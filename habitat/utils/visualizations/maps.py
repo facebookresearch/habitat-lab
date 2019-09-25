@@ -18,7 +18,6 @@ from habitat.utils.visualizations import utils
 cv2 = try_cv2_import()
 
 
-
 AGENT_SPRITE = imageio.imread(
     os.path.join(
         os.path.dirname(__file__),
