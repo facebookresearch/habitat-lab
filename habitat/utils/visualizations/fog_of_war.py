@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numba
 import numpy as np
 
+import numba
 from habitat.utils.visualizations import maps
 
 

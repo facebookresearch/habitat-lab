@@ -9,9 +9,9 @@ import random
 
 import numpy as np
 import pytest
-import quaternion
 
 import habitat
+import quaternion
 from habitat.config.default import get_config
 from habitat.tasks.nav.nav_task import (
     MoveForwardAction,
