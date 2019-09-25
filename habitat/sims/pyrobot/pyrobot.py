@@ -142,6 +142,19 @@ class PyRobotBumpSensor(BumpSensor):
 
 @registry.register_simulator(name="PyRobot-v0")
 class PyRobot(Simulator):
+    r"""Simulator wrapper over PyRobot.
+
+    PyRobot repo: https://github.com/facebookresearch/pyrobot
+    To use this abstraction the user will have to setup PyRobot
+    python3 version. Please refer to the PyRobot repository
+    for setting it up. The user will also have to export a
+    ROS_PATH environment variable to use this integration,
+    please refer to `habitat.core.utils.try_cv2_import` for
+    more details on this.
+
+    This abstraction assumes that reality is a simulation
+    (https://www.youtube.com/watch?v=tlTKTTt47WE).
+    """
     def __init__(self, config: Config) -> None:
         self._config = config
 

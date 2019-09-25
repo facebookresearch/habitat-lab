@@ -447,7 +447,7 @@ class HabitatSim(Simulator):
         else:
             return None
 
-    # TODO (maksymets): Remove check after simulator became stable
+    # TODO(maksymets): Remove check after simulator becomes stable
     def _check_agent_position(self, position, agent_id=0) -> bool:
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")

@@ -176,11 +176,11 @@ def test_env(gpu2gpu):
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[-3.013_391_7, 0.046_230_24, 7.306_454_7],
-            start_rotation=[0, 0.163_276, 0, 0.98658],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
+            start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
                 NavigationGoal(
-                    position=[-3.013_391_7, 0.046_230_24, 7.306_454_7]
+                    position=[-3.0133917, 0.04623024, 7.3064547]
                 )
             ],
             info={"geodesic_distance": 0.001},
@@ -282,11 +282,11 @@ def test_rl_env(gpu2gpu):
         NavigationEpisode(
             episode_id="0",
             scene_id=config.SIMULATOR.SCENE,
-            start_position=[-3.013_391_7, 0.046_230_24, 7.306_454_7],
-            start_rotation=[0, 0.163_276, 0, 0.98658],
+            start_position=[-3.0133917, 0.04623024, 7.3064547],
+            start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
                 NavigationGoal(
-                    position=[-3.013_391_7, 0.046_230_24, 7.306_454_7]
+                    position=[-3.0133917, 0.04623024, 7.3064547]
                 )
             ],
             info={"geodesic_distance": 0.001},
