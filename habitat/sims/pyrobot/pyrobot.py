@@ -161,6 +161,7 @@ class PyRobot(Simulator):
     Args:
         config: configuration for initializing the PyRobot object.
     """
+
     def __init__(self, config: Config) -> None:
         self._config = config
 

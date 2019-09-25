@@ -61,6 +61,7 @@ def try_cv2_import():
     if ros_path is not None and ros_path in sys.path:
         sys.path.remove(ros_path)
         import cv2
+
         sys.path.append(ros_path)
     else:
         import cv2
