@@ -179,9 +179,7 @@ def test_env(gpu2gpu):
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
-                NavigationGoal(
-                    position=[-3.0133917, 0.04623024, 7.3064547]
-                )
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
             ],
             info={"geodesic_distance": 0.001},
         )
@@ -285,9 +283,7 @@ def test_rl_env(gpu2gpu):
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
-                NavigationGoal(
-                    position=[-3.0133917, 0.04623024, 7.3064547]
-                )
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
             ],
             info={"geodesic_distance": 0.001},
         )

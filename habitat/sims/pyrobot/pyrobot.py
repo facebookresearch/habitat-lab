@@ -85,6 +85,9 @@ class PyRobotRGBSensor(RGBSensor):
 
 @registry.register_sensor
 class PyRobotDepthSensor(DepthSensor):
+    min_depth_value: float
+    max_depth_value: float
+
     def __init__(self, config):
         if config.NORMALIZE_DEPTH:
             self.min_depth_value = 0
@@ -154,6 +157,9 @@ class PyRobot(Simulator):
 
     This abstraction assumes that reality is a simulation
     (https://www.youtube.com/watch?v=tlTKTTt47WE).
+
+    Args:
+        config: configuration for initializing the PyRobot object.
     """
     def __init__(self, config: Config) -> None:
         self._config = config
@@ -228,6 +234,13 @@ class PyRobot(Simulator):
         return observations
 
     def step(self, action, action_params):
+        r"""Step in reality. Currently the supported
+        actions are the ones defined in `_locobot_base_action_space`
+        and `_locobot_camera_action_space`. For details on how
+        to use these actions please refer to the documentation
+        of namesake methods in PyRobot
+        (https://github.com/facebookresearch/pyrobot).
+        """
         if action in self._robot_config.BASE_ACTIONS:
             getattr(self._robot.base, action)(**action_params)
         elif action in self._robot_config.CAMERA_ACTIONS:
