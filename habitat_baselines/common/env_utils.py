@@ -87,7 +87,7 @@ def construct_envs(
         config.defrost()
         config.TASK_CONFIG = task_config
         config.freeze()
-        configs.append(config)
+        configs.append(config.clone())
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
