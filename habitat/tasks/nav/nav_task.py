@@ -13,17 +13,10 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import (
-    Action,
-    EmbodiedTask,
-    EmptySpace,
-    Measure,
-    Measurements,
-)
+from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorAction
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Sensor,
-    SensorSuite,
     SensorTypes,
     ShortestPathPoint,
     Simulator,
@@ -422,12 +415,7 @@ class SPL(Measure):
     """
 
     def __init__(
-        self,
-        *args: Any,
-        sim: Simulator,
-        task: EmbodiedTask,
-        config: Config,
-        **kwargs: Any
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._previous_position = None
         self._start_end_episode_distance = None
@@ -452,7 +440,9 @@ class SPL(Measure):
             np.array(position_b) - np.array(position_a), ord=2
         )
 
-    def update_metric(self, *args: Any, episode, action, **kwargs: Any):
+    def update_metric(
+        self, *args: Any, episode, action, task: EmbodiedTask, **kwargs: Any
+    ):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
 
@@ -461,8 +451,8 @@ class SPL(Measure):
         )
 
         if (
-            hasattr(self._task, "is_stop_called")
-            and self._task.is_stop_called
+            hasattr(task, "is_stop_called")
+            and task.is_stop_called
             and distance_to_target < self._config.SUCCESS_DISTANCE
         ):
             ep_success = 1
@@ -724,51 +714,9 @@ class TopDownMap(Measure):
             )
 
 
-@registry.register_task(name="Nav-v0")
-class NavigationTask(EmbodiedTask):
-    def __init__(
-        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
-    ) -> None:
-        super().__init__(config=config, sim=sim, dataset=dataset)
-
-    def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
-    ) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
-
-    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
-        if not hasattr(self, "is_stop_called"):
-            return True
-        else:
-            return not self.is_stop_called
-
-
-class SimulatorAction(Action):
-    def __init__(
-        self,
-        *args: Any,
-        config: Config,
-        sim: Simulator,
-        task: EmbodiedTask,
-        **kwargs: Any
-    ) -> None:
-        self._config = config
-        self._task = task
-        self._sim = sim
-
-    def get_action_space(self):
-        return EmptySpace()
-
-    def reset(self, *args: Any, **kwargs: Any) -> None:
-        return None
-
-
 @registry.register_task_action
 class MoveForwardAction(SimulatorAction):
     name: str = "MOVE_FORWARD"
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.name
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -779,9 +727,6 @@ class MoveForwardAction(SimulatorAction):
 
 @registry.register_task_action
 class TurnLeftAction(SimulatorAction):
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "TURN_LEFT"
-
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -791,9 +736,6 @@ class TurnLeftAction(SimulatorAction):
 
 @registry.register_task_action
 class TurnRightAction(SimulatorAction):
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "TURN_RIGHT"
-
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -805,25 +747,19 @@ class TurnRightAction(SimulatorAction):
 class StopAction(SimulatorAction):
     name: str = "STOP"
 
-    def reset(self, *args: Any, **kwargs: Any):
-        self._task.is_stop_called = False
+    def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
+        task.is_stop_called = False
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.name
-
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        self._task.is_stop_called = True
+        task.is_stop_called = True
         return self._sim.get_observations_at()
 
 
 @registry.register_task_action
 class LookUpAction(SimulatorAction):
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "LOOK_UP"
-
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -833,9 +769,6 @@ class LookUpAction(SimulatorAction):
 
 @registry.register_task_action
 class LookDownAction(SimulatorAction):
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "LOOK_DOWN"
-
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -874,7 +807,8 @@ class TeleportAction(SimulatorAction):
             position=position, rotation=rotation, keep_agent_at_new_pose=True
         )
 
-    def get_action_space(self):
+    @property
+    def action_space(self):
         return spaces.Dict(
             {
                 "position": spaces.Box(
@@ -889,3 +823,19 @@ class TeleportAction(SimulatorAction):
                 ),
             }
         )
+
+
+@registry.register_task(name="Nav-v0")
+class NavigationTask(EmbodiedTask):
+    def __init__(
+        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
+    ) -> None:
+        super().__init__(config=config, sim=sim, dataset=dataset)
+
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
+        return merge_sim_episode_config(sim_config, episode)
+
+    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
+        return not getattr(self, "is_stop_called", False)

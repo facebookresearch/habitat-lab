@@ -246,6 +246,8 @@ _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 
+# -----------------------------------------------------------------------------
+
 
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,

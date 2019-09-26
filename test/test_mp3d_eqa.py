@@ -14,9 +14,9 @@ import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
-from habitat.datasets import make_dataset
 from habitat.tasks.eqa.eqa_task import AnswerAction
 from habitat.tasks.nav.nav_task import MoveForwardAction
+from habitat.datasets import make_dataset
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"

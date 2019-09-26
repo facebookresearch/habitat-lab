@@ -47,7 +47,7 @@ class EQAEpisode(NavigationEpisode):
 
 @registry.register_sensor
 class QuestionSensor(Sensor):
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset, *args: Any, **kwargs: Any):
         self.uuid = "question"
         self.sensor_type = SensorTypes.TEXT
         self._dataset = dataset
@@ -60,7 +60,7 @@ class QuestionSensor(Sensor):
         self,
         observations: Dict[str, Observations],
         episode: EQAEpisode,
-        **kwargs,
+        *args: Any, **kwargs: Any
     ):
         return self._dataset.get_questions_vocabulary()[
             episode.question.question_text
@@ -72,14 +72,14 @@ class CorrectAnswer(Measure):
     """CorrectAnswer
     """
 
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "correct_answer"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = self._dataset.get_answers_vocabulary()[
             episode.question.answer_text
         ]
@@ -93,7 +93,7 @@ class EpisodeInfo(Measure):
     """Episode Info
     """
 
-    def __init__(self, sim, config, **kwargs):
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
 
@@ -102,7 +102,7 @@ class EpisodeInfo(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "episode_info"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = vars(episode).copy()
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
@@ -120,10 +120,10 @@ class ActionStats(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "action_stats"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = None
 
-    def update_metric(self, episode, action):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._metric = {"previous_action": action}
 
 
@@ -132,7 +132,7 @@ class AnswerAccuracy(Measure):
     """AnswerAccuracy
     """
 
-    def __init__(self, dataset, task, **kwargs):
+    def __init__(self, dataset, task, *args: Any, **kwargs: Any):
         self._dataset = dataset
         self._task = task
         super().__init__(**kwargs)
@@ -140,7 +140,7 @@ class AnswerAccuracy(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "answer_accuracy"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = 0
 
     def update_metric(
@@ -164,12 +164,7 @@ class DistanceToGoal(Measure):
     """Distance To Goal metrics
     """
 
-@registry.register_measure
-class DistanceToGoal(Measure):
-    """Distance To Goal metrics
-    """
-
-    def __init__(self, sim: Simulator, config: Config, **kwargs):
+    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
@@ -181,7 +176,7 @@ class DistanceToGoal(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "distance_to_goal"
 
-    def reset_metric(self, episode):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = self._sim.get_agent_state().position.tolist()
         self._start_end_episode_distance = self._sim.geodesic_distance(
             self._previous_position, episode.goals[0].position
@@ -194,7 +189,7 @@ class DistanceToGoal(Measure):
             np.array(position_b) - np.array(position_a), ord=2
         )
 
-    def update_metric(self, episode, action):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position.tolist()
 
         distance_to_target = self._sim.geodesic_distance(
@@ -277,7 +272,8 @@ class AnswerAction(Action):
         self._task.answer = answer_id
         return self._sim.get_observations_at()
 
-    def get_action_space(self):
+    @property
+    def action_space(self) -> Space:
         r"""
         Returns:
              the current metric for ``Measure``.
