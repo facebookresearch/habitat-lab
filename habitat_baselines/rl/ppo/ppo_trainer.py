@@ -424,8 +424,8 @@ class PPOTrainer(BaseRLTrainer):
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
         rgb_frames = [
-            []
-        ] * self.config.NUM_PROCESSES  # type: List[List[np.ndarray]]
+            [] for _ in range(self.config.NUM_PROCESSES)
+        ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
