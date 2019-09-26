@@ -13,9 +13,13 @@ import quaternion
 
 import habitat
 from habitat.config.default import get_config
-from habitat.core.simulator import SimulatorActions
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.nav_task import (
+    MoveForwardAction,
+    NavigationEpisode,
+    NavigationGoal,
+)
 from habitat.tasks.utils import quaternion_rotate_vector
+from habitat.utils.test_utils import sample_non_stop_action
 
 
 def _random_episode(env, config):
@@ -96,9 +100,8 @@ def test_tactile():
         _random_episode(env, config)
         env.reset()
 
-        action = env._sim.index_forward_action
         for _ in range(10):
-            obs = env.step(action)
+            obs = env.step(action=MoveForwardAction.name)
             proximity = obs["proximity"]
             assert 0.0 <= proximity
             assert 2.0 >= proximity
@@ -115,14 +118,6 @@ def test_collisions():
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.reset()
-    random.seed(123)
-    np.random.seed(123)
-
-    actions = [
-        SimulatorActions.MOVE_FORWARD,
-        SimulatorActions.TURN_LEFT,
-        SimulatorActions.TURN_RIGHT,
-    ]
 
     for _ in range(20):
         _random_episode(env, config)
@@ -133,22 +128,21 @@ def test_collisions():
         prev_collisions = 0
         prev_loc = env.sim.get_agent_state().position
         for _ in range(50):
-            action = np.random.choice(actions)
+            action = sample_non_stop_action(env.action_space)
             env.step(action)
             collisions = env.get_metrics()["collisions"]["count"]
-
             loc = env.sim.get_agent_state().position
             if (
                 np.linalg.norm(loc - prev_loc)
                 < 0.9 * config.SIMULATOR.FORWARD_STEP_SIZE
-                and action == actions[0]
+                and action["action"] == MoveForwardAction.name
             ):
                 # Check to see if the new method of doing collisions catches
                 # all the same collisions as the old method
                 assert collisions == prev_collisions + 1
 
             # We can _never_ collide with standard turn actions
-            if action != actions[0]:
+            if action["action"] != MoveForwardAction.name:
                 assert collisions == prev_collisions
 
             prev_loc = loc
@@ -189,14 +183,9 @@ def test_pointgoal_sensor():
         ]
     )
 
-    non_stop_actions = [
-        act
-        for act in range(env.action_space.n)
-        if act != SimulatorActions.STOP
-    ]
     env.reset()
     for _ in range(100):
-        obs = env.step(np.random.choice(non_stop_actions))
+        obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(pointgoal, expected_pointgoal)
@@ -247,14 +236,9 @@ def test_pointgoal_with_gps_compass_sensor():
         ]
     )
 
-    non_stop_actions = [
-        act
-        for act in range(env.action_space.n)
-        if act != SimulatorActions.STOP
-    ]
     env.reset()
     for _ in range(100):
-        obs = env.step(np.random.choice(non_stop_actions))
+        obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         pointgoal_with_gps_compass = obs["pointgoal_with_gps_compass"]
         comapss = obs["compass"]
@@ -303,18 +287,13 @@ def test_get_observations_at():
             )
         ]
     )
-    non_stop_actions = [
-        act
-        for act in range(env.action_space.n)
-        if act != SimulatorActions.STOP
-    ]
 
     obs = env.reset()
     start_state = env.sim.get_agent_state()
     for _ in range(100):
         # Note, this test will not currently work for camera change actions
         # (look up/down), only for movement actions.
-        new_obs = env.step(np.random.choice(non_stop_actions))
+        new_obs = env.step(sample_non_stop_action(env.action_space))
         for key, val in new_obs.items():
             agent_state = env.sim.get_agent_state()
             if not (

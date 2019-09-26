@@ -8,7 +8,17 @@ from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import gym
 import numpy as np
@@ -56,7 +66,8 @@ def _make_env_fn(
 
 class VectorEnv:
     r"""Vectorized environment which creates multiple processes where each
-    process runs its own environment.
+    process runs its own environment. Main class for parallelization of
+    training and evaluation.
 
 
     All the environments are synchronized on step and reset methods.
@@ -160,13 +171,13 @@ class VectorEnv:
                         env, gym.Env
                     ):
                         # habitat.RLEnv
-                        observations, reward, done, info = env.step(data)
+                        observations, reward, done, info = env.step(**data)
                         if auto_reset_done and done:
                             observations = env.reset()
                         connection_write_fn((observations, reward, done, info))
                     elif isinstance(env, habitat.Env):
                         # habitat.Env
-                        observations = env.step(data)
+                        observations = env.step(**data)
                         if auto_reset_done and env.episode_over:
                             observations = env.reset()
                         connection_write_fn(observations)
@@ -184,14 +195,15 @@ class VectorEnv:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    connection_write_fn(getattr(env, command))
+                    if isinstance(command, str):
+                        connection_write_fn(getattr(env, command))
 
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
                     if function_args is None or len(function_args) == 0:
                         result = getattr(env, function_name)()
                     else:
-                        result = getattr(env, function_name)(*function_args)
+                        result = getattr(env, function_name)(**function_args)
                     connection_write_fn(result)
 
                 # TODO: update CALL_COMMAND for getting attribute like this
@@ -278,7 +290,7 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action: int):
+    def step_at(self, index_env: int, action: Dict[str, Any]):
         r"""Step in the index_env environment in the vector.
 
         :param index_env: index of the environment to be stepped into
@@ -291,14 +303,20 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
-    def async_step(self, actions: List[int]) -> None:
+    def async_step(self, data: List[Union[int, str, Dict[str, Any]]]) -> None:
         r"""Asynchronously step in the environments.
 
-        :param actions: actions to be performed in the vectorized envs.
+        :param data: list of size _num_envs containing keyword arguments to
+        pass to `step` method for each Environment. For example,
+        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
+        # Backward compatibility
+        if isinstance(data[0], (int, np.integer, str)):
+            data = [{"action": {"action": action}} for action in data]
+
         self._is_waiting = True
-        for write_fn, action in zip(self._connection_write_fns, actions):
-            write_fn((STEP_COMMAND, action))
+        for write_fn, args in zip(self._connection_write_fns, data):
+            write_fn((STEP_COMMAND, args))
 
     def wait_step(self) -> List[Observations]:
         r"""Wait until all the asynchronized environments have synchronized.
@@ -309,14 +327,15 @@ class VectorEnv:
         self._is_waiting = False
         return observations
 
-    def step(self, actions: List[int]):
+    def step(self, data: List[Union[int, str, Dict[str, Any]]]) -> List[Any]:
         r"""Perform actions in the vectorized environments.
 
-        :param actions: list of size _num_envs containing action to be taken
-            in each environment.
+        :param data: list of size _num_envs containing keyword arguments to
+        pass to `step` method for each Environment. For example,
+        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
-        self.async_step(actions)
+        self.async_step(data)
         return self.wait_step()
 
     def close(self) -> None:
@@ -372,7 +391,7 @@ class VectorEnv:
         self,
         index: int,
         function_name: str,
-        function_args: Optional[List[Any]] = None,
+        function_args: Optional[Dict[str, Any]] = None,
     ) -> Any:
         r"""Calls a function (which is passed by name) on the selected env and
         returns the result.

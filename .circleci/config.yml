@@ -130,17 +130,10 @@ jobs:
               if [ ! -d ./habitat-sim ]
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git
-                cd habitat-sim
-                pip install -r requirements.txt --progress-bar off
-                python setup.py install --headless --with-cuda
-              else
-                if [ ! -f ~/miniconda/pip_deps_installed ]
-                then
-                  cd habitat-sim
-                  pip install -r requirements.txt --progress-bar off
-                  python setup.py install --headless --with-cuda
-                fi
               fi
+              cd habitat-sim
+              pip install -r requirements.txt --progress-bar off
+              python setup.py install --headless --with-cuda
       - run:
           name: Ccache stats
           when: always
@@ -177,6 +170,7 @@ jobs:
             - /home/circleci/.ccache
       - run:
           name: Install api
+          no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api

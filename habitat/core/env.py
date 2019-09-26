@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import gym
 import numpy as np
@@ -97,7 +97,7 @@ class Env:
         )
         self._task = make_task(
             self._config.TASK.TYPE,
-            task_config=self._config.TASK,
+            config=self._config.TASK,
             sim=self._sim,
             dataset=self._dataset,
         )
@@ -107,7 +107,7 @@ class Env:
                 **self._task.sensor_suite.observation_spaces.spaces,
             }
         )
-        self.action_space = self._sim.action_space
+        self.action_space = self._task.action_space
         self._max_episode_seconds = (
             self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         )
@@ -197,31 +197,31 @@ class Env:
 
         assert len(self.episodes) > 0, "Episodes list is empty"
 
-        self.current_episode = next(self._episode_iterator)
+        self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
 
-        observations = self._sim.reset()
-        observations.update(
-            self.task.sensor_suite.get_observations(
-                observations=observations, episode=self.current_episode
-            )
+        observations = self.task.reset(episode=self.current_episode)
+        self._task.measurements.reset_measures(
+            episode=self.current_episode, task=self.task
         )
-
-        self._task.measurements.reset_measures(episode=self.current_episode)
 
         return observations
 
     def _update_step_stats(self) -> None:
         self._elapsed_steps += 1
-        self._episode_over = not self._sim.is_episode_active
+        self._episode_over = not self._task.is_episode_active
         if self._past_limit():
             self._episode_over = True
 
-    def step(self, action: int) -> Observations:
+    def step(
+        self, action: Union[int, str, Dict[str, Any]], **kwargs
+    ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to `action_space`) to be performed
-            inside the environment.
+        :param action: action (belonging to ``action_space``) to be performed
+                inside the environment. Action is a name or index of allowed
+                task's action and action arguments (belonging to action's
+            ``action_space``) to support parametrized and continuous actions.
         :return: observations after taking action in environment.
         """
 
@@ -232,15 +232,16 @@ class Env:
             self._episode_over is False
         ), "Episode over, call reset before calling step"
 
-        observations = self._sim.step(action)
-        observations.update(
-            self._task.sensor_suite.get_observations(
-                observations=observations, episode=self.current_episode
-            )
+        # Support simpler interface as well
+        if isinstance(action, str) or isinstance(action, (int, np.integer)):
+            action = {"action": action}
+
+        observations = self.task.step(
+            action=action, episode=self.current_episode
         )
 
         self._task.measurements.update_measures(
-            episode=self.current_episode, action=action
+            episode=self.current_episode, action=action, task=self.task
         )
 
         self._update_step_stats()
@@ -249,6 +250,7 @@ class Env:
 
     def seed(self, seed: int) -> None:
         self._sim.seed(seed)
+        self._task.seed(seed)
 
     def reconfigure(self, config: Config) -> None:
         self._config = config
@@ -350,15 +352,13 @@ class RLEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def step(self, action: int) -> Tuple[Observations, Any, bool, dict]:
+    def step(self, *args, **kwargs) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment.
 
-        :param action: action (belonging to `action_space`) to be performed
-            inside the environment.
         :return: :py:`(observations, reward, done, info)`
         """
 
-        observations = self._env.step(action)
+        observations = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)

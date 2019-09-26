@@ -19,11 +19,12 @@ Import the global registry object using
 
 Various decorators for registry different kind of classes with unique keys
 
--   Register a task: :py:`@registry.register_task`
--   Register a simulator: :py:`@registry.register_simulator`
--   Register a sensor: :py:`@registry.register_sensor`
--   Register a measure: :py:`@registry.register_measure`
--   Register a dataset: :py:`@registry.register_dataset`
+-   Register a task: ``@registry.register_task``
+-   Register a task action: ``@registry.register_task_action``
+-   Register a simulator: ``@registry.register_simulator``
+-   Register a sensor: ``@registry.register_sensor``
+-   Register a measure: ``@registry.register_measure``
+-   Register a dataset: ``@registry.register_dataset``
 """
 
 import collections
@@ -44,11 +45,9 @@ class Registry(metaclass=Singleton):
                 ), "{} must be a subclass of {}".format(
                     to_register, assert_type
                 )
+            register_name = to_register.__name__ if name is None else name
 
-            cls.mapping[_type][
-                to_register.__name__ if name is None else name
-            ] = to_register
-
+            cls.mapping[_type][register_name] = to_register
             return to_register
 
         if to_register is None:
@@ -145,6 +144,25 @@ class Registry(metaclass=Singleton):
         )
 
     @classmethod
+    def register_task_action(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        r"""Add a task action in this registry under key 'name'
+
+        Args:
+            action_space: An action space that describes parameters to the task
+            action's method.
+                If None then the task action's method takes no parameters.
+            name: Key with which the task action will be registered.
+                If None will use the name of the task action's method.
+        """
+        from habitat.core.embodied_task import Action
+
+        return cls._register_impl(
+            "task_action", to_register, name, assert_type=Action
+        )
+
+    @classmethod
     def register_dataset(cls, to_register=None, *, name: Optional[str] = None):
         r"""Register a dataset to registry with key :p:`name`
 
@@ -182,6 +200,10 @@ class Registry(metaclass=Singleton):
     @classmethod
     def get_task(cls, name):
         return cls._get_impl("task", name)
+
+    @classmethod
+    def get_task_action(cls, name):
+        return cls._get_impl("task_action", name)
 
     @classmethod
     def get_simulator(cls, name):

@@ -31,12 +31,42 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT = -1
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # NAVIGATION TASK
+# -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
+_C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
+# -----------------------------------------------------------------------------
+# # ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS = CN()
+ACTIONS.STOP = CN()
+ACTIONS.STOP.TYPE = "StopAction"
+# -----------------------------------------------------------------------------
+# # NAVIGATION ACTIONS
+# -----------------------------------------------------------------------------
+ACTIONS.MOVE_FORWARD = CN()
+ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
+ACTIONS.TURN_LEFT = CN()
+ACTIONS.TURN_LEFT.TYPE = "TurnLeftAction"
+ACTIONS.TURN_RIGHT = CN()
+ACTIONS.TURN_RIGHT.TYPE = "TurnRightAction"
+ACTIONS.LOOK_UP = CN()
+ACTIONS.LOOK_UP.TYPE = "LookUpAction"
+ACTIONS.LOOK_DOWN = CN()
+ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
+ACTIONS.TELEPORT = CN()
+ACTIONS.TELEPORT.TYPE = "TeleportAction"
+
+_C.TASK.ACTIONS = ACTIONS
+# -----------------------------------------------------------------------------
+# # TASK SENSORS
+# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -180,7 +210,6 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
-
 
 # -----------------------------------------------------------------------------
 

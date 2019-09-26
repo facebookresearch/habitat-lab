@@ -20,6 +20,7 @@ import habitat_sim
 from habitat.sims.habitat_simulator.action_spaces import (
     HabitatSimV1ActionSpaceConfiguration,
 )
+from habitat.tasks.nav.nav_task import SimulatorAction
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -124,19 +125,46 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         return config
 
 
+@habitat.registry.register_task_action
+class StrafeLeft(SimulatorAction):
+    def _get_uuid(self, *args, **kwargs) -> str:
+        return "strafe_left"
+
+    def step(self, *args, **kwargs):
+        return self._sim.step(habitat.SimulatorActions.STRAFE_LEFT)
+
+
+@habitat.registry.register_task_action
+class StrafeRight(SimulatorAction):
+    def _get_uuid(self, *args, **kwargs) -> str:
+        return "strafe_right"
+
+    def step(self, *args, **kwargs):
+        return self._sim.step(habitat.SimulatorActions.STRAFE_RIGHT)
+
+
 def main():
     habitat.SimulatorActions.extend_action_space("STRAFE_LEFT")
     habitat.SimulatorActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
+
+    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
+        "STRAFE_LEFT",
+        "STRAFE_RIGHT",
+    ]
+    config.TASK.ACTIONS.STRAFE_LEFT = habitat.config.Config()
+    config.TASK.ACTIONS.STRAFE_LEFT.TYPE = "StrafeLeft"
+    config.TASK.ACTIONS.STRAFE_RIGHT = habitat.config.Config()
+    config.TASK.ACTIONS.STRAFE_RIGHT.TYPE = "StrafeRight"
     config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
     config.freeze()
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("STRAFE_LEFT")
+    env.step("STRAFE_RIGHT")
     env.close()
 
     config.defrost()
@@ -145,8 +173,8 @@ def main():
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("STRAFE_LEFT")
+    env.step("STRAFE_RIGHT")
     env.close()
 
 
