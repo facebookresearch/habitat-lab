@@ -372,19 +372,21 @@ class PPOTrainer(BaseRLTrainer):
         """
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
-        
+
         if self.config.EVAL.USE_CKPT_CONFIG:
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
             config = self.config.clone()
 
         ppo_cfg = config.RL.PPO
-        
+
         # If there is a val set, use it
         if self.config.EVAL.USE_VAL:
-            if os.path.exists(config.TASK_CONFIG.DATASET.DATA_PATH.format(split="val")):
+            if os.path.exists(
+                config.TASK_CONFIG.DATASET.DATA_PATH.format(split="val")
+            ):
                 config.defrost()
-                config.TASK_CONFIG.DATASET.SPLIT = 'val'
+                config.TASK_CONFIG.DATASET.SPLIT = "val"
                 config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
