@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import attr
 import numpy as np
-from gym import spaces, Space
+from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.embodied_task import Action, Measure
@@ -22,6 +22,8 @@ from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
 class QuestionData:
     question_text: str
     answer_text: str
+    question_tokens: Optional[List[str]] = None
+    answer_tokens: Optional[List[str]] = None
     question_type: Optional[str] = None
 
 
@@ -51,20 +53,16 @@ class QuestionSensor(Sensor):
         self.uuid = "question"
         self.sensor_type = SensorTypes.TEXT
         self._dataset = dataset
-
-        self.observation_space = spaces.Discrete(
-            len(dataset.get_questions_vocabulary())
-        )
+        self.observation_space = spaces.Discrete(dataset.vocab.get_size())
 
     def get_observation(
         self,
         observations: Dict[str, Observations],
         episode: EQAEpisode,
-        *args: Any, **kwargs: Any
+        *args: Any,
+        **kwargs: Any
     ):
-        return self._dataset.get_questions_vocabulary()[
-            episode.question.question_text
-        ]
+        return episode.question.question_tokens
 
 
 @registry.register_measure
@@ -80,9 +78,7 @@ class CorrectAnswer(Measure):
         return "correct_answer"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._metric = self._dataset.get_answers_vocabulary()[
-            episode.question.answer_text
-        ]
+        self._metric = episode.question.answer_tokens
 
     def update_metric(self, *args: Any, **kwargs: Any):
         pass
@@ -110,24 +106,6 @@ class EpisodeInfo(Measure):
 
 
 @registry.register_measure
-class ActionStats(Measure):
-    """Actions Statistic
-    """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "action_stats"
-
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._metric = None
-
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
-        self._metric = {"previous_action": action}
-
-
-@registry.register_measure
 class AnswerAccuracy(Measure):
     """AnswerAccuracy
     """
@@ -152,71 +130,11 @@ class AnswerAccuracy(Measure):
         if action["action"] == AnswerAction.name:
             self._metric = (
                 1
-                if self._dataset.get_answers_vocabulary()[
-                    episode.question.answer_text
-                ]
+                if episode.question.answer_tokens
                 == action["action_args"]["answer_id"]
                 else 0
             )
 
-@registry.register_measure
-class DistanceToGoal(Measure):
-    """Distance To Goal metrics
-    """
-
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
-        self._previous_position = None
-        self._start_end_episode_distance = None
-        self._agent_episode_distance = None
-        self._sim = sim
-        self._config = config
-
-        super().__init__(**kwargs)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "distance_to_goal"
-
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._previous_position = self._sim.get_agent_state().position.tolist()
-        self._start_end_episode_distance = self._sim.geodesic_distance(
-            self._previous_position, episode.goals[0].position
-        )
-        self._agent_episode_distance = 0.0
-        self._metric = None
-
-    def _euclidean_distance(self, position_a, position_b):
-        return np.linalg.norm(
-            np.array(position_b) - np.array(position_a), ord=2
-        )
-
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
-        current_position = self._sim.get_agent_state().position.tolist()
-
-        distance_to_target = self._sim.geodesic_distance(
-            current_position, episode.goals[0].position
-        )
-
-        self._agent_episode_distance += self._euclidean_distance(
-            current_position, self._previous_position
-        )
-
-        self._previous_position = current_position
-
-        self._metric = {
-            "distance_to_target": distance_to_target,
-            "start_distance_to_target": self._start_end_episode_distance,
-            "distance_delta": self._start_end_episode_distance
-            - distance_to_target,
-            "agent_path_length": self._agent_episode_distance,
-        }
-
-        self._metric = {
-            "distance_to_target": distance_to_target,
-            "start_distance_to_target": self._start_end_episode_distance,
-            "distance_delta": self._start_end_episode_distance
-            - distance_to_target,
-            "agent_path_length": self._agent_episode_distance,
-        }
 
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
@@ -247,15 +165,10 @@ class AnswerAction(Action):
         self._task = task
         self._sim = sim
         self._task.answer = None
-        self._task.is_stopped = False
         self._dataset = dataset
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.name
 
     def reset(self, *args: Any, **kwargs: Any) -> None:
         self._task.answer = None
-        self._task.is_stopped = False
         self._task.is_valid = True
         return
 
@@ -279,9 +192,5 @@ class AnswerAction(Action):
              the current metric for ``Measure``.
         """
         return spaces.Dict(
-            {
-                "answer_id": spaces.Discrete(
-                    n=len(self._dataset.get_answers_vocabulary())
-                )
-            }
+            {"answer_id": spaces.Discrete(self._dataset.vocab.get_size())}
         )

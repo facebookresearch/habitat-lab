@@ -151,11 +151,6 @@ _C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
 _C.TASK.EPISODE_INFO = CN()
 _C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
 # -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.ACTION_STATS = CN()
-_C.TASK.ACTION_STATS.TYPE = "ActionStats"
-# -----------------------------------------------------------------------------
 # # DISTANCE_TO_GOAL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.DISTANCE_TO_GOAL = CN()

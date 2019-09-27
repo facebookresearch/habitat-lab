@@ -260,9 +260,7 @@ def test_eqa_task():
         del metrics["episode_info"]
         logger.info(metrics)
 
-    correct_answer_id = dataset.get_answers_vocabulary()[
-        env.current_episode.question.answer_text
-    ]
+    correct_answer_id = env.current_episode.question.answer_tokens
     env.step(
         {
             "action": AnswerAction.name,
