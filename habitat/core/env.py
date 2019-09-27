@@ -218,10 +218,10 @@ class Env:
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to ``action_space``) to be performed
-                inside the environment. Action is a name or index of allowed
-                task's action and action arguments (belonging to action's
-            ``action_space``) to support parametrized and continuous actions.
+        :param action: action (belonging to `action_space`) to be performed
+            inside the environment. Action is a name or index of allowed
+            task's action and action arguments (belonging to action's
+            `action_space`) to support parametrized and continuous actions.
         :return: observations after taking action in environment.
         """
 

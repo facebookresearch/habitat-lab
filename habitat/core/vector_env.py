@@ -307,8 +307,8 @@ class VectorEnv:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-        pass to `step` method for each Environment. For example,
-        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            pass to `step` method for each Environment. For example,
+            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
         # Backward compatibility
         if isinstance(data[0], (int, np.integer, str)):
@@ -331,8 +331,8 @@ class VectorEnv:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-        pass to `step` method for each Environment. For example,
-        `[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            pass to `step` method for each Environment. For example,
+            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
         self.async_step(data)
