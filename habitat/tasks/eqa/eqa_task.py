@@ -110,9 +110,8 @@ class AnswerAccuracy(Measure):
     """AnswerAccuracy
     """
 
-    def __init__(self, dataset, task, *args: Any, **kwargs: Any):
+    def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
-        self._task = task
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -162,27 +161,25 @@ class AnswerAction(Action):
     name: str = "ANSWER"
 
     def __init__(self, *args: Any, sim, task, dataset, **kwargs: Any) -> None:
-        self._task = task
         self._sim = sim
-        self._task.answer = None
         self._dataset = dataset
 
-    def reset(self, *args: Any, **kwargs: Any) -> None:
-        self._task.answer = None
-        self._task.is_valid = True
+    def reset(self, task: EQATask, *args: Any, **kwargs: Any) -> None:
+        task.answer = None
+        task.is_valid = True
         return
 
     def step(
-        self, *args: Any, answer_id: int, **kwargs: Any
+        self, *args: Any, answer_id: int, task: EQATask, **kwargs: Any
     ) -> Dict[str, Observations]:
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        if self._task.answer is not None:
-            self._task.is_valid = False
-            self._task.invalid_reason = "Agent answered question twice."
+        if task.answer is not None:
+            task.is_valid = False
+            task.invalid_reason = "Agent answered question twice."
 
-        self._task.answer = answer_id
+        task.answer = answer_id
         return self._sim.get_observations_at()
 
     @property

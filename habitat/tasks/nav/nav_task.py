@@ -421,7 +421,6 @@ class SPL(Measure):
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
         self._sim = sim
-        self._task = task
         self._config = config
 
         super().__init__()
