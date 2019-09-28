@@ -278,7 +278,8 @@ class EpisodeIterator(Iterator):
         cycle: bool = True,
         shuffle: bool = False,
         group_by_scene: bool = True,
-        max_scene_repeat: int = -1,
+        max_scene_repeat_episodes: int = -1,
+        max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
     ):
         r"""..
@@ -310,11 +311,22 @@ class EpisodeIterator(Iterator):
             num_unique_scenes = len(set([e.scene_id for e in episodes]))
             if num_scene_groups >= num_unique_scenes:
                 self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
-        self.max_scene_repetition = max_scene_repeat
+
+        self.max_scene_repetition_episodes = max_scene_repeat_episodes
+        self.max_scene_repetition_steps = max_scene_repeat_steps
         self.shuffle = shuffle
+
         self._rep_count = 0
         self._prev_scene_id = None
+
         self._iterator = iter(self.episodes)
+
+        # Perform an initial shuffle as otherwise scenes will
+        # always be in the same order initially due to sort
+        if self.shuffle:
+            self._shuffle_iterator()
+
+        self._set_shuffle_intervals()
 
     def __iter__(self):
         return self
@@ -334,14 +346,11 @@ class EpisodeIterator(Iterator):
                 self._shuffle_iterator()
             next_episode = next(self._iterator)
 
-        if self._prev_scene_id == next_episode.scene_id:
-            self._rep_count += 1
-        if (
-            self.max_scene_repetition > 0
-            and self._rep_count >= self.max_scene_repetition - 1
-        ):
-            self._shuffle_iterator()
+        if self._prev_scene_id != next_episode.scene_id:
             self._rep_count = 0
+            self._step_count = 0
+
+        self._switch_scene_if()
 
         self._prev_scene_id = next_episode.scene_id
         return next_episode
@@ -361,3 +370,47 @@ class EpisodeIterator(Iterator):
             episodes = list(self._iterator)
             random.shuffle(episodes)
             self._iterator = iter(episodes)
+
+    def step_taken(self):
+        self._step_count += 1
+
+    def _set_shuffle_intervals(self):
+        if self.max_scene_repetition_episodes > 0:
+            self._max_rep_episode = random.randint(
+                int(0.8 * self.max_scene_repetition_episodes),
+                int(1.2 * self.max_scene_repetition_episodes),
+            )
+        else:
+            self._max_rep_episode = None
+
+        if self.max_scene_repetition_steps > 0:
+            self._max_rep_step = random.randint(
+                int(0.8 * self.max_scene_repetition_steps),
+                int(1.2 * self.max_scene_repetition_steps),
+            )
+        else:
+            self._max_rep_step = None
+
+    def _switch_scene_if(self):
+        do_switch = False
+        self._rep_count += 1
+
+        # Shuffle if a scene has been selected more than _max_rep_episode times in a row
+        if (
+            self._max_rep_episode is not None
+            and self._rep_count >= self._max_rep_episode
+        ):
+            do_switch = True
+
+        # Shuffle if a scene has been used for more than _max_rep_step steps in a row
+        if (
+            self._max_rep_step is not None
+            and self._step_count >= self._max_rep_step
+        ):
+            do_switch = True
+
+        if do_switch:
+            self._shuffle_iterator()
+            self._set_shuffle_intervals()
+            self._rep_count = 0
+            self._step_count = 0

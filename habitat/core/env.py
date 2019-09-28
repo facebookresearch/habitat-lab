@@ -213,6 +213,8 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
+        self._episode_iterator.step_taken()
+
     def step(
         self, action: Union[int, str, Dict[str, Any]], **kwargs
     ) -> Observations:
