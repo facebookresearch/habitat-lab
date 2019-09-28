@@ -13,10 +13,10 @@ We will use the strafe action outline in the habitat_sim example
 """
 
 import attr
-import habitat_sim
 import numpy as np
 
 import habitat
+import habitat_sim
 from habitat.sims.habitat_simulator.action_spaces import (
     HabitatSimV1ActionSpaceConfiguration,
 )

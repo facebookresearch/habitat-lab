@@ -6,7 +6,6 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-# Imports required to execute registration decorators
 from habitat.sims.habitat_simulator import _try_register_habitat_sim
 
 

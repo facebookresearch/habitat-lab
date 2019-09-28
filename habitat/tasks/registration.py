@@ -6,7 +6,6 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-# Imports required to execute registration decorators
 from habitat.tasks.eqa.eqa_task import EQATask
 from habitat.tasks.nav.nav_task import NavigationTask
 

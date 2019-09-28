@@ -1,8 +1,8 @@
 from enum import Enum
 
 import attr
-import habitat_sim
 
+import habitat_sim
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     ActionSpaceConfiguration,
