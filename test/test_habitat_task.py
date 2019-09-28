@@ -39,14 +39,12 @@ def test_task_actions():
         np.allclose(
             np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
         )
-        is True
     ), "mismatch in position after teleport"
     assert (
         np.allclose(
             np.array(TELEPORT_ROTATION, dtype=np.float32),
             np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
         )
-        is True
     ), "mismatch in rotation after teleport"
     env.step("TURN_RIGHT")
     env.close()
