@@ -22,13 +22,11 @@ from habitat.core.simulator import Observations, SensorSuite, Simulator
 
 class Action:
     r"""
-     An action that can be performed by an agent solving a task in environment.
-     For example for navigation task action classes will be:
-     ``MoveForwardAction, TurnLeftAction, TurnRightAction``. The action can
-     use ``Task`` members to pass a state to another action, as well as keep
+    An action that can be performed by an agent solving a task in environment.
+    For example for navigation task action classes will be:
+    ``MoveForwardAction, TurnLeftAction, TurnRightAction``. The action can
+    use ``Task`` members to pass a state to another action, as well as keep
     own state and reset when new episode starts.
-
-    :property Action's action space
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -47,21 +45,20 @@ class Action:
 
         :param kwargs: optional parameters for the action, like distance/force.
         :return: observations after taking action in the task, including ones
-        coming from a simulator.
+            coming from a simulator.
         """
         raise NotImplementedError
 
     @property
     def action_space(self) -> gym.Space:
-        r"""
-        :return: a current Action's action space.
+        r"""a current Action's action space.
         """
         raise NotImplementedError
 
 
 class SimulatorAction(Action):
     r"""
-     An ``EmbodiedTask`` action that is wrapping simulator action.
+    An ``EmbodiedTask`` action that is wrapping simulator action.
     """
 
     def __init__(
@@ -198,6 +195,7 @@ class ActionSpace(spaces.Dict):
     A dictionary of ``EmbodiedTask`` actions and their argument spaces.
 
     .. code:: py
+
         self.observation_space = spaces.ActionSpace(
             "move": spaces.Dict({
                 "position": spaces.Discrete(2),

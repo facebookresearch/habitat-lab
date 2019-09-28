@@ -149,12 +149,11 @@ class Registry(metaclass=Singleton):
     ):
         r"""Add a task action in this registry under key 'name'
 
-        Args:
-            action_space: An action space that describes parameters to the task
-            action's method.
-                If None then the task action's method takes no parameters.
-            name: Key with which the task action will be registered.
-                If None will use the name of the task action's method.
+        :param action_space: An action space that describes parameters to the
+            task action's method. If :py:`None` then the task action's method
+            takes no parameters.
+        :param name: Key with which the task action will be registered. If
+            :py:`None` will use the name of the task action's method.
         """
         from habitat.core.embodied_task import Action
 

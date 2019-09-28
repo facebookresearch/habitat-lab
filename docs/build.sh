@@ -29,3 +29,10 @@ $mcss_path/css/postprocess.py \
   -o ../../habitat-sim/docs/theme.compiled.css
 
 $mcss_path/documentation/python.py conf.py
+
+# The file:// URLs are usually clickable in the terminal, directly opening a
+# browser
+echo "------------------------------------------------------------------------"
+echo "Docs were successfully generated. Open the following link to view them:"
+echo
+echo "file://$(pwd)/../../habitat-sim/build/docs/habitat-api/index.html"
