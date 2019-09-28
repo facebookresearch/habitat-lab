@@ -291,8 +291,10 @@ class EpisodeIterator(Iterator):
             effect if cycle is set to :py:`False`. Will shuffle grouped scenes
             if :p:`group_by_scene` is :py:`True`.
         :param group_by_scene: if :py:`True`, group episodes from same scene.
-        :param max_scene_repeat: threshold of how many episodes from the same
+        :param max_scene_repeat_episodes: threshold of how many episodes from the same
             scene can be loaded consecutively. :py:`-1` for no limit
+        :param max_scene_repeat_steps: threshold of how many steps from the same
+            scene can be taken consecutively. :py:`-1` for no limit
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
         """
@@ -317,6 +319,7 @@ class EpisodeIterator(Iterator):
         self.shuffle = shuffle
 
         self._rep_count = 0
+        self._step_count = 0
         self._prev_scene_id = None
 
         self._iterator = iter(self.episodes)
