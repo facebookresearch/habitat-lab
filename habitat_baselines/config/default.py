@@ -40,7 +40,8 @@ _C.CHECKPOINT_INTERVAL = 50
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
 _C.EVAL = CN()
-_C.EVAL.USE_VAL = True
+# The split to evaluate on
+_C.EVAL.SPLIT = "val"
 _C.EVAL.USE_CKPT_CONFIG = True
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG

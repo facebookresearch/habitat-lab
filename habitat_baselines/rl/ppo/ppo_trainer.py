@@ -380,14 +380,9 @@ class PPOTrainer(BaseRLTrainer):
 
         ppo_cfg = config.RL.PPO
 
-        # If there is a val set, use it
-        if self.config.EVAL.USE_VAL:
-            if os.path.exists(
-                config.TASK_CONFIG.DATASET.DATA_PATH.format(split="val")
-            ):
-                config.defrost()
-                config.TASK_CONFIG.DATASET.SPLIT = "val"
-                config.freeze()
+        config.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
