@@ -16,6 +16,7 @@ from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorAction
 from habitat.core.registry import registry
 from habitat.core.simulator import (
+    AgentState,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
@@ -73,6 +74,7 @@ class ObjectGoal(NavigationGoal):
     object_category: Optional[str] = None
     room_id: Optional[str] = None
     room_name: Optional[str] = None
+    view_points: Optional[List[AgentState]] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -290,7 +292,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor(name="CompassSensor")
 class EpisodicCompassSensor(HeadingSensor):
-    r"""The agents heading in the coordinate frame defined by the epiosde, 
+    r"""The agents heading in the coordinate frame defined by the epiosde,
     theta=0 is defined by the agents state at t=0
     """
 

@@ -1,11 +1,3 @@
-[tool.isort]
-known_third_party = ["PIL", "attr", "cv2", "gym", "habitat_sim", "imageio", "matplotlib", "numba", "numpy", "orbslam2", "pytest", "quaternion", "requests", "scipy", "setuptools", "torch", "torchvision", "tqdm", "version", "yacs"]
-multi_line_output = 3
-force_grid_wrap = false
-line_length = 79
-include_trailing_comma = true
-use_parentheses = true
-
 [tool.black]
 line_length = 79
 exclude = '''

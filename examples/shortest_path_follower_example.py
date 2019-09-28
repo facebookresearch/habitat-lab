@@ -60,7 +60,9 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def shortest_path_example(mode):
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_paths="configs/test/habitat_mp3d_eqa_test.yaml"
+    )
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
@@ -74,7 +76,13 @@ def shortest_path_example(mode):
 
     print("Environment creation successful")
     for episode in range(3):
-        env.reset()
+        observations = env.reset()
+        import imageio
+
+        imageio.imsave(
+            os.path.join(IMAGE_DIR, f"eqa_example_image_{episode}.png"),
+            observations["rgb"],
+        )
         dirname = os.path.join(
             IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
         )
@@ -87,8 +95,11 @@ def shortest_path_example(mode):
             best_action = follower.get_next_action(
                 env.habitat_env.current_episode.goals[0].position
             )
-            if best_action is None:
+            print(best_action)
+            if best_action is None or len(images) > 100:
                 break
+            if best_action > 2:
+                best_action = 0
 
             observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]

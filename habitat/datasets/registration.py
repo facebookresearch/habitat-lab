@@ -6,7 +6,6 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-# Imports required to execute registration decorators
 from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
