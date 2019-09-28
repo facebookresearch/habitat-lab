@@ -35,16 +35,12 @@ def test_task_actions():
         }
     )
     agent_state = env.sim.get_agent_state()
-    assert (
-        np.allclose(
-            np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
-        )
+    assert np.allclose(
+        np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
     ), "mismatch in position after teleport"
-    assert (
-        np.allclose(
-            np.array(TELEPORT_ROTATION, dtype=np.float32),
-            np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
-        )
+    assert np.allclose(
+        np.array(TELEPORT_ROTATION, dtype=np.float32),
+        np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
     ), "mismatch in rotation after teleport"
     env.step("TURN_RIGHT")
     env.close()
