@@ -12,13 +12,13 @@ import time
 from math import pi
 
 import numpy as np
+import orbslam2
 import PIL
 import requests
 import torch
 import torch.nn.functional as F
 
 import habitat
-import orbslam2
 from habitat import SimulatorActions
 from habitat.config.default import get_config
 from habitat_baselines.config.default import get_config as cfg_baseline
@@ -27,6 +27,8 @@ from habitat_baselines.slambased.monodepth import MonoDepthEstimator
 from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
     angle_to_pi_2_minus_pi_2 as norm_ang,
+)
+from habitat_baselines.slambased.reprojection import (
     get_direction,
     get_distance,
     habitat_goalpos_to_mapgoal_pos,

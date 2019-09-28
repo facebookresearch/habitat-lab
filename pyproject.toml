@@ -1,0 +1,28 @@
+[tool.isort]
+known_third_party = ["PIL", "attr", "cv2", "gym", "habitat_sim", "imageio", "matplotlib", "numba", "numpy", "orbslam2", "pytest", "quaternion", "requests", "scipy", "setuptools", "torch", "torchvision", "tqdm", "version", "yacs"]
+multi_line_output = 3
+force_grid_wrap = false
+line_length = 79
+include_trailing_comma = true
+use_parentheses = true
+
+[tool.black]
+line_length = 79
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | obselete
+    | deps
+  )/
+)
+'''
