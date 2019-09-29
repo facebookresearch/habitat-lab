@@ -15,18 +15,19 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black isort numpy
+              sudo pip install black "isort[pyproject]" numpy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black . --line-length 79 setup.py  --diff
-              black . --line-length 79 setup.py --check
+              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
-              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --diff
-              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --check-only
+              isort --version
+              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
 
   install_and_test_ubuntu:
     <<: *gpu
