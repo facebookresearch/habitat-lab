@@ -298,36 +298,33 @@ class EpisodeIterator(Iterator):
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
         """
+        self._repetition_rand_interval = 0.2
+
         # sample episodes
         if num_episode_sample >= 0:
             episodes = np.random.choice(
                 episodes, num_episode_sample, replace=False
             )
+
         self.episodes = episodes
         self.cycle = cycle
         self.group_by_scene = group_by_scene
+        self.shuffle = shuffle
+
+        if shuffle:
+            random.shuffle(self.episodes)
+
         if group_by_scene:
-            num_scene_groups = len(
-                list(groupby(episodes, key=lambda x: x.scene_id))
-            )
-            num_unique_scenes = len(set([e.scene_id for e in episodes]))
-            if num_scene_groups >= num_unique_scenes:
-                self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+            self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
 
         self.max_scene_repetition_episodes = max_scene_repeat_episodes
         self.max_scene_repetition_steps = max_scene_repeat_steps
-        self.shuffle = shuffle
 
         self._rep_count = 0
         self._step_count = 0
         self._prev_scene_id = None
 
         self._iterator = iter(self.episodes)
-
-        # Perform an initial shuffle as otherwise scenes will
-        # always be in the same order initially due to sort
-        if self.shuffle:
-            self._shuffle_iterator()
 
         self._set_shuffle_intervals()
 
@@ -339,6 +336,7 @@ class EpisodeIterator(Iterator):
 
         :return: next episode.
         """
+        self._switch_scene_if()
 
         next_episode = next(self._iterator, None)
         if next_episode is None:
@@ -353,8 +351,6 @@ class EpisodeIterator(Iterator):
             self._rep_count = 0
             self._step_count = 0
 
-        self._switch_scene_if()
-
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
@@ -367,7 +363,11 @@ class EpisodeIterator(Iterator):
                 list(g)
                 for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
             ]
+
             random.shuffle(grouped_episodes)
+            for i in range(len(grouped_episodes)):
+                random.shuffle(grouped_episodes[i])
+
             self._iterator = iter(sum(grouped_episodes, []))
         else:
             episodes = list(self._iterator)
@@ -377,19 +377,24 @@ class EpisodeIterator(Iterator):
     def step_taken(self):
         self._step_count += 1
 
+    @staticmethod
+    def _randomize_value(value, interval):
+        return random.randint(
+            int(value * (1 - interval)), int(value * (1 + interval))
+        )
+
     def _set_shuffle_intervals(self):
         if self.max_scene_repetition_episodes > 0:
-            self._max_rep_episode = random.randint(
-                int(0.8 * self.max_scene_repetition_episodes),
-                int(1.2 * self.max_scene_repetition_episodes),
+            self._max_rep_episode = self._randomize_value(
+                self.max_scene_repetition_episodes,
+                self._repetition_rand_interval,
             )
         else:
             self._max_rep_episode = None
 
         if self.max_scene_repetition_steps > 0:
-            self._max_rep_step = random.randint(
-                int(0.8 * self.max_scene_repetition_steps),
-                int(1.2 * self.max_scene_repetition_steps),
+            self._max_rep_step = self._randomize_value(
+                self.max_scene_repetition_steps, self._repetition_rand_interval
             )
         else:
             self._max_rep_step = None
@@ -401,7 +406,7 @@ class EpisodeIterator(Iterator):
         # Shuffle if a scene has been selected more than _max_rep_episode times in a row
         if (
             self._max_rep_episode is not None
-            and self._rep_count >= self._max_rep_episode
+            and self._rep_count > self._max_rep_episode
         ):
             do_switch = True
 
@@ -415,5 +420,3 @@ class EpisodeIterator(Iterator):
         if do_switch:
             self._shuffle_iterator()
             self._set_shuffle_intervals()
-            self._rep_count = 0
-            self._step_count = 0
