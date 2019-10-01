@@ -37,6 +37,13 @@ _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.CHECKPOINT_INTERVAL = 50
 # -----------------------------------------------------------------------------
+# EVAL CONFIG
+# -----------------------------------------------------------------------------
+_C.EVAL = CN()
+# The split to evaluate on
+_C.EVAL.SPLIT = "val"
+_C.EVAL.USE_CKPT_CONFIG = True
+# -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
