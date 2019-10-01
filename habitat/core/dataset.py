@@ -281,6 +281,7 @@ class EpisodeIterator(Iterator):
         max_scene_repeat_episodes: int = -1,
         max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
+        repetition_rand_interval: float = 0.2,
     ):
         r"""..
 
@@ -298,7 +299,6 @@ class EpisodeIterator(Iterator):
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
         """
-        self._repetition_rand_interval = 0.2
 
         # sample episodes
         if num_episode_sample >= 0:
@@ -326,6 +326,7 @@ class EpisodeIterator(Iterator):
 
         self._iterator = iter(self.episodes)
 
+        self.repetition_rand_interval = repetition_rand_interval
         self._set_shuffle_intervals()
 
     def __iter__(self):
@@ -347,7 +348,10 @@ class EpisodeIterator(Iterator):
                 self._shuffle_iterator()
             next_episode = next(self._iterator)
 
-        if self._prev_scene_id != next_episode.scene_id:
+        if (
+            self._prev_scene_id != next_episode.scene_id
+            and self._prev_scene_id is not None
+        ):
             self._rep_count = 0
             self._step_count = 0
 
@@ -363,10 +367,15 @@ class EpisodeIterator(Iterator):
                 list(g)
                 for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
             ]
+            grouped_episodes += []
 
-            random.shuffle(grouped_episodes)
             for i in range(len(grouped_episodes)):
                 random.shuffle(grouped_episodes[i])
+
+            if len(grouped_episodes) > 1:
+                # Ensure we swap episodes by moving the current group to the end
+                random.shuffle(grouped_episodes[1:])
+                grouped_episodes = grouped_episodes[1:] + grouped_episodes[0:1]
 
             self._iterator = iter(sum(grouped_episodes, []))
         else:
@@ -387,14 +396,14 @@ class EpisodeIterator(Iterator):
         if self.max_scene_repetition_episodes > 0:
             self._max_rep_episode = self._randomize_value(
                 self.max_scene_repetition_episodes,
-                self._repetition_rand_interval,
+                self.repetition_rand_interval,
             )
         else:
             self._max_rep_episode = None
 
         if self.max_scene_repetition_steps > 0:
             self._max_rep_step = self._randomize_value(
-                self.max_scene_repetition_steps, self._repetition_rand_interval
+                self.max_scene_repetition_steps, self.repetition_rand_interval
             )
         else:
             self._max_rep_step = None

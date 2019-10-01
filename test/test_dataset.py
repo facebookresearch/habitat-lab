@@ -243,13 +243,13 @@ def test_iterator_shuffle():
 def test_iterator_scene_switching_episodes():
     total_ep = 1000
     max_repeat = 25
-    dataset = _construct_dataset(total_ep, num_groups=5)
+    dataset = _construct_dataset(total_ep, num_groups=10)
 
     episode_iter = dataset.get_episode_iterator(
-        max_scene_repeat_episodes=max_repeat, shuffle=False
+        max_scene_repeat_episodes=max_repeat,
+        shuffle=False,
+        repetition_rand_interval=0.0,
     )
-    episode_iter._repetition_rand_interval = 0
-    episode_iter._set_shuffle_intervals()
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 
     max_repeat = episode_iter._max_rep_episode
@@ -259,11 +259,13 @@ def test_iterator_scene_switching_episodes():
         episode = next(episode_iter)
         assert episode.episode_id == episodes.pop(0).episode_id
 
-    remaining_episodes = list(islice(episode_iter, total_ep - max_repeat))
-    # remaining episodes should be same but in different order
+    episode = next(episode_iter)
+    assert episode.episode_id != episodes.pop(0).episode_id
+
+    # Disable shuffling for when we run the iterator out
+    episode_iter._max_rep_episode = None
+    remaining_episodes = list(islice(episode_iter, total_ep - max_repeat - 1))
     assert len(remaining_episodes) == len(episodes)
-    assert remaining_episodes != episodes
-    assert sorted(remaining_episodes) == sorted(episodes)
 
     # next episodes should still be grouped by scene (before next switching)
     assert len(set(e.scene_id for e in remaining_episodes)) == len(
@@ -277,10 +279,10 @@ def test_iterator_scene_switching_steps():
     dataset = _construct_dataset(total_ep, num_groups=10)
 
     episode_iter = dataset.get_episode_iterator(
-        max_scene_repeat_steps=max_repeat_steps, shuffle=False
+        max_scene_repeat_steps=max_repeat_steps,
+        shuffle=False,
+        repetition_rand_interval=0.0,
     )
-    episode_iter._repetition_rand_interval = 0
-    episode_iter._set_shuffle_intervals()
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 
     max_repeat_steps = episode_iter._max_rep_step
