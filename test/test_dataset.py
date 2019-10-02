@@ -243,16 +243,12 @@ def test_iterator_shuffle():
 def test_iterator_scene_switching_episodes():
     total_ep = 1000
     max_repeat = 25
-    dataset = _construct_dataset(total_ep, num_groups=10)
+    dataset = _construct_dataset(total_ep)
 
     episode_iter = dataset.get_episode_iterator(
-        max_scene_repeat_episodes=max_repeat,
-        shuffle=False,
-        step_repetition_range=0.0,
+        max_scene_repeat_episodes=max_repeat, shuffle=False
     )
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
-
-    max_repeat = episode_iter._max_rep_episode
 
     # episodes before max_repeat reached should be identical
     for i in range(max_repeat):
@@ -276,7 +272,7 @@ def test_iterator_scene_switching_episodes():
 def test_iterator_scene_switching_steps():
     total_ep = 1000
     max_repeat_steps = 250
-    dataset = _construct_dataset(total_ep, num_groups=10)
+    dataset = _construct_dataset(total_ep)
 
     episode_iter = dataset.get_episode_iterator(
         max_scene_repeat_steps=max_repeat_steps,
@@ -284,8 +280,6 @@ def test_iterator_scene_switching_steps():
         step_repetition_range=0.0,
     )
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
-
-    max_repeat_steps = episode_iter._max_rep_step
 
     episode = next(episode_iter)
     assert episode.episode_id == episodes.pop(0).episode_id
