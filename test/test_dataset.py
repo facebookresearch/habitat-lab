@@ -248,7 +248,7 @@ def test_iterator_scene_switching_episodes():
     episode_iter = dataset.get_episode_iterator(
         max_scene_repeat_episodes=max_repeat,
         shuffle=False,
-        repetition_rand_interval=0.0,
+        step_repetition_range=0.0,
     )
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 
@@ -281,7 +281,7 @@ def test_iterator_scene_switching_steps():
     episode_iter = dataset.get_episode_iterator(
         max_scene_repeat_steps=max_repeat_steps,
         shuffle=False,
-        repetition_rand_interval=0.0,
+        step_repetition_range=0.0,
     )
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 

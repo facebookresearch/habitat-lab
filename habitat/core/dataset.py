@@ -281,7 +281,7 @@ class EpisodeIterator(Iterator):
         max_scene_repeat_episodes: int = -1,
         max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
-        repetition_rand_interval: float = 0.2,
+        step_repetition_range: float = 0.2,
     ):
         r"""..
 
@@ -298,6 +298,11 @@ class EpisodeIterator(Iterator):
             scene can be taken consecutively. :py:`-1` for no limit
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
+        :param step_repetition_range: The maximum number of steps within each scene is
+            uniformly drawn from
+            [1 - step_repeat_range, 1 + step_repeat_range] * max_scene_repeat_steps
+            on each scene switch.  This stops all workers from swapping scenes at
+            the same time
         """
 
         # sample episodes
@@ -326,7 +331,7 @@ class EpisodeIterator(Iterator):
 
         self._iterator = iter(self.episodes)
 
-        self.repetition_rand_interval = repetition_rand_interval
+        self.step_repetition_range = step_repetition_range
         self._set_shuffle_intervals()
 
     def __iter__(self):
@@ -402,23 +407,20 @@ class EpisodeIterator(Iterator):
         self._step_count += 1
 
     @staticmethod
-    def _randomize_value(value, interval):
+    def _randomize_value(value, value_range):
         return random.randint(
-            int(value * (1 - interval)), int(value * (1 + interval))
+            int(value * (1 - value_range)), int(value * (1 + value_range))
         )
 
     def _set_shuffle_intervals(self):
         if self.max_scene_repetition_episodes > 0:
-            self._max_rep_episode = self._randomize_value(
-                self.max_scene_repetition_episodes,
-                self.repetition_rand_interval,
-            )
+            self._max_rep_episode = self.max_scene_repetition_episodes
         else:
             self._max_rep_episode = None
 
         if self.max_scene_repetition_steps > 0:
             self._max_rep_step = self._randomize_value(
-                self.max_scene_repetition_steps, self.repetition_rand_interval
+                self.max_scene_repetition_steps, self.step_repetition_range
             )
         else:
             self._max_rep_step = None
