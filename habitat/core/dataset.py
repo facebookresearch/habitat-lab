@@ -387,21 +387,14 @@ class EpisodeIterator(Iterator):
         r"""Internal method that shuffles the remaining episodes.
             If self.group_by_scene is true, then shuffle groups of scenes.
         """
+        episodes = list(self._iterator)
+
+        random.shuffle(episodes)
+
         if self.group_by_scene:
-            grouped_episodes = [
-                list(g)
-                for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
-            ]
+            episodes = sorted(episodes, key=lambda x: x.scene_id)
 
-            random.shuffle(grouped_episodes)
-            for i in range(len(grouped_episodes)):
-                random.shuffle(grouped_episodes[i])
-
-            self._iterator = iter(sum(grouped_episodes, []))
-        else:
-            episodes = list(self._iterator)
-            random.shuffle(episodes)
-            self._iterator = iter(episodes)
+        self._iterator = iter(episodes)
 
     def step_taken(self):
         self._step_count += 1
