@@ -343,9 +343,12 @@ class EpisodeIterator(Iterator):
         if next_episode is None:
             if not self.cycle:
                 raise StopIteration
+
             self._iterator = iter(self.episodes)
+
             if self.shuffle:
-                self._shuffle_iterator()
+                self._shuffle()
+
             next_episode = next(self._iterator)
 
         if (
@@ -358,7 +361,24 @@ class EpisodeIterator(Iterator):
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
-    def _shuffle_iterator(self) -> None:
+    def _switch_scene(self) -> None:
+        r"""Internal method to switch the scene
+        """
+        grouped_episodes = [
+            list(g)
+            for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+        ]
+
+        if len(grouped_episodes) > 1:
+            # Ensure we swap by moving the current group to the end
+            if self.shuffle:
+                random.shuffle(grouped_episodes[1:])
+
+            grouped_episodes = grouped_episodes[1:] + grouped_episodes[0:1]
+
+        self._iterator = iter(sum(grouped_episodes, []))
+
+    def _shuffle(self) -> None:
         r"""Internal method that shuffles the remaining episodes.
             If self.group_by_scene is true, then shuffle groups of scenes.
         """
@@ -367,15 +387,10 @@ class EpisodeIterator(Iterator):
                 list(g)
                 for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
             ]
-            grouped_episodes += []
 
+            random.shuffle(grouped_episodes)
             for i in range(len(grouped_episodes)):
                 random.shuffle(grouped_episodes[i])
-
-            if len(grouped_episodes) > 1:
-                # Ensure we swap episodes by moving the current group to the end
-                random.shuffle(grouped_episodes[1:])
-                grouped_episodes = grouped_episodes[1:] + grouped_episodes[0:1]
 
             self._iterator = iter(sum(grouped_episodes, []))
         else:
@@ -427,5 +442,5 @@ class EpisodeIterator(Iterator):
             do_switch = True
 
         if do_switch:
-            self._shuffle_iterator()
+            self._switch_scene()
             self._set_shuffle_intervals()
