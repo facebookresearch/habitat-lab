@@ -7,10 +7,10 @@
 
 import os
 
+import imageio
 import numpy as np
 
 import habitat
-import imageio
 from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
 from habitat.utils.visualizations import maps
 

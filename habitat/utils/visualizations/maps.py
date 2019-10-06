@@ -7,10 +7,10 @@
 import os
 from typing import List, Optional, Tuple
 
+import imageio
 import numpy as np
 import scipy.ndimage
 
-import imageio
 from habitat.core.simulator import Simulator
 from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import utils
