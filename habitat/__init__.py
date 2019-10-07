@@ -18,7 +18,6 @@ from habitat.core.simulator import (
     SensorSuite,
     SensorTypes,
     Simulator,
-    SimulatorActions,
 )
 from habitat.core.vector_env import ThreadedVectorEnv, VectorEnv
 from habitat.datasets import make_dataset

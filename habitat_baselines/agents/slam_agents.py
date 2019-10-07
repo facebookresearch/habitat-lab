@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 
 import habitat
-from habitat import SimulatorActions
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.config.default import get_config
 from habitat_baselines.config.default import get_config as cfg_baseline
 from habitat_baselines.slambased.mappers import DirectDepthMapper

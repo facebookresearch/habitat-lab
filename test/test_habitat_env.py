@@ -13,7 +13,7 @@ import pytest
 
 import habitat
 from habitat.config.default import get_config
-from habitat.core.simulator import AgentState, SimulatorActions
+from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.tasks.nav.nav_task import (
     NavigationEpisode,

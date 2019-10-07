@@ -47,6 +47,7 @@ you can install using: :sh:`pip install opencv-python`.
 .. code:: py
 
     import habitat
+    from habitat.sims.habitat_simulator import SimulatorActions
     import cv2
 
 
@@ -78,16 +79,16 @@ you can install using: :sh:`pip install opencv-python`.
             keystroke = cv2.waitKey(0)
 
             if keystroke == ord(FORWARD_KEY):
-                action = habitat.SimulatorActions.MOVE_FORWARD
+                action = SimulatorActions.MOVE_FORWARD
                 print("action: FORWARD")
             elif keystroke == ord(LEFT_KEY):
-                action = habitat.SimulatorActions.TURN_LEFT
+                action = SimulatorActions.TURN_LEFT
                 print("action: LEFT")
             elif keystroke == ord(RIGHT_KEY):
-                action = habitat.SimulatorActions.TURN_RIGHT
+                action = SimulatorActions.TURN_RIGHT
                 print("action: RIGHT")
             elif keystroke == ord(FINISH):
-                action = habitat.SimulatorActions.STOP
+                action = SimulatorActions.STOP
                 print("action: FINISH")
             else:
                 print("INVALID KEY")
@@ -102,7 +103,7 @@ you can install using: :sh:`pip install opencv-python`.
 
         print("Episode finished after {} steps.".format(count_steps))
 
-        if action == habitat.SimulatorActions.STOP and observations["pointgoal"][0] < 0.2:
+        if action == SimulatorActions.STOP and observations["pointgoal"][0] < 0.2:
             print("you successfully navigated to destination point")
         else:
             print("your navigation was unsuccessful")

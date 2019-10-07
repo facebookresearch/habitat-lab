@@ -13,7 +13,7 @@ in habitat. Customized environments should be registered using
 from typing import Any, Dict, Optional, Type, Union
 
 import habitat
-from habitat import Config, Dataset, SimulatorActions
+from habitat import Config, Dataset
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 

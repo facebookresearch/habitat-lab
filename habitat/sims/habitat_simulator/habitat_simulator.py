@@ -24,7 +24,6 @@ from habitat.core.simulator import (
     SensorSuite,
     ShortestPathPoint,
     Simulator,
-    SimulatorActions,
 )
 
 RGBSENSOR_DIMENSION = 3

@@ -11,7 +11,7 @@ from math import pi
 import numpy as np
 
 import habitat
-from habitat import SimulatorActions
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.config.default import get_config
 
 

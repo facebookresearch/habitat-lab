@@ -19,9 +19,9 @@ from habitat.core.simulator import (
     SensorTypes,
     ShortestPathPoint,
     Simulator,
-    SimulatorActions,
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
+from habitat.sims.habitat_simulator import SimulatorActions
 from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_from_coeff,
