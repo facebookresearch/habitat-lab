@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 
 import habitat
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.sims.habitat_simulator import HabitatSimActions
 from habitat.config.default import get_config
 from habitat_baselines.config.default import get_config as cfg_baseline
 from habitat_baselines.slambased.mappers import DirectDepthMapper
@@ -119,7 +119,7 @@ class RandomAgent(object):
         # Act
         # Check if we are done
         if self.is_goal_reached():
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
         else:
             action = random.randint(0, self.num_actions - 1)
         return {"action": action}
@@ -136,20 +136,20 @@ class BlindAgent(RandomAgent):
     def decide_what_to_do(self):
         distance_to_goal = self.obs[GOAL_SENSOR_UUID][0]
         angle_to_goal = norm_ang(np.array(self.obs[GOAL_SENSOR_UUID][1]))
-        command = SimulatorActions.STOP
+        command = HabitatSimActions.STOP
         if distance_to_goal <= self.pos_th:
             return command
         if abs(angle_to_goal) < self.angle_th:
-            command = SimulatorActions.MOVE_FORWARD
+            command = HabitatSimActions.MOVE_FORWARD
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
-                command = SimulatorActions.TURN_LEFT
+                command = HabitatSimActions.TURN_LEFT
             elif angle_to_goal > pi:
-                command = SimulatorActions.TURN_RIGHT
+                command = HabitatSimActions.TURN_RIGHT
             elif (angle_to_goal < 0) and (angle_to_goal > -pi):
-                command = SimulatorActions.TURN_RIGHT
+                command = HabitatSimActions.TURN_RIGHT
             else:
-                command = SimulatorActions.TURN_LEFT
+                command = HabitatSimActions.TURN_LEFT
 
         return command
 
@@ -157,7 +157,7 @@ class BlindAgent(RandomAgent):
         self.update_internal_state(habitat_observation)
         # Act
         if self.is_goal_reached():
-            return SimulatorActions.STOP
+            return HabitatSimActions.STOP
         command = self.decide_what_to_do()
         random_action = random.randint(0, self.num_actions - 1)
         act_randomly = np.random.uniform(0, 1, 1) < random_prob
@@ -270,7 +270,7 @@ class ORBSLAM2Agent(RandomAgent):
                     .view(4, 4)
                     .to(self.device),
                 )
-                if self.action_history[-1] == SimulatorActions.MOVE_FORWARD:
+                if self.action_history[-1] == HabitatSimActions.MOVE_FORWARD:
                     self.unseen_obstacle = (
                         previous_step.item() <= 0.001
                     )  # hardcoded threshold for not moving
@@ -334,7 +334,7 @@ class ORBSLAM2Agent(RandomAgent):
         )
         success = self.is_goal_reached()
         if success:
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
             self.action_history.append(action)
             return {"action": action}
         # Plan action
@@ -488,7 +488,7 @@ class ORBSLAM2Agent(RandomAgent):
         return path, planned_waypoints
 
     def planner_prediction_to_command(self, p_next):
-        command = SimulatorActions.STOP
+        command = HabitatSimActions.STOP
         p_init = self.pose6D.squeeze()
         d_angle_rot_th = self.angle_th
         pos_th = self.pos_th
@@ -498,27 +498,27 @@ class ORBSLAM2Agent(RandomAgent):
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
-            command = SimulatorActions.MOVE_FORWARD
+            command = HabitatSimActions.MOVE_FORWARD
         else:
             if (d_angle > 0) and (d_angle < pi):
-                command = SimulatorActions.TURN_LEFT
+                command = HabitatSimActions.TURN_LEFT
             elif d_angle > pi:
-                command = SimulatorActions.TURN_RIGHT
+                command = HabitatSimActions.TURN_RIGHT
             elif (d_angle < 0) and (d_angle > -pi):
-                command = SimulatorActions.TURN_RIGHT
+                command = HabitatSimActions.TURN_RIGHT
             else:
-                command = SimulatorActions.TURN_LEFT
+                command = HabitatSimActions.TURN_LEFT
         return command
 
     def decide_what_to_do(self):
         action = None
         if self.is_goal_reached():
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
             return {"action": action}
         if self.unseen_obstacle:
-            command = SimulatorActions.TURN_RIGHT
+            command = HabitatSimActions.TURN_RIGHT
             return command
-        command = SimulatorActions.STOP
+        command = HabitatSimActions.STOP
         command = self.planner_prediction_to_command(self.waypointPose6D)
         return command
 

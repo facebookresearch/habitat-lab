@@ -1,4 +1,4 @@
-from habitat.sims.habitat_simulator.actions import SimulatorActions
+from habitat.sims.habitat_simulator.actions import HabitatSimV1ActionSpaceConfiguration, HabitatSimActions
 
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
@@ -15,8 +15,8 @@ def _try_register_habitat_sim():
 
     if has_habitat_sim:
         from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-        from habitat.sims.habitat_simulator.actions import (
-            HabitatSimV1ActionSpaceConfiguration,
+        from habitat.sims.habitat_simulator import (
+            HabitatSimV1ActionSpaceConfiguration
         )
     else:
 

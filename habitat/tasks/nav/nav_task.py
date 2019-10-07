@@ -21,7 +21,7 @@ from habitat.core.simulator import (
     Simulator,
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.sims.habitat_simulator import HabitatSimActions
 from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_from_coeff,
@@ -723,7 +723,7 @@ class MoveForwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.MOVE_FORWARD)
+        return self._sim.step(HabitatSimActions.MOVE_FORWARD)
 
 
 @registry.register_task_action
@@ -732,7 +732,7 @@ class TurnLeftAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.TURN_LEFT)
+        return self._sim.step(HabitatSimActions.TURN_LEFT)
 
 
 @registry.register_task_action
@@ -741,7 +741,7 @@ class TurnRightAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.TURN_RIGHT)
+        return self._sim.step(HabitatSimActions.TURN_RIGHT)
 
 
 @registry.register_task_action
@@ -765,7 +765,7 @@ class LookUpAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.LOOK_UP)
+        return self._sim.step(HabitatSimActions.LOOK_UP)
 
 
 @registry.register_task_action
@@ -774,7 +774,7 @@ class LookDownAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.LOOK_DOWN)
+        return self._sim.step(HabitatSimActions.LOOK_DOWN)
 
 
 @registry.register_task_action

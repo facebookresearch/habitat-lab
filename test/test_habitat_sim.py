@@ -10,7 +10,7 @@ import os
 import numpy as np
 import pytest
 
-from habitat.sims.habitat_simulator import SimulatorActions
+from habitat.sims.habitat_simulator import HabitatSimActions
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 
@@ -35,7 +35,7 @@ def test_sim_trajectory():
 
     # remove last stop action as Sim has no stop action anymore
     for i, action in enumerate(test_trajectory["actions"][:-1]):
-        action = SimulatorActions[action]
+        action = HabitatSimActions[action]
         if i > 0:  # ignore first step as habitat-sim doesn't update
             # agent until then
             state = sim.get_agent_state()
