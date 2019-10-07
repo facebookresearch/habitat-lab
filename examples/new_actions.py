@@ -20,7 +20,7 @@ import habitat_sim
 from habitat.sims.habitat_simulator.action_spaces import (
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat.tasks.nav.nav_task import SimulatorAction
+from habitat.tasks.nav.nav_task import SimulatorTaskAction
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -126,7 +126,7 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
 
 
 @habitat.registry.register_task_action
-class StrafeLeft(SimulatorAction):
+class StrafeLeft(SimulatorTaskAction):
     def _get_uuid(self, *args, **kwargs) -> str:
         return "strafe_left"
 
@@ -135,7 +135,7 @@ class StrafeLeft(SimulatorAction):
 
 
 @habitat.registry.register_task_action
-class StrafeRight(SimulatorAction):
+class StrafeRight(SimulatorTaskAction):
     def _get_uuid(self, *args, **kwargs) -> str:
         return "strafe_right"
 

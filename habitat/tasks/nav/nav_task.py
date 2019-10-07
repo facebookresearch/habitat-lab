@@ -12,7 +12,7 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorAction
+from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Sensor,
@@ -716,7 +716,7 @@ class TopDownMap(Measure):
 
 
 @registry.register_task_action
-class MoveForwardAction(SimulatorAction):
+class MoveForwardAction(SimulatorTaskAction):
     name: str = "MOVE_FORWARD"
 
     def step(self, *args: Any, **kwargs: Any):
@@ -727,7 +727,7 @@ class MoveForwardAction(SimulatorAction):
 
 
 @registry.register_task_action
-class TurnLeftAction(SimulatorAction):
+class TurnLeftAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -736,7 +736,7 @@ class TurnLeftAction(SimulatorAction):
 
 
 @registry.register_task_action
-class TurnRightAction(SimulatorAction):
+class TurnRightAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -745,7 +745,7 @@ class TurnRightAction(SimulatorAction):
 
 
 @registry.register_task_action
-class StopAction(SimulatorAction):
+class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
     def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
@@ -760,7 +760,7 @@ class StopAction(SimulatorAction):
 
 
 @registry.register_task_action
-class LookUpAction(SimulatorAction):
+class LookUpAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -769,7 +769,7 @@ class LookUpAction(SimulatorAction):
 
 
 @registry.register_task_action
-class LookDownAction(SimulatorAction):
+class LookDownAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -778,7 +778,7 @@ class LookDownAction(SimulatorAction):
 
 
 @registry.register_task_action
-class TeleportAction(SimulatorAction):
+class TeleportAction(SimulatorTaskAction):
     # TODO @maksymets: Propagate through Simulator class
     COORDINATE_EPSILON = 1e-6
     COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
