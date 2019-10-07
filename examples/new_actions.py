@@ -17,7 +17,10 @@ import numpy as np
 
 import habitat
 import habitat_sim
-from habitat.sims.habitat_simulator import HabitatSimActions, HabitatSimV1ActionSpaceConfiguration
+from habitat.sims.habitat_simulator import (
+    HabitatSimActions,
+    HabitatSimV1ActionSpaceConfiguration,
+)
 from habitat.tasks.nav.nav_task import SimulatorTaskAction
 
 

@@ -11,8 +11,8 @@ from math import pi
 import numpy as np
 
 import habitat
-from habitat.sims.habitat_simulator import HabitatSimActions
 from habitat.config.default import get_config
+from habitat.sims.habitat_simulator import HabitatSimActions
 
 
 class RandomAgent(habitat.Agent):

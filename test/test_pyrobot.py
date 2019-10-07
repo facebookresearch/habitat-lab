@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from habitat.sims import make_sim
-from habitat.config.default import get_config
-
-import importlib
-import os
-import mock
 import sys
 
+import mock
 import numpy as np
+
+from habitat.config.default import get_config
+from habitat.sims import make_sim
 
 
 class CameraMock:
@@ -52,6 +49,7 @@ def test_pyrobot(mocker):
 
         # Re-register pyrobot with mock
         from habitat.sims.registration import _try_register_pyrobot
+
         _try_register_pyrobot()
 
     config = get_config()
@@ -59,11 +57,11 @@ def test_pyrobot(mocker):
 
     observations = reality.reset()
     observations = reality.step(
-    "go_to_relative",
-    {
-          "xyt_position": [0, 0, (10 / 180) * np.pi],
-          "use_map": False,
-          "close_loop": True,
-          "smooth": False,
-     }
-)
+        "go_to_relative",
+        {
+            "xyt_position": [0, 0, (10 / 180) * np.pi],
+            "use_map": False,
+            "close_loop": True,
+            "smooth": False,
+        },
+    )
