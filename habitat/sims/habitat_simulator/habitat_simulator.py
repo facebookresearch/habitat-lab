@@ -110,7 +110,9 @@ class HabitatSimDepthSensor(DepthSensor):
 
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
 
         return obs
 

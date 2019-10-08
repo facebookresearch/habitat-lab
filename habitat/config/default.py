@@ -219,6 +219,7 @@ PYROBOT_VISUAL_SENSOR.WIDTH = 640
 # -----------------------------------------------------------------------------
 _C.PYROBOT.RGB_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
 _C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
+_C.PYROBOT.RGB_SENSOR.CENTER_CROP = False
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------

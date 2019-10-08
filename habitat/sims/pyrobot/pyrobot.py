@@ -24,6 +24,9 @@ from habitat.core.utils import try_cv2_import
 cv2 = try_cv2_import()
 
 
+MM_IN_METER = 1000  # millimeters in a meter
+
+
 def _locobot_base_action_space():
     return spaces.Dict(
         {
@@ -64,7 +67,7 @@ class PyRobotRGBSensor(RGBSensor):
             dtype=np.uint8,
         )
 
-    def get_observation(self, robot_obs):
+    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -106,7 +109,7 @@ class PyRobotDepthSensor(DepthSensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, robot_obs):
+    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -114,20 +117,46 @@ class PyRobotDepthSensor(DepthSensor):
         )
 
         if obs.shape != self.observation_space.shape:
-            obs = cv2.resize(
-                obs,
-                (
-                    self.observation_space.shape[1],
-                    self.observation_space.shape[0],
-                ),
-            )
+            if (
+                self.config.CENTER_CROP is True
+                and obs.shape[0] > self.observation_space.shape[0]
+                and obs.shape[1] > self.observation_space.shape[1]
+            ):
+                top_left = (
+                    (obs.shape[0] // 2)
+                    - (self.observation_space.shape[0] // 2),
+                    (obs.shape[1] // 2)
+                    - (self.observation_space.shape[1] // 2),
+                )
+                bottom_right = (
+                    (obs.shape[0] // 2)
+                    + (self.observation_space.shape[0] // 2),
+                    (obs.shape[1] // 2)
+                    + (self.observation_space.shape[1] // 2),
+                )
+                obs = obs[
+                    top_left[0] : bottom_right[0],
+                    top_left[1] : bottom_right[1],
+                    :,
+                ]
 
-        obs = obs / 1000  # convert from mm to m
+            else:
+                obs = cv2.resize(
+                    obs,
+                    (
+                        self.observation_space.shape[1],
+                        self.observation_space.shape[0],
+                    ),
+                )
+
+        obs = obs / MM_IN_METER  # convert from mm to m
 
         obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observations to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
 
         obs = np.expand_dims(obs, axis=2)  # make depth observations a 3D array
 
@@ -139,7 +168,7 @@ class PyRobotBumpSensor(BumpSensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(low=False, high=True, shape=(1,), dtype=np.bool)
 
-    def get_observation(self, robot_obs):
+    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         return np.array(robot_obs["bump"])
 
 
@@ -230,8 +259,9 @@ class PyRobot(Simulator):
     def reset(self):
         self._robot.camera.reset()
 
-        robot_obs = self.get_robot_observations()
-        observations = self._sensor_suite.get_observations(robot_obs)
+        observations = self._sensor_suite.get_observations(
+            robot_obs=self.get_robot_observations()
+        )
         return observations
 
     def step(self, action, action_params):
@@ -250,14 +280,15 @@ class PyRobot(Simulator):
             raise ValueError("Invalid action {}".format(action))
 
         observations = self._sensor_suite.get_observations(
-            self.get_robot_observations()
+            robot_obs=self.get_robot_observations()
         )
 
         return observations
 
     def render(self, mode: str = "rgb") -> Any:
-        robot_obs = self.get_robot_observations()
-        observations = self._sensor_suite.get_observations(robot_obs)
+        observations = self._sensor_suite.get_observations(
+            robot_obs=self.get_robot_observations()
+        )
 
         output = observations.get(mode)
         assert output is not None, "mode {} sensor is not active".format(mode)
