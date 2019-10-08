@@ -228,6 +228,7 @@ _C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
 _C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
 _C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
 _C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
+_C.PYROBOT.DEPTH_SENSOR.CENTER_CROP = False
 # -----------------------------------------------------------------------------
 # BUMP SENSOR
 # -----------------------------------------------------------------------------

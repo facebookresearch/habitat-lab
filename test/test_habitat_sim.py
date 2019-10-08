@@ -12,7 +12,7 @@ import pytest
 
 from habitat.config.default import get_config
 from habitat.sims import make_sim
-from habitat.sims.habitat_simulator import HabitatSimActions
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def init_sim():

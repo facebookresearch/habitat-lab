@@ -17,7 +17,7 @@ import numpy as np
 
 import habitat
 import habitat_sim
-from habitat.sims.habitat_simulator import (
+from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )

@@ -47,7 +47,7 @@ you can install using: :sh:`pip install opencv-python`.
 .. code:: py
 
     import habitat
-    from habitat.sims.habitat_simulator import HabitatSimActions
+    from habitat.sims.habitat_simulator.actions import HabitatSimActions
     import cv2
 
 

@@ -25,7 +25,7 @@ from habitat.core.simulator import (
     Simulator,
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
-from habitat.sims.habitat_simulator import HabitatSimActions
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_from_coeff,

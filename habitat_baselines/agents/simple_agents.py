@@ -12,7 +12,7 @@ import numpy as np
 
 import habitat
 from habitat.config.default import get_config
-from habitat.sims.habitat_simulator import HabitatSimActions
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 class RandomAgent(habitat.Agent):
