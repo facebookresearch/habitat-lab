@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat.core.registry import registry
 from habitat.core.dataset import Dataset
+from habitat.core.registry import registry
 
 
 def _try_register_mp3d_eqa_dataset():
@@ -20,6 +20,7 @@ def _try_register_mp3d_eqa_dataset():
     if has_mp3deqa:
         from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
     else:
+
         @registry.register_dataset(name="MP3DEQA-v1")
         class Matterport3dDatasetImportError(Dataset):
             def __init__(self, *args, **kwargs):

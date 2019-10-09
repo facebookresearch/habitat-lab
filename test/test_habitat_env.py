@@ -15,11 +15,7 @@ import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.tasks.nav.nav import (
-    NavigationEpisode,
-    NavigationGoal,
-    StopAction,
-)
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, StopAction
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"

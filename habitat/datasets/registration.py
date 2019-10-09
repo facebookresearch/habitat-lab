@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.core.registry import registry
-
 from habitat.datasets.eqa import _try_register_mp3d_eqa_dataset
 from habitat.datasets.pointnav import _try_register_pointnavdatasetv1
 

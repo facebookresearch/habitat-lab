@@ -6,7 +6,6 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-
 from habitat.tasks.eqa import _try_register_eqa_task
 from habitat.tasks.nav import _try_register_nav_task
 

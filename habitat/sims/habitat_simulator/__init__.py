@@ -1,5 +1,6 @@
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
+
 # from habitat.sims.habitat_simulator.actions import (
 #     HabitatSimV1ActionSpaceConfiguration,
 # )

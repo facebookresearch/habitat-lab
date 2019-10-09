@@ -26,22 +26,14 @@ cv2 = try_cv2_import()
 
 def _center_crop(obs, observation_space):
     top_left = (
-        (obs.shape[0] // 2)
-        - (self.observation_space.shape[0] // 2),
-        (obs.shape[1] // 2)
-        - (self.observation_space.shape[1] // 2),
+        (obs.shape[0] // 2) - (self.observation_space.shape[0] // 2),
+        (obs.shape[1] // 2) - (self.observation_space.shape[1] // 2),
     )
     bottom_right = (
-        (obs.shape[0] // 2)
-        + (self.observation_space.shape[0] // 2),
-        (obs.shape[1] // 2)
-        + (self.observation_space.shape[1] // 2),
+        (obs.shape[0] // 2) + (self.observation_space.shape[0] // 2),
+        (obs.shape[1] // 2) + (self.observation_space.shape[1] // 2),
     )
-    obs = obs[
-        top_left[0] : bottom_right[0],
-        top_left[1] : bottom_right[1],
-        :,
-    ]
+    obs = obs[top_left[0] : bottom_right[0], top_left[1] : bottom_right[1], :]
 
     return obs
 
