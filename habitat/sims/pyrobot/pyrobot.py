@@ -19,23 +19,9 @@ from habitat.core.simulator import (
     SensorSuite,
     Simulator,
 )
-from habitat.core.utils import try_cv2_import
+from habitat.core.utils import center_crop, try_cv2_import
 
 cv2 = try_cv2_import()
-
-
-def _center_crop(obs, observation_space):
-    top_left = (
-        (obs.shape[0] // 2) - (self.observation_space.shape[0] // 2),
-        (obs.shape[1] // 2) - (self.observation_space.shape[1] // 2),
-    )
-    bottom_right = (
-        (obs.shape[0] // 2) + (self.observation_space.shape[0] // 2),
-        (obs.shape[1] // 2) + (self.observation_space.shape[1] // 2),
-    )
-    obs = obs[top_left[0] : bottom_right[0], top_left[1] : bottom_right[1], :]
-
-    return obs
 
 
 def _locobot_base_action_space():
@@ -55,6 +41,22 @@ def _locobot_camera_action_space():
             "set_pan_tilt": spaces.Box(low=-np.inf, high=np.inf, shape=(2,)),
         }
     )
+
+
+def _resize_observation(obs, observation_space, config):
+    if obs.shape != observation_space.shape:
+        if (
+            config.CENTER_CROP is True
+            and obs.shape[0] > observation_space.shape[0]
+            and obs.shape[1] > observation_space.shape[1]
+        ):
+            obs = center_crop(obs, observation_space)
+
+        else:
+            obs = cv2.resize(
+                obs, (observation_space.shape[1], observation_space.shape[0])
+            )
+    return obs
 
 
 MM_IN_METER = 1000  # millimeters in a meter
@@ -86,22 +88,7 @@ class PyRobotRGBSensor(RGBSensor):
             self.uuid
         )
 
-        if obs.shape != self.observation_space.shape:
-            if (
-                self.config.CENTER_CROP is True
-                and obs.shape[0] > self.observation_space.shape[0]
-                and obs.shape[1] > self.observation_space.shape[1]
-            ):
-                obs = _center_crop(obs, observation_space)
-
-            else:
-                obs = cv2.resize(
-                    obs,
-                    (
-                        self.observation_space.shape[1],
-                        self.observation_space.shape[0],
-                    ),
-                )
+        obs = _resize_observation(obs, observation_space, self.config)
 
         return obs
 
@@ -136,22 +123,7 @@ class PyRobotDepthSensor(DepthSensor):
             self.uuid
         )
 
-        if obs.shape != self.observation_space.shape:
-            if (
-                self.config.CENTER_CROP is True
-                and obs.shape[0] > self.observation_space.shape[0]
-                and obs.shape[1] > self.observation_space.shape[1]
-            ):
-                obs = _center_crop(obs, observation_space)
-
-            else:
-                obs = cv2.resize(
-                    obs,
-                    (
-                        self.observation_space.shape[1],
-                        self.observation_space.shape[0],
-                    ),
-                )
+        obs = _resize_observation(obs, observation_space, self.config)
 
         obs = obs / MM_IN_METER  # convert from mm to m
 
