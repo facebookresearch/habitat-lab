@@ -12,7 +12,7 @@ import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
-from habitat.core.dataset import Dataset, Episode
+from habitat.core.dataset import Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
@@ -212,6 +212,11 @@ class Env:
         self._episode_over = not self._task.is_episode_active
         if self._past_limit():
             self._episode_over = True
+
+        if self.episode_iterator is not None and isinstance(
+            self.episode_iterator, EpisodeIterator
+        ):
+            self.episode_iterator.step_taken()
 
     def step(
         self, action: Union[int, str, Dict[str, Any]], **kwargs

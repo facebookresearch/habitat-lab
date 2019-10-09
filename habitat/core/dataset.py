@@ -278,8 +278,10 @@ class EpisodeIterator(Iterator):
         cycle: bool = True,
         shuffle: bool = False,
         group_by_scene: bool = True,
-        max_scene_repeat: int = -1,
+        max_scene_repeat_episodes: int = -1,
+        max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
+        step_repetition_range: float = 0.2,
     ):
         r"""..
 
@@ -290,31 +292,47 @@ class EpisodeIterator(Iterator):
             effect if cycle is set to :py:`False`. Will shuffle grouped scenes
             if :p:`group_by_scene` is :py:`True`.
         :param group_by_scene: if :py:`True`, group episodes from same scene.
-        :param max_scene_repeat: threshold of how many episodes from the same
+        :param max_scene_repeat_episodes: threshold of how many episodes from the same
             scene can be loaded consecutively. :py:`-1` for no limit
+        :param max_scene_repeat_steps: threshold of how many steps from the same
+            scene can be taken consecutively. :py:`-1` for no limit
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
+        :param step_repetition_range: The maximum number of steps within each scene is
+            uniformly drawn from
+            [1 - step_repeat_range, 1 + step_repeat_range] * max_scene_repeat_steps
+            on each scene switch.  This stops all workers from swapping scenes at
+            the same time
         """
+
         # sample episodes
         if num_episode_sample >= 0:
             episodes = np.random.choice(
                 episodes, num_episode_sample, replace=False
             )
+
         self.episodes = episodes
         self.cycle = cycle
         self.group_by_scene = group_by_scene
-        if group_by_scene:
-            num_scene_groups = len(
-                list(groupby(episodes, key=lambda x: x.scene_id))
-            )
-            num_unique_scenes = len(set([e.scene_id for e in episodes]))
-            if num_scene_groups >= num_unique_scenes:
-                self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
-        self.max_scene_repetition = max_scene_repeat
         self.shuffle = shuffle
-        self._rep_count = 0
+
+        if shuffle:
+            random.shuffle(self.episodes)
+
+        if group_by_scene:
+            self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+
+        self.max_scene_repetition_episodes = max_scene_repeat_episodes
+        self.max_scene_repetition_steps = max_scene_repeat_steps
+
+        self._rep_count = -1  # 0 corresponds to first episode already returned
+        self._step_count = 0
         self._prev_scene_id = None
+
         self._iterator = iter(self.episodes)
+
+        self.step_repetition_range = step_repetition_range
+        self._set_shuffle_intervals()
 
     def __iter__(self):
         return self
@@ -324,40 +342,98 @@ class EpisodeIterator(Iterator):
 
         :return: next episode.
         """
+        self._forced_scene_switch_if()
 
         next_episode = next(self._iterator, None)
         if next_episode is None:
             if not self.cycle:
                 raise StopIteration
+
             self._iterator = iter(self.episodes)
+
             if self.shuffle:
-                self._shuffle_iterator()
+                self._shuffle()
+
             next_episode = next(self._iterator)
 
-        if self._prev_scene_id == next_episode.scene_id:
-            self._rep_count += 1
         if (
-            self.max_scene_repetition > 0
-            and self._rep_count >= self.max_scene_repetition - 1
+            self._prev_scene_id != next_episode.scene_id
+            and self._prev_scene_id is not None
         ):
-            self._shuffle_iterator()
             self._rep_count = 0
+            self._step_count = 0
 
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
-    def _shuffle_iterator(self) -> None:
+    def _forced_scene_switch(self) -> None:
+        r"""Internal method to switch the scene. Moves remaining episodes
+        from current scene to the end and switch to next scene episodes.
+        """
+        grouped_episodes = [
+            list(g)
+            for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+        ]
+
+        if len(grouped_episodes) > 1:
+            # Ensure we swap by moving the current group to the end
+            grouped_episodes = grouped_episodes[1:] + grouped_episodes[0:1]
+
+        self._iterator = iter(sum(grouped_episodes, []))
+
+    def _shuffle(self) -> None:
         r"""Internal method that shuffles the remaining episodes.
             If self.group_by_scene is true, then shuffle groups of scenes.
         """
+        episodes = list(self._iterator)
+
+        random.shuffle(episodes)
+
         if self.group_by_scene:
-            grouped_episodes = [
-                list(g)
-                for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
-            ]
-            random.shuffle(grouped_episodes)
-            self._iterator = iter(sum(grouped_episodes, []))
+            episodes = sorted(episodes, key=lambda x: x.scene_id)
+
+        self._iterator = iter(episodes)
+
+    def step_taken(self):
+        self._step_count += 1
+
+    @staticmethod
+    def _randomize_value(value, value_range):
+        return random.randint(
+            int(value * (1 - value_range)), int(value * (1 + value_range))
+        )
+
+    def _set_shuffle_intervals(self):
+        if self.max_scene_repetition_episodes > 0:
+            self._max_rep_episode = self.max_scene_repetition_episodes
         else:
-            episodes = list(self._iterator)
-            random.shuffle(episodes)
-            self._iterator = iter(episodes)
+            self._max_rep_episode = None
+
+        if self.max_scene_repetition_steps > 0:
+            self._max_rep_step = self._randomize_value(
+                self.max_scene_repetition_steps, self.step_repetition_range
+            )
+        else:
+            self._max_rep_step = None
+
+    def _forced_scene_switch_if(self):
+        do_switch = False
+        self._rep_count += 1
+
+        # Shuffle if a scene has been selected more than _max_rep_episode times in a row
+        if (
+            self._max_rep_episode is not None
+            and self._rep_count >= self._max_rep_episode
+        ):
+            do_switch = True
+
+        # Shuffle if a scene has been used for more than _max_rep_step steps in a row
+        if (
+            self._max_rep_step is not None
+            and self._step_count >= self._max_rep_step
+        ):
+            do_switch = True
+
+        if do_switch:
+            self._forced_scene_switch()
+            self._set_shuffle_intervals()
