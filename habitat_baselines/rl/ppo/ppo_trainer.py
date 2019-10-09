@@ -373,8 +373,16 @@ class PPOTrainer(BaseRLTrainer):
         # Map location CPU is almost always better than mapping to a CUDA device.
         ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
 
-        config = self._setup_eval_config(ckpt_dict["config"])
+        if self.config.EVAL.USE_CKPT_CONFIG:
+            config = self._setup_eval_config(ckpt_dict["config"])
+        else:
+            config = self.config.clone()
+
         ppo_cfg = config.RL.PPO
+
+        config.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
@@ -424,8 +432,8 @@ class PPOTrainer(BaseRLTrainer):
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
         rgb_frames = [
-            []
-        ] * self.config.NUM_PROCESSES  # type: List[List[np.ndarray]]
+            [] for _ in range(self.config.NUM_PROCESSES)
+        ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 

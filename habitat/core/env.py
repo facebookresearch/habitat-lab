@@ -12,7 +12,7 @@ import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
-from habitat.core.dataset import Dataset, Episode
+from habitat.core.dataset import Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
@@ -213,15 +213,20 @@ class Env:
         if self._past_limit():
             self._episode_over = True
 
+        if self.episode_iterator is not None and isinstance(
+            self.episode_iterator, EpisodeIterator
+        ):
+            self.episode_iterator.step_taken()
+
     def step(
         self, action: Union[int, str, Dict[str, Any]], **kwargs
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to ``action_space``) to be performed
-                inside the environment. Action is a name or index of allowed
-                task's action and action arguments (belonging to action's
-            ``action_space``) to support parametrized and continuous actions.
+        :param action: action (belonging to `action_space`) to be performed
+            inside the environment. Action is a name or index of allowed
+            task's action and action arguments (belonging to action's
+            `action_space`) to support parametrized and continuous actions.
         :return: observations after taking action in environment.
         """
 

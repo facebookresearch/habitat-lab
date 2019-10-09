@@ -3,18 +3,7 @@
 # Propagate failures properly
 set -e
 
-if [[ $# -eq 1 ]]; then
-  export mcss_path=$1
-elif [[ $# -ne 0 ]]; then
-  echo "usage: ./build.sh [path-to-m.css]"
-  exit 1
-else
-  if [ ! -d ../../habitat-sim/docs/m.css ]; then
-    echo "m.css submodule not found in the sim repository, please run git submodule update --init there or specify the path to it"
-    exit 1
-  fi
-  mcss_path=../../habitat-sim/docs/m.css
-fi
+mcss_path=../../habitat-sim/docs/m.css
 
 # Regenerate the compiled CSS file (yes, in the sim repository, to allow fast
 # iterations from here as well)
@@ -28,11 +17,12 @@ $mcss_path/css/postprocess.py \
   $mcss_path/css/m-documentation.css \
   -o ../../habitat-sim/docs/theme.compiled.css
 
-$mcss_path/documentation/python.py conf.py
+$mcss_path/documentation/python.py conf-public.py
 
 # The file:// URLs are usually clickable in the terminal, directly opening a
 # browser
 echo "------------------------------------------------------------------------"
-echo "Docs were successfully generated. Open the following link to view them:"
+echo "Public docs were successfully generated to the following location. Note"
+echo "that the search functionality requires a web server in this case."
 echo
-echo "file://$(pwd)/../../habitat-sim/build/docs/habitat-api/index.html"
+echo "file://$(pwd)/../../habitat-sim/build/docs-public/habitat-api/index.html"
