@@ -21,7 +21,7 @@ from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat.tasks.nav.nav_task import SimulatorTaskAction
+from habitat.tasks.nav.nav import SimulatorTaskAction
 
 
 @attr.s(auto_attribs=True, slots=True)
