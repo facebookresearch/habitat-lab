@@ -325,7 +325,7 @@ class EpisodeIterator(Iterator):
         self.max_scene_repetition_episodes = max_scene_repeat_episodes
         self.max_scene_repetition_steps = max_scene_repeat_steps
 
-        self._rep_count = 0
+        self._rep_count = -1  # 0 corresponds to first episode already returned
         self._step_count = 0
         self._prev_scene_id = None
 
@@ -342,7 +342,7 @@ class EpisodeIterator(Iterator):
 
         :return: next episode.
         """
-        self._switch_scene_if()
+        self._forced_scene_switch_if()
 
         next_episode = next(self._iterator, None)
         if next_episode is None:
@@ -366,8 +366,9 @@ class EpisodeIterator(Iterator):
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
-    def _switch_scene(self) -> None:
-        r"""Internal method to switch the scene
+    def _forced_scene_switch(self) -> None:
+        r"""Internal method to switch the scene. Moves remaining episodes
+        from current scene to the end and switch to next scene episodes.
         """
         grouped_episodes = [
             list(g)
@@ -376,9 +377,6 @@ class EpisodeIterator(Iterator):
 
         if len(grouped_episodes) > 1:
             # Ensure we swap by moving the current group to the end
-            if self.shuffle:
-                random.shuffle(grouped_episodes[1:])
-
             grouped_episodes = grouped_episodes[1:] + grouped_episodes[0:1]
 
         self._iterator = iter(sum(grouped_episodes, []))
@@ -418,14 +416,14 @@ class EpisodeIterator(Iterator):
         else:
             self._max_rep_step = None
 
-    def _switch_scene_if(self):
+    def _forced_scene_switch_if(self):
         do_switch = False
         self._rep_count += 1
 
         # Shuffle if a scene has been selected more than _max_rep_episode times in a row
         if (
             self._max_rep_episode is not None
-            and self._rep_count > self._max_rep_episode
+            and self._rep_count >= self._max_rep_episode
         ):
             do_switch = True
 
@@ -437,5 +435,5 @@ class EpisodeIterator(Iterator):
             do_switch = True
 
         if do_switch:
-            self._switch_scene()
+            self._forced_scene_switch()
             self._set_shuffle_intervals()
