@@ -13,7 +13,6 @@ from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
-from habitat.core.utils import Singleton
 
 
 @attr.s(auto_attribs=True)
@@ -22,80 +21,6 @@ class ActionSpaceConfiguration:
 
     def get(self):
         raise NotImplementedError
-
-
-class _DefaultSimulatorActions(Enum):
-    STOP = 0
-    MOVE_FORWARD = 1
-    TURN_LEFT = 2
-    TURN_RIGHT = 3
-    LOOK_UP = 4
-    LOOK_DOWN = 5
-
-
-@attr.s(auto_attribs=True, slots=True)
-class SimulatorActionsSingleton(metaclass=Singleton):
-    r"""Implements an extendable Enum for the mapping of action names
-    to their integer values.
-
-    This means that new action names can be added, but old action names cannot
-    be removed nor can their mapping be altered. This also ensures that all
-    actions are always contigously mapped in :py:`[0, len(SimulatorActions) - 1]`
-
-    This accesible as the global singleton `SimulatorActions`
-    """
-
-    _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
-
-    def __attrs_post_init__(self):
-        for action in _DefaultSimulatorActions:
-            self._known_actions[action.name] = action.value
-
-    def extend_action_space(self, name: str) -> int:
-        r"""Extends the action space to accomidate a new action with
-        the name :p:`name`
-
-        :param name: The name of the new action
-        :return: The number the action is registered on
-
-        Usage:
-
-        .. code:: py
-
-            from habitat import SimulatorActions
-            SimulatorActions.extend_action_space("MY_ACTION")
-            print(SimulatorActions.MY_ACTION)
-        """
-        assert (
-            name not in self._known_actions
-        ), "Cannot register an action name twice"
-        self._known_actions[name] = len(self._known_actions)
-
-        return self._known_actions[name]
-
-    def has_action(self, name: str) -> bool:
-        r"""Checks to see if action :p:`name` is already register
-
-        :param name: The name to check
-        :return: Whether or not :p:`name` already exists
-        """
-
-        return name in self._known_actions
-
-    def __getattr__(self, name):
-        return self._known_actions[name]
-
-    def __getitem__(self, name):
-        return self._known_actions[name]
-
-    def __len__(self):
-        return len(self._known_actions)
-
-    def __iter__(self):
-        return iter(self._known_actions)
-
-
-SimulatorActions: SimulatorActionsSingleton = SimulatorActionsSingleton()
 
 
 class SensorTypes(Enum):
@@ -229,6 +154,23 @@ class SemanticSensor(Sensor):
         raise NotImplementedError
 
 
+class BumpSensor(Sensor):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "bump"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        return SensorTypes.FORCE
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        raise NotImplementedError
+
+    def get_observation(self, *args: Any, **kwargs: Any):
+        raise NotImplementedError
+
+
 class SensorSuite:
     r"""Represents a set of sensors, with each sensor being identified
     through a unique id.
@@ -307,7 +249,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def step(self, action: int) -> Observations:
+    def step(self, action, *args, **kwargs) -> Observations:
         r"""Perform an action in the simulator and return observations.
 
         :param action: action to be performed inside the simulator.

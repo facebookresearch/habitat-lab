@@ -11,7 +11,7 @@ import imageio
 import numpy as np
 
 import habitat
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
 from habitat.utils.visualizations import maps
 
 IMAGE_DIR = os.path.join("examples", "images")

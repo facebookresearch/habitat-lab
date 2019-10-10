@@ -7,13 +7,16 @@
 from typing import Any, Dict, List, Optional, Type, Union
 
 import attr
-import cv2
 import numpy as np
 from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorAction
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    Measure,
+    SimulatorTaskAction,
+)
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -21,15 +24,18 @@ from habitat.core.simulator import (
     SensorTypes,
     ShortestPathPoint,
     Simulator,
-    SimulatorActions,
 )
-from habitat.core.utils import not_none_validator
+from habitat.core.utils import not_none_validator, try_cv2_import
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import (
     cartesian_to_polar,
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
+
+cv2 = try_cv2_import()
+
 
 MAP_THICKNESS_SCALAR: int = 1250
 
@@ -770,36 +776,36 @@ class DistanceToGoal(Measure):
 
 
 @registry.register_task_action
-class MoveForwardAction(SimulatorAction):
+class MoveForwardAction(SimulatorTaskAction):
     name: str = "MOVE_FORWARD"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.MOVE_FORWARD)
+        return self._sim.step(HabitatSimActions.MOVE_FORWARD)
 
 
 @registry.register_task_action
-class TurnLeftAction(SimulatorAction):
+class TurnLeftAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.TURN_LEFT)
+        return self._sim.step(HabitatSimActions.TURN_LEFT)
 
 
 @registry.register_task_action
-class TurnRightAction(SimulatorAction):
+class TurnRightAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.TURN_RIGHT)
+        return self._sim.step(HabitatSimActions.TURN_RIGHT)
 
 
 @registry.register_task_action
-class StopAction(SimulatorAction):
+class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
     def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
@@ -814,25 +820,25 @@ class StopAction(SimulatorAction):
 
 
 @registry.register_task_action
-class LookUpAction(SimulatorAction):
+class LookUpAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.LOOK_UP)
+        return self._sim.step(HabitatSimActions.LOOK_UP)
 
 
 @registry.register_task_action
-class LookDownAction(SimulatorAction):
+class LookDownAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(SimulatorActions.LOOK_DOWN)
+        return self._sim.step(HabitatSimActions.LOOK_DOWN)
 
 
 @registry.register_task_action
-class TeleportAction(SimulatorAction):
+class TeleportAction(SimulatorTaskAction):
     # TODO @maksymets: Propagate through Simulator class
     COORDINATE_EPSILON = 1e-6
     COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON

@@ -15,7 +15,7 @@ from habitat.core.embodied_task import Action, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 
 @attr.s(auto_attribs=True)

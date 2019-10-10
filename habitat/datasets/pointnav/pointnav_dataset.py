@@ -12,7 +12,7 @@ from typing import List, Optional
 from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav_task import (
+from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
     ShortestPathPoint,

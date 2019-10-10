@@ -11,8 +11,8 @@ from math import pi
 import numpy as np
 
 import habitat
-from habitat import SimulatorActions
 from habitat.config.default import get_config
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 class RandomAgent(habitat.Agent):
@@ -29,13 +29,13 @@ class RandomAgent(habitat.Agent):
 
     def act(self, observations):
         if self.is_goal_reached(observations):
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
         else:
             action = np.random.choice(
                 [
-                    SimulatorActions.MOVE_FORWARD,
-                    SimulatorActions.TURN_LEFT,
-                    SimulatorActions.TURN_RIGHT,
+                    HabitatSimActions.MOVE_FORWARD,
+                    HabitatSimActions.TURN_LEFT,
+                    HabitatSimActions.TURN_RIGHT,
                 ]
             )
         return {"action": action}
@@ -44,9 +44,9 @@ class RandomAgent(habitat.Agent):
 class ForwardOnlyAgent(RandomAgent):
     def act(self, observations):
         if self.is_goal_reached(observations):
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
         else:
-            action = SimulatorActions.MOVE_FORWARD
+            action = HabitatSimActions.MOVE_FORWARD
         return {"action": action}
 
 
@@ -57,13 +57,13 @@ class RandomForwardAgent(RandomAgent):
 
     def act(self, observations):
         if self.is_goal_reached(observations):
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
         else:
             if np.random.uniform(0, 1, 1) < self.FORWARD_PROBABILITY:
-                action = SimulatorActions.MOVE_FORWARD
+                action = HabitatSimActions.MOVE_FORWARD
             else:
                 action = np.random.choice(
-                    [SimulatorActions.TURN_LEFT, SimulatorActions.TURN_RIGHT]
+                    [HabitatSimActions.TURN_LEFT, HabitatSimActions.TURN_RIGHT]
                 )
 
         return {"action": action}
@@ -87,20 +87,20 @@ class GoalFollower(RandomAgent):
         if angle_to_goal > pi or (
             (angle_to_goal < 0) and (angle_to_goal > -pi)
         ):
-            action = SimulatorActions.TURN_RIGHT
+            action = HabitatSimActions.TURN_RIGHT
         else:
-            action = SimulatorActions.TURN_LEFT
+            action = HabitatSimActions.TURN_LEFT
         return action
 
     def act(self, observations):
         if self.is_goal_reached(observations):
-            action = SimulatorActions.STOP
+            action = HabitatSimActions.STOP
         else:
             angle_to_goal = self.normalize_angle(
                 np.array(observations[self.goal_sensor_uuid][1])
             )
             if abs(angle_to_goal) < self.angle_th:
-                action = SimulatorActions.MOVE_FORWARD
+                action = HabitatSimActions.MOVE_FORWARD
             else:
                 action = self.turn_towards_goal(angle_to_goal)
 
