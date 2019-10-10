@@ -88,7 +88,7 @@ class PyRobotRGBSensor(RGBSensor):
             self.uuid
         )
 
-        obs = _resize_observation(obs, observation_space, self.config)
+        obs = _resize_observation(obs, self.observation_space, self.config)
 
         return obs
 
@@ -123,7 +123,7 @@ class PyRobotDepthSensor(DepthSensor):
             self.uuid
         )
 
-        obs = _resize_observation(obs, observation_space, self.config)
+        obs = _resize_observation(obs, self.observation_space, self.config)
 
         obs = obs / MM_IN_METER  # convert from mm to m
 
