@@ -56,7 +56,7 @@ class Action:
         raise NotImplementedError
 
 
-class SimulatorAction(Action):
+class SimulatorTaskAction(Action):
     r"""
     An ``EmbodiedTask`` action that is wrapping simulator action.
     """

@@ -10,7 +10,7 @@ import numpy as np
 
 from habitat.core.simulator import Simulator
 from habitat.datasets.utils import get_action_shortest_path
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
 
 r"""A minimum radius of a plane that a point should be part of to be
 considered  as a target or source location. Used to filter isolated points

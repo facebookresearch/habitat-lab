@@ -13,7 +13,7 @@ import quaternion
 
 import habitat
 from habitat.config.default import get_config
-from habitat.tasks.nav.nav_task import (
+from habitat.tasks.nav.nav import (
     MoveForwardAction,
     NavigationEpisode,
     NavigationGoal,

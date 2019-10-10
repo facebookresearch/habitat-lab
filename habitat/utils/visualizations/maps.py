@@ -7,13 +7,16 @@
 import os
 from typing import List, Optional, Tuple
 
-import cv2
 import imageio
 import numpy as np
 import scipy.ndimage
 
 from habitat.core.simulator import Simulator
+from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import utils
+
+cv2 = try_cv2_import()
+
 
 AGENT_SPRITE = imageio.imread(
     os.path.join(
@@ -335,7 +338,7 @@ def colorize_topdown_map(
     r"""Convert the top down map to RGB based on the indicator values.
         Args:
             top_down_map: A non-colored version of the map.
-            fog_of_war_mask: A mask used to determine which parts of the 
+            fog_of_war_mask: A mask used to determine which parts of the
                 top_down_map are visible
                 Non-visible parts will be desaturated
             fog_of_war_desat_amount: Amount to desaturate the color of unexplored areas

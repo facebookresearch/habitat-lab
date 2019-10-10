@@ -24,7 +24,6 @@ from habitat.core.simulator import (
     SensorSuite,
     ShortestPathPoint,
     Simulator,
-    SimulatorActions,
 )
 
 RGBSENSOR_DIMENSION = 3
@@ -111,7 +110,9 @@ class HabitatSimDepthSensor(DepthSensor):
 
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / self.config.MAX_DEPTH
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
 
         return obs
 
@@ -447,7 +448,7 @@ class HabitatSim(Simulator):
         else:
             return None
 
-    # TODO (maksymets): Remove check after simulator became stable
+    # TODO(maksymets): Remove check after simulator becomes stable
     def _check_agent_position(self, position, agent_id=0) -> bool:
         if not np.allclose(position, self.get_agent_state(agent_id).position):
             logger.info("Agent state diverges from configured start position.")

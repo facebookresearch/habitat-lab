@@ -1,4 +1,4 @@
-from habitat.tasks.nav.nav_task import StopAction
+from habitat.tasks.nav.nav import StopAction
 
 
 def sample_non_stop_action(action_space, num_samples=1):

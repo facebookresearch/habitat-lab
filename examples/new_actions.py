@@ -17,10 +17,11 @@ import numpy as np
 
 import habitat
 import habitat_sim
-from habitat.sims.habitat_simulator.action_spaces import (
+from habitat.sims.habitat_simulator.actions import (
+    HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat.tasks.nav.nav_task import SimulatorAction
+from habitat.tasks.nav.nav import SimulatorTaskAction
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -96,11 +97,11 @@ class NoNoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
     def get(self):
         config = super().get()
 
-        config[habitat.SimulatorActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
             "noisy_strafe_left",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
-        config[habitat.SimulatorActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
             "noisy_strafe_right",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
@@ -113,11 +114,11 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
     def get(self):
         config = super().get()
 
-        config[habitat.SimulatorActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
             "noisy_strafe_left",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
-        config[habitat.SimulatorActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
             "noisy_strafe_right",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
@@ -126,26 +127,26 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
 
 
 @habitat.registry.register_task_action
-class StrafeLeft(SimulatorAction):
+class StrafeLeft(SimulatorTaskAction):
     def _get_uuid(self, *args, **kwargs) -> str:
         return "strafe_left"
 
     def step(self, *args, **kwargs):
-        return self._sim.step(habitat.SimulatorActions.STRAFE_LEFT)
+        return self._sim.step(HabitatSimActions.STRAFE_LEFT)
 
 
 @habitat.registry.register_task_action
-class StrafeRight(SimulatorAction):
+class StrafeRight(SimulatorTaskAction):
     def _get_uuid(self, *args, **kwargs) -> str:
         return "strafe_right"
 
     def step(self, *args, **kwargs):
-        return self._sim.step(habitat.SimulatorActions.STRAFE_RIGHT)
+        return self._sim.step(HabitatSimActions.STRAFE_RIGHT)
 
 
 def main():
-    habitat.SimulatorActions.extend_action_space("STRAFE_LEFT")
-    habitat.SimulatorActions.extend_action_space("STRAFE_RIGHT")
+    HabitatSimActions.extend_action_space("STRAFE_LEFT")
+    HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()

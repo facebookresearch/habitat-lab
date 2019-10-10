@@ -448,7 +448,9 @@ class VectorEnv:
         images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
-            import cv2
+            from habitat.core.utils import try_cv2_import
+
+            cv2 = try_cv2_import()
 
             cv2.imshow("vecenv", tile[:, :, ::-1])
             cv2.waitKey(1)

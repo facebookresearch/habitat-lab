@@ -69,49 +69,49 @@ _C.TASK.ACTIONS = ACTIONS
 # # TASK SENSORS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# # POINTGOAL SENSOR
+# POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.POINTGOAL_SENSOR = CN()
 _C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
 _C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
 _C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
-# # POINTGOAL WITH GPS+COMPASS SENSOR
+# POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
 _C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
     "PointGoalWithGPSCompassSensor"
 )
 # -----------------------------------------------------------------------------
-# # HEADING SENSOR
+# HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
 _C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
 # -----------------------------------------------------------------------------
-# # COMPASS SENSOR
+# COMPASS SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.COMPASS_SENSOR = CN()
 _C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
 # -----------------------------------------------------------------------------
-# # GPS SENSOR
+# GPS SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.GPS_SENSOR = CN()
 _C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
 _C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
-# # PROXIMITY SENSOR
+# PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.PROXIMITY_SENSOR = CN()
 _C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
 _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 # -----------------------------------------------------------------------------
-# # SPL MEASUREMENT
+# SPL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 # -----------------------------------------------------------------------------
-# # TopDownMap MEASUREMENT
+# TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.TOP_DOWN_MAP = CN()
 _C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
@@ -127,7 +127,7 @@ _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
 # -----------------------------------------------------------------------------
-# # COLLISIONS MEASUREMENT
+# COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
@@ -146,22 +146,22 @@ _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 # -----------------------------------------------------------------------------
-# # SENSORS
+# SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
-SENSOR = CN()
-SENSOR.HEIGHT = 480
-SENSOR.WIDTH = 640
-SENSOR.HFOV = 90  # horizontal field of view in degrees
-SENSOR.POSITION = [0, 1.25, 0]
+SIMULATOR_SENSOR = CN()
+SIMULATOR_SENSOR.HEIGHT = 480
+SIMULATOR_SENSOR.WIDTH = 640
+SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
+SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 # -----------------------------------------------------------------------------
-# # RGB SENSOR
+# RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
 _C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0
 _C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10
@@ -169,7 +169,7 @@ _C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = SENSOR.clone()
+_C.SIMULATOR.SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
@@ -200,6 +200,49 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 # Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
 # for the caveats that results in
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
+# -----------------------------------------------------------------------------
+# PYROBOT
+# -----------------------------------------------------------------------------
+_C.PYROBOT = CN()
+_C.PYROBOT.ROBOTS = ["locobot"]  # types of robots supported
+_C.PYROBOT.ROBOT = "locobot"
+_C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR", "BUMP_SENSOR"]
+_C.PYROBOT.BASE_CONTROLLER = "proportional"
+_C.PYROBOT.BASE_PLANNER = "none"
+# -----------------------------------------------------------------------------
+# SENSORS
+# -----------------------------------------------------------------------------
+PYROBOT_VISUAL_SENSOR = CN()
+PYROBOT_VISUAL_SENSOR.HEIGHT = 480
+PYROBOT_VISUAL_SENSOR.WIDTH = 640
+# -----------------------------------------------------------------------------
+# RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.PYROBOT.RGB_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
+_C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
+_C.PYROBOT.RGB_SENSOR.CENTER_CROP = False
+# -----------------------------------------------------------------------------
+# DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.PYROBOT.DEPTH_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
+_C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
+_C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
+_C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
+_C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
+_C.PYROBOT.DEPTH_SENSOR.CENTER_CROP = False
+# -----------------------------------------------------------------------------
+# BUMP SENSOR
+# -----------------------------------------------------------------------------
+_C.PYROBOT.BUMP_SENSOR = CN()
+_C.PYROBOT.BUMP_SENSOR.TYPE = "PyRobotBumpSensor"
+# -----------------------------------------------------------------------------
+# ACTIONS LOCOBOT
+# -----------------------------------------------------------------------------
+_C.PYROBOT.LOCOBOT = CN()
+_C.PYROBOT.LOCOBOT.ACTIONS = ["BASE_ACTIONS", "CAMERA_ACTIONS"]
+_C.PYROBOT.LOCOBOT.BASE_ACTIONS = ["go_to_relative", "go_to_absolute"]
+_C.PYROBOT.LOCOBOT.CAMERA_ACTIONS = ["set_pan", "set_tilt", "set_pan_tilt"]
+# TODO(akadian): add support for Arm actions
 # -----------------------------------------------------------------------------
 # DATASET
 # -----------------------------------------------------------------------------

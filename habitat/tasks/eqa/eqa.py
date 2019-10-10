@@ -18,7 +18,7 @@ from habitat.core.simulator import (
     SensorTypes,
 )
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 
 @attr.s(auto_attribs=True)

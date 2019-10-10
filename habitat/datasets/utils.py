@@ -7,7 +7,7 @@
 from typing import List
 
 from habitat.core.logging import logger
-from habitat.core.simulator import ShortestPathPoint, SimulatorActions
+from habitat.core.simulator import ShortestPathPoint
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
