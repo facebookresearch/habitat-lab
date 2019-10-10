@@ -8,7 +8,7 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, Optional, Sized, Type, Union
 
 import gym
 import numpy as np
@@ -236,6 +236,45 @@ class ActionSpace(spaces.Dict):
             "ActionSpace("
             + ", ".join([k + ":" + str(s) for k, s in self.spaces.items()])
             + ")"
+        )
+
+
+class SequenceSpace(Space):
+    """
+    A Space that describes sequence of other Space. Used to describe list of
+    tokens ids, vectors and etc.
+
+    .. code:: py
+
+        observation_space = SequenceSpace(spaces.Discrete(
+            dataset.question_vocab.get_size()))
+    """
+
+    def __init__(self, space, min_seq_length=0, max_seq_length=1 << 15):
+        self.min_seq_length = min_seq_length
+        self.max_seq_length = max_seq_length
+        self.space = space
+        self.length_select = gym.spaces.Discrete(
+            max_seq_length - min_seq_length
+        )
+
+    def sample(self):
+        seq_length = self.length_select.sample() + self.min_seq_length
+        return [self.space.sample() for _ in range(seq_length)]
+
+    def contains(self, x):
+        if not isinstance(x, Sized):
+            return False
+
+        if self.min_seq_length <= len(x) <= self.min_seq_length:
+            return False
+
+        return all([self.space.contains(el) for el in x])
+
+    def __repr__(self):
+        return (
+            f"SequenceSpace({self.space}, min_seq_length="
+            f"{self.min_seq_length}, max_seq_length={self.max_seq_length})"
         )
 
 

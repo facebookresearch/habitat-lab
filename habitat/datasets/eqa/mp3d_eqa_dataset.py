@@ -56,19 +56,6 @@ class Matterport3dDatasetV1(Dataset):
         with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
-        # self.vocab = VocabFromText(
-        #     [episode.question.question_text for episode in self.episodes]
-        #     + [episode.question.answer_text for episode in self.episodes]
-        # )
-        #
-        # for episode in self.episodes:
-        #     episode.question.question_tokens = self.vocab.tokenize_and_index(
-        #         episode.question.question_text
-        #     )
-        #     episode.question.answer_tokens = self.vocab.tokenize_and_index(
-        #         episode.question.answer_text
-        #     )
-
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:

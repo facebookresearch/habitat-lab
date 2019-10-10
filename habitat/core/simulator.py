@@ -40,6 +40,7 @@ class SensorTypes(Enum):
     MEASUREMENT = 10
     HEADING = 11
     TACTILE = 12
+    TOKEN_IDS = 13
 
 
 class Sensor:

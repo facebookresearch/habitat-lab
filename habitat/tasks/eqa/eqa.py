@@ -7,13 +7,11 @@
 from typing import Any, Dict, List, Optional
 
 import attr
-import numpy as np
 from gym import Space, spaces
 
-from habitat.config import Config
-from habitat.core.embodied_task import Action, Measure
+from habitat.core.embodied_task import Action, Measure, SequenceSpace
 from habitat.core.registry import registry
-from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
+from habitat.core.simulator import Observations, Sensor, SensorTypes
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
@@ -57,6 +55,12 @@ class QuestionSensor(Sensor):
             dataset.question_vocab.get_size()
         )
 
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        raise SensorTypes.TOKEN_IDS
+
     def get_observation(
         self,
         observations: Dict[str, Observations],
@@ -65,6 +69,11 @@ class QuestionSensor(Sensor):
         **kwargs: Any
     ):
         return episode.question.question_tokens
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        return SequenceSpace(
+            spaces.Discrete(self._dataset.question_vocab.get_size())
+        )
 
 
 @registry.register_measure
@@ -132,7 +141,7 @@ class AnswerAccuracy(Measure):
             self._metric = (
                 1
                 if episode.question.answer_tokens
-                == action["action_args"]["answer_id"]
+                == action["action_args"]["answer_token_ids"]
                 else 0
             )
 
@@ -152,25 +161,15 @@ class EQATask(NavigationTask):
                     env.step(action)
                 metrics = env.get_metrics() # to check distance to target
 
-            correct_answer_id = env.current_episode.question.answer_tokens
+            correct_answer_token_ids = env.current_episode.question.answer_tokens
             env.step(
                 {
                     "action": AnswerAction.name,
-                    "action_args": {"answer_id": correct_answer_id},
+                    "action_args": {"answer_token_ids": correct_answer_token_ids},
                 }
             )
 
             metrics = env.get_metrics()
-            assert metrics["answer_accuracy"] == 1
-
-
-            observations = self._env.reset()
-            while not env.episode_over:
-                action = agent.act(observations)
-                observations = env.step(action)
-            env.task.answer_question(
-                agent.answer_question(observations), env.episode_over)
-            metrics = self._env.get_metrics()
     """
 
     def _check_episode_is_active(
@@ -194,28 +193,21 @@ class AnswerAction(Action):
         return
 
     def step(
-        self, *args: Any, answer_id: int, task: EQATask, **kwargs: Any
+        self, *args: Any, answer_token_ids: int, task: EQATask, **kwargs: Any
     ) -> Dict[str, Observations]:
-        r"""Update ``_metric``, this method is called from ``Env`` on each
-        ``step``.
-        """
         if task.answer is not None:
             task.is_valid = False
             task.invalid_reason = "Agent answered question twice."
 
-        task.answer = answer_id
+        task.answer = answer_token_ids
         return self._sim.get_observations_at()
 
     @property
     def action_space(self) -> Space:
-        r"""
-        Returns:
-             the current metric for ``Measure``.
-        """
         return spaces.Dict(
             {
-                "answer_id": spaces.Discrete(
-                    self._dataset.answer_vocab.get_size()
+                "answer_token_ids": SequenceSpace(
+                    spaces.Discrete(self._dataset.answer_vocab.get_size())
                 )
             }
         )

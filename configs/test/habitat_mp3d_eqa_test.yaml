@@ -7,9 +7,7 @@ TASK:
 ENVIRONMENT:
   ITERATOR_OPTIONS:
     CYCLE: False
-    MAX_SCENE_REPEAT_EPISODES: 1
-    SHUFFLE: False
-    STEP_REPETITION_RANGE: 0
+    MAX_SCENE_REPEAT: 1
 
 SIMULATOR:
   SCENE: data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb
@@ -31,5 +29,5 @@ SIMULATOR:
 DATASET:
   TYPE: MP3DEQA-v1
   SPLIT: val
-  DATA_PATH: "data/datasets/eqa/mp3d/v3/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
