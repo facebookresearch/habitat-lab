@@ -53,7 +53,9 @@ class QuestionSensor(Sensor):
         self.uuid = "question"
         self.sensor_type = SensorTypes.TEXT
         self._dataset = dataset
-        self.observation_space = spaces.Discrete(dataset.vocab.get_size())
+        self.observation_space = spaces.Discrete(
+            dataset.question_vocab.get_size()
+        )
 
     def get_observation(
         self,
@@ -140,6 +142,28 @@ class EQATask(NavigationTask):
     """
         Embodied Question Answering Task
         Usage example:
+            env = habitat.Env(config=eqa_config)
+
+            env.reset()
+
+            for i in range(10):
+                action = sample_non_stop_action(env.action_space)
+                if action["action"] != AnswerAction.name:
+                    env.step(action)
+                metrics = env.get_metrics() # to check distance to target
+
+            correct_answer_id = env.current_episode.question.answer_tokens
+            env.step(
+                {
+                    "action": AnswerAction.name,
+                    "action_args": {"answer_id": correct_answer_id},
+                }
+            )
+
+            metrics = env.get_metrics()
+            assert metrics["answer_accuracy"] == 1
+
+
             observations = self._env.reset()
             while not env.episode_over:
                 action = agent.act(observations)
@@ -189,5 +213,9 @@ class AnswerAction(Action):
              the current metric for ``Measure``.
         """
         return spaces.Dict(
-            {"answer_id": spaces.Discrete(self._dataset.vocab.get_size())}
+            {
+                "answer_id": spaces.Discrete(
+                    self._dataset.answer_vocab.get_size()
+                )
+            }
         )

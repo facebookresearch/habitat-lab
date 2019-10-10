@@ -13,10 +13,10 @@ from habitat.core.simulator import ShortestPathPoint, SimulatorActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
-SENTENCE_SPLIT_REGEX = re.compile(r"(\W+)")
+SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
 """
- Tokenize and vocabulary utils originally authored by apsdehal and are
+ Tokenize and vocabulary utils originally authored by @apsdehal and are
  taken from Pythia.
 """
 
@@ -50,9 +50,14 @@ class VocabDict:
     START_TOKEN = "<s>"
     END_TOKEN = "</s>"
 
-    def __init__(self, text):
-        self.word_list = load_str_list(text)
-        self._build()
+    def __init__(self, word_list=None, filepath=None):
+        if word_list is not None:
+            self.word_list = word_list
+            self._build()
+
+        elif filepath:
+            self.word_list = load_str_list(filepath)
+            self._build()
 
     def _build(self):
         if self.UNK_TOKEN not in self.word_list:
@@ -105,8 +110,17 @@ class VocabDict:
                 % w
             )
 
-    def tokenize_and_index(self, sentence) -> List[int]:
-        inds = [self.word2idx(w) for w in tokenize(sentence)]
+    def tokenize_and_index(
+        self,
+        sentence,
+        regex=SENTENCE_SPLIT_REGEX,
+        keep=["'s"],
+        remove=[",", "?"],
+    ) -> List[int]:
+        inds = [
+            self.word2idx(w)
+            for w in tokenize(sentence, regex=regex, keep=keep, remove=remove)
+        ]
         return inds
 
 

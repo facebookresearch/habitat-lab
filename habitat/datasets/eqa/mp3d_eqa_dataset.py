@@ -12,7 +12,8 @@ from typing import List, Optional
 from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
-from habitat.datasets.utils import VocabFromText
+from habitat.core.simulator import AgentState
+from habitat.datasets.utils import VocabDict, VocabFromText
 from habitat.tasks.eqa.eqa_task import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav_task import ObjectGoal, ShortestPathPoint
 
@@ -39,6 +40,8 @@ class Matterport3dDatasetV1(Dataset):
     """
 
     episodes: List[EQAEpisode]
+    answer_vocab: VocabDict
+    question_vocab: VocabDict
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
@@ -53,24 +56,29 @@ class Matterport3dDatasetV1(Dataset):
         with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
-        self.vocab = VocabFromText(
-            [episode.question.question_text for episode in self.episodes]
-            + [episode.question.answer_text for episode in self.episodes]
-        )
-
-        for episode in self.episodes:
-            episode.question.question_tokens = self.vocab.tokenize_and_index(
-                episode.question.question_text
-            )
-            episode.question.answer_tokens = self.vocab.tokenize_and_index(
-                episode.question.answer_text
-            )
+        # self.vocab = VocabFromText(
+        #     [episode.question.question_text for episode in self.episodes]
+        #     + [episode.question.answer_text for episode in self.episodes]
+        # )
+        #
+        # for episode in self.episodes:
+        #     episode.question.question_tokens = self.vocab.tokenize_and_index(
+        #         episode.question.question_text
+        #     )
+        #     episode.question.answer_tokens = self.vocab.tokenize_and_index(
+        #         episode.question.answer_text
+        #     )
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
         self.__dict__.update(deserialized)
+        self.answer_vocab = VocabDict(word_list=self.answer_vocab["word_list"])
+        self.question_vocab = VocabDict(
+            word_list=self.question_vocab["word_list"]
+        )
+
         for ep_index, episode in enumerate(deserialized["episodes"]):
             episode = EQAEpisode(**episode)
             if scenes_dir is not None:
@@ -82,6 +90,14 @@ class Matterport3dDatasetV1(Dataset):
             episode.question = QuestionData(**episode.question)
             for g_index, goal in enumerate(episode.goals):
                 episode.goals[g_index] = ObjectGoal(**goal)
+                new_goal = episode.goals[g_index]
+                if new_goal.view_points is not None:
+                    for p_index, agent_state in enumerate(
+                        new_goal.view_points
+                    ):
+                        new_goal.view_points[p_index] = AgentState(
+                            **agent_state
+                        )
             if episode.shortest_paths is not None:
                 for path in episode.shortest_paths:
                     for p_index, point in enumerate(path):
