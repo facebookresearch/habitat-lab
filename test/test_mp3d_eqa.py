@@ -260,11 +260,11 @@ def test_eqa_task():
         del metrics["episode_info"]
         logger.info(metrics)
 
-    correct_answer_token_ids = env.current_episode.question.answer_tokens
+    correct_answer_id = env.current_episode.question.answer_token
     env.step(
         {
             "action": AnswerAction.name,
-            "action_args": {"answer_token_ids": correct_answer_token_ids},
+            "action_args": {"answer_id": correct_answer_id},
         }
     )
 

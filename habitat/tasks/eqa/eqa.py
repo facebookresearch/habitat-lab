@@ -21,7 +21,7 @@ class QuestionData:
     question_text: str
     answer_text: str
     question_tokens: Optional[List[str]] = None
-    answer_tokens: Optional[List[str]] = None
+    answer_token: Optional[List[str]] = None
     question_type: Optional[str] = None
 
 
@@ -89,7 +89,7 @@ class CorrectAnswer(Measure):
         return "correct_answer"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._metric = episode.question.answer_tokens
+        self._metric = episode.question.answer_token
 
     def update_metric(self, *args: Any, **kwargs: Any):
         pass
@@ -140,8 +140,8 @@ class AnswerAccuracy(Measure):
         if action["action"] == AnswerAction.name:
             self._metric = (
                 1
-                if episode.question.answer_tokens
-                == action["action_args"]["answer_token_ids"]
+                if episode.question.answer_token
+                == action["action_args"]["answer_id"]
                 else 0
             )
 
@@ -161,11 +161,11 @@ class EQATask(NavigationTask):
                     env.step(action)
                 metrics = env.get_metrics() # to check distance to target
 
-            correct_answer_token_ids = env.current_episode.question.answer_tokens
+            correct_answer_id = env.current_episode.question.answer_token
             env.step(
                 {
                     "action": AnswerAction.name,
-                    "action_args": {"answer_token_ids": correct_answer_token_ids},
+                    "action_args": {"answer_id": correct_answer_id},
                 }
             )
 
@@ -183,7 +183,7 @@ class AnswerAction(Action):
     _answer: Optional[str]
     name: str = "ANSWER"
 
-    def __init__(self, *args: Any, sim, task, dataset, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, sim, dataset, **kwargs: Any) -> None:
         self._sim = sim
         self._dataset = dataset
 
@@ -193,21 +193,23 @@ class AnswerAction(Action):
         return
 
     def step(
-        self, *args: Any, answer_token_ids: int, task: EQATask, **kwargs: Any
+        self, *args: Any, answer_id: int, task: EQATask, **kwargs: Any
     ) -> Dict[str, Observations]:
         if task.answer is not None:
             task.is_valid = False
             task.invalid_reason = "Agent answered question twice."
 
-        task.answer = answer_token_ids
+        task.answer = answer_id
         return self._sim.get_observations_at()
 
     @property
     def action_space(self) -> Space:
+        """Answer expected to be single token.
+        """
         return spaces.Dict(
             {
-                "answer_token_ids": SequenceSpace(
-                    spaces.Discrete(self._dataset.answer_vocab.get_size())
+                "answer_id": spaces.Discrete(
+                    self._dataset.answer_vocab.get_size()
                 )
             }
         )

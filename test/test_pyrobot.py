@@ -4,9 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 import sys
 
+import mock
 import numpy as np
 
-import mock
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 
