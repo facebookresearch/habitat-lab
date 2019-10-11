@@ -48,15 +48,10 @@ class EQAEpisode(NavigationEpisode):
 @registry.register_sensor
 class QuestionSensor(Sensor):
     def __init__(self, dataset, *args: Any, **kwargs: Any):
-        self.uuid = "question"
-        self.sensor_type = SensorTypes.TEXT
         self._dataset = dataset
-        self.observation_space = spaces.Discrete(
-            dataset.question_vocab.get_size()
-        )
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.uuid
+        return "question"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         raise SensorTypes.TOKEN_IDS
