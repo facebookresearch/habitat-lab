@@ -6,7 +6,6 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import Simulator
 from habitat.sims.habitat_simulator import _try_register_habitat_sim
 from habitat.sims.pyrobot import _try_register_pyrobot
 

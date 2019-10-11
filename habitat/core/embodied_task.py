@@ -8,16 +8,15 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, Optional, Type, Union
 
-import gym
 import numpy as np
-from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, SensorSuite, Simulator
+from habitat.core.spaces import ActionSpace, EmptySpace, Space
 
 
 class Action:
@@ -50,7 +49,7 @@ class Action:
         raise NotImplementedError
 
     @property
-    def action_space(self) -> gym.Space:
+    def action_space(self) -> Space:
         r"""a current Action's action space.
         """
         raise NotImplementedError
@@ -175,68 +174,6 @@ class Measurements:
         packaged inside `Metrics`.
         """
         return Metrics(self.measures)
-
-
-class EmptySpace(Space):
-    """
-    A ``gym.Space`` that reflects arguments space for action that doesn't have
-    arguments. Needed for consistency ang always samples `None` value.
-    """
-
-    def sample(self):
-        return None
-
-    def contains(self, x):
-        return False
-
-
-class ActionSpace(spaces.Dict):
-    """
-    A dictionary of ``EmbodiedTask`` actions and their argument spaces.
-
-    .. code:: py
-
-        self.observation_space = spaces.ActionSpace(
-            "move": spaces.Dict({
-                "position": spaces.Discrete(2),
-                "velocity": spaces.Discrete(3)
-                },
-            "move_forward": EmptySpace,
-            )
-        )
-    """
-
-    def __init__(self, spaces):
-        if isinstance(spaces, dict):
-            self.spaces = OrderedDict(sorted(list(spaces.items())))
-        if isinstance(spaces, list):
-            self.spaces = OrderedDict(spaces)
-        self.actions_select = gym.spaces.Discrete(len(self.spaces))
-
-    @property
-    def n(self):
-        return len(self.spaces)
-
-    def sample(self):
-        action_index = self.actions_select.sample()
-        return {
-            "action": list(self.spaces.keys())[action_index],
-            "action_args": list(self.spaces.values())[action_index].sample(),
-        }
-
-    def contains(self, x):
-        if not isinstance(x, dict) and {"action", "action_args"} not in x:
-            return False
-        if not self.spaces[x["action"]].contains(x["action_args"]):
-            return False
-        return True
-
-    def __repr__(self):
-        return (
-            "ActionSpace("
-            + ", ".join([k + ":" + str(s) for k, s in self.spaces.items()])
-            + ")"
-        )
 
 
 class EmbodiedTask:

@@ -29,6 +29,7 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
 _C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
 _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_EPISODES = -1
 _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS = int(1e4)
+_C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
@@ -131,6 +132,36 @@ _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
 # -----------------------------------------------------------------------------
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# # EQA TASK
+# -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ANSWER = CN()
+_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
+# # EQA TASK QUESTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.QUESTION_SENSOR = CN()
+_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+# -----------------------------------------------------------------------------
+# # EQA TASK CORRECT_ANSWER measure for training
+# -----------------------------------------------------------------------------
+_C.TASK.CORRECT_ANSWER = CN()
+_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+# -----------------------------------------------------------------------------
+# # EQA TASK ANSWER SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.EPISODE_INFO = CN()
+_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+# -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL = CN()
+_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+# -----------------------------------------------------------------------------
+# # ANSWER_ACCURACY MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ANSWER_ACCURACY = CN()
+_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------

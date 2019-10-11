@@ -19,6 +19,7 @@ from habitat.core.embodied_task import (
 )
 from habitat.core.registry import registry
 from habitat.core.simulator import (
+    AgentState,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
@@ -79,6 +80,7 @@ class ObjectGoal(NavigationGoal):
     object_category: Optional[str] = None
     room_id: Optional[str] = None
     room_name: Optional[str] = None
+    view_points: Optional[List[AgentState]] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -717,6 +719,61 @@ class TopDownMap(Measure):
                 * max(self._map_resolution)
                 / (self._coordinate_max - self._coordinate_min),
             )
+
+
+@registry.register_measure
+class DistanceToGoal(Measure):
+    """The measure provides a set of metrics that illustrate agent's progress
+    towards the goal.
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "distance_to_goal"
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self._previous_position = self._sim.get_agent_state().position.tolist()
+        self._start_end_episode_distance = self._sim.geodesic_distance(
+            self._previous_position, episode.goals[0].position
+        )
+        self._agent_episode_distance = 0.0
+        self._metric = None
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(
+            np.array(position_b) - np.array(position_a), ord=2
+        )
+
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
+        current_position = self._sim.get_agent_state().position.tolist()
+
+        distance_to_target = self._sim.geodesic_distance(
+            current_position, episode.goals[0].position
+        )
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = {
+            "distance_to_target": distance_to_target,
+            "start_distance_to_target": self._start_end_episode_distance,
+            "distance_delta": self._start_end_episode_distance
+            - distance_to_target,
+            "agent_path_length": self._agent_episode_distance,
+        }
 
 
 @registry.register_task_action

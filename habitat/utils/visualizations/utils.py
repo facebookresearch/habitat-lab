@@ -11,6 +11,7 @@ import imageio
 import numpy as np
 import tqdm
 
+from habitat.core.logging import logger
 from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import maps
 
@@ -101,7 +102,7 @@ def images_to_video(
     video_name: str,
     fps: int = 10,
     quality: Optional[float] = 5,
-    **kwargs
+    **kwargs,
 ):
     r"""Calls imageio to run FFMPEG on a list of images. For more info on
     parameters, see https://imageio.readthedocs.io/en/stable/format_ffmpeg.html
@@ -125,8 +126,9 @@ def images_to_video(
         os.path.join(output_dir, video_name),
         fps=fps,
         quality=quality,
-        **kwargs
+        **kwargs,
     )
+    logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
     for im in tqdm.tqdm(images):
         writer.append_data(im)
     writer.close()

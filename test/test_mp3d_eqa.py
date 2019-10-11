@@ -15,6 +15,8 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.tasks.eqa.eqa import AnswerAction
+from habitat.tasks.nav.nav import MoveForwardAction
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -227,3 +229,49 @@ def test_mp3d_eqa_sim_correspondence():
             cycles_n -= 1
 
     env.close()
+
+
+def test_eqa_task():
+    eqa_config = get_config(CFG_TEST)
+
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
+        eqa_config.DATASET
+    ):
+        pytest.skip("Please download Matterport3D EQA dataset to data folder.")
+
+    dataset = make_dataset(
+        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+    )
+    env = habitat.Env(config=eqa_config, dataset=dataset)
+    env.episodes = list(
+        filter(
+            lambda e: int(e.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT],
+            dataset.episodes,
+        )
+    )
+
+    env.reset()
+
+    for i in range(10):
+        action = sample_non_stop_action(env.action_space)
+        if action["action"] != AnswerAction.name:
+            env.step(action)
+        metrics = env.get_metrics()
+        del metrics["episode_info"]
+        logger.info(metrics)
+
+    correct_answer_id = env.current_episode.question.answer_token
+    env.step(
+        {
+            "action": AnswerAction.name,
+            "action_args": {"answer_id": correct_answer_id},
+        }
+    )
+
+    metrics = env.get_metrics()
+    del metrics["episode_info"]
+    logger.info(metrics)
+    assert metrics["answer_accuracy"] == 1
+
+    with pytest.raises(AssertionError):
+        env.step({"action": MoveForwardAction.name})
