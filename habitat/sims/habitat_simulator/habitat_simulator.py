@@ -7,7 +7,7 @@
 from typing import Any, List, Optional
 
 import numpy as np
-from gym import Space, spaces
+from gym import spaces
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -23,6 +23,7 @@ from habitat.core.simulator import (
     ShortestPathPoint,
     Simulator,
 )
+from habitat.core.spaces import Space
 
 RGBSENSOR_DIMENSION = 3
 
