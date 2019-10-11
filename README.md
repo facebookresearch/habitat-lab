@@ -11,6 +11,8 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
 
 We also have a dev slack channel, please follow this [link](https://join.slack.com/t/ai-habitat/shared_invite/enQtNjY1MzM1NDE4MTk2LTZhMzdmYWMwODZlNjg5MjZiZjExOTBjOTg5MmRiZTVhOWQyNzk0OTMyN2E1ZTEzZTNjMWM0MjBkN2VhMjQxMDI) to get added to the channel. If you want to contribute PRs or face issues with habitat please reach out to us either through github issues or slack channel.
 
+[Try Habitat in your browser!](https://aihabitat.org/demo)
+
 <p align="center">
   <img src="res/img/habitat_compressed.gif"  height="400">
 </p>
@@ -49,9 +51,10 @@ If you use the Habitat platform in your research, please cite the following [pap
 
 ## Installation
 
-1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+1. Clone a stable version from the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 
     ```bash
+    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
     cd habitat-api
     pip install -e .
     ```
@@ -59,6 +62,7 @@ If you use the Habitat platform in your research, please cite the following [pap
     The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
 
     ```bash
+    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
     cd habitat-api
     pip install -r requirements.txt
     python setup.py develop --all # install habitat and habitat_baselines

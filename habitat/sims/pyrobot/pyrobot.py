@@ -7,9 +7,9 @@
 from typing import Any
 
 import numpy as np
+import pyrobot
 from gym import Space, spaces
 
-import pyrobot
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     BumpSensor,
