@@ -723,7 +723,8 @@ class TopDownMap(Measure):
 
 @registry.register_measure
 class DistanceToGoal(Measure):
-    """Distance To Goal metrics
+    """The measure provides a set of metrics that illustrate agent's progress
+    towards the goal.
     """
 
     def __init__(

@@ -44,7 +44,7 @@ class RolloutStorage:
         self.returns = torch.zeros(num_steps + 1, num_envs, 1)
 
         self.action_log_probs = torch.zeros(num_steps, num_envs, 1)
-        if action_space.__class__.__name__ == "ActionSpace":
+        if action_space.__class__.__name__ == "EmptyActionSpace":
             action_shape = 1
         else:
             action_shape = action_space.shape[0]

@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 from habitat.config.default import get_config
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"

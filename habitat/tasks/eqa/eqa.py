@@ -9,9 +9,10 @@ from typing import Any, Dict, List, Optional
 import attr
 from gym import Space, spaces
 
-from habitat.core.embodied_task import Action, Measure, SequenceSpace
+from habitat.core.embodied_task import Action, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes
+from habitat.core.spaces import ListSpace
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
@@ -49,12 +50,13 @@ class EQAEpisode(NavigationEpisode):
 class QuestionSensor(Sensor):
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
+        super().__init__(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "question"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
-        raise SensorTypes.TOKEN_IDS
+        return SensorTypes.TOKEN_IDS
 
     def get_observation(
         self,
@@ -66,7 +68,7 @@ class QuestionSensor(Sensor):
         return episode.question.question_tokens
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
-        return SequenceSpace(
+        return ListSpace(
             spaces.Discrete(self._dataset.question_vocab.get_size())
         )
 
