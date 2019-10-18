@@ -17,11 +17,11 @@ import numpy as np
 
 import habitat
 import habitat_sim
-import habitat_sim.utils
-from habitat.sims.habitat_simulator.action_spaces import (
+from habitat.sims.habitat_simulator.actions import (
+    HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat_sim.agent.controls import register_move_fn
+from habitat.tasks.nav.nav import SimulatorTaskAction
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -58,7 +58,7 @@ def _strafe_impl(
     scene_node.translate_local(move_ax * move_amount)
 
 
-@register_move_fn(body_action=True)
+@habitat_sim.registry.register_move_fn(body_action=True)
 class NoisyStrafeLeft(habitat_sim.SceneNodeControl):
     def __call__(
         self,
@@ -74,7 +74,7 @@ class NoisyStrafeLeft(habitat_sim.SceneNodeControl):
         )
 
 
-@register_move_fn(body_action=True)
+@habitat_sim.registry.register_move_fn(body_action=True)
 class NoisyStrafeRight(habitat_sim.SceneNodeControl):
     def __call__(
         self,
@@ -97,11 +97,11 @@ class NoNoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
     def get(self):
         config = super().get()
 
-        config[habitat.SimulatorActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
             "noisy_strafe_left",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
-        config[habitat.SimulatorActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
             "noisy_strafe_right",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
@@ -114,11 +114,11 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
     def get(self):
         config = super().get()
 
-        config[habitat.SimulatorActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
             "noisy_strafe_left",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
-        config[habitat.SimulatorActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
+        config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
             "noisy_strafe_right",
             NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
@@ -126,19 +126,46 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         return config
 
 
+@habitat.registry.register_task_action
+class StrafeLeft(SimulatorTaskAction):
+    def _get_uuid(self, *args, **kwargs) -> str:
+        return "strafe_left"
+
+    def step(self, *args, **kwargs):
+        return self._sim.step(HabitatSimActions.STRAFE_LEFT)
+
+
+@habitat.registry.register_task_action
+class StrafeRight(SimulatorTaskAction):
+    def _get_uuid(self, *args, **kwargs) -> str:
+        return "strafe_right"
+
+    def step(self, *args, **kwargs):
+        return self._sim.step(HabitatSimActions.STRAFE_RIGHT)
+
+
 def main():
-    habitat.SimulatorActions.extend_action_space("STRAFE_LEFT")
-    habitat.SimulatorActions.extend_action_space("STRAFE_RIGHT")
+    HabitatSimActions.extend_action_space("STRAFE_LEFT")
+    HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
+
+    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
+        "STRAFE_LEFT",
+        "STRAFE_RIGHT",
+    ]
+    config.TASK.ACTIONS.STRAFE_LEFT = habitat.config.Config()
+    config.TASK.ACTIONS.STRAFE_LEFT.TYPE = "StrafeLeft"
+    config.TASK.ACTIONS.STRAFE_RIGHT = habitat.config.Config()
+    config.TASK.ACTIONS.STRAFE_RIGHT.TYPE = "StrafeRight"
     config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
     config.freeze()
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("STRAFE_LEFT")
+    env.step("STRAFE_RIGHT")
     env.close()
 
     config.defrost()
@@ -147,8 +174,8 @@ def main():
 
     env = habitat.Env(config=config)
     env.reset()
-    env.step(habitat.SimulatorActions.STRAFE_LEFT)
-    env.step(habitat.SimulatorActions.STRAFE_RIGHT)
+    env.step("STRAFE_LEFT")
+    env.step("STRAFE_RIGHT")
     env.close()
 
 

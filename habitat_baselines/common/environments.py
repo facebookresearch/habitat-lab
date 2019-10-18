@@ -10,10 +10,10 @@ in habitat. Customized environments should be registered using
 ``@baseline_registry.register_env(name="myEnv")` for reusability
 """
 
-from typing import Optional, Type
+from typing import Any, Dict, Optional, Type, Union
 
 import habitat
-from habitat import Config, Dataset, SimulatorActions
+from habitat import Config, Dataset
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 
@@ -51,9 +51,9 @@ class NavRLEnv(habitat.RLEnv):
         ]
         return observations
 
-    def step(self, action):
-        self._previous_action = action
-        return super().step(action)
+    def step(self, *args, **kwargs):
+        self._previous_action = kwargs["action"]
+        return super().step(*args, **kwargs)
 
     def get_reward_range(self):
         return (
@@ -83,7 +83,7 @@ class NavRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         if (
-            self._previous_action == SimulatorActions.STOP
+            self._env.task.is_stop_called
             and self._distance_target() < self._success_distance
         ):
             return True

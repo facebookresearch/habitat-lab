@@ -11,6 +11,8 @@ Habitat-API currently uses [`Habitat-Sim`](https://github.com/facebookresearch/h
 
 We also have a dev slack channel, please follow this [link](https://join.slack.com/t/ai-habitat/shared_invite/enQtNjY1MzM1NDE4MTk2LTZhMzdmYWMwODZlNjg5MjZiZjExOTBjOTg5MmRiZTVhOWQyNzk0OTMyN2E1ZTEzZTNjMWM0MjBkN2VhMjQxMDI) to get added to the channel. If you want to contribute PRs or face issues with habitat please reach out to us either through github issues or slack channel.
 
+[Try Habitat in your browser!](https://aihabitat.org/demo)
+
 <p align="center">
   <img src="res/img/habitat_compressed.gif"  height="400">
 </p>
@@ -26,9 +28,9 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
    1. [Details](#details)
    1. [Data](#data)
    1. [Baselines](#baselines)
+   1. [License](#license)   
    1. [Acknowledgments](#acknowledgments)
-   1. [License](#license)
-   1. [References](#references)
+   1. [References](#references-and-citation)
 
 ## Motivation
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
@@ -49,9 +51,10 @@ If you use the Habitat platform in your research, please cite the following [pap
 
 ## Installation
 
-1. Clone the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+1. Clone a stable version from the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 
     ```bash
+    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
     cd habitat-api
     pip install -e .
     ```
@@ -59,6 +62,7 @@ If you use the Habitat platform in your research, please cite the following [pap
     The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
 
     ```bash
+    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
     cd habitat-api
     pip install -r requirements.txt
     python setup.py develop --all # install habitat and habitat_baselines
@@ -154,17 +158,25 @@ Download the Habitat related Gibson dataset following the instructions [here](ht
 | --- | --- | --- | --- | --- | --- |
 | Point goal navigtaion | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | Point goal navigtaion | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
+| Embodied Question Answering | MatterPort3D | [eqa_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/eqa/mp3d/v1/eqa_mp3d_v1.zip) | `data/datasets/eqa/mp3d/v1/` | [`datasets/eqa/mp3d.yaml`](configs/datasets/eqa/mp3d.yaml) | 44 MB |
 
 To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](habitat_baselines/README.md#reinforcement-learning-rl).
 
 ## Baselines
 Habitat-API includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat_baselines/README.md).
 
+## Habitat-PyRobot
+Habitat-API supports deployment of models on a physical robot through PyRobot (https://github.com/facebookresearch/pyrobot). Please install the python3 version of PyRobot and refer to `habitat.sims.pyrobot.pyrobot` for instructions. This functionality allows deployment of models across simulation and reality.
+
 ## Acknowledgments
 The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
 
 ## License
-Habitat-API is MIT licensed. See the LICENSE file for details.
+Habitat-API is MIT licensed. See the [LICENSE file](habitat_baselines/LICENSE) for details.
+
+The trained models and the task datasets are considered data derived from the correspondent scene datasets.
+- Matterport3D based task datasets and trained models are distributed with [Matterport3D Terms of Use](http://kaldir.vc.in.tum.de/matterport/MP_TOS.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
+- Gibson based task datasets and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
 
 ## References and Citation
 1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.

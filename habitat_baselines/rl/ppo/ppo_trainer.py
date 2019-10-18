@@ -103,7 +103,7 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             dict containing checkpoint info
         """
-        return torch.load(checkpoint_path, map_location=self.device)
+        return torch.load(checkpoint_path, *args, **kwargs)
 
     def _collect_rollout_step(
         self, rollouts, current_episode_reward, episode_rewards, episode_counts
@@ -207,7 +207,11 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         ppo_cfg = self.config.RL.PPO
-        self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
         if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
         self._setup_actor_critic_agent(ppo_cfg)
@@ -366,12 +370,19 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-        ckpt_dict = self.load_checkpoint(
-            checkpoint_path, map_location=self.device
-        )
+        # Map location CPU is almost always better than mapping to a CUDA device.
+        ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
 
-        config = self._setup_eval_config(ckpt_dict["config"])
+        if self.config.EVAL.USE_CKPT_CONFIG:
+            config = self._setup_eval_config(ckpt_dict["config"])
+        else:
+            config = self.config.clone()
+
         ppo_cfg = config.RL.PPO
+
+        config.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
@@ -395,7 +406,9 @@ class PPOTrainer(BaseRLTrainer):
         assert measure_type is not None, "invalid measurement type {}".format(
             metric_cfg.TYPE
         )
-        self.metric_uuid = measure_type(None, None)._get_uuid()
+        self.metric_uuid = measure_type(
+            sim=None, task=None, config=None
+        )._get_uuid()
 
         observations = self.envs.reset()
         batch = batch_obs(observations, self.device)
@@ -419,8 +432,8 @@ class PPOTrainer(BaseRLTrainer):
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
         rgb_frames = [
-            []
-        ] * self.config.NUM_PROCESSES  # type: List[List[np.ndarray]]
+            [] for _ in range(self.config.NUM_PROCESSES)
+        ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
@@ -506,26 +519,24 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(observations[i], infos[i])
                     rgb_frames[i].append(frame)
 
-            # pausing self.envs with no new episode
-            if len(envs_to_pause) > 0:
-                state_index = list(range(self.envs.num_envs))
-                for idx in reversed(envs_to_pause):
-                    state_index.pop(idx)
-                    self.envs.pause_at(idx)
-
-                # indexing along the batch dimensions
-                test_recurrent_hidden_states = test_recurrent_hidden_states[
-                    state_index
-                ]
-                not_done_masks = not_done_masks[state_index]
-                current_episode_reward = current_episode_reward[state_index]
-                prev_actions = prev_actions[state_index]
-
-                for k, v in batch.items():
-                    batch[k] = v[state_index]
-
-                if len(self.config.VIDEO_OPTION) > 0:
-                    rgb_frames = [rgb_frames[i] for i in state_index]
+        (
+            self.envs,
+            test_recurrent_hidden_states,
+            not_done_masks,
+            current_episode_reward,
+            prev_actions,
+            batch,
+            rgb_frames,
+        ) = self._pause_envs(
+            envs_to_pause,
+            self.envs,
+            test_recurrent_hidden_states,
+            not_done_masks,
+            current_episode_reward,
+            prev_actions,
+            batch,
+            rgb_frames,
+        )
 
         aggregated_stats = dict()
         for stat_key in next(iter(stats_episodes.values())).keys():

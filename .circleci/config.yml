@@ -15,18 +15,19 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black isort numpy
+              sudo pip install black "isort[pyproject]" numpy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black . --line-length 79 setup.py  --diff
-              black . --line-length 79 setup.py --check
+              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
-              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --diff
-              isort . -rc --multi-line 3 --trailing-comma --force-grid-wrap 0 --line-width 79 --combine-as -o torch -o pytest -o torchvision -o matplotlib -p habitat_sim --check-only
+              isort --version
+              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
 
   install_and_test_ubuntu:
     <<: *gpu
@@ -89,7 +90,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:$PATH
                 conda create -y -n habitat python=3.6
                 . activate habitat
-                conda install -q -y -c conda-forge ninja ccache numpy pytest
+                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock
               fi
       - run:
           name: Install pytorch
@@ -130,17 +131,10 @@ jobs:
               if [ ! -d ./habitat-sim ]
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git
-                cd habitat-sim
-                pip install -r requirements.txt --progress-bar off
-                python setup.py install --headless --with-cuda
-              else
-                if [ ! -f ~/miniconda/pip_deps_installed ]
-                then
-                  cd habitat-sim
-                  pip install -r requirements.txt --progress-bar off
-                  python setup.py install --headless --with-cuda
-                fi
               fi
+              cd habitat-sim
+              pip install -r requirements.txt --progress-bar off
+              python setup.py install --headless --with-cuda
       - run:
           name: Ccache stats
           when: always
@@ -177,6 +171,7 @@ jobs:
             - /home/circleci/.ccache
       - run:
           name: Install api
+          no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:$PATH
               . activate habitat; cd habitat-api

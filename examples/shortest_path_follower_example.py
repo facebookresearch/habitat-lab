@@ -7,13 +7,15 @@
 import os
 import shutil
 
-import cv2
 import numpy as np
 
 import habitat
+from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
+
+cv2 = try_cv2_import()
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -87,6 +89,9 @@ def shortest_path_example(mode):
             best_action = follower.get_next_action(
                 env.habitat_env.current_episode.goals[0].position
             )
+            if best_action is None:
+                break
+
             observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]
             top_down_map = draw_top_down_map(

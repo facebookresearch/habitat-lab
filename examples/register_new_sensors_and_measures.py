@@ -15,7 +15,7 @@ import habitat
 # Define the measure and register it with habitat
 # By default, the things are registered with the class name
 @habitat.registry.register_measure
-class EpisodeInfo(habitat.Measure):
+class EpisodeInfoExample(habitat.Measure):
     def __init__(self, sim, config, **kwargs: Any):
         # This measure only needs the config
         self._config = config
@@ -27,14 +27,14 @@ class EpisodeInfo(habitat.Measure):
         return "episode_info"
 
     # This is called whenver the environment is reset
-    def reset_metric(self, episode):
+    def reset_metric(self, *args: Any, episode, **kwargs: Any):
         # Our measure always contains all the attributes of the episode
         self._metric = vars(episode).copy()
         # But only on reset, it has an additional field of my_value
         self._metric["my_value"] = self._config.VALUE
 
     # This is called whenver an action is taken in the environment
-    def update_metric(self, episode, action):
+    def update_metric(self, *args: Any, episode, action, **kwargs: Any):
         # Now the measure will just have all the attributes of the episode
         self._metric = vars(episode).copy()
 
@@ -68,7 +68,9 @@ class AgentPositionSensor(habitat.Sensor):
         )
 
     # This is called whenver reset is called or an action is taken
-    def get_observation(self, observations, episode):
+    def get_observation(
+        self, observations, *args: Any, episode, **kwargs: Any
+    ):
         return self._sim.get_agent_state().position
 
 
@@ -78,13 +80,13 @@ def main():
     config.defrost()
 
     # Add things to the config to for the measure
-    config.TASK.EPISODE_INFO = habitat.Config()
+    config.TASK.EPISODE_INFO_EXAMPLE = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
-    config.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-    config.TASK.EPISODE_INFO.VALUE = 5
+    config.TASK.EPISODE_INFO_EXAMPLE.TYPE = "EpisodeInfoExample"
+    config.TASK.EPISODE_INFO_EXAMPLE.VALUE = 5
     # Add the measure to the list of measures in use
-    config.TASK.MEASUREMENTS.append("EPISODE_INFO")
+    config.TASK.MEASUREMENTS.append("EPISODE_INFO_EXAMPLE")
 
     # Now define the config for the sensor
     config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
@@ -98,7 +100,7 @@ def main():
     env = habitat.Env(config=config)
     print(env.reset()["agent_position"])
     print(env.get_metrics()["episode_info"])
-    print(env.step(habitat.SimulatorActions.MOVE_FORWARD)["agent_position"])
+    print(env.step("MOVE_FORWARD")["agent_position"])
     print(env.get_metrics()["episode_info"])
 
 

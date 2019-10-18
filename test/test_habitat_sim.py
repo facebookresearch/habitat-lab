@@ -10,9 +10,9 @@ import os
 import numpy as np
 import pytest
 
-from habitat import SimulatorActions
 from habitat.config.default import get_config
 from habitat.sims import make_sim
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def init_sim():
@@ -33,8 +33,9 @@ def test_sim_trajectory():
         rotation=test_trajectory["rotations"][0],
     )
 
-    for i, action in enumerate(test_trajectory["actions"]):
-        action = SimulatorActions[action]
+    # remove last stop action as Sim has no stop action anymore
+    for i, action in enumerate(test_trajectory["actions"][:-1]):
+        action = HabitatSimActions[action]
         if i > 0:  # ignore first step as habitat-sim doesn't update
             # agent until then
             state = sim.get_agent_state()
@@ -68,8 +69,6 @@ def test_sim_trajectory():
         assert sim.action_space.contains(action)
 
         sim.step(action)
-        if i == len(test_trajectory["actions"]) - 1:  # STOP action
-            assert sim.is_episode_active is False
 
     sim.close()
 
