@@ -14,7 +14,6 @@ from habitat.datasets.pointnav import _try_register_pointnavdatasetv1
 def make_dataset(id_dataset, **kwargs):
     logger.info("Initializing dataset {}".format(id_dataset))
     _dataset = registry.get_dataset(id_dataset)
-    print(registry.mapping['dataset'])
     assert _dataset is not None, "Could not find dataset {}".format(id_dataset)
 
     return _dataset(**kwargs)
