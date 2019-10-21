@@ -8,7 +8,7 @@ from typing import Dict, Optional
 
 import attr
 import numpy as np
-from gym import spaces
+from gym import Space, spaces
 
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -18,7 +18,7 @@ from habitat.core.simulator import (
     SensorTypes,
 )
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationTask, NavigationGoal
+from habitat.tasks.nav.nav import NavigationGoal, NavigationEpisode, NavigationTask
 from typing import Any, List, Optional, Type
 
 
@@ -54,46 +54,47 @@ class VLNEpisode(NavigationEpisode):
 class InstructionSensor(Sensor):
     def __init__(self, **kwargs):
         self.uuid = "instruction"
+        # when InstructionData exists:
+        #   SensorTypes.TOKEN_IDS
         self.sensor_type = SensorTypes.TEXT
-        # TODO (maksymets) extend gym observation space for text and metadata
         self.observation_space = spaces.Discrete(0)
+        self.previous_instruction = {
+            "episode_id": -1,
+            "instruction": ""
+        }
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "instruction"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        return self.sensor_type
 
     def _get_observation(
         self,
         observations: Dict[str, Observations],
-        episode: NavigationEpisode,
+        episode: VLNEpisode,
         **kwargs
     ):
-        return episode.goals[0].instructions
+        # when InstructionData exists: intruction.instruction_tokens
+        if self.previous_instruction["episode_id"] == episode.episode_id:
+            return self.previous_instruction["instruction"]
+
+        self.previous_instruction = {
+            "episode_id": episode.episode_id,
+            "instruction": np.random.choice(episode.instructions)
+        }
+        return self.previous_instruction["instruction"]
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
+    
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        pass
+        # when InstructionData exists:
+        # return ListSpace(
+        #     spaces.Discrete(self._dataset.instruction_vocab.get_size())
+        # )
 
-# # TODO (maksymets) Move reward to measurement class
-# class RewardSensor(Sensor):
-#     REWARD_MIN = -100
-#     REWARD_MAX = -100
-
-#     def __init__(self, **kwargs):
-#         self.uuid = "reward"
-#         self.sensor_type = SensorTypes.TENSOR
-#         self.observation_space = spaces.Box(
-#             low=RewardSensor.REWARD_MIN,
-#             high=RewardSensor.REWARD_MAX,
-#             shape=(1,),
-#             dtype=np.float,
-#         )
-
-#     def _get_observation(
-#         self,
-#         observations: Dict[str, Observations],
-#         episode: NavigationEpisode,
-#         **kwargs
-#     ):
-#         return [0]
-
-#     def get_observation(self, **kwargs):
-#         return self._get_observation(**kwargs)
 
 @registry.register_task(name="VLN-v0")
 class VLNTask(NavigationTask):

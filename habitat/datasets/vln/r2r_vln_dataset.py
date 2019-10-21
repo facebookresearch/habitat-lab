@@ -13,7 +13,7 @@ from habitat.config import Config
 from habitat.tasks.vln.vln_task import VLNGoal, VLNEpisode
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav_task import (
+from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
     ShortestPathPoint,
@@ -26,7 +26,8 @@ DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
 
 @registry.register_dataset(name="R2RVLN-v1")
 class VLNDatasetV1(Dataset):
-    r"""Class inherited from Dataset that loads Room dataset.
+    r"""Class inherited from Dataset that loads the MatterPort3D
+    Room-to-Room (R2R) dataset for Vision and Language Navigation.
     """
 
     episodes: List[NavigationEpisode]

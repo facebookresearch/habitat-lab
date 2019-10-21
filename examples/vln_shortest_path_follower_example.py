@@ -6,15 +6,16 @@
 
 import os
 import shutil
-
+import json
+import copy
 import cv2
 import numpy as np
-
+import argparse
 import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
-from habitat.core.simulator import SimulatorActions
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -59,92 +60,78 @@ def draw_top_down_map(info, heading, output_size):
     )
     return top_down_map
 
+def save_map(observations, info, images):
+    im = observations["rgb"]
+    top_down_map = draw_top_down_map(
+        info, observations["heading"], im.shape[0]
+    )
+    output_im = np.concatenate((im, top_down_map), axis=1)
+    shape = output_im.shape
+    color = (255, 0, 0) 
+    org = (5, shape[0] - 10) 
 
-def shortest_path_example(mode):
+    fontScale = 0.5
+    thickness = 1
+    font = cv2.FONT_HERSHEY_COMPLEX_SMALL
+
+    y0, dy = shape[0] - 80, 20
+    for i, line in enumerate(observations["instruction"].split('.')):
+        y = y0 + i*dy
+        cv2.putText(output_im, line, (5, y), font, fontScale, color, thickness, cv2.LINE_AA)
+
+    images.append(output_im)
+
+
+def shortest_path_example(mode, all_episodes=False):
+    """
+    Saves a video of a shortest path follower agent navigating from a start
+    position to a goal. Agent navigates to intermediate viewpoints on the way.
+    Args:
+        mode: 'geodesic_path' or 'greedy'
+        all_episodes: if True, runs for every episode. otherwise, 5. 
+    """
     config = habitat.get_config(config_paths="configs/tasks/vln_r2r_mp3d.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
     env = SimpleRLEnv(config=config)
-    goal_radius = env.episodes[0].goals[0].radius
-    # goal_radius = None
 
-    if goal_radius is None:
-        goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
-    follower = ShortestPathFollower(env.habitat_env.sim, goal_radius, False)
+    follower = ShortestPathFollower(env.habitat_env.sim, goal_radius=0.5, return_one_hot=False)
     follower.mode = mode
-
     print("Environment creation successful")
-    for episode in range(1):
-        env.reset()
-        dirname = os.path.join(
-            IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
-        )
-        if os.path.exists(dirname):
-            shutil.rmtree(dirname)
+
+    dirname = os.path.join(IMAGE_DIR, "vln_path_follow")
+    if os.path.exists(dirname):
+        shutil.rmtree(dirname)
         os.makedirs(dirname)
-        print("Agent stepping around inside environment.")
+
+    episodes_range = len(env.episodes) if all_episodes else 1
+    for episode in range(episodes_range):
+        env.reset()
+        episode_id = env.habitat_env.current_episode.episode_id
+        print(f"Agent stepping around inside environment. Episode id: {episode_id}")
+
         images = []
-
-        goal_pos = env.habitat_env.current_episode.goals[0].position
-        if not env.habitat_env.sim.is_navigable(goal_pos):
-            print('Goal is not navigable.')
-
-        while not env.habitat_env.episode_over:
-            x = 0
-            
-            for path in env.habitat_env.current_episode.path:
-                # done = False
-                print("Path : " + str(0))
-
-                # if not env.habitat_env.sim.is_navigable(path):
-                #     print("Path not reachable : " + str(path))
-                #     continue
-                i = 0
-                while True:
-                    best_action = follower.get_next_action(
-                        path
-                    )
-                    if best_action == SimulatorActions.STOP or i > 20:
-                        print("Reached The end")
-                        break
-                    observations, reward, done, info = env.step(best_action)
-                    # print(observations, reward, done, info)
-                    im = observations["rgb"]
-                    top_down_map = draw_top_down_map(
-                        info, observations["heading"], im.shape[0]
-                    )
-                    output_im = np.concatenate((im, top_down_map), axis=1)
-                    # cv2.imwrite("examples/images/i.jpg", output_im)
-                    images.append(output_im)
-                    print("Iteration : " + str(i))
-                    i += 1
-                
-                images_to_video(images, dirname, "trajectory_" + str(x))
-                x += 1
+        error = False
+        steps = 0
+        path = env.habitat_env.current_episode.path + [
+            env.habitat_env.current_episode.goals[0].position
+        ]
+        for point in path:
             done = False
             while not done:
-                best_action = follower.get_next_action(
-                        env.habitat_env.current_episode.goals[0].position
-                    )
+                best_action = follower.get_next_action(point)
+                if best_action == None:
+                    break
                 observations, reward, done, info = env.step(best_action)
-                im = observations["rgb"]
-                top_down_map = draw_top_down_map(
-                    info, observations["heading"], im.shape[0]
-                )
-                output_im = np.concatenate((im, top_down_map), axis=1)
-                cv2.imwrite("examples/images/i.jpg", output_im)
-                images.append(output_im)
-                print("Iteration : " + str(i))
-                i += 1
-        images_to_video(images, dirname, "trajectory_final")
+                save_map(observations, info, images)
+                steps += 1
 
-
-def main():
-    shortest_path_example("geodesic_path")
-    shortest_path_example("greedy")
+        print(f'Navigated to goal in {steps} steps.')
+        images_to_video(images, dirname, str(episode_id))
+        images = []
 
 
 if __name__ == "__main__":
-    main()
+    shortest_path_example("geodesic_path")
