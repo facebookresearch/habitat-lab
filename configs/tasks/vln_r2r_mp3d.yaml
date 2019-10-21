@@ -37,5 +37,5 @@ TASK:
 DATASET:
   TYPE: R2RVLN-v1
   SPLIT: train
-  DATA_PATH: data/datasets/R2R-navigable/hb_R2R_{split}.json
+  DATA_PATH: data/datasets/R2R/hb_R2R_{split}_single.json
   SCENES_DIR: data/scene_datasets/mp3d/

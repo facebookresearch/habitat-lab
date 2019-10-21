@@ -7,8 +7,8 @@
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.datasets.eqa import _try_register_mp3d_eqa_dataset
-from habitat.datasets.vln import _try_register_mp3d_vln_dataset
 from habitat.datasets.pointnav import _try_register_pointnavdatasetv1
+from habitat.datasets.vln import _try_register_r2r_vln_dataset
 
 
 def make_dataset(id_dataset, **kwargs):
@@ -21,4 +21,4 @@ def make_dataset(id_dataset, **kwargs):
 
 _try_register_mp3d_eqa_dataset()
 _try_register_pointnavdatasetv1()
-_try_register_mp3d_vln_dataset()
+_try_register_r2r_vln_dataset()

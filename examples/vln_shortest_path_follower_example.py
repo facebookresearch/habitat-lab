@@ -132,6 +132,50 @@ def shortest_path_example(mode, all_episodes=False):
         images_to_video(images, dirname, str(episode_id))
         images = []
 
+def load_r2r_from_folder(dataset_dir):
+    input_file = open (dataset_dir)
+    json_array = json.load(input_file)
+    return json_array
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=
+        '''
+        Run a particular episode from the R2R Dataset
+        Example invocation:
+          python r2r_runner.py -e episode_id -m mode
+        The -e argument is required and specifies the path_id.
+        The --m argument is required to point to the r2r dataset train, test, val_seen, val_unseen
+
+        ''',
+        formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-e', '--episode_id', required=False, help='episode_id to load', default=None)
+    parser.add_argument('-m', '--mode', required=False, help='Data mode', default=None)
+    args = parser.parse_args()
+ 
+
+    if args.mode != None and args.episode_id != None:
+        episode_id = args.episode_id
+        mode = args.mode
+        path = "data/datasets/R2R/hb_R2R_"
+        single = "_single"
+        json_name = ".json"
+        json_array = load_r2r_from_folder(path + mode + json_name)
+
+        if episode_id == "all":
+            print("Episode Id : All")
+            with open(path + "train" + single + json_name, 'w') as outfile:
+                json.dump(json_array, outfile, indent=4)
+        else:
+
+            jsonObject = {}
+            print("Episode Id : " + str(episode_id))
+            jarray = []
+            for jsonData in json_array["episodes"]:
+                if int(jsonData["episode_id"]) == int(episode_id):
+                    jarray.append(jsonData)
+                    jsonObject["episodes"] = jarray
+                    break
+            with open(path + "train" + single + json_name, 'w') as outfile:
+                json.dump(jsonObject, outfile, indent=4)
+
     shortest_path_example("geodesic_path")
