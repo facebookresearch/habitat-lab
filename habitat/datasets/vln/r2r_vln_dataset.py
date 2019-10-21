@@ -10,7 +10,7 @@ import os
 import math
 from typing import List, Optional
 from habitat.config import Config
-from habitat.tasks.vln.vln import VLNGoal, VLNEpisode
+from habitat.tasks.vln.vln import VLNEpisode
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import (
@@ -20,13 +20,12 @@ from habitat.tasks.nav.nav import (
 )
 from scipy.spatial.transform import Rotation as R
 
-ALL_SCENES_MASK = "*"
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
 
-R2R_TRAIN_EPISODES = 3609 * 3
-R2R_VAL_SEEN_EPISODES = 260 * 3
-R2R_VAL_UNSEEN_EPISODES = 613 * 3
+R2R_TRAIN_EPISODES = 10837
+R2R_VAL_SEEN_EPISODES = 781
+R2R_VAL_UNSEEN_EPISODES = 1839
 
 @registry.register_dataset(name="R2RVLN-v1")
 class VLNDatasetV1(Dataset):
@@ -58,26 +57,24 @@ class VLNDatasetV1(Dataset):
     def from_json(
         self, deserialized: [str], scenes_dir: Optional[str] = None
     ) -> None:
-    
+
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
-            
         for episode in deserialized["episodes"]:
-            goals = episode["goals"][0]
-            instructions = episode["instructions"]
-            del episode["goals"]
-            del episode['instructions']
-            vln_episode = VLNEpisode(**episode)
-            if scenes_dir is not None:
-                    if vln_episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
-                        vln_episode.scene_id = vln_episode.scene_id[
-                            len(DEFAULT_SCENE_PATH_PREFIX) :
-                        ]
-                    vln_episode.scene_id = os.path.join(scenes_dir, vln_episode.scene_id, vln_episode.scene_id + ".glb")
+            episode = VLNEpisode(**episode)
 
-            for i, instruction in enumerate(instructions):                
-                goals["instruction"] = instruction
-                vln_goal = VLNGoal(**goals)
-                vln_episode.goals = [vln_goal]
-                vln_episode.episode_id = str(vln_episode.episode_id) + "_" + str(i)
-                self.episodes.append(vln_episode)
+            if scenes_dir is not None:
+                if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
+                    episode.scene_id = episode.scene_id[
+                        len(DEFAULT_SCENE_PATH_PREFIX) :
+                    ]
+
+                episode.scene_id = os.path.join(scenes_dir, episode.scene_id, episode.scene_id + ".glb")
+
+            for g_index, goal in enumerate(episode.goals):
+                episode.goals[g_index] = NavigationGoal(**goal)
+            if episode.shortest_paths is not None:
+                for path in episode.shortest_paths:
+                    for p_index, point in enumerate(path):
+                        path[p_index] = ShortestPathPoint(**point)
+            self.episodes.append(episode)

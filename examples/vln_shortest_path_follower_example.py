@@ -60,6 +60,7 @@ def draw_top_down_map(info, heading, output_size):
     )
     return top_down_map
 
+
 def save_map(observations, info, images):
     im = observations["rgb"]
     top_down_map = draw_top_down_map(
@@ -75,7 +76,7 @@ def save_map(observations, info, images):
     font = cv2.FONT_HERSHEY_COMPLEX_SMALL
 
     y0, dy = shape[0] - 80, 20
-    for i, line in enumerate(observations["instruction"].split('.')):
+    for i, line in enumerate(observations["instruction"]["text"].split('.')):
         y = y0 + i*dy
         cv2.putText(output_im, line, (5, y), font, fontScale, color, thickness, cv2.LINE_AA)
 
@@ -132,10 +133,12 @@ def shortest_path_example(mode, all_episodes=False):
         images_to_video(images, dirname, str(episode_id))
         images = []
 
+
 def load_r2r_from_folder(dataset_dir):
-    input_file = open (dataset_dir)
-    json_array = json.load(input_file)
+    with open(dataset_dir) as f:
+        json_array = json.load(f)
     return json_array
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=
@@ -152,7 +155,6 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--mode', required=False, help='Data mode', default=None)
     args = parser.parse_args()
  
-
     if args.mode != None and args.episode_id != None:
         episode_id = args.episode_id
         mode = args.mode
@@ -166,7 +168,6 @@ if __name__ == "__main__":
             with open(path + "train" + single + json_name, 'w') as outfile:
                 json.dump(json_array, outfile, indent=4)
         else:
-
             jsonObject = {}
             print("Episode Id : " + str(episode_id))
             jarray = []
