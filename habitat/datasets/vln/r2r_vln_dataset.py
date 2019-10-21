@@ -24,6 +24,10 @@ ALL_SCENES_MASK = "*"
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
 
+R2R_TRAIN_EPISODES = 3609 * 3
+R2R_VAL_SEEN_EPISODES = 260 * 3
+R2R_VAL_UNSEEN_EPISODES = 613 * 3
+
 @registry.register_dataset(name="R2RVLN-v1")
 class VLNDatasetV1(Dataset):
     r"""Class inherited from Dataset that loads the MatterPort3D
@@ -57,7 +61,7 @@ class VLNDatasetV1(Dataset):
     
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
-        # print(deserialized)
+            
         for episode in deserialized["episodes"]:
             goals = episode["goals"][0]
             instructions = episode["instructions"]

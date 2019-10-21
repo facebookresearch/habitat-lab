@@ -90,7 +90,7 @@ def shortest_path_example(mode, all_episodes=False):
         mode: 'geodesic_path' or 'greedy'
         all_episodes: if True, runs for every episode. otherwise, 5. 
     """
-    config = habitat.get_config(config_paths="configs/tasks/vln_r2r_mp3d.yaml")
+    config = habitat.get_config(config_paths="configs/tasks/vln_r2r.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
