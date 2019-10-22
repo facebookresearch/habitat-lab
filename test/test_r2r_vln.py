@@ -25,6 +25,7 @@ CFG_TEST = "configs/test/habitat_r2r_vln_test.yaml"
 
 EPISODES_LIMIT = 1
 
+
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
@@ -75,7 +76,9 @@ def test_r2r_vln_sim():
     env = SimpleRLEnv(config=vln_config, dataset=dataset)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
-    follower = ShortestPathFollower(env.habitat_env.sim, goal_radius=0.5, return_one_hot=False)
+    follower = ShortestPathFollower(
+        env.habitat_env.sim, goal_radius=0.5, return_one_hot=False
+    )
 
     assert env
 
@@ -93,8 +96,13 @@ def test_r2r_vln_sim():
                     break
                 obs, reward, done, info = env.step(best_action)
                 assert "rgb" in obs, "RGB image is missing in observation."
-                assert "instruction" in obs, "Instruction is missing in observation."
-                assert obs["instruction"]["text"] == env.habitat_env.current_episode.instruction.instruction_text, "Instruction from sensor does not match the intruction from the episode"
+                assert (
+                    "instruction" in obs
+                ), "Instruction is missing in observation."
+                assert (
+                    obs["instruction"]["text"]
+                    == env.habitat_env.current_episode.instruction.instruction_text
+                ), "Instruction from sensor does not match the intruction from the episode"
 
                 assert obs["rgb"].shape[:2] == (
                     vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,

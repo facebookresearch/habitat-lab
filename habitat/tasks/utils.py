@@ -65,6 +65,7 @@ def cartesian_to_polar(x, y):
     phi = np.arctan2(y, x)
     return rho, phi
 
+
 def quat_from_two_vectors(v0: np.ndarray, v1: np.ndarray) -> np.quaternion:
     r"""Creates a quaternion that rotates the frist vector onto the second vector
 

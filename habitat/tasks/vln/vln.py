@@ -8,16 +8,12 @@ import attr
 from gym import spaces
 
 from habitat.core.registry import registry
-from habitat.core.simulator import (
-    Observations,
-    Sensor,
-    SensorSuite
-)
+from habitat.core.simulator import Observations, Sensor, SensorSuite
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import (
-	NavigationEpisode,
-	NavigationTask,
-	NavigationGoal
+    NavigationEpisode,
+    NavigationTask,
+    NavigationGoal,
 )
 from typing import Dict, Optional, Any, List
 
@@ -49,10 +45,10 @@ class VLNEpisode(NavigationEpisode):
     instruction: InstructionData = attr.ib(
         default=None, validator=not_none_validator
     )
-    trajectory_id: int = attr.ib(
+    trajectory_id: int = attr.ib(default=None, validator=not_none_validator)
+    goals: List[NavigationGoal] = attr.ib(
         default=None, validator=not_none_validator
     )
-    goals: List[NavigationGoal] = None
 
 
 @registry.register_sensor(name="InstructionSensor")
@@ -60,7 +56,7 @@ class InstructionSensor(Sensor):
     def __init__(self, **kwargs):
         self.uuid = "instruction"
         self.observation_space = spaces.Discrete(0)
-    
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.uuid
 
@@ -73,7 +69,7 @@ class InstructionSensor(Sensor):
         return {
             "text": episode.instruction.instruction_text,
             "tokens": episode.instruction.instruction_tokens,
-            "trajectory_id": episode.trajectory_id
+            "trajectory_id": episode.trajectory_id,
         }
 
     def get_observation(self, **kwargs):
@@ -86,6 +82,4 @@ class VLNTask(NavigationTask):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._sensor_suite = SensorSuite(
-            [InstructionSensor()]
-        )
+        self._sensor_suite = SensorSuite([InstructionSensor()])

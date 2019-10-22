@@ -9,7 +9,6 @@ from collections import defaultdict
 import sys
 
 import habitat
-from habitat import SimulatorActions
 from habitat.config.default import get_config
 from habitat.core.benchmark import Benchmark
 from habitat_baselines.agents.simple_agents import RandomAgent, ForwardOnlyAgent, RandomForwardAgent, GoalFollower
@@ -65,7 +64,7 @@ def shortest_path_benchmark(env, mode):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--task-config", type=str, default="configs/tasks/vln_r2r_mp3d.yaml"
+        "--task-config", type=str, default="configs/tasks/vln_r2r.yaml"
     )
     parser.add_argument(
         "--sp-mode", type=str, default="geodesic_path"

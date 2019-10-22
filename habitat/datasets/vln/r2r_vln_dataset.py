@@ -22,6 +22,7 @@ R2R_TRAIN_EPISODES = 10837
 R2R_VAL_SEEN_EPISODES = 781
 R2R_VAL_UNSEEN_EPISODES = 1839
 
+
 @registry.register_dataset(name="R2RVLN-v1")
 class VLNDatasetV1(Dataset):
     r"""Class inherited from Dataset that loads the MatterPort3D
@@ -37,29 +38,31 @@ class VLNDatasetV1(Dataset):
             config.DATA_PATH.format(split=config.SPLIT)
         ) and os.path.exists(config.SCENES_DIR)
 
-
     def __init__(self, config: Optional[Config] = None) -> None:
         self.episodes = []
 
         if config is None:
             return
-        
+
         datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
-        with open(datasetfile_path) as json_file:
-            json_str = json.load(json_file)
-        self.from_json(json_str, scenes_dir=config.SCENES_DIR)
+        with open(datasetfile_path) as f:
+            self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
     def from_json(
-        self, deserialized: [str], scenes_dir: Optional[str] = None
+        self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
-        
-        #Done for serialization test
-        if isinstance(deserialized, str):
-            deserialized = json.loads(deserialized)
-            self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"]["word_list"])
-        else:
-            self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"])
 
+        deserialized = json.loads(json_str)
+
+        # Done for the serialization test
+        if "word_list" in deserialized["instruction_vocab"]:
+            self.instruction_vocab = VocabDict(
+                word_list=deserialized["instruction_vocab"]["word_list"]
+            )
+        else:
+            self.instruction_vocab = VocabDict(
+                word_list=deserialized["instruction_vocab"]
+            )
 
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
@@ -72,7 +75,9 @@ class VLNDatasetV1(Dataset):
                         len(DEFAULT_SCENE_PATH_PREFIX) :
                     ]
 
-                episode.scene_id = os.path.join(scenes_dir, episode.scene_id, episode.scene_id + ".glb")
+                episode.scene_id = os.path.join(
+                    scenes_dir, episode.scene_id, episode.scene_id + ".glb"
+                )
 
             episode.instruction = InstructionData(**episode.instruction)
             for g_index, goal in enumerate(episode.goals):
