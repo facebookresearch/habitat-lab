@@ -7,7 +7,6 @@
 import os
 import shutil
 import json
-import copy
 import cv2
 import numpy as np
 import argparse
@@ -15,7 +14,6 @@ import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):

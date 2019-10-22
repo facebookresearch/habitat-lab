@@ -5,14 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import attr
-from gym import Space, spaces
+from gym import spaces
 
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     Observations,
     Sensor,
-    SensorSuite,
-    SensorTypes,
+    SensorSuite
 )
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import (
@@ -20,7 +19,13 @@ from habitat.tasks.nav.nav import (
 	NavigationTask,
 	NavigationGoal
 )
-from typing import Dict, Optional, Any, List, Optional, Type
+from typing import Dict, Optional, Any, List
+
+
+@attr.s(auto_attribs=True)
+class InstructionData:
+    instruction_text: str
+    instruction_tokens: Optional[List[str]] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -41,7 +46,7 @@ class VLNEpisode(NavigationEpisode):
     path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )
-    instruction: str = attr.ib(
+    instruction: InstructionData = attr.ib(
         default=None, validator=not_none_validator
     )
     trajectory_id: int = attr.ib(
@@ -54,16 +59,10 @@ class VLNEpisode(NavigationEpisode):
 class InstructionSensor(Sensor):
     def __init__(self, **kwargs):
         self.uuid = "instruction"
-        # when InstructionData exists:
-        #   SensorTypes.TOKEN_IDS
-        self.sensor_type = SensorTypes.TEXT
         self.observation_space = spaces.Discrete(0)
     
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.uuid
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
-        return self.sensor_type
 
     def _get_observation(
         self,
@@ -72,19 +71,13 @@ class InstructionSensor(Sensor):
         **kwargs
     ):
         return {
-            "text": episode.instruction,
+            "text": episode.instruction.instruction_text,
+            "tokens": episode.instruction.instruction_tokens,
             "trajectory_id": episode.trajectory_id
         }
 
     def get_observation(self, **kwargs):
         return self._get_observation(**kwargs)
-    
-    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
-        pass
-        # when InstructionData exists:
-        # return ListSpace(
-        #     spaces.Discrete(self._dataset.instruction_vocab.get_size())
-        # )
 
 
 @registry.register_task(name="VLN-v0")

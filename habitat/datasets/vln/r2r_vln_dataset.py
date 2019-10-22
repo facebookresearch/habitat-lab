@@ -4,21 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import gzip
 import json
 import os
-import math
 from typing import List, Optional
 from habitat.config import Config
-from habitat.tasks.vln.vln import VLNEpisode
+from habitat.tasks.vln.vln import VLNEpisode, InstructionData
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav import (
-    NavigationEpisode,
-    NavigationGoal,
-    ShortestPathPoint,
-)
-from scipy.spatial.transform import Rotation as R
+from habitat.datasets.utils import VocabDict
+from habitat.tasks.nav.nav import NavigationGoal, ShortestPathPoint
 
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
@@ -34,6 +28,7 @@ class VLNDatasetV1(Dataset):
     """
 
     episodes: List[VLNEpisode]
+    instruction_vocab: VocabDict
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
@@ -53,10 +48,10 @@ class VLNDatasetV1(Dataset):
             json_str = json.load(json_file)
         self.from_json(json_str, scenes_dir=config.SCENES_DIR)
 
-    # TODO Add tokenized instructions
     def from_json(
         self, deserialized: [str], scenes_dir: Optional[str] = None
     ) -> None:
+        self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"])
 
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
@@ -71,6 +66,7 @@ class VLNDatasetV1(Dataset):
 
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id, episode.scene_id + ".glb")
 
+            episode.instruction = InstructionData(**episode.instruction)
             for g_index, goal in enumerate(episode.goals):
                 episode.goals[g_index] = NavigationGoal(**goal)
             if episode.shortest_paths is not None:
