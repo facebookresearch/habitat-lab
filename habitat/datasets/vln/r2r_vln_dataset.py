@@ -13,6 +13,7 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.datasets.utils import VocabDict
 from habitat.tasks.nav.nav import NavigationGoal, ShortestPathPoint
+from habitat.core.logging import logger
 
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
@@ -51,7 +52,14 @@ class VLNDatasetV1(Dataset):
     def from_json(
         self, deserialized: [str], scenes_dir: Optional[str] = None
     ) -> None:
-        self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"])
+        
+        #Done for serialization test
+        if isinstance(deserialized, str):
+            deserialized = json.loads(deserialized)
+            self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"]["word_list"])
+        else:
+            self.instruction_vocab = VocabDict(word_list=deserialized["instruction_vocab"])
+
 
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
@@ -69,8 +77,4 @@ class VLNDatasetV1(Dataset):
             episode.instruction = InstructionData(**episode.instruction)
             for g_index, goal in enumerate(episode.goals):
                 episode.goals[g_index] = NavigationGoal(**goal)
-            if episode.shortest_paths is not None:
-                for path in episode.shortest_paths:
-                    for p_index, point in enumerate(path):
-                        path[p_index] = ShortestPathPoint(**point)
             self.episodes.append(episode)

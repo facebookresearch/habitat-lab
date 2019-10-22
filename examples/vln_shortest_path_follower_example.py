@@ -106,13 +106,12 @@ def shortest_path_example(mode, all_episodes=False):
         os.makedirs(dirname)
 
     episodes_range = len(env.episodes) if all_episodes else 1
-    for episode in range(episodes_range):
+    for i in range(episodes_range):
         env.reset()
         episode_id = env.habitat_env.current_episode.episode_id
         print(f"Agent stepping around inside environment. Episode id: {episode_id}")
 
         images = []
-        error = False
         steps = 0
         path = env.habitat_env.current_episode.path + [
             env.habitat_env.current_episode.goals[0].position
@@ -173,6 +172,7 @@ if __name__ == "__main__":
                 if int(jsonData["episode_id"]) == int(episode_id):
                     jarray.append(jsonData)
                     jsonObject["episodes"] = jarray
+                    jsonObject["instruction_vocab"] = json_array["instruction_vocab"]
                     break
             with open(path + "train" + single + json_name, 'w') as outfile:
                 json.dump(jsonObject, outfile, indent=4)
