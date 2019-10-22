@@ -392,7 +392,7 @@ class PPOTrainer(BaseRLTrainer):
 
         logger.info(f"env config: {config}")
         self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
+            config, get_env_class(config.ENV_NAME)
         )
         self._setup_actor_critic_agent(ppo_cfg)
 
@@ -519,24 +519,24 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(observations[i], infos[i])
                     rgb_frames[i].append(frame)
 
-        (
-            self.envs,
-            test_recurrent_hidden_states,
-            not_done_masks,
-            current_episode_reward,
-            prev_actions,
-            batch,
-            rgb_frames,
-        ) = self._pause_envs(
-            envs_to_pause,
-            self.envs,
-            test_recurrent_hidden_states,
-            not_done_masks,
-            current_episode_reward,
-            prev_actions,
-            batch,
-            rgb_frames,
-        )
+            (
+                self.envs,
+                test_recurrent_hidden_states,
+                not_done_masks,
+                current_episode_reward,
+                prev_actions,
+                batch,
+                rgb_frames,
+            ) = self._pause_envs(
+                envs_to_pause,
+                self.envs,
+                test_recurrent_hidden_states,
+                not_done_masks,
+                current_episode_reward,
+                prev_actions,
+                batch,
+                rgb_frames,
+            )
 
         aggregated_stats = dict()
         for stat_key in next(iter(stats_episodes.values())).keys():
