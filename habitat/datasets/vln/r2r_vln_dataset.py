@@ -7,13 +7,14 @@
 import json
 import os
 from typing import List, Optional
+
 from habitat.config import Config
-from habitat.tasks.vln.vln import VLNEpisode, InstructionData
 from habitat.core.dataset import Dataset
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.datasets.utils import VocabDict
 from habitat.tasks.nav.nav import NavigationGoal, ShortestPathPoint
-from habitat.core.logging import logger
+from habitat.tasks.vln.vln import InstructionData, VLNEpisode
 
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"

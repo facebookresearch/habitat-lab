@@ -4,18 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, Dict, List, Optional
+
 import attr
 from gym import spaces
 
 from habitat.core.registry import registry
-from habitat.core.simulator import Observations, Sensor, SensorSuite
+from habitat.core.simulator import Observations, Sensor
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import (
     NavigationEpisode,
-    NavigationTask,
     NavigationGoal,
+    NavigationTask,
 )
-from typing import Dict, Optional, Any, List
 
 
 @attr.s(auto_attribs=True)
@@ -78,8 +79,5 @@ class InstructionSensor(Sensor):
 
 @registry.register_task(name="VLN-v0")
 class VLNTask(NavigationTask):
-    _sensor_suite: SensorSuite
-
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._sensor_suite = SensorSuite([InstructionSensor()])

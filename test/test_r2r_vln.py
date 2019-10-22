@@ -11,15 +11,15 @@ import pytest
 
 import habitat
 import habitat.datasets.vln.r2r_vln_dataset as r2r_vln_dataset
+from examples.vln_shortest_path_follower_example import SimpleRLEnv
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
-from habitat.tasks.vln.vln import VLNEpisode, VLNTask
 from habitat.tasks.nav.nav import MoveForwardAction
-from habitat.utils.test_utils import sample_non_stop_action
-from examples.vln_shortest_path_follower_example import SimpleRLEnv
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+from habitat.tasks.vln.vln import VLNEpisode, VLNTask
+from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_r2r_vln_test.yaml"
 

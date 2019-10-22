@@ -4,12 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import argparse
+import json
 import os
 import shutil
-import json
+
 import cv2
 import numpy as np
-import argparse
+
 import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
@@ -66,17 +68,26 @@ def save_map(observations, info, images):
     )
     output_im = np.concatenate((im, top_down_map), axis=1)
     shape = output_im.shape
-    color = (255, 0, 0) 
-    org = (5, shape[0] - 10) 
+    color = (255, 0, 0)
+    org = (5, shape[0] - 10)
 
     fontScale = 0.5
     thickness = 1
     font = cv2.FONT_HERSHEY_COMPLEX_SMALL
 
     y0, dy = shape[0] - 80, 20
-    for i, line in enumerate(observations["instruction"]["text"].split('.')):
-        y = y0 + i*dy
-        cv2.putText(output_im, line, (5, y), font, fontScale, color, thickness, cv2.LINE_AA)
+    for i, line in enumerate(observations["instruction"]["text"].split(".")):
+        y = y0 + i * dy
+        cv2.putText(
+            output_im,
+            line,
+            (5, y),
+            font,
+            fontScale,
+            color,
+            thickness,
+            cv2.LINE_AA,
+        )
 
     images.append(output_im)
 
@@ -87,16 +98,20 @@ def shortest_path_example(mode, all_episodes=False):
     position to a goal. Agent navigates to intermediate viewpoints on the way.
     Args:
         mode: 'geodesic_path' or 'greedy'
-        all_episodes: if True, runs for every episode. otherwise, 5. 
+        all_episodes: if True, runs for every episode. otherwise, 5.
     """
-    config = habitat.get_config(config_paths="configs/tasks/vln_r2r.yaml")
+    config = habitat.get_config(
+        config_paths="configs/test/habitat_r2r_vln_test.yaml"
+    )
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
     env = SimpleRLEnv(config=config)
 
-    follower = ShortestPathFollower(env.habitat_env.sim, goal_radius=0.5, return_one_hot=False)
+    follower = ShortestPathFollower(
+        env.habitat_env.sim, goal_radius=0.5, return_one_hot=False
+    )
     follower.mode = mode
     print("Environment creation successful")
 
@@ -109,7 +124,9 @@ def shortest_path_example(mode, all_episodes=False):
     for episode in range(episodes_range):
         env.reset()
         episode_id = env.habitat_env.current_episode.episode_id
-        print(f"Agent stepping around inside environment. Episode id: {episode_id}")
+        print(
+            f"Agent stepping around inside environment. Episode id: {episode_id}"
+        )
 
         images = []
         steps = 0
@@ -126,7 +143,7 @@ def shortest_path_example(mode, all_episodes=False):
                 save_map(observations, info, images)
                 steps += 1
 
-        print(f'Navigated to goal in {steps} steps.')
+        print(f"Navigated to goal in {steps} steps.")
         images_to_video(images, dirname, str(episode_id))
         images = []
 

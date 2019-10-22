@@ -64,34 +64,3 @@ def cartesian_to_polar(x, y):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(y, x)
     return rho, phi
-
-
-def quat_from_two_vectors(v0: np.ndarray, v1: np.ndarray) -> np.quaternion:
-    r"""Creates a quaternion that rotates the frist vector onto the second vector
-
-    v1 = (q * np.quaternion(0, *v0) * q.inverse()).imag
-
-    Args:
-        v0 (np.array): The starting vector, does not need to be a unit vector
-        v1 (np.array): The end vector, does not need to be a unit vector
-
-    Returns:
-        np.quaternion: The quaternion
-    """
-
-    v0 = v0 / np.linalg.norm(v0)
-    v1 = v1 / np.linalg.norm(v1)
-    c = v0.dot(v1)
-    if c < (-1 + 1e-8):
-        c = max(c, -1)
-        m = np.stack([v0, v1], 0)
-        _, _, vh = np.linalg.svd(m, full_matrices=True)
-        axis = vh[2]
-        w2 = (1 + c) * 0.5
-        w = np.sqrt(w2)
-        axis = axis * np.sqrt(1 - w2)
-        return np.quaternion(w, *axis)
-
-    axis = np.cross(v0, v1)
-    s = np.sqrt((1 + c) * 2)
-    return np.quaternion(s * 0.5, *(axis / s))
