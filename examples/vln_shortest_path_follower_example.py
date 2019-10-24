@@ -11,7 +11,7 @@ import shutil
 
 import cv2
 import numpy as np
-
+import textwrap
 import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
@@ -60,6 +60,29 @@ def draw_top_down_map(info, heading, output_size):
     )
     return top_down_map
 
+def append_text_to_image(orig_img, text):
+    h, w, c = orig_img.shape
+    font_size = 0.5
+    font_thickness = 1
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    blank_image = np.zeros(orig_img.shape, dtype=np.uint8)
+
+    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
+    wrapped_text = textwrap.wrap(text, width= int(w / char_size[0]))
+    
+    y = 0
+    for line in wrapped_text:
+        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
+        y += textsize[1] + 10
+        x = 10
+        cv2.putText(blank_image, line, (x, y), font,
+                    font_size, 
+                    (255,255,255), 
+                    font_thickness, 
+                    lineType = cv2.LINE_AA)
+    text_image = blank_image[0:y+10, 0:w]
+    final = np.concatenate((orig_img, text_image), axis=0)
+    return final
 
 def save_map(observations, info, images):
     im = observations["rgb"]
@@ -67,28 +90,9 @@ def save_map(observations, info, images):
         info, observations["heading"], im.shape[0]
     )
     output_im = np.concatenate((im, top_down_map), axis=1)
-    shape = output_im.shape
-    color = (255, 0, 0)
-    org = (5, shape[0] - 10)
-
-    fontScale = 0.5
-    thickness = 1
-    font = cv2.FONT_HERSHEY_COMPLEX_SMALL
-
-    y0, dy = shape[0] - 80, 20
-    for i, line in enumerate(observations["instruction"]["text"].split(".")):
-        y = y0 + i * dy
-        cv2.putText(
-            output_im,
-            line,
-            (5, y),
-            font,
-            fontScale,
-            color,
-            thickness,
-            cv2.LINE_AA,
-        )
-
+    cv2.imwrite("title.jpg", output_im)
+    observations["instruction"]["text"]
+    output_im = append_text_to_image(output_im, observations["instruction"]["text"])
     images.append(output_im)
 
 
@@ -116,8 +120,7 @@ def shortest_path_example(mode, all_episodes=False):
     print("Environment creation successful")
 
     dirname = os.path.join(IMAGE_DIR, "vln_path_follow")
-    if os.path.exists(dirname):
-        shutil.rmtree(dirname)
+    if not os.path.exists(dirname):
         os.makedirs(dirname)
 
     episodes_range = len(env.episodes) if all_episodes else 1
