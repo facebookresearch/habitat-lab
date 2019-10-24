@@ -8,10 +8,11 @@ import argparse
 import json
 import os
 import shutil
+import textwrap
 
 import cv2
 import numpy as np
-import textwrap
+
 import habitat
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
@@ -60,6 +61,7 @@ def draw_top_down_map(info, heading, output_size):
     )
     return top_down_map
 
+
 def append_text_to_image(orig_img, text):
     h, w, c = orig_img.shape
     font_size = 0.5
@@ -68,21 +70,27 @@ def append_text_to_image(orig_img, text):
     blank_image = np.zeros(orig_img.shape, dtype=np.uint8)
 
     char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
-    wrapped_text = textwrap.wrap(text, width= int(w / char_size[0]))
-    
+    wrapped_text = textwrap.wrap(text, width=int(w / char_size[0]))
+
     y = 0
     for line in wrapped_text:
         textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
         y += textsize[1] + 10
         x = 10
-        cv2.putText(blank_image, line, (x, y), font,
-                    font_size, 
-                    (255,255,255), 
-                    font_thickness, 
-                    lineType = cv2.LINE_AA)
-    text_image = blank_image[0:y+10, 0:w]
+        cv2.putText(
+            blank_image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (255, 255, 255),
+            font_thickness,
+            lineType=cv2.LINE_AA,
+        )
+    text_image = blank_image[0 : y + 10, 0:w]
     final = np.concatenate((orig_img, text_image), axis=0)
     return final
+
 
 def save_map(observations, info, images):
     im = observations["rgb"]
@@ -92,7 +100,9 @@ def save_map(observations, info, images):
     output_im = np.concatenate((im, top_down_map), axis=1)
     cv2.imwrite("title.jpg", output_im)
     observations["instruction"]["text"]
-    output_im = append_text_to_image(output_im, observations["instruction"]["text"])
+    output_im = append_text_to_image(
+        output_im, observations["instruction"]["text"]
+    )
     images.append(output_im)
 
 
