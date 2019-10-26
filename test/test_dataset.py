@@ -350,3 +350,12 @@ def test_iterator_scene_switching_steps():
         "Next episodes should still be grouped by scene (before next "
         "switching)."
     )
+
+
+def test_preserve_order():
+    dataset = _construct_dataset(100)
+    episodes = sorted(dataset.episodes, reverse=True, key=lambda x: x.scene_id)
+    dataset.episodes = episodes[:]
+    episode_iter = dataset.get_episode_iterator(shuffle=False, cycle=False)
+
+    assert list(episode_iter) == episodes

@@ -322,7 +322,7 @@ class EpisodeIterator(Iterator):
             random.shuffle(self.episodes)
 
         if group_by_scene:
-            self.episodes = sorted(self.episodes, key=lambda x: x.scene_id)
+            self.episodes = self._group_scenes(self.episodes)
 
         self.max_scene_repetition_episodes = max_scene_repeat_episodes
         self.max_scene_repetition_steps = max_scene_repeat_steps
@@ -387,14 +387,32 @@ class EpisodeIterator(Iterator):
         r"""Internal method that shuffles the remaining episodes.
             If self.group_by_scene is true, then shuffle groups of scenes.
         """
+        assert self.shuffle
         episodes = list(self._iterator)
 
         random.shuffle(episodes)
 
         if self.group_by_scene:
-            episodes = sorted(episodes, key=lambda x: x.scene_id)
+            episodes = self._group_scenes(episodes)
 
         self._iterator = iter(episodes)
+
+    def _group_scenes(self, episodes):
+        r"""Internal method that groups episodes by scene
+            Groups will be ordered by the order the first episode of a given
+            scene is in the list of episodes
+
+            So if the episodes list shuffled before calling this method,
+            the scenes will be in a random order
+        """
+        assert self.group_by_scene
+
+        scene_sort_keys = {}
+        for e in episodes:
+            if e.scene_id not in scene_sort_keys:
+                scene_sort_keys[e.scene_id] = len(scene_sort_keys)
+
+        return sorted(episodes, key=lambda e: scene_sort_keys[e.scene_id])
 
     def step_taken(self):
         self._step_count += 1
