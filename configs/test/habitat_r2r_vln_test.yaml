@@ -6,8 +6,8 @@ SIMULATOR:
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
   RGB_SENSOR:
-    WIDTH: 512
-    HEIGHT: 512
+    WIDTH: 256
+    HEIGHT: 256
     HFOV: 45
     TYPE: HabitatSimRGBSensor
   DEPTH_SENSOR:
@@ -23,9 +23,9 @@ TASK:
   MEASUREMENTS: ['SPL']
   SPL:
     TYPE: SPL
-    SUCCESS_DISTANCE: 2.0
+    SUCCESS_DISTANCE: 3.0
 DATASET:
   TYPE: R2RVLN-v1
   SPLIT: val_seen
-  DATA_PATH: data/datasets/R2R/hb_R2R_{split}.json
-  SCENES_DIR: data/scene_datasets/mp3d/
+  DATA_PATH: "data/datasets/vln/r2r/v1/{split}/{split}.json.gz"
+  SCENES_DIR: "data/scene_datasets/"

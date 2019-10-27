@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gzip
 import json
 import os
 from typing import List, Optional
@@ -45,8 +46,8 @@ class VLNDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
-        with open(datasetfile_path) as f:
+        dataset_filename = config.DATA_PATH.format(split=config.SPLIT)
+        with gzip.open(dataset_filename, "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
     def from_json(
@@ -76,9 +77,7 @@ class VLNDatasetV1(Dataset):
                         len(DEFAULT_SCENE_PATH_PREFIX) :
                     ]
 
-                episode.scene_id = os.path.join(
-                    scenes_dir, episode.scene_id, episode.scene_id + ".glb"
-                )
+                episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             episode.instruction = InstructionData(**episode.instruction)
             for g_index, goal in enumerate(episode.goals):

@@ -4,19 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import argparse
-import json
 import os
 import shutil
 import textwrap
 
-import cv2
 import numpy as np
 
 import habitat
+from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
+
+cv2 = try_cv2_import()
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -106,13 +106,13 @@ def save_map(observations, info, images):
     images.append(output_im)
 
 
-def shortest_path_example(mode, all_episodes=False):
+def shortest_path_example(mode):
     """
     Saves a video of a shortest path follower agent navigating from a start
-    position to a goal. Agent navigates to intermediate viewpoints on the way.
+    position to a goal. Agent follows the ground truth path by navigating to
+    intermediate viewpoints en route to goal.
     Args:
         mode: 'geodesic_path' or 'greedy'
-        all_episodes: if True, runs for every episode. otherwise, 5.
     """
     config = habitat.get_config(
         config_paths="configs/test/habitat_r2r_vln_test.yaml"
@@ -129,17 +129,19 @@ def shortest_path_example(mode, all_episodes=False):
     follower.mode = mode
     print("Environment creation successful")
 
-    dirname = os.path.join(IMAGE_DIR, "vln_path_follow")
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-
-    episodes_range = len(env.episodes) if all_episodes else 1
-    for episode in range(episodes_range):
+    for episode in range(3):
         env.reset()
         episode_id = env.habitat_env.current_episode.episode_id
         print(
             f"Agent stepping around inside environment. Episode id: {episode_id}"
         )
+
+        dirname = os.path.join(
+            IMAGE_DIR, "vln_shortest_path_example", mode, "%02d" % episode
+        )
+        if os.path.exists(dirname):
+            shutil.rmtree(dirname)
+        os.makedirs(dirname)
 
         images = []
         steps = 0
