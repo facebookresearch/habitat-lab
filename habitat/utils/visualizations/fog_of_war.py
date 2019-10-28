@@ -12,7 +12,7 @@ from habitat.utils.visualizations import maps
 
 @numba.jit(nopython=True)
 def bresenham_supercover_line(pt1, pt2):
-    r"""Line drawing algo based 
+    r"""Line drawing algo based
     on http://eugen.dedu.free.fr/projects/bresenham/
     """
 

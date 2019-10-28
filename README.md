@@ -28,7 +28,7 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
    1. [Details](#details)
    1. [Data](#data)
    1. [Baselines](#baselines)
-   1. [License](#license)   
+   1. [License](#license)
    1. [Acknowledgments](#acknowledgments)
    1. [References](#references-and-citation)
 

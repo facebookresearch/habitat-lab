@@ -391,9 +391,7 @@ class PPOTrainer(BaseRLTrainer):
             config.freeze()
 
         logger.info(f"env config: {config}")
-        self.envs = construct_envs(
-            config, get_env_class(config.ENV_NAME)
-        )
+        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
