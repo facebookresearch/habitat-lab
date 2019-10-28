@@ -19,7 +19,7 @@ If you use this code or the provided environments in your research, please cite 
     }
 
 
-    
+
 ## Dependencies:
 
 - conda
@@ -28,7 +28,7 @@ If you use this code or the provided environments in your research, please cite 
 - ORBSLAM2
 
 
-## Tested with: 
+## Tested with:
 - Ubuntu 16.04
 - python 3.6
 - pytorch 0.4, 1.0
@@ -39,5 +39,3 @@ If you use this code or the provided environments in your research, please cite 
 - Install dependencies via ./install_deps.sh.  It should install everything except the datasets.
 
 Simple example of working with agents is shown in (../handcrafted-agent-example.ipynb)
-
-

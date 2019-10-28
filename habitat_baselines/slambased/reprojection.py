@@ -147,7 +147,7 @@ def add_rot_wps(p):
 
 
 def planned_path2tps(path, cell_size, map_size, agent_h, add_rot=False):
-    r"""Path is list of 2d coordinates from planner, in map cells. 
+    r"""Path is list of 2d coordinates from planner, in map cells.
     tp is trajectory pose, 4x4 matrix - same format,
     as in localization module
     """
@@ -178,7 +178,7 @@ def planned_path2tps(path, cell_size, map_size, agent_h, add_rot=False):
 
 
 def habitat_goalpos_to_tp(ro_phi, p_curr):
-    r"""Convert distance and azimuth to 
+    r"""Convert distance and azimuth to
     trajectory pose, 4x4 matrix - same format,
     as in localization module
     """
@@ -208,7 +208,7 @@ def habitat_goalpos_to_tp(ro_phi, p_curr):
 
 
 def habitat_goalpos_to_mapgoal_pos(offset, p_curr, cell_size, map_size):
-    r"""Convert distance and azimuth to 
+    r"""Convert distance and azimuth to
     map cell coordinates
     """
     device = offset.device
@@ -237,7 +237,7 @@ def homogenize_p(tps):
 
 
 def project_tps_into_worldmap(tps, cell_size, map_size, do_floor=True):
-    r"""Convert 4x4 pose matrices (trajectory poses) to 
+    r"""Convert 4x4 pose matrices (trajectory poses) to
     map cell coordinates
     """
     if len(tps) == 0:
