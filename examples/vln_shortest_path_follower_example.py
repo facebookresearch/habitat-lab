@@ -11,6 +11,10 @@ import textwrap
 import numpy as np
 
 import habitat
+from examples.shortest_path_follower_example import (
+    SimpleRLEnv,
+    draw_top_down_map,
+)
 from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
@@ -21,45 +25,6 @@ cv2 = try_cv2_import()
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
-
-
-class SimpleRLEnv(habitat.RLEnv):
-    def get_reward_range(self):
-        return [-1, 1]
-
-    def get_reward(self, observations):
-        return 0
-
-    def get_done(self, observations):
-        return self.habitat_env.episode_over
-
-    def get_info(self, observations):
-        return self.habitat_env.get_metrics()
-
-
-def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(
-        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
-    )
-    original_map_size = top_down_map.shape[:2]
-    map_scale = np.array(
-        (1, original_map_size[1] * 1.0 / original_map_size[0])
-    )
-    new_map_size = np.round(output_size * map_scale).astype(np.int32)
-    # OpenCV expects w, h but map size is in h, w
-    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
-
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(
-        map_agent_pos * new_map_size / original_map_size
-    ).astype(np.int32)
-    top_down_map = maps.draw_agent(
-        top_down_map,
-        map_agent_pos,
-        heading - np.pi / 2,
-        agent_radius_px=top_down_map.shape[0] / 40,
-    )
-    return top_down_map
 
 
 def append_text_to_image(orig_img, text):
@@ -98,7 +63,6 @@ def save_map(observations, info, images):
         info, observations["heading"], im.shape[0]
     )
     output_im = np.concatenate((im, top_down_map), axis=1)
-    cv2.imwrite("title.jpg", output_im)
     observations["instruction"]["text"]
     output_im = append_text_to_image(
         output_im, observations["instruction"]["text"]
@@ -145,7 +109,7 @@ def shortest_path_example(mode):
 
         images = []
         steps = 0
-        path = env.habitat_env.current_episode.path + [
+        path = env.habitat_env.current_episode.shortest_path + [
             env.habitat_env.current_episode.goals[0].position
         ]
         for point in path:

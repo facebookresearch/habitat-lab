@@ -36,20 +36,17 @@ class VLNEpisode(NavigationEpisode):
         start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
             elements of unit quaternion (versor) representing agent 3D
             orientation.
-        instruction: single instruction guide to goal.
+        instruction: single natural language instruction guide to goal.
         trajectory_id: id of ground truth trajectory path.
-        goals: relevant goal object/room.
+        shortest_path: List of numpy ndarray containing 3 entries for (x, y, z) which gives the shortest path mentioned in the instruction
     """
-    path: List[List[float]] = attr.ib(
+    shortest_path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )
     instruction: InstructionData = attr.ib(
         default=None, validator=not_none_validator
     )
     trajectory_id: int = attr.ib(default=None, validator=not_none_validator)
-    goals: List[NavigationGoal] = attr.ib(
-        default=None, validator=not_none_validator
-    )
 
 
 @registry.register_sensor(name="InstructionSensor")
@@ -79,5 +76,14 @@ class InstructionSensor(Sensor):
 
 @registry.register_task(name="VLN-v0")
 class VLNTask(NavigationTask):
+    """
+        Visual Language Navigation Task
+        Goal : The agent must navigate a 3D environment by following a given natural language instruction.
+        Metric : Shortest Path Length(SPl)
+        Usage example:
+            examples/vln_benchmark.py
+            examples/vln_shortest_path_follower.py
+    """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
