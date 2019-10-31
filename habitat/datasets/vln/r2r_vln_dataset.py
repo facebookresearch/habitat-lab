@@ -52,16 +52,9 @@ class VLNDatasetV1(Dataset):
     ) -> None:
 
         deserialized = json.loads(json_str)
-
-        # Done for the serialization test
-        if "word_list" in deserialized["instruction_vocab"]:
-            self.instruction_vocab = VocabDict(
-                word_list=deserialized["instruction_vocab"]["word_list"]
-            )
-        else:
-            self.instruction_vocab = VocabDict(
-                word_list=deserialized["instruction_vocab"]
-            )
+        self.instruction_vocab = VocabDict(
+            word_list=deserialized["instruction_vocab"]["word_list"]
+        )
 
         for episode in deserialized["episodes"]:
             episode = VLNEpisode(**episode)

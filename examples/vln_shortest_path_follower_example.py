@@ -6,7 +6,6 @@
 
 import os
 import shutil
-import textwrap
 
 import numpy as np
 
@@ -18,43 +17,14 @@ from examples.shortest_path_follower_example import (
 from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
-from habitat.utils.visualizations.utils import images_to_video
-
-cv2 = try_cv2_import()
+from habitat.utils.visualizations.utils import (
+    append_text_to_image,
+    images_to_video,
+)
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
-
-
-def append_text_to_image(orig_img, text):
-    h, w, c = orig_img.shape
-    font_size = 0.5
-    font_thickness = 1
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(orig_img.shape, dtype=np.uint8)
-
-    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
-    wrapped_text = textwrap.wrap(text, width=int(w / char_size[0]))
-
-    y = 0
-    for line in wrapped_text:
-        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
-        x = 10
-        cv2.putText(
-            blank_image,
-            line,
-            (x, y),
-            font,
-            font_size,
-            (255, 255, 255),
-            font_thickness,
-            lineType=cv2.LINE_AA,
-        )
-    text_image = blank_image[0 : y + 10, 0:w]
-    final = np.concatenate((orig_img, text_image), axis=0)
-    return final
 
 
 def save_map(observations, info, images):
@@ -63,7 +33,6 @@ def save_map(observations, info, images):
         info, observations["heading"], im.shape[0]
     )
     output_im = np.concatenate((im, top_down_map), axis=1)
-    observations["instruction"]["text"]
     output_im = append_text_to_image(
         output_im, observations["instruction"]["text"]
     )

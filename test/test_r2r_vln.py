@@ -65,7 +65,7 @@ def test_r2r_vln_sim():
         vln_config.DATASET
     ):
         pytest.skip(
-            "Please download Matterport3D R2R VLN dataset to " "data folder."
+            "Please download Matterport3D R2R VLN dataset to data folder."
         )
 
     dataset = make_dataset(
