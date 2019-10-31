@@ -27,20 +27,24 @@ class InstructionData:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class VLNEpisode(NavigationEpisode):
-    r"""Specification of episode that includes initial position and rotation of
-    agent, goal specifications, instruction specifications, and optional shortest paths.
+    r"""Specification of episode that includes initial position and rotation
+    of agent, goal specifications, instruction specifications, and optional
+    shortest paths.
 
     Args:
+        episode_id: id of episode in the dataset
         scene_id: id of scene inside the simulator.
         start_position: numpy ndarray containing 3 entries for (x, y, z).
         start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
             elements of unit quaternion (versor) representing agent 3D
             orientation.
+        goals: list of goals specifications
+        path: List of (x, y, z) positions which gives the shortest
+            path to the goal that aligns with the instruction.
         instruction: single natural language instruction guide to goal.
         trajectory_id: id of ground truth trajectory path.
-        shortest_path: List of numpy ndarray containing 3 entries for (x, y, z) which gives the shortest path mentioned in the instruction
     """
-    shortest_path: List[List[float]] = attr.ib(
+    path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )
     instruction: InstructionData = attr.ib(
@@ -76,13 +80,12 @@ class InstructionSensor(Sensor):
 
 @registry.register_task(name="VLN-v0")
 class VLNTask(NavigationTask):
-    """
-        Visual Language Navigation Task
-        Goal : The agent must navigate a 3D environment by following a given natural language instruction.
-        Metric : Shortest Path Length(SPl)
-        Usage example:
-            examples/vln_benchmark.py
-            examples/vln_shortest_path_follower.py
+    r"""Vision and Language Navigation Task
+    Goal: An agent must navigate to a goal location in a 3D environment
+        specified by a natural language instruction.
+    Metric: Success weighted by Path Length (SPL)
+    Usage example:
+        examples/vln_shortest_path_follower.py
     """
 
     def __init__(self, **kwargs) -> None:

@@ -157,6 +157,7 @@ _C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
 # -----------------------------------------------------------------------------
 _C.TASK.INSTRUCTION_SENSOR = CN()
 _C.TASK.INSTRUCTION_SENSOR.TYPE = "InstructionSensor"
+_C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
 # -----------------------------------------------------------------------------
 # # DISTANCE_TO_GOAL MEASUREMENT
 # -----------------------------------------------------------------------------

@@ -83,7 +83,7 @@ def test_r2r_vln_sim():
     for i in range(len(env.episodes)):
         env.reset()
         steps = 0
-        path = env.habitat_env.current_episode.shortest_path + [
+        path = env.habitat_env.current_episode.path + [
             env.habitat_env.current_episode.goals[0].position
         ]
         for point in path:

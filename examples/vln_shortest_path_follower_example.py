@@ -109,7 +109,7 @@ def shortest_path_example(mode):
 
         images = []
         steps = 0
-        path = env.habitat_env.current_episode.shortest_path + [
+        path = env.habitat_env.current_episode.path + [
             env.habitat_env.current_episode.goals[0].position
         ]
         for point in path:
