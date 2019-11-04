@@ -96,9 +96,7 @@ def batch_obs(
             batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
-        batch[sensor] = torch.stack(batch[sensor], dim=0).to(
-            device=device, non_blocking=True
-        )
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
     return batch
 
