@@ -288,7 +288,11 @@ class PPOTrainer(BaseRLTrainer):
                     )
 
                 for step in range(ppo_cfg.num_steps):
-                    delta_pth_time, delta_env_time, delta_steps = self._collect_rollout_step(
+                    (
+                        delta_pth_time,
+                        delta_env_time,
+                        delta_steps,
+                    ) = self._collect_rollout_step(
                         rollouts,
                         current_episode_reward,
                         episode_rewards,
@@ -298,9 +302,12 @@ class PPOTrainer(BaseRLTrainer):
                     env_time += delta_env_time
                     count_steps += delta_steps
 
-                delta_pth_time, value_loss, action_loss, dist_entropy = self._update_agent(
-                    ppo_cfg, rollouts
-                )
+                (
+                    delta_pth_time,
+                    value_loss,
+                    action_loss,
+                    dist_entropy,
+                ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
                 window_episode_reward.append(episode_rewards.clone())
