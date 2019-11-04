@@ -70,7 +70,7 @@ def _to_tensor(v):
     if torch.is_tensor(v):
         return v
     elif isinstance(v, np.ndarray):
-        return torch.from_numpy(v).to(dtype=torch.float)
+        return torch.from_numpy(v)
     else:
         return torch.tensor(v, dtype=torch.float)
 
@@ -96,7 +96,9 @@ def batch_obs(
             batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
-        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(
+            device=device, dtype=torch.float
+        )
 
     return batch
 
