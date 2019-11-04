@@ -446,7 +446,6 @@ class PPOTrainer(BaseRLTrainer):
             self.config.NUM_PROCESSES, 1, device=self.device
         )
         stats_episodes = dict()  # dict of dicts that stores stats per episode
-        print(test_recurrent_hidden_states.size())
 
         rgb_frames = [
             [] for _ in range(self.config.NUM_PROCESSES)
