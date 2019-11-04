@@ -275,8 +275,6 @@ class PPOTrainer(BaseRLTrainer):
             lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),
         )
 
-        self.save_checkpoint(f"ckpt.{count_checkpoints}.pth", dict(step=0))
-        exit()
         with TensorboardWriter(
             self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
