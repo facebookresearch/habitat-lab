@@ -7,4 +7,4 @@
 from habitat_baselines.rl.ppo.policy import Net, PointNavBaselinePolicy, Policy
 from habitat_baselines.rl.ppo.ppo import PPO
 
-__all__ = ["PPO", "Policy", "Net", "PointNavBaselinePolicy"]
+__all__ = ["PPO", "Policy", "RolloutStorage", "Net", "PointNavBaselinePolicy"]

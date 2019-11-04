@@ -55,7 +55,7 @@ class RolloutStorage:
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
 
-        self.masks = torch.ones(num_steps + 1, num_envs, 1)
+        self.masks = torch.zeros(num_steps + 1, num_envs, 1)
 
         self.num_steps = num_steps
         self.step = 0
@@ -97,21 +97,26 @@ class RolloutStorage:
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
 
-        self.step = (self.step + 1) % self.num_steps
+        self.step = self.step + 1
 
     def after_update(self):
         for sensor in self.observations:
-            self.observations[sensor][0].copy_(self.observations[sensor][-1])
+            self.observations[sensor][0].copy_(
+                self.observations[sensor][self.step]
+            )
 
-        self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
-        self.masks[0].copy_(self.masks[-1])
-        self.prev_actions[0].copy_(self.prev_actions[-1])
+        self.recurrent_hidden_states[0].copy_(
+            self.recurrent_hidden_states[self.step]
+        )
+        self.masks[0].copy_(self.masks[self.step])
+        self.prev_actions[0].copy_(self.prev_actions[self.step])
+        self.step = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
-            self.value_preds[-1] = next_value
+            self.value_preds[self.step] = next_value
             gae = 0
-            for step in reversed(range(self.rewards.size(0))):
+            for step in reversed(range(self.step)):
                 delta = (
                     self.rewards[step]
                     + gamma * self.value_preds[step + 1] * self.masks[step + 1]
@@ -120,8 +125,8 @@ class RolloutStorage:
                 gae = delta + gamma * tau * self.masks[step + 1] * gae
                 self.returns[step] = gae + self.value_preds[step]
         else:
-            self.returns[-1] = next_value
-            for step in reversed(range(self.rewards.size(0))):
+            self.returns[self.step] = next_value
+            for step in reversed(range(self.step)):
                 self.returns[step] = (
                     self.returns[step + 1] * gamma * self.masks[step + 1]
                     + self.rewards[step]
@@ -153,25 +158,25 @@ class RolloutStorage:
 
                 for sensor in self.observations:
                     observations_batch[sensor].append(
-                        self.observations[sensor][:-1, ind]
+                        self.observations[sensor][: self.step, ind]
                     )
 
                 recurrent_hidden_states_batch.append(
                     self.recurrent_hidden_states[0, :, ind]
                 )
 
-                actions_batch.append(self.actions[:, ind])
-                prev_actions_batch.append(self.prev_actions[:-1, ind])
-                value_preds_batch.append(self.value_preds[:-1, ind])
-                return_batch.append(self.returns[:-1, ind])
-                masks_batch.append(self.masks[:-1, ind])
+                actions_batch.append(self.actions[: self.step, ind])
+                prev_actions_batch.append(self.prev_actions[: self.step, ind])
+                value_preds_batch.append(self.value_preds[: self.step, ind])
+                return_batch.append(self.returns[: self.step, ind])
+                masks_batch.append(self.masks[: self.step, ind])
                 old_action_log_probs_batch.append(
-                    self.action_log_probs[:, ind]
+                    self.action_log_probs[: self.step, ind]
                 )
 
-                adv_targ.append(advantages[:, ind])
+                adv_targ.append(advantages[: self.step, ind])
 
-            T, N = self.num_steps, num_envs_per_batch
+            T, N = self.step, num_envs_per_batch
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:

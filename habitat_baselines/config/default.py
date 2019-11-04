@@ -62,13 +62,32 @@ _C.RL.PPO.lr = 7e-4
 _C.RL.PPO.eps = 1e-5
 _C.RL.PPO.max_grad_norm = 0.5
 _C.RL.PPO.num_steps = 5
-_C.RL.PPO.hidden_size = 512
 _C.RL.PPO.use_gae = True
 _C.RL.PPO.use_linear_lr_decay = False
 _C.RL.PPO.use_linear_clip_decay = False
 _C.RL.PPO.gamma = 0.99
 _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
+_C.RL.PPO.use_normalized_advantage = True
+_C.RL.PPO.hidden_size = 512
+# -----------------------------------------------------------------------------
+# DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
+# -----------------------------------------------------------------------------
+_C.RL.DDPPO = CN()
+_C.RL.DDPPO.sync_frac = 0.6
+_C.RL.DDPPO.distrib_backend = "GLOO"
+_C.RL.DDPPO.rnn_type = "LSTM"
+_C.RL.DDPPO.num_recurrent_layers = 2
+_C.RL.DDPPO.backbone = "resnet50"
+_C.RL.DDPPO.pretrained_weights = "data/ddppo-models/gibson-2plus-resnet50.pth"
+# Loads pretrained weights
+_C.RL.DDPPO.pretrained = False
+# Loads just the visual encoder backbone weights
+_C.RL.DDPPO.pretrained_encoder = False
+# Whether or not the visual encoder backbone will be trained
+_C.RL.DDPPO.train_encoder = True
+# Whether or not the reset the critic linear layer
+_C.RL.DDPPO.reset_critic = True
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE
 # -----------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 import os
 import time
 from collections import deque
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -44,6 +44,9 @@ class PPOTrainer(BaseRLTrainer):
         if config is not None:
             logger.info(f"config: {config}")
 
+        self._static_encoder = False
+        self._encoder = None
+
     def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
 
@@ -75,7 +78,9 @@ class PPOTrainer(BaseRLTrainer):
             max_grad_norm=ppo_cfg.max_grad_norm,
         )
 
-    def save_checkpoint(self, file_name: str) -> None:
+    def save_checkpoint(
+        self, file_name: str, extra_state: Optional[Dict] = None
+    ) -> None:
         r"""Save checkpoint with specified name.
 
         Args:
@@ -88,6 +93,9 @@ class PPOTrainer(BaseRLTrainer):
             "state_dict": self.agent.state_dict(),
             "config": self.config,
         }
+        if extra_state is not None:
+            checkpoint["extra_state"] = extra_state
+
         torch.save(
             checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
         )
@@ -141,17 +149,25 @@ class PPOTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations)
-        rewards = torch.tensor(rewards, dtype=torch.float)
+        rewards = torch.tensor(
+            rewards, dtype=torch.float, device=episode_rewards.device
+        )
         rewards = rewards.unsqueeze(1)
 
         masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones], dtype=torch.float
+            [[0.0] if done else [1.0] for done in dones],
+            dtype=torch.float,
+            device=episode_rewards.device,
         )
 
         current_episode_reward += rewards
         episode_rewards += (1 - masks) * current_episode_reward
         episode_counts += 1 - masks
         current_episode_reward *= masks
+
+        if self._static_encoder:
+            with torch.no_grad():
+                batch["visual_features"] = self._encoder(batch)
 
         rollouts.insert(
             batch,
@@ -171,13 +187,13 @@ class PPOTrainer(BaseRLTrainer):
         t_update_model = time.time()
         with torch.no_grad():
             last_observation = {
-                k: v[-1] for k, v in rollouts.observations.items()
+                k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
             next_value = self.actor_critic.get_value(
                 last_observation,
-                rollouts.recurrent_hidden_states[-1],
-                rollouts.prev_actions[-1],
-                rollouts.masks[-1],
+                rollouts.recurrent_hidden_states[rollouts.step],
+                rollouts.prev_actions[rollouts.step],
+                rollouts.masks[rollouts.step],
             ).detach()
 
         rollouts.compute_returns(
@@ -259,6 +275,8 @@ class PPOTrainer(BaseRLTrainer):
             lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),
         )
 
+        self.save_checkpoint(f"ckpt.{count_checkpoints}.pth", dict(step=0))
+        exit()
         with TensorboardWriter(
             self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
@@ -349,7 +367,9 @@ class PPOTrainer(BaseRLTrainer):
 
                 # checkpoint model
                 if update % self.config.CHECKPOINT_INTERVAL == 0:
-                    self.save_checkpoint(f"ckpt.{count_checkpoints}.pth")
+                    self.save_checkpoint(
+                        f"ckpt.{count_checkpoints}.pth", dict(step=count_steps)
+                    )
                     count_checkpoints += 1
 
             self.envs.close()
@@ -428,6 +448,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config.NUM_PROCESSES, 1, device=self.device
         )
         stats_episodes = dict()  # dict of dicts that stores stats per episode
+        print(test_recurrent_hidden_states.size())
 
         rgb_frames = [
             [] for _ in range(self.config.NUM_PROCESSES)
@@ -553,20 +574,20 @@ class PPOTrainer(BaseRLTrainer):
             f"Average episode {self.metric_uuid}: {episode_metric_mean:.6f}"
         )
 
+        step_id = checkpoint_index
+        if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
+            step_id = ckpt_dict["extra_state"]["step"]
+
         writer.add_scalars(
-            "eval_reward",
-            {"average reward": episode_reward_mean},
-            checkpoint_index,
+            "eval_reward", {"average reward": episode_reward_mean}, step_id
         )
         writer.add_scalars(
             f"eval_{self.metric_uuid}",
             {f"average {self.metric_uuid}": episode_metric_mean},
-            checkpoint_index,
+            step_id,
         )
         writer.add_scalars(
-            "eval_success",
-            {"average success": episode_success_mean},
-            checkpoint_index,
+            "eval_success", {"average success": episode_success_mean}, step_id
         )
 
         self.envs.close()
