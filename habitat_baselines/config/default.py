@@ -86,7 +86,7 @@ _C.RL.DDPPO.pretrained = False
 _C.RL.DDPPO.pretrained_encoder = False
 # Whether or not the visual encoder backbone will be trained
 _C.RL.DDPPO.train_encoder = True
-# Whether or not the reset the critic linear layer
+# Whether or not to reset the critic linear layer
 _C.RL.DDPPO.reset_critic = True
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE

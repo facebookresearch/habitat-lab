@@ -51,7 +51,7 @@ RL:
     pretrained_encoder: False
     # Whether or not the visual encoder backbone will be trained.
     train_encoder: True
-    # Whether or not the reset the critic linear layer
+    # Whether or not to reset the critic linear layer
     reset_critic: True
 
     # Model parameters
