@@ -73,7 +73,7 @@ class SimulatorTaskAction(Action):
     def reset(self, *args: Any, **kwargs: Any) -> None:
         return None
 
-    def step(self, *args: Any, **kwargs: Any) -> None:
+    def step(self, *args: Any, **kwargs: Any) -> Observations:
         r"""Step method is called from ``Env`` on each ``step``.
         """
         raise NotImplementedError
