@@ -30,14 +30,23 @@ def conv1x1(in_planes, out_planes, stride=1):
 
 class BasicBlock(nn.Module):
     expansion = 1
+    resneXt = False
 
-    def __init__(self, inplanes, planes, ngroups, stride=1, downsample=None):
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        ngroups,
+        stride=1,
+        downsample=None,
+        cardinality=1,
+    ):
         super(BasicBlock, self).__init__()
         self.convs = nn.Sequential(
-            conv3x3(in_planes, planes, stride),
+            conv3x3(inplanes, planes, stride, groups=cardinality),
             nn.GroupNorm(ngroups, planes),
             nn.ReLU(True),
-            conv3x3(planes, planes),
+            conv3x3(planes, planes, groups=cardinality),
             nn.GroupNorm(ngroups, planes),
         )
         self.downsample = downsample
@@ -270,6 +279,12 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         return x
+
+
+def resnet18(in_channels, base_planes, ngroups):
+    model = ResNet(in_channels, base_planes, ngroups, BasicBlock, [2, 2, 2, 2])
+
+    return model
 
 
 def resnet50(in_channels, base_planes, ngroups):
