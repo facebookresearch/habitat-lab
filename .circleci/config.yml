@@ -87,7 +87,7 @@ jobs:
                 chmod +x ~/miniconda.sh
                 ~/miniconda.sh -b -p $HOME/miniconda
                 rm ~/miniconda.sh
-                export PATH=$HOME/miniconda/bin:$PATH
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.6
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock
@@ -99,7 +99,7 @@ jobs:
           command: |
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
-                export PATH=$HOME/miniconda/bin:$PATH
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
                 conda install -c  conda-forge opencv -y
                 conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
@@ -116,7 +116,7 @@ jobs:
       - run:
           name: CCache initialization
           command: |
-            export PATH=$HOME/miniconda/bin:$PATH
+            export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
             . activate habitat;
             ccache --show-stats
             ccache --zero-stats
@@ -126,7 +126,7 @@ jobs:
           no_output_timeout: 20m
           command: |
               while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
-              export PATH=$HOME/miniconda/bin:$PATH
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               if [ ! -d ./habitat-sim ]
               then
@@ -139,7 +139,7 @@ jobs:
           name: Ccache stats
           when: always
           command: |
-            export PATH=$HOME/miniconda/bin:$PATH
+            export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
             . activate habitat;
             ccache --show-stats
       - run:
@@ -156,7 +156,7 @@ jobs:
           name: Run sim benchmark
           command: |
               while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
-              export PATH=$HOME/miniconda/bin:$PATH
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
@@ -173,7 +173,7 @@ jobs:
           name: Install api
           no_output_timeout: 20m
           command: |
-              export PATH=$HOME/miniconda/bin:$PATH
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-api
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
@@ -187,7 +187,7 @@ jobs:
       - run:
           name: Run api tests
           command: |
-              export PATH=$HOME/miniconda/bin:$PATH
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-api
               python setup.py develop --all
               python setup.py test
