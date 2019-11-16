@@ -163,18 +163,27 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     Returns:
         generated image of a single frame.
     """
-    observation_size = observation["rgb"].shape[0]
-    egocentric_view = observation["rgb"][:, :, :3]
-    # draw collision
-    if "collisions" in info and info["collisions"]["is_collision"]:
-        egocentric_view = draw_collision(egocentric_view)
+    egocentric_view = None
+    if "rgb" in observation:
+        observation_size = observation["rgb"].shape[0]
+        egocentric_view = observation["rgb"][:, :, :3]
 
     # draw depth map if observation has depth info
     if "depth" in observation:
+        observation_size = observation["depth"].shape[0]
         depth_map = (observation["depth"].squeeze() * 255).astype(np.uint8)
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
 
-        egocentric_view = np.concatenate((egocentric_view, depth_map), axis=1)
+        if egocentric_view is None:
+            egocentric_view = depth_map
+        else:
+            egocentric_view = np.concatenate(
+                (egocentric_view, depth_map), axis=1
+            )
+
+    # draw collision
+    if "collisions" in info and info["collisions"]["is_collision"]:
+        egocentric_view = draw_collision(egocentric_view)
 
     frame = egocentric_view
 
