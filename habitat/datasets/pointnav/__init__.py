@@ -32,7 +32,7 @@ def _try_register_pointnavdatasetv1():
         )
     else:
 
-        @registry.register_dataset(name="MP3DEQA-v1")
+        @registry.register_dataset(name="PointNav-v1")
         class PointnavDatasetImportError(Dataset):
             def __init__(self, *args, **kwargs):
                 raise pointnav_import_error
