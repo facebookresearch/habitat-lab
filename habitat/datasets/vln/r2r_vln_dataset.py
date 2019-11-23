@@ -11,21 +11,18 @@ from typing import List, Optional
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset
-from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.datasets.utils import VocabDict
-from habitat.tasks.nav.nav import NavigationGoal, ShortestPathPoint
+from habitat.tasks.nav.nav import NavigationGoal
 from habitat.tasks.vln.vln import InstructionData, VLNEpisode
 
-DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/mp3d/"
-
-R2R_VAL_SEEN_EPISODES = 781
+DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
 @registry.register_dataset(name="R2RVLN-v1")
 class VLNDatasetV1(Dataset):
-    r"""Class inherited from Dataset that loads the MatterPort3D
-    Room-to-Room (R2R) dataset for Vision and Language Navigation.
+    r"""Class inherited from Dataset that loads a Vision and Language
+    Navigation dataset.
     """
 
     episodes: List[VLNEpisode]

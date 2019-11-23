@@ -14,9 +14,7 @@ from examples.shortest_path_follower_example import (
     SimpleRLEnv,
     draw_top_down_map,
 )
-from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import (
     append_text_to_image,
     images_to_video,
@@ -39,11 +37,11 @@ def save_map(observations, info, images):
     images.append(output_im)
 
 
-def shortest_path_example(mode):
+def reference_path_example(mode):
     """
     Saves a video of a shortest path follower agent navigating from a start
-    position to a goal. Agent follows the ground truth path by navigating to
-    intermediate viewpoints en route to goal.
+    position to a goal. Agent follows the ground truth reference path by
+    navigating to intermediate viewpoints en route to goal.
     Args:
         mode: 'geodesic_path' or 'greedy'
     """
@@ -70,7 +68,7 @@ def shortest_path_example(mode):
         )
 
         dirname = os.path.join(
-            IMAGE_DIR, "vln_shortest_path_example", mode, "%02d" % episode
+            IMAGE_DIR, "vln_reference_path_example", mode, "%02d" % episode
         )
         if os.path.exists(dirname):
             shutil.rmtree(dirname)
@@ -78,10 +76,10 @@ def shortest_path_example(mode):
 
         images = []
         steps = 0
-        path = env.habitat_env.current_episode.path + [
+        reference_path = env.habitat_env.current_episode.reference_path + [
             env.habitat_env.current_episode.goals[0].position
         ]
-        for point in path:
+        for point in reference_path:
             done = False
             while not done:
                 best_action = follower.get_next_action(point)
@@ -97,4 +95,4 @@ def shortest_path_example(mode):
 
 
 if __name__ == "__main__":
-    shortest_path_example("geodesic_path")
+    reference_path_example("geodesic_path")

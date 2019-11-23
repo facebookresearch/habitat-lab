@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Owners/maintainers of the Vision and Language Navigation task:
+#   @jacobkrantz: Jacob Krantz
+#   @koshyanand: Anand Koshy
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -12,11 +16,7 @@ from gym import spaces
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import (
-    NavigationEpisode,
-    NavigationGoal,
-    NavigationTask,
-)
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 
 @attr.s(auto_attribs=True)
@@ -28,8 +28,8 @@ class InstructionData:
 @attr.s(auto_attribs=True, kw_only=True)
 class VLNEpisode(NavigationEpisode):
     r"""Specification of episode that includes initial position and rotation
-    of agent, goal specifications, instruction specifications, and optional
-    shortest paths.
+    of agent, goal specifications, instruction specifications, reference path,
+    and optional shortest paths.
 
     Args:
         episode_id: id of episode in the dataset
@@ -39,12 +39,12 @@ class VLNEpisode(NavigationEpisode):
             elements of unit quaternion (versor) representing agent 3D
             orientation.
         goals: list of goals specifications
-        path: List of (x, y, z) positions which gives the shortest
+        reference_path: List of (x, y, z) positions which gives the reference
             path to the goal that aligns with the instruction.
         instruction: single natural language instruction guide to goal.
         trajectory_id: id of ground truth trajectory path.
     """
-    path: List[List[float]] = attr.ib(
+    reference_path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )
     instruction: InstructionData = attr.ib(
@@ -85,7 +85,7 @@ class VLNTask(NavigationTask):
         specified by a natural language instruction.
     Metric: Success weighted by Path Length (SPL)
     Usage example:
-        examples/vln_shortest_path_follower.py
+        examples/vln_reference_path_follower_example.py
     """
 
     def __init__(self, **kwargs) -> None:

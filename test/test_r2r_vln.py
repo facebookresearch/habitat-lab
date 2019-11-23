@@ -5,23 +5,18 @@
 
 import time
 
-import numpy as np
 import pytest
 
 import habitat
 import habitat.datasets.vln.r2r_vln_dataset as r2r_vln_dataset
-from examples.vln_shortest_path_follower_example import SimpleRLEnv
 from habitat.config.default import get_config
-from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
-from habitat.tasks.nav.nav import MoveForwardAction
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-from habitat.tasks.vln.vln import VLNEpisode, VLNTask
-from habitat.utils.test_utils import sample_non_stop_action
+from habitat.tasks.vln.vln import VLNEpisode
 
 CFG_TEST = "configs/test/habitat_r2r_vln_test.yaml"
-
+R2R_VAL_SEEN_EPISODES = 778
 EPISODES_LIMIT = 1
 
 
@@ -53,7 +48,7 @@ def test_r2r_vln_dataset():
     )
     assert dataset
     assert (
-        len(dataset.episodes) == r2r_vln_dataset.R2R_VAL_SEEN_EPISODES
+        len(dataset.episodes) == R2R_VAL_SEEN_EPISODES
     ), "Val Seen split episode number mismatch"
     check_json_serializaiton(dataset)
 
@@ -72,19 +67,18 @@ def test_r2r_vln_sim():
         id_dataset=vln_config.DATASET.TYPE, config=vln_config.DATASET
     )
 
-    env = SimpleRLEnv(config=vln_config, dataset=dataset)
+    env = habitat.Env(config=vln_config, dataset=dataset)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
     follower = ShortestPathFollower(
-        env.habitat_env.sim, goal_radius=0.5, return_one_hot=False
+        env.sim, goal_radius=0.5, return_one_hot=False
     )
     assert env
 
     for i in range(len(env.episodes)):
         env.reset()
-        steps = 0
-        path = env.habitat_env.current_episode.path + [
-            env.habitat_env.current_episode.goals[0].position
+        path = env.current_episode.reference_path + [
+            env.current_episode.goals[0].position
         ]
         for point in path:
             done = False
@@ -92,14 +86,14 @@ def test_r2r_vln_sim():
                 best_action = follower.get_next_action(point)
                 if best_action == None:
                     break
-                obs, reward, done, info = env.step(best_action)
+                obs = env.step(best_action)
                 assert "rgb" in obs, "RGB image is missing in observation."
                 assert (
                     "instruction" in obs
                 ), "Instruction is missing in observation."
                 assert (
                     obs["instruction"]["text"]
-                    == env.habitat_env.current_episode.instruction.instruction_text
+                    == env.current_episode.instruction.instruction_text
                 ), "Instruction from sensor does not match the intruction from the episode"
 
                 assert obs["rgb"].shape[:2] == (
@@ -113,6 +107,5 @@ def test_r2r_vln_sim():
                         vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
                     )
                 )
-                steps += 1
 
     env.close()

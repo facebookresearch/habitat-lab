@@ -8,7 +8,7 @@ SIMULATOR:
   RGB_SENSOR:
     WIDTH: 256
     HEIGHT: 256
-    HFOV: 45
+    HFOV: 90
     TYPE: HabitatSimRGBSensor
   DEPTH_SENSOR:
     WIDTH: 256
@@ -20,6 +20,7 @@ TASK:
     GOAL_FORMAT: "POLAR"
     DIMENSIONALITY: 2
   GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+  INSTRUCTION_SENSOR_UUID: instruction
   MEASUREMENTS: ['SPL']
   SPL:
     TYPE: SPL
@@ -27,5 +28,5 @@ TASK:
 DATASET:
   TYPE: R2RVLN-v1
   SPLIT: val_seen
-  DATA_PATH: "data/datasets/vln/r2r/v1/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/vln/mp3d/r2r/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
