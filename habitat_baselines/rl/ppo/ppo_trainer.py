@@ -76,6 +76,7 @@ class PPOTrainer(BaseRLTrainer):
             lr=ppo_cfg.lr,
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
+            use_normalized_advantage=ppo_cfg.use_normalized_advantage,
         )
 
     def save_checkpoint(
