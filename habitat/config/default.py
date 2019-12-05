@@ -153,6 +153,12 @@ _C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
 _C.TASK.EPISODE_INFO = CN()
 _C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
 # -----------------------------------------------------------------------------
+# # VLN TASK INSTRUCTION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.INSTRUCTION_SENSOR = CN()
+_C.TASK.INSTRUCTION_SENSOR.TYPE = "InstructionSensor"
+_C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
+# -----------------------------------------------------------------------------
 # # DISTANCE_TO_GOAL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.DISTANCE_TO_GOAL = CN()
