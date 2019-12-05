@@ -7,12 +7,15 @@
 import os
 import shutil
 
-import cv2
-import habitat
 import numpy as np
+
+import habitat
+from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
+
+cv2 = try_cv2_import()
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -34,7 +37,9 @@ class SimpleRLEnv(habitat.RLEnv):
 
 
 def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(info["top_down_map"]["map"])
+    top_down_map = maps.colorize_topdown_map(
+        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+    )
     original_map_size = top_down_map.shape[:2]
     map_scale = np.array(
         (1, original_map_size[1] * 1.0 / original_map_size[0])
@@ -58,8 +63,10 @@ def draw_top_down_map(info, heading, output_size):
 
 def shortest_path_example(mode):
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.freeze()
     env = SimpleRLEnv(config=config)
     goal_radius = env.episodes[0].goals[0].radius
     if goal_radius is None:
@@ -82,7 +89,10 @@ def shortest_path_example(mode):
             best_action = follower.get_next_action(
                 env.habitat_env.current_episode.goals[0].position
             )
-            observations, reward, done, info = env.step(best_action.value)
+            if best_action is None:
+                break
+
+            observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]
             top_down_map = draw_top_down_map(
                 info, observations["heading"], im.shape[0]

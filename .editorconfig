@@ -1,0 +1,23 @@
+# See https://editorconfig.org/ for more info :)
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# isort can't parse [*.{py, rst}], so specifying it separately
+# https://github.com/timothycrosley/isort/issues/830
+[*.rst]
+indent_size = 4
+[*.py]
+indent_size = 4
+max_line_length = 79
+multi_line_output = 3
+force_grid_wrap = false
+include_trailing_comma = true
+ensure_newline_before_comments=true
+use_parentheses = true
+known_first_party = habitat,habitat_sim,habitat_baselines,version
+known_third_party = PIL,attr,conf,gym,imageio,matplotlib,mock,numba,numpy,orbslam2,pyrobot,pytest,quaternion,requests,scipy,setuptools,torch,torchvision,tqdm,yacs

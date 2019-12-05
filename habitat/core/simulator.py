@@ -5,16 +5,26 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
 from enum import Enum
+from typing import Any, Dict, Iterable, List, Optional
 
+import attr
 from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
+
 from habitat.config import Config
 
 
+@attr.s(auto_attribs=True)
+class ActionSpaceConfiguration:
+    config: Config
+
+    def get(self):
+        raise NotImplementedError
+
+
 class SensorTypes(Enum):
-    """Enumeration of types of sensors.
+    r"""Enumeration of types of sensors.
     """
 
     NULL = 0
@@ -30,19 +40,20 @@ class SensorTypes(Enum):
     MEASUREMENT = 10
     HEADING = 11
     TACTILE = 12
+    TOKEN_IDS = 13
 
 
 class Sensor:
-    """Represents a sensor that provides data from the environment to agent.
+    r"""Represents a sensor that provides data from the environment to agent.
+
+    :data uuid: universally unique id.
+    :data sensor_type: type of Sensor, use SensorTypes enum if your sensor
+        comes under one of it's categories.
+    :data observation_space: ``gym.Space`` object corresponding to observation
+        of sensor.
+
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
-
-    Attributes:
-        uuid: universally unique id.
-        sensor_type: type of Sensor, use SensorTypes enum if your sensor
-            comes under one of it's categories.
-        observation_space: gym.Space object corresponding to observation of
-            sensor
     """
 
     uuid: str
@@ -66,23 +77,26 @@ class Sensor:
         raise NotImplementedError
 
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        """
+        r"""
         Returns:
-            Current observation for Sensor.
+            current observation for Sensor.
         """
         raise NotImplementedError
 
 
 class Observations(dict):
-    """Dictionary containing sensor observations
-
-    Args:
-        sensors: list of sensors whose observations are fetched and packaged.
+    r"""Dictionary containing sensor observations
     """
 
     def __init__(
         self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
     ) -> None:
+        """Constructor
+
+        :param sensors: list of sensors whose observations are fetched and
+            packaged.
+        """
+
         data = [
             (uuid, sensor.get_observation(*args, **kwargs))
             for uuid, sensor in sensors.items()
@@ -141,19 +155,37 @@ class SemanticSensor(Sensor):
         raise NotImplementedError
 
 
-class SensorSuite:
-    """Represents a set of sensors, with each sensor being identified
-    through a unique id.
+class BumpSensor(Sensor):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
-    Args:
-        sensors: list containing sensors for the environment, uuid of each
-            sensor must be unique.
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "bump"
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
+        return SensorTypes.FORCE
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        raise NotImplementedError
+
+    def get_observation(self, *args: Any, **kwargs: Any):
+        raise NotImplementedError
+
+
+class SensorSuite:
+    r"""Represents a set of sensors, with each sensor being identified
+    through a unique id.
     """
 
     sensors: Dict[str, Sensor]
     observation_spaces: SpaceDict
 
-    def __init__(self, sensors: List[Sensor]) -> None:
+    def __init__(self, sensors: Iterable[Sensor]) -> None:
+        """Constructor
+
+        :param sensors: list containing sensors for the environment, uuid of
+            each sensor must be unique.
+        """
         self.sensors = OrderedDict()
         spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
@@ -168,10 +200,8 @@ class SensorSuite:
         return self.sensors[uuid]
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
-        """
-        Returns:
-            collect data from all sensors and return it packaged inside
-            Observation.
+        r"""Collects data from all sensors and returns it packaged inside
+            `Observations`.
         """
         return Observations(self.sensors, *args, **kwargs)
 
@@ -201,16 +231,8 @@ class ShortestPathPoint:
 
 
 class Simulator:
-    """Basic simulator class for habitat. New simulators to be added to habtiat
-    must derive from this class and implement the below methods:
-        reset
-        step
-        seed
-        reconfigure
-        geodesic_distance
-        sample_navigable_point
-        action_space_shortest_path
-        close
+    r"""Basic simulator class for habitat. New simulators to be added to habtiat
+    must derive from this class and implement the abstarct methods.
     """
 
     @property
@@ -221,26 +243,18 @@ class Simulator:
     def action_space(self) -> Space:
         raise NotImplementedError
 
-    @property
-    def is_episode_active(self) -> bool:
-        raise NotImplementedError
-
     def reset(self) -> Observations:
-        """Resets the simulator and returns the initial observations.
+        r"""resets the simulator and returns the initial observations.
 
-        Returns:
-            Initial observations from simulator.
+        :return: initial observations from simulator.
         """
         raise NotImplementedError
 
-    def step(self, action: int) -> Observations:
-        """Perform an action in the simulator and return observations.
+    def step(self, action, *args, **kwargs) -> Observations:
+        r"""Perform an action in the simulator and return observations.
 
-        Args:
-            action: action to be performed inside the simulator.
-
-        Returns:
-            observations after taking action in simulator.
+        :param action: action to be performed inside the simulator.
+        :return: observations after taking action in simulator.
         """
         raise NotImplementedError
 
@@ -253,58 +267,71 @@ class Simulator:
     def geodesic_distance(
         self, position_a: List[float], position_b: List[float]
     ) -> float:
-        """Calculates geodesic distance between two points.
+        r"""Calculates geodesic distance between two points.
 
-        Args:
-            position_a: coordinates of first point
-            position_b: coordinates of second point
-
-        Returns:
+        :param position_a: coordinates of first point.
+        :param position_b: coordinates of second point.
+        :return:
             the geodesic distance in the cartesian space between points
-            position_a and position_b, if no path is found between the
-            points then infinity is returned.
+            :p:`position_a` and :p:`position_b`, if no path is found between
+            the points then `math.inf` is returned.
         """
         raise NotImplementedError
 
     def get_agent_state(self, agent_id: int = 0):
-        """
-        Args:
-             agent_id: id of agent
+        r"""..
 
-        Returns:
-            state of agent corresponding to agent_id
+        :param agent_id: id of agent.
+        :return: state of agent corresponding to :p:`agent_id`.
+        """
+        raise NotImplementedError
+
+    def get_observations_at(
+        self,
+        position: List[float],
+        rotation: List[float],
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+        """Returns the observation.
+
+        :param position: list containing 3 entries for :py:`(x, y, z)`.
+        :param rotation: list with 4 entries for :py:`(x, y, z, w)` elements
+            of unit quaternion (versor) representing agent 3D orientation,
+            (https://en.wikipedia.org/wiki/Versor)
+        :param keep_agent_at_new_pose: If true, the agent will stay at the
+            requested location. Otherwise it will return to where it started.
+        :return:
+            The observations or :py:`None` if it was unable to get valid
+            observations.
+
         """
         raise NotImplementedError
 
     def sample_navigable_point(self) -> List[float]:
-        """Samples a navigable point from the simulator. A point is defined as
+        r"""Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
 
-        Returns:
-            Navigable point.
+        :return: navigable point.
         """
         raise NotImplementedError
 
     def is_navigable(self, point: List[float]) -> bool:
-        """Return true if the agent can stand at the specified point.
+        r"""Return :py:`True` if the agent can stand at the specified point.
 
-        Args:
-            point: The point to check.
+        :param point: the point to check.
         """
         raise NotImplementedError
 
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        """Calculates the shortest path between source and target agent states.
+        r"""Calculates the shortest path between source and target agent
+        states.
 
-        Args:
-            source: source agent state for shortest path calculation.
-            targets: target agent state(s) for shortest path calculation.
-            agent_id: id for agent (relevant for multi-agent setup).
-
-        Returns:
-            List of agent states and actions along the shortest path from
+        :param source: source agent state for shortest path calculation.
+        :param targets: target agent state(s) for shortest path calculation.
+        :param agent_id: id for agent (relevant for multi-agent setup).
+        :return: list of agent states and actions along the shortest path from
             source to the nearest target (both included).
         """
         raise NotImplementedError
@@ -312,31 +339,29 @@ class Simulator:
     def get_straight_shortest_path_points(
         self, position_a: List[float], position_b: List[float]
     ) -> List[List[float]]:
-        """Returns points along the geodesic (shortest) path between two points
-         irrespective of the angles between the waypoints.
+        r"""Returns points along the geodesic (shortest) path between two
+        points irrespective of the angles between the waypoints.
 
-         Args:
-            position_a: The start point. This will be the first point in the
-                returned list.
-            position_b: The end point. This will be the last point in the
-                returned list.
-        Returns:
-            A list of waypoints (x, y, z) on the geodesic path between the two
-            points.
-         """
+        :param position_a: the start point. This will be the first point in
+            the returned list.
+        :param position_b: the end point. This will be the last point in the
+            returned list.
+        :return: a list of waypoints :py:`(x, y, z)` on the geodesic path
+            between the two points.
+        """
 
         raise NotImplementedError
 
     @property
     def up_vector(self):
-        """The vector representing the direction upward (perpendicular to the
+        r"""The vector representing the direction upward (perpendicular to the
         floor) from the global coordinate frame.
         """
         raise NotImplementedError
 
     @property
     def forward_vector(self):
-        """The forward direction in the global coordinate frame i.e. the
+        r"""The forward direction in the global coordinate frame i.e. the
         direction of forward movement for an agent with 0 degrees rotation in
         the ground plane.
         """
@@ -346,4 +371,12 @@ class Simulator:
         raise NotImplementedError
 
     def close(self) -> None:
+        raise NotImplementedError
+
+    def previous_step_collided(self) -> bool:
+        r"""Whether or not the previous step resulted in a collision
+
+        :return: :py:`True` if the previous step resulted in a collision,
+            :py:`False` otherwise
+        """
         raise NotImplementedError

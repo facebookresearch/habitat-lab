@@ -10,7 +10,7 @@ import numpy as np
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    """Tile multiple images into single image
+    r"""Tile multiple images into single image
 
     Args:
         images: list of images where each image has dimension
@@ -40,3 +40,55 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
         new_height * height, new_width * width, n_channels
     )
     return out_image
+
+
+def not_none_validator(self, attribute, value):
+    if value is None:
+        raise ValueError(f"Argument '{attribute.name}' must be set")
+
+
+def try_cv2_import():
+    r"""The PyRobot python3 version which is a dependency of Habitat-PyRobot integration
+    relies on ROS running in python2.7. In order to import cv2 in python3 we need to remove
+    the python2.7 path from sys.path. To use the Habitat-PyRobot integration the user
+    needs to export environment variable ROS_PATH which will look something like:
+    /opt/ros/kinetic/lib/python2.7/dist-packages
+    """
+    import sys
+    import os
+
+    ros_path = os.environ.get("ROS_PATH")
+    if ros_path is not None and ros_path in sys.path:
+        sys.path.remove(ros_path)
+        import cv2
+
+        sys.path.append(ros_path)
+    else:
+        import cv2
+
+    return cv2
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(
+                *args, **kwargs
+            )
+        return cls._instances[cls]
+
+
+def center_crop(obs, new_shape):
+    top_left = (
+        (obs.shape[0] // 2) - (new_shape[0] // 2),
+        (obs.shape[1] // 2) - (new_shape[1] // 2),
+    )
+    bottom_right = (
+        (obs.shape[0] // 2) + (new_shape[0] // 2),
+        (obs.shape[1] // 2) + (new_shape[1] // 2),
+    )
+    obs = obs[top_left[0] : bottom_right[0], top_left[1] : bottom_right[1], :]
+
+    return obs

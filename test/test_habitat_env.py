@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import multiprocessing as mp
 import os
 
@@ -14,8 +15,8 @@ import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.sims.habitat_simulator import SimulatorActions
-from habitat.tasks.nav.nav_task import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, StopAction
+from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 NUM_ENVS = 4
@@ -72,48 +73,56 @@ def _load_test_data():
     return configs, datasets
 
 
-def _vec_env_test_fn(configs, datasets, multiprocessing_start_method):
+def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
     num_envs = len(configs)
+    for cfg in configs:
+        cfg.defrost()
+        cfg.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        cfg.freeze()
+
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.VectorEnv(
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method,
     )
     envs.reset()
-    non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
-    ]
 
     for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        observations = envs.step(np.random.choice(non_stop_actions, num_envs))
+        observations = envs.step(
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
+        )
         assert len(observations) == num_envs
 
 
-def test_vectorized_envs_forkserver():
+@pytest.mark.parametrize(
+    "multiprocessing_start_method,gpu2gpu",
+    itertools.product(["forkserver", "spawn", "fork"], [True, False]),
+)
+def test_vectorized_envs(multiprocessing_start_method, gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     configs, datasets = _load_test_data()
-    _vec_env_test_fn(configs, datasets, "forkserver")
+    if multiprocessing_start_method == "fork":
+        if gpu2gpu:
+            pytest.skip("Fork does not support gpu2gpu")
 
-
-def test_vectorized_envs_spawn():
-    configs, datasets = _load_test_data()
-    _vec_env_test_fn(configs, datasets, "spawn")
-
-
-def _fork_test_target(configs, datasets):
-    _vec_env_test_fn(configs, datasets, "fork")
-
-
-def test_vectorized_envs_fork():
-    configs, datasets = _load_test_data()
-    # 'fork' works in a process that has yet to use the GPU
-    # this test uses spawns a new python instance, which allows us to fork
-    mp_ctx = mp.get_context("spawn")
-    p = mp_ctx.Process(target=_fork_test_target, args=(configs, datasets))
-    p.start()
-    p.join()
-    assert p.exitcode == 0
+        # 'fork' works in a process that has yet to use the GPU
+        # this test uses spawns a new python instance, which allows us to fork
+        mp_ctx = mp.get_context("spawn")
+        p = mp_ctx.Process(
+            target=_vec_env_test_fn,
+            args=(configs, datasets, multiprocessing_start_method, gpu2gpu),
+        )
+        p.start()
+        p.join()
+        assert p.exitcode == 0
+    else:
+        _vec_env_test_fn(
+            configs, datasets, multiprocessing_start_method, gpu2gpu
+        )
 
 
 def test_with_scope():
@@ -134,23 +143,30 @@ def test_threaded_vectorized_env():
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
     envs.reset()
-    non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
-    ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        observations = envs.step(np.random.choice(non_stop_actions, num_envs))
+        observations = envs.step(
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
+        )
         assert len(observations) == num_envs
 
     envs.close()
 
 
-def test_env():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_env(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
+
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
@@ -158,20 +174,16 @@ def test_env():
             scene_id=config.SIMULATOR.SCENE,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            goals=[
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
+            ],
             info={"geodesic_distance": 0.001},
         )
     ]
     env.reset()
 
-    non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
-    ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        act = np.random.choice(non_stop_actions)
-        env.step(act)
+        env.step(sample_non_stop_action(env.action_space))
 
     # check for steps limit on environment
     assert env.episode_over is True, (
@@ -180,17 +192,15 @@ def test_env():
 
     env.reset()
 
-    env.step(SimulatorActions.STOP.value)
+    env.step(action={"action": StopAction.name})
     # check for STOP action
-    assert env.episode_over is True, (
-        "episode should be over after STOP " "action"
-    )
+    assert env.episode_over is True, "episode should be over after STOP action"
 
     env.close()
 
 
 def make_rl_env(config, dataset, rank: int = 0):
-    """Constructor for default habitat Env.
+    r"""Constructor for default habitat Env.
     :param config: configurations for environment
     :param dataset: dataset for environment
     :param rank: rank for setting seeds for environment
@@ -201,36 +211,65 @@ def make_rl_env(config, dataset, rank: int = 0):
     return env
 
 
-def test_rl_vectorized_envs():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_rl_vectorized_envs(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     configs, datasets = _load_test_data()
+    for config in configs:
+        config.defrost()
+        config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        config.freeze()
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
     envs.reset()
-    non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
-    ]
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        outputs = envs.step(np.random.choice(non_stop_actions, num_envs))
+        outputs = envs.step(
+            sample_non_stop_action(envs.action_spaces[0], num_envs)
+        )
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
         assert len(observations) == num_envs
         assert len(rewards) == num_envs
         assert len(dones) == num_envs
         assert len(infos) == num_envs
+
+        tiled_img = envs.render(mode="rgb_array")
+        new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+        new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+        print(f"observations: {observations}")
+        h, w, c = observations[0]["rgb"].shape
+        assert tiled_img.shape == (
+            h * new_height,
+            w * new_width,
+            c,
+        ), "vector env render is broken"
+
         if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
     envs.close()
 
 
-def test_rl_env():
+@pytest.mark.parametrize("gpu2gpu", [False, True])
+def test_rl_env(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
     config = get_config(CFG_TEST)
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
+
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.freeze()
 
     env = DummyRLEnv(config=config, dataset=None)
     env.episodes = [
@@ -239,29 +278,28 @@ def test_rl_env():
             scene_id=config.SIMULATOR.SCENE,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[NavigationGoal([-3.0133917, 0.04623024, 7.3064547])],
+            goals=[
+                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
+            ],
             info={"geodesic_distance": 0.001},
         )
     ]
 
     done = False
-    observation = env.reset()
+    env.reset()
 
-    non_stop_actions = [
-        v
-        for v in range(len(SimulatorActions))
-        if v != SimulatorActions.STOP.value
-    ]
     for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
         observation, reward, done, info = env.step(
-            np.random.choice(non_stop_actions)
+            action=sample_non_stop_action(env.action_space)
         )
 
     # check for steps limit on environment
     assert done is True, "episodes should be over after max_episode_steps"
 
     env.reset()
-    observation, reward, done, info = env.step(SimulatorActions.STOP.value)
+    observation, reward, done, info = env.step(
+        action={"action": StopAction.name}
+    )
     assert done is True, "done should be true after STOP action"
 
     env.close()
@@ -288,18 +326,18 @@ def test_vec_env_call_func():
     env_id = envs.call_at(1, "get_env_ind")
     assert env_id == true_env_ids[1]
 
-    envs.call_at(2, "set_env_ind", [20])
+    envs.call_at(2, "set_env_ind", {"new_env_ind": 20})
     true_env_ids[2] = 20
     env_ids = envs.call(["get_env_ind"] * num_envs)
     assert env_ids == true_env_ids
 
-    envs.call_at(2, "set_env_ind", [2])
+    envs.call_at(2, "set_env_ind", {"new_env_ind": 2})
     true_env_ids[2] = 2
     env_ids = envs.call(["get_env_ind"] * num_envs)
     assert env_ids == true_env_ids
 
-    envs.pause_at(3)
-    true_env_ids.pop(3)
+    envs.pause_at(0)
+    true_env_ids.pop(0)
     env_ids = envs.call(["get_env_ind"] * num_envs)
     assert env_ids == true_env_ids
 
@@ -312,6 +350,21 @@ def test_vec_env_call_func():
     env_ids = envs.call(["get_env_ind"] * num_envs)
     assert env_ids == list(range(num_envs))
     envs.close()
+
+
+def test_close_with_paused():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+    ) as envs:
+        envs.reset()
+
+        envs.pause_at(3)
+        envs.pause_at(0)
+
+    assert envs._is_closed
 
 
 # TODO Bring back this test for the greedy follower
@@ -351,10 +404,10 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.sim.action_space_shortest_path(source, targets)
+    shortest_path1 = env.action_space_shortest_path(source, targets)
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.sim.action_space_shortest_path(source, targets)
+    shortest_path2 = env.action_space_shortest_path(source, targets)
     assert shortest_path2 == []
     env.close()

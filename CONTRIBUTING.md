@@ -34,7 +34,7 @@ We use mypy to check Python typing and guard API consistency, please make sure n
 mypy . --ignore-missing-imports
 ```
 
-## Coding Style  
+## Coding Style
 We use black to format our code, you can use the following commands to format your code prior to submission:
 
 ```
@@ -45,4 +45,3 @@ black habitat test --line-length 79
 ## License
 By contributing to habitat-api, you agree that your contributions will be licensed
 under the LICENSE file in the root directory of this source tree.
-

@@ -1,0 +1,5 @@
+DATASET:
+  TYPE: MP3DEQA-v1
+  SPLIT: train
+  DATA_PATH: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
+  SCENES_DIR: "data/scene_datasets/"

@@ -1,0 +1,3 @@
+graft habitat/utils/visualizations/assets
+include habitat/py.typed
+include habitat_baselines/py.typed
