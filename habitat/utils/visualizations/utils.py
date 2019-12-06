@@ -163,10 +163,10 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     Returns:
         generated image of a single frame.
     """
-    egocentric_view = None
+    egocentric_view = []
     if "rgb" in observation:
         observation_size = observation["rgb"].shape[0]
-        egocentric_view = observation["rgb"][:, :, :3]
+        egocentric_view.append(observation["rgb"][:, :, :3])
 
     # draw depth map if observation has depth info
     if "depth" in observation:
@@ -175,11 +175,14 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
 
         if egocentric_view is None:
-            egocentric_view = depth_map
+            egocentric_view.appned( depth_map)
         else:
             egocentric_view = np.concatenate(
                 (egocentric_view, depth_map), axis=1
             )
+    assert len(egocentric_view) > 0,
+        "Expected at least one visual sensor enabled."
+    egocentric_view = np.concatenate(egocentric_view, axis=1)
 
     # draw collision
     if "collisions" in info and info["collisions"]["is_collision"]:
