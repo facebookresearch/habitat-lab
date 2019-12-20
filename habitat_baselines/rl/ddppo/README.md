@@ -13,12 +13,12 @@ There are two example scripts to run provided.  A single node script that levera
 The two recommended backends are GLOO and NCCL.  Use NCCL if your system has it, and GLOO if otherwise.
 
 See [pytorch's distributed docs](https://pytorch.org/docs/stable/distributed.html#backends-that-come-with-pytorch)
-and [pytorch's distributed tutorial](https://pytorch.org/tutorials/intermediate/dist_tuto.html) for more information
+and [pytorch's distributed tutorial](https://pytorch.org/tutorials/intermediate/dist_tuto.html) for more information.
 
 ## Pretrained Models (PointGoal Navigation with GPS+Compass)
 
 
-All weights avaliable as a zip [here](https://drive.google.com/open?id=1ueXuIqP2HZ0oxhpDytpc3hpciXSd8H16)
+All weights available as a zip [here](https://drive.google.com/open?id=1ueXuIqP2HZ0oxhpDytpc3hpciXSd8H16).
 
 ### Depth models
 
@@ -49,16 +49,16 @@ All weights avaliable as a zip [here](https://drive.google.com/open?id=1ueXuIqP2
 
 **Note:** Evaluation was done with *sampled* actions.
 
-All model weights are subject to [Matterport3D Terms-of-Use](http://dovahkiin.stanford.edu/matterport/public/MP_TOS.pdf)
+All model weights are subject to [Matterport3D Terms-of-Use](http://dovahkiin.stanford.edu/matterport/public/MP_TOS.pdf).
 
 
 ## Citing
 
-If you use DD-PPO or the model-weights in your research, please cite the following [technical report]():
+If you use DD-PPO or the model-weights in your research, please cite the following [paper](https://arxiv.org/abs/1911.00357):
 
-    @article{wijmans2019ddppo,
+    @article{wijmans2020ddppo,
       title = {{D}ecentralized {D}istributed {PPO}: {S}olving {P}oint{G}oal {N}avigation},
       author =  {Erik Wijmans and Abhishek Kadian and Ari Morcos and Stefan Lee and Irfan Essa and Devi Parikh and Manolis Savva and Dhruv Batra},
-      journal = {arXiv preprint},
-      year =    {2019}
+      journal = {International Conference on Learning Representations (ICLR)},
+      year =    {2020}
     }

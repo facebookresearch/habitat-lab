@@ -4,6 +4,7 @@ import shlex
 import signal
 import subprocess
 import threading
+from typing import Any, Optional, Tuple
 
 import ifcfg
 import torch
@@ -17,9 +18,15 @@ EXIT.clear()
 REQUEUE = threading.Event()
 REQUEUE.clear()
 
+
+# Default port to initialized the TCP store on
+DEFAULT_PORT = 8738
+# Default address of world rank 0
+DEFAULT_MASTER_ADDR = "127.0.0.1"
+
 SLURM_JOBID = os.environ.get("SLURM_JOB_ID", None)
 INTERRUPTED_STATE_FILE = osp.join(
-    os.environ["HOME"], ".interrupted_states", "{}.pth".format(SLURM_JOBID)
+    os.environ["HOME"], ".interrupted_states", f"{SLURM_JOBID}.pth"
 )
 
 
@@ -41,25 +48,46 @@ def add_signal_handlers():
     signal.signal(signal.SIGUSR1, _requeue_handler)
 
 
-def save_interrupted_state(state):
-    if SLURM_JOBID is None:
+def save_interrupted_state(state: Any, filename: str = None):
+    r"""Saves the interrupted job state to the specified filename.  This is useful when working with preemptable job partitions.
+
+    This method will do nothing if SLURM is not currently being used and the filename is the default
+
+    :param state: The state to save
+    :param filename: The filename.  Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
+    """
+    if SLURM_JOBID is None and filename is None:
         logger.warn("SLURM_JOBID is none, not saving interrupted state")
         return
 
-    torch.save(state, INTERRUPTED_STATE_FILE)
+    if filename is None:
+        filename = INTERRUPTED_STATE_FILE
+
+    torch.save(state, filename)
 
 
-def load_interrupted_state():
-    if SLURM_JOBID is None:
+def load_interrupted_state(filename: str = None) -> Optional[Any]:
+    r"""Loads the saved interrupted state
+
+    :param filename: The filename of the saved state.  Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
+
+    :return: The saved state if the file exists, else none
+    """
+    if SLURM_JOBID is None and filename is None:
         return None
 
-    if not osp.exists(INTERRUPTED_STATE_FILE):
+    if filename is None:
+        filename = INTERRUPTED_STATE_FILE
+
+    if not osp.exists(filename):
         return None
 
-    return torch.load(INTERRUPTED_STATE_FILE, map_location="cpu")
+    return torch.load(filename, map_location="cpu")
 
 
 def requeue_job():
+    r"""Requeues the job by calling `scontrol requeue ${SLURM_JOBID}`
+    """
     if SLURM_JOBID is None:
         return
 
@@ -69,18 +97,26 @@ def requeue_job():
     distrib.barrier()
 
     if distrib.get_rank() == 0:
-        logger.info("Requeueing job {}".format(SLURM_JOBID))
-        subprocess.check_call(
-            shlex.split("scontrol requeue {}".format(SLURM_JOBID))
-        )
+        logger.info(f"Requeueing job {SLURM_JOBID}")
+        subprocess.check_call(shlex.split("scontrol requeue {SLURM_JOBID}"))
 
 
 def get_ifname():
     return ifcfg.default_interface()["device"]
 
 
-def init_distrib_slurm(backend="nccl"):
-    assert torch.distributed.is_available(), "torch.distributed not avaliable"
+def init_distrib_slurm(
+    backend: str = "nccl"
+) -> Tuple[int, torch.distributed.TCPStore]:
+    r"""Initializes torch.distributed by parsing environment variables set by SLURM when `srun` is used
+    or by parsing environment variables set by torch.distributed.launch
+
+    :param backend: Which torch.distributed backend to use
+    :returns: Tuple of the local_rank (aka which GPU to use for this process) and the TCPStore used for the rendezvous
+    """
+    assert (
+        torch.distributed.is_available()
+    ), "torch.distributed must be available"
 
     if "GLOO_SOCKET_IFNAME" not in os.environ:
         os.environ["GLOO_SOCKET_IFNAME"] = get_ifname()
@@ -88,8 +124,8 @@ def init_distrib_slurm(backend="nccl"):
     if "NCCL_SOCKET_IFNAME" not in os.environ:
         os.environ["NCCL_SOCKET_IFNAME"] = get_ifname()
 
-    master_port = int(os.environ.get("MASTER_PORT", 8738))
-    master_addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
+    master_port = int(os.environ.get("MASTER_PORT", DEFAULT_PORT))
+    master_addr = os.environ.get("MASTER_ADDR", DEFAULT_MASTER_ADDR)
     local_rank = int(
         os.environ.get("LOCAL_RANK", os.environ.get("SLURM_LOCALID", 0))
     )
