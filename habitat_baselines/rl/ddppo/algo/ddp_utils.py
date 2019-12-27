@@ -106,7 +106,7 @@ def get_ifname():
 
 
 def init_distrib_slurm(
-    backend: str = "nccl"
+    backend: str = "nccl",
 ) -> Tuple[int, torch.distributed.TCPStore]:
     r"""Initializes torch.distributed by parsing environment variables set by SLURM when `srun` is used
     or by parsing environment variables set by torch.distributed.launch

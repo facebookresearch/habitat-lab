@@ -16,7 +16,7 @@ EPS_PPO = 1e-5
 
 
 def distributed_mean_and_var(
-    values: torch.Tensor
+    values: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     r"""Computes the mean and variances of a tensor over multiple workers.
 
