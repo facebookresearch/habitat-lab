@@ -179,33 +179,6 @@ class ResNeXtBottleneck(Bottleneck):
     resneXt = True
 
 
-class TwoBranchShakeBottleneck(nn.Module):
-    expansion = 4
-
-    def __init__(self, inplanes, planes, ngroups, stride=1, downsample=None):
-        super().__init__()
-        self.b1 = _build_bottleneck_branch(
-            inplanes, planes, ngroups, stride, self.expansion
-        )
-        self.b2 = _build_bottleneck_branch(
-            inplanes, planes, ngroups, stride, self.expansion
-        )
-        self.shake_shake = ShakeShake()
-        self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
-
-    def forward(self, x):
-        identity = x
-
-        b1 = self.b1(x)
-        b2 = self.b2(x)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        return self.relu(self.shake_shake(identity, b1, b2))
-
-
 class ResNet(nn.Module):
     def __init__(
         self, in_channels, base_planes, ngroups, block, layers, cardinality=1
