@@ -63,16 +63,12 @@ class ActionSpace(gym.spaces.Dict):
         }
 
     def contains(self, x):
-        if not isinstance(x, dict):
+        if not isinstance(x, dict) or "action" not in x:
             return False
-        if not all(key in x for key in {"action", "action_args"}):
-            return False
-
         if x["action"] not in self.spaces:
             return False
-        if not self.spaces[x["action"]].contains(x["action_args"]):
+        if not self.spaces[x["action"]].contains(x.get("action_args", None)):
             return False
-
         return True
 
     def __repr__(self):
