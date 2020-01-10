@@ -24,6 +24,7 @@ def test_task_actions():
     config.freeze()
 
     env = habitat.Env(config=config)
+    assert env.action_space.contains(env.action_space.sample())
     env.reset()
     env.step(
         action={
@@ -53,6 +54,7 @@ def test_task_actions_sampling_for_teleport():
     config.freeze()
 
     env = habitat.Env(config=config)
+    assert env.action_space.contains(env.action_space.sample())
     env.reset()
     while not env.episode_over:
         action = sample_non_stop_action(env.action_space)
@@ -86,6 +88,7 @@ def test_task_actions_sampling(config_file):
         )
 
     env = habitat.Env(config=config)
+    assert env.action_space.contains(env.action_space.sample())
     env.reset()
     while not env.episode_over:
         action = sample_non_stop_action(env.action_space)
