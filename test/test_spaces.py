@@ -36,6 +36,7 @@ def test_action_space():
     assert space.contains({"action": "move_forward"})
     assert not space.contains([0, 1, 2])
     assert not space.contains({"zero": None})
+    assert not space.contains({"action": "bad"})
     assert not space.contains({"action": "move"})
     assert not space.contains(
         {"action": "move", "action_args": {"position": 0}}
@@ -48,6 +49,7 @@ def test_action_space():
 def test_list_space():
     space = ListSpace(gym.spaces.Discrete(2), 5, 10)
     assert space.contains(space.sample())
+    assert not space.contains(0)
     assert not space.contains([0] * 4)
     assert not space.contains([2] * 5)
     assert not space.contains([1] * 11)
