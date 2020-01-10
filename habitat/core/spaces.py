@@ -106,7 +106,7 @@ class ListSpace(Space):
         if not isinstance(x, Sized):
             return False
 
-        if len(x) < self.min_seq_length or len(x) > self.max_seq_length:
+        if not (self.min_seq_length <= len(x) <= self.max_seq_length):
             return False
 
         return all([self.space.contains(el) for el in x])
