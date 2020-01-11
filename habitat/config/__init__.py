@@ -4,8 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from yacs.config import CfgNode as Config
+import yacs.config
 
 from habitat.config.default import get_config
+
+# Default config node
+Config = lambda *args, **kwargs: yacs.config.CfgNode(
+    *args, **kwargs, new_allowed=True
+)
+
 
 __all__ = ["Config", "get_config"]
