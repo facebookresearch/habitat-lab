@@ -6,7 +6,17 @@
 
 from typing import List, Optional, Union
 
-from habitat.config import Config as CN  # type: ignore
+import yacs.config
+
+# from habitat.config import Config as CN # type: ignore
+
+# Default Habitat config node
+class Config(yacs.config.CfgNode):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, new_allowed=True)
+
+
+CN = Config
 
 DEFAULT_CONFIG_DIR = "configs/"
 CONFIG_FILE_SEPARATOR = ","
