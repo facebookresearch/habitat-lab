@@ -25,7 +25,7 @@ def test_task_actions():
 
     env = habitat.Env(config=config)
     env.reset()
-    action={
+    action = {
         "action": "TELEPORT",
         "action_args": {
             "position": TELEPORT_POSITION,
