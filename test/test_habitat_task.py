@@ -13,8 +13,8 @@ import habitat
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
-TELEPORT_POSITION = [-3.2890449, 0.15067159, 11.124366]
-TELEPORT_ROTATION = [0.92035, 0, -0.39109465, 0]
+TELEPORT_POSITION = np.array([-3.2890449, 0.15067159, 11.124366])
+TELEPORT_ROTATION = np.array([0.92035, 0, -0.39109465, 0])
 
 
 def test_task_actions():
@@ -24,17 +24,16 @@ def test_task_actions():
     config.freeze()
 
     env = habitat.Env(config=config)
-    assert env.action_space.contains(env.action_space.sample())
     env.reset()
-    env.step(
-        action={
-            "action": "TELEPORT",
-            "action_args": {
-                "position": TELEPORT_POSITION,
-                "rotation": TELEPORT_ROTATION,
-            },
-        }
-    )
+    action={
+        "action": "TELEPORT",
+        "action_args": {
+            "position": TELEPORT_POSITION,
+            "rotation": TELEPORT_ROTATION,
+        },
+    }
+    assert env.action_space.contains(action)
+    env.step(action)
     agent_state = env.sim.get_agent_state()
     assert np.allclose(
         np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
@@ -54,10 +53,10 @@ def test_task_actions_sampling_for_teleport():
     config.freeze()
 
     env = habitat.Env(config=config)
-    assert env.action_space.contains(env.action_space.sample())
     env.reset()
     while not env.episode_over:
         action = sample_non_stop_action(env.action_space)
+        assert env.action_space.contains(action)
         habitat.logger.info(
             f"Action : "
             f"{action['action']}, "
@@ -88,10 +87,10 @@ def test_task_actions_sampling(config_file):
         )
 
     env = habitat.Env(config=config)
-    assert env.action_space.contains(env.action_space.sample())
     env.reset()
     while not env.episode_over:
         action = sample_non_stop_action(env.action_space)
+        assert env.action_space.contains(action)
         habitat.logger.info(
             f"Action : "
             f"{action['action']}, "
