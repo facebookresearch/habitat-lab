@@ -314,6 +314,8 @@ class DDPPOTrainer(PPOTrainer):
                     env_time += delta_env_time
                     count_steps_delta += delta_steps
 
+                    # This is where the preemption of workers happens.  If a
+                    # worker detects it will be a straggler, it preempts itself!
                     if (step >= ppo_cfg.num_steps / 4) and int(
                         num_rollouts_done_store.get("num_done")
                     ) > (self.config.RL.DDPPO.sync_frac * self.world_size):
