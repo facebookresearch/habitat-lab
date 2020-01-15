@@ -3,7 +3,7 @@
 Provides changes to the core baseline ppo algorithm and training script to implemented Decentralized Distributed PPO (DD-PPO).
 DD-PPO leverages distributed data parallelism to seamlessly scale PPO to hundreds of GPUs with no centralized server.
 
-See the [technical report](https://arxiv.org/abs/1911.00357) for more detail.
+See the [paper](https://arxiv.org/abs/1911.00357) for more detail.
 
 ## Running
 
