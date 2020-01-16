@@ -9,7 +9,6 @@ from typing import Any, Optional, Tuple
 import ifcfg
 import torch
 import torch.distributed as distrib
-import torch.nn as nn
 
 from habitat import logger
 
@@ -43,13 +42,22 @@ def _requeue_handler(signal, frame):
 def add_signal_handlers():
     signal.signal(signal.SIGINT, _clean_exit_handler)
     signal.signal(signal.SIGTERM, _clean_exit_handler)
+
+    # SIGUSR2 can be sent to all processes to have them cleanup
+    # and exit nicely.  This is nice to use with SLURM as scancel <job_id>
+    # sets a 30 second timer for the job to exit, and it can take more than
+    # 30 seconds for the job to cleanup and exit nicely.  When using NCCL,
+    # forcing the job to exit without cleaning up can be bad.
+    # scancel --signal SIGUSR2 <job_id> will set no such timer and will give
+    # the job ample time to cleanup and exit.
     signal.signal(signal.SIGUSR2, _clean_exit_handler)
 
     signal.signal(signal.SIGUSR1, _requeue_handler)
 
 
 def save_interrupted_state(state: Any, filename: str = None):
-    r"""Saves the interrupted job state to the specified filename.  This is useful when working with preemptable job partitions.
+    r"""Saves the interrupted job state to the specified filename.
+        This is useful when working with preemptable job partitions.
 
     This method will do nothing if SLURM is not currently being used and the filename is the default
 
@@ -69,7 +77,8 @@ def save_interrupted_state(state: Any, filename: str = None):
 def load_interrupted_state(filename: str = None) -> Optional[Any]:
     r"""Loads the saved interrupted state
 
-    :param filename: The filename of the saved state.  Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
+    :param filename: The filename of the saved state.
+        Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
 
     :return: The saved state if the file exists, else none
     """
@@ -108,11 +117,14 @@ def get_ifname():
 def init_distrib_slurm(
     backend: str = "nccl",
 ) -> Tuple[int, torch.distributed.TCPStore]:
-    r"""Initializes torch.distributed by parsing environment variables set by SLURM when `srun` is used
-    or by parsing environment variables set by torch.distributed.launch
+    r"""Initializes torch.distributed by parsing environment variables set
+        by SLURM when `srun` is used or by parsing environment variables set
+        by torch.distributed.launch
 
     :param backend: Which torch.distributed backend to use
-    :returns: Tuple of the local_rank (aka which GPU to use for this process) and the TCPStore used for the rendezvous
+
+    :returns: Tuple of the local_rank (aka which GPU to use for this process)
+        and the TCPStore used for the rendezvous
     """
     assert (
         torch.distributed.is_available()
@@ -126,13 +138,22 @@ def init_distrib_slurm(
 
     master_port = int(os.environ.get("MASTER_PORT", DEFAULT_PORT))
     master_addr = os.environ.get("MASTER_ADDR", DEFAULT_MASTER_ADDR)
-    local_rank = int(
-        os.environ.get("LOCAL_RANK", os.environ.get("SLURM_LOCALID", 0))
-    )
-    world_rank = int(os.environ.get("RANK", os.environ.get("SLURM_PROCID", 0)))
-    world_size = int(
-        os.environ.get("WORLD_SIZE", os.environ.get("SLURM_NTASKS", 1))
-    )
+
+    # Check to see if we should parse from torch.distributed.launch
+    if os.environ.get("LOCAL_RANK", None) is not None:
+        local_rank = int(os.environ["LOCAL_RANK"])
+        world_rank = int(os.environ["RANK"])
+        world_size = int(os.environ["WORLD_SIZE"])
+    # Else parse from SLURM is using SLURM
+    elif os.environ.get("SLURM_JOBID", None) is not None:
+        local_rank = int(os.environ["SLURM_LOCALID"])
+        world_rank = int(os.environ["SLURM_PROCID"])
+        world_size = int(os.environ["SLURM_NTASKS"])
+    # Otherwise setup for just 1 process, this is nice for testing
+    else:
+        local_rank = 0
+        world_rank = 0
+        world_size = 1
 
     tcp_store = distrib.TCPStore(
         master_addr, master_port, world_size, world_rank == 0
