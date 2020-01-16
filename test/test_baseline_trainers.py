@@ -12,6 +12,7 @@ import pytest
 
 try:
     import torch
+    import torch.distributed
 
     from habitat_baselines.run import run_exp
     from habitat_baselines.common.base_trainer import BaseRLTrainer
@@ -48,6 +49,10 @@ def test_trainers(test_cfg_path, mode, gpu2gpu):
         mode,
         ["TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU", str(gpu2gpu)],
     )
+
+    # Deinit processes group
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
 
 
 @pytest.mark.skipif(
