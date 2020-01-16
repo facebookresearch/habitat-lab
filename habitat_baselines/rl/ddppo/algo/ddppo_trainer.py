@@ -44,6 +44,14 @@ from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 @baseline_registry.register_trainer(name="ddppo")
 class DDPPOTrainer(PPOTrainer):
+    # DD-PPO cuts rollouts short to mitigate the straggler effect
+    # This, in theory, can cause some rollouts to be very short.
+    # All rollouts contributed equally to the loss/model-update,
+    # thus very short rollouts can be problematic.  This threshold
+    # limits the how short a short rollout can be as a fraction of the
+    # max rollout length
+    SHORT_ROLLOUT_THRESHOLD: float = 0.25
+
     def __init__(self, config=None):
         interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
@@ -272,33 +280,34 @@ class DDPPOTrainer(PPOTrainer):
                         update, self.config.NUM_UPDATES
                     )
 
-                requeue_stats = dict(
-                    env_time=env_time,
-                    pth_time=pth_time,
-                    count_steps=count_steps,
-                    count_checkpoints=count_checkpoints,
-                    start_update=update,
-                    prev_time=(time.time() - t_start) + prev_time,
-                )
+                if EXIT.is_set():
+                    self.envs.close()
+
+                    if REQUEUE.is_set() and self.world_rank == 0:
+                        requeue_stats = dict(
+                            env_time=env_time,
+                            pth_time=pth_time,
+                            count_steps=count_steps,
+                            count_checkpoints=count_checkpoints,
+                            start_update=update,
+                            prev_time=(time.time() - t_start) + prev_time,
+                        )
+                        save_interrupted_state(
+                            dict(
+                                state_dict=self.agent.state_dict(),
+                                optim_state=self.agent.optimizer.state_dict(),
+                                lr_sched_state=lr_scheduler.state_dict(),
+                                config=self.config,
+                                requeue_stats=requeue_stats,
+                            )
+                        )
+
+                    requeue_job()
+                    return
+
                 count_steps_delta = 0
                 self.agent.eval()
                 for step in range(ppo_cfg.num_steps):
-                    if EXIT.is_set():
-                        self.envs.close()
-
-                        if REQUEUE.is_set() and self.world_rank == 0:
-                            save_interrupted_state(
-                                dict(
-                                    state_dict=self.agent.state_dict(),
-                                    optim_state=self.agent.optimizer.state_dict(),
-                                    lr_sched_state=lr_scheduler.state_dict(),
-                                    config=self.config,
-                                    requeue_stats=requeue_stats,
-                                )
-                            )
-
-                        requeue_job()
-                        return
 
                     (
                         delta_pth_time,
@@ -316,9 +325,12 @@ class DDPPOTrainer(PPOTrainer):
 
                     # This is where the preemption of workers happens.  If a
                     # worker detects it will be a straggler, it preempts itself!
-                    if (step >= ppo_cfg.num_steps / 4) and int(
-                        num_rollouts_done_store.get("num_done")
-                    ) > (self.config.RL.DDPPO.sync_frac * self.world_size):
+                    if (
+                        step
+                        >= ppo_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+                    ) and int(num_rollouts_done_store.get("num_done")) > (
+                        self.config.RL.DDPPO.sync_frac * self.world_size
+                    ):
                         break
 
                 num_rollouts_done_store.add("num_done", 1)
