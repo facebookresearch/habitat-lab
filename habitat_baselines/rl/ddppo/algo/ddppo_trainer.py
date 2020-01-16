@@ -150,8 +150,11 @@ class DDPPOTrainer(PPOTrainer):
         self.config.SIMULATOR_GPU_ID = self.local_rank
         self.config.freeze()
 
-        self.device = torch.device("cuda", self.local_rank)
-        torch.cuda.set_device(self.device)
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda", self.local_rank)
+            torch.cuda.set_device(self.device)
+        else:
+            self.device = torch.device("cpu")
 
         self.envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)

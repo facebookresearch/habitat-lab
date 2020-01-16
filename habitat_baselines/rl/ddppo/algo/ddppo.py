@@ -70,9 +70,12 @@ class DecentralizedDistributedMixin:
         # so they don't show up in the state_dict
         class Guard:
             def __init__(self, model, device):
-                self.ddp = torch.nn.parallel.DistributedDataParallel(
-                    model, device_ids=[device], output_device=device
-                )
+                if torch.cuda.is_available():
+                    self.ddp = torch.nn.parallel.DistributedDataParallel(
+                        model, device_ids=[device], output_device=device
+                    )
+                else:
+                    self.ddp = torch.nn.parallel.DistributedDataParallel(model)
 
         self._ddp_hooks = Guard(self.actor_critic, self.device)
         self.get_advantages = self._get_advantages_distributed
