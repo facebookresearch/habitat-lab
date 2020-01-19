@@ -144,9 +144,8 @@ def draw_collision(view: np.ndarray, alpha: float = 0.4) -> np.ndarray:
     Returns:
         A view with collision effect drawn.
     """
-    size = view.shape[0]
-    strip_width = size // 20
-    mask = np.ones((size, size))
+    strip_width = view.shape[0] // 20
+    mask = np.ones(view.shape)
     mask[strip_width:-strip_width, strip_width:-strip_width] = 0
     mask = mask == 1
     view[mask] = (alpha * np.array([255, 0, 0]) + (1.0 - alpha) * view)[mask]
@@ -174,7 +173,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         observation_size = observation["depth"].shape[0]
         depth_map = (observation["depth"].squeeze() * 255).astype(np.uint8)
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-        egocentric_view.appned(depth_map)
+        egocentric_view.append(depth_map)
 
     assert (
         len(egocentric_view) > 0
