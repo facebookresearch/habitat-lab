@@ -461,6 +461,7 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
+        self.actor_critic.eval()
         while (
             len(stats_episodes) < self.config.TEST_EPISODE_COUNT
             and self.envs.num_envs > 0
