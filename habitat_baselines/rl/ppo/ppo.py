@@ -41,7 +41,11 @@ class PPO(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.optimizer = optim.Adam(actor_critic.parameters(), lr=lr, eps=eps)
+        self.optimizer = optim.Adam(
+            list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
+            lr=lr,
+            eps=eps,
+        )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
 

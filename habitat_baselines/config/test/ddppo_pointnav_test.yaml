@@ -1,0 +1,57 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
+TRAINER_NAME: "ddppo"
+ENV_NAME: "NavRLEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+VIDEO_OPTION: []
+TENSORBOARD_DIR: ""
+EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
+NUM_PROCESSES: 1
+CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/pointnav/"
+NUM_UPDATES: 2
+LOG_INTERVAL: 100
+CHECKPOINT_INTERVAL: 1
+
+RL:
+  SUCCESS_REWARD: 2.5
+  PPO:
+    # ppo params
+    clip_param: 0.2
+    ppo_epoch: 2
+    num_mini_batch: 1
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    lr: 2.5e-4
+    eps: 1e-5
+    max_grad_norm: 0.2
+    num_steps: 16
+    use_gae: True
+    gamma: 0.99
+    tau: 0.95
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    reward_window_size: 50
+
+    use_normalized_advantage: False
+
+    hidden_size: 512
+
+  DDPPO:
+    sync_frac: 0.6
+    # The PyTorch distributed backend to use
+    distrib_backend: GLOO
+    # Visual encoder backbone
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    # Initialize with pretrained weights
+    pretrained: False
+    # Initialize just the visual encoder backbone with pretrained weights
+    pretrained_encoder: False
+    # Whether or not the visual encoder backbone will be trained.
+    train_encoder: True
+    # Whether or not to reset the critic linear layer
+    reset_critic: True
+
+    # Model parameters
+    backbone: resnet50
+    rnn_type: LSTM
+    num_recurrent_layers: 2
