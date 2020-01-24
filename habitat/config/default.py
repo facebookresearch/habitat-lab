@@ -247,6 +247,8 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 # Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
 # for the caveats that results in
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
+# Whether or not the agent slides on collisions
+_C.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = True
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------
