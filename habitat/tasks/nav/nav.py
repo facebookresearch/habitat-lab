@@ -10,6 +10,7 @@ import attr
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
@@ -68,20 +69,6 @@ class NavigationGoal:
 
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
     radius: Optional[float] = None
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class ObjectGoal(NavigationGoal):
-    r"""Object goal that can be specified by object_id or position or object
-    category.
-    """
-
-    object_id: str = attr.ib(default=None, validator=not_none_validator)
-    object_name: Optional[str] = None
-    object_category: Optional[str] = None
-    room_id: Optional[str] = None
-    room_name: Optional[str] = None
-    view_points: Optional[List[AgentState]] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -429,6 +416,7 @@ class SPL(Measure):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
+        self._episode_view_points = None
         self._sim = sim
         self._config = config
 
@@ -441,7 +429,14 @@ class SPL(Measure):
         self._previous_position = self._sim.get_agent_state().position.tolist()
         self._start_end_episode_distance = episode.info["geodesic_distance"]
         self._agent_episode_distance = 0.0
+        self._previous_distance_to_target = 0.0  # remove after debug
         self._metric = None
+        if self._config.DISTANCE_TO == "VIEW_POINTS":
+            self._episode_view_points = [
+                view_point.agent_state.position
+                for goal in episode.goals
+                for view_point in goal.view_points
+            ]
 
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(
@@ -454,9 +449,27 @@ class SPL(Measure):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
 
-        distance_to_target = self._sim.geodesic_distance(
-            current_position, episode.goals[0].position
-        )
+        if self._config.DISTANCE_TO == "POINT":
+            distance_to_target = self._sim.geodesic_distance(
+                current_position, episode.goals[0].position
+            )
+        elif self._config.DISTANCE_TO == "VIEW_POINTS":
+            multi_goal = habitat_sim.MultiGoalShortestPath()
+            multi_goal.requested_start = current_position
+            multi_goal.requested_ends = self._episode_view_points
+            self._sim._sim.pathfinder.find_path(multi_goal)
+            distance_to_target = multi_goal.geodesic_distance
+
+        # remove after debug
+        # print(
+        #     f"distance_to_target: {distance_to_target}, delta d: {self._previous_distance_to_target - distance_to_target}"
+        # )
+        self._previous_distance_to_target = distance_to_target
+        if (
+            self._previous_distance_to_target - distance_to_target
+            > self._sim.config.FORWARD_STEP_SIZE
+        ):
+            print("!!! distance_to_target change more than forward step")
 
         if (
             hasattr(task, "is_stop_called")
@@ -577,18 +590,71 @@ class TopDownMap(Measure):
             s_y - point_padding : s_y + point_padding + 1,
         ] = maps.MAP_SOURCE_POINT_INDICATOR
 
-        # mark target point
-        t_x, t_y = maps.to_grid(
-            episode.goals[0].position[0],
-            episode.goals[0].position[2],
-            self._coordinate_min,
-            self._coordinate_max,
-            self._map_resolution,
-        )
-        self._top_down_map[
-            t_x - point_padding : t_x + point_padding + 1,
-            t_y - point_padding : t_y + point_padding + 1,
-        ] = maps.MAP_TARGET_POINT_INDICATOR
+        for goal in episode.goals:
+            if goal.view_points is not None:
+                for view_point in goal.view_points:
+                    # mark view point
+                    t_x, t_y = maps.to_grid(
+                        view_point.agent_state.position[0],
+                        view_point.agent_state.position[2],
+                        self._coordinate_min,
+                        self._coordinate_max,
+                        self._map_resolution,
+                    )
+
+                    self._top_down_map[
+                        t_x - point_padding : t_x + point_padding + 1,
+                        t_y - point_padding : t_y + point_padding + 1,
+                    ] = maps.MAP_VIEW_POINT_INDICATOR
+
+        for goal in episode.goals:
+            # mark target point
+            t_x, t_y = maps.to_grid(
+                goal.position[0],
+                goal.position[2],
+                self._coordinate_min,
+                self._coordinate_max,
+                self._map_resolution,
+            )
+
+            self._top_down_map[
+                t_x - point_padding : t_x + point_padding + 1,
+                t_y - point_padding : t_y + point_padding + 1,
+            ] = maps.MAP_TARGET_POINT_INDICATOR
+
+            sem_scene = self._sim.semantic_annotations()
+            object_id = goal.object_id
+            assert int(sem_scene.objects[object_id].id.split("_")[-1]) == int(
+                goal.object_id
+            )
+
+            center = sem_scene.objects[object_id].aabb.center
+            import itertools
+
+            x_len, _, z_len = sem_scene.objects[object_id].aabb.sizes / 2.0
+            corners = [
+                center + np.array([x, 0, z])
+                for x, z in itertools.product([-x_len, x_len], [z_len, -z_len])
+            ]
+            corners[2], corners[3] = corners[3], corners[2]
+            corners.append(corners[0])
+            map_corners = [
+                maps.to_grid(
+                    p[0],
+                    p[2],
+                    self._coordinate_min,
+                    self._coordinate_max,
+                    self._map_resolution,
+                )[::-1]
+                for p in corners
+            ]
+
+            maps.draw_path(
+                self._top_down_map,
+                map_corners,
+                maps.MAP_TARGET_BOUNDING_BOX,
+                self.line_thickness,
+            )
 
     def reset_metric(self, *args: Any, episode, **kwargs: Any):
         self._step_count = 0
@@ -854,7 +920,7 @@ class TeleportAction(SimulatorTaskAction):
         *args: Any,
         position: List[float],
         rotation: List[float],
-        **kwargs: Any
+        **kwargs: Any,
     ):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.

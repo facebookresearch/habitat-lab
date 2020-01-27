@@ -1,0 +1,47 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 750
+SIMULATOR:
+  TURN_ANGLE: 30
+  TILT_ANGLE: 30
+  AGENT_0:
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+    HEIGHT: 0.88
+    RADIUS: 0.18
+  HABITAT_SIM_V0:
+    GPU_DEVICE_ID: 0
+  SEMANTIC_SENSOR:
+    WIDTH: 640
+    HEIGHT: 480
+    HFOV: 59
+    POSITION: [0, 0.88, 0]
+  RGB_SENSOR:
+    WIDTH: 640
+    HEIGHT: 480
+    HFOV: 59
+    POSITION: [0, 0.88, 0]
+  DEPTH_SENSOR:
+    WIDTH: 640
+    HEIGHT: 480
+    HFOV: 59
+    MIN_DEPTH: 0.5
+    MAX_DEPTH: 3.86
+    POSITION: [0, 0.88, 0]
+TASK:
+  TYPE: ObjectNav-v0
+  SUCCESS_DISTANCE: 0.1
+
+  SENSORS: ['OBJECTGOAL_SENSOR']
+  GOAL_SENSOR_UUID: objectgoal
+
+  MEASUREMENTS: ['SPL']
+  SPL:
+    TYPE: SPL
+    DISTANCE_TO: VIEW_POINTS
+    SUCCESS_DISTANCE: 0.2
+
+DATASET:
+  TYPE: ObjectNav-v1
+  SPLIT: val
+  CONTENT_SCENES: []
+  DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
+  SCENES_DIR: "data/scene_datasets/"

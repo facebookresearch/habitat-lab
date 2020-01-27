@@ -94,6 +94,13 @@ _C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
     "PointGoalWithGPSCompassSensor"
 )
 # -----------------------------------------------------------------------------
+# OBJECTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECTGOAL_SENSOR = CN()
+_C.TASK.OBJECTGOAL_SENSOR.TYPE = "ObjectGoalSensor"
+_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC = "TASK_CATEGORY_ID"
+_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
+# -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
@@ -121,6 +128,7 @@ _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
+_C.TASK.SPL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -210,8 +218,8 @@ _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10
+_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
+_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
 _C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
