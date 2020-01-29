@@ -75,9 +75,9 @@ class NavRLEnv(habitat.RLEnv):
 
     def _distance_target(self):
         current_position = self._env.sim.get_agent_state().position.tolist()
-        target_position = self._env.current_episode.goals[0].position
         distance = self._env.sim.geodesic_distance(
-            current_position, target_position
+            current_position,
+            [goal.position for goal in self._env.current_episode.goals],
         )
         return distance
 

@@ -82,3 +82,27 @@ def test_sim_no_sensors():
     sim = make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
     sim.reset()
     sim.close()
+
+
+def test_sim_geodesic_distance():
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    sim = make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
+    sim.seed(0)
+    sim.reset()
+    start_point = sim.sample_navigable_point()
+    navigable_points = [sim.sample_navigable_point() for _ in range(10)]
+    assert np.isclose(
+        sim.geodesic_distance(start_point, navigable_points[0]), 1.3849650
+    ), "Geodesic distance or sample navigable points mechanism has been changed."
+    assert np.isclose(
+        sim.geodesic_distance(start_point, navigable_points), 0.6194838
+    ), "Geodesic distance or sample navigable points mechanism has been changed."
+    assert sim.geodesic_distance(start_point, navigable_points) == np.min(
+        [
+            sim.geodesic_distance(start_point, position)
+            for position in navigable_points
+        ]
+    ), "Geodesic distance for multi target setup isn't equal to separate single target calls."
+    sim.close()
