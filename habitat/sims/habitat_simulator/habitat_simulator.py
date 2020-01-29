@@ -283,6 +283,7 @@ class HabitatSim(Simulator):
     def geodesic_distance(self, position_a, position_b):
         path = habitat_sim.MultiGoalShortestPath()
         path.requested_start = np.array(position_a, dtype=np.float32)
+
         if isinstance(position_b[0], List) or isinstance(
             position_b[0], np.ndarray
         ):

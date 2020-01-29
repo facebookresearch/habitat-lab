@@ -70,8 +70,6 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             for i in range(len(episode.goals)):
-                if "best_iou" in episode.goals[i]:  # remove before release
-                    del episode.goals[i]["best_iou"]
                 episode.goals[i] = ObjectGoal(**episode.goals[i])
 
                 for vidx, view in enumerate(episode.goals[i].view_points):

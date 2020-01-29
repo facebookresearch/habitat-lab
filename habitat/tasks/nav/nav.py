@@ -10,7 +10,6 @@ import attr
 import numpy as np
 from gym import spaces
 
-import habitat_sim
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
@@ -21,7 +20,6 @@ from habitat.core.embodied_task import (
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
-    AgentState,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
@@ -429,7 +427,6 @@ class SPL(Measure):
         self._previous_position = self._sim.get_agent_state().position.tolist()
         self._start_end_episode_distance = episode.info["geodesic_distance"]
         self._agent_episode_distance = 0.0
-        self._previous_distance_to_target = 0.0  # remove after debug
         self._metric = None
         if self._config.DISTANCE_TO == "VIEW_POINTS":
             self._episode_view_points = [
@@ -451,25 +448,16 @@ class SPL(Measure):
 
         if self._config.DISTANCE_TO == "POINT":
             distance_to_target = self._sim.geodesic_distance(
-                current_position, episode.goals[0].position
+                current_position, [goal.position for goal in episode.goals]
             )
         elif self._config.DISTANCE_TO == "VIEW_POINTS":
-            multi_goal = habitat_sim.MultiGoalShortestPath()
-            multi_goal.requested_start = current_position
-            multi_goal.requested_ends = self._episode_view_points
-            self._sim._sim.pathfinder.find_path(multi_goal)
-            distance_to_target = multi_goal.geodesic_distance
-
-        # remove after debug
-        # print(
-        #     f"distance_to_target: {distance_to_target}, delta d: {self._previous_distance_to_target - distance_to_target}"
-        # )
-        self._previous_distance_to_target = distance_to_target
-        if (
-            self._previous_distance_to_target - distance_to_target
-            > self._sim.config.FORWARD_STEP_SIZE
-        ):
-            print("!!! distance_to_target change more than forward step")
+            distance_to_target = self._sim.geodesic_distance(
+                current_position, self._episode_view_points
+            )
+        else:
+            logger.error(
+                f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
+            )
 
         if (
             hasattr(task, "is_stop_called")
@@ -591,21 +579,24 @@ class TopDownMap(Measure):
         ] = maps.MAP_SOURCE_POINT_INDICATOR
 
         for goal in episode.goals:
-            if goal.view_points is not None:
-                for view_point in goal.view_points:
-                    # mark view point
-                    t_x, t_y = maps.to_grid(
-                        view_point.agent_state.position[0],
-                        view_point.agent_state.position[2],
-                        self._coordinate_min,
-                        self._coordinate_max,
-                        self._map_resolution,
-                    )
+            try:
+                if goal.view_points is not None:
+                    for view_point in goal.view_points:
+                        # mark view point
+                        t_x, t_y = maps.to_grid(
+                            view_point.agent_state.position[0],
+                            view_point.agent_state.position[2],
+                            self._coordinate_min,
+                            self._coordinate_max,
+                            self._map_resolution,
+                        )
 
-                    self._top_down_map[
-                        t_x - point_padding : t_x + point_padding + 1,
-                        t_y - point_padding : t_y + point_padding + 1,
-                    ] = maps.MAP_VIEW_POINT_INDICATOR
+                        self._top_down_map[
+                            t_x - point_padding : t_x + point_padding + 1,
+                            t_y - point_padding : t_y + point_padding + 1,
+                        ] = maps.MAP_VIEW_POINT_INDICATOR
+            except AttributeError:
+                pass
 
         for goal in episode.goals:
             # mark target point
