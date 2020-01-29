@@ -17,6 +17,7 @@ from habitat.core.embodied_task import (
     Measure,
     SimulatorTaskAction,
 )
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
