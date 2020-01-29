@@ -72,7 +72,7 @@ class ShortestPathFollower:
         """
         if (
             self._sim.geodesic_distance(
-                self._sim.get_agent_state().position, goal_pos
+                self._sim.get_agent_state().position, [goal_pos]
             )
             <= self._goal_radius
         ):
@@ -113,7 +113,7 @@ class ShortestPathFollower:
 
     def _geo_dist(self, goal_pos: np.array) -> float:
         return self._sim.geodesic_distance(
-            self._sim.get_agent_state().position, goal_pos
+            self._sim.get_agent_state().position, [goal_pos]
         )
 
     def _est_max_grad_dir(self, goal_pos: np.array) -> np.array:

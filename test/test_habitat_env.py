@@ -390,7 +390,7 @@ def test_action_space_shortest_path():
         angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
-        if env.sim.geodesic_distance(source_position, position) != np.inf:
+        if env.sim.geodesic_distance(source_position, [position]) != np.inf:
             reachable_targets.append(AgentState(position, rotation))
 
     while len(unreachable_targets) < 3:
@@ -400,7 +400,7 @@ def test_action_space_shortest_path():
         angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
-        if env.sim.geodesic_distance(source_position, position) == np.inf:
+        if env.sim.geodesic_distance(source_position, [position]) == np.inf:
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
