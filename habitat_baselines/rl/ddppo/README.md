@@ -18,31 +18,30 @@ and [pytorch's distributed tutorial](https://pytorch.org/tutorials/intermediate/
 ## Pretrained Models (PointGoal Navigation with GPS+Compass)
 
 
-All weights available as a zip [here](https://drive.google.com/open?id=1ueXuIqP2HZ0oxhpDytpc3hpciXSd8H16).
+All weights available as a zip [here](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models.zip).
 
 ### Depth models
 
 | Architecture | Training Data | Val SPL | Test SPL | URL |
 | ------------ | ------------- | ------- | -------- | --- |
-| ResNet50 + LSTM512 | Gibson 4+ | 0.922 | 0.917 | |
-| ResNet50 + LSTM512 | Gibson 4+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.956 | 0.941 |
-| ResNet50 + LSTM512 | Gibson 2+ | 0.956 | 0.944 | |
-| SE-ResNeXt50 + LSTM512 | Gibson 2+ | 0.959 | 0.943 | |
-| SE-ResNeXt101 + LSTM1024 | Gibson 2+ | 0.969 | 0.948 |  |
+| ResNet50 + LSTM512 | Gibson 4+ | 0.922 | 0.917 | [gibson-4plus-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-resnet50.pth) |
+| ResNet50 + LSTM512 | Gibson 4+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.956 | 0.941 | [gibson-4plus-mp3d-train-val-test-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-mp3d-train-val-test-resnet50.pth) |
+| ResNet50 + LSTM512 | Gibson 2+ | 0.956 | 0.944 | [gibson-2plus-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-resnet50.pth)|
+| SE-ResNeXt50 + LSTM512 | Gibson 2+ | 0.959 | 0.943 | [gibson-2plus-se-resneXt101.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-se-resneXt101.pth)|
+| SE-ResNeXt101 + LSTM1024 | Gibson 2+ | 0.969 | 0.948 | [gibson-2plus-se-resneXt101-lstm1024.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-se-resneXt101-lstm1024.pth)|
 
 ### RGB models
 
 | Architecture | Training Data | Val SPL | Test SPL | URL |
 | ------------ | ------------- | ------- | -------- | --- |
-| ResNet50 + LSTM512 | Gibson 2+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test |  |  |
-| SE-ResNeXt50 + LSTM512 | Gibson 2+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.933 | 0.920 |
+| SE-ResNeXt50 + LSTM512 | Gibson 2+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.933 | 0.920 | [gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth) |
 
 
 ### Blind Models
 
 | Architecture | Training Data | Val SPL | Test SPL | URL |
 | ------------ | ------------- | ------- | -------- | --- |
-| LSTM512 | Gibson 0+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.729  |  0.676 |
+| LSTM512 | Gibson 0+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.729  |  0.676 | [gibson-0plus-mp3d-train-val-test-blind.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-0plus-mp3d-train-val-test-blind.pth) |
 
 
 
@@ -57,7 +56,7 @@ All model weights are subject to [Matterport3D Terms-of-Use](http://dovahkiin.st
 If you use DD-PPO or the model-weights in your research, please cite the following [paper](https://arxiv.org/abs/1911.00357):
 
     @article{wijmans2020ddppo,
-      title = {{D}ecentralized {D}istributed {PPO}: {S}olving {P}oint{G}oal {N}avigation},
+      title = {{DD-PPO}: {L}earning Near-Perfect PointGoal Navigators from 2.5 Billion Frames},
       author =  {Erik Wijmans and Abhishek Kadian and Ari Morcos and Stefan Lee and Irfan Essa and Devi Parikh and Manolis Savva and Dhruv Batra},
       journal = {International Conference on Learning Representations (ICLR)},
       year =    {2020}
