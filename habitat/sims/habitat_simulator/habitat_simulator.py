@@ -178,6 +178,10 @@ class HabitatSim(Simulator):
         sim_config.scene.id = self.config.SCENE
         sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
         sim_config.allow_sliding = self.config.HABITAT_SIM_V0.ALLOW_SLIDING
+        sim_config.enable_physics = self.config.HABITAT_SIM_V0.ENABLE_PHYSICS
+        sim_config.physics_config_file = (
+            self.config.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE
+        )
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
