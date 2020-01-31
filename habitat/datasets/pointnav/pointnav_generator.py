@@ -40,7 +40,7 @@ def is_compatible_episode(
     if np.abs(s[1] - t[1]) > 0.5:  # check height difference to assure s and
         #  t are from same floor
         return False, 0
-    d_separation = sim.geodesic_distance(s, t)
+    d_separation = sim.geodesic_distance(s, [t])
     if d_separation == np.inf:
         return False, 0
     if not near_dist <= d_separation <= far_dist:
