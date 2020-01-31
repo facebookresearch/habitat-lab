@@ -138,7 +138,9 @@ class ObjectGoalSensor(Sensor):
         elif self.config.GOAL_SPEC == "OBJECT_ID":
             return np.array([episode.goals[0].object_name_id], dtype=np.int64)
         else:
-            return None
+            raise RuntimeError(
+                "Wrong GOAL_SPEC specified for ObjectGoalSensor."
+            )
 
 
 @registry.register_task(name="ObjectNav-v0")

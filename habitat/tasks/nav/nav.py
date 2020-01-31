@@ -20,6 +20,7 @@ from habitat.core.embodied_task import (
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
+    AgentState,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
@@ -532,6 +533,9 @@ class TopDownMap(Measure):
         self.line_thickness = int(
             np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
         )
+        self.point_padding = 2 * int(
+            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+        )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -561,89 +565,112 @@ class TopDownMap(Measure):
 
         return top_down_map
 
-    def draw_source_and_target(self, episode):
-        # mark source point
-        s_x, s_y = maps.to_grid(
-            episode.start_position[0],
-            episode.start_position[2],
+    def _draw_point(self, position, point_type):
+        t_x, t_y = maps.to_grid(
+            position[0],
+            position[2],
             self._coordinate_min,
             self._coordinate_max,
             self._map_resolution,
         )
-        point_padding = 2 * int(
-            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
-        )
         self._top_down_map[
-            s_x - point_padding : s_x + point_padding + 1,
-            s_y - point_padding : s_y + point_padding + 1,
-        ] = maps.MAP_SOURCE_POINT_INDICATOR
+            t_x - self.point_padding : t_x + self.point_padding + 1,
+            t_y - self.point_padding : t_y + self.point_padding + 1,
+        ] = point_type
 
-        for goal in episode.goals:
-            try:
-                if goal.view_points is not None:
-                    for view_point in goal.view_points:
-                        # mark view point
-                        t_x, t_y = maps.to_grid(
-                            view_point.agent_state.position[0],
-                            view_point.agent_state.position[2],
+    def _draw_goals_view_points(self, episode):
+        if self._config.DRAW_VIEW_POINTS:
+            for goal in episode.goals:
+                try:
+                    if goal.view_points is not None:
+                        for view_point in goal.view_points:
+                            self._draw_point(
+                                view_point.agent_state.position,
+                                maps.MAP_VIEW_POINT_INDICATOR,
+                            )
+                except AttributeError:
+                    pass
+
+    def _draw_goals_positions(self, episode):
+        if self._config.DRAW_GOAL_POSITIONS:
+
+            for goal in episode.goals:
+                try:
+                    self._draw_point(
+                        goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                    )
+                except AttributeError:
+                    pass
+
+    def _draw_goals_aabb(self, episode):
+        if self._config.DRAW_GOAL_AABBS:
+            for goal in episode.goals:
+                try:
+                    sem_scene = self._sim.semantic_annotations()
+                    object_id = goal.object_id
+                    assert int(
+                        sem_scene.objects[object_id].id.split("_")[-1]
+                    ) == int(
+                        goal.object_id
+                    ), f"Object_id doesn't correspond to id in semantic scene objects dictionary for episode: {episode}"
+
+                    center = sem_scene.objects[object_id].aabb.center
+                    x_len, _, z_len = (
+                        sem_scene.objects[object_id].aabb.sizes / 2.0
+                    )
+                    # Nodes to draw rectangle
+                    corners = [
+                        center + np.array([x, 0, z])
+                        for x, z in [
+                            (-x_len, -z_len),
+                            (-x_len, z_len),
+                            (x_len, z_len),
+                            (x_len, -z_len),
+                            (-x_len, -z_len),
+                        ]
+                    ]
+
+                    map_corners = [
+                        maps.to_grid(
+                            p[0],
+                            p[2],
                             self._coordinate_min,
                             self._coordinate_max,
                             self._map_resolution,
                         )
+                        for p in corners
+                    ]
 
-                        self._top_down_map[
-                            t_x - point_padding : t_x + point_padding + 1,
-                            t_y - point_padding : t_y + point_padding + 1,
-                        ] = maps.MAP_VIEW_POINT_INDICATOR
-            except AttributeError:
-                pass
+                    maps.draw_path(
+                        self._top_down_map,
+                        map_corners,
+                        maps.MAP_TARGET_BOUNDING_BOX,
+                        self.line_thickness,
+                    )
+                except AttributeError:
+                    pass
 
-        for goal in episode.goals:
-            # mark target point
-            t_x, t_y = maps.to_grid(
-                goal.position[0],
-                goal.position[2],
-                self._coordinate_min,
-                self._coordinate_max,
-                self._map_resolution,
+    def _draw_shortest_path(
+        self, episode: Episode, agent_position: AgentState
+    ):
+        if self._config.DRAW_SHORTEST_PATH:
+            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
             )
-
-            self._top_down_map[
-                t_x - point_padding : t_x + point_padding + 1,
-                t_y - point_padding : t_y + point_padding + 1,
-            ] = maps.MAP_TARGET_POINT_INDICATOR
-
-            sem_scene = self._sim.semantic_annotations()
-            object_id = goal.object_id
-            assert int(sem_scene.objects[object_id].id.split("_")[-1]) == int(
-                goal.object_id
-            )
-
-            center = sem_scene.objects[object_id].aabb.center
-            import itertools
-
-            x_len, _, z_len = sem_scene.objects[object_id].aabb.sizes / 2.0
-            corners = [
-                center + np.array([x, 0, z])
-                for x, z in itertools.product([-x_len, x_len], [z_len, -z_len])
-            ]
-            corners[2], corners[3] = corners[3], corners[2]
-            corners.append(corners[0])
-            map_corners = [
+            self._shortest_path_points = [
                 maps.to_grid(
                     p[0],
                     p[2],
                     self._coordinate_min,
                     self._coordinate_max,
                     self._map_resolution,
-                )[::-1]
-                for p in corners
+                )
+                for p in self._shortest_path_points
             ]
-
             maps.draw_path(
                 self._top_down_map,
-                map_corners,
-                maps.MAP_TARGET_BOUNDING_BOX,
+                self._shortest_path_points,
+                maps.MAP_SHORTEST_PATH_COLOR,
                 self.line_thickness,
             )
 
@@ -660,33 +687,20 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        if self._config.DRAW_SHORTEST_PATH:
-            # draw shortest path
-            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
-                agent_position, episode.goals[0].position
-            )
-            self._shortest_path_points = [
-                maps.to_grid(
-                    p[0],
-                    p[2],
-                    self._coordinate_min,
-                    self._coordinate_max,
-                    self._map_resolution,
-                )[::-1]
-                for p in self._shortest_path_points
-            ]
-            maps.draw_path(
-                self._top_down_map,
-                self._shortest_path_points,
-                maps.MAP_SHORTEST_PATH_COLOR,
-                self.line_thickness,
-            )
 
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
-        # draw source and target points last to avoid overlap
-        if self._config.DRAW_SOURCE_AND_TARGET:
-            self.draw_source_and_target(episode)
+        # draw source and target parts last to avoid overlap
+        self._draw_goals_view_points(episode)
+        self._draw_goals_aabb(episode)
+        self._draw_goals_positions(episode)
+
+        self._draw_shortest_path(episode, agent_position)
+
+        if self._config.DRAW_SOURCE:
+            self._draw_point(
+                episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
+            )
 
     def _clip_map(self, _map):
         return _map[
