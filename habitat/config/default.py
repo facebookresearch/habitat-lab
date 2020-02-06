@@ -128,7 +128,6 @@ _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
 _C.TASK.SPL.SUCCESS_DISTANCE = 0.2
-_C.TASK.SPL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -185,6 +184,7 @@ _C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
 # -----------------------------------------------------------------------------
 _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+_C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
 # # ANSWER_ACCURACY MEASUREMENT
 # -----------------------------------------------------------------------------

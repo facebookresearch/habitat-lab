@@ -109,7 +109,9 @@ class ObjectGoalSensor(Sensor):
         sensor_shape = (1,)
         max_value = (self.config.GOAL_SPEC_MAX_VAL - 1,)
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
-            max_value = len(self._dataset.category_to_task_category_id)
+            max_value = max(
+                self._dataset.category_to_task_category_id.values()
+            )
 
         return spaces.Box(
             low=0, high=max_value, shape=sensor_shape, dtype=np.int64
@@ -134,7 +136,10 @@ class ObjectGoalSensor(Sensor):
                 )
                 return None
             category_name = episode.goals[0].object_category
-            return self._dataset.category_to_task_category_id[category_name]
+            return np.array(
+                [self._dataset.category_to_task_category_id[category_name]],
+                dtype=np.int64,
+            )
         elif self.config.GOAL_SPEC == "OBJECT_ID":
             return np.array([episode.goals[0].object_name_id], dtype=np.int64)
         else:
