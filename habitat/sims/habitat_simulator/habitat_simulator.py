@@ -288,14 +288,6 @@ class HabitatSim(Simulator):
             position_b[0], np.ndarray
         ):
             path.requested_ends = np.array(position_b, dtype=np.float32)
-            # TODO(erikwijmans) Remove next line as soon as multi goal shortest
-            # path passes the tests.
-            return np.min(
-                [
-                    self.geodesic_distance(position_a, position)
-                    for position in position_b
-                ]
-            )
         else:
             path.requested_ends = np.array(
                 [np.array(position_b, dtype=np.float32)]

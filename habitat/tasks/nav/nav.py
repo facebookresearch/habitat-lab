@@ -272,7 +272,7 @@ class HeadingSensor(Sensor):
         heading_vector = quaternion_rotate_vector(quat, direction_vector)
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        return np.array(phi)
+        return np.array([phi], dtype=np.float32)
 
     def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
@@ -299,13 +299,8 @@ class EpisodicCompassSensor(HeadingSensor):
         rotation_world_agent = agent_state.rotation
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
 
-        return np.array(
-            [
-                self._quat_to_xy_heading(
-                    rotation_world_agent.inverse() * rotation_world_start
-                )
-            ],
-            dtype=np.float32,
+        return self._quat_to_xy_heading(
+            rotation_world_agent.inverse() * rotation_world_start
         )
 
 

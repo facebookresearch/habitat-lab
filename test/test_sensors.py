@@ -241,14 +241,14 @@ def test_pointgoal_with_gps_compass_sensor():
         obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         pointgoal_with_gps_compass = obs["pointgoal_with_gps_compass"]
-        comapss = obs["compass"]
+        compass = obs["compass"]
         gps = obs["gps"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(
             pointgoal_with_gps_compass,
             quaternion_rotate_vector(
                 quaternion.from_rotation_vector(
-                    comapss * np.array([0, 1, 0])
+                    compass * np.array([0, 1, 0])
                 ).inverse(),
                 pointgoal - gps,
             ),
