@@ -78,7 +78,7 @@ def test_state_sensors():
 
         obs = env.reset()
         heading = obs["heading"]
-        assert np.allclose(heading, random_heading)
+        assert np.allclose(heading, [random_heading])
         assert np.allclose(obs["compass"], [0.0], atol=1e-5)
         assert np.allclose(obs["gps"], [0.0, 0.0], atol=1e-5)
 
@@ -241,7 +241,7 @@ def test_pointgoal_with_gps_compass_sensor():
         obs = env.step(sample_non_stop_action(env.action_space))
         pointgoal = obs["pointgoal"]
         pointgoal_with_gps_compass = obs["pointgoal_with_gps_compass"]
-        compass = obs["compass"]
+        compass = float(obs["compass"][0])
         gps = obs["gps"]
         # check to see if taking non-stop actions will affect static point_goal
         assert np.allclose(
@@ -252,6 +252,7 @@ def test_pointgoal_with_gps_compass_sensor():
                 ).inverse(),
                 pointgoal - gps,
             ),
+            atol=1e-5,
         )
 
     env.close()
