@@ -25,7 +25,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Object Navigation dataset.
     """
     category_to_task_category_id: Dict[str, int]
-    category_to_mp3d_category_id: Dict[str, int]
+    category_to_scene_annotation_category_id: Dict[str, int]
     episodes: List[NavigationEpisode]
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
@@ -45,17 +45,22 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
                 "category_to_task_category_id"
             ]
 
+        if "category_to_scene_annotation_category_id" in deserialized:
+            self.category_to_scene_annotation_category_id = deserialized[
+                "category_to_scene_annotation_category_id"
+            ]
+
         if "category_to_mp3d_category_id" in deserialized:
-            self.category_to_mp3d_category_id = deserialized[
+            self.category_to_scene_annotation_category_id = deserialized[
                 "category_to_mp3d_category_id"
             ]
 
         assert len(self.category_to_task_category_id) == len(
-            self.category_to_mp3d_category_id
+            self.category_to_scene_annotation_category_id
         )
 
         assert set(self.category_to_task_category_id.keys()) == set(
-            self.category_to_mp3d_category_id.keys()
+            self.category_to_scene_annotation_category_id.keys()
         ), "category_to_task and category_to_mp3d must have the same keys"
 
         for episode in deserialized["episodes"]:

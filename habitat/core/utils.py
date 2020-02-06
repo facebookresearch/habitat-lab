@@ -12,6 +12,8 @@ import quaternion
 
 from habitat.utils.geometry_utils import quaternion_to_list
 
+# Internals from inner json library needed for patching functionality in
+# DatasetFloatJSONEncoder.
 try:
     from _json import encode_basestring_ascii
 except ImportError:
@@ -108,12 +110,10 @@ def center_crop(obs, new_shape):
 
 
 class DatasetFloatJSONEncoder(json.JSONEncoder):
+    r"""JSON Encoder that sets a float precision for a space saving purpose and
+        encodes ndarray and quaternion. The encoder is compatible with JSON
+        version 2.0.9.
     """
-        JSON Encoder that set float precision for space saving purpose.
-    """
-
-    # Version of JSON library that encoder is compatible with.
-    __version__ = "2.0.9"
 
     def default(self, object):
         # JSON doesn't support numpy ndarray and quaternion
