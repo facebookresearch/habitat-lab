@@ -6,10 +6,10 @@ TORCH_GPU_ID: 1
 VIDEO_OPTION: ["disk", "tensorboard"]
 TENSORBOARD_DIR: "/checkpoint/maksymets/logs/habitat_baselines/ddppo/obj_nav_mp3d"
 VIDEO_DIR: "data/video_dir"
-TEST_EPISODE_COUNT: 2
+TEST_EPISODE_COUNT: 2184
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_PROCESSES: 2
-SENSORS: ["DEPTH_SENSOR"]
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: 10000
 LOG_INTERVAL: 10
