@@ -64,3 +64,9 @@ def cartesian_to_polar(x, y):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(y, x)
     return rho, phi
+
+
+def compute_pixel_coverage(instance_seg, object_id):
+    cand_mask = instance_seg == object_id
+    score = cand_mask.sum().astype(np.float64) / cand_mask.size
+    return score

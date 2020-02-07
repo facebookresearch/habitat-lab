@@ -8,7 +8,7 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Type, Union
 
 import numpy as np
 
@@ -174,6 +174,31 @@ class Measurements:
         packaged inside `Metrics`.
         """
         return Metrics(self.measures)
+
+    def _get_measure_index(self, measure_name):
+        return list(self.measures.keys()).index(measure_name)
+
+    def check_measure_dependencies(
+        self, measure_name: str, dependencies: List[str]
+    ):
+        r"""Checks if dependencies measures are enabled and calculatethat the measure
+        :param measure_name: a name of the measure for which has dependencies.
+        :param dependencies: a list of a measure names that are required by
+        the measure.
+        :return:
+        """
+        measure_index = self._get_measure_index(measure_name)
+        for dependency_measure in dependencies:
+            assert (
+                dependency_measure in self.measures
+            ), f"""{measure_name} measure requires {dependency_measure}
+                listed in tje measures list in the config."""
+
+        for dependency_measure in dependencies:
+            assert measure_index > self._get_measure_index(
+                dependency_measure
+            ), f"""{measure_name} measure requires be listed after {dependency_measure}
+                in tje measures list in the config."""
 
 
 class EmbodiedTask:

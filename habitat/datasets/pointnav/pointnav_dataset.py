@@ -37,12 +37,12 @@ class PointNavDatasetV1(Dataset):
             config.DATA_PATH.format(split=config.SPLIT)
         ) and os.path.exists(config.SCENES_DIR)
 
-    @staticmethod
-    def get_scenes_to_load(config: Config) -> List[str]:
+    @classmethod
+    def get_scenes_to_load(cls, config: Config) -> List[str]:
         r"""Return list of scene ids for which dataset has separate files with
         episodes.
         """
-        assert PointNavDatasetV1.check_config_paths_exist(config)
+        assert cls.check_config_paths_exist(config)
         dataset_dir = os.path.dirname(
             config.DATA_PATH.format(split=config.SPLIT)
         )
@@ -50,8 +50,8 @@ class PointNavDatasetV1(Dataset):
         cfg = config.clone()
         cfg.defrost()
         cfg.CONTENT_SCENES = []
-        dataset = PointNavDatasetV1(cfg)
-        return PointNavDatasetV1._get_scenes_from_folder(
+        dataset = cls(cfg)
+        return cls._get_scenes_from_folder(
             content_scenes_path=dataset.content_scenes_path,
             dataset_dir=dataset_dir,
         )
@@ -86,7 +86,7 @@ class PointNavDatasetV1(Dataset):
         dataset_dir = os.path.dirname(datasetfile_path)
         scenes = config.CONTENT_SCENES
         if ALL_SCENES_MASK in scenes:
-            scenes = PointNavDatasetV1._get_scenes_from_folder(
+            scenes = self.__class__._get_scenes_from_folder(
                 content_scenes_path=self.content_scenes_path,
                 dataset_dir=dataset_dir,
             )
