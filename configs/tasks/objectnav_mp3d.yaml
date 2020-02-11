@@ -1,5 +1,8 @@
 ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
+  ITERATOR_OPTIONS:
+    CYCLE: True
+    NUM_EPISODE_SAMPLE: 4
 SIMULATOR:
   TURN_ANGLE: 30
   TILT_ANGLE: 30
@@ -20,6 +23,9 @@ SIMULATOR:
     HEIGHT: 480
     HFOV: 79
     POSITION: [0, 0.88, 0]
+    NOISE_MODEL: "GaussianNoiseModel"
+    NOISE_MODEL_KWARGS:
+      intensity_constant: 0.1
   DEPTH_SENSOR:
     WIDTH: 640
     HEIGHT: 480
@@ -27,6 +33,7 @@ SIMULATOR:
     MIN_DEPTH: 0.5
     MAX_DEPTH: 5.0
     POSITION: [0, 0.88, 0]
+    NOISE_MODEL: "RedwoodDepthNoiseModel"
 TASK:
   TYPE: ObjectNav-v1
   POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
@@ -45,7 +52,7 @@ TASK:
 
 DATASET:
   TYPE: ObjectNav-v1
-  SPLIT: val
-  CONTENT_SCENES: []
+  SPLIT: train
+  CONTENT_SCENES: ["GdvgFV5R1Z5", "GdvgFV5R1Z5", "GdvgFV5R1Z5", "GdvgFV5R1Z5"] # ["YmJkqBEsHnH", "YmJkqBEsHnH", "YmJkqBEsHnH", "YmJkqBEsHnH"] # ["*"] #
   DATA_PATH: "data/datasets/objectnav/mp3d/v0/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"

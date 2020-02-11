@@ -165,5 +165,9 @@ def generate_video(
         images_to_video(images, video_dir, video_name)
     if "tensorboard" in video_option:
         tb_writer.add_video_from_np_images(
-            f"episode{episode_id}", checkpoint_idx, images, fps=fps
+            # f"episode{episode_id}",
+            video_name,
+            checkpoint_idx,
+            images,
+            fps=fps,
         )

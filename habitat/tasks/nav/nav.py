@@ -817,6 +817,9 @@ class DistanceToGoal(Measure):
                 for goal in episode.goals
                 for view_point in goal.view_points
             ]
+            # logger.info(
+            #     f"episode: {episode.episode_id}, {episode.goals[0].object_category} self._episode_view_points { len(self._episode_view_points)}."
+            # )
         self.update_metric(*args, episode=episode, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):

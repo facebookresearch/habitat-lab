@@ -4,23 +4,26 @@ ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 1
 VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "/checkpoint/maksymets/logs/habitat_baselines/ddppo/obj_nav_mp3d"
+TENSORBOARD_DIR: "/checkpoint/maksymets/logs/habitat_baselines/ddppo/obj_nav_mp3d_4_ep_slack-1e3"
 VIDEO_DIR: "data/video_dir"
-TEST_EPISODE_COUNT: 2184
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_PROCESSES: 2
+TEST_EPISODE_COUNT: 1
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints/obj_nav_mp3d_4_ep_slack-1e3"
+NUM_PROCESSES: 4
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 10000
+CHECKPOINT_FOLDER: "data/new_checkpoints/obj_nav_mp3d_4_ep_slack-1e3"
+NUM_UPDATES: 270000
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 50
+EVAL:
+  SPLIT: "train"
 
 RL:
   SUCCESS_REWARD: 2.5
+  SLACK_REWARD: -1e-3
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 2
+    ppo_epoch: 4
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01

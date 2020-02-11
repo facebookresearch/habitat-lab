@@ -36,7 +36,11 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
+        from habitat.core.logging import logger
+
+        logger.info(f"deserializing")
         deserialized = json.loads(json_str)
+        logger.info("unpacking")
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
 
@@ -98,3 +102,4 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         for i, ep in enumerate(self.episodes):
             ep.episode_id = str(i)
+        logger.info("unpacked.")

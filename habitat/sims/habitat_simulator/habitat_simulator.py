@@ -186,12 +186,18 @@ class HabitatSim(Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            overwrite_config(
+                config_from=sensor.config, config_to=sim_sensor_cfg
+            )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
-            sim_sensor_cfg.position = sensor.config.POSITION
+            # sim_sensor_cfg.position = sensor.config.POSITION
+            # sim_sensor_cfg.orientation = np.array(sensor.config.ORIENTATION, dtype=np.float32)
+            # sim_sensor_cfg.noise_model = sensor.config.NOISE_MODEL
+
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore

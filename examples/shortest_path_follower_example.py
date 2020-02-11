@@ -62,7 +62,9 @@ def draw_top_down_map(info, heading, output_size):
 
 
 def shortest_path_example(mode):
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_paths="configs/tasks/objectnav_mp3d.yaml"
+    )
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
@@ -97,8 +99,13 @@ def shortest_path_example(mode):
             top_down_map = draw_top_down_map(
                 info, observations["heading"][0], im.shape[0]
             )
+            from habitat.utils.visualizations.utils import (
+                observations_to_image,
+            )
+
             output_im = np.concatenate((im, top_down_map), axis=1)
-            images.append(output_im)
+
+            images.append(observations_to_image(observations, info))
         images_to_video(images, dirname, "trajectory")
         print("Episode finished")
 

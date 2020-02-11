@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
@@ -91,6 +92,9 @@ class Env:
             self._config.defrost()
             self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
             self._config.freeze()
+            print(
+                f"scenes{self._dataset.scene_ids}len(self._dataset.episodes) = {len(self._dataset.episodes)}"
+            )
 
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
@@ -198,6 +202,7 @@ class Env:
         assert len(self.episodes) > 0, "Episodes list is empty"
 
         self._current_episode = next(self._episode_iterator)
+        # print(f"self._current_episode: {self._current_episode.episode_id} {self._current_episode.scene_id}")
         self.reconfigure(self._config)
 
         observations = self.task.reset(episode=self.current_episode)
@@ -254,6 +259,8 @@ class Env:
         return observations
 
     def seed(self, seed: int) -> None:
+        np.random.seed(seed)
+        random.seed(seed)
         self._sim.seed(seed)
         self._task.seed(seed)
 
