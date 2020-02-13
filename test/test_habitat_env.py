@@ -139,6 +139,9 @@ def test_with_scope():
 
 def test_threaded_vectorized_env():
     configs, datasets = _load_test_data()
+    # TODO: remove this once singletons are allowed by habitat-sim
+    configs = configs[:1]
+    datasets = datasets[:1]
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
