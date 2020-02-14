@@ -149,7 +149,13 @@ def test_threaded_vectorized_env():
 
     for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
         observations = envs.step(
-            sample_non_stop_action(envs.action_spaces[0], num_envs)
+            [
+                {
+                    "action": sample_non_stop_action(
+                        envs.action_spaces[0], num_envs
+                    )
+                }
+            ]
         )
         assert len(observations) == num_envs
 
