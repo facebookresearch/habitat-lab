@@ -309,13 +309,9 @@ class EpisodeIterator(Iterator):
 
         # sample episodes
         if num_episode_sample >= 0:
-            np.random.seed(100)
-            print(f"np.random.state {np.random.get_state()[0]}")
-            episodes = [
-                episode
-                for episode in episodes
-                if episode.episode_id in ["7", "77", "774", "10"]
-            ]
+            # np.random.seed(100)
+            # print(f"np.random.state {np.random.get_state()[0]}")
+            # episodes = [episode for episode in episodes if episode.episode_id in ["7", "77", "774", "10"]]
             episodes = np.random.choice(
                 episodes, num_episode_sample, replace=False
             )
