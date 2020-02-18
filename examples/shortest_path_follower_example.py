@@ -13,7 +13,10 @@ import habitat
 from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
-from habitat.utils.visualizations.utils import images_to_video
+from habitat.utils.visualizations.utils import (
+    images_to_video,
+    observations_to_image,
+)
 
 cv2 = try_cv2_import()
 
@@ -34,31 +37,6 @@ class SimpleRLEnv(habitat.RLEnv):
 
     def get_info(self, observations):
         return self.habitat_env.get_metrics()
-
-
-def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(
-        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
-    )
-    original_map_size = top_down_map.shape[:2]
-    map_scale = np.array(
-        (1, original_map_size[1] * 1.0 / original_map_size[0])
-    )
-    new_map_size = np.round(output_size * map_scale).astype(np.int32)
-    # OpenCV expects w, h but map size is in h, w
-    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
-
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(
-        map_agent_pos * new_map_size / original_map_size
-    ).astype(np.int32)
-    top_down_map = maps.draw_agent(
-        top_down_map,
-        map_agent_pos,
-        heading - np.pi / 2,
-        agent_radius_px=top_down_map.shape[0] / 40,
-    )
-    return top_down_map
 
 
 def shortest_path_example(mode):
@@ -96,14 +74,6 @@ def shortest_path_example(mode):
 
             observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]
-            top_down_map = draw_top_down_map(
-                info, observations["heading"][0], im.shape[0]
-            )
-            from habitat.utils.visualizations.utils import (
-                observations_to_image,
-            )
-
-            output_im = np.concatenate((im, top_down_map), axis=1)
 
             images.append(observations_to_image(observations, info))
         images_to_video(images, dirname, "trajectory")
