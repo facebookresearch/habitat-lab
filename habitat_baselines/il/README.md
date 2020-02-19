@@ -3,14 +3,15 @@ Imitation Learning (IL)
 
 #### Embodied Question Answering
 
-> based on EmbodiedQA (Das et al. CVPR 2018) implementation.
+**based on EmbodiedQA (Das et al. CVPR 2018) implementation.**
 
 **Paper:** https://embodiedqa.org/paper.pdf
+
 **Code:** https://github.com/facebookresearch/EmbodiedQA
 
 The implementation consists of first independently training the -
-- NAV model (for navigating to the required destination based on question and image input)
-- VQA model (for predicting answer based on question and image input)
+- **NAV model** (for navigating to the required destination based on question and image input)
+- **VQA model** (for predicting answer based on question and image input)
 
 followed by fine-tuning the NAV model.
 
