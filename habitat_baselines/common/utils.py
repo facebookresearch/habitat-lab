@@ -161,7 +161,8 @@ def generate_video(
     if len(images) < 1:
         return
 
-    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_{metric_name}{metric_value:.2f}"
+    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_{metric_name}\
+                {metric_value:.2f}"
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name)
@@ -169,3 +170,16 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+
+
+def tensor_to_images(tensor: torch.Tensor) -> List[np.ndarray]:
+    r"""Converts tensor of n image tensors to list of n images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    images = []
+    for img_tensor in tensor:
+        images.append(img_tensor.permute(1, 2, 0).cpu().numpy() * 255)
+    return images

@@ -1,0 +1,27 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/eqa_mp3d.yaml"
+TRAINER_NAME: "vqa"
+
+ENV_NAME: "VQAILEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+
+EVAL_CKPT_PATH_DIR: "data/vqa/checkpoints/"
+NUM_PROCESSES: 1
+SENSORS: ["RGB_SENSOR"]
+CHECKPOINT_FOLDER: "data/vqa/checkpoints"
+TENSORBOARD_DIR: "data/vqa/tb"
+RESULTS_DIR: "data/vqa/results/{split}" 
+
+LOG_METRICS: True
+OUTPUT_LOG_DIR: data/vqa/logs
+LOG_INTERVAL: 10
+CHECKPOINT_INTERVAL: 1
+EVAL_SAVE_RESULTS_INTERVAL: 10
+
+IL:
+  VQA:
+    # vqa params
+    num_frames: 5
+    max_epochs: 1000
+    batch_size: 20
+    lr: 1e-5

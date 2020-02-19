@@ -1,0 +1,28 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/eqa_mp3d.yaml"
+TRAINER_NAME: "nav"
+
+ENV_NAME: "NavILEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+
+EVAL_CKPT_PATH_DIR: "data/nav/checkpoints/"
+NUM_PROCESSES: 1
+SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
+CHECKPOINT_FOLDER: "data/nav/checkpoints"
+TENSORBOARD_DIR: "data/nav/tb"
+RESULTS_DIR: "data/nav/results/{split}" 
+
+LOG_METRICS: True
+OUTPUT_LOG_DIR: data/nav/logs
+LOG_INTERVAL: 10
+CHECKPOINT_INTERVAL: 10
+EVAL_SAVE_RESULTS_INTERVAL: 10
+
+IL:
+  NAV:
+    # nav params
+    max_epochs: 1000
+    batch_size: 20
+    lr: 1e-3
+    max_controller_actions: 5
+    max_episode_length: 10
