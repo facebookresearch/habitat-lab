@@ -19,7 +19,12 @@ from habitat.tasks.nav.nav import (
     NavigationGoal,
 )
 from habitat.tasks.utils import quaternion_rotate_vector
+from habitat.utils.geometry_utils import angle_between_quaternions
 from habitat.utils.test_utils import sample_non_stop_action
+from habitat.utils.visualizations.utils import (
+    images_to_video,
+    observations_to_image,
+)
 
 
 def _random_episode(env, config):
@@ -318,4 +323,116 @@ def test_get_observations_at():
     agent_state = env.sim.get_agent_state()
     assert np.allclose(agent_state.position, start_state.position)
     assert np.allclose(agent_state.rotation, start_state.rotation)
+    env.close()
+
+
+def test_noise_models_rgbd():
+    DEMO_MODE = False
+    N_STEPS = 100
+
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.SCENE = (
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
+    config.freeze()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+
+    expected_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+    test_episode = NavigationEpisode(
+        episode_id="0",
+        scene_id=config.SIMULATOR.SCENE,
+        start_position=valid_start_position,
+        start_rotation=start_rotation,
+        goals=[NavigationGoal(position=goal_position)],
+    )
+
+    print(f"{test_episode}")
+    env = habitat.Env(config=config, dataset=None)
+
+    env.episode_iterator = iter([test_episode])
+    no_noise_obs = [env.reset()]
+    no_noise_states = [env.sim.get_agent_state()]
+
+    actions = [
+        sample_non_stop_action(env.action_space) for _ in range(N_STEPS)
+    ]
+    for action in actions:
+        no_noise_obs.append(env.step(action))
+        no_noise_states.append(env.sim.get_agent_state())
+    env.close()
+
+    config.defrost()
+
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL = "GaussianNoiseModel"
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS = habitat.Config()
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.INTENSITY_CONSTANT = 0.5
+    config.SIMULATOR.DEPTH_SENSOR.NOISE_MODEL = "RedwoodDepthNoiseModel"
+
+    config.SIMULATOR.ACTION_SPACE_CONFIG = "pyrobotnoisy"
+    config.SIMULATOR.NOISE_MODEL = habitat.Config()
+    config.SIMULATOR.NOISE_MODEL.ROBOT = "LoCoBot"
+    config.SIMULATOR.NOISE_MODEL.CONTROLLER = "Proportional"
+    config.SIMULATOR.NOISE_MODEL.NOISE_MULTIPLIER = 0.5
+
+    config.freeze()
+
+    env = habitat.Env(config=config, dataset=None)
+
+    env.episode_iterator = iter([test_episode])
+
+    obs = env.reset()
+    assert np.linalg.norm(
+        obs["rgb"].astype(np.float) - no_noise_obs[0]["rgb"].astype(np.float)
+    ) > 1.5e-2 * np.linalg.norm(
+        no_noise_obs[0]["rgb"].astype(np.float)
+    ), f"No RGB noise detected."
+
+    assert np.linalg.norm(
+        obs["depth"].astype(np.float)
+        - no_noise_obs[0]["depth"].astype(np.float)
+    ) > 1.5e-2 * np.linalg.norm(
+        no_noise_obs[0]["depth"].astype(np.float)
+    ), f"No Depth noise detected."
+
+    images = []
+    state = env.sim.get_agent_state()
+    angle_diffs = []
+    pos_diffs = []
+    for step_id, action in enumerate(actions):
+        prev_state = state
+        obs = env.step(action)
+        state = env.sim.get_agent_state()
+        position_change = np.linalg.norm(
+            np.array(state.position) - np.array(prev_state.position), ord=2
+        )
+
+        if action["action"][:5] == "TURN_":
+            angle_diff = abs(
+                angle_between_quaternions(state.rotation, prev_state.rotation)
+                - np.deg2rad(config.SIMULATOR.TURN_ANGLE)
+            )
+            angle_diffs.append(angle_diff)
+        else:
+            pos_diffs.append(
+                abs(position_change - config.SIMULATOR.FORWARD_STEP_SIZE)
+            )
+
+        if DEMO_MODE:
+            images.append(observations_to_image(obs, {}))
+
+    if DEMO_MODE:
+        images_to_video(images, "data/video/test_noise", "test_noise")
+
+    assert sum(angle_diffs) > 2.8, "No turn action actuation noise detected."
+    assert sum(pos_diffs) > 1.1, "No forward action actuation noise detected."
     env.close()

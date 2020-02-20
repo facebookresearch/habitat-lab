@@ -29,9 +29,24 @@ RGBSENSOR_DIMENSION = 3
 
 
 def overwrite_config(config_from: Config, config_to: Any) -> None:
+    r"""Takes Habitat-API config and Habitat-Sim config structures. Overwrites
+     Habitat-Sim config with Habitat-API values, where a field name is present
+     in lowercase. Mostly used to avoid `sim_cfg.field = hapi_cfg.FIELD` code.
+
+    Args:
+        config_from: Habitat-API config node.
+        config_to: Habitat-Sim config structure.
+    """
+
+    def if_config_to_lower(config):
+        if isinstance(config, Config):
+            return {key.lower(): val for key, val in config.items()}
+        else:
+            return config
+
     for attr, value in config_from.items():
         if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), value)
+            setattr(config_to, attr.lower(), if_config_to_lower(value))
 
 
 def check_sim_obs(obs, sensor):
@@ -175,13 +190,10 @@ class HabitatSim(Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
-        sim_config.scene.id = self.config.SCENE
-        sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
-        sim_config.allow_sliding = self.config.HABITAT_SIM_V0.ALLOW_SLIDING
-        sim_config.enable_physics = self.config.HABITAT_SIM_V0.ENABLE_PHYSICS
-        sim_config.physics_config_file = (
-            self.config.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE
+        overwrite_config(
+            config_from=self.config.HABITAT_SIM_V0, config_to=sim_config
         )
+        sim_config.scene.id = self.config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -190,12 +202,15 @@ class HabitatSim(Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            overwrite_config(
+                config_from=sensor.config, config_to=sim_sensor_cfg
+            )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
-            sim_sensor_cfg.position = sensor.config.POSITION
+
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
