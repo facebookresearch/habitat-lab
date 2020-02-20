@@ -58,7 +58,6 @@ def construct_envs(
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
-    print(f"len(scenes): {len(scenes)}")
     if len(scenes) > 0:
         random.shuffle(scenes)
 
