@@ -30,7 +30,26 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def to_json(self) -> str:
+        for ep in self.episodes:
+            ep.goals = str(ep.goals[0].object_id)
+
+        self.goals_per_category = {}
+        for i, ep in enumerate(self.episodes):
+            obj_id = str(ep.goals[0].object_id)
+            if obj_id not in self.goals_per_category:
+                self.goals_per_category[obj_id] = ep.goals
+
+            self.episodes[i].goals = obj_id
+
         result = DatasetFloatJSONEncoder().encode(self)
+
+        for i in range(len(self.episodes)):
+            self.episodes[i].goals = self.goals_per_category[
+                self.episodes[i].goals
+            ]
+
+        del self.goals_per_category
+
         return result
 
     def from_json(
@@ -63,6 +82,19 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
             self.category_to_scene_annotation_category_id.keys()
         ), "category_to_task and category_to_mp3d must have the same keys"
 
+        goals_by_category = deserialized["goals_by_category"]
+
+        for k, v in goals_by_category.items():
+            for i in range(len(v)):
+                v[i] = ObjectGoal(**v[i])
+
+                for vidx, view in enumerate(v[i].view_points):
+                    view_location = ObjectViewLocation(**view)
+                    view_location.agent_state = AgentState(
+                        **view_location.agent_state
+                    )
+                    v[i].view_points[vidx] = view_location
+
         for episode in deserialized["episodes"]:
             episode = NavigationEpisode(**episode)
 
@@ -74,15 +106,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
-            for i in range(len(episode.goals)):
-                episode.goals[i] = ObjectGoal(**episode.goals[i])
-
-                for vidx, view in enumerate(episode.goals[i].view_points):
-                    view_location = ObjectViewLocation(**view)
-                    view_location.agent_state = AgentState(
-                        **view_location.agent_state
-                    )
-                    episode.goals[i].view_points[vidx] = view_location
+            episode.goals = goals_by_category[episode.goals]
 
             if episode.shortest_paths is not None:
                 for path in episode.shortest_paths:
