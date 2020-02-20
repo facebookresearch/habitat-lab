@@ -102,6 +102,11 @@ class VQATrainer(BaseILTrainer):
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
 
+        model.train()
+        model.cnn.eval()
+        model = model.double()
+        model.cuda()
+
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
@@ -109,11 +114,6 @@ class VQATrainer(BaseILTrainer):
                 start_time = time.time()
                 for batch in train_loader:
                     t += 1
-
-                    model.train()
-                    model.cnn.eval()
-                    model.cuda()
-                    model = model.double()
 
                     idx, questions, answers, frame_queues = batch
 
@@ -246,6 +246,7 @@ class VQATrainer(BaseILTrainer):
         model.eval()
         model.cnn.eval()
         model = model.double()
+        model.cuda()
 
         metrics = VqaMetric(
             info={"split": "val"},
@@ -261,7 +262,6 @@ class VQATrainer(BaseILTrainer):
         for batch in eval_loader:
             t += 1
 
-            model.cuda()
 
             idx, questions, answers, frame_queues = batch
             questions_var = questions.cuda()
