@@ -51,10 +51,25 @@ class PointNavDatasetV1(Dataset):
         cfg.defrost()
         cfg.CONTENT_SCENES = []
         dataset = cls(cfg)
-        return cls._get_scenes_from_folder(
-            content_scenes_path=dataset.content_scenes_path,
-            dataset_dir=dataset_dir,
-        )
+        if os.path.exists(
+            dataset.content_scenes_path.split("{scene}")[0].format(
+                data_path=dataset_dir
+            )
+        ):
+            return cls._get_scenes_from_folder(
+                content_scenes_path=dataset.content_scenes_path,
+                dataset_dir=dataset_dir,
+            )
+        else:
+            # Load the full dataset, things are split into separate files
+            cfg.CONTENT_SCENES = [ALL_SCENES_MASK]
+            dataset = cls(cfg)
+            scenes = {
+                cls._scene_from_episode(episode)
+                for episode in dataset.episodes
+            }
+
+            return sorted(list(scenes))
 
     @staticmethod
     def _get_scenes_from_folder(content_scenes_path, dataset_dir):
@@ -84,19 +99,32 @@ class PointNavDatasetV1(Dataset):
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
-        scenes = config.CONTENT_SCENES
-        if ALL_SCENES_MASK in scenes:
-            scenes = self.__class__._get_scenes_from_folder(
-                content_scenes_path=self.content_scenes_path,
-                dataset_dir=dataset_dir,
+        if os.path.exists(
+            self.content_scenes_path.split("{scene}")[0].format(
+                data_path=dataset_dir
             )
+        ):
+            scenes = config.CONTENT_SCENES
+            if ALL_SCENES_MASK in scenes:
+                scenes = self._get_scenes_from_folder(
+                    content_scenes_path=self.content_scenes_path,
+                    dataset_dir=dataset_dir,
+                )
 
-        for scene in scenes:
-            scene_filename = self.content_scenes_path.format(
-                data_path=dataset_dir, scene=scene
-            )
-            with gzip.open(scene_filename, "rt") as f:
-                self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+            for scene in scenes:
+                scene_filename = self.content_scenes_path.format(
+                    data_path=dataset_dir, scene=scene
+                )
+                with gzip.open(scene_filename, "rt") as f:
+                    self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+
+        elif ALL_SCENES_MASK not in config.CONTENT_SCENES:
+            scenes_to_load = set(config.CONTENT_SCENES)
+            self.episodes = [
+                episode
+                for episode in self.episodes
+                if self._scene_from_episode(episode) in scenes_to_load
+            ]
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

@@ -98,8 +98,9 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
                     )
                     v[i].view_points[vidx] = view_location
 
-        for episode in deserialized["episodes"]:
+        for i, episode in enumerate(deserialized["episodes"]):
             episode = NavigationEpisode(**episode)
+            episode.episode_id = str(i)
 
             if scenes_dir is not None:
                 if episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
@@ -122,6 +123,3 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
                         path[p_index] = ShortestPathPoint(**point)
 
             self.episodes.append(episode)
-
-        for i, ep in enumerate(self.episodes):
-            ep.episode_id = str(i)

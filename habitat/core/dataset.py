@@ -10,6 +10,7 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
+import os
 import random
 from itertools import groupby
 from typing import (
@@ -26,6 +27,7 @@ from typing import (
 import attr
 import numpy as np
 
+from habitat.config import Config
 from habitat.core.utils import not_none_validator
 
 
@@ -64,6 +66,25 @@ class Dataset(Generic[T]):
     r"""Base class for dataset specification.
     """
     episodes: List[T]
+
+    @staticmethod
+    def _scene_from_episode(episode: T) -> str:
+        r"""Helper method to get the scene name from an episode.  Assumes
+        the scene_id is formated /path/to/<scene_name>.<ext>
+        """
+        return os.path.splitext(os.path.basename(episode.scene_id))[0]
+
+    @classmethod
+    def get_scenes_to_load(cls, config: Config) -> List[str]:
+        r"""Return a sorted list of scenes
+        """
+        assert cls.check_config_paths_exist(config)
+        dataset = cls(config)
+        scenes = {
+            cls._scene_from_episode(episode) for episode in dataset.episodes
+        }
+
+        return sorted(list(scenes))
 
     @property
     def num_episodes(self) -> int:

@@ -56,13 +56,19 @@ def construct_envs(
     dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
     scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
-    if len(scenes) > 0:
-        random.shuffle(scenes)
+    if num_processes > 1:
+        if len(scenes) == 0:
+            raise RuntimeError(
+                "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
+            )
 
-        assert len(scenes) >= num_processes, (
-            "reduce the number of processes as there "
-            "aren't enough number of scenes"
-        )
+        if len(scenes) < num_processes:
+            raise RuntimeError(
+                "reduce the number of processes as there "
+                "aren't enough number of scenes"
+            )
+
+        random.shuffle(scenes)
 
     scene_splits = [[] for _ in range(num_processes)]
     for idx, scene in enumerate(scenes):

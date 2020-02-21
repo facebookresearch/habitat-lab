@@ -12,6 +12,7 @@ from typing import List, Optional
 from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
+from habitat.datasets.pointnav.pointnav_dataset import ALL_SCENES_MASK
 from habitat.datasets.utils import VocabDict
 from habitat.tasks.nav.nav import NavigationGoal
 from habitat.tasks.vln.vln import InstructionData, VLNEpisode
@@ -34,20 +35,6 @@ class VLNDatasetV1(Dataset):
             config.DATA_PATH.format(split=config.SPLIT)
         ) and os.path.exists(config.SCENES_DIR)
 
-    @staticmethod
-    def get_scenes_to_load(config: Config) -> List[str]:
-        r"""Return a sorted list of scene ids
-        """
-        assert VLNDatasetV1.check_config_paths_exist(config)
-        dataset = VLNDatasetV1(config)
-        scenes = set()
-
-        for episode in dataset.episodes:
-            scene = episode.scene_id.rsplit("/", 1)[-1].replace(".glb", "")
-            scenes.add(scene)
-
-        return sorted(list(scenes))
-
     def __init__(self, config: Optional[Config] = None) -> None:
         self.episodes = []
 
@@ -57,6 +44,14 @@ class VLNDatasetV1(Dataset):
         dataset_filename = config.DATA_PATH.format(split=config.SPLIT)
         with gzip.open(dataset_filename, "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+
+        if ALL_SCENES_MASK not in config.CONTENT_SCENES:
+            scenes_to_load = set(config.CONTENT_SCENES)
+            self.episodes = [
+                episode
+                for episode in self.episodes
+                if self._scene_from_episode(episode) in scenes_to_load
+            ]
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
