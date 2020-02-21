@@ -77,9 +77,10 @@ def construct_envs(
     assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_processes):
+        proc_config = config.clone()
+        proc_config.defrost()
 
-        task_config = config.TASK_CONFIG.clone()
-        task_config.defrost()
+        task_config = proc_config.TASK_CONFIG
         if len(scenes) > 0:
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
@@ -88,12 +89,9 @@ def construct_envs(
         )
 
         task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
-        task_config.freeze()
 
-        config.defrost()
-        config.TASK_CONFIG = task_config
-        config.freeze()
-        configs.append(config.clone())
+        proc_config.freeze()
+        configs.append(proc_config)
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,

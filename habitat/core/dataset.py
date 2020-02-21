@@ -30,6 +30,8 @@ import numpy as np
 from habitat.config import Config
 from habitat.core.utils import not_none_validator
 
+ALL_SCENES_MASK = "*"
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class Episode:
@@ -85,6 +87,18 @@ class Dataset(Generic[T]):
         }
 
         return sorted(list(scenes))
+
+    @classmethod
+    def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
+        scenes_to_load = set(config.CONTENT_SCENES)
+
+        def _filter(ep: T) -> bool:
+            return (
+                ALL_SCENES_MASK in scenes_to_load
+                or cls._scene_from_episode(ep) in scenes_to_load
+            )
+
+        return _filter
 
     @property
     def num_episodes(self) -> int:

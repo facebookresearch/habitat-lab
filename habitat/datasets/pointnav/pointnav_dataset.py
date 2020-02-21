@@ -10,7 +10,7 @@ import os
 from typing import List, Optional
 
 from habitat.config import Config
-from habitat.core.dataset import Dataset
+from habitat.core.dataset import ALL_SCENES_MASK, Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import (
     NavigationEpisode,
@@ -18,7 +18,6 @@ from habitat.tasks.nav.nav import (
     ShortestPathPoint,
 )
 
-ALL_SCENES_MASK = "*"
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
@@ -51,11 +50,12 @@ class PointNavDatasetV1(Dataset):
         cfg.defrost()
         cfg.CONTENT_SCENES = []
         dataset = cls(cfg)
-        if os.path.exists(
+        has_individual_scene_files = os.path.exists(
             dataset.content_scenes_path.split("{scene}")[0].format(
                 data_path=dataset_dir
             )
-        ):
+        )
+        if has_individual_scene_files:
             return cls._get_scenes_from_folder(
                 content_scenes_path=dataset.content_scenes_path,
                 dataset_dir=dataset_dir,
@@ -99,11 +99,12 @@ class PointNavDatasetV1(Dataset):
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
-        if os.path.exists(
+        has_individual_scene_files = os.path.exists(
             self.content_scenes_path.split("{scene}")[0].format(
                 data_path=dataset_dir
             )
-        ):
+        )
+        if has_individual_scene_files:
             scenes = config.CONTENT_SCENES
             if ALL_SCENES_MASK in scenes:
                 scenes = self._get_scenes_from_folder(
@@ -118,13 +119,10 @@ class PointNavDatasetV1(Dataset):
                 with gzip.open(scene_filename, "rt") as f:
                     self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
 
-        elif ALL_SCENES_MASK not in config.CONTENT_SCENES:
-            scenes_to_load = set(config.CONTENT_SCENES)
-            self.episodes = [
-                episode
-                for episode in self.episodes
-                if self._scene_from_episode(episode) in scenes_to_load
-            ]
+        else:
+            self.episodes = self.filter_episodes(
+                self.build_content_scenes_filter(config)
+            )
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

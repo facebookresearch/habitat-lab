@@ -206,28 +206,17 @@ class SensorSuite:
         return Observations(self.sensors, *args, **kwargs)
 
 
+@attr.s(auto_attribs=True)
 class AgentState:
     position: List[float]
-    rotation: Optional[List[float]]
-
-    def __init__(
-        self, position: List[float], rotation: Optional[List[float]]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
+    rotation: Optional[List[float]] = None
 
 
+@attr.s(auto_attribs=True)
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]
-    action: Optional[int]
-
-    def __init__(
-        self, position: List[Any], rotation: List[Any], action: Optional[int]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
-        self.action = action
+    action: Optional[int] = None
 
 
 class Simulator:

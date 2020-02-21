@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import time
 
 import numpy as np
@@ -26,17 +27,20 @@ PARTIAL_LOAD_SCENES = 3
 
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
-    json_str = str(dataset.to_json())
+    json_str = dataset.to_json()
     logger.info(
         "JSON conversion finished. {} sec".format((time.time() - start_time))
     )
-    decoded_dataset = dataset.__class__()
+    decoded_dataset = ObjectNavDatasetV1()
     decoded_dataset.from_json(json_str)
-    assert len(decoded_dataset.episodes) > 0
+    assert len(decoded_dataset.episodes) == len(dataset.episodes)
     episode = decoded_dataset.episodes[0]
     assert isinstance(episode, Episode)
-    assert (
-        decoded_dataset.to_json() == json_str
+
+    # The strings won't match exactly as dictionaries don't have an order for the keys
+    # Thus we need to parse the json strings and compare the serialized forms
+    assert json.loads(decoded_dataset.to_json()) == json.loads(
+        json_str
     ), "JSON dataset encoding/decoding isn't consistent"
 
 
@@ -51,6 +55,12 @@ def test_mp3d_object_nav_dataset():
         id_dataset=dataset_config.TYPE, config=dataset_config
     )
     assert dataset
+    dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
+    dataset.goals_by_category = {
+        k: v
+        for k, v in dataset.goals_by_category.items()
+        if k in {ep.goals_key for ep in dataset.episodes}
+    }
     check_json_serializaiton(dataset)
 
 

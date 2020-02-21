@@ -23,6 +23,15 @@ from habitat.tasks.nav.nav import (
 )
 
 
+@attr.s(auto_attribs=True, kw_only=True)
+class ObjectGoalNavEpisode(NavigationEpisode):
+    r"""ObjectGoal Navigation Episode
+
+    :param goals_key: Key to retrieve goals with
+    """
+    goals_key: str = None
+
+
 @attr.s(auto_attribs=True)
 class ObjectViewLocation:
     r"""ObjectViewLocation provides information about a position around an object goal

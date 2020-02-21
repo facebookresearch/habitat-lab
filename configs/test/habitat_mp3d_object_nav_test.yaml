@@ -45,7 +45,7 @@ TASK:
 
 DATASET:
   TYPE: ObjectNav-v1
-  SPLIT: mini_val
-  CONTENT_SCENES: []
+  SPLIT: val
+  CONTENT_SCENES: ["*"]
   DATA_PATH: "data/datasets/objectnav/mp3d/v0/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
