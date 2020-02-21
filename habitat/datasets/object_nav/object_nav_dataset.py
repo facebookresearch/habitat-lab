@@ -30,16 +30,13 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def to_json(self) -> str:
-        for ep in self.episodes:
-            ep.goals = str(ep.goals[0].object_id)
-
         self.goals_per_category = {}
         for i, ep in enumerate(self.episodes):
-            obj_id = str(ep.goals[0].object_id)
-            if obj_id not in self.goals_per_category:
-                self.goals_per_category[obj_id] = ep.goals
+            goals_id = "{}_{}".format(ep.scene_id, ep.goals[0].object_id)
+            if goals_id not in self.goals_per_category:
+                self.goals_per_category[goals_id] = ep.goals
 
-            self.episodes[i].goals = obj_id
+            self.episodes[i].goals = goals_id
 
         result = DatasetFloatJSONEncoder().encode(self)
 
