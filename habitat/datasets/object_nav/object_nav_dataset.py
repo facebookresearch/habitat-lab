@@ -79,6 +79,10 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
             self.category_to_scene_annotation_category_id.keys()
         ), "category_to_task and category_to_mp3d must have the same keys"
 
+        if not "goals_by_category" in deserialized:
+            assert len(deserialized["episodes"]) == 0, "Episodes have no goals"
+            return
+
         goals_by_category = deserialized["goals_by_category"]
 
         for k, v in goals_by_category.items():
