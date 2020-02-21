@@ -29,7 +29,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
 
     :param goals_key: Key to retrieve goals with
     """
-    goals_key: str = None
+    goals_key: Optional[str] = None
 
 
 @attr.s(auto_attribs=True)
