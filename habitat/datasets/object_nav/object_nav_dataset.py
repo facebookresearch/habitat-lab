@@ -80,8 +80,10 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         ), "category_to_task and category_to_mp3d must have the same keys"
 
         if not "goals_by_category" in deserialized:
-            assert len(deserialized["episodes"]) == 0, "Episodes have no goals"
-            return
+            if len(deserialized["episodes"]) == 0:
+                return
+            else:
+                raise RuntimeError("Episodes have no goals")
 
         goals_by_category = deserialized["goals_by_category"]
 
