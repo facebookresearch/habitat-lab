@@ -122,7 +122,7 @@ class PointNavDatasetV1(Dataset):
         else:
             self.episodes = self.filter_episodes(
                 self.build_content_scenes_filter(config)
-            )
+            ).episodes
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
