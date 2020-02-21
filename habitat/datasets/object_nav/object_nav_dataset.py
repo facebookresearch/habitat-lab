@@ -41,14 +41,16 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         goals_by_category = dict()
         for i, ep in enumerate(dataset["episodes"]):
-            goals_key = "{}_{}".format(
-                ep["scene_id"], ep["goals"][0]["object_id"]
-            )
+            dataset["episodes"][i]["object_category"] = ep["goals"][0][
+                "object_category"
+            ]
+            ep = ObjectGoalNavEpisode(**ep)
+
+            goals_key = ep.goals_key
             if goals_key not in goals_by_category:
-                goals_by_category[goals_key] = ep["goals"]
+                goals_by_category[goals_key] = ep.goals
 
             dataset["episodes"][i]["goals"] = []
-            dataset["episodes"][i]["goals_key"] = goals_key
 
         dataset["goals_by_category"] = goals_by_category
 
