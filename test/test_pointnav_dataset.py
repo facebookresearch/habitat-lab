@@ -51,8 +51,8 @@ def test_single_pointnav_dataset():
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
     assert (
-        len(scenes) == 0
-    ), "Expected dataset doesn't expect separate episode file per scene."
+        len(scenes) > 0
+    ), "Expected dataset contains separate episode file per scene."
     dataset = PointNavDatasetV1(config=dataset_config)
     assert len(dataset.episodes) > 0, "The dataset shouldn't be empty."
     assert (
