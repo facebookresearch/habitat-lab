@@ -13,7 +13,6 @@ from torch.utils.data import DataLoader
 from collections import OrderedDict
 
 from habitat import logger
-
 from habitat_baselines.common.base_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -70,7 +69,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
         )
 
-        print("train_loader has %d samples" % len(vqa_dataset))
+        logger.info("train_loader has %d samples" % len(vqa_dataset))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
@@ -104,7 +103,6 @@ class VQATrainer(BaseILTrainer):
 
         model.train()
         model.cnn.eval()
-        model = model.double()
         model.cuda()
 
         with TensorboardWriter(
@@ -115,15 +113,15 @@ class VQATrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    idx, questions, answers, frame_queues = batch
+                    idx, questions, answers, img_feats = batch
 
                     optim.zero_grad()
 
                     question_var = questions.cuda()
                     answers_var = answers.cuda()
-                    frame_queues = frame_queues.cuda()
+                    img_feats_var = img_feats.cuda()
 
-                    scores, att_probs = model(frame_queues, question_var)
+                    scores, att_probs = model(img_feats_var, question_var)
                     loss = lossFn(scores, answers_var)
 
                     # update metrics
@@ -168,16 +166,16 @@ class VQATrainer(BaseILTrainer):
                 end_time = time.time()
                 time_taken = "%.01f" % ((end_time - start_time) / 60)
 
-                print(
+                logger.info(
                     "Epoch {} completed. Time taken: {} minutes.".format(
                         epoch, time_taken
                     )
                 )
 
-                print("Average loss: %.02f" % avg_loss)
-                print("Average accuracy: %.02f" % avg_accuracy)
-                print("Average mean rank: %.02f" % avg_mean_rank)
-                print(
+                logger.info("Average loss: %.02f" % avg_loss)
+                logger.info("Average accuracy: %.02f" % avg_accuracy)
+                logger.info("Average mean rank: %.02f" % avg_mean_rank)
+                logger.info(
                     "Average mean reciprocal rank: %.02f"
                     % avg_mean_reciprocal_rank
                 )
@@ -224,7 +222,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
         )
 
-        print("Number of episodes: ", len(vqa_dataset))
+        logger.info("Number of episodes: ", len(vqa_dataset))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
@@ -245,7 +243,6 @@ class VQATrainer(BaseILTrainer):
 
         model.eval()
         model.cnn.eval()
-        model = model.double()
         model.cuda()
 
         metrics = VqaMetric(
@@ -261,14 +258,16 @@ class VQATrainer(BaseILTrainer):
 
         for batch in eval_loader:
             t += 1
+            if self.config.EVAL_SAVE_RESULTS:
+                idx, questions, answers, img_feats, frame_queue = batch
+            else:
+                idx, questions, answers, img_feats = batch
 
-
-            idx, questions, answers, frame_queues = batch
             questions_var = questions.cuda()
             answers_var = answers.cuda()
-            images_var = frame_queues.cuda()
+            img_feats_var = img_feats.cuda()
 
-            scores, att_probs = model(images_var, questions_var)
+            scores, att_probs = model(img_feats_var, questions_var)
 
             loss = lossFn(scores, answers_var)
 
@@ -280,7 +279,7 @@ class VQATrainer(BaseILTrainer):
                 accuracy,
                 mean_rank,
                 mean_reciprocal_rank,
-            ) = metrics.get_stats(mode=1)
+            ) = metrics.get_stats(mode=0)
 
             avg_loss += metrics_loss
             avg_accuracy += accuracy
@@ -288,36 +287,39 @@ class VQATrainer(BaseILTrainer):
             avg_mean_reciprocal_rank += mean_reciprocal_rank
 
             if t % config.LOG_INTERVAL == 0:
-                print(metrics.get_stat_string(mode=0))
+                logger.info(metrics.get_stat_string(mode=0))
                 metrics.dump_log()
 
-            if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
+            if config.EVAL_SAVE_RESULTS:
+                if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
-                self._save_results(
-                    t,
-                    questions_var,
-                    images_var,
-                    scores,
-                    answers_var,
-                    q_vocab_dict,
-                    ans_vocab_dict,
-                )
+                    self._save_results(
+                        t,
+                        questions_var,
+                        frame_queue,
+                        scores,
+                        answers_var,
+                        q_vocab_dict,
+                        ans_vocab_dict,
+                    )
 
         avg_loss /= len(eval_loader)
         avg_accuracy /= len(eval_loader)
         avg_mean_rank /= len(eval_loader)
         avg_mean_reciprocal_rank /= len(eval_loader)
 
-        writer.add_scalar("avg loss", avg_loss, checkpoint_index)
-        writer.add_scalar("avg accuracy", avg_accuracy, checkpoint_index)
-        writer.add_scalar("avg mean rank", avg_mean_rank, checkpoint_index)
+        writer.add_scalar("avg val loss", avg_loss, checkpoint_index)
+        writer.add_scalar("avg val accuracy", avg_accuracy, checkpoint_index)
+        writer.add_scalar("avg val mean rank", avg_mean_rank, checkpoint_index)
         writer.add_scalar(
-            "avg mean reciprocal rank",
+            "avg val mean reciprocal rank",
             avg_mean_reciprocal_rank,
             checkpoint_index,
         )
 
-        print("Average loss: %.02f" % avg_loss)
-        print("Average accuracy: %.02f" % avg_accuracy)
-        print("Average mean rank: %.02f" % avg_mean_rank)
-        print("Average mean reciprocal rank: %.02f" % avg_mean_reciprocal_rank)
+        logger.info("Average loss: %.02f" % avg_loss)
+        logger.info("Average accuracy: %.02f" % avg_accuracy)
+        logger.info("Average mean rank: %.02f" % avg_mean_rank)
+        logger.info(
+            "Average mean reciprocal rank: %.02f" % avg_mean_reciprocal_rank
+        )

@@ -4,8 +4,8 @@ from torch.utils.data import Dataset
 import numpy as np
 from tqdm import tqdm
 from typing import List, Tuple
-
 from habitat.core.simulator import ShortestPathPoint
+from habitat_baselines.il.models.models import MultitaskCNN
 
 
 class EQADataset(Dataset):
@@ -33,15 +33,28 @@ class EQADataset(Dataset):
         self.q_vocab = self.env._dataset.question_vocab
         self.ans_vocab = self.env._dataset.answer_vocab
 
+        self.eval_save_results = config.EVAL_SAVE_RESULTS
+
+        if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
+            self.mode = "eval"
+        else:
+            self.mode = "train"
+
+        # feature extractor
+        cnn_kwargs = {"num_classes": 191, "pretrained": True}
+        self.cnn = MultitaskCNN(**cnn_kwargs)
+        self.cnn.eval()
+
         # calculating max length of question tokens for padding later
-        # can be done in mp3d_eqa_dataset while loading dataset
+        # [TODO] can be done in mp3d_eqa_dataset while loading dataset
         self.max_q_len = 0
+
         for episode in self.episodes:
             if len(episode.question.question_tokens) > self.max_q_len:
                 self.max_q_len = len(episode.question.question_tokens)
-
         ctr = 0
 
+        # restructuring answer vocab
         for key in self.ans_vocab.word2idx_dict.keys():
             self.ans_vocab.word2idx_dict[key] = ctr
             ctr += 1
@@ -74,8 +87,17 @@ class EQADataset(Dataset):
                 episode = next(
                     ep for ep in self.episodes if ep.episode_id == ep_id
                 )
-                pos_queue = episode.shortest_paths[0][-self.num_frames :]
-                episode.frame_queue = self.get_frame_queue(pos_queue)
+                pos_queue = episode.shortest_paths[0][-self.num_frames:]
+                frame_queue = torch.Tensor(self.get_frame_queue(pos_queue))
+                # extracting features from last n frames of episode
+                img_feats = self.cnn(frame_queue)
+                episode.img_feats = img_feats
+
+                if self.mode == "eval" and self.eval_save_results:
+                    # loading last 2 full images for saving results during eval
+                    episode.frame_queue = frame_queue[-2:]
+
+        self.env.close()
 
     def get_vocab_dicts(self) -> Tuple[dict, dict]:
         return self.q_vocab.word2idx_dict, self.ans_vocab.word2idx_dict
@@ -90,7 +112,6 @@ class EQADataset(Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-
             if preprocess is True:
                 img = img.transpose(2, 0, 1)
                 img = img / 255.0
@@ -104,7 +125,7 @@ class EQADataset(Dataset):
 
     def __getitem__(
         self, idx: int
-    ) -> Tuple[int, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ):
         r"""Returns batch to trainer.
 
         example->
@@ -114,7 +135,7 @@ class EQADataset(Dataset):
         batch ->
         question: [4,5,6,7,8,9,7,10,0,0..],
         answer: 2,
-        frame_queue: list of images depending on trainer and model.
+        img_feats: images' feature tensors.
 
         """
         questions = self.episodes[idx].question.question_tokens
@@ -129,10 +150,18 @@ class EQADataset(Dataset):
             for i in range(diff):
                 questions.append(0)
 
-        frame_queue = self.episodes[idx].frame_queue
+        img_feats = self.episodes[idx].img_feats
         questions = torch.LongTensor(questions)
 
         if self.input_type == "vqa":
-            batch = idx, questions, answers, frame_queue
-
+            if self.mode == "eval" and self.eval_save_results:
+                batch = (
+                    idx,
+                    questions,
+                    answers,
+                    img_feats,
+                    self.episodes[idx].frame_queue,
+                )
+            else:
+                batch = idx, questions, answers, img_feats
         return batch

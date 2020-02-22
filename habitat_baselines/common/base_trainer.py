@@ -247,7 +247,8 @@ class BaseILTrainer(BaseTrainer):
     def _make_dirs(self):
         self._make_log_dir()
         self._make_ckpt_dir()
-        self._make_results_dir()
+        if self.config.EVAL_SAVE_RESULTS:
+            self._make_results_dir()
 
     def _make_log_dir(self):
         if self.config.LOG_METRICS:
@@ -259,10 +260,9 @@ class BaseILTrainer(BaseTrainer):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
     def _make_results_dir(self):
-        for split in ["train", "val"]:
-            dir_name = self.config.RESULTS_DIR.format(split=split)
-            if not os.path.isdir(dir_name):
-                os.makedirs(dir_name)
+        dir_name = self.config.RESULTS_DIR.format(split="val")
+        if not os.path.isdir(dir_name):
+            os.makedirs(dir_name)
 
     def train(self) -> None:
         raise NotImplementedError

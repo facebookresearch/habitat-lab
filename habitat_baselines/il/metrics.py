@@ -8,9 +8,7 @@ import copy
 import json
 import numpy as np
 from typing import List, Tuple
-
 import torch
-import numpy as np
 
 
 class Metric:

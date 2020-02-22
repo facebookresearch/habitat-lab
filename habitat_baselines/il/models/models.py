@@ -240,17 +240,9 @@ class VqaLstmCnnAttentionModel(nn.Module):
         )
 
     def forward(self, images, questions):
-
-        N, T, _, _, _ = images.size()
-        # bs x 5 x 3 x 224 x 224
-        img_feats = self.cnn(
-            images.contiguous().view(
-                -1, images.size(2), images.size(3), images.size(4)
-            )
-        )
-
-        img_feats = self.cnn_fc_layer(img_feats)
-
+        N, T, _ = images.size()
+        img_feats = self.cnn_fc_layer(images)
+        img_feats = img_feats.contiguous().view(-1, img_feats.size(-1))
         img_feats_tr = self.img_tr(img_feats)
         ques_feats = self.q_rnn(questions)
 
