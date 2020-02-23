@@ -64,12 +64,7 @@ class PointNavDatasetV1(Dataset):
             # Load the full dataset, things are split into separate files
             cfg.CONTENT_SCENES = [ALL_SCENES_MASK]
             dataset = cls(cfg)
-            scenes = {
-                cls._scene_from_episode(episode)
-                for episode in dataset.episodes
-            }
-
-            return sorted(list(scenes))
+            return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
     @staticmethod
     def _get_scenes_from_folder(content_scenes_path, dataset_dir):

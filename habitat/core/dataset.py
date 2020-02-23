@@ -70,32 +70,41 @@ class Dataset(Generic[T]):
     episodes: List[T]
 
     @staticmethod
-    def _scene_from_episode(episode: T) -> str:
-        r"""Helper method to get the scene name from an episode.  Assumes
-        the scene_id is formated /path/to/<scene_name>.<ext>
+    def scene_from_scene_path(scene_path: str) -> str:
+        r"""Helper method to get the scene name from an episode.
+
+        :param scene_path: The path to the scene, assumes this is formatted
+                            ``/path/to/<scene_name>.<ext>``
+
+        :return: <scene_name> from the path
         """
-        return os.path.splitext(os.path.basename(episode.scene_id))[0]
+        return os.path.splitext(os.path.basename(scene_path))[0]
 
     @classmethod
     def get_scenes_to_load(cls, config: Config) -> List[str]:
-        r"""Return a sorted list of scenes
+        r"""Returns a list of scene names that would be loaded with this dataset.
+
+        Useful for determing what scenes to split up among different workers.
+
+        :param config: The config for the dataset
+
+        :return: A list of scene names that would be loaded with the dataset
         """
         assert cls.check_config_paths_exist(config)
         dataset = cls(config)
-        scenes = {
-            cls._scene_from_episode(episode) for episode in dataset.episodes
-        }
-
-        return sorted(list(scenes))
+        return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
     @classmethod
     def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
+        r"""Returns a filter function that takes an episode and returns True if that
+        episode is valid under the CONTENT_SCENES feild of the provided config
+        """
         scenes_to_load = set(config.CONTENT_SCENES)
 
         def _filter(ep: T) -> bool:
             return (
                 ALL_SCENES_MASK in scenes_to_load
-                or cls._scene_from_episode(ep) in scenes_to_load
+                or cls.scene_from_scene_path(ep.scene_id) in scenes_to_load
             )
 
         return _filter
