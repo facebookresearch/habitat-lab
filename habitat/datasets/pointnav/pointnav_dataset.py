@@ -61,7 +61,7 @@ class PointNavDatasetV1(Dataset):
                 dataset_dir=dataset_dir,
             )
         else:
-            # Load the full dataset, things are split into separate files
+            # Load the full dataset, things are not split into separate files
             cfg.CONTENT_SCENES = [ALL_SCENES_MASK]
             dataset = cls(cfg)
             return list(map(cls.scene_from_scene_path, dataset.scene_ids))
