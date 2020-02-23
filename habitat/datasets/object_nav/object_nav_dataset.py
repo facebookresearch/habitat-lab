@@ -35,24 +35,26 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     goals_by_category: Dict[str, List[ObjectGoal]]
 
     @staticmethod
-    def dedup_goals(dset: Dict[str, Any]) -> Dict[str, Any]:
-        if len(dset["episodes"]) == 0:
-            return dset
+    def dedup_goals(dataset: Dict[str, Any]) -> Dict[str, Any]:
+        if len(dataset["episodes"]) == 0:
+            return dataset
 
         goals_by_category = dict()
-        for i, ep in enumerate(dset["episodes"]):
-            goals_key = "{}_{}".format(
-                ep["scene_id"], ep["goals"][0]["object_id"]
-            )
+        for i, ep in enumerate(dataset["episodes"]):
+            dataset["episodes"][i]["object_category"] = ep["goals"][0][
+                "object_category"
+            ]
+            ep = ObjectGoalNavEpisode(**ep)
+
+            goals_key = ep.goals_key
             if goals_key not in goals_by_category:
-                goals_by_category[goals_key] = ep["goals"]
+                goals_by_category[goals_key] = ep.goals
 
-            dset["episodes"][i]["goals"] = []
-            dset["episodes"][i]["goals_key"] = goals_key
+            dataset["episodes"][i]["goals"] = []
 
-        dset["goals_by_category"] = goals_by_category
+        dataset["goals_by_category"] = goals_by_category
 
-        return dset
+        return dataset
 
     def to_json(self) -> str:
         for i in range(len(self.episodes)):
@@ -138,12 +140,13 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
             if episode.shortest_paths is not None:
                 for path in episode.shortest_paths:
                     for p_index, point in enumerate(path):
-                        if isinstance(point, int) or point is None:
+                        if point is None or isinstance(point, (int, str)):
                             point = {
                                 "action": point,
                                 "rotation": None,
                                 "position": None,
                             }
+
                         path[p_index] = ShortestPathPoint(**point)
 
             self.episodes.append(episode)

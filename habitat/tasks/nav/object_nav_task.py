@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Any, List, Optional
 
 import attr
@@ -27,9 +28,15 @@ from habitat.tasks.nav.nav import (
 class ObjectGoalNavEpisode(NavigationEpisode):
     r"""ObjectGoal Navigation Episode
 
-    :param goals_key: Key to retrieve goals with
+    :param object_category: Category of the obect
     """
-    goals_key: str = None
+    object_category: Optional[str] = None
+
+    @property
+    def goals_key(self) -> str:
+        r"""The key to retrieve the goals
+        """
+        return f"{os.path.basename(self.scene_id)}_{self.object_category}"
 
 
 @attr.s(auto_attribs=True)
@@ -130,7 +137,7 @@ class ObjectGoalSensor(Sensor):
         self,
         observations,
         *args: Any,
-        episode: NavigationEpisode,
+        episode: ObjectGoalNavEpisode,
         **kwargs: Any,
     ) -> Optional[int]:
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
@@ -144,7 +151,7 @@ class ObjectGoalSensor(Sensor):
                     f"First goal should be ObjectGoal, episode {episode.episode_id}."
                 )
                 return None
-            category_name = episode.goals[0].object_category
+            category_name = episode.object_category
             return np.array(
                 [self._dataset.category_to_task_category_id[category_name]],
                 dtype=np.int64,

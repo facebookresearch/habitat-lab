@@ -54,7 +54,9 @@ def construct_envs(
     configs = []
     env_classes = [env_class for _ in range(num_processes)]
     dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
-    scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+    scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
+    if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
+        scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
     if num_processes > 1:
         if len(scenes) == 0:
