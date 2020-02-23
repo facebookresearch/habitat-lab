@@ -212,6 +212,7 @@ def test_pointnav_episode_generator():
         geodesic_to_euclid_min_ratio=0,
     ):
         episodes.append(episode)
+
     assert len(episodes) == 2 * NUM_EPISODES
     env.episode_iterator = iter(episodes)
 
