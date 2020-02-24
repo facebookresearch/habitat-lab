@@ -222,7 +222,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
         )
 
-        logger.info("Number of episodes: ", len(vqa_dataset))
+        print("Number of episodes: ", len(vqa_dataset))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
@@ -287,7 +287,7 @@ class VQATrainer(BaseILTrainer):
             avg_mean_reciprocal_rank += mean_reciprocal_rank
 
             if t % config.LOG_INTERVAL == 0:
-                logger.info(metrics.get_stat_string(mode=0))
+                print(metrics.get_stat_string(mode=0))
                 metrics.dump_log()
 
             if config.EVAL_SAVE_RESULTS:

@@ -48,5 +48,5 @@ Results from evaluation are stored in `data/vqa/results/val`.
 
 ##### Example results:
 
-![](https://user-images.githubusercontent.com/24846546/74877092-beb74580-535c-11ea-9199-c04985d1eed2.jpg)
-![](https://user-images.githubusercontent.com/24846546/74877214-f4f4c500-535c-11ea-81f3-43924a072f4a.jpg)
+![](https://user-images.githubusercontent.com/24846546/75141155-464bde00-56e8-11ea-9f2e-ca346440e1d2.jpg)
+![](https://user-images.githubusercontent.com/24846546/75141287-8e6b0080-56e8-11ea-8045-b4c4521954b2.jpg)
