@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import torch
+import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
@@ -461,6 +462,7 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
+        pbar = tqdm.tqdm(total=self.config.TEST_EPISODE_COUNT)
         self.actor_critic.eval()
         while (
             len(stats_episodes) < self.config.TEST_EPISODE_COUNT
@@ -513,6 +515,7 @@ class PPOTrainer(BaseRLTrainer):
 
                 # episode ended
                 if not_done_masks[i].item() == 0:
+                    pbar.update()
                     episode_stats = dict()
                     episode_stats[self.metric_uuid] = infos[i][
                         self.metric_uuid

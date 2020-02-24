@@ -58,13 +58,19 @@ def construct_envs(
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
-    if len(scenes) > 0:
-        random.shuffle(scenes)
+    if num_processes > 1:
+        if len(scenes) == 0:
+            raise RuntimeError(
+                "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
+            )
 
-        assert len(scenes) >= num_processes, (
-            "reduce the number of processes as there "
-            "aren't enough number of scenes"
-        )
+        if len(scenes) < num_processes:
+            raise RuntimeError(
+                "reduce the number of processes as there "
+                "aren't enough number of scenes"
+            )
+
+        random.shuffle(scenes)
 
     scene_splits = [[] for _ in range(num_processes)]
     for idx, scene in enumerate(scenes):
@@ -73,9 +79,10 @@ def construct_envs(
     assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_processes):
+        proc_config = config.clone()
+        proc_config.defrost()
 
-        task_config = config.TASK_CONFIG.clone()
-        task_config.defrost()
+        task_config = proc_config.TASK_CONFIG
         if len(scenes) > 0:
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
@@ -84,12 +91,9 @@ def construct_envs(
         )
 
         task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
-        task_config.freeze()
 
-        config.defrost()
-        config.TASK_CONFIG = task_config
-        config.freeze()
-        configs.append(config.clone())
+        proc_config.freeze()
+        configs.append(proc_config)
 
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
