@@ -104,8 +104,11 @@ def shortest_path_example(mode):
 
 
 def main():
-    shortest_path_example("geodesic_path")
-    shortest_path_example("greedy")
+    # When using Habitat-Sim, the exact_gradient mode should be used
+    shortest_path_example("exact_gradient")
+
+    # approximate_gradient mode is used here for testing/demo purposes only
+    shortest_path_example("approximate_gradient")
 
 
 if __name__ == "__main__":

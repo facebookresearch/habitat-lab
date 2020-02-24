@@ -52,10 +52,10 @@ class ShortestPathFollower:
         self._step_size = self._sim.config.FORWARD_STEP_SIZE
 
         self._mode = (
-            "geodesic_path"
+            "exact_gradient"
             if getattr(sim, "get_straight_shortest_path_points", None)
             is not None
-            else "greedy"
+            else "approximate_gradient"
         )
         self._return_one_hot = return_one_hot
 
@@ -121,7 +121,7 @@ class ShortestPathFollower:
         current_state = self._sim.get_agent_state()
         current_pos = current_state.position
 
-        if self.mode == "geodesic_path":
+        if self.mode == "exact_gradient":
             points = self._sim.get_straight_shortest_path_points(
                 self._sim.get_agent_state().position, goal_pos
             )
@@ -184,17 +184,17 @@ class ShortestPathFollower:
 
     @mode.setter
     def mode(self, new_mode: str):
-        r"""Sets the mode for how the greedy follower determines the best next
-            step.
-        Args:
-            new_mode: geodesic_path indicates using the simulator's shortest
-                path algorithm to find points on the map to navigate between.
-                greedy indicates trying to move forward at all possible
-                orientations and selecting the one which reduces the geodesic
-                distance the most.
+        r"""Sets the mode for how the greedy follower determines the gradient of the geodesic_distance
+        function (it then follows the negative of this gradient)
+
+        :param new_mode: Must be one of 'exact_gradient' or 'approximate_gradient'.  If 'exact_gradient', then
+                         the simulator must provide a straightend shortest path.
+
+                         If 'approximate_gradient', the follower approximates the gradient by turning
+                         and then stepping forward
         """
-        assert new_mode in {"geodesic_path", "greedy"}
-        if new_mode == "geodesic_path":
+        assert new_mode in {"exact_gradient", "approximate_gradient"}
+        if new_mode == "exact_gradient":
             assert (
                 getattr(self._sim, "get_straight_shortest_path_points", None)
                 is not None
