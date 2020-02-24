@@ -509,8 +509,8 @@ class BaseILTrainer(BaseTrainer):
                         break
                 q_string += q_word + " "
             else:
-                q_string += "?"
                 break
+        q_string += "?"
 
         value, index = scores.max(0)
         prediction = list(ans_vocab_dict.keys())[index]
