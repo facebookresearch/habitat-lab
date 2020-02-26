@@ -92,7 +92,11 @@ def test_sim_geodesic_distance():
     sim.reset()
 
     with open(
-        "test/data/test-sim-geodesic-distance-test-golden.json", "r"
+        os.path.join(
+            os.path.dirname(__file__),
+            "test-sim-geodesic-distance-test-golden.json",
+        ),
+        "r",
     ) as f:
         test_data = json.load(f)
 
