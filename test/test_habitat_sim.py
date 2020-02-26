@@ -94,6 +94,7 @@ def test_sim_geodesic_distance():
     with open(
         os.path.join(
             os.path.dirname(__file__),
+            "data",
             "test-sim-geodesic-distance-test-golden.json",
         ),
         "r",
