@@ -433,6 +433,10 @@ def test_noise_models_rgbd():
     if DEMO_MODE:
         images_to_video(images, "data/video/test_noise", "test_noise")
 
-    assert sum(angle_diffs) > 2.8, "No turn action actuation noise detected."
-    assert sum(pos_diffs) > 1.1, "No forward action actuation noise detected."
+    assert (
+        np.mean(angle_diffs) > 0.025
+    ), "No turn action actuation noise detected."
+    assert (
+        np.mean(pos_diffs) > 0.025
+    ), "No forward action actuation noise detected."
     env.close()
