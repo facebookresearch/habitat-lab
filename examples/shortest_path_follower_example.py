@@ -95,7 +95,7 @@ def shortest_path_example(mode):
             observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]
             top_down_map = draw_top_down_map(
-                info, observations["heading"], im.shape[0]
+                info, observations["heading"][0], im.shape[0]
             )
             output_im = np.concatenate((im, top_down_map), axis=1)
             images.append(output_im)
@@ -104,8 +104,11 @@ def shortest_path_example(mode):
 
 
 def main():
-    shortest_path_example("geodesic_path")
-    shortest_path_example("greedy")
+    # When using Habitat-Sim, the exact_gradient mode should be used
+    shortest_path_example("exact_gradient")
+
+    # approximate_gradient mode is used here for testing/demo purposes only
+    shortest_path_example("approximate_gradient")
 
 
 if __name__ == "__main__":

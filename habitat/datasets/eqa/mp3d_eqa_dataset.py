@@ -15,7 +15,8 @@ from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
 from habitat.datasets.utils import VocabDict, VocabFromText
 from habitat.tasks.eqa.eqa import EQAEpisode, QuestionData
-from habitat.tasks.nav.nav import ObjectGoal, ShortestPathPoint
+from habitat.tasks.nav.nav import ShortestPathPoint
+from habitat.tasks.nav.object_nav_task import ObjectGoal
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -55,6 +56,10 @@ class Matterport3dDatasetV1(Dataset):
 
         with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
             self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+
+        self.episodes = list(
+            filter(self.build_content_scenes_filter(config), self.episodes)
+        )
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

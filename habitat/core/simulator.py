@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import attr
 from gym import Space
@@ -206,28 +206,17 @@ class SensorSuite:
         return Observations(self.sensors, *args, **kwargs)
 
 
+@attr.s(auto_attribs=True)
 class AgentState:
     position: List[float]
-    rotation: Optional[List[float]]
-
-    def __init__(
-        self, position: List[float], rotation: Optional[List[float]]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
+    rotation: Optional[List[float]] = None
 
 
+@attr.s(auto_attribs=True)
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]
-    action: Optional[int]
-
-    def __init__(
-        self, position: List[Any], rotation: List[Any], action: Optional[int]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
-        self.action = action
+    action: Optional[int] = None
 
 
 class Simulator:
@@ -265,12 +254,15 @@ class Simulator:
         raise NotImplementedError
 
     def geodesic_distance(
-        self, position_a: List[float], position_b: List[float]
+        self,
+        position_a: List[float],
+        position_b: Union[List[float], List[List[float]]],
     ) -> float:
         r"""Calculates geodesic distance between two points.
 
         :param position_a: coordinates of first point.
-        :param position_b: coordinates of second point.
+        :param position_b: coordinates of second point or list of goal points
+        coordinates.
         :return:
             the geodesic distance in the cartesian space between points
             :p:`position_a` and :p:`position_b`, if no path is found between

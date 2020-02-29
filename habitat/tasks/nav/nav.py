@@ -17,6 +17,7 @@ from habitat.core.embodied_task import (
     Measure,
     SimulatorTaskAction,
 )
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -67,20 +68,6 @@ class NavigationGoal:
 
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
     radius: Optional[float] = None
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class ObjectGoal(NavigationGoal):
-    r"""Object goal that can be specified by object_id or position or object
-    category.
-    """
-
-    object_id: str = attr.ib(default=None, validator=not_none_validator)
-    object_name: Optional[str] = None
-    object_category: Optional[str] = None
-    room_id: Optional[str] = None
-    room_name: Optional[str] = None
-    view_points: Optional[List[AgentState]] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -285,7 +272,7 @@ class HeadingSensor(Sensor):
         heading_vector = quaternion_rotate_vector(quat, direction_vector)
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        return np.array(phi)
+        return np.array([phi], dtype=np.float32)
 
     def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
@@ -420,6 +407,8 @@ class SPL(Measure):
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf
+    The measure depends on Distance to Goal measure to improve computational
+    performance for sophisticated goal areas.
     """
 
     def __init__(
@@ -428,6 +417,7 @@ class SPL(Measure):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
+        self._episode_view_points = None
         self._sim = sim
         self._config = config
 
@@ -436,11 +426,14 @@ class SPL(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "spl"
 
-    def reset_metric(self, *args: Any, episode, **kwargs: Any):
+    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
         self._previous_position = self._sim.get_agent_state().position.tolist()
         self._start_end_episode_distance = episode.info["geodesic_distance"]
         self._agent_episode_distance = 0.0
-        self._metric = None
+        task.measurements.check_measure_dependencies(
+            self.uuid, [DistanceToGoal.cls_uuid]
+        )
+        self.update_metric(*args, episode=episode, task=task, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(
@@ -448,14 +441,13 @@ class SPL(Measure):
         )
 
     def update_metric(
-        self, *args: Any, episode, action, task: EmbodiedTask, **kwargs: Any
+        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
     ):
         ep_success = 0
         current_position = self._sim.get_agent_state().position.tolist()
-
-        distance_to_target = self._sim.geodesic_distance(
-            current_position, episode.goals[0].position
-        )
+        distance_to_target = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
 
         if (
             hasattr(task, "is_stop_called")
@@ -530,6 +522,9 @@ class TopDownMap(Measure):
         self.line_thickness = int(
             np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
         )
+        self.point_padding = 2 * int(
+            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+        )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -559,35 +554,114 @@ class TopDownMap(Measure):
 
         return top_down_map
 
-    def draw_source_and_target(self, episode):
-        # mark source point
-        s_x, s_y = maps.to_grid(
-            episode.start_position[0],
-            episode.start_position[2],
-            self._coordinate_min,
-            self._coordinate_max,
-            self._map_resolution,
-        )
-        point_padding = 2 * int(
-            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
-        )
-        self._top_down_map[
-            s_x - point_padding : s_x + point_padding + 1,
-            s_y - point_padding : s_y + point_padding + 1,
-        ] = maps.MAP_SOURCE_POINT_INDICATOR
-
-        # mark target point
+    def _draw_point(self, position, point_type):
         t_x, t_y = maps.to_grid(
-            episode.goals[0].position[0],
-            episode.goals[0].position[2],
+            position[0],
+            position[2],
             self._coordinate_min,
             self._coordinate_max,
             self._map_resolution,
         )
         self._top_down_map[
-            t_x - point_padding : t_x + point_padding + 1,
-            t_y - point_padding : t_y + point_padding + 1,
-        ] = maps.MAP_TARGET_POINT_INDICATOR
+            t_x - self.point_padding : t_x + self.point_padding + 1,
+            t_y - self.point_padding : t_y + self.point_padding + 1,
+        ] = point_type
+
+    def _draw_goals_view_points(self, episode):
+        if self._config.DRAW_VIEW_POINTS:
+            for goal in episode.goals:
+                try:
+                    if goal.view_points is not None:
+                        for view_point in goal.view_points:
+                            self._draw_point(
+                                view_point.agent_state.position,
+                                maps.MAP_VIEW_POINT_INDICATOR,
+                            )
+                except AttributeError:
+                    pass
+
+    def _draw_goals_positions(self, episode):
+        if self._config.DRAW_GOAL_POSITIONS:
+
+            for goal in episode.goals:
+                try:
+                    self._draw_point(
+                        goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                    )
+                except AttributeError:
+                    pass
+
+    def _draw_goals_aabb(self, episode):
+        if self._config.DRAW_GOAL_AABBS:
+            for goal in episode.goals:
+                try:
+                    sem_scene = self._sim.semantic_annotations()
+                    object_id = goal.object_id
+                    assert int(
+                        sem_scene.objects[object_id].id.split("_")[-1]
+                    ) == int(
+                        goal.object_id
+                    ), f"Object_id doesn't correspond to id in semantic scene objects dictionary for episode: {episode}"
+
+                    center = sem_scene.objects[object_id].aabb.center
+                    x_len, _, z_len = (
+                        sem_scene.objects[object_id].aabb.sizes / 2.0
+                    )
+                    # Nodes to draw rectangle
+                    corners = [
+                        center + np.array([x, 0, z])
+                        for x, z in [
+                            (-x_len, -z_len),
+                            (-x_len, z_len),
+                            (x_len, z_len),
+                            (x_len, -z_len),
+                            (-x_len, -z_len),
+                        ]
+                    ]
+
+                    map_corners = [
+                        maps.to_grid(
+                            p[0],
+                            p[2],
+                            self._coordinate_min,
+                            self._coordinate_max,
+                            self._map_resolution,
+                        )
+                        for p in corners
+                    ]
+
+                    maps.draw_path(
+                        self._top_down_map,
+                        map_corners,
+                        maps.MAP_TARGET_BOUNDING_BOX,
+                        self.line_thickness,
+                    )
+                except AttributeError:
+                    pass
+
+    def _draw_shortest_path(
+        self, episode: Episode, agent_position: AgentState
+    ):
+        if self._config.DRAW_SHORTEST_PATH:
+            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
+            )
+            self._shortest_path_points = [
+                maps.to_grid(
+                    p[0],
+                    p[2],
+                    self._coordinate_min,
+                    self._coordinate_max,
+                    self._map_resolution,
+                )
+                for p in self._shortest_path_points
+            ]
+            maps.draw_path(
+                self._top_down_map,
+                self._shortest_path_points,
+                maps.MAP_SHORTEST_PATH_COLOR,
+                self.line_thickness,
+            )
 
     def reset_metric(self, *args: Any, episode, **kwargs: Any):
         self._step_count = 0
@@ -602,33 +676,20 @@ class TopDownMap(Measure):
             self._map_resolution,
         )
         self._previous_xy_location = (a_y, a_x)
-        if self._config.DRAW_SHORTEST_PATH:
-            # draw shortest path
-            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
-                agent_position, episode.goals[0].position
-            )
-            self._shortest_path_points = [
-                maps.to_grid(
-                    p[0],
-                    p[2],
-                    self._coordinate_min,
-                    self._coordinate_max,
-                    self._map_resolution,
-                )[::-1]
-                for p in self._shortest_path_points
-            ]
-            maps.draw_path(
-                self._top_down_map,
-                self._shortest_path_points,
-                maps.MAP_SHORTEST_PATH_COLOR,
-                self.line_thickness,
-            )
 
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
-        # draw source and target points last to avoid overlap
-        if self._config.DRAW_SOURCE_AND_TARGET:
-            self.draw_source_and_target(episode)
+        # draw source and target parts last to avoid overlap
+        self._draw_goals_view_points(episode)
+        self._draw_goals_aabb(episode)
+        self._draw_goals_positions(episode)
+
+        self._draw_shortest_path(episode, agent_position)
+
+        if self._config.DRAW_SOURCE:
+            self._draw_point(
+                episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
+            )
 
     def _clip_map(self, _map):
         return _map[
@@ -723,9 +784,10 @@ class TopDownMap(Measure):
 
 @registry.register_measure
 class DistanceToGoal(Measure):
-    """The measure provides a set of metrics that illustrate agent's progress
-    towards the goal.
+    """The measure calculates a distance towards the goal.
     """
+
+    cls_uuid: str = "distance_to_goal"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -735,11 +797,12 @@ class DistanceToGoal(Measure):
         self._agent_episode_distance = None
         self._sim = sim
         self._config = config
+        self._episode_view_points = None
 
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "distance_to_goal"
+        return self.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = self._sim.get_agent_state().position.tolist()
@@ -748,18 +811,34 @@ class DistanceToGoal(Measure):
         )
         self._agent_episode_distance = 0.0
         self._metric = None
+        if self._config.DISTANCE_TO == "VIEW_POINTS":
+            self._episode_view_points = [
+                view_point.agent_state.position
+                for goal in episode.goals
+                for view_point in goal.view_points
+            ]
+        self.update_metric(*args, episode=episode, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(
             np.array(position_b) - np.array(position_a), ord=2
         )
 
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
+    def update_metric(self, episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position.tolist()
 
-        distance_to_target = self._sim.geodesic_distance(
-            current_position, episode.goals[0].position
-        )
+        if self._config.DISTANCE_TO == "POINT":
+            distance_to_target = self._sim.geodesic_distance(
+                current_position, [goal.position for goal in episode.goals]
+            )
+        elif self._config.DISTANCE_TO == "VIEW_POINTS":
+            distance_to_target = self._sim.geodesic_distance(
+                current_position, self._episode_view_points
+            )
+        else:
+            logger.error(
+                f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
+            )
 
         self._agent_episode_distance += self._euclidean_distance(
             current_position, self._previous_position
@@ -767,13 +846,7 @@ class DistanceToGoal(Measure):
 
         self._previous_position = current_position
 
-        self._metric = {
-            "distance_to_target": distance_to_target,
-            "start_distance_to_target": self._start_end_episode_distance,
-            "distance_delta": self._start_end_episode_distance
-            - distance_to_target,
-            "agent_path_length": self._agent_episode_distance,
-        }
+        self._metric = distance_to_target
 
 
 @registry.register_task_action
@@ -853,7 +926,7 @@ class TeleportAction(SimulatorTaskAction):
         *args: Any,
         position: List[float],
         rotation: List[float],
-        **kwargs: Any
+        **kwargs: Any,
     ):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.

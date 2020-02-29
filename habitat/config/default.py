@@ -6,7 +6,17 @@
 
 from typing import List, Optional, Union
 
-from habitat.config import Config as CN  # type: ignore
+import yacs.config
+
+# from habitat.config import Config as CN # type: ignore
+
+# Default Habitat config node
+class Config(yacs.config.CfgNode):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, new_allowed=True)
+
+
+CN = Config
 
 DEFAULT_CONFIG_DIR = "configs/"
 CONFIG_FILE_SEPARATOR = ","
@@ -84,6 +94,13 @@ _C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
     "PointGoalWithGPSCompassSensor"
 )
 # -----------------------------------------------------------------------------
+# OBJECTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECTGOAL_SENSOR = CN()
+_C.TASK.OBJECTGOAL_SENSOR.TYPE = "ObjectGoalSensor"
+_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC = "TASK_CATEGORY_ID"
+_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
+# -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
@@ -120,13 +137,17 @@ _C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
 _C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
 _C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
 _C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
-_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE_AND_TARGET = True
+_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE = True
 _C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
 _C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR = CN()
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
 _C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
+_C.TASK.TOP_DOWN_MAP.DRAW_VIEW_POINTS = True
+_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_POSITIONS = True
+# Axes aligned bounding boxes
+_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
 # -----------------------------------------------------------------------------
 # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -163,6 +184,7 @@ _C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
 # -----------------------------------------------------------------------------
 _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
+_C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
 # # ANSWER_ACCURACY MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -176,7 +198,7 @@ _C.SIMULATOR.TYPE = "Sim-v0"
 _C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.SCENE = (
-    "data/scene_datasets/habitat-test-scenes/" "van-gogh-room.glb"
+    "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
@@ -190,6 +212,7 @@ SIMULATOR_SENSOR.HEIGHT = 480
 SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
+SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -200,8 +223,8 @@ _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10
+_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
+_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
 _C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
@@ -237,6 +260,12 @@ _C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
 # Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
 # for the caveats that results in
 _C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
+# Whether or not the agent slides on collisions
+_C.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = True
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = False
+_C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
+    "./data/default.phys_scene_config.json"
+)
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------

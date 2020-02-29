@@ -1,0 +1,4 @@
+DATASET:
+  TYPE: ObjectNav-v1
+  SPLIT: train
+  DATA_PATH: data/datasets/objectnav/mp3d/v0/{split}/{split}.json.gz

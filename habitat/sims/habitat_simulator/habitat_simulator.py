@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import numpy as np
 from gym import spaces
@@ -29,9 +29,24 @@ RGBSENSOR_DIMENSION = 3
 
 
 def overwrite_config(config_from: Config, config_to: Any) -> None:
+    r"""Takes Habitat-API config and Habitat-Sim config structures. Overwrites
+     Habitat-Sim config with Habitat-API values, where a field name is present
+     in lowercase. Mostly used to avoid `sim_cfg.field = hapi_cfg.FIELD` code.
+
+    Args:
+        config_from: Habitat-API config node.
+        config_to: Habitat-Sim config structure.
+    """
+
+    def if_config_to_lower(config):
+        if isinstance(config, Config):
+            return {key.lower(): val for key, val in config.items()}
+        else:
+            return config
+
     for attr, value in config_from.items():
         if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), value)
+            setattr(config_to, attr.lower(), if_config_to_lower(value))
 
 
 def check_sim_obs(obs, sensor):
@@ -175,8 +190,10 @@ class HabitatSim(Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
+        overwrite_config(
+            config_from=self.config.HABITAT_SIM_V0, config_to=sim_config
+        )
         sim_config.scene.id = self.config.SCENE
-        sim_config.gpu_device_id = self.config.HABITAT_SIM_V0.GPU_DEVICE_ID
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -185,12 +202,15 @@ class HabitatSim(Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            overwrite_config(
+                config_from=sensor.config, config_to=sim_sensor_cfg
+            )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
-            sim_sensor_cfg.position = sensor.config.POSITION
+
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
@@ -280,10 +300,20 @@ class HabitatSim(Simulator):
         self._update_agents_state()
 
     def geodesic_distance(self, position_a, position_b):
-        path = habitat_sim.ShortestPath()
+        path = habitat_sim.MultiGoalShortestPath()
         path.requested_start = np.array(position_a, dtype=np.float32)
-        path.requested_end = np.array(position_b, dtype=np.float32)
+
+        if isinstance(position_b[0], List) or isinstance(
+            position_b[0], np.ndarray
+        ):
+            path.requested_ends = np.array(position_b, dtype=np.float32)
+        else:
+            path.requested_ends = np.array(
+                [np.array(position_b, dtype=np.float32)]
+            )
+
         self._sim.pathfinder.find_path(path)
+
         return path.geodesic_distance
 
     def action_space_shortest_path(

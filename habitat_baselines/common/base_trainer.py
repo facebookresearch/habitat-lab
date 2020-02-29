@@ -123,6 +123,7 @@ class BaseRLTrainer(BaseTrainer):
         """
 
         config = self.config.clone()
+        config.defrost()
 
         ckpt_cmd_opts = checkpoint_config.CMD_TRAILING_OPTS
         eval_cmd_opts = config.CMD_TRAILING_OPTS

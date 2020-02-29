@@ -82,3 +82,45 @@ def test_sim_no_sensors():
     sim = make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
     sim.reset()
     sim.close()
+
+
+def test_sim_geodesic_distance():
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    sim = make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
+    sim.reset()
+
+    with open(
+        os.path.join(
+            os.path.dirname(__file__),
+            "data",
+            "test-sim-geodesic-distance-test-golden.json",
+        ),
+        "r",
+    ) as f:
+        test_data = json.load(f)
+
+    for test_case in test_data["single_end"]:
+        assert np.isclose(
+            sim.geodesic_distance(test_case["start"], test_case["end"]),
+            test_case["expected"],
+        ), "Geodesic distance mechanism has been changed"
+
+    for test_case in test_data["multi_end"]:
+        assert np.isclose(
+            sim.geodesic_distance(test_case["start"], test_case["ends"]),
+            test_case["expected"],
+        ), "Geodesic distance mechanism has been changed"
+
+        assert np.isclose(
+            sim.geodesic_distance(test_case["start"], test_case["ends"]),
+            np.min(
+                [
+                    sim.geodesic_distance(test_case["start"], end)
+                    for end in test_case["ends"]
+                ]
+            ),
+        ), "Geodesic distance for multi target setup isn't equal to separate single target calls."
+
+    sim.close()

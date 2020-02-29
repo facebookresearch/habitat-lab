@@ -4,9 +4,24 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 from typing import List
 
 import numpy as np
+import quaternion
+
+from habitat.utils.geometry_utils import quaternion_to_list
+
+# Internals from inner json library needed for patching functionality in
+# DatasetFloatJSONEncoder.
+try:
+    from _json import encode_basestring_ascii
+except ImportError:
+    encode_basestring_ascii = None
+try:
+    from _json import encode_basestring
+except ImportError:
+    encode_basestring = None
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
@@ -92,3 +107,70 @@ def center_crop(obs, new_shape):
     obs = obs[top_left[0] : bottom_right[0], top_left[1] : bottom_right[1], :]
 
     return obs
+
+
+class DatasetFloatJSONEncoder(json.JSONEncoder):
+    r"""JSON Encoder that sets a float precision for a space saving purpose and
+        encodes ndarray and quaternion. The encoder is compatible with JSON
+        version 2.0.9.
+    """
+
+    def default(self, object):
+        # JSON doesn't support numpy ndarray and quaternion
+        if isinstance(object, np.ndarray):
+            return object.tolist()
+        if isinstance(object, np.quaternion):
+            return quaternion_to_list(object)
+        quaternion
+        return object.__dict__
+
+    # Overriding method to inject own `_repr` function for floats with needed
+    # precision.
+    def iterencode(self, o, _one_shot=False):
+
+        if self.check_circular:
+            markers = {}
+        else:
+            markers = None
+        if self.ensure_ascii:
+            _encoder = encode_basestring_ascii
+        else:
+            _encoder = encode_basestring
+
+        def floatstr(
+            o,
+            allow_nan=self.allow_nan,
+            _repr=lambda x: format(x, ".5f"),
+            _inf=float("inf"),
+            _neginf=-float("inf"),
+        ):
+            if o != o:
+                text = "NaN"
+            elif o == _inf:
+                text = "Infinity"
+            elif o == _neginf:
+                text = "-Infinity"
+            else:
+                return _repr(o)
+
+            if not allow_nan:
+                raise ValueError(
+                    "Out of range float values are not JSON compliant: "
+                    + repr(o)
+                )
+
+            return text
+
+        _iterencode = json.encoder._make_iterencode(
+            markers,
+            self.default,
+            _encoder,
+            self.indent,
+            floatstr,
+            self.key_separator,
+            self.item_separator,
+            self.sort_keys,
+            self.skipkeys,
+            _one_shot,
+        )
+        return _iterencode(o, 0)
