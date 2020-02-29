@@ -8,4 +8,4 @@ SIMULATOR:
 DATASET:
   TYPE: PointNav-v1
   SPLIT: train
-  DATA_PATH: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
+  DATA_PATH: data/datasets/pointnav/gibson/v2/{split}/{split}.json.gz
