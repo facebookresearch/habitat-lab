@@ -21,25 +21,95 @@ class Benchmark:
     r"""Benchmark for evaluating agents in environments.
     """
 
-    def __init__(self, config_paths: Optional[str] = None) -> None:
+    def __init__(
+        self, config_paths: Optional[str] = None, eval_remote=False
+    ) -> None:
         r"""..
 
         :param config_paths: file to be used for creating the environment
+        :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
         """
         config_env = get_config(config_paths)
-        self._env = Env(config=config_env)
+        self._eval_remote = eval_remote
 
-    def evaluate(
+        if self._eval_remote is True:
+            self._env = None
+        else:
+            self._env = Env(config=config_env)
+
+    def remote_evaluate(
         self, agent: Agent, num_episodes: Optional[int] = None
-    ) -> Dict[str, float]:
-        r"""..
+    ):
+        # The modules imported below are specific to habitat-challenge remote evaluation.
+        # These modules are not part of the habitat-api repository.
+        import evaluation_pb2
+        import evaluation_pb2_grpc
+        import evalai_environment_habitat
+        import grpc
+        import pickle
+        import time
 
-        :param agent: agent to be evaluated in environment.
-        :param num_episodes: count of number of episodes for which the
-            evaluation should be run.
-        :return: dict containing metrics tracked by environment.
-        """
+        def pack_for_grpc(entity):
+            return pickle.dumps(entity)
 
+        def unpack_for_grpc(entity):
+            return pickle.loads(entity)
+
+        def remote_ep_over(stub):
+            res_env = unpack_for_grpc(
+                stub.episode_over(evaluation_pb2.Package()).SerializedEntity
+            )
+            return res_env["episode_over"]
+
+        channel = grpc.insecure_channel("environment:8085")
+        stub = evaluation_pb2_grpc.EnvironmentStub(channel)
+
+        base_num_episodes = unpack_for_grpc(
+            stub.num_episodes(evaluation_pb2.Package()).SerializedEntity
+        )
+        num_episodes = base_num_episodes["num_episodes"]
+
+        agg_metrics: Dict = defaultdict(float)
+
+        count_episodes = 0
+
+        while count_episodes < num_episodes:
+            agent.reset()
+            res_env = unpack_for_grpc(
+                stub.reset(evaluation_pb2.Package()).SerializedEntity
+            )
+            obs = res_env["observations"]
+
+            while not remote_ep_over(stub):
+                action = agent.act(obs)
+
+                res_env = unpack_for_grpc(
+                    stub.act_on_environment(
+                        evaluation_pb2.Package(
+                            SerializedEntity=pack_for_grpc(action)
+                        )
+                    ).SerializedEntity
+                )
+
+            metrics = unpack_for_grpc(
+                stub.get_metrics(
+                    evaluation_pb2.Package(
+                        SerializedEntity=pack_for_grpc(action)
+                    )
+                ).SerializedEntity
+            )
+
+            for m, v in metrics["metrics"].items():
+                agg_metrics[m] += v
+            count_episodes += 1
+
+        avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+
+        evalai_environment_habitat.update_submission_result(avg_metrics)
+
+        return avg_metrics
+
+    def local_evaluate(self, agent: Agent, num_episodes: Optional[int] = None):
         if num_episodes is None:
             num_episodes = len(self._env.episodes)
         else:
@@ -71,3 +141,19 @@ class Benchmark:
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
 
         return avg_metrics
+
+    def evaluate(
+        self, agent: Agent, num_episodes: Optional[int] = None
+    ) -> Dict[str, float]:
+        r"""..
+
+        :param agent: agent to be evaluated in environment.
+        :param num_episodes: count of number of episodes for which the
+            evaluation should be run.
+        :return: dict containing metrics tracked by environment.
+        """
+
+        if self._eval_remote is True:
+            return self.remote_evaluate(agent, num_episodes)
+        else:
+            return self.local_evaluate(agent, num_episodes)
