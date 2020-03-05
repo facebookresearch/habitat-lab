@@ -363,18 +363,6 @@ class BaseILTrainer(BaseTrainer):
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
         raise NotImplementedError
 
-    @staticmethod
-    def _pause_envs(
-        envs_to_pause, envs,
-    ):
-        # pausing self.envs with no new episode
-        if len(envs_to_pause) > 0:
-            state_index = list(range(envs.num_envs))
-            for idx in reversed(envs_to_pause):
-                state_index.pop(idx)
-                envs.pause_at(idx)
-        return envs
-
     def _put_text_on_image(
         self,
         image: np.ndarray,
@@ -470,7 +458,7 @@ class BaseILTrainer(BaseTrainer):
             collage_image, question, prediction, ground_truth
         )
 
-        cv2.imwrite(os.path.join(path, str(idx) + "result_image.jpg"), image)
+        cv2.imwrite(os.path.join(path, str(idx) + "_image.jpg"), image)
 
     def _save_results(
         self,

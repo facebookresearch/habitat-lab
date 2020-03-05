@@ -131,7 +131,7 @@ class MultitaskCNN(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, x):
-        assert self.training is False
+        # assert self.training is False
         conv1 = self.conv_block1(x)
         conv2 = self.conv_block2(conv1)
         conv3 = self.conv_block3(conv2)
@@ -206,7 +206,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
     ):
         super(VqaLstmCnnAttentionModel, self).__init__()
 
-        cnn_kwargs = {"num_classes": 191, "pretrained": True}
+        cnn_kwargs = {"num_classes": 191, "pretrained": False}
         self.cnn = MultitaskCNN(**cnn_kwargs)
         self.cnn_fc_layer = nn.Sequential(
             nn.Linear(32 * 12 * 12, 64), nn.ReLU(), nn.Dropout(p=0.5)
@@ -240,9 +240,16 @@ class VqaLstmCnnAttentionModel(nn.Module):
         )
 
     def forward(self, images, questions):
-        N, T, _ = images.size()
-        img_feats = self.cnn_fc_layer(images)
-        img_feats = img_feats.contiguous().view(-1, img_feats.size(-1))
+        N, T, _, _, _ = images.size()
+        # bs x 5 x 3 x 256 x 256
+        img_feats = self.cnn(
+            images.contiguous().view(
+                -1, images.size(2), images.size(3), images.size(4)
+            )
+        )
+
+        img_feats = self.cnn_fc_layer(img_feats)
+
         img_feats_tr = self.img_tr(img_feats)
         ques_feats = self.q_rnn(questions)
 

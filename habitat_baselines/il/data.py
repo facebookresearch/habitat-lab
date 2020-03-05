@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 
+import os
+import cv2
 import numpy as np
 from tqdm import tqdm
 from typing import List, Tuple
@@ -36,28 +38,17 @@ class EQADataset(Dataset):
         self.eval_save_results = config.EVAL_SAVE_RESULTS
 
         if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
-            self.mode = "eval"
+            self.mode = "val"
         else:
             self.mode = "train"
 
-        # feature extractor
-        cnn_kwargs = {"num_classes": 191, "pretrained": True}
-        self.cnn = MultitaskCNN(**cnn_kwargs)
-        self.cnn.eval()
+        self.frame_dataset_path = config.FRAME_DATASET_PATH
+        self.only_vqa_task = config.ONLY_VQA_TASK
+        self.disk_cache_exists = False
 
-        # calculating max length of question tokens for padding later
         # [TODO] can be done in mp3d_eqa_dataset while loading dataset
-        self.max_q_len = 0
-
-        for episode in self.episodes:
-            if len(episode.question.question_tokens) > self.max_q_len:
-                self.max_q_len = len(episode.question.question_tokens)
-        ctr = 0
-
-        # restructuring answer vocab
-        for key in self.ans_vocab.word2idx_dict.keys():
-            self.ans_vocab.word2idx_dict[key] = ctr
-            ctr += 1
+        self.calc_max_length()
+        self.restructure_ans_vocab()
 
         self.scene_ids = []
         self.scene_episode_dict = {}
@@ -70,55 +61,103 @@ class EQADataset(Dataset):
             else:
                 self.scene_episode_dict[ep.scene_id].append(ep.episode_id)
 
-        # for each scene > load scene in memory > get last frames for each
-        # episode corresponding to each scene
-        for scene in tqdm(
-            list(self.scene_episode_dict.keys()),
-            desc="loading\
-                          frames for each episode in memory",
-        ):
+        # checking if cache exists & making cache dir
+        if not os.path.exists(os.path.join(self.frame_dataset_path, self.mode)):
+            os.makedirs(os.path.join(self.frame_dataset_path, self.mode))
+            print('Disk cache does not exist.')
 
-            self.config.defrost()
-            self.config.SIMULATOR.SCENE = scene
-            self.config.freeze()
-            self.env.sim.reconfigure(self.config.SIMULATOR)
+        else:
+            if len(os.listdir(os.path.join(self.frame_dataset_path, self.mode))) == len(self.episodes):
+                self.disk_cache_exists = True
+                print('Disk cache exists.')
 
-            for ep_id in tqdm(self.scene_episode_dict[scene]):
-                episode = next(
-                    ep for ep in self.episodes if ep.episode_id == ep_id
-                )
-                pos_queue = episode.shortest_paths[0][-self.num_frames:]
-                frame_queue = torch.Tensor(self.get_frame_queue(pos_queue))
-                # extracting features from last n frames of episode
-                img_feats = self.cnn(frame_queue)
-                episode.img_feats = img_feats
+        if not self.disk_cache_exists:
+            """
+            for each scene > load scene in memory > save frames for each
+            episode corresponding to each scene
+            """
+            print('Saving episode frames to disk.')
+            for scene in tqdm(
+                list(self.scene_episode_dict.keys()),
+                desc="going through all scenes from dataset"
+            ):
 
-                if self.mode == "eval" and self.eval_save_results:
-                    # loading last 2 full images for saving results during eval
-                    episode.frame_queue = frame_queue[-2:]
+                self.config.defrost()
+                self.config.SIMULATOR.SCENE = scene
+                self.config.freeze()
+                self.env.sim.reconfigure(self.config.SIMULATOR)
 
+                for ep_id in tqdm(self.scene_episode_dict[scene],
+                                  desc="saving episode frames for each scene"):
+                    episode = next(
+                        ep for ep in self.episodes if ep.episode_id == ep_id
+                    )
+                    if self.only_vqa_task:
+                        pos_queue = episode.shortest_paths[0][-self.num_frames:]
+                    else:
+                        pos_queue = episode.shortest_paths[0]
+
+                    self.save_frame_queue(pos_queue, ep_id, self.mode)
+
+        print('Saved all episodes\' frames to disk. Frame dataset ready.')
         self.env.close()
 
+    def calc_max_length(self) -> None:
+        r"""Calculates max length of question.
+        This will be used for padding questions with 0s so that all questions
+        have same string length.
+        """
+        self.max_q_len = 0
+
+        for episode in self.episodes:
+            if len(episode.question.question_tokens) > self.max_q_len:
+                self.max_q_len = len(episode.question.question_tokens)
+
+    def restructure_ans_vocab(self) -> None:
+        r"""
+        Restructures answer vocab so that each answer id corresponds to a
+        numerical index starting from 0 for first answer.
+        """
+
+        ctr = 0
+        for key in self.ans_vocab.word2idx_dict.keys():
+            self.ans_vocab.word2idx_dict[key] = ctr
+            ctr += 1
+
     def get_vocab_dicts(self) -> Tuple[dict, dict]:
+        r"""Returns vocab dictionaries from vocabs
+
+        """
         return self.q_vocab.word2idx_dict, self.ans_vocab.word2idx_dict
 
-    def get_frame_queue(
-        self, pos_queue: List[ShortestPathPoint], preprocess=True
-    ) -> np.ndarray:
-        frame_queue = []
+    def save_frame_queue(
+        self, pos_queue: List[ShortestPathPoint], episode_id, mode
+    ) -> None:
+        r"""Writes episode's frame queue to disk.
+        """
+        episode_frames_path = os.path.join(self.frame_dataset_path, mode, episode_id)
+        if not os.path.exists(episode_frames_path):
+            os.makedirs(episode_frames_path)
 
-        for pos in pos_queue:
+        for idx, pos in enumerate(pos_queue):
             observation = self.env.sim.get_observations_at(
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            if preprocess is True:
-                img = img.transpose(2, 0, 1)
-                img = img / 255.0
+            frame_path = os.path.join(episode_frames_path, "{0:0=3d}".format(idx))
+            cv2.imwrite(frame_path + '.jpg', img)
 
-            frame_queue.append(img)
-
-        return np.array(frame_queue)
+    def get_frames(self, frames_path, num=0):
+        r"""Fetches frames from disk.
+        """
+        frames = []
+        for img in sorted(os.listdir(frames_path))[-num:]:
+            img_path = os.path.join(frames_path, img)
+            img = cv2.imread(img_path)
+            img = img.transpose(2, 0, 1)
+            img = img / 255.0
+            frames.append(img)
+        return np.array(frames)
 
     def __len__(self) -> int:
         return len(self.episodes)
@@ -135,33 +174,25 @@ class EQADataset(Dataset):
         batch ->
         question: [4,5,6,7,8,9,7,10,0,0..],
         answer: 2,
-        img_feats: images' feature tensors.
+        frame_queue: tensor containing episode frames
 
         """
-        questions = self.episodes[idx].question.question_tokens
-        answers = self.ans_vocab.word2idx(
+        episode_id = self.episodes[idx].episode_id
+        question = self.episodes[idx].question.question_tokens
+        answer = self.ans_vocab.word2idx(
             self.episodes[idx].question.answer_text
         )
 
         # padding question with zeros - to make all questions of same length
-        # (can also be done in mp3d_eqa_dataset while loading dataset)
-        if len(questions) < self.max_q_len:
-            diff = self.max_q_len - len(questions)
+        if len(question) < self.max_q_len:
+            diff = self.max_q_len - len(question)
             for i in range(diff):
-                questions.append(0)
+                question.append(0)
 
-        img_feats = self.episodes[idx].img_feats
-        questions = torch.LongTensor(questions)
+        question = torch.LongTensor(question)
+        frames_path = os.path.join(self.frame_dataset_path, self.mode, episode_id)
 
         if self.input_type == "vqa":
-            if self.mode == "eval" and self.eval_save_results:
-                batch = (
-                    idx,
-                    questions,
-                    answers,
-                    img_feats,
-                    self.episodes[idx].frame_queue,
-                )
-            else:
-                batch = idx, questions, answers, img_feats
+            frame_queue = self.get_frames(frames_path, num=self.num_frames)
+            batch = idx, question, answer, frame_queue
         return batch

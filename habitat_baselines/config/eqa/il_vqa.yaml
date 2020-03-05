@@ -5,6 +5,9 @@ ENV_NAME: "VQAILEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 
+ONLY_VQA_TASK: False # if True, only last `num_frames` will be saved to disk. 
+#if False, all frames for each episode are saved to disk (for NAV task later)
+FRAME_DATASET_PATH: "data/episode_frame_dataset/"
 EVAL_CKPT_PATH_DIR: "data/vqa/checkpoints/"
 NUM_PROCESSES: 1
 SENSORS: ["RGB_SENSOR"]

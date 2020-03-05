@@ -102,8 +102,8 @@ class VQATrainer(BaseILTrainer):
         avg_mean_reciprocal_rank = 0.0
 
         model.train()
-        model.cnn.eval()
-        model.cuda()
+        # model.cnn.eval()
+        model.double().cuda()
 
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
@@ -113,16 +113,16 @@ class VQATrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    idx, questions, answers, img_feats = batch
+                    idx, questions, answers, frame_queue = batch
 
                     optim.zero_grad()
 
-                    question_var = questions.cuda()
-                    answers_var = answers.cuda()
-                    img_feats_var = img_feats.cuda()
+                    questions = questions.cuda()
+                    answers = answers.cuda()
+                    frame_queue = frame_queue.cuda()
 
-                    scores, att_probs = model(img_feats_var, question_var)
-                    loss = lossFn(scores, answers_var)
+                    scores, att_probs = model(frame_queue, questions)
+                    loss = lossFn(scores, answers)
 
                     # update metrics
                     accuracy, ranks = metrics.compute_ranks(
@@ -243,7 +243,7 @@ class VQATrainer(BaseILTrainer):
 
         model.eval()
         model.cnn.eval()
-        model.cuda()
+        model.double().cuda()
 
         metrics = VqaMetric(
             info={"split": "val"},
@@ -258,18 +258,14 @@ class VQATrainer(BaseILTrainer):
 
         for batch in eval_loader:
             t += 1
-            if self.config.EVAL_SAVE_RESULTS:
-                idx, questions, answers, img_feats, frame_queue = batch
-            else:
-                idx, questions, answers, img_feats = batch
+            idx, questions, answers, frame_queue = batch
+            questions = questions.cuda()
+            answers = answers.cuda()
+            frame_queue = frame_queue.cuda()
 
-            questions_var = questions.cuda()
-            answers_var = answers.cuda()
-            img_feats_var = img_feats.cuda()
+            scores, att_probs = model(frame_queue, questions)
 
-            scores, att_probs = model(img_feats_var, questions_var)
-
-            loss = lossFn(scores, answers_var)
+            loss = lossFn(scores, answers)
 
             accuracy, ranks = metrics.compute_ranks(scores.data.cpu(), answers)
             metrics.update([loss.item(), accuracy, ranks, 1.0 / ranks])
@@ -294,11 +290,11 @@ class VQATrainer(BaseILTrainer):
                 if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
                     self._save_results(
-                        t,
-                        questions_var,
+                        idx,
+                        questions,
                         frame_queue,
                         scores,
-                        answers_var,
+                        answers,
                         q_vocab_dict,
                         ans_vocab_dict,
                     )

@@ -185,6 +185,7 @@ def tensor_to_images(tensor: torch.Tensor) -> List[np.ndarray]:
 
     for img_tensor in tensor:
         image = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        image = image.astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         images.append(image)
 
