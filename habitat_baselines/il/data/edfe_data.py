@@ -58,7 +58,7 @@ class EDFEDataset(Dataset):
             """
             print('Saving rgb, semantic, depth frames to disk.')
 
-            for scene in tqdm(list(self.scene_episode_dict.keys())[50:]):
+            for scene in tqdm(list(self.scene_episode_dict.keys())):
 
                 self.load_scene(scene)
 
