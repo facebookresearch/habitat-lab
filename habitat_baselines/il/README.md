@@ -54,7 +54,7 @@ Results from evaluation are stored in `data/eqa/edfe/results/val`.
 
 Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint link](https://drive.google.com/file/d/1onjsv8Y8PrAyUE8wp9oe-b8xpHKKtRJ1/view?usp=sharing))
 
-<img src="https://user-images.githubusercontent.com/24846546/76315251-39c2aa80-62d0-11ea-86a6-b5f588a22f64.jpg" width=70%>
+<img src="https://user-images.githubusercontent.com/24846546/76339759-6f788b00-62f2-11ea-90e0-a8ac16c34f76.jpg" width=80%>
 
 ### VQA model (answering module)- 
 
