@@ -54,9 +54,9 @@ class EDFEDataset(Dataset):
             for each scene > load scene in memory > save frames for each
             episode corresponding to each scene
             """
-            print("Saving rgb, semantic, depth frames to disk.")
+            print("Saving rgb, seg, depth frames to disk.")
 
-            for scene in tqdm(list(self.scene_episode_dict.keys())[50:]):
+            for scene in tqdm(list(self.scene_episode_dict.keys())):
 
                 self.load_scene(scene)
 
@@ -79,16 +79,16 @@ class EDFEDataset(Dataset):
         self.depth_list = sorted(
             os.listdir(self.dataset_path.format(split=self.mode, type="depth"))
         )
-        self.semantic_list = sorted(
+        self.seg_list = sorted(
             os.listdir(
-                self.dataset_path.format(split=self.mode, type="semantic")
+                self.dataset_path.format(split=self.mode, type="seg")
             )
         )
 
     def save_frames(
         self, pos_queue: List[ShortestPathPoint], episode_id
     ) -> None:
-        r"""Writes rgb, semantic, depth frames to disk.
+        r"""Writes rgb, seg, depth frames to disk.
         """
 
         for idx, pos in enumerate(pos_queue):
@@ -99,9 +99,9 @@ class EDFEDataset(Dataset):
 
             depth = observation["depth"]
             rgb = observation["rgb"]
-            semantic = observation["semantic"]
-            semantic = semantic % 40
-            semantic = semantic.astype(np.uint8)
+            seg = observation["semantic"]
+            seg = seg % 40
+            seg = seg.astype(np.uint8)
 
             if random.random() < 0.8:
                 split = "train"
@@ -116,14 +116,14 @@ class EDFEDataset(Dataset):
                 self.dataset_path.format(split=split, type="depth"),
                 "ep_" + episode_id + "_{0:0=3d}".format(idx),
             )
-            semantic_frame_path = os.path.join(
-                self.dataset_path.format(split=split, type="semantic"),
+            seg_frame_path = os.path.join(
+                self.dataset_path.format(split=split, type="seg"),
                 "ep_" + episode_id + "_{0:0=3d}".format(idx),
             )
 
             cv2.imwrite(rgb_frame_path + ".jpg", rgb)
             cv2.imwrite(depth_frame_path + ".jpg", depth * 255)
-            np.savez_compressed(semantic_frame_path, semantic)
+            np.savez_compressed(seg_frame_path, seg)
 
     def get_frames(self, frames_path, num=0):
         r"""Fetches frames from disk.
@@ -160,12 +160,12 @@ class EDFEDataset(Dataset):
 
     def make_dataset_dirs(self) -> None:
         for split in ["train", "val"]:
-            for type in ["rgb", "semantic", "depth"]:
+            for type in ["rgb", "seg", "depth"]:
                 os.makedirs(self.dataset_path.format(split=split, type=type))
 
     def check_cache_exists(self) -> bool:
         for split in ["train", "val"]:
-            for type in ["rgb", "semantic", "depth"]:
+            for type in ["rgb", "seg", "depth"]:
                 if not os.path.exists(
                     self.dataset_path.format(split=split, type=type)
                 ):
@@ -196,7 +196,7 @@ class EDFEDataset(Dataset):
     def __getitem__(self, idx: int):
         r"""Returns batches to trainer.
 
-        batch: (rgb, depth, semantic)
+        batch: (rgb, depth, seg)
 
         """
         rgb = cv2.imread(
@@ -220,8 +220,8 @@ class EDFEDataset(Dataset):
 
         seg = np.load(
             os.path.join(
-                self.dataset_path.format(split=self.mode, type="semantic"),
-                self.semantic_list[idx],
+                self.dataset_path.format(split=self.mode, type="seg"),
+                self.seg_list[idx],
             )
         )["arr_0"]
 
