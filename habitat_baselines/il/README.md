@@ -26,9 +26,7 @@ followed by fine-tuning the NAV model.
 ### EDFE model (Encoder-Decoder for Feature Extraction)- 
 
 #### Information:
-This is a encoder-decoder network that takes RGB input and generates an RGB reconstruction, a Depth map and a a Segmentation map.
-
-The encoder from this network is extracted and used as a feature extractor for subsequent VQA and NAV trainers.
+This is a encoder-decoder network that takes RGB input and generates an RGB reconstruction, a Depth map and a a Segmentation map. The encoder from this network is extracted and used as a frozen feature extractor for subsequent VQA and NAV trainers.
 
 (more information about network in Appendix B of [paper](https://embodiedqa.org/paper.pdf)).
 
@@ -54,9 +52,9 @@ Results from evaluation are stored in `data/eqa/edfe/results/val`.
 
 ##### Example results:
 
-Trained for 5 epochs on 100k images from MP3DEQA dataset episodes.
+Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint link](https://drive.google.com/file/d/1onjsv8Y8PrAyUE8wp9oe-b8xpHKKtRJ1/view?usp=sharing))
 
-![](https://user-images.githubusercontent.com/24846546/76315251-39c2aa80-62d0-11ea-86a6-b5f588a22f64.jpg)
+<img src="https://user-images.githubusercontent.com/24846546/76315251-39c2aa80-62d0-11ea-86a6-b5f588a22f64.jpg" width=70%>
 
 ### VQA model (answering module)- 
 

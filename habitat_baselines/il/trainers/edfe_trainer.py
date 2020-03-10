@@ -76,7 +76,7 @@ class EDFETrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    rgb, depth, seg = batch
+                    idx, rgb, depth, seg = batch
 
                     optim.zero_grad()
 
