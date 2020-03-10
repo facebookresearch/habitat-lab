@@ -7,6 +7,7 @@
 import os
 import time
 from typing import ClassVar, Dict, List
+from collections import OrderedDict
 
 import torch
 import cv2
@@ -227,8 +228,6 @@ class BaseILTrainer(BaseTrainer):
     video_option: List[str]
     _flush_secs: int
 
-    import cv2
-
     def __init__(self, config: Config):
         super().__init__()
         assert config is not None, "needs config file to initialize trainer"
@@ -359,6 +358,20 @@ class BaseILTrainer(BaseTrainer):
             None
         """
         raise NotImplementedError
+
+    def save_checkpoint(self, state_dict: OrderedDict, file_name: str) -> None:
+        r"""Save checkpoint with specified name.
+
+        Args:
+            state_dict: model's state_dict
+            file_name: file name for checkpoint
+
+        Returns:
+            None
+        """
+        torch.save(
+            state_dict, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
+        )
 
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
         raise NotImplementedError

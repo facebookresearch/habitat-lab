@@ -62,24 +62,28 @@ class EQADataset(Dataset):
                 self.scene_episode_dict[ep.scene_id].append(ep.episode_id)
 
         # checking if cache exists & making cache dir
-        if not os.path.exists(os.path.join(self.frame_dataset_path, self.mode)):
+        if not os.path.exists(
+            os.path.join(self.frame_dataset_path, self.mode)
+        ):
             os.makedirs(os.path.join(self.frame_dataset_path, self.mode))
-            print('Disk cache does not exist.')
+            print("Disk cache does not exist.")
 
         else:
-            if len(os.listdir(os.path.join(self.frame_dataset_path, self.mode))) == len(self.episodes):
+            if len(
+                os.listdir(os.path.join(self.frame_dataset_path, self.mode))
+            ) == len(self.episodes):
                 self.disk_cache_exists = True
-                print('Disk cache exists.')
+                print("Disk cache exists.")
 
         if not self.disk_cache_exists:
             """
             for each scene > load scene in memory > save frames for each
             episode corresponding to each scene
             """
-            print('Saving episode frames to disk.')
+            print("Saving episode frames to disk.")
             for scene in tqdm(
                 list(self.scene_episode_dict.keys()),
-                desc="going through all scenes from dataset"
+                desc="going through all scenes from dataset",
             ):
 
                 self.config.defrost()
@@ -87,19 +91,23 @@ class EQADataset(Dataset):
                 self.config.freeze()
                 self.env.sim.reconfigure(self.config.SIMULATOR)
 
-                for ep_id in tqdm(self.scene_episode_dict[scene],
-                                  desc="saving episode frames for each scene"):
+                for ep_id in tqdm(
+                    self.scene_episode_dict[scene],
+                    desc="saving episode frames for each scene",
+                ):
                     episode = next(
                         ep for ep in self.episodes if ep.episode_id == ep_id
                     )
                     if self.only_vqa_task:
-                        pos_queue = episode.shortest_paths[0][-self.num_frames:]
+                        pos_queue = episode.shortest_paths[0][
+                            -self.num_frames :
+                        ]
                     else:
                         pos_queue = episode.shortest_paths[0]
 
                     self.save_frame_queue(pos_queue, ep_id, self.mode)
 
-        print('Saved all episodes\' frames to disk. Frame dataset ready.')
+            print("Saved all episodes' frames to disk. Frame dataset ready.")
         self.env.close()
 
     def calc_max_length(self) -> None:
@@ -135,7 +143,9 @@ class EQADataset(Dataset):
     ) -> None:
         r"""Writes episode's frame queue to disk.
         """
-        episode_frames_path = os.path.join(self.frame_dataset_path, mode, episode_id)
+        episode_frames_path = os.path.join(
+            self.frame_dataset_path, mode, episode_id
+        )
         if not os.path.exists(episode_frames_path):
             os.makedirs(episode_frames_path)
 
@@ -144,8 +154,10 @@ class EQADataset(Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            frame_path = os.path.join(episode_frames_path, "{0:0=3d}".format(idx))
-            cv2.imwrite(frame_path + '.jpg', img)
+            frame_path = os.path.join(
+                episode_frames_path, "{0:0=3d}".format(idx)
+            )
+            cv2.imwrite(frame_path + ".jpg", img)
 
     def get_frames(self, frames_path, num=0):
         r"""Fetches frames from disk.
@@ -162,9 +174,7 @@ class EQADataset(Dataset):
     def __len__(self) -> int:
         return len(self.episodes)
 
-    def __getitem__(
-        self, idx: int
-    ):
+    def __getitem__(self, idx: int):
         r"""Returns batch to trainer.
 
         example->
@@ -190,7 +200,9 @@ class EQADataset(Dataset):
                 question.append(0)
 
         question = torch.LongTensor(question)
-        frames_path = os.path.join(self.frame_dataset_path, self.mode, episode_id)
+        frames_path = os.path.join(
+            self.frame_dataset_path, self.mode, episode_id
+        )
 
         if self.input_type == "vqa":
             frame_queue = self.get_frames(frames_path, num=self.num_frames)

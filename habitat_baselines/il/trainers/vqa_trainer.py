@@ -10,14 +10,13 @@ import torch
 import habitat
 
 from torch.utils.data import DataLoader
-from collections import OrderedDict
 
 from habitat import logger
 from habitat_baselines.common.base_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.models.models import VqaLstmCnnAttentionModel
-from habitat_baselines.il.data import EQADataset
+from habitat_baselines.il.data.data import EQADataset
 from habitat_baselines.il.metrics import VqaMetric
 
 
@@ -33,20 +32,6 @@ class VQATrainer(BaseILTrainer):
 
         if config is not None:
             logger.info(f"config: {config}")
-
-    def save_checkpoint(self, state_dict: OrderedDict, file_name: str) -> None:
-        r"""Save checkpoint with specified name.
-
-        Args:
-            state_dict: model's state_dict
-            file_name: file name for checkpoint
-
-        Returns:
-            None
-        """
-        torch.save(
-            state_dict, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
-        )
 
     def train(self) -> None:
         r"""Main method for training VQA (Answering) model of EQA.
@@ -76,7 +61,7 @@ class VQATrainer(BaseILTrainer):
         model_kwargs = {"q_vocab": q_vocab_dict, "ans_vocab": ans_vocab_dict}
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
-        lossFn = torch.nn.CrossEntropyLoss().cuda()
+        lossFn = torch.nn.CrossEntropyLoss()
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -101,9 +86,8 @@ class VQATrainer(BaseILTrainer):
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
 
-        model.train()
-        # model.cnn.eval()
-        model.double().cuda()
+        model.cnn.eval()
+        model.double().train().cuda()
 
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
@@ -184,7 +168,7 @@ class VQATrainer(BaseILTrainer):
 
                 if epoch % config.CHECKPOINT_INTERVAL == 0:
                     self.save_checkpoint(
-                        model.state_dict(), "epoch_" + str(epoch) + ".ckpt",
+                        model.state_dict(), "epoch_{}.ckpt".format(epoch)
                     )
 
                 epoch += 1
@@ -205,12 +189,14 @@ class VQATrainer(BaseILTrainer):
         Returns:
             None
         """
-
-        self.config.defrost()
-        self.config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
-        self.config.freeze()
-
         config = self.config
+
+        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
+        torch.cuda.set_device(config.TORCH_GPU_ID)
+
+        config.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
+        config.freeze()
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
@@ -232,7 +218,7 @@ class VQATrainer(BaseILTrainer):
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
 
-        lossFn = torch.nn.CrossEntropyLoss().cuda()
+        lossFn = torch.nn.CrossEntropyLoss()
 
         t = 0
 
