@@ -7,7 +7,7 @@
 import glob
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -172,7 +172,23 @@ def generate_video(
         )
 
 
-def tensor_to_images(tensor: torch.Tensor) -> List[np.ndarray]:
+def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
+    r"""Converts tensor (or list) of n image tensors to list of n images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    images = []
+
+    for img_tensor in tensor:
+        image = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        images.append(image)
+
+    return images
+
+
+def tensor_to_rgb_images(tensor: torch.Tensor) -> List[np.ndarray]:
     r"""Converts tensor of n image tensors to list of n images.
     Args:
         tensor: tensor containing n image tensors
@@ -184,9 +200,9 @@ def tensor_to_images(tensor: torch.Tensor) -> List[np.ndarray]:
     images = []
 
     for img_tensor in tensor:
-        image = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
-        image = image.astype(np.uint8)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        images.append(image)
+        img = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        img = img.astype(np.uint8)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        images.append(img)
 
     return images

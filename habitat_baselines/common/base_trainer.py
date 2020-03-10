@@ -17,7 +17,8 @@ from habitat import Config, logger
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
     poll_checkpoint_folder,
-    tensor_to_images,
+    tensor_to_rgb_images,
+    tensor_to_depth_images,
 )
 
 
@@ -259,9 +260,17 @@ class BaseILTrainer(BaseTrainer):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
     def _make_results_dir(self):
-        dir_name = self.config.RESULTS_DIR.format(split="val")
-        if not os.path.isdir(dir_name):
-            os.makedirs(dir_name)
+        if self.config.TRAINER_NAME == "edfe":
+            for type in ["rgb", "seg", "depth"]:
+                dir_name = self.config.RESULTS_DIR.format(
+                    split="val", type=type
+                )
+                if not os.path.isdir(dir_name):
+                    os.makedirs(dir_name)
+        else:
+            dir_name = self.config.RESULTS_DIR.format(split="val")
+            if not os.path.isdir(dir_name):
+                os.makedirs(dir_name)
 
     def train(self) -> None:
         raise NotImplementedError
@@ -432,6 +441,7 @@ class BaseILTrainer(BaseTrainer):
 
     def _save_image_results(
         self,
+        ckpt_idx: int,
         idx: int,
         images_tensor: torch.Tensor,
         question: str,
@@ -442,6 +452,7 @@ class BaseILTrainer(BaseTrainer):
 
         Args:
             idx: index of batch
+            ckpt_idx: idx of ckpt being evaluated
             images_tensor: images' tensor containing input frames
             question: input question to model
             prediction: model's answer prediction
@@ -454,7 +465,7 @@ class BaseILTrainer(BaseTrainer):
             split=self.config.TASK_CONFIG.DATASET.SPLIT
         )
 
-        images = tensor_to_images(images_tensor)
+        images = tensor_to_rgb_images(images_tensor)
 
         collage_image = cv2.hconcat(images)
         collage_image = cv2.copyMakeBorder(
@@ -471,11 +482,15 @@ class BaseILTrainer(BaseTrainer):
             collage_image, question, prediction, ground_truth
         )
 
-        cv2.imwrite(os.path.join(path, str(idx) + "_image.jpg"), image)
+        cv2.imwrite(
+            os.path.join(path, "c_{}_{}_image.jpg".format(ckpt_idx, idx)),
+            image,
+        )
 
-    def _save_results(
+    def _save_vqa_results(
         self,
-        idx: int,
+        ckpt_idx: int,
+        idx: torch.Tensor,
         questions_var: torch.Tensor,
         images_var: torch.Tensor,
         scores: torch.Tensor,
@@ -487,6 +502,7 @@ class BaseILTrainer(BaseTrainer):
         r"""For saving VQA results.
 
         Args:
+            ckpt_idx: idx of checkpoint being evaluated
             idx: index of batch
             images_tensor: images' tensor containing input frames
             question: input question to model
@@ -496,6 +512,7 @@ class BaseILTrainer(BaseTrainer):
         Returns:
             None
         """
+        idx = idx[0].item()
         question = questions_var[0]
         images = images_var[0]
         answer = answers_var[0]
@@ -522,5 +539,102 @@ class BaseILTrainer(BaseTrainer):
         print("Ground-truth answer:", ground_truth)
 
         self._save_image_results(
-            idx, images, q_string, prediction, ground_truth
+            idx, ckpt_idx, images, q_string, prediction, ground_truth
         )
+
+    def _save_rgb_results(
+        self, rgb: torch.Tensor, out_ae: torch.Tensor
+    ) -> None:
+        r"""For saving RGB reconstruction results.
+
+        Args:
+            rgb: ground truth RGB image
+            out_ae: ouput of autoencoder
+        """
+        rgb_path = self.results_path.format(split="val", type="rgb")
+        rgb_img, out_ae_img = tensor_to_rgb_images([rgb, out_ae])
+        cv2.imwrite(
+            os.path.join(rgb_path, self.result_id + "_gt.jpg"), rgb_img
+        )
+        cv2.imwrite(
+            os.path.join(rgb_path, self.result_id + "_output.jpg"), out_ae_img
+        )
+
+    def _save_seg_results(
+        self, seg: torch.Tensor, out_seg: torch.Tensor
+    ) -> None:
+        r"""For saving Segmentation results.
+
+        Args:
+            seg: ground truth segmentation
+            out_seg: ouput segmentation
+        """
+
+        seg_path = self.results_path.format(split="val", type="seg")
+
+        seg_img = seg.cpu().numpy()
+        out_seg_img = torch.argmax(out_seg, 0).cpu().numpy()
+
+        seg_img_color = self.colors[seg_img]
+        out_seg_img_color = self.colors[out_seg_img]
+
+        cv2.imwrite(
+            os.path.join(seg_path, self.result_id + "_gt.jpg"), seg_img_color
+        )
+        cv2.imwrite(
+            os.path.join(seg_path, self.result_id + "_output.jpg"),
+            out_seg_img_color,
+        )
+
+    def _save_depth_results(
+        self, depth: torch.Tensor, out_depth: torch.Tensor
+    ) -> None:
+        r"""For saving depth results.
+
+        Args:
+            depth: ground truth depth map
+            out_depth: ouput depth map
+        """
+        depth_path = self.results_path.format(split="val", type="depth")
+
+        depth_img, out_depth_img = tensor_to_depth_images([depth, out_depth])
+
+        cv2.imwrite(
+            os.path.join(depth_path, self.result_id + "_gt.jpg"), depth_img
+        )
+        cv2.imwrite(
+            os.path.join(depth_path, self.result_id + "_output.jpg"),
+            out_depth_img,
+        )
+
+    def _save_edfe_results(
+        self,
+        ckpt_idx: int,
+        idx: torch.Tensor,
+        rgb: torch.Tensor,
+        out_ae: torch.Tensor,
+        seg: torch.Tensor,
+        out_seg: torch.Tensor,
+        depth: torch.Tensor,
+        out_depth: torch.Tensor,
+    ) -> None:
+        r"""For saving EDFE results.
+
+        Args:
+            ckpt_idx: index of ckpt being evaluated
+            idx: batch index
+            rgb: rgb ground truth
+            out_ae: autoencoder output rgb reconstruction
+            seg: segmentation ground truth
+            out_seg: segmentation output
+            depth: depth map ground truth
+            out_depth: depth map output
+        """
+
+        self.results_path = self.config.RESULTS_DIR
+
+        self.result_id = "c_{}_{}".format(ckpt_idx, idx[0].item())
+
+        self._save_rgb_results(rgb[0], out_ae[0])
+        self._save_seg_results(seg[0], out_seg[0])
+        self._save_depth_results(depth[0], out_depth[0])

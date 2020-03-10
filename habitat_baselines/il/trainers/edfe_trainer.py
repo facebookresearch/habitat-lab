@@ -7,6 +7,7 @@
 import time
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 
 import habitat
 from habitat import logger
@@ -62,7 +63,7 @@ class EDFETrainer(BaseILTrainer):
 
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
-        semantic_loss = torch.nn.CrossEntropyLoss()
+        seg_loss = torch.nn.CrossEntropyLoss()
 
         epoch, t = 1, 0
         with TensorboardWriter(
@@ -75,17 +76,17 @@ class EDFETrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    rgb, depth, semantic = batch
+                    rgb, depth, seg = batch
 
                     optim.zero_grad()
 
                     rgb = rgb.cuda()
                     depth = depth.cuda()
-                    semantic = semantic.cuda()
+                    seg = seg.cuda()
 
                     out_seg, out_depth, out_ae = model(rgb)
 
-                    l1 = semantic_loss(out_seg, semantic.long())
+                    l1 = seg_loss(out_seg, seg.long())
                     l2 = ae_loss(out_ae, rgb)
                     l3 = depth_loss(out_depth, depth)
 
@@ -94,16 +95,21 @@ class EDFETrainer(BaseILTrainer):
                     avg_loss += loss
 
                     if t % config.LOG_INTERVAL == 0:
-                        print('Epoch: ', epoch,
-                              '; iter: ', t,
-                              '; loss: ', loss.item())
+                        print(
+                            "Epoch: ",
+                            epoch,
+                            "; iter: ",
+                            t,
+                            "; loss: ",
+                            loss.item(),
+                        )
 
                         writer.add_scalar("total_loss", loss, t)
-                        writer.add_scalars("individual_losses", {
-                            'semantic_loss': l1,
-                            'ae_loss': l2,
-                            'depth_loss': l3
-                        }, t)
+                        writer.add_scalars(
+                            "individual_losses",
+                            {"seg_loss": l1, "ae_loss": l2, "depth_loss": l3},
+                            t,
+                        )
 
                     loss.backward()
                     optim.step()
@@ -155,7 +161,7 @@ class EDFETrainer(BaseILTrainer):
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
-        edfe_dataset = EDFEDataset(env, config, mode='val')
+        edfe_dataset = EDFEDataset(env, config, mode="val")
 
         eval_loader = DataLoader(
             edfe_dataset, batch_size=config.IL.EDFE.batch_size, shuffle=False
@@ -173,40 +179,70 @@ class EDFETrainer(BaseILTrainer):
 
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
-        semantic_loss = torch.nn.CrossEntropyLoss()
+        seg_loss = torch.nn.CrossEntropyLoss()
+
+        np.random.seed(2)
+        self.colors = np.random.randint(255, size=(40, 3))
 
         t = 0
         avg_loss = 0.0
+        avg_l1 = 0.0
+        avg_l2 = 0.0
+        avg_l3 = 0.0
 
-        for batch in eval_loader:
-            t += 1
+        with torch.no_grad():
+            for batch in eval_loader:
+                t += 1
 
-            rgb, depth, semantic = batch
+                idx, rgb, depth, seg = batch
+                rgb = rgb.cuda()
+                depth = depth.cuda()
+                seg = seg.cuda()
 
-            rgb = rgb.cuda()
-            depth = depth.cuda()
-            semantic = semantic.cuda()
+                out_seg, out_depth, out_ae = model(rgb)
+                l1 = seg_loss(out_seg, seg.long())
+                l2 = ae_loss(out_ae, rgb)
+                l3 = depth_loss(out_depth, depth)
 
-            out_seg, out_depth, out_ae = model(rgb)
+                loss = l1 + (10 * l2) + (10 * l3)
 
-            l1 = semantic_loss(out_seg, semantic.long())
-            l2 = ae_loss(out_ae, rgb)
-            l3 = depth_loss(out_depth, depth)
+                avg_loss += loss.item()
+                avg_l1 += l1.item()
+                avg_l2 += l2.item()
+                avg_l3 += l3.item()
 
-            loss = l1 + (10 * l2) + (10 * l3)
+                if t % config.LOG_INTERVAL == 0:
+                    print(
+                        "Iter: ", t, "; loss: ", loss.item(),
+                    )
 
-            avg_loss += loss.item()
+                if config.EVAL_SAVE_RESULTS:
+                    if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
-            if t % config.LOG_INTERVAL == 0:
-                print('Iter: ', t,
-                      '; loss: ', loss.item())
+                        self._save_edfe_results(
+                            checkpoint_index,
+                            idx,
+                            rgb,
+                            out_ae,
+                            seg,
+                            out_seg,
+                            depth,
+                            out_depth,
+                        )
 
         avg_loss /= len(eval_loader)
-        writer.add_scalar("avg val total loss", avg_loss, checkpoint_index)
-        writer.add_scalars("avg val individual_losses", {
-                            'semantic_loss': l1,
-                            'ae_loss': l2,
-                            'depth_loss': l3
-                        }, checkpoint_index)
+        avg_l1 /= len(eval_loader)
+        avg_l2 /= len(eval_loader)
+        avg_l3 /= len(eval_loader)
 
-        logger.info("Average loss: %.02f" % avg_loss)
+        writer.add_scalar("avg val total loss", avg_loss, checkpoint_index)
+        writer.add_scalars(
+            "avg val individual_losses",
+            {"seg_loss": avg_l1, "ae_loss": avg_l2, "depth_loss": avg_l3},
+            checkpoint_index,
+        )
+
+        logger.info("Average loss: %.03f" % avg_loss)
+        logger.info("Average seg loss: %.03f" % avg_l1)
+        logger.info("Average autoencoder loss: %.04f" % avg_l2)
+        logger.info("Average depthloss: %.04f" % avg_l3)

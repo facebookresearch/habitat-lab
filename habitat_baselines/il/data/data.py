@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 from typing import List, Tuple
 from habitat.core.simulator import ShortestPathPoint
-from habitat_baselines.il.models.models import MultitaskCNN
 
 
 class EQADataset(Dataset):

@@ -1,4 +1,3 @@
-
 import os
 import random
 from tqdm import tqdm
@@ -6,6 +5,7 @@ from typing import List
 
 import cv2
 import numpy as np
+
 # import torch
 from torch.utils.data import Dataset
 
@@ -16,9 +16,7 @@ from habitat.core.simulator import ShortestPathPoint
 class EDFEDataset(Dataset):
     """Pytorch dataset for Embodied Q&A's feature-extractor"""
 
-    def __init__(
-        self, env, config, mode='train'
-    ):
+    def __init__(self, env, config, mode="train"):
         """
         Args:
             env (habitat.Env): Habitat environment
@@ -56,9 +54,9 @@ class EDFEDataset(Dataset):
             for each scene > load scene in memory > save frames for each
             episode corresponding to each scene
             """
-            print('Saving rgb, semantic, depth frames to disk.')
+            print("Saving rgb, semantic, depth frames to disk.")
 
-            for scene in tqdm(list(self.scene_episode_dict.keys())):
+            for scene in tqdm(list(self.scene_episode_dict.keys())[50:]):
 
                 self.load_scene(scene)
 
@@ -72,18 +70,20 @@ class EDFEDataset(Dataset):
                     random_pos = random.sample(pos_queue, 9)
                     self.save_frames(random_pos, ep_id)
 
-            print('Saved all episodes\' frames to disk. Frame dataset ready.')
+            print("Saved all episodes' frames to disk. Frame dataset ready.")
         self.env.close()
 
-        self.rgb_list = sorted(os.listdir(self.dataset_path.format(
-            split=self.mode, type='rgb'
-        )))
-        self.depth_list = sorted(os.listdir(self.dataset_path.format(
-            split=self.mode, type='depth'
-        )))
-        self.semantic_list = sorted(os.listdir(self.dataset_path.format(
-            split=self.mode, type='semantic'
-        )))
+        self.rgb_list = sorted(
+            os.listdir(self.dataset_path.format(split=self.mode, type="rgb"))
+        )
+        self.depth_list = sorted(
+            os.listdir(self.dataset_path.format(split=self.mode, type="depth"))
+        )
+        self.semantic_list = sorted(
+            os.listdir(
+                self.dataset_path.format(split=self.mode, type="semantic")
+            )
+        )
 
     def save_frames(
         self, pos_queue: List[ShortestPathPoint], episode_id
@@ -108,22 +108,21 @@ class EDFEDataset(Dataset):
             else:
                 split = "val"
 
-            rgb_frame_path = os.path.join(self.dataset_path
-                                          .format(split=split, type='rgb'),
-                                          "ep_" + episode_id + "_{0:0=3d}"
-                                          .format(idx))
-            depth_frame_path = os.path.join(self.dataset_path
-                                            .format(split=split, type='depth'),
-                                            "ep_" + episode_id + "_{0:0=3d}"
-                                            .format(idx))
-            semantic_frame_path = os.path.join(self.dataset_path
-                                               .format(split=split,
-                                                       type='semantic'),
-                                               "ep_" + episode_id + "_{0:0=3d}"
-                                               .format(idx))
+            rgb_frame_path = os.path.join(
+                self.dataset_path.format(split=split, type="rgb"),
+                "ep_" + episode_id + "_{0:0=3d}".format(idx),
+            )
+            depth_frame_path = os.path.join(
+                self.dataset_path.format(split=split, type="depth"),
+                "ep_" + episode_id + "_{0:0=3d}".format(idx),
+            )
+            semantic_frame_path = os.path.join(
+                self.dataset_path.format(split=split, type="semantic"),
+                "ep_" + episode_id + "_{0:0=3d}".format(idx),
+            )
 
-            cv2.imwrite(rgb_frame_path + '.jpg', rgb)
-            cv2.imwrite(depth_frame_path + '.jpg', depth * 255)
+            cv2.imwrite(rgb_frame_path + ".jpg", rgb)
+            cv2.imwrite(depth_frame_path + ".jpg", depth * 255)
             np.savez_compressed(semantic_frame_path, semantic)
 
     def get_frames(self, frames_path, num=0):
@@ -167,14 +166,21 @@ class EDFEDataset(Dataset):
     def check_cache_exists(self) -> bool:
         for split in ["train", "val"]:
             for type in ["rgb", "semantic", "depth"]:
-                if not os.path.exists(self.dataset_path.format(split=split,
-                                                               type=type)):
+                if not os.path.exists(
+                    self.dataset_path.format(split=split, type=type)
+                ):
                     return False
                 else:
-                    if len(os.listdir(
-                           self.dataset_path
-                           .format(split=split,
-                                   type=type))) == 0:
+                    if (
+                        len(
+                            os.listdir(
+                                self.dataset_path.format(
+                                    split=split, type=type
+                                )
+                            )
+                        )
+                        == 0
+                    ):
                         return False
         return True
 
@@ -187,30 +193,36 @@ class EDFEDataset(Dataset):
     def __len__(self) -> int:
         return len(self.rgb_list)
 
-    def __getitem__(
-        self, idx: int
-    ):
+    def __getitem__(self, idx: int):
         r"""Returns batches to trainer.
 
         batch: (rgb, depth, semantic)
 
         """
-        rgb = cv2.imread(os.path.join(
-            self.dataset_path.format(split=self.mode, type='rgb'),
-            self.rgb_list[idx]
-        ))
+        rgb = cv2.imread(
+            os.path.join(
+                self.dataset_path.format(split=self.mode, type="rgb"),
+                self.rgb_list[idx],
+            )
+        )
         rgb = rgb.transpose(2, 0, 1)
         rgb = rgb / 255.0
 
-        depth = cv2.imread(os.path.join(
-            self.dataset_path.format(split=self.mode, type='depth'),
-            self.depth_list[idx]
-        ), -1)
+        depth = cv2.imread(
+            os.path.join(
+                self.dataset_path.format(split=self.mode, type="depth"),
+                self.depth_list[idx],
+            ),
+            -1,
+        )
+        depth = depth.reshape(1, depth.shape[0], -1)
         depth = depth / 255.0
 
-        semantic = np.load(os.path.join(
-            self.dataset_path.format(split=self.mode, type='semantic'),
-            self.semantic_list[idx]
-        ))['arr_0']
+        seg = np.load(
+            os.path.join(
+                self.dataset_path.format(split=self.mode, type="semantic"),
+                self.semantic_list[idx],
+            )
+        )["arr_0"]
 
-        return rgb, depth, semantic
+        return idx, rgb, depth, seg

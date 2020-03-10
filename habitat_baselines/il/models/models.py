@@ -51,8 +51,7 @@ class MaskedNLLCriterion(nn.Module):
 
 class MultitaskCNNOutput(nn.Module):
     def __init__(
-        self,
-        num_classes=40,
+        self, num_classes=40,
     ):
         super(MultitaskCNNOutput, self).__init__()
 
@@ -140,37 +139,61 @@ class MultitaskCNNOutput(nn.Module):
         score_pool3_ae = self.score_pool3_ae(conv3)
 
         score_seg = F.upsample(
-            encoder_output_seg, score_pool3_seg.size()[2:], mode="bilinear"
+            encoder_output_seg,
+            score_pool3_seg.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_seg += score_pool3_seg
         score_seg = F.upsample(
-            score_seg, score_pool2_seg.size()[2:], mode="bilinear"
+            score_seg,
+            score_pool2_seg.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_seg += score_pool2_seg
-        out_seg = F.upsample(score_seg, x.size()[2:], mode="bilinear")
+        out_seg = F.upsample(
+            score_seg, x.size()[2:], mode="bilinear", align_corners=True
+        )
 
         score_depth = F.upsample(
-            encoder_output_depth, score_pool3_depth.size()[2:], mode="bilinear"
+            encoder_output_depth,
+            score_pool3_depth.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_depth += score_pool3_depth
         score_depth = F.upsample(
-            score_depth, score_pool2_depth.size()[2:], mode="bilinear"
+            score_depth,
+            score_pool2_depth.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_depth += score_pool2_depth
         out_depth = torch.sigmoid(
-            F.upsample(score_depth, x.size()[2:], mode="bilinear")
+            F.upsample(
+                score_depth, x.size()[2:], mode="bilinear", align_corners=True
+            )
         )
 
         score_ae = F.upsample(
-            encoder_output_ae, score_pool3_ae.size()[2:], mode="bilinear"
+            encoder_output_ae,
+            score_pool3_ae.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_ae += score_pool3_ae
         score_ae = F.upsample(
-            score_ae, score_pool2_ae.size()[2:], mode="bilinear"
+            score_ae,
+            score_pool2_ae.size()[2:],
+            mode="bilinear",
+            align_corners=True,
         )
         score_ae += score_pool2_ae
         out_ae = torch.sigmoid(
-            F.upsample(score_ae, x.size()[2:], mode="bilinear")
+            F.upsample(
+                score_ae, x.size()[2:], mode="bilinear", align_corners=True
+            )
         )
 
         return out_seg, out_depth, out_ae

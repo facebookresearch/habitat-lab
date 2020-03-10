@@ -241,49 +241,52 @@ class VQATrainer(BaseILTrainer):
             ],
             log_json=os.path.join(config.OUTPUT_LOG_DIR, "eval.json"),
         )
+        with torch.no_grad():
+            for batch in eval_loader:
+                t += 1
+                idx, questions, answers, frame_queue = batch
+                questions = questions.cuda()
+                answers = answers.cuda()
+                frame_queue = frame_queue.cuda()
 
-        for batch in eval_loader:
-            t += 1
-            idx, questions, answers, frame_queue = batch
-            questions = questions.cuda()
-            answers = answers.cuda()
-            frame_queue = frame_queue.cuda()
+                scores, att_probs = model(frame_queue, questions)
 
-            scores, att_probs = model(frame_queue, questions)
+                loss = lossFn(scores, answers)
 
-            loss = lossFn(scores, answers)
+                accuracy, ranks = metrics.compute_ranks(
+                    scores.data.cpu(), answers
+                )
+                metrics.update([loss.item(), accuracy, ranks, 1.0 / ranks])
 
-            accuracy, ranks = metrics.compute_ranks(scores.data.cpu(), answers)
-            metrics.update([loss.item(), accuracy, ranks, 1.0 / ranks])
+                (
+                    metrics_loss,
+                    accuracy,
+                    mean_rank,
+                    mean_reciprocal_rank,
+                ) = metrics.get_stats(mode=0)
 
-            (
-                metrics_loss,
-                accuracy,
-                mean_rank,
-                mean_reciprocal_rank,
-            ) = metrics.get_stats(mode=0)
+                avg_loss += metrics_loss
+                avg_accuracy += accuracy
+                avg_mean_rank += mean_rank
+                avg_mean_reciprocal_rank += mean_reciprocal_rank
 
-            avg_loss += metrics_loss
-            avg_accuracy += accuracy
-            avg_mean_rank += mean_rank
-            avg_mean_reciprocal_rank += mean_reciprocal_rank
+                if t % config.LOG_INTERVAL == 0:
+                    print(metrics.get_stat_string(mode=0))
+                    metrics.dump_log()
 
-            if t % config.LOG_INTERVAL == 0:
-                print(metrics.get_stat_string(mode=0))
-                metrics.dump_log()
+                if config.EVAL_SAVE_RESULTS:
+                    if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
-            if config.EVAL_SAVE_RESULTS:
-                if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
-
-                    self._save_results(
-                        idx,
-                        questions,
-                        frame_queue,
-                        scores,
-                        answers,
-                        q_vocab_dict,
-                        ans_vocab_dict,
-                    )
+                        self._save_vqa_results(
+                            checkpoint_index,
+                            idx,
+                            questions,
+                            frame_queue,
+                            scores,
+                            answers,
+                            q_vocab_dict,
+                            ans_vocab_dict,
+                        )
 
         avg_loss /= len(eval_loader)
         avg_accuracy /= len(eval_loader)

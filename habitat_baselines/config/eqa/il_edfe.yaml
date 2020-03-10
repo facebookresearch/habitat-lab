@@ -11,14 +11,14 @@ EVAL_CKPT_PATH_DIR: "data/eqa/edfe/checkpoints"
 
 CHECKPOINT_FOLDER: "data/eqa/edfe/checkpoints"
 TENSORBOARD_DIR: "data/eqa/edfe/tb"
-RESULTS_DIR: "data/eqa/edfe/results/{split}" 
+RESULTS_DIR: "data/eqa/edfe/results/{split}/{type}" 
 OUTPUT_LOG_DIR: data/eqa/edfe/logs
 
 LOG_METRICS: True
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 1
 EVAL_SAVE_RESULTS: True
-EVAL_SAVE_RESULTS_INTERVAL: 10
+EVAL_SAVE_RESULTS_INTERVAL: 20
 
 IL:
   EDFE:
