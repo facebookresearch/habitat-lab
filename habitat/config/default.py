@@ -101,6 +101,13 @@ _C.TASK.OBJECTGOAL_SENSOR.TYPE = "ObjectGoalSensor"
 _C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC = "TASK_CATEGORY_ID"
 _C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
 # -----------------------------------------------------------------------------
+# IMAGEGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.IMAGEGOAL_SENSOR = CN()
+_C.TASK.IMAGEGOAL_SENSOR.TYPE = "ImageGoalSensor"
+_C.TASK.IMAGEGOAL_SENSOR.GOAL_FORMAT = "POLAR"
+_C.TASK.IMAGEGOAL_SENSOR.DIMENSIONALITY = 2
+# -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
