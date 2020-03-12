@@ -218,6 +218,8 @@ class ImageGoalSensor(Sensor):
         self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
+        if "rgb" not in self._sim.sensor_suite.sensors:
+            raise ValueError("ImageGoalNav requires RGB sensor")
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -227,22 +229,21 @@ class ImageGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        sensor_shape = (self._dimensionality,)
-
-        return spaces.Box(
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            shape=sensor_shape,
-            dtype=np.float32,
-        )
+        return self._sim.sensor_suite.observation_spaces.spaces["rgb"]
 
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
     ):
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
+        # to be sure that the rotation is the same within an episode
+        seed = abs(hash(episode.episode_id)) % (
+            2 ** 32
+        )
+        rng = np.random.RandomState(seed)
+        angle = rng.uniform(0, 2 * np.pi)
+        source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         image_goal = self._sim.get_observations_at(
-            position=goal_position.tolist(),
-            rotation=[0.0, 0.0, 0.0, 0.0],
+            position=goal_position.tolist(), rotation=source_rotation
         )
 
         return image_goal["rgb"]
