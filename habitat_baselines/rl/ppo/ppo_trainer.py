@@ -116,29 +116,31 @@ class PPOTrainer(BaseRLTrainer):
         return torch.load(checkpoint_path, *args, **kwargs)
 
     @staticmethod
-    def _extra_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
+    def _extract_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
             if isinstance(v, dict):
                 result.update(
                     {
                         k + "." + subk: subv
-                        for subk, subv in _extract_helper(v).items()
+                        for subk, subv in _extract_scalars_from_info(v).items()
                     }
                 )
+            # Things that are scalar-like will have an np.size of 1.
+            # Strings also have an np.size of 1, so explicitly ban those
             elif np.size(v) == 1 and not isinstance(v, str):
                 result[k] = float(v)
 
         return result
 
     @classmethod
-    def _extra_scalars_from_infos(
+    def _extract_scalars_from_infos(
         cls, infos: List[Dict[str, Any]]
     ) -> Dict[str, List[float]]:
 
         results = defaultdict(list)
         for i in range(len(infos)):
-            for k, v in cls._extra_scalars_from_info(infos[i]).items():
+            for k, v in cls._extract_scalars_from_info(infos[i]).items():
                 results[k].append(v)
 
         return results
@@ -193,7 +195,7 @@ class PPOTrainer(BaseRLTrainer):
         current_episode_reward += rewards
         running_episode_stats["reward"] += (1 - masks) * current_episode_reward
         running_episode_stats["count"] += 1 - masks
-        for k, v in self._extra_scalars_from_infos(infos).items():
+        for k, v in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v, dtype=torch.float, device=current_episode_reward.device
             ).unsqueeze(1)
@@ -547,7 +549,7 @@ class PPOTrainer(BaseRLTrainer):
                     episode_stats = dict()
                     episode_stats["reward"] = current_episode_reward[i].item()
                     episode_stats.update(
-                        self._extra_scalars_from_info(infos[i])
+                        self._extract_scalars_from_info(infos[i])
                     )
                     current_episode_reward[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
