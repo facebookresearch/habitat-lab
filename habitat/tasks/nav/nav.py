@@ -211,31 +211,13 @@ class ImageGoalSensor(Sensor):
 
     Args:
         sim: reference to the simulator for calculating task observations.
-        config: config for the PointGoal sensor. Can contain field for
-            GOAL_FORMAT which can be used to specify the format in which
-            the pointgoal is specified. Current options for goal format are
-            cartesian and polar.
-
-            Also contains a DIMENSIONALITY field which specifes the number
-            of dimensions ued to specify the goal, must be in [2, 3]
-
-    Attributes:
-        _goal_format: format for specifying the goal which can be done
-            in cartesian or polar coordinates.
-        _dimensionality: number of dimensions used to specify the goal
+        config: config for the ImageGoal sensor.
     """
 
     def __init__(
         self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
-
-        self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
-        assert self._goal_format in ["CARTESIAN", "POLAR"]
-
-        self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
-        assert self._dimensionality in [2, 3]
-
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -257,11 +239,9 @@ class ImageGoalSensor(Sensor):
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
     ):
-        source_position = np.array(episode.start_position, dtype=np.float32)
-        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
         image_goal = self._sim.get_observations_at(
-            position=goal_position.tolist(),  # for linter to be happy
+            position=goal_position.tolist(),
             rotation=[0.0, 0.0, 0.0, 0.0],
         )
 
