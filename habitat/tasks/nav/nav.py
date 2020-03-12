@@ -403,7 +403,7 @@ class ProximitySensor(Sensor):
 
 @registry.register_measure
 class Success(Measure):
-    r"""Whether or not the agent succeeded at it's task
+    r"""Whether or not the agent succeeded at its task
 
     This measure depends on DistanceToGoal measure.
     """
