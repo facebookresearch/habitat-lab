@@ -384,7 +384,8 @@ class DDPPOTrainer(PPOTrainer):
                         count_steps,
                     )
 
-                    # Check to see if there are any metrics that haven't been logged yet
+                    # Check to see if there are any metrics
+                    # that haven't been logged yet
                     metrics = {
                         k: v / deltas["count"]
                         for k, v in deltas.items()
