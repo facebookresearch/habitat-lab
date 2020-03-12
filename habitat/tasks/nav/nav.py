@@ -254,50 +254,18 @@ class ImageGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def _compute_pointgoal(
-        self, source_position, source_rotation, goal_position
-    ):
-        direction_vector = goal_position - source_position
-        direction_vector_agent = quaternion_rotate_vector(
-            source_rotation.inverse(), direction_vector
-        )
-
-        if self._goal_format == "POLAR":
-            if self._dimensionality == 2:
-                rho, phi = cartesian_to_polar(
-                    -direction_vector_agent[2], direction_vector_agent[0]
-                )
-                return np.array([rho, -phi], dtype=np.float32)
-            else:
-                _, phi = cartesian_to_polar(
-                    -direction_vector_agent[2], direction_vector_agent[0]
-                )
-                theta = np.arccos(
-                    direction_vector_agent[1]
-                    / np.linalg.norm(direction_vector_agent)
-                )
-                rho = np.linalg.norm(direction_vector_agent)
-
-                return np.array([rho, -phi, theta], dtype=np.float32)
-        else:
-            if self._dimensionality == 2:
-                return np.array(
-                    [-direction_vector_agent[2], direction_vector_agent[0]],
-                    dtype=np.float32,
-                )
-            else:
-                return direction_vector_agent
-
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
     ):
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
-
-        return self._compute_pointgoal(
-            source_position, rotation_world_start, goal_position
+        image_goal = self._sim.get_observations_at(
+            position=goal_position.tolist(),  # for linter to be happy
+            rotation=[0.0, 0.0, 0.0, 0.0],
         )
+
+        return image_goal["rgb"]
 
 
 @registry.register_sensor(name="PointGoalWithGPSCompassSensor")
