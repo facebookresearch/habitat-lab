@@ -378,7 +378,7 @@ class PPOTrainer(BaseRLTrainer):
                     if k not in {"reward", "count"}
                 }
                 if len(metrics) > 0:
-                    writer.add_scalars("eval_metrics", metrics, count_steps)
+                    writer.add_scalars("metrics", metrics, count_steps)
 
                 losses = [value_loss, action_loss]
                 writer.add_scalars(

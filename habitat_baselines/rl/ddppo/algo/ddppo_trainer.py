@@ -392,9 +392,7 @@ class DDPPOTrainer(PPOTrainer):
                         if k not in {"reward", "count"}
                     }
                     if len(metrics) > 0:
-                        writer.add_scalars(
-                            "eval_metrics", metrics, count_steps
-                        )
+                        writer.add_scalars("metrics", metrics, count_steps)
 
                     writer.add_scalars(
                         "losses",
