@@ -8,8 +8,7 @@ import habitat
 
 
 def example():
-    print("imagenav")
-    env = habitat.Env(config=habitat.get_config("configs/tasks/imagenav.yaml"))
+    env = habitat.Env(config=habitat.get_config("configs/tasks/pointnav.yaml"))
 
     print("Environment creation successful")
     observations = env.reset()
