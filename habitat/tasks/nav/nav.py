@@ -221,8 +221,18 @@ class ImageGoalSensor(Sensor):
         self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
-        if RGBSensor.uuid not in self._sim.sensor_suite.sensors:
-            raise ValueError("ImageGoalNav requires RGB sensor")
+        sensors = self._sim.sensor_suite.sensors
+        rgb_sensor_uuids = [
+            uuid
+            for uuid, sensor in sensors.items()
+            if isinstance(sensor, RGBSensor)
+        ]
+        if len(rgb_sensor_uuids) != 1:
+            raise ValueError(
+                f"ImageGoalNav requires one RGB sensor, {len(rgb_sensor_uuids)} detected"
+            )
+
+        self._rgb_sensor_uuid, = rgb_sensor_uuids
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -232,7 +242,9 @@ class ImageGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return self._sim.sensor_suite.observation_spaces.spaces[RGBSensor.uuid]
+        return self._sim.sensor_suite.observation_spaces.spaces[
+            self._rgb_sensor_uuid
+        ]
 
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
@@ -247,7 +259,7 @@ class ImageGoalSensor(Sensor):
             position=goal_position.tolist(), rotation=source_rotation
         )
 
-        return image_goal[RGBSensor.uuid]
+        return image_goal[self._rgb_sensor_uuid]
 
 
 @registry.register_sensor(name="PointGoalWithGPSCompassSensor")
