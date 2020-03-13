@@ -25,6 +25,7 @@ from habitat.core.simulator import (
     SensorTypes,
     ShortestPathPoint,
     Simulator,
+    RGBSensor,
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -206,8 +207,7 @@ class PointGoalSensor(Sensor):
 class ImageGoalSensor(Sensor):
     r"""Sensor for ImageGoal observations which are used in ImageGoal Navigation.
 
-    For the agent in simulator the forward direction is along negative-z.
-    In polar coordinate format the angle returned is azimuth to the goal.
+    RGBSensor needs to be one of the simulation sensor
 
     Args:
         sim: reference to the simulator for calculating task observations.
@@ -218,7 +218,7 @@ class ImageGoalSensor(Sensor):
         self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
-        if "rgb" not in self._sim.sensor_suite.sensors:
+        if RGBSensor.uuid not in self._sim.sensor_suite.sensors:
             raise ValueError("ImageGoalNav requires RGB sensor")
         super().__init__(config=config)
 
@@ -229,7 +229,7 @@ class ImageGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return self._sim.sensor_suite.observation_spaces.spaces["rgb"]
+        return self._sim.sensor_suite.observation_spaces.spaces[RGBSensor.uuid]
 
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
@@ -244,7 +244,7 @@ class ImageGoalSensor(Sensor):
             position=goal_position.tolist(), rotation=source_rotation
         )
 
-        return image_goal["rgb"]
+        return image_goal[RGBSensor.uuid]
 
 
 @registry.register_sensor(name="PointGoalWithGPSCompassSensor")
