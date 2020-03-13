@@ -207,7 +207,10 @@ class PointGoalSensor(Sensor):
 class ImageGoalSensor(Sensor):
     r"""Sensor for ImageGoal observations which are used in ImageGoal Navigation.
 
-    RGBSensor needs to be one of the simulation sensor
+    RGBSensor needs to be one of the Simulator sensors.
+    Currently the task is using pointnav Dataset.
+    This sensor return the rgb image taken from the goal position to reach with
+    random rotation.
 
     Args:
         sim: reference to the simulator for calculating task observations.
