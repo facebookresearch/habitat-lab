@@ -115,15 +115,19 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    @staticmethod
-    def _extract_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
+    @classmethod
+    def _extract_scalars_from_info(
+        cls, info: Dict[str, Any]
+    ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
             if isinstance(v, dict):
                 result.update(
                     {
                         k + "." + subk: subv
-                        for subk, subv in _extract_scalars_from_info(v).items()
+                        for subk, subv in cls._extract_scalars_from_info(
+                            v
+                        ).items()
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
