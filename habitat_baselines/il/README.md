@@ -18,12 +18,12 @@ followed by fine-tuning the NAV model.
 
 > "We employ a two-stage training process. First, the navigation and answering modules are independently trained using imitation/supervised learning on automatically generated expert demonstrations of navigation. Second, the navigation architecture is fine-tuned .."
 
-### Pre-requisites:
+## Pre-requisites:
 
 - Habitat-sim and Habitat-api installation.
 - Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](https://github.com/facebookresearch/habitat-api/blob/master/README.md)).
 
-### EDFE model (Encoder-Decoder for Feature Extraction)- 
+## EDFE model (Encoder-Decoder for Feature Extraction)- 
 
 #### Information:
 This is a encoder-decoder network that takes RGB input and generates an RGB reconstruction, a Depth map and a a Segmentation map. The encoder from this network is extracted and used as a frozen feature extractor for subsequent VQA and NAV trainers.
@@ -56,7 +56,7 @@ Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint 
 
 <img src="https://user-images.githubusercontent.com/24846546/76339759-6f788b00-62f2-11ea-90e0-a8ac16c34f76.jpg" width=80%>
 
-### VQA model (answering module)- 
+## VQA model (answering module)- 
 
 #### Configuration:
 
@@ -85,4 +85,4 @@ Results from evaluation are stored in `data/eqa/vqa/results/val`.
 ![](https://user-images.githubusercontent.com/24846546/75141155-464bde00-56e8-11ea-9f2e-ca346440e1d2.jpg)
 ![](https://user-images.githubusercontent.com/24846546/75141287-8e6b0080-56e8-11ea-8045-b4c4521954b2.jpg)
 
-### NAV model (coming soon)
+## NAV model (coming soon)
