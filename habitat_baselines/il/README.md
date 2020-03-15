@@ -1,7 +1,7 @@
 Imitation Learning (IL)
 =======================
 
-#### Embodied Question Answering
+## Embodied Question Answering
 
 **based on EmbodiedQA (Das et al. CVPR 2018) implementation.**
 
@@ -61,6 +61,8 @@ Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint 
 #### Configuration:
 
 Configuration for training the VQA (answering) model can be found in `habitat_baselines/config/eqa/il_vqa.yaml`.
+
+The VQA trainer picks the EDFE encoder checkpoint by default from `data/eqa/edfe/checkpoints/epoch_5.ckpt`. If you haven't trained the EDFE model and want to use a different checkpoint, the corresponding path can be changed in the aforementioned configuration file's `EDFE_CKPT_PATH` parameter.
 
 #### Train:
 
