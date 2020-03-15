@@ -80,9 +80,7 @@ class EDFEDataset(Dataset):
             os.listdir(self.dataset_path.format(split=self.mode, type="depth"))
         )
         self.seg_list = sorted(
-            os.listdir(
-                self.dataset_path.format(split=self.mode, type="seg")
-            )
+            os.listdir(self.dataset_path.format(split=self.mode, type="seg"))
         )
 
     def save_frames(

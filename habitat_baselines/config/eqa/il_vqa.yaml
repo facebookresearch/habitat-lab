@@ -9,13 +9,15 @@ ONLY_VQA_TASK: False # if True, only last `num_frames` will be saved to disk.
 #if False, all frames for each episode are saved to disk (for NAV task later)
 FRAME_DATASET_PATH: "data/datasets/eqa/frame_dataset/"
 EVAL_CKPT_PATH_DIR: "data/eqa/vqa/checkpoints/"
+EDFE_CKPT_PATH: "data/eqa/edfe/checkpoints/epoch_5.ckpt"
+
 SENSORS: ["RGB_SENSOR"]
 CHECKPOINT_FOLDER: "data/eqa/vqa/checkpoints"
 TENSORBOARD_DIR: "data/eqa/vqa/tb"
 RESULTS_DIR: "data/eqa/vqa/results/{split}" 
 
 LOG_METRICS: True
-OUTPUT_LOG_DIR: data/eqa/vqa/logs
+OUTPUT_LOG_DIR: "data/eqa/vqa/logs"
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 1
 EVAL_SAVE_RESULTS: True
@@ -25,6 +27,6 @@ IL:
   VQA:
     # vqa params
     num_frames: 5
-    max_epochs: 1000
+    max_epochs: 50
     batch_size: 20
     lr: 1e-5

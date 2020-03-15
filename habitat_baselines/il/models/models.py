@@ -202,9 +202,9 @@ class MultitaskCNNOutput(nn.Module):
 class MultitaskCNN(nn.Module):
     def __init__(
         self,
-        num_classes=191,
+        num_classes=40,
         pretrained=True,
-        checkpoint_path="habitat_baselines/il/models/03_13_h3d_hybrid_cnn.pt",
+        checkpoint_path="data/eqa/edfe/checkpoints/epoch_5.ckpt",
     ):
         super(MultitaskCNN, self).__init__()
 
@@ -264,7 +264,7 @@ class MultitaskCNN(nn.Module):
             checkpoint = torch.load(
                 checkpoint_path, map_location={"cuda:0": "cpu"}
             )
-            self.load_state_dict(checkpoint["model_state"])
+            self.load_state_dict(checkpoint)
             for param in self.parameters():
                 param.requires_grad = False
         else:
@@ -281,7 +281,7 @@ class MultitaskCNN(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, x):
-        # assert self.training is False
+        assert self.training is False
         conv1 = self.conv_block1(x)
         conv2 = self.conv_block2(conv1)
         conv3 = self.conv_block3(conv2)
@@ -345,6 +345,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         self,
         q_vocab,
         ans_vocab,
+        edfe_ckpt_path,
         image_feat_dim=64,
         question_wordvec_dim=64,
         question_hidden_dim=64,
@@ -356,7 +357,11 @@ class VqaLstmCnnAttentionModel(nn.Module):
     ):
         super(VqaLstmCnnAttentionModel, self).__init__()
 
-        cnn_kwargs = {"num_classes": 191, "pretrained": False}
+        cnn_kwargs = {
+            "num_classes": 40,
+            "pretrained": True,
+            "checkpoint_path": edfe_ckpt_path,
+        }
         self.cnn = MultitaskCNN(**cnn_kwargs)
         self.cnn_fc_layer = nn.Sequential(
             nn.Linear(32 * 12 * 12, 64), nn.ReLU(), nn.Dropout(p=0.5)
@@ -379,7 +384,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "input_dim": 64,
             "hidden_dims": fc_dims,
             "output_dim": len(ans_vocab),
-            "use_batchnorm": fc_use_batchnorm,
+            "use_batchnorm": True,
             "dropout": fc_dropout,
             "add_sigmoid": 0,
         }

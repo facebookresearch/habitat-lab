@@ -58,7 +58,11 @@ class VQATrainer(BaseILTrainer):
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
-        model_kwargs = {"q_vocab": q_vocab_dict, "ans_vocab": ans_vocab_dict}
+        model_kwargs = {
+            "q_vocab": q_vocab_dict,
+            "ans_vocab": ans_vocab_dict,
+            "edfe_ckpt_path": config.EDFE_CKPT_PATH,
+        }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
         lossFn = torch.nn.CrossEntropyLoss()
@@ -85,9 +89,9 @@ class VQATrainer(BaseILTrainer):
         avg_accuracy = 0.0
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
-
-        model.cnn.eval()
+        print(model)
         model.double().train().cuda()
+        model.cnn.eval()
 
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
@@ -205,14 +209,18 @@ class VQATrainer(BaseILTrainer):
         )
 
         eval_loader = DataLoader(
-            vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
+            vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=False
         )
 
         print("Number of episodes: ", len(vqa_dataset))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
-        model_kwargs = {"q_vocab": q_vocab_dict, "ans_vocab": ans_vocab_dict}
+        model_kwargs = {
+            "q_vocab": q_vocab_dict,
+            "ans_vocab": ans_vocab_dict,
+            "edfe_ckpt_path": config.EDFE_CKPT_PATH,
+        }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
         state_dict = torch.load(checkpoint_path)
