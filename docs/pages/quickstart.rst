@@ -69,7 +69,8 @@ you can install using: :sh:`pip install opencv-python`.
         print("Environment creation successful")
         observations = env.reset()
         print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
-            observations["pointgoal"][0], observations["pointgoal"][1]))
+            observations["pointgoal_with_gps_compass"][0],
+            observations["pointgoal_with_gps_compass"][1]))
         cv2.imshow("RGB", transform_rgb_bgr(observations["rgb"]))
 
         print("Agent stepping around inside environment.")
@@ -98,12 +99,16 @@ you can install using: :sh:`pip install opencv-python`.
             count_steps += 1
 
             print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
-                observations["pointgoal"][0], observations["pointgoal"][1]))
+                observations["pointgoal_with_gps_compass"][0],
+                observations["pointgoal_with_gps_compass"][1]))
             cv2.imshow("RGB", transform_rgb_bgr(observations["rgb"]))
 
         print("Episode finished after {} steps.".format(count_steps))
 
-        if action == HabitatSimActions.STOP and observations["pointgoal"][0] < 0.2:
+        if (
+            action == habitat.SimulatorActions.stop
+            and observations["pointgoal_with_gps_compass"][0] < 0.2
+        ):
             print("you successfully navigated to destination point")
         else:
             print("your navigation was unsuccessful")
@@ -128,6 +133,8 @@ Below is a demo of what the example output will look like:
 For more examples refer to
 :gh:`Habitat-API examples <facebookresearch/habitat-sim/tree/master/examples>`
 and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/master/examples>`.
+
+
 
 `Citation`_
 ===========
