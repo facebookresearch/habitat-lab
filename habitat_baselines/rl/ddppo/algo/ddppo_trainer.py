@@ -227,10 +227,12 @@ class DDPPOTrainer(PPOTrainer):
         batch = None
         observations = None
 
-        current_episode_reward = torch.zeros(self.envs.num_envs, 1)
+        current_episode_reward = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
         running_episode_stats = dict(
-            count=torch.zeros(self.envs.num_envs, 1),
-            reward=torch.zeros(self.envs.num_envs, 1),
+            count=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
         )
         window_episode_stats = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
