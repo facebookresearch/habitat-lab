@@ -233,6 +233,8 @@ class ImageGoalSensor(Sensor):
             )
 
         self._rgb_sensor_uuid, = rgb_sensor_uuids
+        self._current_episode_id = None
+        self._current_image_goal = None
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -249,17 +251,22 @@ class ImageGoalSensor(Sensor):
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
     ):
+        if episode.episode_id == self._current_episode_id:
+            return self._current_image_goal
+
+        self._current_episode_id = episode.episode_id
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
-        # to be sure that the rotation is the same within an episode
+        # to be sure that the rotation is the same for the same episode_id
         seed = abs(hash(episode.episode_id)) % (2 ** 32)
         rng = np.random.RandomState(seed)
         angle = rng.uniform(0, 2 * np.pi)
         source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
-        image_goal = self._sim.get_observations_at(
+        goal_observation = self._sim.get_observations_at(
             position=goal_position.tolist(), rotation=source_rotation
         )
+        self._current_image_goal = goal_observation[self._rgb_sensor_uuid]
 
-        return image_goal[self._rgb_sensor_uuid]
+        return self._current_image_goal
 
 
 @registry.register_sensor(name="PointGoalWithGPSCompassSensor")
