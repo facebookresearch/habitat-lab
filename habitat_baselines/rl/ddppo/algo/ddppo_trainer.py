@@ -36,6 +36,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ddppo.policy.resnet_policy import (
+    ImageNavResNetPolicy,
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
@@ -69,16 +70,29 @@ class DDPPOTrainer(PPOTrainer):
         """
         logger.add_filehandler(self.config.LOG_FILE)
 
-        self.actor_critic = PointNavResNetPolicy(
-            observation_space=self.envs.observation_spaces[0],
-            action_space=self.envs.action_spaces[0],
-            hidden_size=ppo_cfg.hidden_size,
-            rnn_type=self.config.RL.DDPPO.rnn_type,
-            num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
-            backbone=self.config.RL.DDPPO.backbone,
-            normalize_visual_inputs="rgb"
-            in self.envs.observation_spaces[0].spaces,
-        )
+        if "IMAGEGOAL_SENSOR" in self.config.TASK_CONFIG.TASK.SENSORS:
+            self.actor_critic = ImageNavResNetPolicy(
+                observation_space=self.envs.observation_spaces[0],
+                action_space=self.envs.action_spaces[0],
+                hidden_size=ppo_cfg.hidden_size,
+                rnn_type=self.config.RL.DDPPO.rnn_type,
+                num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
+                backbone=self.config.RL.DDPPO.backbone,
+                goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
+                normalize_visual_inputs="rgb"
+                in self.envs.observation_spaces[0].spaces,
+            )
+        else:
+            self.actor_critic = PointNavResNetPolicy(
+                observation_space=self.envs.observation_spaces[0],
+                action_space=self.envs.action_spaces[0],
+                hidden_size=ppo_cfg.hidden_size,
+                rnn_type=self.config.RL.DDPPO.rnn_type,
+                num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
+                backbone=self.config.RL.DDPPO.backbone,
+                normalize_visual_inputs="rgb"
+                in self.envs.observation_spaces[0].spaces,
+            )
         self.actor_critic.to(self.device)
 
         if (
