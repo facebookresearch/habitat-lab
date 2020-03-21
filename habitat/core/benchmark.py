@@ -49,6 +49,8 @@ class Benchmark:
         import pickle
         import time
 
+        time.sleep(60)
+
         def pack_for_grpc(entity):
             return pickle.dumps(entity)
 
@@ -61,7 +63,7 @@ class Benchmark:
             )
             return res_env["episode_over"]
 
-        channel = grpc.insecure_channel("environment:8085")
+        channel = grpc.insecure_channel("localhost:8085")
         stub = evaluation_pb2_grpc.EnvironmentStub(channel)
 
         base_num_episodes = unpack_for_grpc(
@@ -105,7 +107,7 @@ class Benchmark:
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
 
-        evalai_environment_habitat.update_submission_result(avg_metrics)
+        stub.evalai_update_submission(evaluation_pb2.Package())
 
         return avg_metrics
 
