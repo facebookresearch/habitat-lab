@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import warnings
 from typing import Optional, Union
 
 import numpy as np
@@ -11,12 +12,6 @@ import numpy as np
 import habitat_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.utils.geometry_utils import (
-    angle_between_quaternions,
-    quaternion_from_two_vectors,
-)
-
-EPSILON = 1e-6
 
 
 def action_to_one_hot(action: int) -> np.array:
@@ -40,22 +35,14 @@ class ShortestPathFollower:
     def __init__(
         self, sim: HabitatSim, goal_radius: float, return_one_hot: bool = True
     ):
-        assert (
-            getattr(sim, "geodesic_distance", None) is not None
-        ), "{} must have a method called geodesic_distance".format(
-            type(sim).__name__
-        )
-
-        self._sim = sim
-        self._max_delta = self._sim.config.FORWARD_STEP_SIZE - EPSILON
-        self._goal_radius = goal_radius
-        self._step_size = self._sim.config.FORWARD_STEP_SIZE
-
-        self._mode = (
-            "exact_gradient"
-            if getattr(sim, "get_straight_shortest_path_points", None)
-            is not None
-            else "approximate_gradient"
+        self._follower = habitat_sim.nav.GreedyGeodesicFollower(
+            sim._sim.pathfinder,
+            sim._sim.get_agent(0),
+            goal_radius=goal_radius,
+            stop_key=HabitatSimActions.STOP,
+            forward_key=HabitatSimActions.MOVE_FORWARD,
+            left_key=HabitatSimActions.TURN_LEFT,
+            right_key=HabitatSimActions.TURN_RIGHT,
         )
         self._return_one_hot = return_one_hot
 
@@ -70,133 +57,15 @@ class ShortestPathFollower:
     ) -> Optional[Union[int, np.array]]:
         """Returns the next action along the shortest path.
         """
-        if (
-            self._sim.geodesic_distance(
-                self._sim.get_agent_state().position, [goal_pos]
-            )
-            <= self._goal_radius
-        ):
-            return None
+        next_action = self._follower.next_action_along(goal_pos)
 
-        max_grad_dir = self._est_max_grad_dir(goal_pos)
-        if max_grad_dir is None:
-            return self._get_return_value(HabitatSimActions.MOVE_FORWARD)
-        return self._step_along_grad(max_grad_dir)
-
-    def _step_along_grad(
-        self, grad_dir: np.quaternion
-    ) -> Union[int, np.array]:
-        current_state = self._sim.get_agent_state()
-        alpha = angle_between_quaternions(grad_dir, current_state.rotation)
-        if alpha <= np.deg2rad(self._sim.config.TURN_ANGLE) + EPSILON:
-            return self._get_return_value(HabitatSimActions.MOVE_FORWARD)
-        else:
-            sim_action = HabitatSimActions.TURN_LEFT
-            self._sim.step(sim_action)
-            best_turn = (
-                HabitatSimActions.TURN_LEFT
-                if (
-                    angle_between_quaternions(
-                        grad_dir, self._sim.get_agent_state().rotation
-                    )
-                    < alpha
-                )
-                else HabitatSimActions.TURN_RIGHT
-            )
-            self._reset_agent_state(current_state)
-            return self._get_return_value(best_turn)
-
-    def _reset_agent_state(self, state: habitat_sim.AgentState) -> None:
-        self._sim.set_agent_state(
-            state.position, state.rotation, reset_sensors=False
-        )
-
-    def _geo_dist(self, goal_pos: np.array) -> float:
-        return self._sim.geodesic_distance(
-            self._sim.get_agent_state().position, [goal_pos]
-        )
-
-    def _est_max_grad_dir(self, goal_pos: np.array) -> np.array:
-
-        current_state = self._sim.get_agent_state()
-        current_pos = current_state.position
-
-        if self.mode == "exact_gradient":
-            points = self._sim.get_straight_shortest_path_points(
-                self._sim.get_agent_state().position, goal_pos
-            )
-            # Add a little offset as things get weird if
-            # points[1] - points[0] is anti-parallel with forward
-            if len(points) < 2:
-                return None
-            max_grad_dir = quaternion_from_two_vectors(
-                self._sim.forward_vector,
-                points[1]
-                - points[0]
-                + EPSILON
-                * np.cross(self._sim.up_vector, self._sim.forward_vector),
-            )
-            max_grad_dir.x = 0
-            max_grad_dir = np.normalized(max_grad_dir)
-        else:
-            current_rotation = self._sim.get_agent_state().rotation
-            current_dist = self._geo_dist(goal_pos)
-
-            best_geodesic_delta = -2 * self._max_delta
-            best_rotation = current_rotation
-            for _ in range(0, 360, self._sim.config.TURN_ANGLE):
-                sim_action = HabitatSimActions.MOVE_FORWARD
-                self._sim.step(sim_action)
-                new_delta = current_dist - self._geo_dist(goal_pos)
-
-                if new_delta > best_geodesic_delta:
-                    best_rotation = self._sim.get_agent_state().rotation
-                    best_geodesic_delta = new_delta
-
-                # If the best delta is within (1 - cos(TURN_ANGLE))% of the
-                # best delta (the step size), then we almost certainly have
-                # found the max grad dir and should just exit
-                if np.isclose(
-                    best_geodesic_delta,
-                    self._max_delta,
-                    rtol=1 - np.cos(np.deg2rad(self._sim.config.TURN_ANGLE)),
-                ):
-                    break
-
-                self._sim.set_agent_state(
-                    current_pos,
-                    self._sim.get_agent_state().rotation,
-                    reset_sensors=False,
-                )
-
-                sim_action = HabitatSimActions.TURN_LEFT
-                self._sim.step(sim_action)
-
-            self._reset_agent_state(current_state)
-
-            max_grad_dir = best_rotation
-
-        return max_grad_dir
+        return self._get_return_value(next_action)
 
     @property
     def mode(self):
-        return self._mode
+        warnings.warn(".mode is depricated", DeprecationWarning)
+        return ""
 
     @mode.setter
     def mode(self, new_mode: str):
-        r"""Sets the mode for how the greedy follower determines the gradient of the geodesic_distance
-        function (it then follows the negative of this gradient)
-
-        :param new_mode: Must be one of 'exact_gradient' or 'approximate_gradient'.  If 'exact_gradient', then
-                         the simulator must provide a straightend shortest path.
-
-                         If 'approximate_gradient', the follower approximates the gradient by turning
-                         and then stepping forward
-        """
-        assert new_mode in {"exact_gradient", "approximate_gradient"}
-        if new_mode == "exact_gradient":
-            assert (
-                getattr(self._sim, "get_straight_shortest_path_points", None)
-                is not None
-            )
-        self._mode = new_mode
+        warnings.warn(".mode is depricated", DeprecationWarning)
