@@ -263,6 +263,45 @@ def test_pointgoal_with_gps_compass_sensor():
     env.close()
 
 
+def test_imagegoal_sensor():
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+    config.defrost()
+    config.TASK.SENSORS = ["IMAGEGOAL_SENSOR"]
+    config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
+    config.freeze()
+    env = habitat.Env(config=config, dataset=None)
+
+    # start position is checked for validity for the specific test scene
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+    pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+
+    env.episode_iterator = iter(
+        [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position)],
+            )
+        ]
+    )
+    obs = env.reset()
+    for _ in range(100):
+        new_obs = env.step(sample_non_stop_action(env.action_space))
+        # check to see if taking non-stop actions will affect static image_goal
+        assert np.allclose(obs["imagegoal"], new_obs["imagegoal"])
+
+    env.close()
+
+
 def test_get_observations_at():
     config = get_config()
     if not os.path.exists(config.SIMULATOR.SCENE):
