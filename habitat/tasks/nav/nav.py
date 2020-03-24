@@ -208,7 +208,6 @@ class ImageGoalSensor(Sensor):
     r"""Sensor for ImageGoal observations which are used in ImageGoal Navigation.
 
     RGBSensor needs to be one of the Simulator sensors.
-    Currently the task is using pointnav Dataset.
     This sensor return the rgb image taken from the goal position to reach with
     random rotation.
 
@@ -248,15 +247,10 @@ class ImageGoalSensor(Sensor):
             self._rgb_sensor_uuid
         ]
 
-    def get_observation(
-        self, *args: Any, observations, episode: Episode, **kwargs: Any
-    ):
-        if episode.episode_id == self._current_episode_id:
-            return self._current_image_goal
-
-        self._current_episode_id = episode.episode_id
+    def _get_pointnav_episode_image_goal(self, episode: Episode):
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
         # to be sure that the rotation is the same for the same episode_id
+        # since the task is currently using pointnav Dataset.
         seed = abs(hash(episode.episode_id)) % (2 ** 32)
         rng = np.random.RandomState(seed)
         angle = rng.uniform(0, 2 * np.pi)
@@ -264,7 +258,18 @@ class ImageGoalSensor(Sensor):
         goal_observation = self._sim.get_observations_at(
             position=goal_position.tolist(), rotation=source_rotation
         )
-        self._current_image_goal = goal_observation[self._rgb_sensor_uuid]
+        return goal_observation[self._rgb_sensor_uuid]
+
+    def get_observation(
+        self, *args: Any, observations, episode: Episode, **kwargs: Any
+    ):
+        if episode.episode_id == self._current_episode_id:
+            return self._current_image_goal
+
+        image_goal = self._get_pointnav_episode_image_goal(episode)
+
+        self._current_image_goal = image_goal
+        self._current_episode_id = episode.episode_id
 
         return self._current_image_goal
 
