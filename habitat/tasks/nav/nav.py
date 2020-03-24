@@ -21,11 +21,11 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    RGBSensor,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
     Simulator,
-    RGBSensor,
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -231,7 +231,7 @@ class ImageGoalSensor(Sensor):
                 f"ImageGoalNav requires one RGB sensor, {len(rgb_sensor_uuids)} detected"
             )
 
-        self._rgb_sensor_uuid, = rgb_sensor_uuids
+        (self._rgb_sensor_uuid,) = rgb_sensor_uuids
         self._current_episode_id = None
         self._current_image_goal = None
         super().__init__(config=config)
