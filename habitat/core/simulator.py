@@ -13,6 +13,7 @@ from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
+from habitat.core.dataset import Episode
 
 
 @attr.s(auto_attribs=True)
@@ -257,12 +258,14 @@ class Simulator:
         self,
         position_a: List[float],
         position_b: Union[List[float], List[List[float]]],
+        episode: Optional[Episode] = None,
     ) -> float:
         r"""Calculates geodesic distance between two points.
 
         :param position_a: coordinates of first point.
         :param position_b: coordinates of second point or list of goal points
         coordinates.
+        :param episode: The episode with these ends points.  This is used for shortest path computation caching
         :return:
             the geodesic distance in the cartesian space between points
             :p:`position_a` and :p:`position_b`, if no path is found between
