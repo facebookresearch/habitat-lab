@@ -68,6 +68,10 @@ class Episode:
             if k not in {"_shortest_path_cache"}
         }
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__dict__["_shortest_path_cache"] = None
+
 
 T = TypeVar("T", bound=Episode)
 
