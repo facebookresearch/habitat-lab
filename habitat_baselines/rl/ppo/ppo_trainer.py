@@ -184,7 +184,7 @@ class PPOTrainer(BaseRLTrainer):
         env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=current_episode_reward.device
         )
@@ -294,7 +294,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
@@ -470,7 +470,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
-        batch = batch_obs(observations, self.device)
+        batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -525,7 +525,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, self.device)
+            batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
