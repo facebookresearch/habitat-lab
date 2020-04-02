@@ -189,7 +189,7 @@ class DDPPOTrainer(PPOTrainer):
             )
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         obs_space = self.envs.observation_spaces[0]
         if self._static_encoder:
