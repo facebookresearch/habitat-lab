@@ -115,12 +115,17 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
+            if k in cls.METRICS_BLACKLIST:
+                continue
+
             if isinstance(v, dict):
                 result.update(
                     {
@@ -128,6 +133,7 @@ class PPOTrainer(BaseRLTrainer):
                         for subk, subv in cls._extract_scalars_from_info(
                             v
                         ).items()
+                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -571,8 +577,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metric_name=self.metric_uuid,
-                            metric_value=infos[i][self.metric_uuid],
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 
