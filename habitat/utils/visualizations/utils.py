@@ -166,12 +166,17 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     egocentric_view = []
     if "rgb" in observation:
         observation_size = observation["rgb"].shape[0]
-        egocentric_view.append(observation["rgb"][:, :, :3])
+        egocentric_view.append(observation["rgb"][:, :, :3].cpu().numpy())
 
     # draw depth map if observation has depth info
     if "depth" in observation:
         observation_size = observation["depth"].shape[0]
-        depth_map = (observation["depth"].squeeze() * 255).astype(np.uint8)
+        depth_map = (
+            (observation["depth"].squeeze() * 255)
+            .cpu()
+            .numpy()
+            .astype(np.uint8)
+        )
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
         egocentric_view.append(depth_map)
 
