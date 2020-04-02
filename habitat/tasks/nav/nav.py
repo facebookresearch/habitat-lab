@@ -858,31 +858,34 @@ class DistanceToGoal(Measure):
             np.array(position_b) - np.array(position_a), ord=2
         )
 
-    def update_metric(self, episode, *args: Any, **kwargs: Any):
+    def update_metric(self, episode: Episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position.tolist()
 
-        if self._config.DISTANCE_TO == "POINT":
-            distance_to_target = self._sim.geodesic_distance(
-                current_position,
-                [goal.position for goal in episode.goals],
-                episode,
-            )
-        elif self._config.DISTANCE_TO == "VIEW_POINTS":
-            distance_to_target = self._sim.geodesic_distance(
-                current_position, self._episode_view_points, episode
-            )
-        else:
-            logger.error(
-                f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
+        if episode._shortest_path_cache is None or not np.allclose(
+            episode._shortest_path_cache.requested_start, current_position
+        ):
+            if self._config.DISTANCE_TO == "POINT":
+                distance_to_target = self._sim.geodesic_distance(
+                    current_position,
+                    [goal.position for goal in episode.goals],
+                    episode,
+                )
+            elif self._config.DISTANCE_TO == "VIEW_POINTS":
+                distance_to_target = self._sim.geodesic_distance(
+                    current_position, self._episode_view_points, episode
+                )
+            else:
+                logger.error(
+                    f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
+                )
+
+            self._agent_episode_distance += self._euclidean_distance(
+                current_position, self._previous_position
             )
 
-        self._agent_episode_distance += self._euclidean_distance(
-            current_position, self._previous_position
-        )
+            self._previous_position = current_position
 
-        self._previous_position = current_position
-
-        self._metric = distance_to_target
+            self._metric = distance_to_target
 
 
 @registry.register_task_action
