@@ -42,7 +42,7 @@ RUN conda create -n habitat python=3.6 cmake=3.14.0
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; python setup.py install --headless --with-cuda"
+RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; python setup.py install--headless"
 
 # Install challenge specific habitat-api
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
