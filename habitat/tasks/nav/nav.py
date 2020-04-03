@@ -388,7 +388,7 @@ class ProximitySensor(Sensor):
             low=0.0,
             high=self._max_detection_radius,
             shape=(1,),
-            dtype=np.float,
+            dtype=np.float32,
         )
 
     def get_observation(
@@ -396,8 +396,13 @@ class ProximitySensor(Sensor):
     ):
         current_position = self._sim.get_agent_state().position
 
-        return self._sim.distance_to_closest_obstacle(
-            current_position, self._max_detection_radius
+        return np.array(
+            [
+                self._sim.distance_to_closest_obstacle(
+                    current_position, self._max_detection_radius
+                )
+            ],
+            dtype=np.float32,
         )
 
 
