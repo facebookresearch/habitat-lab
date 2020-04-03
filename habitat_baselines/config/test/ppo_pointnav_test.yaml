@@ -3,7 +3,8 @@ TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: []
+VIDEO_OPTION: ["DISK"]
+VIDEO_DIR: "data/test_checkpoints/ppo/pointnav/video"
 TENSORBOARD_DIR: ""
 EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ppo/pointnav/ckpt.0.pth"
 NUM_PROCESSES: 1
