@@ -476,25 +476,26 @@ class SPL(Measure):
         return "spl"
 
     def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
-        self._previous_position = self._sim.get_agent_state().position.tolist()
-        self._start_end_episode_distance = episode.info["geodesic_distance"]
-        self._agent_episode_distance = 0.0
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
         )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
         self.update_metric(*args, episode=episode, task=task, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
-        return np.linalg.norm(
-            np.array(position_b) - np.array(position_a), ord=2
-        )
+        return np.linalg.norm(position_b - position_a, ord=2)
 
     def update_metric(
         self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
     ):
-        current_position = self._sim.get_agent_state().position.tolist()
         ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
 
+        current_position = self._sim.get_agent_state().position
         self._agent_episode_distance += self._euclidean_distance(
             current_position, self._previous_position
         )
@@ -832,8 +833,6 @@ class DistanceToGoal(Measure):
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._previous_position = None
-        self._start_end_episode_distance = None
-        self._agent_episode_distance = None
         self._sim = sim
         self._config = config
         self._episode_view_points = None
@@ -844,11 +843,7 @@ class DistanceToGoal(Measure):
         return self.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._previous_position = self._sim.get_agent_state().position.tolist()
-        self._start_end_episode_distance = self._sim.geodesic_distance(
-            self._previous_position, episode.goals[0].position
-        )
-        self._agent_episode_distance = 0.0
+        self._previous_position = None
         self._metric = None
         if self._config.DISTANCE_TO == "VIEW_POINTS":
             self._episode_view_points = [
@@ -858,16 +853,11 @@ class DistanceToGoal(Measure):
             ]
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def _euclidean_distance(self, position_a, position_b):
-        return np.linalg.norm(
-            np.array(position_b) - np.array(position_a), ord=2
-        )
-
     def update_metric(self, episode: Episode, *args: Any, **kwargs: Any):
-        current_position = self._sim.get_agent_state().position.tolist()
+        current_position = self._sim.get_agent_state().position
 
-        if episode._shortest_path_cache is None or not np.allclose(
-            episode._shortest_path_cache.requested_start, current_position
+        if self._previous_position is None or not np.allclose(
+            self._previous_position, current_position
         ):
             if self._config.DISTANCE_TO == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
@@ -883,10 +873,6 @@ class DistanceToGoal(Measure):
                 logger.error(
                     f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
                 )
-
-            self._agent_episode_distance += self._euclidean_distance(
-                current_position, self._previous_position
-            )
 
             self._previous_position = current_position
 
