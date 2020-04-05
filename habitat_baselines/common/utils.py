@@ -138,8 +138,7 @@ def generate_video(
     images: List[np.ndarray],
     episode_id: int,
     checkpoint_idx: int,
-    metric_name: str,
-    metric_value: float,
+    metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
     fps: int = 10,
 ) -> None:
@@ -161,8 +160,13 @@ def generate_video(
     if len(images) < 1:
         return
 
-    video_name = f"episode{episode_id}_ckpt{checkpoint_idx}_{metric_name}\
-                {metric_value:.2f}"
+    metric_strs = []
+    for k, v in metrics.items():
+        metric_strs.append(f"{k}={v:.2f}")
+
+    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
+        metric_strs
+    )
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name)

@@ -13,6 +13,7 @@ from gym import Space
 from gym.spaces.dict_space import Dict as SpaceDict
 
 from habitat.config import Config
+from habitat.core.dataset import Episode
 
 
 @attr.s(auto_attribs=True)
@@ -206,28 +207,17 @@ class SensorSuite:
         return Observations(self.sensors, *args, **kwargs)
 
 
+@attr.s(auto_attribs=True)
 class AgentState:
     position: List[float]
-    rotation: Optional[List[float]]
-
-    def __init__(
-        self, position: List[float], rotation: Optional[List[float]]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
+    rotation: Optional[List[float]] = None
 
 
+@attr.s(auto_attribs=True)
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]
-    action: Optional[int]
-
-    def __init__(
-        self, position: List[Any], rotation: List[Any], action: Optional[int]
-    ) -> None:
-        self.position = position
-        self.rotation = rotation
-        self.action = action
+    action: Optional[int] = None
 
 
 class Simulator:
@@ -268,12 +258,14 @@ class Simulator:
         self,
         position_a: List[float],
         position_b: Union[List[float], List[List[float]]],
+        episode: Optional[Episode] = None,
     ) -> float:
         r"""Calculates geodesic distance between two points.
 
         :param position_a: coordinates of first point.
         :param position_b: coordinates of second point or list of goal points
         coordinates.
+        :param episode: The episode with these ends points.  This is used for shortest path computation caching
         :return:
             the geodesic distance in the cartesian space between points
             :p:`position_a` and :p:`position_b`, if no path is found between

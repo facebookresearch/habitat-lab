@@ -123,11 +123,16 @@ _C.TASK.PROXIMITY_SENSOR = CN()
 _C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
 _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 # -----------------------------------------------------------------------------
+# SUCCESS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.SUCCESS = CN()
+_C.TASK.SUCCESS.TYPE = "Success"
+_C.TASK.SUCCESS.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
 # SPL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.SPL = CN()
 _C.TASK.SPL.TYPE = "SPL"
-_C.TASK.SPL.SUCCESS_DISTANCE = 0.2
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------

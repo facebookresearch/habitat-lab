@@ -8,8 +8,7 @@ import contextlib
 import os
 import random
 import time
-from collections import deque
-from typing import Dict, List
+from collections import OrderedDict, defaultdict, deque
 
 import numpy as np
 import torch
@@ -190,7 +189,7 @@ class DDPPOTrainer(PPOTrainer):
             )
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         obs_space = self.envs.observation_spaces[0]
         if self._static_encoder:
@@ -228,15 +227,16 @@ class DDPPOTrainer(PPOTrainer):
         batch = None
         observations = None
 
-        episode_rewards = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
-        episode_counts = torch.zeros(self.envs.num_envs, 1, device=self.device)
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
         )
-        window_episode_reward = deque(maxlen=ppo_cfg.reward_window_size)
-        window_episode_counts = deque(maxlen=ppo_cfg.reward_window_size)
+        running_episode_stats = dict(
+            count=torch.zeros(self.envs.num_envs, 1, device=self.device),
+            reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
+        )
+        window_episode_stats = defaultdict(
+            lambda: deque(maxlen=ppo_cfg.reward_window_size)
+        )
 
         t_start = time.time()
         env_time = 0
@@ -317,10 +317,7 @@ class DDPPOTrainer(PPOTrainer):
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts,
-                        current_episode_reward,
-                        episode_rewards,
-                        episode_counts,
+                        rollouts, current_episode_reward, running_episode_stats
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -350,11 +347,14 @@ class DDPPOTrainer(PPOTrainer):
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
-                stats = torch.stack([episode_rewards, episode_counts], 0)
+                stats_ordering = list(sorted(running_episode_stats.keys()))
+                stats = torch.stack(
+                    [running_episode_stats[k] for k in stats_ordering], 0
+                )
                 distrib.all_reduce(stats)
 
-                window_episode_reward.append(stats[0].clone())
-                window_episode_counts.append(stats[1].clone())
+                for i, k in enumerate(stats_ordering):
+                    window_episode_stats[k].append(stats[i].clone())
 
                 stats = torch.tensor(
                     [value_loss, action_loss, count_steps_delta],
@@ -370,17 +370,13 @@ class DDPPOTrainer(PPOTrainer):
                         stats[0].item() / self.world_size,
                         stats[1].item() / self.world_size,
                     ]
-                    stats = zip(
-                        ["count", "reward"],
-                        [window_episode_counts, window_episode_reward],
-                    )
                     deltas = {
                         k: (
                             (v[-1] - v[0]).sum().item()
                             if len(v) > 1
                             else v[0].sum().item()
                         )
-                        for k, v in stats
+                        for k, v in window_episode_stats.items()
                     }
                     deltas["count"] = max(deltas["count"], 1.0)
 
@@ -389,6 +385,16 @@ class DDPPOTrainer(PPOTrainer):
                         deltas["reward"] / deltas["count"],
                         count_steps,
                     )
+
+                    # Check to see if there are any metrics
+                    # that haven't been logged yet
+                    metrics = {
+                        k: v / deltas["count"]
+                        for k, v in deltas.items()
+                        if k not in {"reward", "count"}
+                    }
+                    if len(metrics) > 0:
+                        writer.add_scalars("metrics", metrics, count_steps)
 
                     writer.add_scalars(
                         "losses",
@@ -412,25 +418,16 @@ class DDPPOTrainer(PPOTrainer):
                                 update, env_time, pth_time, count_steps
                             )
                         )
-
-                        window_rewards = (
-                            window_episode_reward[-1]
-                            - window_episode_reward[0]
-                        ).sum()
-                        window_counts = (
-                            window_episode_counts[-1]
-                            - window_episode_counts[0]
-                        ).sum()
-
-                        if window_counts > 0:
-                            logger.info(
-                                "Average window size {} reward: {:3f}".format(
-                                    len(window_episode_reward),
-                                    (window_rewards / window_counts).item(),
-                                )
+                        logger.info(
+                            "Average window size: {}  {}".format(
+                                len(window_episode_stats["count"]),
+                                "  ".join(
+                                    "{}: {:.3f}".format(k, v / deltas["count"])
+                                    for k, v in deltas.items()
+                                    if k != "count"
+                                ),
                             )
-                        else:
-                            logger.info("No episodes finish in current window")
+                        )
 
                     # checkpoint model
                     if update % self.config.CHECKPOINT_INTERVAL == 0:

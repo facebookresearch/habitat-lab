@@ -92,6 +92,5 @@ class DecentralizedDistributedMixin:
             self.reducer.prepare_for_backward([])
 
 
-# Mixin goes second that way the PPO __init__ will still be called
-class DDPPO(PPO, DecentralizedDistributedMixin):
+class DDPPO(DecentralizedDistributedMixin, PPO):
     pass

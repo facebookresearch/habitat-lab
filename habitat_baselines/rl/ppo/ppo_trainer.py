@@ -6,11 +6,12 @@
 
 import os
 import time
-from collections import deque
-from typing import Dict, List, Optional
+from collections import defaultdict, deque
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
+import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
@@ -114,8 +115,48 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+
+    @classmethod
+    def _extract_scalars_from_info(
+        cls, info: Dict[str, Any]
+    ) -> Dict[str, float]:
+        result = {}
+        for k, v in info.items():
+            if k in cls.METRICS_BLACKLIST:
+                continue
+
+            if isinstance(v, dict):
+                result.update(
+                    {
+                        k + "." + subk: subv
+                        for subk, subv in cls._extract_scalars_from_info(
+                            v
+                        ).items()
+                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
+                    }
+                )
+            # Things that are scalar-like will have an np.size of 1.
+            # Strings also have an np.size of 1, so explicitly ban those
+            elif np.size(v) == 1 and not isinstance(v, str):
+                result[k] = float(v)
+
+        return result
+
+    @classmethod
+    def _extract_scalars_from_infos(
+        cls, infos: List[Dict[str, Any]]
+    ) -> Dict[str, List[float]]:
+
+        results = defaultdict(list)
+        for i in range(len(infos)):
+            for k, v in cls._extract_scalars_from_info(infos[i]).items():
+                results[k].append(v)
+
+        return results
+
     def _collect_rollout_step(
-        self, rollouts, current_episode_reward, episode_rewards, episode_counts
+        self, rollouts, current_episode_reward, running_episode_stats
     ):
         pth_time = 0.0
         env_time = 0.0
@@ -149,21 +190,32 @@ class PPOTrainer(BaseRLTrainer):
         env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
         rewards = torch.tensor(
-            rewards, dtype=torch.float, device=episode_rewards.device
+            rewards, dtype=torch.float, device=current_episode_reward.device
         )
         rewards = rewards.unsqueeze(1)
 
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
             dtype=torch.float,
-            device=episode_rewards.device,
+            device=current_episode_reward.device,
         )
 
         current_episode_reward += rewards
-        episode_rewards += (1 - masks) * current_episode_reward
-        episode_counts += 1 - masks
+        running_episode_stats["reward"] += (1 - masks) * current_episode_reward
+        running_episode_stats["count"] += 1 - masks
+        for k, v in self._extract_scalars_from_infos(infos).items():
+            v = torch.tensor(
+                v, dtype=torch.float, device=current_episode_reward.device
+            ).unsqueeze(1)
+            if k not in running_episode_stats:
+                running_episode_stats[k] = torch.zeros_like(
+                    running_episode_stats["count"]
+                )
+
+            running_episode_stats[k] += (1 - masks) * v
+
         current_episode_reward *= masks
 
         if self._static_encoder:
@@ -248,7 +300,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
@@ -259,11 +311,14 @@ class PPOTrainer(BaseRLTrainer):
         batch = None
         observations = None
 
-        episode_rewards = torch.zeros(self.envs.num_envs, 1)
-        episode_counts = torch.zeros(self.envs.num_envs, 1)
         current_episode_reward = torch.zeros(self.envs.num_envs, 1)
-        window_episode_reward = deque(maxlen=ppo_cfg.reward_window_size)
-        window_episode_counts = deque(maxlen=ppo_cfg.reward_window_size)
+        running_episode_stats = dict(
+            count=torch.zeros(self.envs.num_envs, 1),
+            reward=torch.zeros(self.envs.num_envs, 1),
+        )
+        window_episode_stats = defaultdict(
+            lambda: deque(maxlen=ppo_cfg.reward_window_size)
+        )
 
         t_start = time.time()
         env_time = 0
@@ -294,10 +349,7 @@ class PPOTrainer(BaseRLTrainer):
                         delta_env_time,
                         delta_steps,
                     ) = self._collect_rollout_step(
-                        rollouts,
-                        current_episode_reward,
-                        episode_rewards,
-                        episode_counts,
+                        rollouts, current_episode_reward, running_episode_stats
                     )
                     pth_time += delta_pth_time
                     env_time += delta_env_time
@@ -311,21 +363,16 @@ class PPOTrainer(BaseRLTrainer):
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
-                window_episode_reward.append(episode_rewards.clone())
-                window_episode_counts.append(episode_counts.clone())
+                for k, v in running_episode_stats.items():
+                    window_episode_stats[k].append(v.clone())
 
-                losses = [value_loss, action_loss]
-                stats = zip(
-                    ["count", "reward"],
-                    [window_episode_counts, window_episode_reward],
-                )
                 deltas = {
                     k: (
                         (v[-1] - v[0]).sum().item()
                         if len(v) > 1
                         else v[0].sum().item()
                     )
-                    for k, v in stats
+                    for k, v in window_episode_stats.items()
                 }
                 deltas["count"] = max(deltas["count"], 1.0)
 
@@ -333,6 +380,17 @@ class PPOTrainer(BaseRLTrainer):
                     "reward", deltas["reward"] / deltas["count"], count_steps
                 )
 
+                # Check to see if there are any metrics
+                # that haven't been logged yet
+                metrics = {
+                    k: v / deltas["count"]
+                    for k, v in deltas.items()
+                    if k not in {"reward", "count"}
+                }
+                if len(metrics) > 0:
+                    writer.add_scalars("metrics", metrics, count_steps)
+
+                losses = [value_loss, action_loss]
                 writer.add_scalars(
                     "losses",
                     {k: l for l, k in zip(losses, ["value", "policy"])},
@@ -354,22 +412,16 @@ class PPOTrainer(BaseRLTrainer):
                         )
                     )
 
-                    window_rewards = (
-                        window_episode_reward[-1] - window_episode_reward[0]
-                    ).sum()
-                    window_counts = (
-                        window_episode_counts[-1] - window_episode_counts[0]
-                    ).sum()
-
-                    if window_counts > 0:
-                        logger.info(
-                            "Average window size {} reward: {:3f}".format(
-                                len(window_episode_reward),
-                                (window_rewards / window_counts).item(),
-                            )
+                    logger.info(
+                        "Average window size: {}  {}".format(
+                            len(window_episode_stats["count"]),
+                            "  ".join(
+                                "{}: {:.3f}".format(k, v / deltas["count"])
+                                for k, v in deltas.items()
+                                if k != "count"
+                            ),
                         )
-                    else:
-                        logger.info("No episodes finish in current window")
+                    )
 
                 # checkpoint model
                 if update % self.config.CHECKPOINT_INTERVAL == 0:
@@ -423,19 +475,8 @@ class PPOTrainer(BaseRLTrainer):
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
-        # get name of performance metric, e.g. "spl"
-        metric_name = self.config.TASK_CONFIG.TASK.MEASUREMENTS[0]
-        metric_cfg = getattr(self.config.TASK_CONFIG.TASK, metric_name)
-        measure_type = baseline_registry.get_measure(metric_cfg.TYPE)
-        assert measure_type is not None, "invalid measurement type {}".format(
-            metric_cfg.TYPE
-        )
-        self.metric_uuid = measure_type(
-            sim=None, task=None, config=None
-        )._get_uuid()
-
         observations = self.envs.reset()
-        batch = batch_obs(observations, self.device)
+        batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -461,6 +502,7 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
+        pbar = tqdm.tqdm(total=self.config.TEST_EPISODE_COUNT)
         self.actor_critic.eval()
         while (
             len(stats_episodes) < self.config.TEST_EPISODE_COUNT
@@ -489,7 +531,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, self.device)
+            batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -513,14 +555,12 @@ class PPOTrainer(BaseRLTrainer):
 
                 # episode ended
                 if not_done_masks[i].item() == 0:
+                    pbar.update()
                     episode_stats = dict()
-                    episode_stats[self.metric_uuid] = infos[i][
-                        self.metric_uuid
-                    ]
-                    episode_stats["success"] = int(
-                        infos[i][self.metric_uuid] > 0
-                    )
                     episode_stats["reward"] = current_episode_reward[i].item()
+                    episode_stats.update(
+                        self._extract_scalars_from_info(infos[i])
+                    )
                     current_episode_reward[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
@@ -537,8 +577,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metric_name=self.metric_uuid,
-                            metric_value=infos[i][self.metric_uuid],
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 
@@ -568,37 +607,29 @@ class PPOTrainer(BaseRLTrainer):
                 rgb_frames,
             )
 
+        num_episodes = len(stats_episodes)
         aggregated_stats = dict()
         for stat_key in next(iter(stats_episodes.values())).keys():
-            aggregated_stats[stat_key] = sum(
-                [v[stat_key] for v in stats_episodes.values()]
+            aggregated_stats[stat_key] = (
+                sum([v[stat_key] for v in stats_episodes.values()])
+                / num_episodes
             )
-        num_episodes = len(stats_episodes)
 
-        episode_reward_mean = aggregated_stats["reward"] / num_episodes
-        episode_metric_mean = aggregated_stats[self.metric_uuid] / num_episodes
-        episode_success_mean = aggregated_stats["success"] / num_episodes
-
-        logger.info(f"Average episode reward: {episode_reward_mean:.6f}")
-        logger.info(f"Average episode success: {episode_success_mean:.6f}")
-        logger.info(
-            f"Average episode {self.metric_uuid}: {episode_metric_mean:.6f}"
-        )
+        for k, v in aggregated_stats.items():
+            logger.info(f"Average episode {k}: {v:.4f}")
 
         step_id = checkpoint_index
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
         writer.add_scalars(
-            "eval_reward", {"average reward": episode_reward_mean}, step_id
-        )
-        writer.add_scalars(
-            f"eval_{self.metric_uuid}",
-            {f"average {self.metric_uuid}": episode_metric_mean},
+            "eval_reward",
+            {"average reward": aggregated_stats["reward"]},
             step_id,
         )
-        writer.add_scalars(
-            "eval_success", {"average success": episode_success_mean}, step_id
-        )
+
+        metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
+        if len(metrics) > 0:
+            writer.add_scalars("eval_metrics", metrics, step_id)
 
         self.envs.close()

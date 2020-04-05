@@ -10,6 +10,7 @@ of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
 import json
+import os
 import random
 from itertools import groupby
 from typing import (
@@ -26,7 +27,10 @@ from typing import (
 import attr
 import numpy as np
 
+from habitat.config import Config
 from habitat.core.utils import not_none_validator
+
+ALL_SCENES_MASK = "*"
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -55,6 +59,18 @@ class Episode:
         default=None, validator=not_none_validator
     )
     info: Optional[Dict[str, str]] = None
+    _shortest_path_cache: Any = attr.ib(init=False, default=None)
+
+    def __getstate__(self):
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if k not in {"_shortest_path_cache"}
+        }
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__dict__["_shortest_path_cache"] = None
 
 
 T = TypeVar("T", bound=Episode)
@@ -64,6 +80,46 @@ class Dataset(Generic[T]):
     r"""Base class for dataset specification.
     """
     episodes: List[T]
+
+    @staticmethod
+    def scene_from_scene_path(scene_path: str) -> str:
+        r"""Helper method to get the scene name from an episode.
+
+        :param scene_path: The path to the scene, assumes this is formatted
+                            ``/path/to/<scene_name>.<ext>``
+
+        :return: <scene_name> from the path
+        """
+        return os.path.splitext(os.path.basename(scene_path))[0]
+
+    @classmethod
+    def get_scenes_to_load(cls, config: Config) -> List[str]:
+        r"""Returns a list of scene names that would be loaded with this dataset.
+
+        Useful for determing what scenes to split up among different workers.
+
+        :param config: The config for the dataset
+
+        :return: A list of scene names that would be loaded with the dataset
+        """
+        assert cls.check_config_paths_exist(config)
+        dataset = cls(config)
+        return list(map(cls.scene_from_scene_path, dataset.scene_ids))
+
+    @classmethod
+    def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
+        r"""Returns a filter function that takes an episode and returns True if that
+        episode is valid under the CONTENT_SCENES feild of the provided config
+        """
+        scenes_to_load = set(config.CONTENT_SCENES)
+
+        def _filter(ep: T) -> bool:
+            return (
+                ALL_SCENES_MASK in scenes_to_load
+                or cls.scene_from_scene_path(ep.scene_id) in scenes_to_load
+            )
+
+        return _filter
 
     @property
     def num_episodes(self) -> int:
@@ -114,7 +170,12 @@ class Dataset(Generic[T]):
             def default(self, object):
                 if isinstance(object, np.ndarray):
                     return object.tolist()
-                return object.__dict__
+
+                return (
+                    object.__getstate__()
+                    if hasattr(object, "__getstate__")
+                    else object.__dict__
+                )
 
         result = DatasetJSONEncoder().encode(self)
         return result

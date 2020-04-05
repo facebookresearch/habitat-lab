@@ -1,0 +1,11 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 500
+SIMULATOR:
+  AGENT_0:
+    HEIGHT: 0.88
+    RADIUS: 0.18
+
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: train
+  DATA_PATH: data/datasets/pointnav/gibson/v2/{split}/{split}.json.gz

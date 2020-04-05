@@ -35,17 +35,15 @@ TASK:
   SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
   GOAL_SENSOR_UUID: objectgoal
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SPL']
-  SPL:
-    TYPE: SPL
-    DISTANCE_TO: VIEW_POINTS
+  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+  SUCCESS:
     SUCCESS_DISTANCE: 0.2
   DISTANCE_TO_GOAL:
     DISTANCE_TO: VIEW_POINTS
 
 DATASET:
   TYPE: ObjectNav-v1
-  SPLIT: mini_val
-  CONTENT_SCENES: []
-  DATA_PATH: "data/datasets/objectnav/mp3d/v0/{split}/{split}.json.gz"
+  SPLIT: val
+  CONTENT_SCENES: ["*"]
+  DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
