@@ -92,7 +92,7 @@ class EDFETrainer(BaseILTrainer):
 
                     loss = l1 + (10 * l2) + (10 * l3)
 
-                    avg_loss += loss
+                    avg_loss += loss.item()
 
                     if t % config.LOG_INTERVAL == 0:
                         print(

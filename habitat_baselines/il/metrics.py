@@ -68,12 +68,12 @@ class Metric:
             stat_string += "[%s:%s]" % (k, v)
 
         stat_string += "[iters:%d]" % self.num_iters
-
         for i in range(len(self.metric_names)):
-            stat_string += "[%s:%.05f]" % (
-                self.metric_names[i],
-                self.metrics[i][mode],
-            )
+            if self.metrics[i][mode] is not None:
+                stat_string += "[%s:%.05f]" % (
+                    self.metric_names[i],
+                    self.metrics[i][mode],
+                )
 
         return stat_string
 

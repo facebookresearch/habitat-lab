@@ -42,7 +42,7 @@ class MaskedNLLCriterion(nn.Module):
         super(MaskedNLLCriterion, self).__init__()
 
     def forward(self, input, target, mask):
-        logprob_select = torch.gather(input, 1, target)
+        logprob_select = torch.gather(input, 1, target.long())
         out = torch.masked_select(logprob_select, mask)
         loss = -torch.sum(out) / mask.float().sum()
 
@@ -596,6 +596,7 @@ class NavRnn(nn.Module):
             if len(input_feats) == 0:
                 input_feats = self.action_embed(actions_in)
             else:
+                actions_in = actions_in.long()
                 input_feats = torch.cat(
                     [input_feats, self.action_embed(actions_in)], 2
                 )

@@ -212,7 +212,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=False
         )
 
-        print("Number of episodes: ", len(vqa_dataset))
+        logger.info("eval_loader has %d samples" % len(vqa_dataset))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
