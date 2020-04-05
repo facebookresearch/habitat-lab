@@ -10,6 +10,7 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -299,20 +300,28 @@ class HabitatSim(Simulator):
 
         self._update_agents_state()
 
-    def geodesic_distance(self, position_a, position_b):
-        path = habitat_sim.MultiGoalShortestPath()
+    def geodesic_distance(
+        self, position_a, position_b, episode: Optional[Episode] = None
+    ):
+        if episode is None or episode._shortest_path_cache is None:
+            path = habitat_sim.MultiGoalShortestPath()
+            if isinstance(position_b[0], List) or isinstance(
+                position_b[0], np.ndarray
+            ):
+                path.requested_ends = np.array(position_b, dtype=np.float32)
+            else:
+                path.requested_ends = np.array(
+                    [np.array(position_b, dtype=np.float32)]
+                )
+        else:
+            path = episode._shortest_path_cache
+
         path.requested_start = np.array(position_a, dtype=np.float32)
 
-        if isinstance(position_b[0], List) or isinstance(
-            position_b[0], np.ndarray
-        ):
-            path.requested_ends = np.array(position_b, dtype=np.float32)
-        else:
-            path.requested_ends = np.array(
-                [np.array(position_b, dtype=np.float32)]
-            )
-
         self._sim.pathfinder.find_path(path)
+
+        if episode is not None:
+            episode._shortest_path_cache = path
 
         return path.geodesic_distance
 
