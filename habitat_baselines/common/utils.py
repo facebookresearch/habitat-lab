@@ -7,14 +7,17 @@
 import glob
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 
+from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+
+cv2 = try_cv2_import()
 
 
 class Flatten(nn.Module):
@@ -174,3 +177,56 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+
+
+def image_resize_shortest_edge(img: np.ndarray, size: int):
+    """Resizes an img so that the shortest side is length of size.
+
+    Args:
+        img: the array object that needs to be resized
+        size: the size that you want the shortest edge to be resize to
+    Returns:
+        the resized array
+    """
+    h, w = img.shape[:2]
+    if w > h:
+        percent = size / h
+    else:
+        percent = size / w
+    h *= percent
+    w *= percent
+    h = int(h)
+    w = int(w)
+    img = cv2.resize(img, (h, w), interpolation=cv2.INTER_AREA)
+    if len(img.shape) == 2:
+        img = np.expand_dims(img, axis=-1)
+    return img
+
+
+def center_crop(img, cropx: int, cropy: int):
+    """performs a center
+
+    Args:
+        img: the array object that needs to be resized
+        size: the size that you want the shortest edge to be resize to
+    Returns:
+        the resized array
+    """
+    y, x = img.shape[:2]
+    startx = x // 2 - (cropx // 2)
+    starty = y // 2 - (cropy // 2)
+    return img[starty : starty + cropy, startx : startx + cropx]
+
+
+def apply_ppo_data_augs(
+    observations: Dict[str, Any], resize: int, center_crop_size: int
+) -> Dict[str, Any]:
+    for k, obs in observations.items():
+        if k in ["rgb", "depth", "semantic"]:
+            obs = observations[k]
+            if resize:
+                obs = image_resize_shortest_edge(obs, resize)
+            if center_crop:
+                obs = center_crop(obs, center_crop_size, center_crop_size)
+            observations[k] = obs
+    return observations

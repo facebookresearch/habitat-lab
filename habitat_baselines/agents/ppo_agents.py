@@ -16,7 +16,12 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
-from habitat_baselines.common.utils import batch_obs
+from habitat_baselines.common.utils import (
+    apply_ppo_data_augs,
+    batch_obs,
+    center_crop,
+    image_resize_shortest_edge,
+)
 from habitat_baselines.rl.ppo import PointNavBaselinePolicy
 
 
@@ -27,7 +32,6 @@ def get_default_config():
     c.RESOLUTION = 256
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
-    c.PTH_GPU_ID = 0
     c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
 
@@ -82,6 +86,14 @@ class PPOAgent(Agent):
             goal_sensor_uuid=self.goal_sensor_uuid,
         )
         self.actor_critic.to(self.device)
+        try:
+            self.center_crop_size = config.RL.PPO.center_crop
+        except AttributeError:
+            self.center_crop_size = 0
+        try:
+            self.resize_shortest_edge_size = config.RL.PPO.resize_shortest_edge
+        except AttributeError:
+            self.resize_shortest_edge_size = 0
 
         if config.MODEL_PATH:
             ckpt = torch.load(config.MODEL_PATH, map_location=self.device)
@@ -116,6 +128,9 @@ class PPOAgent(Agent):
         )
 
     def act(self, observations):
+        observations = apply_ppo_data_augs(
+            observations, self.resize_shortest_edge_size, self.center_crop_size
+        )
         batch = batch_obs([observations], device=self.device)
 
         with torch.no_grad():

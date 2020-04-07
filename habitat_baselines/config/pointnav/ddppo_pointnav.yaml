@@ -34,6 +34,8 @@ RL:
     use_linear_clip_decay: False
     use_linear_lr_decay: False
     reward_window_size: 50
+    resize_shortest_edge: 256
+    center_crop: 256
 
     use_normalized_advantage: False
 
