@@ -8,7 +8,7 @@ TORCH_GPU_ID: 0
 ONLY_VQA_TASK: False # if True, only last `num_frames` will be saved to disk. 
 #if False, all frames for each episode are saved to disk (for NAV task later)
 FRAME_DATASET_PATH: "data/datasets/eqa/frame_dataset/"
-EVAL_CKPT_PATH_DIR: "data/eqa/nav/checkpoints/"
+EVAL_CKPT_PATH_DIR: "data/eqa/nav/checkpoints/epoch_10.ckpt"
 EDFE_CKPT_PATH: "data/eqa/edfe/checkpoints/epoch_5.ckpt"
 
 NUM_PROCESSES: 1
@@ -21,14 +21,14 @@ LOG_METRICS: True
 OUTPUT_LOG_DIR: data/eqa/nav/logs
 LOG_INTERVAL: 50
 CHECKPOINT_INTERVAL: 1
-EVAL_SAVE_RESULTS: False
-EVAL_SAVE_RESULTS_INTERVAL: 10
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
 
 IL:
   NAV:
     # nav params
-    max_epochs: 1000
-    batch_size: 10
+    max_epochs: 15
+    batch_size: 100
     eval_batch_size: 1
     lr: 1e-3
     max_controller_actions: 5

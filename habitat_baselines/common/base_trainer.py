@@ -20,6 +20,7 @@ from habitat_baselines.common.utils import (
     tensor_to_rgb_images,
     tensor_to_depth_images,
 )
+from habitat.utils.visualizations.utils import images_to_video
 
 
 class BaseTrainer:
@@ -385,7 +386,25 @@ class BaseILTrainer(BaseTrainer):
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
         raise NotImplementedError
 
-    def _put_text_on_image(
+    def _get_q_string(self, question: List, q_vocab_dict: Dict) -> str:
+        r"""
+        Converts question tokens to question string.
+        """
+        q_string = ""
+        for token in question:
+            if token != 0:
+                for word, idx in q_vocab_dict.items():
+                    if idx == token:
+                        q_word = word
+                        break
+                q_string += q_word + " "
+            else:
+                break
+        q_string += "?"
+
+        return q_string
+
+    def _put_vqa_text_on_image(
         self,
         image: np.ndarray,
         question: str,
@@ -478,7 +497,7 @@ class BaseILTrainer(BaseTrainer):
             value=(255, 255, 255),
         )
 
-        image = self._put_text_on_image(
+        image = self._put_vqa_text_on_image(
             collage_image, question, prediction, ground_truth
         )
 
@@ -491,10 +510,10 @@ class BaseILTrainer(BaseTrainer):
         self,
         ckpt_idx: int,
         idx: torch.Tensor,
-        questions_var: torch.Tensor,
-        images_var: torch.Tensor,
+        questions: torch.Tensor,
+        images: torch.Tensor,
         scores: torch.Tensor,
-        answers_var: torch.Tensor,
+        answers: torch.Tensor,
         q_vocab_dict: Dict,
         ans_vocab_dict: Dict,
     ) -> None:
@@ -513,22 +532,11 @@ class BaseILTrainer(BaseTrainer):
             None
         """
         idx = idx[0].item()
-        question = questions_var[0]
-        images = images_var[0]
-        answer = answers_var[0]
+        question = questions[0]
+        images = images[0]
+        answer = answers[0]
         scores = scores[0]
-        q_string = ""
-
-        for token in question:
-            if token != 0:
-                for word, idx in q_vocab_dict.items():
-                    if idx == token:
-                        q_word = word
-                        break
-                q_string += q_word + " "
-            else:
-                break
-        q_string += "?"
+        q_string = self._get_q_string(question, q_vocab_dict)
 
         value, index = scores.max(0)
         prediction = list(ans_vocab_dict.keys())[index]
@@ -638,3 +646,63 @@ class BaseILTrainer(BaseTrainer):
         self._save_rgb_results(rgb[0], out_ae[0])
         self._save_seg_results(seg[0], out_seg[0])
         self._save_depth_results(depth[0], out_depth[0])
+
+    def _save_nav_results(
+        self,
+        ckpt_path: int,
+        t: int,
+        questions: torch.Tensor,
+        imgs: List[np.ndarray],
+        q_vocab_dict: Dict,
+        results_dir: str,
+    ) -> None:
+
+        r"""For saving VQA results.
+
+        Args:
+            ckpt_path: path of checkpoint being evaluated
+            t: index
+            images: images' tensor containing input frames
+            question: input question to model
+
+        Returns:
+            None
+        """
+
+        question = questions[0]
+
+        ckpt_epoch = ckpt_path[ckpt_path.rfind("/") + 1 :]
+        results_dir = os.path.join(results_dir, ckpt_epoch)
+
+        q_string = self._get_q_string(question, q_vocab_dict)
+
+        for idx, img in enumerate(imgs):
+            border_width = 32
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            color = (0, 0, 0)
+            scale = 0.3
+            thickness = 1
+
+            img = cv2.copyMakeBorder(
+                img,
+                border_width,
+                border_width,
+                border_width,
+                border_width,
+                cv2.BORDER_CONSTANT,
+                value=(255, 255, 255),
+            )
+
+            img = cv2.putText(
+                img,
+                "Question: " + q_string,
+                (10, 15),
+                font,
+                scale,
+                color,
+                thickness,
+            )
+
+            imgs[idx] = img
+
+        images_to_video(imgs, results_dir, str(t))

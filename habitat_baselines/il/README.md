@@ -23,6 +23,8 @@ followed by fine-tuning the NAV model.
 - Habitat-sim and Habitat-api installation.
 - Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](https://github.com/facebookresearch/habitat-api/blob/master/README.md)).
 
+---
+
 ## EDFE model (Encoder-Decoder for Feature Extraction)- 
 
 #### Information:
@@ -56,7 +58,14 @@ Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint 
 
 <img src="https://user-images.githubusercontent.com/24846546/76339759-6f788b00-62f2-11ea-90e0-a8ac16c34f76.jpg" width=80%>
 
+---
+
 ## VQA model (answering module)- 
+
+#### Information:
+The VQA model is responsible for predicting an answer based on question and RGB image input. The network first encodes images from the scene using the pre-trained EDFE encoder mentioned above.
+
+(more information about network can be found in the [paper](https://embodiedqa.org/paper.pdf)).
 
 #### Configuration:
 
@@ -85,4 +94,42 @@ Results from evaluation are stored in `data/eqa/vqa/results/val`.
 ![](https://user-images.githubusercontent.com/24846546/75141155-464bde00-56e8-11ea-9f2e-ca346440e1d2.jpg)
 ![](https://user-images.githubusercontent.com/24846546/75141287-8e6b0080-56e8-11ea-8045-b4c4521954b2.jpg)
 
-## NAV model (coming soon)
+----
+
+## NAV model
+
+#### Information:
+The NAV model (known as *PACMAN*) predicts the actions required to navigate the environment to the required destination based on the question and RGB image input.
+
+Here also, the pre-trained EDFE encoder is used for extracting features from scene images.
+
+(more information about network can be found in the [paper](https://embodiedqa.org/paper.pdf)).
+
+#### Configuration:
+
+Configuration for training the NAV model can be found in `habitat_baselines/config/eqa/il_nav.yaml`.
+
+The NAV trainer picks the EDFE encoder checkpoint by default from `data/eqa/edfe/checkpoints/epoch_5.ckpt`. If you haven't trained the EDFE model and want to use a different checkpoint, the corresponding path can be changed in the aforementioned configuration file's `EDFE_CKPT_PATH` parameter.
+
+#### Train:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_nav.yaml --run-type train
+```
+
+Training checkpoints are by default stored in `data/eqa/nav/checkpoints`. 
+
+
+#### Eval:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_nav.yaml --run-type eval
+```
+
+Results from evaluation are stored in `data/eqa/nav/results/val`.
+
+##### Example results:
+
+![](https://user-images.githubusercontent.com/24846546/78616220-2d942380-7863-11ea-9092-34a760352555.gif)
+
+![](https://user-images.githubusercontent.com/24846546/78616221-2ec55080-7863-11ea-987b-2fdc2a802f24.gif)

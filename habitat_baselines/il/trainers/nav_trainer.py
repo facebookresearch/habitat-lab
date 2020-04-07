@@ -17,8 +17,6 @@ from habitat_baselines.il.models.models import (
     MaskedNLLCriterion,
 )
 from habitat_baselines.il.metrics import NavMetric
-from habitat.utils.visualizations.utils import images_to_video
-
 
 import numpy as np
 import torch
@@ -297,6 +295,8 @@ class NavTrainer(BaseILTrainer):
         model.load_state_dict(state_dict)
         model.eval().cuda()
 
+        results_dir = config.RESULTS_DIR.format(split="val")
+
         metrics = NavMetric(
             info={"split": "val"},
             metric_names=[
@@ -403,6 +403,7 @@ class NavTrainer(BaseILTrainer):
                 planner_step = True
                 action = int(controller_action_in)
                 imgs = []
+
                 for step in range(config.IL.NAV.max_episode_length):
                     if not first_step:
                         imgs.append(img)
@@ -471,10 +472,7 @@ class NavTrainer(BaseILTrainer):
                             env.sim.get_agent_state().position, goal_pos
                         )
                     )
-                    # print(env.sim.get_agent_state().position)
-                    # print(goal_pos)
-                    # print(env.sim.geodesic_distance(env.sim.get_agent_state().position, goal_pos))
-                    # exit()
+
                     pos_queue.append([env.sim.get_agent_state()])
 
                     if episode_done:
@@ -521,32 +519,40 @@ class NavTrainer(BaseILTrainer):
             # update metrics
             metrics.update(metrics_list)
 
-            # logger.info("EVAL: metrics: {}".format(metrics_list))
             if t % config.LOG_INTERVAL == 0:
                 print("Number of invalids: ", len(invalids) / 3)
-                q_string = ""
-                for token in question[0]:
-                    if token != 0:
-                        for word, indx in q_vocab_dict.items():
-                            if indx == token:
-                                q_word = word
-                                break
-                        q_string += q_word + " "
-                    else:
-                        break
-                q_string += "?"
-                ans = list(ans_vocab_dict.keys())[answer]
-                print("Question:", q_string)
-                print("Answer:", ans)
-                images_to_video(imgs, "./e5_results", str(t))
-                # logger.info("EVAL: metrics: {}".format(metrics_list))
-                # print('---------------------')
+
                 logger.info(
-                    "EVAL: Avg metrics till now: {}".format(
+                    "EVAL: Avg metrics: {}".format(
                         metrics.get_stat_string(mode=0)
                     )
                 )
                 print("-----------------------------------------------------")
+
+            if config.EVAL_SAVE_RESULTS:
+                if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
+                    q_string = ""
+                    for token in question[0]:
+                        if token != 0:
+                            for word, indx in q_vocab_dict.items():
+                                if indx == token:
+                                    q_word = word
+                                    break
+                            q_string += q_word + " "
+
+                        else:
+                            break
+                    q_string += "?"
+                    print("Question:", q_string)
+
+                    self._save_nav_results(
+                        checkpoint_path,
+                        t,
+                        question,
+                        imgs,
+                        q_vocab_dict,
+                        results_dir,
+                    )
 
         eval_accuracy = metrics.metrics[8][0]  # d_D_50
         logger.info(
