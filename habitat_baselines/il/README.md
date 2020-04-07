@@ -130,4 +130,4 @@ Results from evaluation are stored in `data/eqa/nav/results/val`.
 
 ### Example results:
 
-![](https://user-images.githubusercontent.com/24846546/78617027-78169f80-7865-11ea-86f5-bad6b53cc078.gif) ![](https://user-images.githubusercontent.com/24846546/78617051-97adc800-7865-11ea-83af-f4f0d8ea8270.gif) ![](https://user-images.githubusercontent.com/24846546/78616897-2cfc8c80-7865-11ea-8a4c-0afdfefea49c.gif)
+![](https://user-images.githubusercontent.com/24846546/78616220-2d942380-7863-11ea-9092-34a760352555.gif) ![](https://user-images.githubusercontent.com/24846546/78616221-2ec55080-7863-11ea-987b-2fdc2a802f24.gif) ![](https://user-images.githubusercontent.com/24846546/78616897-2cfc8c80-7865-11ea-8a4c-0afdfefea49c.gif)
