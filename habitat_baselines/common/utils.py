@@ -13,11 +13,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-
-cv2 = try_cv2_import()
 
 
 class Flatten(nn.Module):
@@ -179,16 +176,30 @@ def generate_video(
         )
 
 
-def image_resize_shortest_edge(img: np.ndarray, size: int):
+def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     """Resizes an img so that the shortest side is length of size.
 
     Args:
-        img: the array object that needs to be resized
+        img: the array object that needs to be resized (HWC) or (NHWC)
         size: the size that you want the shortest edge to be resize to
+        channels_first: a boolean that specifies the img is (CHW) or (NCHW)
     Returns:
-        the resized array
+        The resized array as a torch tensor.
     """
-    h, w = img.shape[:2]
+    no_batch_dim = len(img.shape) == 3
+    if len(img.shape) != 3 and len(img.shape) != 4:
+        raise NotImplementedError()
+    img = _to_tensor(img)
+    if no_batch_dim:
+        img = img.unsqueeze(0)  # Adds a batch dimension
+    if channels_first:
+        # NCHW
+        h, w = img.shape[-2:]
+    else:
+        # NHWC
+        h, w = img.shape[1:3]
+        img = img.permute(0, 3, 1, 2)
+
     if w > h:
         percent = size / h
     else:
@@ -197,9 +208,17 @@ def image_resize_shortest_edge(img: np.ndarray, size: int):
     w *= percent
     h = int(h)
     w = int(w)
-    img = cv2.resize(img, (h, w), interpolation=cv2.INTER_AREA)
-    if len(img.shape) == 2:
-        img = np.expand_dims(img, axis=-1)
+    is_uint8 = img.dtype == torch.uint8
+    if is_uint8:
+        # Interpolate isn't implemented for UINT8
+        img = img / 255.0
+    img = torch.nn.functional.interpolate(img, size=(h, w), mode="area")
+    if is_uint8:
+        img = (255.0 * img).round().byte()
+    if not channels_first:
+        img = img.permute(0, 2, 3, 1)
+    if no_batch_dim:
+        img = img.squeeze(dim=0)  # Removes the batch dimension
     return img
 
 

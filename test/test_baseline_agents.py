@@ -4,11 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import os
 
 import pytest
 
 import habitat
+from habitat.config import Config as CN
 
 try:
     from habitat_baselines.agents import ppo_agents
@@ -25,28 +27,50 @@ CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_ppo_agents():
+
     agent_config = ppo_agents.get_default_config()
     agent_config.MODEL_PATH = ""
     config_env = habitat.get_config(config_paths=CFG_TEST)
+    agent_config.defrost()
+    agent_config.RL = CN()
+    agent_config.RL.PPO = CN()
+    agent_config.RL.PPO.center_crop = 0
+    agent_config.RL.PPO.resize_shortest_edge = 0
+    agent_config.freeze()
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
     benchmark = habitat.Benchmark(config_paths=CFG_TEST)
 
     for input_type in ["blind", "rgb", "depth", "rgbd"]:
-        config_env.defrost()
-        config_env.SIMULATOR.AGENT_0.SENSORS = []
-        if input_type in ["rgb", "rgbd"]:
-            config_env.SIMULATOR.AGENT_0.SENSORS += ["RGB_SENSOR"]
-        if input_type in ["depth", "rgbd"]:
-            config_env.SIMULATOR.AGENT_0.SENSORS += ["DEPTH_SENSOR"]
-        config_env.freeze()
-        del benchmark._env
-        benchmark._env = habitat.Env(config=config_env)
-        agent_config.INPUT_TYPE = input_type
+        for center_crop, resize_shortest, resolution in itertools.product(
+            [0, 256], [0, 256], [256, 384]
+        ):
+            if center_crop == 0 and resize_shortest == 0 and resolution != 256:
+                continue
+            config_env.defrost()
+            agent_config.defrost()
+            config_env.SIMULATOR.AGENT_0.SENSORS = []
+            if input_type in ["rgb", "rgbd"]:
+                config_env.SIMULATOR.AGENT_0.SENSORS += ["RGB_SENSOR"]
+                # agent_config.RESOLUTION = resolution
+                config_env.SIMULATOR.RGB_SENSOR.WIDTH = resolution
+                config_env.SIMULATOR.RGB_SENSOR.HEIGHT = resolution
+            if input_type in ["depth", "rgbd"]:
+                config_env.SIMULATOR.AGENT_0.SENSORS += ["DEPTH_SENSOR"]
+                # agent_config.RESOLUTION = resolution
+                config_env.SIMULATOR.DEPTH_SENSOR.WIDTH = resolution
+                config_env.SIMULATOR.DEPTH_SENSOR.HEIGHT = resolution
+            agent_config.RL.PPO.resize_shortest_edge = resize_shortest
+            agent_config.RL.PPO.center_crop = center_crop
+            config_env.freeze()
 
-        agent = ppo_agents.PPOAgent(agent_config)
-        habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
+            del benchmark._env
+            benchmark._env = habitat.Env(config=config_env)
+            agent_config.INPUT_TYPE = input_type
+
+            agent = ppo_agents.PPOAgent(agent_config)
+            habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
 
 
 @pytest.mark.skipif(
