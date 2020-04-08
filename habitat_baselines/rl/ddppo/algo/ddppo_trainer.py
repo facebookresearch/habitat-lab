@@ -24,7 +24,11 @@ from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import batch_obs, linear_decay
+from habitat_baselines.common.utils import (
+    apply_ppo_data_augs,
+    batch_obs,
+    linear_decay,
+)
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
     REQUEUE,
@@ -190,6 +194,11 @@ class DDPPOTrainer(PPOTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_ppo_data_augs(
+            batch,
+            self.config.RL.PPO.resize_shortest_edge_size,
+            self.config.RL.PPO.center_crop,
+        )
 
         obs_space = self.envs.observation_spaces[0]
         if self._static_encoder:

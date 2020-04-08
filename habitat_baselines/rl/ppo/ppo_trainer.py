@@ -23,6 +23,7 @@ from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
+    apply_ppo_data_augs,
     batch_obs,
     generate_video,
     linear_decay,
@@ -44,6 +45,24 @@ class PPOTrainer(BaseRLTrainer):
         self.envs = None
         if config is not None:
             logger.info(f"config: {config}")
+            new_resolution = None
+            if config.RL.PPO.center_crop != 0:
+                new_resolution = config.RL.PPO.center_crop
+            elif config.RL.PPO.resize_shortest_edge_size != 0:
+                new_resolution = config.RL.PPO.resize_shortest_edge_size
+            if new_resolution != None:
+                config.defrost()
+                try:
+                    config.SIMULATOR.RGB_SENSOR.WIDTH = new_resolution
+                    config.SIMULATOR.RGB_SENSOR.HEIGHT = new_resolution
+                except AttributeError:
+                    pass
+                try:
+                    config.SIMULATOR.DEPTH_SENSOR.WIDTH = new_resolution
+                    config.SIMULATOR.DEPTH_SENSOR.HEIGHT = new_resolution
+                except AttributeError:
+                    pass
+                config.freeze()
 
         self._static_encoder = False
         self._encoder = None
@@ -191,6 +210,11 @@ class PPOTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_ppo_data_augs(
+            batch,
+            self.config.RL.PPO.resize_shortest_edge_size,
+            self.config.RL.PPO.center_crop,
+        )
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=current_episode_reward.device
         )
@@ -301,7 +325,11 @@ class PPOTrainer(BaseRLTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
-
+        batch = apply_ppo_data_augs(
+            batch,
+            self.config.RL.PPO.resize_shortest_edge_size,
+            self.config.RL.PPO.center_crop,
+        )
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
 
@@ -477,6 +505,11 @@ class PPOTrainer(BaseRLTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_ppo_data_augs(
+            batch,
+            self.config.RL.PPO.resize_shortest_edge_size,
+            self.config.RL.PPO.center_crop,
+        )
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -532,6 +565,11 @@ class PPOTrainer(BaseRLTrainer):
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
+            batch = apply_ppo_data_augs(
+                batch,
+                self.config.RL.PPO.resize_shortest_edge_size,
+                self.config.RL.PPO.center_crop,
+            )
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],

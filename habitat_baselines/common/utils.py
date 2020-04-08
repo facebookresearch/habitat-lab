@@ -208,13 +208,9 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     w *= percent
     h = int(h)
     w = int(w)
-    is_uint8 = img.dtype == torch.uint8
-    if is_uint8:
-        # Interpolate isn't implemented for UINT8
-        img = img / 255.0
-    img = torch.nn.functional.interpolate(img, size=(h, w), mode="area")
-    if is_uint8:
-        img = (255.0 * img).round().byte()
+    img = torch.nn.functional.interpolate(
+        img.float(), size=(h, w), mode="area"
+    ).to(dtype=img.dtype)
     if not channels_first:
         img = img.permute(0, 2, 3, 1)
     if no_batch_dim:
@@ -222,19 +218,29 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     return img
 
 
-def center_crop(img, cropx: int, cropy: int):
-    """performs a center
+def center_crop(img, cropx: int, cropy: int, channels_first: bool = False):
+    """Performs a center crop on an image.
 
     Args:
-        img: the array object that needs to be resized
+        img: the array object that needs to be resized (either batched or unbatched)
         size: the size that you want the shortest edge to be resize to
+        channels_first: If it's in NCHW
     Returns:
         the resized array
     """
-    y, x = img.shape[:2]
+    if channels_first:
+        # NCHW
+        y, x = img.shape[-2:]
+    else:
+        # NHWC
+        y, x = img.shape[-3:-1]
+
     startx = x // 2 - (cropx // 2)
     starty = y // 2 - (cropy // 2)
-    return img[starty : starty + cropy, startx : startx + cropx]
+    if channels_first:
+        return img[..., starty : starty + cropy, startx : startx + cropx]
+    else:
+        return img[..., starty : starty + cropy, startx : startx + cropx, :]
 
 
 def apply_ppo_data_augs(

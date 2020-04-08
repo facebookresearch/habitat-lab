@@ -129,11 +129,10 @@ class PPOAgent(Agent):
         )
 
     def act(self, observations):
-        observations = apply_ppo_data_augs(
-            observations, self.resize_shortest_edge_size, self.center_crop_size
-        )
         batch = batch_obs([observations], device=self.device)
-
+        batch = apply_ppo_data_augs(
+            batch, self.resize_shortest_edge_size, self.center_crop_size
+        )
         with torch.no_grad():
             (
                 _,

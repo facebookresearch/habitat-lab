@@ -32,3 +32,5 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+    center_crop: 0
+    resize_shortest_edge_size: 0
