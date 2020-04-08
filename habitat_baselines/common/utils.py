@@ -223,10 +223,9 @@ def apply_ppo_data_augs(
 ) -> Dict[str, Any]:
     for k, obs in observations.items():
         if k in ["rgb", "depth", "semantic"]:
-            obs = observations[k]
-            if resize:
+            if resize != 0:
                 obs = image_resize_shortest_edge(obs, resize)
-            if center_crop:
+            if center_crop_size != 0:
                 obs = center_crop(obs, center_crop_size, center_crop_size)
             observations[k] = obs
     return observations

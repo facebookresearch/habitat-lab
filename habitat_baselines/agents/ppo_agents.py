@@ -31,6 +31,7 @@ def get_default_config():
     c.MODEL_PATH = "data/checkpoints/blind.pth"
     c.RESOLUTION = 256
     c.HIDDEN_SIZE = 512
+    c.PTH_GPU_ID = 0
     c.RANDOM_SEED = 7
     c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
