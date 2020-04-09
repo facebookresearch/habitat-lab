@@ -1,8 +1,17 @@
+import copy
+
 import numpy as np
 import torch
 import torch.nn as nn
+from gym.spaces import Box
 
-from habitat_baselines.common.utils import Flatten
+from habitat import logger
+from habitat_baselines.common.utils import (
+    Flatten,
+    center_crop,
+    image_resize_shortest_edge,
+    overwrite_gym_box,
+)
 
 
 class SimpleCNN(nn.Module):
@@ -15,8 +24,24 @@ class SimpleCNN(nn.Module):
         output_size: The size of the embedding vector
     """
 
-    def __init__(self, observation_space, output_size):
+    def __init__(
+        self, observation_space, output_size, force_input_size=(256, 256)
+    ):
         super().__init__()
+        self.force_input_size = force_input_size
+        observation_space = copy.deepcopy(observation_space)
+
+        if force_input_size:
+            for key in observation_space.spaces:
+                if key in ["rgb", "depth"]:
+                    logger.info(
+                        "Overwriting CNN input size of %s: %s"
+                        % (key, force_input_size)
+                    )
+                    observation_space.spaces[key] = overwrite_gym_box(
+                        observation_space.spaces[key], force_input_size
+                    )
+
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
         else:
@@ -141,6 +166,21 @@ class SimpleCNN(nn.Module):
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
+
+        if self.force_input_size:
+            cnn_input = [
+                center_crop(
+                    image_resize_shortest_edge(
+                        inp,
+                        max(self.force_input_size[:2]),
+                        channels_first=True,
+                    ),
+                    self.force_input_size[0],
+                    self.force_input_size[1],
+                    channels_first=True,
+                )
+                for inp in cnn_input
+            ]
 
         cnn_input = torch.cat(cnn_input, dim=1)
 

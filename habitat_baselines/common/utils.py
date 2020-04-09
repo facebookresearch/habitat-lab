@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
+from gym.spaces import Box
 
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -244,13 +245,35 @@ def center_crop(img, cropx: int, cropy: int, channels_first: bool = False):
 
 
 def apply_ppo_data_augs(
-    observations: Dict[str, Any], resize: int, center_crop_size: int
+    observations: Dict[str, Any],
+    resize: int,
+    center_crop_size: int,
+    channels_first: bool = False,
 ) -> Dict[str, Any]:
     for k, obs in observations.items():
         if k in ["rgb", "depth", "semantic"]:
             if resize != 0:
-                obs = image_resize_shortest_edge(obs, resize)
+                obs = image_resize_shortest_edge(
+                    obs, resize, channels_first=channels_first
+                )
             if center_crop_size != 0:
-                obs = center_crop(obs, center_crop_size, center_crop_size)
+                obs = center_crop(
+                    obs,
+                    center_crop_size,
+                    center_crop_size,
+                    channels_first=channels_first,
+                )
             observations[k] = obs
     return observations
+
+
+def overwrite_gym_box(box: Box, shape: tuple) -> Box:
+    # if len(shape) < len(box.shape):
+    shape = list(shape) + list(box.shape[len(shape) :])
+    low = box.low
+    if not np.isscalar(low):
+        low = np.min(low)  # low.flatten()[0]
+    high = box.high
+    if not np.isscalar(high):
+        high = np.max(high)  # high.flatten()[0]
+    return Box(low=low, high=high, shape=shape, dtype=box.dtype)

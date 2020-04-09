@@ -30,39 +30,28 @@ def test_ppo_agents():
 
     agent_config = ppo_agents.get_default_config()
     agent_config.MODEL_PATH = ""
-    config_env = habitat.get_config(config_paths=CFG_TEST)
     agent_config.defrost()
-    agent_config.RL = CN()
-    agent_config.RL.PPO = CN()
-    agent_config.RL.PPO.center_crop = 0
-    agent_config.RL.PPO.resize_shortest_edge = 0
-    agent_config.freeze()
+    config_env = habitat.get_config(config_paths=CFG_TEST)
     if not os.path.exists(config_env.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
     benchmark = habitat.Benchmark(config_paths=CFG_TEST)
 
     for input_type in ["blind", "rgb", "depth", "rgbd"]:
-        for center_crop, resize_shortest, resolution in itertools.product(
-            [0, 256], [0, 256], [256, 384]
-        ):
-            if center_crop == 0 and resize_shortest == 0 and resolution != 256:
-                continue
+        for resolution in [256, 384]:
             config_env.defrost()
-            agent_config.defrost()
             config_env.SIMULATOR.AGENT_0.SENSORS = []
             if input_type in ["rgb", "rgbd"]:
                 config_env.SIMULATOR.AGENT_0.SENSORS += ["RGB_SENSOR"]
-                # agent_config.RESOLUTION = resolution
+                agent_config.RESOLUTION = resolution
                 config_env.SIMULATOR.RGB_SENSOR.WIDTH = resolution
                 config_env.SIMULATOR.RGB_SENSOR.HEIGHT = resolution
             if input_type in ["depth", "rgbd"]:
                 config_env.SIMULATOR.AGENT_0.SENSORS += ["DEPTH_SENSOR"]
-                # agent_config.RESOLUTION = resolution
+                agent_config.RESOLUTION = resolution
                 config_env.SIMULATOR.DEPTH_SENSOR.WIDTH = resolution
                 config_env.SIMULATOR.DEPTH_SENSOR.HEIGHT = resolution
-            agent_config.RL.PPO.resize_shortest_edge = resize_shortest
-            agent_config.RL.PPO.center_crop = center_crop
+
             config_env.freeze()
 
             del benchmark._env

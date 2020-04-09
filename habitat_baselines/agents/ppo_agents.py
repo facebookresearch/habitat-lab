@@ -87,14 +87,6 @@ class PPOAgent(Agent):
             goal_sensor_uuid=self.goal_sensor_uuid,
         )
         self.actor_critic.to(self.device)
-        try:
-            self.center_crop_size = config.RL.PPO.center_crop
-        except AttributeError:
-            self.center_crop_size = 0
-        try:
-            self.resize_shortest_edge_size = config.RL.PPO.resize_shortest_edge
-        except AttributeError:
-            self.resize_shortest_edge_size = 0
 
         if config.MODEL_PATH:
             ckpt = torch.load(config.MODEL_PATH, map_location=self.device)
@@ -130,9 +122,6 @@ class PPOAgent(Agent):
 
     def act(self, observations):
         batch = batch_obs([observations], device=self.device)
-        batch = apply_ppo_data_augs(
-            batch, self.resize_shortest_edge_size, self.center_crop_size
-        )
         with torch.no_grad():
             (
                 _,
