@@ -303,10 +303,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
 
         for sensor in rollouts.observations:
-            try:
-                rollouts.observations[sensor][0].copy_(batch[sensor])
-            except:
-                assert False, sensor
+            rollouts.observations[sensor][0].copy_(batch[sensor])
 
         # batch and observations may contain shared PyTorch CUDA
         # tensors.  We must explicitly clear them here otherwise

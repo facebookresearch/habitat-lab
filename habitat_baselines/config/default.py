@@ -72,8 +72,6 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = True
 _C.RL.PPO.hidden_size = 512
-_C.RL.PPO.center_crop = 0
-_C.RL.PPO.resize_shortest_edge = 0
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------

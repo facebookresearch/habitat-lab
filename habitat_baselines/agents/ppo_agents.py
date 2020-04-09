@@ -16,12 +16,7 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
-from habitat_baselines.common.utils import (
-    apply_ppo_data_augs,
-    batch_obs,
-    center_crop,
-    image_resize_shortest_edge,
-)
+from habitat_baselines.common.utils import batch_obs
 from habitat_baselines.rl.ppo import PointNavBaselinePolicy
 
 
@@ -31,8 +26,8 @@ def get_default_config():
     c.MODEL_PATH = "data/checkpoints/blind.pth"
     c.RESOLUTION = 256
     c.HIDDEN_SIZE = 512
-    c.PTH_GPU_ID = 0
     c.RANDOM_SEED = 7
+    c.PTH_GPU_ID = 0
     c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
 

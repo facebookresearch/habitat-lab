@@ -189,7 +189,7 @@ class DDPPOTrainer(PPOTrainer):
             )
 
         observations = self.envs.reset()
-        batched = batch_obs(observations, device=self.device)
+        batch = batch_obs(observations, device=self.device)
 
         obs_space = self.envs.observation_spaces[0]
         if self._static_encoder:
@@ -219,7 +219,7 @@ class DDPPOTrainer(PPOTrainer):
         rollouts.to(self.device)
 
         for sensor in rollouts.observations:
-            rollouts.observations[sensor][0].copy_(batched[sensor])
+            rollouts.observations[sensor][0].copy_(batch[sensor])
 
         # batch and observations may contain shared PyTorch CUDA
         # tensors.  We must explicitly clear them here otherwise
