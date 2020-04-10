@@ -520,14 +520,14 @@ class SoftSPL(SPL):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "softspl"
 
-    def update_metric(self, episode, *args: Any, **kwargs: Any):
+    def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position.tolist()
-        distance_to_target = self._sim.geodesic_distance(
-            current_position, episode.goals[0].position
-        )
+        distance_to_target = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
 
-        ep_soft_success = (
-            1 - distance_to_target / self._start_end_episode_distance
+        ep_soft_success = max(
+            0, (1 - distance_to_target / self._start_end_episode_distance)
         )
 
         self._agent_episode_distance += self._euclidean_distance(
