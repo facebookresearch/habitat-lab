@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import glob
 import os
 from collections import defaultdict
@@ -14,6 +15,7 @@ import torch
 import torch.nn as nn
 from gym.spaces import Box
 
+from habitat import logger
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
@@ -52,6 +54,51 @@ class CategoricalNet(nn.Module):
     def forward(self, x):
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
+
+
+class ResizeCenterCropper(nn.Module):
+    def __init__(
+        self, force_input_size: Optional[tuple], channels_first: bool = True
+    ):
+        super().__init__()
+        assert (
+            len(force_input_size) == 2
+        ), "forced input size must be len of 2 (h, w)"
+        self.force_input_size = force_input_size
+        self.channels_first = channels_first
+
+    def transform_observation_space(
+        self, observation_space, trans_keys=["rgb", "depth", "semantic"]
+    ):
+        force_input_size = self.force_input_size
+        observation_space = copy.deepcopy(observation_space)
+        if force_input_size:
+            for key in observation_space.spaces:
+                if key in trans_keys:
+                    logger.info(
+                        "Overwriting CNN input size of %s: %s"
+                        % (key, force_input_size)
+                    )
+                    observation_space.spaces[key] = overwrite_gym_box(
+                        observation_space.spaces[key], force_input_size
+                    )
+        self.observation_space = observation_space
+        return observation_space
+
+    def forward(self, input: torch.Tensor):
+        if self.force_input_size is None:
+            return input
+
+        return center_crop(
+            image_resize_shortest_edge(
+                input,
+                max(self.force_input_size[:2]),
+                channels_first=self.channels_first,
+            ),
+            self.force_input_size[0],
+            self.force_input_size[1],
+            channels_first=self.channels_first,
+        )
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
@@ -188,7 +235,7 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
         The resized array as a torch tensor.
     """
     no_batch_dim = len(img.shape) == 3
-    if len(img.shape) != 3 and len(img.shape) != 4:
+    if len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
     img = _to_tensor(img)
     if no_batch_dim:
@@ -198,8 +245,11 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
         h, w = img.shape[-2:]
     else:
         # NHWC
-        h, w = img.shape[1:3]
-        img = img.permute(0, 3, 1, 2)
+        h, w = img.shape[-3:-1]
+        if len(img.shape) == 4:
+            img = img.permute(0, 3, 1, 2)
+        else:
+            img = img.permute(0, 1, 4, 2, 3)
 
     if w > h:
         percent = size / h
@@ -213,7 +263,10 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
         img.float(), size=(h, w), mode="area"
     ).to(dtype=img.dtype)
     if not channels_first:
-        img = img.permute(0, 2, 3, 1)
+        if len(img.shape) == 4:
+            img = img.permute(0, 2, 3, 1)
+        else:
+            img = img.permute(0, 1, 3, 4, 2)
     if no_batch_dim:
         img = img.squeeze(dim=0)  # Removes the batch dimension
     return img
