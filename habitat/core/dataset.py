@@ -59,6 +59,18 @@ class Episode:
         default=None, validator=not_none_validator
     )
     info: Optional[Dict[str, str]] = None
+    _shortest_path_cache: Any = attr.ib(init=False, default=None)
+
+    def __getstate__(self):
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if k not in {"_shortest_path_cache"}
+        }
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__dict__["_shortest_path_cache"] = None
 
 
 T = TypeVar("T", bound=Episode)
@@ -158,7 +170,12 @@ class Dataset(Generic[T]):
             def default(self, object):
                 if isinstance(object, np.ndarray):
                     return object.tolist()
-                return object.__dict__
+
+                return (
+                    object.__getstate__()
+                    if hasattr(object, "__getstate__")
+                    else object.__dict__
+                )
 
         result = DatasetJSONEncoder().encode(self)
         return result
