@@ -36,7 +36,7 @@ class PointNavResNetPolicy(Policy):
         resnet_baseplanes=32,
         backbone="resnet50",
         normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(force_input_size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__(
             PointNavResNetNet(
@@ -64,7 +64,7 @@ class ResNetEncoder(nn.Module):
         spatial_size=128,
         make_backbone=None,
         normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(force_input_size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__()
 
@@ -183,7 +183,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs,
-        obs_transform=ResizeCenterCropper(force_input_size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__()
         self.goal_sensor_uuid = goal_sensor_uuid

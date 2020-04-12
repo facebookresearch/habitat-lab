@@ -6,6 +6,7 @@
 
 import copy
 import glob
+import numbers
 import os
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
@@ -57,47 +58,50 @@ class CategoricalNet(nn.Module):
 
 
 class ResizeCenterCropper(nn.Module):
-    def __init__(
-        self, force_input_size: Optional[tuple], channels_first: bool = True
-    ):
+    def __init__(self, size, channels_last: bool = False):
+        r"""An nn module the resizes and center crops your input.
+        Args:
+            size: A sequence (w, h) or int of the size you wish to resize/center_crop.
+                    If int, assumes square crop
+            channels_list: indicates if channels is the last dimension
+        """
         super().__init__()
-        assert (
-            len(force_input_size) == 2
-        ), "forced input size must be len of 2 (h, w)"
-        self.force_input_size = force_input_size
-        self.channels_first = channels_first
+        if isinstance(size, numbers.Number):
+            size = (int(size), int(size))
+        assert len(size) == 2, "forced input size must be len of 2 (w, h)"
+        self._size = size
+        self.channels_last = channels_last
 
     def transform_observation_space(
         self, observation_space, trans_keys=["rgb", "depth", "semantic"]
     ):
-        force_input_size = self.force_input_size
+        size = self._size
         observation_space = copy.deepcopy(observation_space)
-        if force_input_size:
+        if size:
             for key in observation_space.spaces:
-                if key in trans_keys:
+                if (
+                    key in trans_keys
+                    and observation_space.spaces[key].shape != size
+                ):
                     logger.info(
-                        "Overwriting CNN input size of %s: %s"
-                        % (key, force_input_size)
+                        "Overwriting CNN input size of %s: %s" % (key, size)
                     )
-                    observation_space.spaces[key] = overwrite_gym_box(
-                        observation_space.spaces[key], force_input_size
+                    observation_space.spaces[key] = overwrite_gym_box_shape(
+                        observation_space.spaces[key], size
                     )
         self.observation_space = observation_space
         return observation_space
 
     def forward(self, input: torch.Tensor):
-        if self.force_input_size is None:
+        if self._size is None:
             return input
 
         return center_crop(
             image_resize_shortest_edge(
-                input,
-                max(self.force_input_size[:2]),
-                channels_first=self.channels_first,
+                input, max(self._size), channels_last=self.channels_last
             ),
-            self.force_input_size[0],
-            self.force_input_size[1],
-            channels_first=self.channels_first,
+            self._size,
+            channels_last=self.channels_last,
         )
 
 
@@ -106,7 +110,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
 
     Args:
         epoch: current epoch number
-        total_num_updates: total number of epochs
+        total_num_updates: total number of
 
     Returns:
         multiplicative factor that decreases param value linearly
@@ -224,13 +228,14 @@ def generate_video(
         )
 
 
-def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
-    """Resizes an img so that the shortest side is length of size.
+def image_resize_shortest_edge(img, size: int, channels_last: bool = False):
+    """Resizes an img so that the shortest side is length of size while
+        preserving aspect ratio.
 
     Args:
         img: the array object that needs to be resized (HWC) or (NHWC)
         size: the size that you want the shortest edge to be resize to
-        channels_first: a boolean that specifies the img is (CHW) or (NCHW)
+        channels: a boolean that channel is the last dimension
     Returns:
         The resized array as a torch tensor.
     """
@@ -240,17 +245,18 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     img = _to_tensor(img)
     if no_batch_dim:
         img = img.unsqueeze(0)  # Adds a batch dimension
-    if channels_first:
-        # NCHW
-        h, w = img.shape[-2:]
-    else:
+    if channels_last:
         # NHWC
         h, w = img.shape[-3:-1]
         if len(img.shape) == 4:
             img = img.permute(0, 3, 1, 2)
         else:
             img = img.permute(0, 1, 4, 2, 3)
+    else:
+        # NCHW
+        h, w = img.shape[-2:]
 
+    # Percentage resize
     if w > h:
         percent = size / h
     else:
@@ -262,7 +268,7 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     img = torch.nn.functional.interpolate(
         img.float(), size=(h, w), mode="area"
     ).to(dtype=img.dtype)
-    if not channels_first:
+    if channels_last:
         if len(img.shape) == 4:
             img = img.permute(0, 2, 3, 1)
         else:
@@ -272,61 +278,40 @@ def image_resize_shortest_edge(img, size: int, channels_first: bool = False):
     return img
 
 
-def center_crop(img, cropx: int, cropy: int, channels_first: bool = False):
+def center_crop(img, size, channels_last: bool = False):
     """Performs a center crop on an image.
 
     Args:
         img: the array object that needs to be resized (either batched or unbatched)
-        size: the size that you want the shortest edge to be resize to
-        channels_first: If it's in NCHW
+        size: A sequence (w, h) or a python(int) that you want cropped
+        channels_last: If the channels are the last dimension.
     Returns:
         the resized array
     """
-    if channels_first:
-        # NCHW
-        y, x = img.shape[-2:]
-    else:
+    if channels_last:
         # NHWC
-        y, x = img.shape[-3:-1]
-
-    startx = x // 2 - (cropx // 2)
-    starty = y // 2 - (cropy // 2)
-    if channels_first:
-        return img[..., starty : starty + cropy, startx : startx + cropx]
+        h, w = img.shape[-3:-1]
     else:
+        # NCHW
+        h, w = img.shape[-2:]
+
+    if isinstance(size, numbers.Number):
+        size = (int(size), int(size))
+    assert len(size) == 2, "size should be (h,w) you wish to resize to"
+    cropx, cropy = size
+
+    startx = w // 2 - (cropx // 2)
+    starty = h // 2 - (cropy // 2)
+    if channels_last:
         return img[..., starty : starty + cropy, startx : startx + cropx, :]
+    else:
+        return img[..., starty : starty + cropy, startx : startx + cropx]
 
 
-def apply_ppo_data_augs(
-    observations: Dict[str, Any],
-    resize: int,
-    center_crop_size: int,
-    channels_first: bool = False,
-) -> Dict[str, Any]:
-    for k, obs in observations.items():
-        if k in ["rgb", "depth", "semantic"]:
-            if resize != 0:
-                obs = image_resize_shortest_edge(
-                    obs, resize, channels_first=channels_first
-                )
-            if center_crop_size != 0:
-                obs = center_crop(
-                    obs,
-                    center_crop_size,
-                    center_crop_size,
-                    channels_first=channels_first,
-                )
-            observations[k] = obs
-    return observations
-
-
-def overwrite_gym_box(box: Box, shape: tuple) -> Box:
-    # if len(shape) < len(box.shape):
+def overwrite_gym_box_shape(box: Box, shape) -> Box:
+    if box.shape == shape:
+        return box
     shape = list(shape) + list(box.shape[len(shape) :])
-    low = box.low
-    if not np.isscalar(low):
-        low = np.min(low)  # low.flatten()[0]
-    high = box.high
-    if not np.isscalar(high):
-        high = np.max(high)  # high.flatten()[0]
+    low = box.low if np.isscalar(box.low) else np.min(box.low)
+    high = box.high if np.isscalar(box.high) else np.max(box.high)
     return Box(low=low, high=high, shape=shape, dtype=box.dtype)
