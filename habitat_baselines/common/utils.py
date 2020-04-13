@@ -92,7 +92,7 @@ class ResizeCenterCropper(nn.Module):
         self.observation_space = observation_space
         return observation_space
 
-    def forward(self, input: torch.Tensor):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         if self._size is None:
             return input
 
@@ -118,7 +118,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-def _to_tensor(v):
+def _to_tensor(v) -> torch.Tensor:
     if torch.is_tensor(v):
         return v
     elif isinstance(v, np.ndarray):
@@ -228,7 +228,9 @@ def generate_video(
         )
 
 
-def image_resize_shortest_edge(img, size: int, channels_last: bool = False):
+def image_resize_shortest_edge(
+    img, size: int, channels_last: bool = False
+) -> torch.Tensor:
     """Resizes an img so that the shortest side is length of size while
         preserving aspect ratio.
 
@@ -239,10 +241,10 @@ def image_resize_shortest_edge(img, size: int, channels_last: bool = False):
     Returns:
         The resized array as a torch tensor.
     """
+    img = _to_tensor(img)
     no_batch_dim = len(img.shape) == 3
     if len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
-    img = _to_tensor(img)
     if no_batch_dim:
         img = img.unsqueeze(0)  # Adds a batch dimension
     if channels_last:
@@ -257,14 +259,9 @@ def image_resize_shortest_edge(img, size: int, channels_last: bool = False):
         h, w = img.shape[-2:]
 
     # Percentage resize
-    if w > h:
-        percent = size / h
-    else:
-        percent = size / w
-    h *= percent
-    w *= percent
-    h = int(h)
-    w = int(w)
+    scale = size / min(h, w)
+    h = int(h * scale)
+    w = int(w * scale)
     img = torch.nn.functional.interpolate(
         img.float(), size=(h, w), mode="area"
     ).to(dtype=img.dtype)
