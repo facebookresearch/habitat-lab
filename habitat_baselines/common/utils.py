@@ -248,14 +248,15 @@ def image_resize_shortest_edge(
     if no_batch_dim:
         img = img.unsqueeze(0)  # Adds a batch dimension
     if channels_last:
-        # NHWC
         h, w = img.shape[-3:-1]
         if len(img.shape) == 4:
+            # NHWC -> NCHW
             img = img.permute(0, 3, 1, 2)
         else:
+            # NDHWC -> NDCHW
             img = img.permute(0, 1, 4, 2, 3)
     else:
-        # NCHW
+        # ..HW
         h, w = img.shape[-2:]
 
     # Percentage resize
@@ -267,8 +268,10 @@ def image_resize_shortest_edge(
     ).to(dtype=img.dtype)
     if channels_last:
         if len(img.shape) == 4:
+            # NCHW -> NHWC
             img = img.permute(0, 2, 3, 1)
         else:
+            # NDCHW -> NDHWC
             img = img.permute(0, 1, 3, 4, 2)
     if no_batch_dim:
         img = img.squeeze(dim=0)  # Removes the batch dimension
