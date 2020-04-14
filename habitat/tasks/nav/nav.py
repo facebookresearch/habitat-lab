@@ -430,7 +430,7 @@ class Success(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(
         self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
@@ -461,7 +461,7 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._previous_position = None
         self._start_end_episode_distance = None
@@ -491,7 +491,7 @@ class SPL(Measure):
         return np.linalg.norm(position_b - position_a, ord=2)
 
     def update_metric(
-        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
 
@@ -503,6 +503,53 @@ class SPL(Measure):
         self._previous_position = current_position
 
         self._metric = ep_success * (
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
+
+
+@registry.register_measure
+class SoftSPL(SPL):
+    r"""Soft SPL
+
+    Similar to SPL with a relaxed soft-success criteria. Instead of a boolean
+    success is now calculated as 1 - (ratio of distance covered to target).
+    """
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return "softspl"
+
+    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [DistanceToGoal.cls_uuid]
+        )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self.update_metric(*args, episode=episode, task=task, **kwargs)
+
+    def update_metric(self, episode, task, *args: Any, **kwargs: Any):
+        current_position = self._sim.get_agent_state().position
+        distance_to_target = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+
+        ep_soft_success = max(
+            0, (1 - distance_to_target / self._start_end_episode_distance)
+        )
+
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = ep_soft_success * (
             self._start_end_episode_distance
             / max(
                 self._start_end_episode_distance, self._agent_episode_distance
@@ -851,7 +898,7 @@ class DistanceToGoal(Measure):
                 for goal in episode.goals
                 for view_point in goal.view_points
             ]
-        self.update_metric(*args, episode=episode, **kwargs)
+        self.update_metric(episode=episode, *args, **kwargs)
 
     def update_metric(self, episode: Episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
