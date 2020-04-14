@@ -80,37 +80,34 @@ class EQADataset(Dataset):
             self.max_controller_actions = max_controller_actions
             self.preprocess_actions()
 
-            if self.mode == "val":
-                """
-                For eval, we create a new episodes list that is grouped based
-                on the scene-ids. This allows us to load a scene once, and
-                use that for all of the eval episodes corresponding to that
-                scene id, then load another scene and so on.
-                """
-                self.eval_episodes = []
-                ctr = 0
-                for scene in tqdm(
-                    list(self.scene_episode_dict.keys()),
-                    desc="going through all scenes from dataset",
-                ):
-                    for ep_id in self.scene_episode_dict[scene]:
-                        episode = next(
-                            ep
-                            for ep in self.episodes
-                            if ep.episode_id == ep_id
-                        )
+        if self.mode == "val":
+            """
+            For eval, we create a new episodes list that is grouped based
+            on the scene-ids. This allows us to load a scene once, and
+            use that for all of the eval episodes corresponding to that
+            scene id, then load another scene and so on.
+            """
+            self.eval_episodes = []
+            ctr = 0
+            for scene in tqdm(
+                list(self.scene_episode_dict.keys()),
+                desc="going through all scenes from dataset",
+            ):
+                for ep_id in self.scene_episode_dict[scene]:
+                    episode = next(
+                        ep for ep in self.episodes if ep.episode_id == ep_id
+                    )
 
-                        tmp_episode = copy.copy(episode)
-                        tmp_episode.episode_id = ctr
-                        self.eval_episodes.append(tmp_episode)
-                        ctr += 1
+                    tmp_episode = copy.copy(episode)
+                    tmp_episode.episode_id = ctr
+                    self.eval_episodes.append(tmp_episode)
+                    ctr += 1
 
         # checking if cache exists & making cache dir
         if not os.path.exists(
             os.path.join(self.frame_dataset_path, self.mode)
         ):
             os.makedirs(os.path.join(self.frame_dataset_path, self.mode))
-            print("Disk cache does not exist.")
 
         else:
             if len(
@@ -125,6 +122,7 @@ class EQADataset(Dataset):
             episode corresponding to each scene
             """
 
+            print("Disk cache not present / incomplete.")
             print("Saving episode frames to disk.")
             ctr = 0
 
@@ -137,7 +135,7 @@ class EQADataset(Dataset):
                 self.config.SIMULATOR.SCENE = scene
                 self.config.freeze()
                 self.env.sim.reconfigure(self.config.SIMULATOR)
-                ctr = 0
+
                 for ep_id in tqdm(
                     self.scene_episode_dict[scene],
                     desc="saving episode frames for each scene",
@@ -152,10 +150,10 @@ class EQADataset(Dataset):
                         ]
                     else:
                         pos_queue = episode.shortest_paths[0]
-                    if self.input_type == "pacman":
-                        if self.mode == "val":
-                            self.save_frame_queue(pos_queue, ctr, self.mode)
-                            ctr += 1
+
+                    if self.mode == "val":
+                        self.save_frame_queue(pos_queue, ctr, self.mode)
+                        ctr += 1
                     else:
                         self.save_frame_queue(pos_queue, ep_id, self.mode)
 
@@ -321,8 +319,8 @@ class EQADataset(Dataset):
         self, idx, actions, backtrack_steps=0, max_controller_actions=5
     ):
 
-        # action_length = len(actions) - 1
         action_length = len(actions)
+
         pa, ca, pq_idx, cq_idx, ph_idx = self.flat_to_hierarchical_actions(
             actions=actions, controller_action_lim=max_controller_actions
         )
@@ -330,9 +328,6 @@ class EQADataset(Dataset):
         # count how many actions of same type have been encountered before
         # starting navigation
 
-        # backtrack_controller_steps = actions[
-        #     1 : action_length - backtrack_steps + 1 :  # noqa: E203
-        # ][::-1]
         backtrack_controller_steps = actions[
             0 : action_length - backtrack_steps + 1 :  # noqa: E203
         ][::-1]
@@ -408,7 +403,7 @@ class EQADataset(Dataset):
 
         """
 
-        if self.input_type == "pacman" and self.mode == "val":
+        if self.mode == "val":
             self.episodes = self.eval_episodes
 
         episode_id = self.episodes[idx].episode_id

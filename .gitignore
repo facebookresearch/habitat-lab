@@ -87,3 +87,6 @@ target/
 
 # vim
 *.swp
+
+# video results
+*.mp4

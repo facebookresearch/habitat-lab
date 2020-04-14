@@ -353,7 +353,7 @@ class NavTrainer(BaseILTrainer):
                     controller_action_counter,
                 ) = nav_dataset.get_hierarchical_features_till_spawn(
                     idx.item(),
-                    actions[0, : action_length[0] + 1].numpy(),
+                    actions[0, : action_length[0]].numpy(),
                     i,
                     config.IL.NAV.max_controller_actions,
                 )
