@@ -49,7 +49,6 @@ _C.habitat.environment.iterator_options.step_repetition_range = 0.2
 # -----------------------------------------------------------------------------
 _C.habitat.task = CN()
 _C.habitat.task.type = "Nav-v0"
-_C.habitat.task.success_distance = 0.2
 _C.habitat.task.sensors = []
 _C.habitat.task.measurements = []
 _C.habitat.task.goal_sensor_uuid = "pointgoal"

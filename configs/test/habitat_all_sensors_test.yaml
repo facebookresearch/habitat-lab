@@ -18,7 +18,7 @@ habitat:
     data_path: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
   task:
     type: Nav-v0
-    success_distance: 0.2
+
     sensors: ['pointgoal_with_gps_compass_sensor']
     possible_actions: ['stop', 'move_forward', 'turn_left', 'turn_right', 'teleport']
     pointgoal_with_gps_compass_sensor:

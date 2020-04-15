@@ -33,7 +33,6 @@ habitat:
   task:
     type: ObjectNav-v1
     possible_actions: ["stop", "move_forward", "turn_left", "turn_right", "look_up", "look_down"]
-    success_distance: 0.1
 
     sensors: ['objectgoal_sensor', 'compass_sensor', 'gps_sensor']
     goal_sensor_uuid: objectgoal

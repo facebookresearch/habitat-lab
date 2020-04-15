@@ -14,7 +14,6 @@ habitat:
       height: 256
   task:
     type: Nav-v0
-    success_distance: 0.2
 
     sensors: ['pointgoal_with_gps_compass_sensor']
     pointgoal_with_gps_compass_sensor:

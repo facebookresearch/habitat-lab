@@ -196,7 +196,7 @@ def test_pointnav_episode_generator():
     random.seed(config.habitat.seed)
     generator = pointnav_generator.generate_pointnav_episode(
         sim=env.sim,
-        shortest_path_success_distance=config.habitat.task.success_distance,
+        shortest_path_success_distance=config.habitat.task.success.success_distance,
         shortest_path_max_steps=config.habitat.environment.max_episode_steps,
     )
     episodes = []
@@ -207,7 +207,7 @@ def test_pointnav_episode_generator():
     for episode in pointnav_generator.generate_pointnav_episode(
         sim=env.sim,
         num_episodes=NUM_EPISODES,
-        shortest_path_success_distance=config.habitat.task.success_distance,
+        shortest_path_success_distance=config.habitat.task.success.success_distance,
         shortest_path_max_steps=config.habitat.environment.max_episode_steps,
         geodesic_to_euclid_min_ratio=0,
     ):

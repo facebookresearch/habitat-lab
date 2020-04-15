@@ -18,12 +18,11 @@ habitat:
       height: 256
   task:
     type: VLN-v0
-    success_distance: 3.0
     sensors: ['instruction_sensor']
     instruction_sensor_uuid: instruction
     possible_actions: ['stop', 'move_forward', 'turn_left', 'turn_right']
-    measurements: ['distance_to_goal', 'SUCESS', 'spl']
-    SUCESS:
+    measurements: ['distance_to_goal', 'success', 'spl']
+    success:
       success_distance: 3.0
   dataset:
     type: R2RVLN-v1
