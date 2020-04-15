@@ -156,7 +156,6 @@ def get_config(
         :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
         sweeping or quick tests.
     """
-    _HabitatBaselinesDefaultConfigBuilder()
     config = habitat.get_config(config_paths, opts)
     if opts is not None:
         config.defrost()
