@@ -357,10 +357,26 @@ _C.habitat.dataset.data_path = (
 # -----------------------------------------------------------------------------
 
 
+def extend_default_config(prefix: str, new_node: Config):
+    r"""Extended the default config with a new node
+
+    :param prefix: The prefix of the new node in the config, i.e. to add
+                   add a new config node under habitat.dataset.episode,
+                   you would provide that!
+    :param new_node: The new config node to add
+    """
+    prefix = prefix.split(".")
+    node = _C
+    for name in prefix[:-1]:
+        node = getattr(node, name)
+
+    setattr(node, prefix[-1], new_node)
+
+
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
-) -> CN:
+) -> Config:
     r"""Create a unified config with default values overwritten by values from
     :p:`config_paths` and overwritten by options from :p:`opts`.
 

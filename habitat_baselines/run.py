@@ -30,7 +30,7 @@ def main():
     )
     parser.add_argument(
         "--opts",
-        default=None,
+        type=str,
         nargs="*",
         help="Modify config options from command line",
     )

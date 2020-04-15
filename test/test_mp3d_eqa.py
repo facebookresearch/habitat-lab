@@ -175,21 +175,20 @@ def test_mp3d_eqa_sim():
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
-                eqa_config.simulator.rgb_sensor.height,
-                eqa_config.simulator.rgb_sensor.width,
+                eqa_config.habitat.simulator.rgb_sensor.height,
+                eqa_config.habitat.simulator.rgb_sensor.width,
             ), (
                 "Observation resolution {} doesn't correspond to config "
                 "({}, {}).".format(
                     obs["rgb"].shape[:2],
-                    eqa_config.simulator.rgb_sensor.height,
-                    eqa_config.simulator.rgb_sensor.width,
+                    eqa_config.habitat.simulator.rgb_sensor.height,
+                    eqa_config.habitat.simulator.rgb_sensor.width,
                 )
             )
 
     env.close()
 
 
-@pytest.mark.skip
 def test_mp3d_eqa_sim_correspondence():
     eqa_config = get_config(CFG_TEST)
 
@@ -269,8 +268,9 @@ def test_mp3d_eqa_sim_correspondence():
 
         if ep_i < len(RGB_EPISODE_MEANS):
             rgb_mean = rgb_mean / len(episode.shortest_paths[0])
+            # Big atol to deal with basis meshes being very so slightly different
             assert np.isclose(
-                RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean
+                RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean, atol=0.5
             ), "RGB output doesn't match the ground truth."
 
         ep_i = (ep_i + 1) % EPISODES_LIMIT

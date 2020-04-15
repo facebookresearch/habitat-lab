@@ -280,6 +280,15 @@ class Env:
     def close(self) -> None:
         self._sim.close()
 
+    def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 
 class RLEnv(gym.Env):
     r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
@@ -384,3 +393,12 @@ class RLEnv(gym.Env):
 
     def close(self) -> None:
         self._env.close()
+
+    def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

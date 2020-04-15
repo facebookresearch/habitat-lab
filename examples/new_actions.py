@@ -161,21 +161,19 @@ def main():
     config.habitat.simulator.action_space_config = "NoNoiseStrafe"
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    env.step("strafe_left")
-    env.step("strafe_right")
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        env.step("strafe_left")
+        env.step("strafe_right")
 
     config.defrost()
     config.habitat.simulator.action_space_config = "NoiseStrafe"
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    env.step("strafe_left")
-    env.step("strafe_right")
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        env.step("strafe_left")
+        env.step("strafe_right")
 
 
 if __name__ == "__main__":
