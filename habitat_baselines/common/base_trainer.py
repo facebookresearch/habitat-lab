@@ -79,6 +79,7 @@ class BaseRLTrainer(BaseTrainer):
             assert (
                 len(self.config.TENSORBOARD_DIR) > 0
             ), "Must specify a tensorboard directory for video display"
+            os.makedirs(self.config.TENSORBOARD_DIR, exist_ok=True)
         if "disk" in self.config.VIDEO_OPTION:
             assert (
                 len(self.config.VIDEO_DIR) > 0

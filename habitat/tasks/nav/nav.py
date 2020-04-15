@@ -224,9 +224,10 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+    cls_uuid: str = "pointgoal_with_gps_compass"
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "pointgoal_with_gps_compass"
+        return self.cls_uuid
 
     def get_observation(
         self, *args: Any, observations, episode, **kwargs: Any
@@ -252,7 +253,7 @@ class HeadingSensor(Sensor):
     """
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
         super().__init__(config=config)
@@ -288,9 +289,10 @@ class EpisodicCompassSensor(HeadingSensor):
     r"""The agents heading in the coordinate frame defined by the epiosde,
     theta=0 is defined by the agents state at t=0
     """
+    cls_uuid: str = "compass"
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "compass"
+        return self.cls_uuid
 
     def get_observation(
         self, *args: Any, observations, episode, **kwargs: Any
@@ -315,9 +317,10 @@ class EpisodicGPSSensor(Sensor):
     Attributes:
         _dimensionality: number of dimensions used to specify the agents position
     """
+    cls_uuid: str = "gps"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._sim = sim
 
@@ -326,7 +329,7 @@ class EpisodicGPSSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "gps"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.POSITION
@@ -430,10 +433,10 @@ class Success(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
-        self.update_metric(episode=episode, task=task, *args, **kwargs)
+        self.update_metric(*args, episode=episode, task=task, **kwargs)
 
     def update_metric(
-        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
@@ -461,7 +464,7 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._previous_position = None
         self._start_end_episode_distance = None
@@ -877,7 +880,7 @@ class DistanceToGoal(Measure):
     cls_uuid: str = "distance_to_goal"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
     ):
         self._previous_position = None
         self._sim = sim
@@ -898,13 +901,13 @@ class DistanceToGoal(Measure):
                 for goal in episode.goals
                 for view_point in goal.view_points
             ]
-        self.update_metric(episode=episode, *args, **kwargs)
+        self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, episode: Episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
 
         if self._previous_position is None or not np.allclose(
-            self._previous_position, current_position
+            self._previous_position, current_position, atol=1e-4
         ):
             if self._config.DISTANCE_TO == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
@@ -922,7 +925,6 @@ class DistanceToGoal(Measure):
                 )
 
             self._previous_position = current_position
-
             self._metric = distance_to_target
 
 

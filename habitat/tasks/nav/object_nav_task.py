@@ -107,6 +107,7 @@ class ObjectGoalSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+    cls_uuid: str = "objectgoal"
 
     def __init__(
         self, sim, config: Config, dataset: Dataset, *args: Any, **kwargs: Any
@@ -116,7 +117,7 @@ class ObjectGoalSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "objectgoal"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.SEMANTIC

@@ -9,6 +9,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from habitat.tasks.nav.nav import (
+    EpisodicCompassSensor,
+    EpisodicGPSSensor,
+    IntegratedPointGoalGPSAndCompassSensor,
+)
+from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.utils import CategoricalNet, Flatten
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -23,7 +29,6 @@ class PointNavResNetPolicy(Policy):
         self,
         observation_space,
         action_space,
-        goal_sensor_uuid="pointgoal_with_gps_compass",
         hidden_size=512,
         num_recurrent_layers=2,
         rnn_type="LSTM",
@@ -35,7 +40,6 @@ class PointNavResNetPolicy(Policy):
             PointNavResNetNet(
                 observation_space=observation_space,
                 action_space=action_space,
-                goal_sensor_uuid=goal_sensor_uuid,
                 hidden_size=hidden_size,
                 num_recurrent_layers=num_recurrent_layers,
                 rnn_type=rnn_type,
@@ -158,7 +162,6 @@ class PointNavResNetNet(Net):
         self,
         observation_space,
         action_space,
-        goal_sensor_uuid,
         hidden_size,
         num_recurrent_layers,
         rnn_type,
@@ -167,20 +170,58 @@ class PointNavResNetNet(Net):
         normalize_visual_inputs,
     ):
         super().__init__()
-        self.goal_sensor_uuid = goal_sensor_uuid
 
         self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         self._n_prev_action = 32
+        rnn_input_size = self._n_prev_action
 
-        self._n_input_goal = (
-            observation_space.spaces[self.goal_sensor_uuid].shape[0] + 1
-        )
-        self.tgt_embeding = nn.Linear(self._n_input_goal, 32)
-        self._n_input_goal = 32
+        # OrderedDict([('compass', Box(1, )), ('depth', Box(256, 256, 1)),
+        #              ('gps', Box(2, )), ('objectgoal', Box(1, )),
+        #              ('rgb', Box(256, 256, 3))])
+
+        if (
+            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            in observation_space.spaces
+        ):
+            n_input_goal = (
+                observation_space.spaces[
+                    IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+                ].shape[0]
+                + 1
+            )
+            self.pointgoal_gps_compass_embedding = nn.Linear(n_input_goal, 32)
+            rnn_input_size += 32
+
+        if ObjectGoalSensor.cls_uuid in observation_space.spaces:
+            _n_object_categories = (
+                int(
+                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
+                )
+                + 1
+            )
+            self.obj_categories_embedding = nn.Linear(_n_object_categories, 32)
+            rnn_input_size += 32
+
+        if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
+            input_gps_dim = observation_space.spaces[
+                EpisodicGPSSensor.cls_uuid
+            ].shape[0]
+            self.gps_embedding = nn.Linear(input_gps_dim, 32)
+            rnn_input_size += 32
+
+        if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
+            assert (
+                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
+                    0
+                ]
+                == 1
+            ), "Expected compass with 2D rotation."
+            input_compass_dim = 2  # cos and sin of the angle
+            self.compass_embedding = nn.Linear(input_compass_dim, 32)
+            rnn_input_size += 32
 
         self._hidden_size = hidden_size
 
-        rnn_input_size = self._n_input_goal + self._n_prev_action
         self.visual_encoder = ResNetEncoder(
             observation_space,
             baseplanes=resnet_baseplanes,
@@ -219,19 +260,6 @@ class PointNavResNetNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def get_tgt_encoding(self, observations):
-        goal_observations = observations[self.goal_sensor_uuid]
-        goal_observations = torch.stack(
-            [
-                goal_observations[:, 0],
-                torch.cos(-goal_observations[:, 1]),
-                torch.sin(-goal_observations[:, 1]),
-            ],
-            -1,
-        )
-
-        return self.tgt_embeding(goal_observations)
-
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         x = []
         if not self.is_blind:
@@ -243,12 +271,49 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        tgt_encoding = self.get_tgt_encoding(observations)
         prev_actions = self.prev_action_embedding(
             ((prev_actions.float() + 1) * masks).long().squeeze(-1)
         )
+        x.append(prev_actions)
 
-        x += [tgt_encoding, prev_actions]
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
+            goal_observations = observations[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ]
+            goal_observations = torch.stack(
+                [
+                    goal_observations[:, 0],
+                    torch.cos(-goal_observations[:, 1]),
+                    torch.sin(-goal_observations[:, 1]),
+                ],
+                -1,
+            )
+
+            x.append(self.pointgoal_gps_compass_embedding(goal_observations))
+
+        if ObjectGoalSensor.cls_uuid in observations:
+            object_goal = nn.functional.one_hot(
+                observations[ObjectGoalSensor.cls_uuid].long(),
+                num_classes=self._n_object_categories,
+            ).squeeze()
+            x.append(self.obj_categories_embedding(object_goal.float()))
+
+        if EpisodicGPSSensor.cls_uuid in observations:
+            compass_observations = torch.stack(
+                [
+                    torch.cos(observations[EpisodicGPSSensor.cls_uuid]),
+                    torch.sin(observations[EpisodicGPSSensor.cls_uuid]),
+                ],
+                -1,
+            )
+            x.append(self.compass_embedding(compass_observations.squeeze()))
+
+        if EpisodicCompassSensor.cls_uuid in observations:
+            x.append(
+                self.gps_embedding(
+                    observations[EpisodicCompassSensor.cls_uuid]
+                )
+            )
 
         x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
