@@ -6,6 +6,7 @@
 
 import argparse
 import random
+from typing import List, Optional
 
 import numpy as np
 
@@ -22,15 +23,15 @@ def main():
         help="run type of the experiment (train or eval)",
     )
     parser.add_argument(
-        "--exp-config",
+        "--exp-configs",
         type=str,
-        required=True,
+        nargs="+",
         help="path to config yaml containing info about experiment",
     )
     parser.add_argument(
-        "opts",
+        "--opts",
         default=None,
-        nargs=argparse.REMAINDER,
+        nargs="*",
         help="Modify config options from command line",
     )
 
@@ -38,7 +39,9 @@ def main():
     run_exp(**vars(args))
 
 
-def run_exp(exp_config: str, run_type: str, opts=None) -> None:
+def run_exp(
+    exp_configs: List[str], run_type: str, opts: Optional[List[str]] = None
+) -> None:
     r"""Runs experiment given mode and config
 
     Args:
@@ -49,13 +52,17 @@ def run_exp(exp_config: str, run_type: str, opts=None) -> None:
     Returns:
         None.
     """
-    config = get_config(exp_config, opts)
+    config = get_config(exp_configs, opts)
 
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     if run_type == "train":

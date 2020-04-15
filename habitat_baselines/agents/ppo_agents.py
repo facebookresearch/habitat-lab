@@ -25,16 +25,16 @@ def get_default_config():
     c.INPUT_TYPE = "blind"
     c.MODEL_PATH = "data/checkpoints/blind.pth"
     c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
+    c.hidden_size = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    c.goal_sensor_uuid = "pointgoal_with_gps_compass"
     return c
 
 
 class PPOAgent(Agent):
     def __init__(self, config: Config):
-        self.goal_sensor_uuid = config.GOAL_SENSOR_UUID
+        self.goal_sensor_uuid = config.goal_sensor_uuid
         spaces = {
             self.goal_sensor_uuid: Box(
                 low=np.finfo(np.float32).min,
@@ -68,7 +68,7 @@ class PPOAgent(Agent):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self.hidden_size = config.HIDDEN_SIZE
+        self.hidden_size = config.hidden_size
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)
@@ -156,7 +156,7 @@ def main():
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
-    agent_config.GOAL_SENSOR_UUID = config.TASK.GOAL_SENSOR_UUID
+    agent_config.goal_sensor_uuid = config.task.goal_sensor_uuid
 
     agent = PPOAgent(agent_config)
     benchmark = habitat.Benchmark(config_paths=args.task_config)

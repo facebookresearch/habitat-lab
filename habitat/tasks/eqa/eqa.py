@@ -178,7 +178,7 @@ class EQATask(NavigationTask):
 @registry.register_task_action
 class AnswerAction(Action):
     _answer: Optional[str]
-    name: str = "ANSWER"
+    name: str = "answer"
 
     def __init__(self, *args: Any, sim, dataset, **kwargs: Any) -> None:
         self._sim = sim

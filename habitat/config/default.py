@@ -25,309 +25,332 @@ CONFIG_FILE_SEPARATOR = ","
 # Config definition
 # -----------------------------------------------------------------------------
 _C = CN()
-_C.SEED = 100
+_C.habitat = CN()
+_C.habitat.seed = 100
 # -----------------------------------------------------------------------------
-# ENVIRONMENT
+# environment
 # -----------------------------------------------------------------------------
-_C.ENVIRONMENT = CN()
-_C.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
-_C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
-_C.ENVIRONMENT.ITERATOR_OPTIONS = CN()
-_C.ENVIRONMENT.ITERATOR_OPTIONS.CYCLE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
-_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_EPISODES = -1
-_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS = int(1e4)
-_C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
+_C.habitat.environment = CN()
+_C.habitat.environment.max_episode_steps = 1000
+_C.habitat.environment.max_episode_seconds = 10000000
+_C.habitat.environment.iterator_options = CN()
+_C.habitat.environment.iterator_options.cycle = True
+_C.habitat.environment.iterator_options.shuffle = True
+_C.habitat.environment.iterator_options.group_by_scene = True
+_C.habitat.environment.iterator_options.num_episode_sample = -1
+_C.habitat.environment.iterator_options.max_scene_repeat_episodes = -1
+_C.habitat.environment.iterator_options.max_scene_repeat_steps = int(1e4)
+_C.habitat.environment.iterator_options.step_repetition_range = 0.2
 # -----------------------------------------------------------------------------
-# TASK
+# task
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# # NAVIGATION TASK
+# # NAVIGATION task
 # -----------------------------------------------------------------------------
-_C.TASK = CN()
-_C.TASK.TYPE = "Nav-v0"
-_C.TASK.SUCCESS_DISTANCE = 0.2
-_C.TASK.SENSORS = []
-_C.TASK.MEASUREMENTS = []
-_C.TASK.GOAL_SENSOR_UUID = "pointgoal"
-_C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
+_C.habitat.task = CN()
+_C.habitat.task.type = "Nav-v0"
+_C.habitat.task.success_distance = 0.2
+_C.habitat.task.sensors = []
+_C.habitat.task.measurements = []
+_C.habitat.task.goal_sensor_uuid = "pointgoal"
+_C.habitat.task.possible_actions = [
+    "stop",
+    "move_forward",
+    "turn_left",
+    "turn_right",
+]
 # -----------------------------------------------------------------------------
-# # ACTIONS
+# # actions
 # -----------------------------------------------------------------------------
-ACTIONS = CN()
-ACTIONS.STOP = CN()
-ACTIONS.STOP.TYPE = "StopAction"
+actions = CN()
+actions.stop = CN()
+actions.stop.type = "StopAction"
 # -----------------------------------------------------------------------------
-# # NAVIGATION ACTIONS
+# # NAVIGATION actions
 # -----------------------------------------------------------------------------
-ACTIONS.MOVE_FORWARD = CN()
-ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
-ACTIONS.TURN_LEFT = CN()
-ACTIONS.TURN_LEFT.TYPE = "TurnLeftAction"
-ACTIONS.TURN_RIGHT = CN()
-ACTIONS.TURN_RIGHT.TYPE = "TurnRightAction"
-ACTIONS.LOOK_UP = CN()
-ACTIONS.LOOK_UP.TYPE = "LookUpAction"
-ACTIONS.LOOK_DOWN = CN()
-ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
-ACTIONS.TELEPORT = CN()
-ACTIONS.TELEPORT.TYPE = "TeleportAction"
+actions.move_forward = CN()
+actions.move_forward.type = "MoveForwardAction"
+actions.turn_left = CN()
+actions.turn_left.type = "TurnLeftAction"
+actions.turn_right = CN()
+actions.turn_right.type = "TurnRightAction"
+actions.look_up = CN()
+actions.look_up.type = "LookUpAction"
+actions.look_down = CN()
+actions.look_down.type = "LookDownAction"
+actions.teleport = CN()
+actions.teleport.type = "TeleportAction"
 
-_C.TASK.ACTIONS = ACTIONS
+_C.habitat.task.actions = actions
 # -----------------------------------------------------------------------------
-# # TASK SENSORS
+# # task sensors
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_SENSOR = CN()
-_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
-_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
-_C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
+_C.habitat.task.pointgoal_sensor = CN()
+_C.habitat.task.pointgoal_sensor.type = "PointGoalSensor"
+_C.habitat.task.pointgoal_sensor.goal_format = "POLAR"
+_C.habitat.task.pointgoal_sensor.dimensionality = 2
 # -----------------------------------------------------------------------------
 # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
-_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+_C.habitat.task.pointgoal_with_gps_compass_sensor = (
+    _C.habitat.task.pointgoal_sensor.clone()
+)
+_C.habitat.task.pointgoal_with_gps_compass_sensor.type = (
     "PointGoalWithGPSCompassSensor"
 )
 # -----------------------------------------------------------------------------
 # OBJECTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.OBJECTGOAL_SENSOR = CN()
-_C.TASK.OBJECTGOAL_SENSOR.TYPE = "ObjectGoalSensor"
-_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC = "TASK_CATEGORY_ID"
-_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
+_C.habitat.task.objectgoal_sensor = CN()
+_C.habitat.task.objectgoal_sensor.type = "ObjectGoalSensor"
+_C.habitat.task.objectgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
+_C.habitat.task.objectgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.HEADING_SENSOR = CN()
-_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+_C.habitat.task.heading_sensor = CN()
+_C.habitat.task.heading_sensor.type = "HeadingSensor"
 # -----------------------------------------------------------------------------
 # COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.COMPASS_SENSOR = CN()
-_C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
+_C.habitat.task.compass_sensor = CN()
+_C.habitat.task.compass_sensor.type = "CompassSensor"
 # -----------------------------------------------------------------------------
 # GPS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.GPS_SENSOR = CN()
-_C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
-_C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
+_C.habitat.task.gps_sensor = CN()
+_C.habitat.task.gps_sensor.type = "GPSSensor"
+_C.habitat.task.gps_sensor.dimensionality = 2
 # -----------------------------------------------------------------------------
 # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.PROXIMITY_SENSOR = CN()
-_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
-_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
+_C.habitat.task.proximity_sensor = CN()
+_C.habitat.task.proximity_sensor.type = "ProximitySensor"
+_C.habitat.task.proximity_sensor.max_detection_radius = 2.0
 # -----------------------------------------------------------------------------
-# SUCCESS MEASUREMENT
+# success MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SUCCESS = CN()
-_C.TASK.SUCCESS.TYPE = "Success"
-_C.TASK.SUCCESS.SUCCESS_DISTANCE = 0.2
+_C.habitat.task.success = CN()
+_C.habitat.task.success.type = "Success"
+_C.habitat.task.success.success_distance = 0.2
 # -----------------------------------------------------------------------------
-# SPL MEASUREMENT
+# spl MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
+_C.habitat.task.spl = CN()
+_C.habitat.task.spl.type = "SPL"
 # -----------------------------------------------------------------------------
 # SOFT-SPL MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SOFT_SPL = CN()
-_C.TASK.SOFT_SPL.TYPE = "SoftSPL"
+_C.habitat.task.soft_spl = CN()
+_C.habitat.task.soft_spl.type = "SoftSPL"
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.TOP_DOWN_MAP = CN()
-_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
-_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
-_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
-_C.TASK.TOP_DOWN_MAP.NUM_TOPDOWN_MAP_SAMPLE_POINTS = 20000
-_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1250
-_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE = True
-_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
-_C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR = CN()
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
-_C.TASK.TOP_DOWN_MAP.DRAW_VIEW_POINTS = True
-_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_POSITIONS = True
+_C.habitat.task.top_down_map = CN()
+_C.habitat.task.top_down_map.type = "TopDownMap"
+_C.habitat.task.top_down_map.max_episode_steps = (
+    _C.habitat.environment.max_episode_steps
+)
+_C.habitat.task.top_down_map.map_padding = 3
+_C.habitat.task.top_down_map.num_topdown_map_sample_points = 20000
+_C.habitat.task.top_down_map.map_resolution = 1250
+_C.habitat.task.top_down_map.draw_source = True
+_C.habitat.task.top_down_map.draw_border = True
+_C.habitat.task.top_down_map.draw_shortest_path = True
+_C.habitat.task.top_down_map.fog_of_war = CN()
+_C.habitat.task.top_down_map.fog_of_war.draw = True
+_C.habitat.task.top_down_map.fog_of_war.visibility_dist = 5.0
+_C.habitat.task.top_down_map.fog_of_war.fov = 90
+_C.habitat.task.top_down_map.draw_view_points = True
+_C.habitat.task.top_down_map.draw_goal_positions = True
 # Axes aligned bounding boxes
-_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
+_C.habitat.task.top_down_map.draw_goal_aabbs = True
 # -----------------------------------------------------------------------------
-# COLLISIONS MEASUREMENT
+# collisions MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.COLLISIONS = CN()
-_C.TASK.COLLISIONS.TYPE = "Collisions"
+_C.habitat.task.collisions = CN()
+_C.habitat.task.collisions.type = "Collisions"
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# # EQA TASK
+# # EQA task
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.ANSWER = CN()
-_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
-# # EQA TASK QUESTION SENSOR
+_C.habitat.task.actions.answer = CN()
+_C.habitat.task.actions.answer.type = "AnswerAction"
+# # EQA task QUESTION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.QUESTION_SENSOR = CN()
-_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+_C.habitat.task.question_sensor = CN()
+_C.habitat.task.question_sensor.type = "QuestionSensor"
 # -----------------------------------------------------------------------------
-# # EQA TASK CORRECT_ANSWER measure for training
+# # EQA task correct_answer measure for training
 # -----------------------------------------------------------------------------
-_C.TASK.CORRECT_ANSWER = CN()
-_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+_C.habitat.task.correct_answer = CN()
+_C.habitat.task.correct_answer.type = "CorrectAnswer"
 # -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
+# # EQA task answer SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.EPISODE_INFO = CN()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+_C.habitat.task.episode_info = CN()
+_C.habitat.task.episode_info.type = "EpisodeInfo"
 # -----------------------------------------------------------------------------
-# # VLN TASK INSTRUCTION SENSOR
+# # VLN task INSTRUCTION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.INSTRUCTION_SENSOR = CN()
-_C.TASK.INSTRUCTION_SENSOR.TYPE = "InstructionSensor"
-_C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
+_C.habitat.task.instruction_sensor = CN()
+_C.habitat.task.instruction_sensor.type = "InstructionSensor"
+_C.habitat.task.instruction_sensor_uuid = "instruction"
 # -----------------------------------------------------------------------------
-# # DISTANCE_TO_GOAL MEASUREMENT
+# # distance_to_goal MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.DISTANCE_TO_GOAL = CN()
-_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
-_C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
+_C.habitat.task.distance_to_goal = CN()
+_C.habitat.task.distance_to_goal.type = "DistanceToGoal"
+_C.habitat.task.distance_to_goal.distance_to = "POINT"
 # -----------------------------------------------------------------------------
-# # ANSWER_ACCURACY MEASUREMENT
+# # answer_accuracy MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.ANSWER_ACCURACY = CN()
-_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
+_C.habitat.task.answer_accuracy = CN()
+_C.habitat.task.answer_accuracy.type = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
-# SIMULATOR
+# simulator
 # -----------------------------------------------------------------------------
-_C.SIMULATOR = CN()
-_C.SIMULATOR.TYPE = "Sim-v0"
-_C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
-_C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
-_C.SIMULATOR.SCENE = (
+_C.habitat.simulator = CN()
+_C.habitat.simulator.type = "Sim-v0"
+_C.habitat.simulator.action_space_config = "v0"
+_C.habitat.simulator.forward_step_size = 0.25  # in metres
+_C.habitat.simulator.scene = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
-_C.SIMULATOR.SEED = _C.SEED
-_C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
-_C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
-_C.SIMULATOR.DEFAULT_AGENT_ID = 0
+_C.habitat.simulator.seed = _C.habitat.seed
+_C.habitat.simulator.turn_angle = (
+    10
+)  # angle to rotate left or right in degrees
+_C.habitat.simulator.tilt_angle = (
+    15
+)  # angle to tilt the camera up or down in degrees
+_C.habitat.simulator.default_agent_id = 0
 # -----------------------------------------------------------------------------
-# SIMULATOR SENSORS
+# simulator sensors
 # -----------------------------------------------------------------------------
 SIMULATOR_SENSOR = CN()
-SIMULATOR_SENSOR.HEIGHT = 480
-SIMULATOR_SENSOR.WIDTH = 640
-SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
-SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
-SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+SIMULATOR_SENSOR.height = 480
+SIMULATOR_SENSOR.width = 640
+SIMULATOR_SENSOR.hfov = 90  # horizontal field of view in degrees
+SIMULATOR_SENSOR.position = [0, 1.25, 0]
+SIMULATOR_SENSOR.orientation = [0.0, 0.0, 0.0]  # Euler's angles
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
+_C.habitat.simulator.rgb_sensor = SIMULATOR_SENSOR.clone()
+_C.habitat.simulator.rgb_sensor.type = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
-_C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
+_C.habitat.simulator.depth_sensor = SIMULATOR_SENSOR.clone()
+_C.habitat.simulator.depth_sensor.type = "HabitatSimDepthSensor"
+_C.habitat.simulator.depth_sensor.min_depth = 0.0
+_C.habitat.simulator.depth_sensor.max_depth = 10.0
+_C.habitat.simulator.depth_sensor.normalize_depth = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+_C.habitat.simulator.semantic_sensor = SIMULATOR_SENSOR.clone()
+_C.habitat.simulator.semantic_sensor.type = "HabitatSimSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.AGENT_0 = CN()
-_C.SIMULATOR.AGENT_0.HEIGHT = 1.5
-_C.SIMULATOR.AGENT_0.RADIUS = 0.1
-_C.SIMULATOR.AGENT_0.MASS = 32.0
-_C.SIMULATOR.AGENT_0.LINEAR_ACCELERATION = 20.0
-_C.SIMULATOR.AGENT_0.ANGULAR_ACCELERATION = 4 * 3.14
-_C.SIMULATOR.AGENT_0.LINEAR_FRICTION = 0.5
-_C.SIMULATOR.AGENT_0.ANGULAR_FRICTION = 1.0
-_C.SIMULATOR.AGENT_0.COEFFICIENT_OF_RESTITUTION = 0.0
-_C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
-_C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
-_C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
-_C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
-_C.SIMULATOR.AGENTS = ["AGENT_0"]
+_C.habitat.simulator.agent_0 = CN()
+_C.habitat.simulator.agent_0.height = 1.5
+_C.habitat.simulator.agent_0.radius = 0.1
+_C.habitat.simulator.agent_0.mass = 32.0
+_C.habitat.simulator.agent_0.linear_acceleration = 20.0
+_C.habitat.simulator.agent_0.angular_acceleration = 4 * 3.14
+_C.habitat.simulator.agent_0.linear_friction = 0.5
+_C.habitat.simulator.agent_0.angular_friction = 1.0
+_C.habitat.simulator.agent_0.coefficient_of_restitution = 0.0
+_C.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
+_C.habitat.simulator.agent_0.is_set_start_state = False
+_C.habitat.simulator.agent_0.start_position = [0, 0, 0]
+_C.habitat.simulator.agent_0.start_rotation = [0, 0, 0, 1]
+_C.habitat.simulator.agents = ["agent_0"]
+
+_C.habitat.simulator.noise_model = CN()
+_C.habitat.simulator.noise_model.robot = "LoCoBot"
+_C.habitat.simulator.noise_model.controller = "Proportional"
+_C.habitat.simulator.noise_model.noise_multiplier = 0.5
 # -----------------------------------------------------------------------------
-# SIMULATOR HABITAT_SIM_V0
+# simulator habitat_sim_v0
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.HABITAT_SIM_V0 = CN()
-_C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
+_C.habitat.simulator.habitat_sim_v0 = CN()
+_C.habitat.simulator.habitat_sim_v0.gpu_device_id = 0
 # Use Habitat-Sim's GPU->GPU copy mode to return rendering results
 # in PyTorch tensors.  Requires Habitat-Sim to be built
 # with --with-cuda
 # This will generally imply sharing CUDA tensors between processes.
 # Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
 # for the caveats that results in
-_C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
+_C.habitat.simulator.habitat_sim_v0.gpu_gpu = False
 # Whether or not the agent slides on collisions
-_C.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = True
-_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = False
-_C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
+_C.habitat.simulator.habitat_sim_v0.allow_sliding = True
+_C.habitat.simulator.habitat_sim_v0.enable_physics = False
+_C.habitat.simulator.habitat_sim_v0.physics_config_file = (
     "./data/default.phys_scene_config.json"
 )
 # -----------------------------------------------------------------------------
-# PYROBOT
+# pyrobot
 # -----------------------------------------------------------------------------
-_C.PYROBOT = CN()
-_C.PYROBOT.ROBOTS = ["locobot"]  # types of robots supported
-_C.PYROBOT.ROBOT = "locobot"
-_C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR", "BUMP_SENSOR"]
-_C.PYROBOT.BASE_CONTROLLER = "proportional"
-_C.PYROBOT.BASE_PLANNER = "none"
+_C.habitat.pyrobot = CN()
+_C.habitat.pyrobot.robots = ["locobot"]  # types of robots supported
+_C.habitat.pyrobot.robot = "locobot"
+_C.habitat.pyrobot.sensors = ["rgb_sensor", "depth_sensor", "bump_sensor"]
+_C.habitat.pyrobot.base_controller = "proportional"
+_C.habitat.pyrobot.base_planner = "none"
 # -----------------------------------------------------------------------------
-# SENSORS
+# sensors
 # -----------------------------------------------------------------------------
 PYROBOT_VISUAL_SENSOR = CN()
-PYROBOT_VISUAL_SENSOR.HEIGHT = 480
-PYROBOT_VISUAL_SENSOR.WIDTH = 640
+PYROBOT_VISUAL_SENSOR.height = 480
+PYROBOT_VISUAL_SENSOR.width = 640
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.RGB_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
-_C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
-_C.PYROBOT.RGB_SENSOR.CENTER_CROP = False
+_C.habitat.pyrobot.rgb_sensor = PYROBOT_VISUAL_SENSOR.clone()
+_C.habitat.pyrobot.rgb_sensor.type = "PyRobotRGBSensor"
+_C.habitat.pyrobot.rgb_sensor.center_crop = False
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.DEPTH_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
-_C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
-_C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
-_C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
-_C.PYROBOT.DEPTH_SENSOR.CENTER_CROP = False
+_C.habitat.pyrobot.depth_sensor = PYROBOT_VISUAL_SENSOR.clone()
+_C.habitat.pyrobot.depth_sensor.type = "PyRobotDepthSensor"
+_C.habitat.pyrobot.depth_sensor.min_depth = 0.0
+_C.habitat.pyrobot.depth_sensor.max_depth = 5.0
+_C.habitat.pyrobot.depth_sensor.normalize_depth = True
+_C.habitat.pyrobot.depth_sensor.center_crop = False
 # -----------------------------------------------------------------------------
 # BUMP SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.BUMP_SENSOR = CN()
-_C.PYROBOT.BUMP_SENSOR.TYPE = "PyRobotBumpSensor"
+_C.habitat.pyrobot.bump_sensor = CN()
+_C.habitat.pyrobot.bump_sensor.type = "PyRobotBumpSensor"
 # -----------------------------------------------------------------------------
-# ACTIONS LOCOBOT
+# actions locobot
 # -----------------------------------------------------------------------------
-_C.PYROBOT.LOCOBOT = CN()
-_C.PYROBOT.LOCOBOT.ACTIONS = ["BASE_ACTIONS", "CAMERA_ACTIONS"]
-_C.PYROBOT.LOCOBOT.BASE_ACTIONS = ["go_to_relative", "go_to_absolute"]
-_C.PYROBOT.LOCOBOT.CAMERA_ACTIONS = ["set_pan", "set_tilt", "set_pan_tilt"]
+_C.habitat.pyrobot.locobot = CN()
+_C.habitat.pyrobot.locobot.actions = ["base_actions", "camera_actions"]
+_C.habitat.pyrobot.locobot.base_actions = ["go_to_relative", "go_to_absolute"]
+_C.habitat.pyrobot.locobot.camera_actions = [
+    "set_pan",
+    "set_tilt",
+    "set_pan_tilt",
+]
 # TODO(akadian): add support for Arm actions
 # -----------------------------------------------------------------------------
-# DATASET
+# dataset
 # -----------------------------------------------------------------------------
-_C.DATASET = CN()
-_C.DATASET.TYPE = "PointNav-v1"
-_C.DATASET.SPLIT = "train"
-_C.DATASET.SCENES_DIR = "data/scene_datasets"
-_C.DATASET.CONTENT_SCENES = ["*"]
-_C.DATASET.DATA_PATH = (
+_C.habitat.dataset = CN()
+_C.habitat.dataset.type = "PointNav-v1"
+_C.habitat.dataset.split = "train"
+_C.habitat.dataset.scenes_dir = "data/scene_datasets"
+_C.habitat.dataset.content_scenes = ["*"]
+_C.habitat.dataset.data_path = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 

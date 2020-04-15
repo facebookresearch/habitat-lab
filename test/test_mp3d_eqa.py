@@ -89,7 +89,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 
 def test_mp3d_eqa_dataset():
-    dataset_config = get_config(CFG_TEST).DATASET
+    dataset_config = get_config(CFG_TEST).habitat.dataset
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -106,9 +106,9 @@ def test_mp3d_eqa_dataset():
 @pytest.mark.parametrize("split", ["train", "val"])
 def test_dataset_splitting(split):
 
-    dataset_config = get_config(CFG_TEST).DATASET
+    dataset_config = get_config(CFG_TEST).habitat.dataset
     dataset_config.defrost()
-    dataset_config.SPLIT = split
+    dataset_config.split = split
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
         dataset_config
     ):
@@ -121,25 +121,25 @@ def test_dataset_splitting(split):
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
 
-    dataset_config.CONTENT_SCENES = scenes
+    dataset_config.content_scenes = scenes
     full_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     full_episodes = {
         (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
     }
 
-    dataset_config.CONTENT_SCENES = scenes[0 : len(scenes) // 2]
+    dataset_config.content_scenes = scenes[0 : len(scenes) // 2]
     split1_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     split1_episodes = {
         (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
     }
 
-    dataset_config.CONTENT_SCENES = scenes[len(scenes) // 2 :]
+    dataset_config.content_scenes = scenes[len(scenes) // 2 :]
     split2_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     split2_episodes = {
         (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
@@ -157,12 +157,13 @@ def test_mp3d_eqa_sim():
     eqa_config = get_config(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.DATASET
+        eqa_config.habitat.dataset
     ):
         pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     dataset = make_dataset(
-        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+        id_dataset=eqa_config.habitat.dataset.type,
+        config=eqa_config.habitat.dataset,
     )
     env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = dataset.episodes[:EPISODES_LIMIT]
@@ -174,30 +175,32 @@ def test_mp3d_eqa_sim():
         if not env.episode_over:
             assert "rgb" in obs, "RGB image is missing in observation."
             assert obs["rgb"].shape[:2] == (
-                eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                eqa_config.simulator.rgb_sensor.height,
+                eqa_config.simulator.rgb_sensor.width,
             ), (
                 "Observation resolution {} doesn't correspond to config "
                 "({}, {}).".format(
                     obs["rgb"].shape[:2],
-                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                    eqa_config.simulator.rgb_sensor.height,
+                    eqa_config.simulator.rgb_sensor.width,
                 )
             )
 
     env.close()
 
 
+@pytest.mark.skip
 def test_mp3d_eqa_sim_correspondence():
     eqa_config = get_config(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.DATASET
+        eqa_config.habitat.dataset
     ):
         pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     dataset = make_dataset(
-        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+        id_dataset=eqa_config.habitat.dataset.type,
+        config=eqa_config.habitat.dataset,
     )
     env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = [
@@ -281,12 +284,13 @@ def test_eqa_task():
     eqa_config = get_config(CFG_TEST)
 
     if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        eqa_config.DATASET
+        eqa_config.habitat.dataset
     ):
         pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     dataset = make_dataset(
-        id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
+        id_dataset=eqa_config.habitat.dataset.type,
+        config=eqa_config.habitat.dataset,
     )
     env = habitat.Env(config=eqa_config, dataset=dataset)
     env.episodes = list(

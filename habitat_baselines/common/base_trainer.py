@@ -17,7 +17,7 @@ from habitat_baselines.common.utils import poll_checkpoint_folder
 
 class BaseTrainer:
     r"""Generic trainer class that serves as a base template for more
-    specific trainer classes like RL trainer, SLAM or imitation learner.
+    specific trainer classes like rl trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
 
@@ -37,7 +37,7 @@ class BaseTrainer:
 
 
 class BaseRLTrainer(BaseTrainer):
-    r"""Base trainer class for RL trainers. Future RL-specific
+    r"""Base trainer class for rl trainers. Future RL-specific
     methods should be hosted here.
     """
     device: torch.device
@@ -70,26 +70,31 @@ class BaseRLTrainer(BaseTrainer):
             None
         """
         self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
+            torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
 
-        if "tensorboard" in self.config.VIDEO_OPTION:
+        if "tensorboard" in self.config.habitat_baselines.video_option:
             assert (
-                len(self.config.TENSORBOARD_DIR) > 0
+                len(self.config.habitat_baselines.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
-        if "disk" in self.config.VIDEO_OPTION:
+        if "disk" in self.config.habitat_baselines.video_option:
             assert (
-                len(self.config.VIDEO_DIR) > 0
+                len(self.config.habitat_baselines.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"
 
         with TensorboardWriter(
-            self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+            self.config.habitat_baselines.tensorboard_dir,
+            flush_secs=self.flush_secs,
         ) as writer:
-            if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
+            if os.path.isfile(
+                self.config.habitat_baselines.eval_ckpt_path_dir
+            ):
                 # evaluate singe checkpoint
-                self._eval_checkpoint(self.config.EVAL_CKPT_PATH_DIR, writer)
+                self._eval_checkpoint(
+                    self.config.habitat_baselines.eval_ckpt_path_dir, writer
+                )
             else:
                 # evaluate multiple checkpoints in order
                 prev_ckpt_ind = -1
@@ -97,7 +102,8 @@ class BaseRLTrainer(BaseTrainer):
                     current_ckpt = None
                     while current_ckpt is None:
                         current_ckpt = poll_checkpoint_folder(
-                            self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind
+                            self.config.habitat_baselines.eval_ckpt_path_dir,
+                            prev_ckpt_ind,
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
                     logger.info(f"=======current_ckpt: {current_ckpt}=======")
@@ -125,8 +131,8 @@ class BaseRLTrainer(BaseTrainer):
         config = self.config.clone()
         config.defrost()
 
-        ckpt_cmd_opts = checkpoint_config.CMD_TRAILING_OPTS
-        eval_cmd_opts = config.CMD_TRAILING_OPTS
+        ckpt_cmd_opts = checkpoint_config.habitat_baselines.cmd_trailing_opts
+        eval_cmd_opts = config.habitat_baselines.cmd_trailing_opts
 
         try:
             config.merge_from_other_cfg(checkpoint_config)
@@ -137,11 +143,10 @@ class BaseRLTrainer(BaseTrainer):
             logger.info("Saved config is outdated, using solely eval config")
             config = self.config.clone()
             config.merge_from_list(eval_cmd_opts)
-        if config.TASK_CONFIG.DATASET.SPLIT == "train":
-            config.TASK_CONFIG.defrost()
-            config.TASK_CONFIG.DATASET.SPLIT = "val"
+        if config.habitat.dataset.split == "train":
+            config.habitat.defrost()
+            config.habitat.dataset.split = "val"
 
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
         config.freeze()
 
         return config

@@ -69,7 +69,7 @@ class HabitatSimRGBSensor(RGBSensor):
         return spaces.Box(
             low=0,
             high=255,
-            shape=(self.config.HEIGHT, self.config.WIDTH, RGBSENSOR_DIMENSION),
+            shape=(self.config.height, self.config.width, RGBSENSOR_DIMENSION),
             dtype=np.uint8,
         )
 
@@ -91,12 +91,12 @@ class HabitatSimDepthSensor(DepthSensor):
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
 
-        if config.NORMALIZE_DEPTH:
+        if config.normalize_depth:
             self.min_depth_value = 0
             self.max_depth_value = 1
         else:
-            self.min_depth_value = config.MIN_DEPTH
-            self.max_depth_value = config.MAX_DEPTH
+            self.min_depth_value = config.min_depth
+            self.max_depth_value = config.max_depth
 
         super().__init__(config=config)
 
@@ -104,7 +104,7 @@ class HabitatSimDepthSensor(DepthSensor):
         return spaces.Box(
             low=self.min_depth_value,
             high=self.max_depth_value,
-            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            shape=(self.config.height, self.config.width, 1),
             dtype=np.float32,
         )
 
@@ -113,20 +113,20 @@ class HabitatSimDepthSensor(DepthSensor):
         check_sim_obs(obs, self)
 
         if isinstance(obs, np.ndarray):
-            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+            obs = np.clip(obs, self.config.min_depth, self.config.max_depth)
 
             obs = np.expand_dims(
                 obs, axis=2
             )  # make depth observation a 3D array
         else:
-            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+            obs = obs.clamp(self.config.min_depth, self.config.max_depth)
 
             obs = obs.unsqueeze(-1)
 
-        if self.config.NORMALIZE_DEPTH:
+        if self.config.normalize_depth:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / (
-                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            obs = (obs - self.config.min_depth) / (
+                self.config.max_depth - self.config.min_depth
             )
 
         return obs
@@ -144,7 +144,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return spaces.Box(
             low=np.iinfo(np.uint32).min,
             high=np.iinfo(np.uint32).max,
-            shape=(self.config.HEIGHT, self.config.WIDTH),
+            shape=(self.config.height, self.config.width),
             dtype=np.uint32,
         )
 
@@ -169,12 +169,12 @@ class HabitatSim(Simulator):
         agent_config = self._get_agent_config()
 
         sim_sensors = []
-        for sensor_name in agent_config.SENSORS:
+        for sensor_name in agent_config.sensors:
             sensor_cfg = getattr(self.config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
+            sensor_type = registry.get_sensor(sensor_cfg.type)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.TYPE
+                sensor_cfg.type
             )
             sim_sensors.append(sensor_type(sensor_cfg))
 
@@ -192,9 +192,9 @@ class HabitatSim(Simulator):
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
         overwrite_config(
-            config_from=self.config.HABITAT_SIM_V0, config_to=sim_config
+            config_from=self.config.habitat_sim_v0, config_to=sim_config
         )
-        sim_config.scene.id = self.config.SCENE
+        sim_config.scene.id = self.config.scene
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -210,19 +210,19 @@ class HabitatSim(Simulator):
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
-            sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
+            sim_sensor_cfg.parameters["hfov"] = str(sensor.config.hfov)
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
             sim_sensor_cfg.gpu2gpu_transfer = (
-                self.config.HABITAT_SIM_V0.GPU_GPU
+                self.config.habitat_sim_v0.gpu_gpu
             )
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = registry.get_action_space_configuration(
-            self.config.ACTION_SPACE_CONFIG
+            self.config.action_space_config
         )(self.config).get()
 
         return habitat_sim.Configuration(sim_config, [agent_config])
@@ -237,12 +237,12 @@ class HabitatSim(Simulator):
 
     def _update_agents_state(self) -> bool:
         is_updated = False
-        for agent_id, _ in enumerate(self.config.AGENTS):
+        for agent_id, _ in enumerate(self.config.agents):
             agent_cfg = self._get_agent_config(agent_id)
-            if agent_cfg.IS_SET_START_STATE:
+            if agent_cfg.is_set_start_state:
                 self.set_agent_state(
-                    agent_cfg.START_POSITION,
-                    agent_cfg.START_ROTATION,
+                    agent_cfg.start_position,
+                    agent_cfg.start_rotation,
                     agent_id,
                 )
                 is_updated = True
@@ -289,11 +289,11 @@ class HabitatSim(Simulator):
 
     def reconfigure(self, config: Config) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
-        is_same_scene = config.SCENE == self._current_scene
+        is_same_scene = config.scene == self._current_scene
         self.config = config
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
-            self._current_scene = config.SCENE
+            self._current_scene = config.scene
             self._sim.close()
             del self._sim
             self._sim = habitat_sim.Simulator(self.sim_config)
@@ -401,8 +401,8 @@ class HabitatSim(Simulator):
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
-            agent_id = self.config.DEFAULT_AGENT_ID
-        agent_name = self.config.AGENTS[agent_id]
+            agent_id = self.config.default_agent_id
+        agent_name = self.config.agents[agent_id]
         agent_config = getattr(self.config, agent_name)
         return agent_config
 

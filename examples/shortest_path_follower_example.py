@@ -64,13 +64,13 @@ def draw_top_down_map(info, heading, output_size):
 def shortest_path_example(mode):
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
-    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-    config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.habitat.task.measurements.append("top_down_map")
+    config.habitat.task.sensors.append("heading_sensor")
     config.freeze()
     env = SimpleRLEnv(config=config)
     goal_radius = env.episodes[0].goals[0].radius
     if goal_radius is None:
-        goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
+        goal_radius = config.habitat.simulator.forward_step_size
     follower = ShortestPathFollower(env.habitat_env.sim, goal_radius, False)
     follower.mode = mode
 

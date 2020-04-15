@@ -54,20 +54,23 @@ def _load_test_data():
     datasets = []
     for i in range(NUM_ENVS):
         config = get_config(CFG_TEST)
-        if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+        if not PointNavDatasetV1.check_config_paths_exist(
+            config.habitat.dataset
+        ):
             pytest.skip("Please download Habitat test data to data folder.")
 
         datasets.append(
             habitat.make_dataset(
-                id_dataset=config.DATASET.TYPE, config=config.DATASET
+                id_dataset=config.habitat.dataset.type,
+                config=config.habitat.dataset,
             )
         )
 
-        config.defrost()
-        config.SIMULATOR.SCENE = datasets[-1].episodes[0].scene_id
-        if not os.path.exists(config.SIMULATOR.SCENE):
+        config.habitat.defrost()
+        config.habitat.simulator.scene = datasets[-1].episodes[0].scene_id
+        if not os.path.exists(config.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
-        config.freeze()
+        config.habitat.freeze()
         configs.append(config)
 
     return configs, datasets
@@ -77,7 +80,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
     num_envs = len(configs)
     for cfg in configs:
         cfg.defrost()
-        cfg.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        cfg.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
         cfg.freeze()
 
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
@@ -87,7 +90,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
     )
     envs.reset()
 
-    for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+    for _ in range(2 * configs[0].habitat.environment.max_episode_steps):
         observations = envs.step(
             sample_non_stop_action(envs.action_spaces[0], num_envs)
         )
@@ -144,7 +147,7 @@ def test_threaded_vectorized_env():
     envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
     envs.reset()
 
-    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+    for i in range(2 * configs[0].habitat.environment.max_episode_steps):
         observations = envs.step(
             sample_non_stop_action(envs.action_spaces[0], num_envs)
         )
@@ -161,17 +164,17 @@ def test_env(gpu2gpu):
         pytest.skip("GPU-GPU requires CUDA")
 
     config = get_config(CFG_TEST)
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    config.defrost()
-    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
-    config.freeze()
+    config.habitat.defrost()
+    config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+    config.habitat.freeze()
     env = habitat.Env(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
             episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
+            scene_id=config.habitat.simulator.scene,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
@@ -182,7 +185,7 @@ def test_env(gpu2gpu):
     ]
     env.reset()
 
-    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
+    for _ in range(config.habitat.environment.max_episode_steps):
         env.step(sample_non_stop_action(env.action_space))
 
     # check for steps limit on environment
@@ -193,8 +196,8 @@ def test_env(gpu2gpu):
     env.reset()
 
     env.step(action={"action": StopAction.name})
-    # check for STOP action
-    assert env.episode_over is True, "episode should be over after STOP action"
+    # check for stop action
+    assert env.episode_over is True, "episode should be over after stop action"
 
     env.close()
 
@@ -207,7 +210,7 @@ def make_rl_env(config, dataset, rank: int = 0):
     :return: constructed habitat Env
     """
     env = DummyRLEnv(config=config, dataset=dataset)
-    env.seed(config.SEED + rank)
+    env.seed(config.habitat.seed + rank)
     return env
 
 
@@ -220,16 +223,16 @@ def test_rl_vectorized_envs(gpu2gpu):
 
     configs, datasets = _load_test_data()
     for config in configs:
-        config.defrost()
-        config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
-        config.freeze()
+        config.habitat.defrost()
+        config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+        config.habitat.freeze()
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
     envs.reset()
 
-    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+    for i in range(2 * configs[0].habitat.environment.max_episode_steps):
         outputs = envs.step(
             sample_non_stop_action(envs.action_spaces[0], num_envs)
         )
@@ -250,7 +253,7 @@ def test_rl_vectorized_envs(gpu2gpu):
             c,
         ), "vector env render is broken"
 
-        if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
+        if (i + 1) % configs[0].habitat.environment.max_episode_steps == 0:
             assert all(dones), "dones should be true after max_episode steps"
 
     envs.close()
@@ -264,18 +267,18 @@ def test_rl_env(gpu2gpu):
         pytest.skip("GPU-GPU requires CUDA")
 
     config = get_config(CFG_TEST)
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    config.defrost()
-    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
-    config.freeze()
+    config.habitat.defrost()
+    config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+    config.habitat.freeze()
 
     env = DummyRLEnv(config=config, dataset=None)
     env.episodes = [
         NavigationEpisode(
             episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
+            scene_id=config.habitat.simulator.scene,
             start_position=[-3.0133917, 0.04623024, 7.3064547],
             start_rotation=[0, 0.163276, 0, 0.98658],
             goals=[
@@ -288,7 +291,7 @@ def test_rl_env(gpu2gpu):
     done = False
     env.reset()
 
-    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
+    for _ in range(config.habitat.environment.max_episode_steps):
         observation, reward, done, info = env.step(
             action=sample_non_stop_action(env.action_space)
         )
@@ -300,7 +303,7 @@ def test_rl_env(gpu2gpu):
     observation, reward, done, info = env.step(
         action={"action": StopAction.name}
     )
-    assert done is True, "done should be true after STOP action"
+    assert done is True, "done should be true after stop action"
 
     env.close()
 
@@ -371,14 +374,14 @@ def test_close_with_paused():
 @pytest.mark.skip
 def test_action_space_shortest_path():
     config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
     env = habitat.Env(config=config, dataset=None)
 
     # action space shortest path
     source_position = env.sim.sample_navigable_point()
-    angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+    angles = [x for x in range(-180, 180, config.habitat.simulator.turn_angle)]
     angle = np.radians(np.random.choice(angles))
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
@@ -387,7 +390,9 @@ def test_action_space_shortest_path():
     unreachable_targets = []
     while len(reachable_targets) < 5:
         position = env.sim.sample_navigable_point()
-        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+        angles = [
+            x for x in range(-180, 180, config.habitat.simulator.turn_angle)
+        ]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.sim.geodesic_distance(source_position, [position]) != np.inf:
@@ -397,7 +402,9 @@ def test_action_space_shortest_path():
         position = env.sim.sample_navigable_point()
         # Change height of the point to make it unreachable
         position[1] = 100
-        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+        angles = [
+            x for x in range(-180, 180, config.habitat.simulator.turn_angle)
+        ]
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.sim.geodesic_distance(source_position, [position]) == np.inf:

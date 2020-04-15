@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------------
 
 # Camera calibration and distortion parameters (OpenCV)
-#For resolution 256x256, FOV 90 deg
+#For resolution 256x256, fov 90 deg
 Camera.fx: 128.0
 Camera.fy: 128.0
 Camera.cx: 127.0

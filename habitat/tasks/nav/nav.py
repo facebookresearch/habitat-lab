@@ -45,18 +45,18 @@ def merge_sim_episode_config(
     sim_config: Config, episode: Type[Episode]
 ) -> Any:
     sim_config.defrost()
-    sim_config.SCENE = episode.scene_id
+    sim_config.scene = episode.scene_id
     sim_config.freeze()
     if (
         episode.start_position is not None
         and episode.start_rotation is not None
     ):
-        agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
+        agent_name = sim_config.agents[sim_config.default_agent_id]
         agent_cfg = getattr(sim_config, agent_name)
         agent_cfg.defrost()
-        agent_cfg.START_POSITION = episode.start_position
-        agent_cfg.START_ROTATION = episode.start_rotation
-        agent_cfg.IS_SET_START_STATE = True
+        agent_cfg.start_position = episode.start_position
+        agent_cfg.start_rotation = episode.start_rotation
+        agent_cfg.is_set_start_state = True
         agent_cfg.freeze()
     return sim_config
 
@@ -114,11 +114,11 @@ class PointGoalSensor(Sensor):
     Args:
         sim: reference to the simulator for calculating task observations.
         config: config for the PointGoal sensor. Can contain field for
-            GOAL_FORMAT which can be used to specify the format in which
+            goal_format which can be used to specify the format in which
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
 
-            Also contains a DIMENSIONALITY field which specifes the number
+            Also contains a dimensionality field which specifes the number
             of dimensions ued to specify the goal, must be in [2, 3]
 
     Attributes:
@@ -132,10 +132,10 @@ class PointGoalSensor(Sensor):
     ):
         self._sim = sim
 
-        self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
+        self._goal_format = getattr(config, "goal_format", "CARTESIAN")
         assert self._goal_format in ["CARTESIAN", "POLAR"]
 
-        self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
+        self._dimensionality = getattr(config, "dimensionality", 2)
         assert self._dimensionality in [2, 3]
 
         super().__init__(config=config)
@@ -212,11 +212,11 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     Args:
         sim: reference to the simulator for calculating task observations.
         config: config for the PointGoal sensor. Can contain field for
-            GOAL_FORMAT which can be used to specify the format in which
+            goal_format which can be used to specify the format in which
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
 
-            Also contains a DIMENSIONALITY field which specifes the number
+            Also contains a dimensionality field which specifes the number
             of dimensions ued to specify the goal, must be in [2, 3]
 
     Attributes:
@@ -311,7 +311,7 @@ class EpisodicGPSSensor(Sensor):
 
     Args:
         sim: reference to the simulator for calculating task observations.
-        config: Contains the DIMENSIONALITY field for the number of dimensions to express the agents position
+        config: Contains the dimensionality field for the number of dimensions to express the agents position
     Attributes:
         _dimensionality: number of dimensions used to specify the agents position
     """
@@ -321,7 +321,7 @@ class EpisodicGPSSensor(Sensor):
     ):
         self._sim = sim
 
-        self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
+        self._dimensionality = getattr(config, "dimensionality", 2)
         assert self._dimensionality in [2, 3]
         super().__init__(config=config)
 
@@ -329,7 +329,7 @@ class EpisodicGPSSensor(Sensor):
         return "gps"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.POSITION
+        return SensorTypes.position
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         sensor_shape = (self._dimensionality,)
@@ -373,7 +373,7 @@ class ProximitySensor(Sensor):
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._max_detection_radius = getattr(
-            config, "MAX_DETECTION_RADIUS", 2.0
+            config, "max_detection_radius", 2.0
         )
         super().__init__(config=config)
 
@@ -442,7 +442,7 @@ class Success(Measure):
         if (
             hasattr(task, "is_stop_called")
             and task.is_stop_called
-            and distance_to_target < self._config.SUCCESS_DISTANCE
+            and distance_to_target < self._config.success_distance
         ):
             self._metric = 1.0
         else:
@@ -512,9 +512,9 @@ class SPL(Measure):
 
 @registry.register_measure
 class SoftSPL(SPL):
-    r"""Soft SPL
+    r"""Soft spl
 
-    Similar to SPL with a relaxed soft-success criteria. Instead of a boolean
+    Similar to spl with a relaxed soft-success criteria. Instead of a boolean
     success is now calculated as 1 - (ratio of distance covered to target).
     """
 
@@ -590,10 +590,10 @@ class TopDownMap(Measure):
     ):
         self._sim = sim
         self._config = config
-        self._grid_delta = config.MAP_PADDING
+        self._grid_delta = config.map_padding
         self._step_count = None
-        self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
-        self._num_samples = config.NUM_TOPDOWN_MAP_SAMPLE_POINTS
+        self._map_resolution = (config.map_resolution, config.map_resolution)
+        self._num_samples = config.num_topdown_map_sample_points
         self._ind_x_min = None
         self._ind_x_max = None
         self._ind_y_min = None
@@ -625,7 +625,7 @@ class TopDownMap(Measure):
             self._sim,
             self._map_resolution,
             self._num_samples,
-            self._config.DRAW_BORDER,
+            self._config.draw_border,
         )
 
         range_x = np.where(np.any(top_down_map, axis=1))[0]
@@ -636,7 +636,7 @@ class TopDownMap(Measure):
         self._ind_y_min = range_y[0]
         self._ind_y_max = range_y[-1]
 
-        if self._config.FOG_OF_WAR.DRAW:
+        if self._config.fog_of_war.draw:
             self._fog_of_war_mask = np.zeros_like(top_down_map)
 
         return top_down_map
@@ -655,7 +655,7 @@ class TopDownMap(Measure):
         ] = point_type
 
     def _draw_goals_view_points(self, episode):
-        if self._config.DRAW_VIEW_POINTS:
+        if self._config.draw_view_points:
             for goal in episode.goals:
                 try:
                     if goal.view_points is not None:
@@ -668,7 +668,7 @@ class TopDownMap(Measure):
                     pass
 
     def _draw_goals_positions(self, episode):
-        if self._config.DRAW_GOAL_POSITIONS:
+        if self._config.draw_goal_positions:
 
             for goal in episode.goals:
                 try:
@@ -679,7 +679,7 @@ class TopDownMap(Measure):
                     pass
 
     def _draw_goals_aabb(self, episode):
-        if self._config.DRAW_GOAL_AABBS:
+        if self._config.draw_goal_aabbs:
             for goal in episode.goals:
                 try:
                     sem_scene = self._sim.semantic_annotations()
@@ -729,7 +729,7 @@ class TopDownMap(Measure):
     def _draw_shortest_path(
         self, episode: Episode, agent_position: AgentState
     ):
-        if self._config.DRAW_SHORTEST_PATH:
+        if self._config.draw_shortest_path:
             self._shortest_path_points = self._sim.get_straight_shortest_path_points(
                 agent_position, episode.goals[0].position
             )
@@ -773,7 +773,7 @@ class TopDownMap(Measure):
 
         self._draw_shortest_path(episode, agent_position)
 
-        if self._config.DRAW_SOURCE:
+        if self._config.draw_source:
             self._draw_point(
                 episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
             )
@@ -799,7 +799,7 @@ class TopDownMap(Measure):
         clipped_house_map = self._clip_map(house_map)
 
         clipped_fog_of_war_map = None
-        if self._config.FOG_OF_WAR.DRAW:
+        if self._config.fog_of_war.draw:
             clipped_fog_of_war_map = self._clip_map(self._fog_of_war_mask)
 
         self._metric = {
@@ -836,7 +836,7 @@ class TopDownMap(Measure):
         # Don't draw over the source point
         if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
             color = 10 + min(
-                self._step_count * 245 // self._config.MAX_EPISODE_STEPS, 245
+                self._step_count * 245 // self._config.max_episode_steps, 245
             )
 
             thickness = int(
@@ -856,14 +856,14 @@ class TopDownMap(Measure):
         return self._top_down_map, a_x, a_y
 
     def update_fog_of_war_mask(self, agent_position):
-        if self._config.FOG_OF_WAR.DRAW:
+        if self._config.fog_of_war.draw:
             self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
                 self._top_down_map,
                 self._fog_of_war_mask,
                 agent_position,
                 self.get_polar_angle(),
-                fov=self._config.FOG_OF_WAR.FOV,
-                max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
+                fov=self._config.fog_of_war.fov,
+                max_line_len=self._config.fog_of_war.visibility_dist
                 * max(self._map_resolution)
                 / (self._coordinate_max - self._coordinate_min),
             )
@@ -892,7 +892,7 @@ class DistanceToGoal(Measure):
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._metric = None
-        if self._config.DISTANCE_TO == "VIEW_POINTS":
+        if self._config.distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
                 for goal in episode.goals
@@ -906,19 +906,19 @@ class DistanceToGoal(Measure):
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position
         ):
-            if self._config.DISTANCE_TO == "POINT":
+            if self._config.distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
                     [goal.position for goal in episode.goals],
                     episode,
                 )
-            elif self._config.DISTANCE_TO == "VIEW_POINTS":
+            elif self._config.distance_to == "VIEW_POINTS":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position, self._episode_view_points, episode
                 )
             else:
                 logger.error(
-                    f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
+                    f"Non valid distance_to parameter was provided: {self._config.distance_to}"
                 )
 
             self._previous_position = current_position
@@ -928,13 +928,13 @@ class DistanceToGoal(Measure):
 
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
-    name: str = "MOVE_FORWARD"
+    name: str = "move_forward"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.MOVE_FORWARD)
+        return self._sim.step(HabitatSimActions.move_forward)
 
 
 @registry.register_task_action
@@ -943,7 +943,7 @@ class TurnLeftAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.TURN_LEFT)
+        return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
@@ -952,12 +952,12 @@ class TurnRightAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.TURN_RIGHT)
+        return self._sim.step(HabitatSimActions.turn_right)
 
 
 @registry.register_task_action
 class StopAction(SimulatorTaskAction):
-    name: str = "STOP"
+    name: str = "stop"
 
     def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         task.is_stop_called = False
@@ -976,7 +976,7 @@ class LookUpAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.LOOK_UP)
+        return self._sim.step(HabitatSimActions.look_up)
 
 
 @registry.register_task_action
@@ -985,7 +985,7 @@ class LookDownAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.LOOK_DOWN)
+        return self._sim.step(HabitatSimActions.look_down)
 
 
 @registry.register_task_action
@@ -996,7 +996,7 @@ class TeleportAction(SimulatorTaskAction):
     COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "TELEPORT"
+        return "teleport"
 
     def step(
         self,

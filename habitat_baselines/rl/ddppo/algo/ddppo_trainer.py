@@ -67,37 +67,35 @@ class DDPPOTrainer(PPOTrainer):
         Returns:
             None
         """
-        logger.add_filehandler(self.config.LOG_FILE)
+        logger.add_filehandler(self.config.habitat_baselines.log_file)
+        ddppo_cfg = self.config.habitat_baselines.rl.ddppo
 
         self.actor_critic = PointNavResNetPolicy(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,
-            rnn_type=self.config.RL.DDPPO.rnn_type,
-            num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
-            backbone=self.config.RL.DDPPO.backbone,
-            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
+            rnn_type=ddppo_cfg.rnn_type,
+            num_recurrent_layers=ddppo_cfg.num_recurrent_layers,
+            backbone=ddppo_cfg.backbone,
+            goal_sensor_uuid=self.config.habitat.task.goal_sensor_uuid,
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
         )
         self.actor_critic.to(self.device)
 
-        if (
-            self.config.RL.DDPPO.pretrained_encoder
-            or self.config.RL.DDPPO.pretrained
-        ):
+        if ddppo_cfg.pretrained_encoder or ddppo_cfg.pretrained:
             pretrained_state = torch.load(
-                self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
+                ddppo_cfg.pretrained_weights, map_location="cpu"
             )
 
-        if self.config.RL.DDPPO.pretrained:
+        if ddppo_cfg.pretrained:
             self.actor_critic.load_state_dict(
                 {
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
             )
-        elif self.config.RL.DDPPO.pretrained_encoder:
+        elif ddppo_cfg.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
             self.actor_critic.net.visual_encoder.load_state_dict(
                 {
@@ -107,12 +105,12 @@ class DDPPOTrainer(PPOTrainer):
                 }
             )
 
-        if not self.config.RL.DDPPO.train_encoder:
+        if not ddppo_cfg.train_encoder:
             self._static_encoder = True
             for param in self.actor_critic.net.visual_encoder.parameters():
                 param.requires_grad_(False)
 
-        if self.config.RL.DDPPO.reset_critic:
+        if ddppo_cfg.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
@@ -135,8 +133,9 @@ class DDPPOTrainer(PPOTrainer):
         Returns:
             None
         """
+        ddppo_cfg = self.config.habitat_baselines.rl.ddppo
         self.local_rank, tcp_store = init_distrib_slurm(
-            self.config.RL.DDPPO.distrib_backend
+            ddppo_cfg.distrib_backend
         )
         add_signal_handlers()
 
@@ -149,12 +148,12 @@ class DDPPOTrainer(PPOTrainer):
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
 
-        random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
-        np.random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
+        random.seed(self.config.habitat.seed + self.world_rank)
+        np.random.seed(self.config.habitat.seed + self.world_rank)
 
         self.config.defrost()
-        self.config.TORCH_GPU_ID = self.local_rank
-        self.config.SIMULATOR_GPU_ID = self.local_rank
+        self.config.habitat.torch_gpu_id = self.local_rank
+        self.config.habitat.simulator_gpu_id = self.local_rank
         self.config.freeze()
 
         if torch.cuda.is_available():
@@ -164,15 +163,15 @@ class DDPPOTrainer(PPOTrainer):
             self.device = torch.device("cpu")
 
         self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
+            self.config, get_env_class(self.config.habitat_baselines.env_name)
         )
 
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.habitat_baselines.rl.ppo
         if (
-            not os.path.isdir(self.config.CHECKPOINT_FOLDER)
+            not os.path.isdir(self.config.habitat_baselines.checkpoint_folder)
             and self.world_rank == 0
         ):
-            os.makedirs(self.config.CHECKPOINT_FOLDER)
+            os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
         self._setup_actor_critic_agent(ppo_cfg)
         self.agent.init_distributed(find_unused_params=True)
@@ -248,7 +247,9 @@ class DDPPOTrainer(PPOTrainer):
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),
+            lr_lambda=lambda x: linear_decay(
+                x, self.config.habitat_baselines.num_updates
+            ),
         )
 
         interrupted_state = load_interrupted_state()
@@ -269,18 +270,21 @@ class DDPPOTrainer(PPOTrainer):
 
         with (
             TensorboardWriter(
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                self.config.habitat_baselines.tensorboard_dir,
+                flush_secs=self.flush_secs,
             )
             if self.world_rank == 0
             else contextlib.suppress()
         ) as writer:
-            for update in range(start_update, self.config.NUM_UPDATES):
+            for update in range(
+                start_update, self.config.habitat_baselines.num_updates
+            ):
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
-                        update, self.config.NUM_UPDATES
+                        update, self.config.habitat_baselines.num_updates
                     )
 
                 if EXIT.is_set():
@@ -329,7 +333,7 @@ class DDPPOTrainer(PPOTrainer):
                         step
                         >= ppo_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
                     ) and int(num_rollouts_done_store.get("num_done")) > (
-                        self.config.RL.DDPPO.sync_frac * self.world_size
+                        ddppo_cfg.sync_frac * self.world_size
                     ):
                         break
 
@@ -403,7 +407,11 @@ class DDPPOTrainer(PPOTrainer):
                     )
 
                     # log stats
-                    if update > 0 and update % self.config.LOG_INTERVAL == 0:
+                    if (
+                        update > 0
+                        and update % self.config.habitat_baselines.log_interval
+                        == 0
+                    ):
                         logger.info(
                             "update: {}\tfps: {:.3f}\t".format(
                                 update,
@@ -430,7 +438,11 @@ class DDPPOTrainer(PPOTrainer):
                         )
 
                     # checkpoint model
-                    if update % self.config.CHECKPOINT_INTERVAL == 0:
+                    if (
+                        update
+                        % self.config.habitat_baselines.checkpoint_interval
+                        == 0
+                    ):
                         self.save_checkpoint(
                             f"ckpt.{count_checkpoints}.pth",
                             dict(step=count_steps),

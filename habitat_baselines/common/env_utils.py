@@ -27,10 +27,10 @@ def make_env_fn(
         env object created according to specification.
     """
     dataset = make_dataset(
-        config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
+        config.habitat.dataset.type, config=config.habitat.dataset
     )
     env = env_class(config=config, dataset=dataset)
-    env.seed(rank)
+    env.seed(config.habitat.seed + rank)
     return env
 
 
@@ -42,7 +42,7 @@ def construct_envs(
     each individual env, grouped by scenes.
 
     Args:
-        config: configs that contain num_processes as well as information
+        config: configs that contain simulators_per_gpu as well as information
         necessary to create individual environments.
         env_class: class type of the envs to be created.
 
@@ -50,47 +50,44 @@ def construct_envs(
         VectorEnv object created according to specification.
     """
 
-    num_processes = config.NUM_PROCESSES
+    simulators_per_gpu = config.habitat_baselines.simulators_per_gpu
     configs = []
-    env_classes = [env_class for _ in range(num_processes)]
-    dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
-    scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
-    if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
-        scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+    env_classes = [env_class for _ in range(simulators_per_gpu)]
+    dataset = make_dataset(config.habitat.dataset.type)
+    scenes = config.habitat.dataset.content_scenes
+    if "*" in config.habitat.dataset.content_scenes:
+        scenes = dataset.get_scenes_to_load(config.habitat.dataset)
 
-    if num_processes > 1:
+    if simulators_per_gpu > 1:
         if len(scenes) == 0:
             raise RuntimeError(
-                "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
+                "No scenes to load, multiple simulator logic relies on being able to split scenes uniquely between processes"
             )
 
-        if len(scenes) < num_processes:
+        if len(scenes) < simulators_per_gpu:
             raise RuntimeError(
-                "reduce the number of processes as there "
+                "reduce the number of simulators per GPU as there "
                 "aren't enough number of scenes"
             )
 
         random.shuffle(scenes)
 
-    scene_splits = [[] for _ in range(num_processes)]
+    scene_splits = [[] for _ in range(simulators_per_gpu)]
     for idx, scene in enumerate(scenes):
         scene_splits[idx % len(scene_splits)].append(scene)
 
     assert sum(map(len, scene_splits)) == len(scenes)
 
-    for i in range(num_processes):
+    for i in range(simulators_per_gpu):
         proc_config = config.clone()
         proc_config.defrost()
 
-        task_config = proc_config.TASK_CONFIG
         if len(scenes) > 0:
-            task_config.DATASET.CONTENT_SCENES = scene_splits[i]
+            proc_config.habitat.dataset.content_scenes = scene_splits[i]
 
-        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
-            config.SIMULATOR_GPU_ID
+        proc_config.habitat.simulator.habitat_sim_v0.gpu_device_id = (
+            config.habitat_baselines.simulator_gpu_id
         )
-
-        task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
 
         proc_config.freeze()
         configs.append(proc_config)
@@ -98,7 +95,7 @@ def construct_envs(
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
         env_fn_args=tuple(
-            tuple(zip(configs, env_classes, range(num_processes)))
+            tuple(zip(configs, env_classes, range(simulators_per_gpu)))
         ),
     )
     return envs
