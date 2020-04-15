@@ -25,7 +25,7 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
     def __init__(self):
         habitat_baselines = CN()
         habitat_baselines.cmd_trailing_opts = []
-        habitat_baselines.trainer_name = "PPO"
+        habitat_baselines.trainer_name = "ppo"
         habitat_baselines.env_name = "NavRLEnv"
         habitat_baselines.simulator_gpu_id = 0
         habitat_baselines.torch_gpu_id = 0

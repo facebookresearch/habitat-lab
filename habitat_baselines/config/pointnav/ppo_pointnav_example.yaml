@@ -1,10 +1,10 @@
 habitat:
   simulator:
     agent_0:
-      sensors: ["depth_sensor", "rgb_sensor"]
+      sensors: ["depth_sensor"]
 
 habitat_baselines:
-  trainer_name: "PPO"
+  trainer_name: "ppo"
   env_name: "NavRLEnv"
   simulator_gpu_id: 0
   torch_gpu_id: 0
@@ -13,7 +13,7 @@ habitat_baselines:
   video_dir: "video_dir"
   test_episode_count: 2
   eval_ckpt_path_dir: "data/new_checkpoints"
-  simulators_per_gpu: 1
+  simulators_per_gpu: 2
   sensors: ["rgb_sensor", "depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: 10000
@@ -24,7 +24,7 @@ habitat_baselines:
     ppo:
       # ppo params
       clip_param: 0.1
-      ppo_epoch: 4
+      ppo_epoch: 2
       num_mini_batch: 1
       value_loss_coef: 0.5
       entropy_coef: 0.01
