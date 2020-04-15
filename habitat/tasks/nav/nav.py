@@ -128,7 +128,7 @@ class PointGoalSensor(Sensor):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -253,7 +253,7 @@ class HeadingSensor(Sensor):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         super().__init__(config=config)
@@ -320,7 +320,7 @@ class EpisodicGPSSensor(Sensor):
     cls_uuid: str = "gps"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -419,7 +419,7 @@ class Success(Measure):
     cls_uuid: str = "success"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -433,7 +433,7 @@ class Success(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
@@ -464,7 +464,7 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._previous_position = None
         self._start_end_episode_distance = None
@@ -488,7 +488,7 @@ class SPL(Measure):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(position_b - position_a, ord=2)
@@ -534,7 +534,7 @@ class SoftSPL(SPL):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
@@ -589,7 +589,7 @@ class TopDownMap(Measure):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -880,7 +880,7 @@ class DistanceToGoal(Measure):
     cls_uuid: str = "distance_to_goal"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._previous_position = None
         self._sim = sim
@@ -901,7 +901,7 @@ class DistanceToGoal(Measure):
                 for goal in episode.goals
                 for view_point in goal.view_points
             ]
-        self.update_metric(*args, episode=episode, **kwargs)
+        self.update_metric(episode=episode, *args, **kwargs)
 
     def update_metric(self, episode: Episode, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position

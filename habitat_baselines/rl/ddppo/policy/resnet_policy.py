@@ -175,10 +175,6 @@ class PointNavResNetNet(Net):
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
 
-        # OrderedDict([('compass', Box(1, )), ('depth', Box(256, 256, 1)),
-        #              ('gps', Box(2, )), ('objectgoal', Box(1, )),
-        #              ('rgb', Box(256, 256, 3))])
-
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             in observation_space.spaces
@@ -193,13 +189,15 @@ class PointNavResNetNet(Net):
             rnn_input_size += 32
 
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
-            _n_object_categories = (
+            self._n_object_categories = (
                 int(
                     observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
                 )
                 + 1
             )
-            self.obj_categories_embedding = nn.Linear(_n_object_categories, 32)
+            self.obj_categories_embedding = nn.Linear(
+                self._n_object_categories, 32
+            )
             rnn_input_size += 32
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
