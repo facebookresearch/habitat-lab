@@ -1,8 +1,13 @@
 # Note:  Hyperparameters have been changed slightly from
 # the paper to allow for things to easily run on 1 GPU
+
+habitat:
+  simulator:
+    agent_0:
 # Note:  To train the an RGB only model,
 # you may need to use 8 processes with 4 mini batches,
 # If so, the number of updates should be cut in half
+      sensors: ["depth_sensor"]
 
 habitat_baselines:
   env_name: "NavRLEnv"

@@ -1,7 +1,7 @@
 habitat:
   simulator:
     agent_0:
-      sensors: ["depth_sensor", "rgb_sensor"]
+      sensors: ["depth_sensor"]
 
 habitat_baselines:
   trainer_name: "ddppo"
