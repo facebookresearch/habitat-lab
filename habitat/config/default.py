@@ -222,11 +222,11 @@ _C.habitat.simulator.scene = (
 )
 _C.habitat.simulator.seed = _C.habitat.seed
 _C.habitat.simulator.turn_angle = (
-    10
-)  # angle to rotate left or right in degrees
+    10  # angle to rotate left or right in degrees
+)
 _C.habitat.simulator.tilt_angle = (
-    15
-)  # angle to tilt the camera up or down in degrees
+    15  # angle to tilt the camera up or down in degrees
+)
 _C.habitat.simulator.default_agent_id = 0
 # -----------------------------------------------------------------------------
 # simulator sensors
