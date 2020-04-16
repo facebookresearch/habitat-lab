@@ -263,13 +263,14 @@ class ImageGoalSensor(Sensor):
     def get_observation(
         self, *args: Any, observations, episode: Episode, **kwargs: Any
     ):
-        if episode.episode_id == self._current_episode_id:
+        episode_uniq_id = episode.scene_id + episode.episode_id
+        if episode_uniq_id == self._current_episode_id:
             return self._current_image_goal
 
-        image_goal = self._get_pointnav_episode_image_goal(episode)
-
-        self._current_image_goal = image_goal
-        self._current_episode_id = episode.episode_id
+        self._current_image_goal = self._get_pointnav_episode_image_goal(
+            episode
+        )
+        self._current_episode_id = episode_uniq_id
 
         return self._current_image_goal
 
