@@ -28,7 +28,7 @@ followed by fine-tuning the NAV model.
 ## EDFE model (Encoder-Decoder for Feature Extraction)- 
 
 ### Information:
-This is a encoder-decoder network that takes RGB input and generates an RGB reconstruction, a Depth map and a a Segmentation map. The encoder from this network is extracted and used as a frozen feature extractor for subsequent VQA and NAV trainers.
+This is an encoder-decoder network that takes RGB input and generates an RGB reconstruction, a Depth map and a a Segmentation map. The encoder from this network is extracted and used as a frozen feature extractor for subsequent VQA and NAV trainers.
 
 (more information about network in Appendix B of [paper](https://embodiedqa.org/paper.pdf)).
 
@@ -44,6 +44,12 @@ Configuration for training the VQA (answering) model can be found in `habitat_ba
 
 Training checkpoints are by default stored in `data/eqa/edfe/checkpoints`.
 
+### Pre-trained model
+
+Pre-trained EDFE model can be downloaded from [here](https://www.dropbox.com/s/i4oik5ahqfhg1nu/pretrained_edfe.ckpt?dl=0). 
+
+After downloading the pre-trained model, add it's path to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation. 
+
 ### Eval:
 
 ```
@@ -53,8 +59,6 @@ Training checkpoints are by default stored in `data/eqa/edfe/checkpoints`.
 Results from evaluation are stored in `data/eqa/edfe/results/val`.
 
 ### Example results:
-
-Trained for 5 epochs on 100k images from MP3DEQA dataset episodes. ([Checkpoint link](https://drive.google.com/file/d/1onjsv8Y8PrAyUE8wp9oe-b8xpHKKtRJ1/view?usp=sharing))
 
 <img src="https://user-images.githubusercontent.com/24846546/76339759-6f788b00-62f2-11ea-90e0-a8ac16c34f76.jpg" width=40%>
 
@@ -71,7 +75,7 @@ The VQA model is responsible for predicting an answer based on question and RGB 
 
 Configuration for training the VQA (answering) model can be found in `habitat_baselines/config/eqa/il_vqa.yaml`.
 
-The VQA trainer picks the EDFE encoder checkpoint by default from `data/eqa/edfe/checkpoints/epoch_5.ckpt`. If you haven't trained the EDFE model and want to use a different checkpoint, the corresponding path can be changed in the aforementioned configuration file's `EDFE_CKPT_PATH` parameter.
+The VQA trainer picks the EDFE encoder checkpoint by default from `data/eqa/edfe/checkpoints/epoch_20.ckpt`. If you haven't trained the EDFE model and want to use a different checkpoint, the corresponding path can be changed in the aforementioned config file's `EDFE_CKPT_PATH` parameter.
 
 ### Train:
 
@@ -80,6 +84,12 @@ The VQA trainer picks the EDFE encoder checkpoint by default from `data/eqa/edfe
 ```
 
 Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
+
+### Pre-trained model
+
+Pre-trained VQA model can be downloaded from [here](https://www.dropbox.com/s/5e4srcc5odl4rbo/pretrained_vqa.ckpt?dl=0). 
+
+After downloading the pre-trained model, add it's path to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation. 
 
 ### Eval:
 

@@ -91,7 +91,9 @@ class VQATrainer(BaseILTrainer):
         avg_mean_reciprocal_rank = 0.0
         print(model)
         model.double().train().cuda()
-        model.cnn.eval()
+
+        if config.IL.VQA.freeze_encoder:
+            model.cnn.eval()
 
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs

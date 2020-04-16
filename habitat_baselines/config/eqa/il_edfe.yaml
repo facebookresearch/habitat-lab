@@ -23,6 +23,6 @@ EVAL_SAVE_RESULTS_INTERVAL: 20
 IL:
   EDFE:
     # edfe params
-    max_epochs: 5
+    max_epochs: 20
     batch_size: 40
     lr: 1e-3

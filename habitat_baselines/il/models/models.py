@@ -281,7 +281,7 @@ class MultitaskCNN(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, x):
-        assert self.training is False
+        # assert self.training is False
         conv1 = self.conv_block1(x)
         conv2 = self.conv_block2(conv1)
         conv3 = self.conv_block3(conv2)
