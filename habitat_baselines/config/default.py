@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 import habitat
-from habitat.config import Config as CN
+from habitat.config import Config
 from habitat.core.utils import Singleton
 
 DEFAULT_CONFIG_DIR = "configs/"
@@ -148,7 +148,7 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
-) -> CN:
+) -> Config:
     r"""Create a unified config with default values overwritten by values from
     :p:`config_paths` and overwritten by options from :p:`opts`.
 
