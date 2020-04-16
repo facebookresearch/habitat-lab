@@ -74,7 +74,7 @@ def test_state_sensors():
                 NavigationEpisode(
                     episode_id="0",
                     scene_id=config.SIMULATOR.SCENE,
-                    start_position=[03.00611, 0.072447, -2.67867],
+                    start_position=[03.00611, 0.072_447, -2.67867],
                     start_rotation=random_rotation,
                     goals=[],
                 )
@@ -308,14 +308,18 @@ def test_imagegoal_sensor():
         new_obs = env.step(sample_non_stop_action(env.action_space))
         # check to see if taking non-stop actions will affect static image_goal
         assert np.allclose(obs["imagegoal"], new_obs["imagegoal"])
+        assert np.allclose(obs["rgb"].shape, new_obs["imagegoal"].shape)
 
     previous_episode_obs = obs
-    new_episode_obs = env.reset()
+    _ = env.reset()
     for _ in range(10):
         new_obs = env.step(sample_non_stop_action(env.action_space))
         # check to see if taking non-stop actions will affect static image_goal
         assert not np.allclose(
             previous_episode_obs["imagegoal"], new_obs["imagegoal"]
+        )
+        assert np.allclose(
+            previous_episode_obs["rgb"].shape, new_obs["imagegoal"].shape
         )
 
     env.close()
