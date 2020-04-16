@@ -6,21 +6,21 @@
 
 import os
 import time
-from typing import ClassVar, Dict, List
 from collections import OrderedDict
+from typing import ClassVar, Dict, List
 
-import torch
 import cv2
 import numpy as np
+import torch
 
 from habitat import Config, logger
+from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
     poll_checkpoint_folder,
-    tensor_to_rgb_images,
     tensor_to_depth_images,
+    tensor_to_rgb_images,
 )
-from habitat.utils.visualizations.utils import images_to_video
 
 
 class BaseTrainer:
