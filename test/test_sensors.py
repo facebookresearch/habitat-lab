@@ -278,6 +278,9 @@ def test_imagegoal_sensor():
     pointgoal = [0.1, 0.2, 0.3]
     goal_position = np.add(valid_start_position, pointgoal)
 
+    pointgoal_2 = [0.3, 0.2, 0.1]
+    goal_position_2 = np.add(valid_start_position, pointgoal_2)
+
     # starting quaternion is rotated 180 degree along z-axis, which
     # corresponds to simulator using z-negative as forward action
     start_rotation = [0, 0, 0, 1]
@@ -290,7 +293,14 @@ def test_imagegoal_sensor():
                 start_position=valid_start_position,
                 start_rotation=start_rotation,
                 goals=[NavigationGoal(position=goal_position)],
-            )
+            ),
+            NavigationEpisode(
+                episode_id="1",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=valid_start_position,
+                start_rotation=start_rotation,
+                goals=[NavigationGoal(position=goal_position_2)],
+            ),
         ]
     )
     obs = env.reset()
@@ -298,6 +308,15 @@ def test_imagegoal_sensor():
         new_obs = env.step(sample_non_stop_action(env.action_space))
         # check to see if taking non-stop actions will affect static image_goal
         assert np.allclose(obs["imagegoal"], new_obs["imagegoal"])
+
+    previous_episode_obs = obs
+    new_episode_obs = env.reset()
+    for _ in range(10):
+        new_obs = env.step(sample_non_stop_action(env.action_space))
+        # check to see if taking non-stop actions will affect static image_goal
+        assert not np.allclose(
+            previous_episode_obs["imagegoal"], new_obs["imagegoal"]
+        )
 
     env.close()
 
