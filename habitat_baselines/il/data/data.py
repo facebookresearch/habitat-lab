@@ -1,12 +1,12 @@
-import torch
-from torch.utils.data import Dataset
-
-import os
 import copy
+import os
+from typing import List, Tuple
+
 import cv2
 import numpy as np
+import torch
+from torch.utils.data import Dataset
 from tqdm import tqdm
-from typing import List, Tuple
 
 from habitat import logger
 from habitat.core.simulator import ShortestPathPoint

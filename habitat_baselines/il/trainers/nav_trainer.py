@@ -6,22 +6,23 @@
 
 import os
 import time
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
 import habitat
 from habitat import logger
 from habitat_baselines.common.base_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.data import EQADataset
-from habitat_baselines.il.models.models import (
-    NavPlannerControllerModel,
-    MaskedNLLCriterion,
-)
 from habitat_baselines.il.metrics import NavMetric
-
-import numpy as np
-import torch
-from torch.utils.data import DataLoader
-import torch.nn.functional as F
+from habitat_baselines.il.models.models import (
+    MaskedNLLCriterion,
+    NavPlannerControllerModel,
+)
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 

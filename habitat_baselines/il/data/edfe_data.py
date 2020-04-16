@@ -1,13 +1,11 @@
 import os
 import random
-from tqdm import tqdm
 from typing import List
 
 import cv2
 import numpy as np
-
-# import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 import habitat
 from habitat.core.simulator import ShortestPathPoint

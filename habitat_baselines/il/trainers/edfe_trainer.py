@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
+
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
-import numpy as np
 
 import habitat
 from habitat import logger
