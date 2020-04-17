@@ -23,28 +23,45 @@ def action_to_one_hot(action: int) -> np.array:
 class ShortestPathFollower:
     r"""Utility class for extracting the action on the shortest path to the
         goal.
-    Args:
-        sim: HabitatSim instance.
-        goal_radius: Distance between the agent and the goal for it to be
+
+    :param sim: HabitatSim instance.
+    :param goal_radius: Distance between the agent and the goal for it to be
             considered successful.
-        return_one_hot: If true, returns a one-hot encoding of the action
+    :param return_one_hot: If true, returns a one-hot encoding of the action
             (useful for training ML agents). If false, returns the
             SimulatorAction.
+    :param stop_on_error: Return stop if the follower is unable to determine a
+                          suitable action to take next.  If false, will raise
+                          a habitat_sim.errors.GreedyFollowerError instead
     """
 
     def __init__(
-        self, sim: HabitatSim, goal_radius: float, return_one_hot: bool = True
+        self,
+        sim: HabitatSim,
+        goal_radius: float,
+        return_one_hot: bool = True,
+        stop_on_error: bool = True,
     ):
-        self._follower = habitat_sim.nav.GreedyGeodesicFollower(
-            sim._sim.pathfinder,
-            sim._sim.get_agent(0),
-            goal_radius=goal_radius,
-            stop_key=HabitatSimActions.STOP,
-            forward_key=HabitatSimActions.MOVE_FORWARD,
-            left_key=HabitatSimActions.TURN_LEFT,
-            right_key=HabitatSimActions.TURN_RIGHT,
-        )
+
         self._return_one_hot = return_one_hot
+        self._sim = sim
+        self._goal_radius = goal_radius
+        self._follower = None
+        self._current_scene = None
+        self._stop_on_error = stop_on_error
+
+    def _build_follower(self):
+        if self._current_scene != self._sim.config.SCENE:
+            self._follower = habitat_sim.nav.GreedyGeodesicFollower(
+                self._sim._sim.pathfinder,
+                self._sim._sim.get_agent(0),
+                goal_radius=self._goal_radius,
+                stop_key=HabitatSimActions.STOP,
+                forward_key=HabitatSimActions.MOVE_FORWARD,
+                left_key=HabitatSimActions.TURN_LEFT,
+                right_key=HabitatSimActions.TURN_RIGHT,
+            )
+            self._current_scene = self._sim.config.SCENE
 
     def _get_return_value(self, action) -> Union[int, np.array]:
         if self._return_one_hot:
@@ -57,7 +74,14 @@ class ShortestPathFollower:
     ) -> Optional[Union[int, np.array]]:
         """Returns the next action along the shortest path.
         """
-        next_action = self._follower.next_action_along(goal_pos)
+        self._build_follower()
+        try:
+            next_action = self._follower.next_action_along(goal_pos)
+        except habitat_sim.errors.GreedyFollowerError as e:
+            if self._stop_on_error:
+                next_action = HabitatSimActions.STOP
+            else:
+                raise e
 
         return self._get_return_value(next_action)
 
