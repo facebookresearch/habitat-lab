@@ -115,12 +115,17 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
+            if k in cls.METRICS_BLACKLIST:
+                continue
+
             if isinstance(v, dict):
                 result.update(
                     {
@@ -128,6 +133,7 @@ class PPOTrainer(BaseRLTrainer):
                         for subk, subv in cls._extract_scalars_from_info(
                             v
                         ).items()
+                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -184,7 +190,7 @@ class PPOTrainer(BaseRLTrainer):
         env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=current_episode_reward.device
         )
@@ -294,7 +300,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
@@ -470,7 +476,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
-        batch = batch_obs(observations, self.device)
+        batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -525,7 +531,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, self.device)
+            batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -571,8 +577,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metric_name=self.metric_uuid,
-                            metric_value=infos[i][self.metric_uuid],
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 

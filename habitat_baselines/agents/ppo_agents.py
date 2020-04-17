@@ -116,10 +116,7 @@ class PPOAgent(Agent):
         )
 
     def act(self, observations):
-        batch = batch_obs([observations])
-        for sensor in batch:
-            batch[sensor] = batch[sensor].to(self.device)
-
+        batch = batch_obs([observations], device=self.device)
         with torch.no_grad():
             (
                 _,

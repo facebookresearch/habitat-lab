@@ -1,5 +1,6 @@
 ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
+
 SIMULATOR:
   TURN_ANGLE: 30
   TILT_ANGLE: 30
@@ -37,13 +38,14 @@ TASK:
   GOAL_SENSOR_UUID: objectgoal
 
   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
-  SUCCESS:
-    SUCCESS_DISTANCE: 0.1
+
   DISTANCE_TO_GOAL:
     DISTANCE_TO: VIEW_POINTS
+  SUCCESS:
+    SUCCESS_DISTANCE: 0.1
 
 DATASET:
   TYPE: ObjectNav-v1
-  SPLIT: val
-  DATA_PATH: "data/datasets/objectnav/mp3d/v0/{split}/{split}.json.gz"
+  SPLIT: train
+  DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"

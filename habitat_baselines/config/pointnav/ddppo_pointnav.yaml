@@ -38,7 +38,6 @@ RL:
     use_normalized_advantage: False
 
     hidden_size: 512
-
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use

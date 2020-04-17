@@ -144,7 +144,10 @@ def get_config(
 
         for config_path in config_paths:
             config.merge_from_file(config_path)
-
+    if opts:
+        for k, v in zip(opts[0::2], opts[1::2]):
+            if k == "BASE_TASK_CONFIG_PATH":
+                config.BASE_TASK_CONFIG_PATH = v
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
     if opts:
         config.CMD_TRAILING_OPTS = opts
