@@ -45,14 +45,14 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
         # -----------------------------------------------------------------------------
         # eval CONFIG
         # -----------------------------------------------------------------------------
-        habitat_baselines.eval = CN()
+        habitat_baselines.eval = Config()
         # The split to evaluate on
         habitat_baselines.eval.split = "val"
         habitat_baselines.eval.use_ckpt_config = True
         # -----------------------------------------------------------------------------
         # REINFORCEMENT LEARNING (RL) environment CONFIG
         # -----------------------------------------------------------------------------
-        habitat_baselines.rl = CN()
+        habitat_baselines.rl = Config()
         habitat_baselines.rl.reward_measure = "distance_to_goal"
         habitat_baselines.rl.success_measure = "success"
         habitat_baselines.rl.success_reward = 10.0
@@ -60,7 +60,7 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
         # -----------------------------------------------------------------------------
         # PROXIMAL POLICY OPTIMIZATION (PPO)
         # -----------------------------------------------------------------------------
-        habitat_baselines.rl.ppo = CN()
+        habitat_baselines.rl.ppo = Config()
         habitat_baselines.rl.ppo.clip_param = 0.2
         habitat_baselines.rl.ppo.ppo_epoch = 4
         habitat_baselines.rl.ppo.num_mini_batch = 16
@@ -81,7 +81,7 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
         # -----------------------------------------------------------------------------
         # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
         # -----------------------------------------------------------------------------
-        habitat_baselines.rl.ddppo = CN()
+        habitat_baselines.rl.ddppo = Config()
         habitat_baselines.rl.ddppo.sync_frac = 0.6
         habitat_baselines.rl.ddppo.distrib_backend = "GLOO"
         habitat_baselines.rl.ddppo.rnn_type = "LSTM"
@@ -101,7 +101,7 @@ class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
         # -----------------------------------------------------------------------------
         # orbslam2 BASELINE
         # -----------------------------------------------------------------------------
-        habitat_baselines.orbslam2 = CN()
+        habitat_baselines.orbslam2 = Config()
         habitat_baselines.orbslam2.slam_vocab_path = (
             "habitat_baselines/slambased/data/ORBvoc.txt"
         )
