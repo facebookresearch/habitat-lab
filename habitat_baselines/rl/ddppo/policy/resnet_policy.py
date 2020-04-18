@@ -214,9 +214,8 @@ class PointNavResNetNet(Net):
                 )
                 + 1
             )
-
             self.obj_categories_embedding = nn.Embedding(
-                _n_object_categories, 32
+                self._n_object_categories, 32
             )
             rnn_input_size += 32
 
@@ -312,23 +311,21 @@ class PointNavResNetNet(Net):
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
-            x.append(self.obj_categories_embedding(object_goal))
+            x.append(self.obj_categories_embedding(object_goal).squeeze())
 
-        if EpisodicGPSSensor.cls_uuid in observations:
+        if EpisodicCompassSensor.cls_uuid in observations:
             compass_observations = torch.stack(
                 [
-                    torch.cos(observations[EpisodicGPSSensor.cls_uuid]),
-                    torch.sin(observations[EpisodicGPSSensor.cls_uuid]),
+                    torch.cos(observations[EpisodicCompassSensor.cls_uuid]),
+                    torch.sin(observations[EpisodicCompassSensor.cls_uuid]),
                 ],
                 -1,
             )
             x.append(self.compass_embedding(compass_observations.squeeze()))
 
-        if EpisodicCompassSensor.cls_uuid in observations:
+        if EpisodicGPSSensor.cls_uuid in observations:
             x.append(
-                self.gps_embedding(
-                    observations[EpisodicCompassSensor.cls_uuid]
-                )
+                self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
             )
 
         x = torch.cat(x, dim=1)
