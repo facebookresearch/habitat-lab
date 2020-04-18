@@ -196,6 +196,8 @@ class Env:
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
