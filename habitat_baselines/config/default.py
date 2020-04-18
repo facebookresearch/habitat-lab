@@ -23,7 +23,7 @@ CONFIG_FILE_SEPARATOR = ","
 # but have it in your import path for some reason
 class _HabitatBaselinesDefaultConfigBuilder(metaclass=Singleton):
     def __init__(self):
-        habitat_baselines = CN()
+        habitat_baselines = Config()
         habitat_baselines.cmd_trailing_opts = []
         habitat_baselines.trainer_name = "ppo"
         habitat_baselines.env_name = "NavRLEnv"
