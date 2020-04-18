@@ -56,11 +56,13 @@ class ShortestPathFollower:
                 self._sim._sim.pathfinder,
                 self._sim._sim.get_agent(0),
                 goal_radius=self._goal_radius,
-                stop_key=HabitatSimActions.STOP,
-                forward_key=HabitatSimActions.MOVE_FORWARD,
-                left_key=HabitatSimActions.TURN_LEFT,
-                right_key=HabitatSimActions.TURN_RIGHT,
             )
+            self._follower.action_mapping = {
+                habitat_sim.nav.GreedyFollowerCodes.STOP: HabitatSimActions.STOP,
+                habitat_sim.nav.GreedyFollowerCodes.FORWARD: HabitatSimActions.MOVE_FORWARD,
+                habitat_sim.nav.GreedyFollowerCodes.RIGHT: HabitatSimActions.TURN_RIGHT,
+                habitat_sim.nav.GreedyFollowerCodes.LEFT: HabitatSimActions.TURN_LEFT,
+            }
             self._current_scene = self._sim.config.SCENE
 
     def _get_return_value(self, action) -> Union[int, np.array]:
