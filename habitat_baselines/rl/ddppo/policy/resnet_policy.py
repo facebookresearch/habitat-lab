@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from gym.spaces import Box
 
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -15,7 +17,11 @@ from habitat.tasks.nav.nav import (
     IntegratedPointGoalGPSAndCompassSensor,
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
-from habitat_baselines.common.utils import CategoricalNet, Flatten
+from habitat_baselines.common.utils import (
+    CategoricalNet,
+    Flatten,
+    ResizeCenterCropper,
+)
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
@@ -35,6 +41,7 @@ class PointNavResNetPolicy(Policy):
         resnet_baseplanes=32,
         backbone="resnet50",
         normalize_visual_inputs=False,
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__(
             PointNavResNetNet(
@@ -46,6 +53,7 @@ class PointNavResNetPolicy(Policy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
+                obs_transform=obs_transform,
             ),
             action_space.n,
         )
@@ -60,8 +68,15 @@ class ResNetEncoder(nn.Module):
         spatial_size=128,
         make_backbone=None,
         normalize_visual_inputs=False,
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__()
+
+        self.obs_transform = obs_transform
+        if self.obs_transform is not None:
+            observation_space = self.obs_transform.transform_observation_space(
+                observation_space
+            )
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -144,6 +159,9 @@ class ResNetEncoder(nn.Module):
 
             cnn_input.append(depth_observations)
 
+        if self.obs_transform:
+            cnn_input = [self.obs_transform(inp) for inp in cnn_input]
+
         x = torch.cat(cnn_input, dim=1)
         x = F.avg_pool2d(x, 2)
 
@@ -168,6 +186,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs,
+        obs_transform=ResizeCenterCropper(size=(256, 256)),
     ):
         super().__init__()
 
@@ -227,6 +246,7 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
             normalize_visual_inputs=normalize_visual_inputs,
+            obs_transform=obs_transform,
         )
 
         if not self.visual_encoder.is_blind:
