@@ -191,7 +191,7 @@ class PointGoalSensor(Sensor):
                 return direction_vector_agent
 
     def get_observation(
-        self, *args: Any, observations, episode: Episode, **kwargs: Any
+        self, observations, episode: Episode, *args: Any, **kwargs: Any
     ):
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
@@ -230,7 +230,7 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
         return self.cls_uuid
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
@@ -295,7 +295,7 @@ class EpisodicCompassSensor(HeadingSensor):
         return self.cls_uuid
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
@@ -344,7 +344,7 @@ class EpisodicGPSSensor(Sensor):
         )
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
 
@@ -429,7 +429,7 @@ class Success(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return self.cls_uuid
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
@@ -478,7 +478,7 @@ class SPL(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "spl"
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
         )
@@ -524,7 +524,7 @@ class SoftSPL(SPL):
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "softspl"
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
@@ -753,7 +753,7 @@ class TopDownMap(Measure):
                 self.line_thickness,
             )
 
-    def reset_metric(self, *args: Any, episode, **kwargs: Any):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map()
@@ -961,10 +961,10 @@ class TurnRightAction(SimulatorTaskAction):
 class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
-    def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False
 
-    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
+    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
