@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
+BASE_TASK_CONFIG_PATH: ["configs/tasks/pointnav_gibson.yaml"]
 TRAINER_NAME: "ddppo"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -38,6 +38,7 @@ RL:
     use_normalized_advantage: False
 
     hidden_size: 512
+
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
