@@ -197,6 +197,12 @@ class Env:
 
         assert len(self.episodes) > 0, "Episodes list is empty"
 
+        # Delete the shortest path cache of the current episode
+        # Caching it for the next time we see this episode isn't really worth
+        # it
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
+
         self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
 
