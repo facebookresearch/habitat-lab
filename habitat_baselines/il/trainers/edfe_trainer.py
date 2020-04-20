@@ -54,7 +54,7 @@ class EDFETrainer(BaseILTrainer):
 
         logger.info("train_loader has %d samples" % len(edfe_dataset))
 
-        model = MultitaskCNNOutput(num_classes=40)
+        model = MultitaskCNNOutput(num_classes=41)
         model.double().train().cuda()
 
         optim = torch.optim.Adam(
@@ -81,9 +81,9 @@ class EDFETrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    rgb = rgb.cuda()
-                    depth = depth.cuda()
-                    seg = seg.cuda()
+                    rgb = rgb.double().cuda()
+                    depth = depth.double().cuda()
+                    seg = seg.double().cuda()
 
                     out_seg, out_depth, out_ae = model(rgb)
 
@@ -170,20 +170,20 @@ class EDFETrainer(BaseILTrainer):
 
         logger.info("eval_loader has %d samples" % len(edfe_dataset))
 
-        model = MultitaskCNNOutput(num_classes=40)
+        model = MultitaskCNNOutput(num_classes=41)
 
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
 
-        model.eval()
         model.double().cuda()
+        model.eval()
 
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
         seg_loss = torch.nn.CrossEntropyLoss()
 
         np.random.seed(2)
-        self.colors = np.random.randint(255, size=(40, 3))
+        self.colors = np.random.randint(255, size=(41, 3))
 
         t = 0
         avg_loss = 0.0

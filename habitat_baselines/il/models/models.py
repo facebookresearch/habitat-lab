@@ -51,7 +51,7 @@ class MaskedNLLCriterion(nn.Module):
 
 class MultitaskCNNOutput(nn.Module):
     def __init__(
-        self, num_classes=40,
+        self, num_classes=41,
     ):
         super(MultitaskCNNOutput, self).__init__()
 
@@ -202,7 +202,7 @@ class MultitaskCNNOutput(nn.Module):
 class MultitaskCNN(nn.Module):
     def __init__(
         self,
-        num_classes=40,
+        num_classes=41,
         pretrained=True,
         checkpoint_path="data/eqa/edfe/checkpoints/epoch_5.ckpt",
     ):
@@ -358,7 +358,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         super(VqaLstmCnnAttentionModel, self).__init__()
 
         cnn_kwargs = {
-            "num_classes": 40,
+            "num_classes": 41,
             "pretrained": True,
             "checkpoint_path": edfe_ckpt_path,
         }

@@ -5,7 +5,7 @@ ENV_NAME: "EDFEILEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 
-DATASET_PATH: "data/datasets/eqa/edfe_dataset/{split}/{type}"
+DATASET_PATH: "data/datasets/eqa/edfe_dataset/{split}/{split}.db"
 
 EVAL_CKPT_PATH_DIR: "data/eqa/edfe/checkpoints"
 
