@@ -90,7 +90,7 @@ class VQATrainer(BaseILTrainer):
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
         print(model)
-        model.double().train().cuda()
+        model.train().cuda()
 
         if config.IL.VQA.freeze_encoder:
             model.cnn.eval()
@@ -239,7 +239,7 @@ class VQATrainer(BaseILTrainer):
 
         model.eval()
         model.cnn.eval()
-        model.double().cuda()
+        model.cuda()
 
         metrics = VqaMetric(
             info={"split": "val"},

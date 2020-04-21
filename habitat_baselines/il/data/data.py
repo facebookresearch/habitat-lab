@@ -227,7 +227,7 @@ class EQADataset(Dataset):
             img = img.transpose(2, 0, 1)
             img = img / 255.0
             frames.append(img)
-        return np.array(frames)
+        return np.array(frames, dtype=np.float32)
 
     """
     if the action sequence is [f, f, l, l, f, f, f, r]

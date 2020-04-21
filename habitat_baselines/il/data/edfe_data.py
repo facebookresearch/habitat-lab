@@ -205,7 +205,7 @@ class EDFEDataset(Dataset):
         rgb_binary = self.lmdb_cursor.get(rgb_idx.encode())
         rgb_np = np.frombuffer(rgb_binary, dtype="uint8")
         rgb = rgb_np.reshape(256, 256, 3) / 255.0
-        rgb = rgb.transpose(2, 0, 1)
+        rgb = rgb.transpose(2, 0, 1).astype(np.float32)
 
         depth_idx = "{0:0=6d}_depth".format(idx)
         depth_binary = self.lmdb_cursor.get(depth_idx.encode())

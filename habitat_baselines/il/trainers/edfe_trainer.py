@@ -55,7 +55,7 @@ class EDFETrainer(BaseILTrainer):
         logger.info("train_loader has %d samples" % len(edfe_dataset))
 
         model = MultitaskCNNOutput(num_classes=41)
-        model.double().train().cuda()
+        model.train().cuda()
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -81,9 +81,9 @@ class EDFETrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    rgb = rgb.double().cuda()
-                    depth = depth.double().cuda()
-                    seg = seg.double().cuda()
+                    rgb = rgb.cuda()
+                    depth = depth.cuda()
+                    seg = seg.cuda()
 
                     out_seg, out_depth, out_ae = model(rgb)
 
@@ -114,6 +114,7 @@ class EDFETrainer(BaseILTrainer):
 
                     loss.backward()
                     optim.step()
+                    exit()
 
                 end_time = time.time()
                 time_taken = "%.01f" % ((end_time - start_time) / 60)
@@ -175,8 +176,7 @@ class EDFETrainer(BaseILTrainer):
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
 
-        model.double().cuda()
-        model.eval()
+        model.cuda().eval()
 
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
