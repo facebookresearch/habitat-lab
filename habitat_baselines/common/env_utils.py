@@ -31,6 +31,7 @@ def make_env_fn(
     )
     env = env_class(config=config, dataset=dataset)
     env.seed(config.habitat.seed + rank)
+
     return env
 
 

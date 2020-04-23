@@ -108,6 +108,11 @@ _C.habitat.task.objectgoal_sensor.type = "ObjectGoalSensor"
 _C.habitat.task.objectgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
 _C.habitat.task.objectgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
+# IMAGEGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.habitat.task.IMAGEGOAL_SENSOR = CN()
+_C.habitat.task.IMAGEGOAL_SENSOR.TYPE = "ImageGoalSensor"
+# -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.heading_sensor = CN()

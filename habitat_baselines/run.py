@@ -9,6 +9,7 @@ import random
 from typing import List, Optional
 
 import numpy as np
+import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
@@ -56,6 +57,7 @@ def run_exp(
 
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
+    torch.seed_manual(config.habitat.seed)
 
     trainer_init = baseline_registry.get_trainer(
         config.habitat_baselines.trainer_name

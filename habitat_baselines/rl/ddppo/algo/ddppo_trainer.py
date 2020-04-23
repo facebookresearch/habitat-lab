@@ -148,13 +148,16 @@ class DDPPOTrainer(PPOTrainer):
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
 
-        random.seed(self.config.habitat.seed + self.world_rank)
-        np.random.seed(self.config.habitat.seed + self.world_rank)
-
         self.config.defrost()
         self.config.habitat.torch_gpu_id = self.local_rank
         self.config.habitat.simulator_gpu_id = self.local_rank
+        # Multiply by the number of simulators to make sure they also get unique seeds
+        self.config.habitat.seed += self.world_rank * self.config.NUM_PROCESSES
         self.config.freeze()
+
+        random.seed(self.config.habitat.seed)
+        np.random.seed(self.config.habitat.seed)
+        torch.manual_seed(self.config.habitat.seed)
 
         if torch.cuda.is_available():
             self.device = torch.device("cuda", self.local_rank)
