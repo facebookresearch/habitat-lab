@@ -8,6 +8,7 @@ import argparse
 import random
 
 import numpy as np
+import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
@@ -53,6 +54,7 @@ def run_exp(exp_config: str, run_type: str, opts=None) -> None:
 
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
+    torch.manual_seed(config.TASK_CONFIG.SEED)
 
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
