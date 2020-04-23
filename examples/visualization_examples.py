@@ -82,30 +82,34 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
 def example_get_topdown_map():
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     dataset = habitat.make_dataset(
-        id_dataset=config.DATASET.TYPE, config=config.DATASET
+        id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
     )
-    env = habitat.Env(config=config, dataset=dataset)
-    env.reset()
-    top_down_map = maps.get_topdown_map(env.sim, map_resolution=(5000, 5000))
-    recolor_map = np.array(
-        [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
-    )
-    range_x = np.where(np.any(top_down_map, axis=1))[0]
-    range_y = np.where(np.any(top_down_map, axis=0))[0]
-    padding = int(np.ceil(top_down_map.shape[0] / 125))
-    range_x = (
-        max(range_x[0] - padding, 0),
-        min(range_x[-1] + padding + 1, top_down_map.shape[0]),
-    )
-    range_y = (
-        max(range_y[0] - padding, 0),
-        min(range_y[-1] + padding + 1, top_down_map.shape[1]),
-    )
-    top_down_map = top_down_map[
-        range_x[0] : range_x[1], range_y[0] : range_y[1]
-    ]
-    top_down_map = recolor_map[top_down_map]
-    imageio.imsave(os.path.join(IMAGE_DIR, "top_down_map.png"), top_down_map)
+    with habitat.Env(config=config, dataset=dataset) as env:
+        env.reset()
+        top_down_map = maps.get_topdown_map(
+            env.sim, map_resolution=(5000, 5000)
+        )
+        recolor_map = np.array(
+            [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
+        )
+        range_x = np.where(np.any(top_down_map, axis=1))[0]
+        range_y = np.where(np.any(top_down_map, axis=0))[0]
+        padding = int(np.ceil(top_down_map.shape[0] / 125))
+        range_x = (
+            max(range_x[0] - padding, 0),
+            min(range_x[-1] + padding + 1, top_down_map.shape[0]),
+        )
+        range_y = (
+            max(range_y[0] - padding, 0),
+            min(range_y[-1] + padding + 1, top_down_map.shape[1]),
+        )
+        top_down_map = top_down_map[
+            range_x[0] : range_x[1], range_y[0] : range_y[1]
+        ]
+        top_down_map = recolor_map[top_down_map]
+        imageio.imsave(
+            os.path.join(IMAGE_DIR, "top_down_map.png"), top_down_map
+        )
 
 
 def main():

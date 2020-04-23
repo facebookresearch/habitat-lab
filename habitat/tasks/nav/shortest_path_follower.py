@@ -47,9 +47,9 @@ class ShortestPathFollower:
         )
 
         self._sim = sim
-        self._max_delta = self._sim.config.FORWARD_STEP_SIZE - EPSILON
+        self._max_delta = self._sim.config.forward_step_size - EPSILON
         self._goal_radius = goal_radius
-        self._step_size = self._sim.config.FORWARD_STEP_SIZE
+        self._step_size = self._sim.config.forward_step_size
 
         self._mode = (
             "exact_gradient"
@@ -80,7 +80,7 @@ class ShortestPathFollower:
 
         max_grad_dir = self._est_max_grad_dir(goal_pos)
         if max_grad_dir is None:
-            return self._get_return_value(HabitatSimActions.MOVE_FORWARD)
+            return self._get_return_value(HabitatSimActions.move_forward)
         return self._step_along_grad(max_grad_dir)
 
     def _step_along_grad(
@@ -88,20 +88,20 @@ class ShortestPathFollower:
     ) -> Union[int, np.array]:
         current_state = self._sim.get_agent_state()
         alpha = angle_between_quaternions(grad_dir, current_state.rotation)
-        if alpha <= np.deg2rad(self._sim.config.TURN_ANGLE) + EPSILON:
-            return self._get_return_value(HabitatSimActions.MOVE_FORWARD)
+        if alpha <= np.deg2rad(self._sim.config.turn_angle) + EPSILON:
+            return self._get_return_value(HabitatSimActions.move_forward)
         else:
-            sim_action = HabitatSimActions.TURN_LEFT
+            sim_action = HabitatSimActions.turn_left
             self._sim.step(sim_action)
             best_turn = (
-                HabitatSimActions.TURN_LEFT
+                HabitatSimActions.turn_left
                 if (
                     angle_between_quaternions(
                         grad_dir, self._sim.get_agent_state().rotation
                     )
                     < alpha
                 )
-                else HabitatSimActions.TURN_RIGHT
+                else HabitatSimActions.turn_right
             )
             self._reset_agent_state(current_state)
             return self._get_return_value(best_turn)
@@ -144,8 +144,8 @@ class ShortestPathFollower:
 
             best_geodesic_delta = -2 * self._max_delta
             best_rotation = current_rotation
-            for _ in range(0, 360, self._sim.config.TURN_ANGLE):
-                sim_action = HabitatSimActions.MOVE_FORWARD
+            for _ in range(0, 360, self._sim.config.turn_angle):
+                sim_action = HabitatSimActions.move_forward
                 self._sim.step(sim_action)
                 new_delta = current_dist - self._geo_dist(goal_pos)
 
@@ -159,7 +159,7 @@ class ShortestPathFollower:
                 if np.isclose(
                     best_geodesic_delta,
                     self._max_delta,
-                    rtol=1 - np.cos(np.deg2rad(self._sim.config.TURN_ANGLE)),
+                    rtol=1 - np.cos(np.deg2rad(self._sim.config.turn_angle)),
                 ):
                     break
 
@@ -169,7 +169,7 @@ class ShortestPathFollower:
                     reset_sensors=False,
                 )
 
-                sim_action = HabitatSimActions.TURN_LEFT
+                sim_action = HabitatSimActions.turn_left
                 self._sim.step(sim_action)
 
             self._reset_agent_state(current_state)

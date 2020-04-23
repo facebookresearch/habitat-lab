@@ -10,7 +10,7 @@ class RNNStateEncoder(nn.Module):
         num_layers: int = 1,
         rnn_type: str = "GRU",
     ):
-        r"""An RNN for encoding the state in RL.
+        r"""An RNN for encoding the state in rl.
 
         Supports masking the hidden state during various timesteps in the forward lass
 

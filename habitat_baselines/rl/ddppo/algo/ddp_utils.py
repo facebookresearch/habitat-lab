@@ -107,7 +107,7 @@ def requeue_job():
 
     if distrib.get_rank() == 0:
         logger.info(f"Requeueing job {SLURM_JOBID}")
-        subprocess.check_call(shlex.split("scontrol requeue {SLURM_JOBID}"))
+        subprocess.check_call(shlex.split(f"scontrol requeue {SLURM_JOBID}"))
 
 
 def get_ifname():
@@ -145,10 +145,11 @@ def init_distrib_slurm(
         world_rank = int(os.environ["RANK"])
         world_size = int(os.environ["WORLD_SIZE"])
     # Else parse from SLURM is using SLURM
-    elif os.environ.get("SLURM_JOBID", None) is not None:
+    elif SLURM_JOBID is not None:
         local_rank = int(os.environ["SLURM_LOCALID"])
         world_rank = int(os.environ["SLURM_PROCID"])
         world_size = int(os.environ["SLURM_NTASKS"])
+        master_port += int(SLURM_JOBID) % 10
     # Otherwise setup for just 1 process, this is nice for testing
     else:
         local_rank = 0

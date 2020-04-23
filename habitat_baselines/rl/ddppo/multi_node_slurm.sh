@@ -18,5 +18,9 @@ export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 
 set -x
 srun python -u -m habitat_baselines.run \
-    --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
-    --run-type train
+    --exp-configs \
+    configs/tasks/pointnav_gibson.yaml \
+    habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
+    --run-type train \
+    --opts \
+    habitat.simulator.agent_0.sensors "['depth_sensor']"

@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from habitat.config.default import Config, get_config
+from habitat.config.default import Config, extend_default_config, get_config
 
 r"""Habitat-API Configuration
 ==============================
@@ -25,25 +25,26 @@ one parameter that could come from the command line:
     merged_config = get_config(
         config_paths=["configs/tasks/pointnav.yaml",
             "configs/dataset/val.yaml"],
-        opts=["ENVIRONMENT.MAX_EPISODE_STEPS", steps_limit]
+        opts=["habitat.environment.max_episode_steps", steps_limit]
     )
 
 ```
 
 ## Config structure
 Below is the structure of config used for Habitat:
-- Environment
-- Task
-    - Sensors
-    - Measurements
-- Simulator
-    - Agent
+- habitat
+    - Environment
+    - Task
         - Sensors
-- Dataset
+        - Measurements
+    - Simulator
+        - Agent
+            - Sensors
+    - Dataset
 
-We use node names (e.g. `SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']`) instead of list
-of config nodes (e.g. `SENSORS: [{TYPE = "HabitatSimDepthSensor",
-MIN_DEPTH = 0}, ...]`) to declare the Sensors attached to an Agent or Measures
+We use node names (e.g. `sensors: ['rgb_sensor', 'depth_sensor']`) instead of list
+of config nodes (e.g. `sensors: [{TYPE = "HabitatSimDepthSensor",
+min_depth = 0}, ...]`) to declare the Sensors attached to an Agent or Measures
 enabled for the Task . With this approach, it's still easy to overwrite a
 particular sensor parameter in yaml file without redefining the whole sensor
 config.
@@ -62,45 +63,22 @@ env = habitat.Env(config)
 
 ## Extending the config with default values
 Example of how to extend a config outside of `habtiat-api` repository.
-First, we create a config extending the default config in the code and re-use
-`habitat.get_config()`:
 ```
 import habitat
 import argparse
 from typing import List, Optional, Union
 
-_C = habitat.get_config()
-_C.defrost()
-# Add new parameters to the config
-_C.TASK.EPISODE_INFO = habitat.Config()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
-_C.TASK.EPISODE_INFO.VALUE = 5
-_C.TASK.MEASUREMENTS.append("EPISODE_INFO")
+episode_info_example = habitat.Config()
+# The type field is used to look-up the measure in the registry.
+# By default, the things are registered with the class name
+episode_info_example.type = "EpisodeInfoExample"
+episode_info_example.value = 5
+# Extend the default config to include this
+habitat.config.extend_default_config(
+    "habitat.task.episode_info_example", episode_info_example
+)
 
-# New function returning extended Habitat config that should be used instead
-# of habitat.get_config()
-def my_get_config(
-        config_paths: Optional[Union[List[str], str]] = None,
-        opts: Optional[list] = None,
-) -> habitat.Config:
-    CONFIG_FILE_SEPARATOR = ","
-    config = _C.clone()
-    if config_paths:
-        if isinstance(config_paths, str):
-            if CONFIG_FILE_SEPARATOR in config_paths:
-                config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
-            else:
-                config_paths = [config_paths]
-
-        for config_path in config_paths:
-            config.merge_from_file(config_path)
-
-    if opts:
-        config.merge_from_list(opts)
-
-    config.freeze()
-    return config
-
+# It will then show up in the default config
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -116,9 +94,9 @@ def main():
         help="Modify config options from command line",
     )
     args = parser.parse_args()
-    config = my_get_config(config_paths=args.task_config, opts=args.opts)
+    config = get_config(config_paths=args.task_config, opts=args.opts)
     env = habitat.Env(config)
 
 ```"""
 
-__all__ = ["Config", "get_config"]
+__all__ = ["Config", "get_config", "extend_default_config"]

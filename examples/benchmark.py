@@ -15,7 +15,7 @@ class ForwardOnlyAgent(habitat.Agent):
         pass
 
     def act(self, observations):
-        action = HabitatSimActions.MOVE_FORWARD
+        action = HabitatSimActions.move_forward
         return {"action": action}
 
 

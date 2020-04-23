@@ -31,7 +31,7 @@ class EpisodeInfoExample(habitat.Measure):
         # Our measure always contains all the attributes of the episode
         self._metric = vars(episode).copy()
         # But only on reset, it has an additional field of my_value
-        self._metric["my_value"] = self._config.VALUE
+        self._metric["my_value"] = self._config.value
 
     # This is called whenver an action is taken in the environment
     def update_metric(self, *args: Any, episode, action, **kwargs: Any):
@@ -48,7 +48,7 @@ class AgentPositionSensor(habitat.Sensor):
 
         self._sim = sim
         # Prints out the answer to life on init
-        print("The answer to life is", self.config.ANSWER_TO_LIFE)
+        print("The answer to life is", self.config.answer_to_life)
 
     # Defines the name of the sensor in the sensor suite dictionary
     def _get_uuid(self, *args: Any, **kwargs: Any):
@@ -56,7 +56,7 @@ class AgentPositionSensor(habitat.Sensor):
 
     # Defines the type of the sensor
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return habitat.SensorTypes.POSITION
+        return habitat.SensorTypes.position
 
     # Defines the size and range of the observations of the sensor
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -75,33 +75,44 @@ class AgentPositionSensor(habitat.Sensor):
 
 
 def main():
-    # Get the default config node
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
-    config.defrost()
-
-    # Add things to the config to for the measure
-    config.TASK.EPISODE_INFO_EXAMPLE = habitat.Config()
+    # Create the new config node
+    episode_info_example = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
-    config.TASK.EPISODE_INFO_EXAMPLE.TYPE = "EpisodeInfoExample"
-    config.TASK.EPISODE_INFO_EXAMPLE.VALUE = 5
-    # Add the measure to the list of measures in use
-    config.TASK.MEASUREMENTS.append("EPISODE_INFO_EXAMPLE")
+    episode_info_example.type = "EpisodeInfoExample"
+    episode_info_example.value = 5
+    # Extend the default config to include this
+    habitat.config.extend_default_config(
+        "habitat.task.episode_info_example", episode_info_example
+    )
 
     # Now define the config for the sensor
-    config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
+    agent_position_sensor = habitat.Config()
     # Use the custom name
-    config.TASK.AGENT_POSITION_SENSOR.TYPE = "my_supercool_sensor"
-    config.TASK.AGENT_POSITION_SENSOR.ANSWER_TO_LIFE = 42
-    # Add the sensor to the list of sensors in use
-    config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
-    config.freeze()
+    agent_position_sensor.type = "my_supercool_sensor"
+    agent_position_sensor.answer_to_life = 42
+    habitat.config.extend_default_config(
+        "habitat.task.agent_position_sensor", agent_position_sensor
+    )
 
-    env = habitat.Env(config=config)
-    print(env.reset()["agent_position"])
-    print(env.get_metrics()["episode_info"])
-    print(env.step("MOVE_FORWARD")["agent_position"])
-    print(env.get_metrics()["episode_info"])
+    # Override the load to use this new sensor and measure
+    config = habitat.get_config(
+        config_paths="configs/tasks/pointnav.yaml",
+        opts=[
+            "habitat.task.measurements",
+            "['episode_info_example', 'distance_to_goal', 'success', 'spl']",
+            "habitat.task.sensors",
+            "['agent_position_sensor', 'pointgoal_with_gps_compass_sensor']",
+            "habitat.task.episode_info_example.value",
+            "20",
+        ],
+    )
+
+    with habitat.Env(config=config) as env:
+        print(env.reset()["agent_position"])
+        print(env.get_metrics()["episode_info"])
+        print(env.step("move_forward")["agent_position"])
+        print(env.get_metrics()["episode_info"])
 
 
 if __name__ == "__main__":

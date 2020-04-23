@@ -26,15 +26,13 @@ except ImportError:
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )
+@pytest.mark.parametrize("task_cfg_path", ["configs/tasks/pointnav.yaml"])
 @pytest.mark.parametrize(
-    "test_cfg_path,mode,gpu2gpu",
-    itertools.product(
-        glob("habitat_baselines/config/test/*"),
-        ["train", "eval"],
-        [True, False],
-    ),
+    "trainer_cfg_path", glob("habitat_baselines/config/test/*")
 )
-def test_trainers(test_cfg_path, mode, gpu2gpu):
+@pytest.mark.parametrize("mode", ["train", "eval"])
+@pytest.mark.parametrize("gpu2gpu", [True, False])
+def test_trainers(task_cfg_path, trainer_cfg_path, mode, gpu2gpu):
     if gpu2gpu:
         try:
             import habitat_sim
@@ -45,9 +43,9 @@ def test_trainers(test_cfg_path, mode, gpu2gpu):
             pytest.skip("GPU-GPU requires CUDA")
 
     run_exp(
-        test_cfg_path,
+        [task_cfg_path, trainer_cfg_path],
         mode,
-        ["TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU", str(gpu2gpu)],
+        ["habitat.simulator.habitat_sim_v0.gpu_gpu", str(gpu2gpu)],
     )
 
     # Deinit processes group
@@ -59,25 +57,34 @@ def test_trainers(test_cfg_path, mode, gpu2gpu):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["VIDEO_OPTION", "[]"]
-    eval_opts = ["VIDEO_OPTION", "['disk']"]
+    ckpt_opts = ["habitat_baselines.video_option", "[]"]
+    eval_opts = ["habitat_baselines.video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
-    assert ckpt_cfg.VIDEO_OPTION == []
-    assert ckpt_cfg.CMD_TRAILING_OPTS == ["VIDEO_OPTION", "[]"]
+    assert ckpt_cfg.habitat_baselines.video_option == []
+    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == [
+        "habitat_baselines.video_option",
+        "[]",
+    ]
 
     eval_cfg = get_config(None, eval_opts)
-    assert eval_cfg.VIDEO_OPTION == ["disk"]
-    assert eval_cfg.CMD_TRAILING_OPTS == ["VIDEO_OPTION", "['disk']"]
+    assert eval_cfg.habitat_baselines.video_option == ["disk"]
+    assert eval_cfg.habitat_baselines.cmd_trailing_opts == [
+        "habitat_baselines.video_option",
+        "['disk']",
+    ]
 
     trainer = BaseRLTrainer(get_config())
-    assert trainer.config.VIDEO_OPTION == ["disk", "tensorboard"]
+    assert trainer.config.habitat_baselines.video_option == [
+        "disk",
+        "tensorboard",
+    ]
     returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
-    assert returned_config.VIDEO_OPTION == []
+    assert returned_config.habitat_baselines.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
     returned_config = trainer._setup_eval_config(ckpt_cfg)
-    assert returned_config.VIDEO_OPTION == ["disk"]
+    assert returned_config.habitat_baselines.video_option == ["disk"]
 
 
 def __do_pause_test(num_envs, envs_to_pause):

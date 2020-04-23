@@ -109,9 +109,9 @@ class Dataset(Generic[T]):
     @classmethod
     def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
         r"""Returns a filter function that takes an episode and returns True if that
-        episode is valid under the CONTENT_SCENES feild of the provided config
+        episode is valid under the content_scenes feild of the provided config
         """
-        scenes_to_load = set(config.CONTENT_SCENES)
+        scenes_to_load = set(config.content_scenes)
 
         def _filter(ep: T) -> bool:
             return (
@@ -315,7 +315,7 @@ class EpisodeIterator(Iterator):
     higher performance. More context: simulator suffers overhead when switching
     between scenes, therefore episodes of the same scene should be loaded
     consecutively. However, if too many consecutive episodes from same scene
-    are feed into RL model, the model will risk to overfit that scene.
+    are feed into rl model, the model will risk to overfit that scene.
     Therefore it's better to load same scene consecutively and switch once a
     number threshold is reached.
 

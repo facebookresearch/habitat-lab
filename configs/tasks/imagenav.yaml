@@ -1,24 +1,23 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
-SIMULATOR:
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR']
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-  RGB_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-TASK:
-  TYPE: Nav-v0
-  SUCCESS_DISTANCE: 0.2
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    agent_0:
+      sensors: ['rgb_sensor']
+    habitat_sim_v0:
+      gpu_device_id: 0
+    rgb_sensor:
+      width: 256
+      height: 256
+    depth_sensor:
+      width: 256
+      height: 256
+  task:
+    type: Nav-v0
 
-  SENSORS: ['IMAGEGOAL_SENSOR']
-  GOAL_SENSOR_UUID: imagegoal
+    sensors: ['imagegoal_sensor']
+    goal_sensor_uuid: imagegoal
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SPL']
-  SPL:
-    TYPE: SPL
-    SUCCESS_DISTANCE: 0.2
+    measurements: ['distance_to_goal', 'success', 'spl']
+    success:
+      success_distance: 0.2

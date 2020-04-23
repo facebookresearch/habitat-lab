@@ -142,7 +142,7 @@ class ResNetEncoder(nn.Module):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            # permute tensor to dimension [BATCH x CHANNEL x height X width]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = rgb_observations / 255.0  # normalize RGB
             cnn_input.append(rgb_observations)
@@ -150,7 +150,7 @@ class ResNetEncoder(nn.Module):
         if self._n_input_depth > 0:
             depth_observations = observations["depth"]
 
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            # permute tensor to dimension [BATCH x CHANNEL x height X width]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
 
             cnn_input.append(depth_observations)

@@ -10,7 +10,7 @@ import torch
 
 
 class RolloutStorage:
-    r"""Class for storing rollout information for RL trainers.
+    r"""Class for storing rollout information for rl trainers.
 
     """
 
@@ -133,15 +133,17 @@ class RolloutStorage:
                 )
 
     def recurrent_generator(self, advantages, num_mini_batch):
-        num_processes = self.rewards.size(1)
-        assert num_processes >= num_mini_batch, (
-            "Trainer requires the number of processes ({}) "
+        simulators_per_gpu = self.rewards.size(1)
+        assert simulators_per_gpu >= num_mini_batch, (
+            "Trainer requires the number of simulators per GPU ({}) "
             "to be greater than or equal to the number of "
-            "trainer mini batches ({}).".format(num_processes, num_mini_batch)
+            "trainer mini batches ({}).".format(
+                simulators_per_gpu, num_mini_batch
+            )
         )
-        num_envs_per_batch = num_processes // num_mini_batch
-        perm = torch.randperm(num_processes)
-        for start_ind in range(0, num_processes, num_envs_per_batch):
+        num_envs_per_batch = simulators_per_gpu // num_mini_batch
+        perm = torch.randperm(simulators_per_gpu)
+        for start_ind in range(0, simulators_per_gpu, num_envs_per_batch):
             observations_batch = defaultdict(list)
 
             recurrent_hidden_states_batch = []

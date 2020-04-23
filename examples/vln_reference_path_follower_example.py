@@ -49,8 +49,8 @@ def reference_path_example(mode):
         config_paths="configs/test/habitat_r2r_vln_test.yaml"
     )
     config.defrost()
-    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-    config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.task.measurements.append("top_down_map")
+    config.task.sensors.append("heading_sensor")
     config.freeze()
     env = SimpleRLEnv(config=config)
 

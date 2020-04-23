@@ -8,5 +8,9 @@ python -u -m torch.distributed.launch \
     --use_env \
     --nproc_per_node 1 \
     habitat_baselines/run.py \
-    --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
-    --run-type train
+    --exp-configs \
+    configs/tasks/pointnav_gibson.yaml \
+    habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
+    --run-type train \
+    --opts \
+    habitat.simulator.agent_0.sensors "['depth_sensor']"

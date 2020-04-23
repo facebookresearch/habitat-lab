@@ -17,43 +17,20 @@ from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
-def test_readme_example():
+@pytest.mark.parametrize(
+    "example_fun_fn",
+    [
+        example,
+        new_actions.main,
+        register_new_sensors_and_measures.main,
+        shortest_path_follower_example.main,
+        visualization_examples.main,
+    ],
+)
+def test_examples(example_fun_fn):
     if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().DATASET
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-    example()
-
-
-def test_visualizations_example():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().DATASET
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-    visualization_examples.main()
-
-
-def test_shortest_path_follower_example():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().DATASET
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-    shortest_path_follower_example.main()
-
-
-def test_register_new_sensors_and_measures():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().DATASET
+        config=habitat.get_config().habitat.dataset
     ):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    register_new_sensors_and_measures.main()
-
-
-def test_new_actions():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().DATASET
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-
-    new_actions.main()
+    example_fun_fn()

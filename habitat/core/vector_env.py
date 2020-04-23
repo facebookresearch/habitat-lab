@@ -60,7 +60,7 @@ def _make_env_fn(
     :return: `env.Env` / `env.RLEnv` object
     """
     habitat_env = Env(config=config, dataset=dataset)
-    habitat_env.seed(config.SEED + rank)
+    habitat_env.seed(config.habitat.seed + rank)
     return habitat_env
 
 
@@ -308,7 +308,7 @@ class VectorEnv:
 
         :param data: list of size _num_envs containing keyword arguments to
             pass to `step` method for each Environment. For example,
-            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            :py:`[{"action": "turn_left", "action_args": {...}}, ...]`.
         """
         # Backward compatibility
         if isinstance(data[0], (int, np.integer, str)):
@@ -332,7 +332,7 @@ class VectorEnv:
 
         :param data: list of size _num_envs containing keyword arguments to
             pass to `step` method for each Environment. For example,
-            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            :py:`[{"action": "turn_left", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
         self.async_step(data)

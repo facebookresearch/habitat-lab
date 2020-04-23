@@ -26,7 +26,7 @@ from habitat.core.registry import Registry
 class BaselineRegistry(Registry):
     @classmethod
     def register_trainer(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a RL training algorithm to registry with key 'name'.
+        r"""Register a rl training algorithm to registry with key 'name'.
 
         Args:
             name: Key with which the trainer will be registered.
