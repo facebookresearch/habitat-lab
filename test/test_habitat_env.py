@@ -137,6 +137,16 @@ def test_with_scope():
     assert envs._is_closed
 
 
+def test_number_of_episodes():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+    ) as envs:
+        assert envs.number_of_episodes == [10000, 10000, 10000, 10000]
+
+
 def test_threaded_vectorized_env():
     configs, datasets = _load_test_data()
     num_envs = len(configs)
