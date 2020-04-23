@@ -524,7 +524,7 @@ class Success(Measure):
 
 @registry.register_measure
 class SPL(Measure):
-    r"""SPL (Success weighted by Path Length)
+    r"""spl (Success weighted by Path Length)
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf

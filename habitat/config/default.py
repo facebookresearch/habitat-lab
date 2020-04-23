@@ -110,8 +110,8 @@ _C.habitat.task.objectgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.IMAGEGOAL_SENSOR = CN()
-_C.habitat.task.IMAGEGOAL_SENSOR.TYPE = "ImageGoalSensor"
+_C.habitat.task.imagegoal_sensor = CN()
+_C.habitat.task.imagegoal_sensor.type = "ImageGoalSensor"
 # -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
@@ -144,7 +144,7 @@ _C.habitat.task.success.success_distance = 0.2
 # spl MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.habitat.task.spl = CN()
-_C.habitat.task.spl.type = "SPL"
+_C.habitat.task.spl.type = "spl"
 # -----------------------------------------------------------------------------
 # SOFT-SPL MEASUREMENT
 # -----------------------------------------------------------------------------

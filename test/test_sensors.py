@@ -271,11 +271,11 @@ def test_pointgoal_with_gps_compass_sensor():
 
 def test_imagegoal_sensor():
     config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     config.defrost()
-    config.TASK.SENSORS = ["IMAGEGOAL_SENSOR"]
-    config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
+    config.habitat.task.sensors = ["imagegoal_sensor"]
+    config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
     config.freeze()
     env = habitat.Env(config=config, dataset=None)
 
@@ -295,14 +295,14 @@ def test_imagegoal_sensor():
         [
             NavigationEpisode(
                 episode_id="0",
-                scene_id=config.SIMULATOR.SCENE,
+                scene_id=config.habitat.simulator.scene,
                 start_position=valid_start_position,
                 start_rotation=start_rotation,
                 goals=[NavigationGoal(position=goal_position)],
             ),
             NavigationEpisode(
                 episode_id="1",
-                scene_id=config.SIMULATOR.SCENE,
+                scene_id=config.habitat.simulator.scene,
                 start_position=valid_start_position,
                 start_rotation=start_rotation,
                 goals=[NavigationGoal(position=goal_position_2)],
