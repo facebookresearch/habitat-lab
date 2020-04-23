@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
@@ -260,6 +261,8 @@ class Env:
         return observations
 
     def seed(self, seed: int) -> None:
+        random.seed(seed)
+        np.random.seed(seed)
         self._sim.seed(seed)
         self._task.seed(seed)
 
