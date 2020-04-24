@@ -35,7 +35,7 @@ def get_default_config():
 class PPOAgent(Agent):
     def __init__(self, config: Config):
         spaces = {
-            get_default_config.GOAL_SENSOR_UUID: Box(
+            get_default_config().GOAL_SENSOR_UUID: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),
