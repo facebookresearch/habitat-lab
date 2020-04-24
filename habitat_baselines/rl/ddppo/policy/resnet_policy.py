@@ -289,11 +289,6 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        prev_actions = self.prev_action_embedding(
-            ((prev_actions.float() + 1) * masks).long().squeeze(-1)
-        )
-        x.append(prev_actions)
-
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             goal_observations = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -311,7 +306,7 @@ class PointNavResNetNet(Net):
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
-            x.append(self.obj_categories_embedding(object_goal).squeeze())
+            x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
 
         if EpisodicCompassSensor.cls_uuid in observations:
             compass_observations = torch.stack(
@@ -321,12 +316,19 @@ class PointNavResNetNet(Net):
                 ],
                 -1,
             )
-            x.append(self.compass_embedding(compass_observations.squeeze()))
+            x.append(
+                self.compass_embedding(compass_observations.squeeze(dim=1))
+            )
 
         if EpisodicGPSSensor.cls_uuid in observations:
             x.append(
                 self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
             )
+
+        prev_actions = self.prev_action_embedding(
+            ((prev_actions.float() + 1) * masks).long().squeeze(dim=-1)
+        )
+        x.append(prev_actions)
 
         x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
