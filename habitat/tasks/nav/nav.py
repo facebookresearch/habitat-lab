@@ -141,7 +141,7 @@ class PointGoalSensor(Sensor):
 
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "pointgoal"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -236,7 +236,7 @@ class ImageGoalSensor(Sensor):
         self._current_image_goal = None
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "imagegoal"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -299,7 +299,7 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     """
     cls_uuid: str = "pointgoal_with_gps_compass"
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def get_observation(
@@ -331,7 +331,7 @@ class HeadingSensor(Sensor):
         self._sim = sim
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "heading"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -364,7 +364,7 @@ class EpisodicCompassSensor(HeadingSensor):
     """
     cls_uuid: str = "compass"
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def get_observation(
@@ -401,7 +401,7 @@ class EpisodicGPSSensor(Sensor):
         assert self._dimensionality in [2, 3]
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -453,7 +453,7 @@ class ProximitySensor(Sensor):
         )
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "proximity"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -499,7 +499,7 @@ class Success(Measure):
 
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
@@ -548,7 +548,7 @@ class SPL(Measure):
 
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "spl"
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
@@ -594,7 +594,7 @@ class SoftSPL(SPL):
     success is now calculated as 1 - (ratio of distance covered to target).
     """
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "softspl"
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
@@ -641,7 +641,7 @@ class Collisions(Measure):
         self._metric = None
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "collisions"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -690,7 +690,7 @@ class TopDownMap(Measure):
         )
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "top_down_map"
 
     def _check_valid_nav_point(self, point: List[float]):
@@ -962,7 +962,7 @@ class DistanceToGoal(Measure):
 
         super().__init__(**kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):

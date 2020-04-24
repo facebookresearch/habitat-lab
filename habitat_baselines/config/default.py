@@ -17,7 +17,8 @@ CONFIG_FILE_SEPARATOR = ","
 # EXPERIMENT CONFIG
 # -----------------------------------------------------------------------------
 _C = CN()
-_C.BASE_TASK_CONFIG_PATH = ["configs/tasks/pointnav.yaml"]
+# task config can be a list of conifgs like "A.yaml,B.yaml"
+_C.BASE_TASK_CONFIG_PATH = "configs/tasks/pointnav.yaml"
 _C.TASK_CONFIG = CN()  # task_config will be stored as a config node
 _C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"
@@ -144,13 +145,10 @@ def get_config(
 
         for config_path in config_paths:
             config.merge_from_file(config_path)
-    if opts:
-        for k, v in zip(opts[0::2], opts[1::2]):
-            if k == "BASE_TASK_CONFIG_PATH":
-                config.BASE_TASK_CONFIG_PATH = v
+
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
     if opts:
-        config.CMD_TRAILING_OPTS = opts
+        config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(opts)
 
     config.freeze()
