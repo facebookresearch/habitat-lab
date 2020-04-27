@@ -11,7 +11,8 @@ VIDEO_OPTION: []
 # VIDEO_OPTION: ["disk", "tensorboard"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
-TEST_EPISODE_COUNT: 994
+# Evaluate on all episodes
+TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
 NUM_PROCESSES: 4

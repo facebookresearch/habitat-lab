@@ -39,6 +39,7 @@ class Env:
     action_space: SpaceDict
     _config: Config
     _dataset: Optional[Dataset]
+    number_of_episodes: Optional[int]
     _episodes: List[Type[Episode]]
     _current_episode_index: Optional[int]
     _current_episode: Optional[Type[Episode]]
@@ -93,6 +94,10 @@ class Env:
             self._config.defrost()
             self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
             self._config.freeze()
+
+            self.number_of_episodes = len(self._dataset.episodes)
+        else:
+            self.number_of_episodes = None
 
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
@@ -319,6 +324,7 @@ class RLEnv(gym.Env):
         self._env = Env(config, dataset)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
+        self.number_of_episodes = self._env.number_of_episodes
         self.reward_range = self.get_reward_range()
 
     @property
