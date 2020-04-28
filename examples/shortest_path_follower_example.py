@@ -99,6 +99,8 @@ def shortest_path_example():
         images_to_video(images, dirname, "trajectory")
         print("Episode finished")
 
+    env.close()
+
 
 def main():
     shortest_path_example()
