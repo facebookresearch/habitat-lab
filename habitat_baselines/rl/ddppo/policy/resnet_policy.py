@@ -202,7 +202,7 @@ class PointNavResNetNet(Net):
                 ].shape[0]
                 + 1
             )
-            self.pointgoal_gps_compass_embedding = nn.Linear(n_input_goal, 32)
+            self.tgt_embeding = nn.Linear(n_input_goal, 32)
             rnn_input_size += 32
 
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
@@ -322,7 +322,7 @@ class PointNavResNetNet(Net):
                 -1,
             )
 
-            x.append(self.pointgoal_gps_compass_embedding(goal_observations))
+            x.append(self.tgt_embeding(goal_observations))
 
         if PointGoalSensor.cls_uuid in observations:
             goal_observations = observations[PointGoalSensor.cls_uuid]

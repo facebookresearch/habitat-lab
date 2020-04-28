@@ -154,7 +154,7 @@ def get_config(
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
-        config.merge_from_list(opts)
+        config.merge_from_list(config.CMD_TRAILING_OPTS)
 
     config.freeze()
     return config
