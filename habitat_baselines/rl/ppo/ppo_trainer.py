@@ -63,6 +63,7 @@ class PPOTrainer(BaseRLTrainer):
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,
+            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
         )
         self.actor_critic.to(self.device)
 
@@ -448,7 +449,6 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
         # Map location CPU is almost always better than mapping to a CUDA device.
-        logger.info(f"Loading {checkpoint_path}.")
         ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
 
         if self.config.EVAL.USE_CKPT_CONFIG:
