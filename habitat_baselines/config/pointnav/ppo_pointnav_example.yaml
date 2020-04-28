@@ -1,3 +1,6 @@
+# Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
+# for better hyperparameters for actual training
+
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
 TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
@@ -6,6 +9,7 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk", "tensorboard"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
+# To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 2
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_PROCESSES: 1

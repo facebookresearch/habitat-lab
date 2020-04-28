@@ -149,13 +149,18 @@ class DDPPOTrainer(PPOTrainer):
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
 
-        random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
-        np.random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
-
         self.config.defrost()
         self.config.TORCH_GPU_ID = self.local_rank
         self.config.SIMULATOR_GPU_ID = self.local_rank
+        # Multiply by the number of simulators to make sure they also get unique seeds
+        self.config.TASK_CONFIG.SEED += (
+            self.world_rank * self.config.NUM_PROCESSES
+        )
         self.config.freeze()
+
+        random.seed(self.config.TASK_CONFIG.SEED)
+        np.random.seed(self.config.TASK_CONFIG.SEED)
+        torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
         if torch.cuda.is_available():
             self.device = torch.device("cuda", self.local_rank)
