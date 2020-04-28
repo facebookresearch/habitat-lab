@@ -8,7 +8,10 @@ import abc
 import torch
 import torch.nn as nn
 
-from habitat.tasks.nav.nav import IntegratedPointGoalGPSAndCompassSensor
+from habitat.tasks.nav.nav import (
+    IntegratedPointGoalGPSAndCompassSensor,
+    PointGoalSensor,
+)
 from habitat_baselines.common.utils import CategoricalNet, Flatten
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
@@ -121,9 +124,19 @@ class PointNavBaselineNet(Net):
 
     def __init__(self, observation_space, hidden_size):
         super().__init__()
-        self._n_input_goal = observation_space.spaces[
+
+        if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-        ].shape[0]
+            in observation_space.spaces
+        ):
+            self._n_input_goal = observation_space.spaces[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ].shape[0]
+        elif PointGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_input_goal = observation_space.spaces[
+                PointGoalSensor.cls_uuid
+            ].shape[0]
+
         self._hidden_size = hidden_size
 
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
@@ -148,9 +161,14 @@ class PointNavBaselineNet(Net):
         return self.state_encoder.num_recurrent_layers
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        target_encoding = observations[
-            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-        ]
+        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
+            target_encoding = observations[
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            ]
+
+        elif PointGoalSensor.cls_uuid in observations:
+            target_encoding = observations[PointGoalSensor.cls_uuid]
+
         x = [target_encoding]
 
         if not self.is_blind:
