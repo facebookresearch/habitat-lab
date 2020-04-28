@@ -448,6 +448,7 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
         # Map location CPU is almost always better than mapping to a CUDA device.
+        logger.info(f"Loading {checkpoint_path}.")
         ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
 
         if self.config.EVAL.USE_CKPT_CONFIG:
@@ -501,23 +502,10 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
-        number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
-        if number_of_eval_episodes == -1:
-            number_of_eval_episodes = sum(self.envs.number_of_episodes)
-        else:
-            total_num_eps = sum(self.envs.number_of_episodes)
-            if total_num_eps < number_of_eval_episodes:
-                logger.warn(
-                    f"Config specified {number_of_eval_episodes} eval episodes"
-                    ", dataset only has {total_num_eps}."
-                )
-                logger.warn(f"Evaluating with {total_num_eps} instead.")
-                number_of_eval_episodes = total_num_eps
-
-        pbar = tqdm.tqdm(total=number_of_eval_episodes)
+        pbar = tqdm.tqdm(total=self.config.TEST_EPISODE_COUNT)
         self.actor_critic.eval()
         while (
-            len(stats_episodes) < number_of_eval_episodes
+            len(stats_episodes) < self.config.TEST_EPISODE_COUNT
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()

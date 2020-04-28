@@ -28,7 +28,7 @@ _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.TENSORBOARD_DIR = "tb"
 _C.VIDEO_DIR = "video_dir"
-_C.TEST_EPISODE_COUNT = -1
+_C.TEST_EPISODE_COUNT = 2
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_PROCESSES = 16
 _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
@@ -145,6 +145,11 @@ def get_config(
 
         for config_path in config_paths:
             config.merge_from_file(config_path)
+
+    if opts:
+        for k, v in zip(opts[0::2], opts[1::2]):
+            if k == "BASE_TASK_CONFIG_PATH":
+                config.BASE_TASK_CONFIG_PATH = v
 
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
     if opts:

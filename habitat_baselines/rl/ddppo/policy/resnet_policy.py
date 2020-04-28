@@ -9,19 +9,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from gym.spaces import Box
 
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
+    HeadingSensor,
     IntegratedPointGoalGPSAndCompassSensor,
+    PointGoalSensor,
+    ProximitySensor,
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
-from habitat_baselines.common.utils import (
-    CategoricalNet,
-    Flatten,
-    ResizeCenterCropper,
-)
+from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
@@ -226,6 +224,28 @@ class PointNavResNetNet(Net):
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
 
+        if PointGoalSensor.cls_uuid in observation_space.spaces:
+            input_pointgoal_dim = observation_space.spaces[
+                PointGoalSensor.cls_uuid
+            ].shape[0]
+            self.pointgoal_embedding = nn.Linear(input_pointgoal_dim, 32)
+            rnn_input_size += 32
+
+        if HeadingSensor.cls_uuid in observation_space.spaces:
+            input_heading_dim = (
+                observation_space.spaces[HeadingSensor.cls_uuid].shape[0] + 1
+            )
+            assert input_heading_dim == 2, "Expected heading with 2D rotation."
+            self.heading_embedding = nn.Linear(input_heading_dim, 32)
+            rnn_input_size += 32
+
+        if ProximitySensor.cls_uuid in observation_space.spaces:
+            input_proximity_dim = observation_space.spaces[
+                ProximitySensor.cls_uuid
+            ].shape[0]
+            self.proximity_embedding = nn.Linear(input_proximity_dim, 32)
+            rnn_input_size += 32
+
         if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
             assert (
                 observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
@@ -303,6 +323,25 @@ class PointNavResNetNet(Net):
             )
 
             x.append(self.pointgoal_gps_compass_embedding(goal_observations))
+
+        if PointGoalSensor.cls_uuid in observations:
+            goal_observations = observations[PointGoalSensor.cls_uuid]
+            x.append(self.pointgoal_embedding(goal_observations))
+
+        if ProximitySensor.cls_uuid in observations:
+            sensor_observations = observations[ProximitySensor.cls_uuid]
+            x.append(self.proximity_embedding(sensor_observations))
+
+        if HeadingSensor.cls_uuid in observations:
+            sensor_observations = observations[HeadingSensor.cls_uuid]
+            sensor_observations = torch.stack(
+                [
+                    torch.cos(sensor_observations[0]),
+                    torch.sin(sensor_observations[0]),
+                ],
+                -1,
+            )
+            x.append(self.heading_embedding(sensor_observations))
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
