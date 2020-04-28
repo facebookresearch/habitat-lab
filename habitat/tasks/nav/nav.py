@@ -127,6 +127,7 @@ class PointGoalSensor(Sensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+    cls_uuid: str = "pointgoal"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -142,7 +143,7 @@ class PointGoalSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "pointgoal"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.PATH
@@ -215,6 +216,7 @@ class ImageGoalSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the ImageGoal sensor.
     """
+    cls_uuid: str = "imagegoal"
 
     def __init__(
         self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
@@ -237,7 +239,7 @@ class ImageGoalSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "imagegoal"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.PATH
@@ -324,6 +326,7 @@ class HeadingSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+    cls_uuid: str = "heading"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -332,7 +335,7 @@ class HeadingSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "heading"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.HEADING
@@ -445,6 +448,7 @@ class ProximitySensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+    cls_uuid: str = "proximity"
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
@@ -454,7 +458,7 @@ class ProximitySensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "proximity"
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.TACTILE

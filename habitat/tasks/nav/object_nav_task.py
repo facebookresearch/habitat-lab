@@ -116,7 +116,7 @@ class ObjectGoalSensor(Sensor):
         self._dataset = dataset
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
