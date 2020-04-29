@@ -168,12 +168,10 @@ def get_action_shortest_path(
     goal_position,
     success_distance=0.05,
     max_episode_steps=500,
-    shortest_path_mode="exact_gradient",
 ) -> List[ShortestPathPoint]:
     sim.reset()
     sim.set_agent_state(source_position, source_rotation)
     follower = ShortestPathFollower(sim, success_distance, False)
-    follower.mode = shortest_path_mode
 
     shortest_path = []
     step_count = 0

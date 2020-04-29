@@ -52,13 +52,11 @@ class ShortestPathFollower:
 
     def _build_follower(self):
         if self._current_scene != self._sim.config.SCENE:
-            self._follower = habitat_sim.nav.GreedyGeodesicFollower(
-                self._sim._sim.pathfinder,
-                self._sim._sim.get_agent(0),
-                goal_radius=self._goal_radius,
+            self._follower = self._sim._sim.make_greedy_follower(
+                0, self._goal_radius
             )
             self._follower.action_mapping = {
-                habitat_sim.nav.GreedyFollowerCodes.STOP: HabitatSimActions.STOP,
+                habitat_sim.nav.GreedyFollowerCodes.STOP: None,
                 habitat_sim.nav.GreedyFollowerCodes.FORWARD: HabitatSimActions.MOVE_FORWARD,
                 habitat_sim.nav.GreedyFollowerCodes.RIGHT: HabitatSimActions.TURN_RIGHT,
                 habitat_sim.nav.GreedyFollowerCodes.LEFT: HabitatSimActions.TURN_LEFT,
