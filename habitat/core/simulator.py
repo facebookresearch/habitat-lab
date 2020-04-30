@@ -109,7 +109,7 @@ class RGBSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "rgb"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:

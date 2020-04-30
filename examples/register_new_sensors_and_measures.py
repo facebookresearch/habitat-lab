@@ -23,7 +23,7 @@ class EpisodeInfoExample(habitat.Measure):
         super().__init__()
 
     # Defines the name of the measure in the measurements dictionary
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "episode_info"
 
     # This is called whenver the environment is reset
@@ -51,7 +51,7 @@ class AgentPositionSensor(habitat.Sensor):
         print("The answer to life is", self.config.ANSWER_TO_LIFE)
 
     # Defines the name of the sensor in the sensor suite dictionary
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "agent_position"
 
     # Defines the type of the sensor
