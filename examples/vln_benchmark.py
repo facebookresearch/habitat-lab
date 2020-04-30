@@ -23,36 +23,36 @@ def reference_path_benchmark(config, num_episodes=None):
         config: Config
         num_episodes: Count of episodes to evaluate on.
     """
-    env = habitat.Env(config=config)
-    if num_episodes is None:
-        num_episodes = len(env.episodes)
+    with habitat.Env(config=config) as env:
+        if num_episodes is None:
+            num_episodes = len(env.episodes)
 
-    follower = ShortestPathFollower(
-        env.sim, goal_radius=0.5, return_one_hot=False
-    )
-    follower.mode = "geodesic_path"
+        follower = ShortestPathFollower(
+            env.sim, goal_radius=0.5, return_one_hot=False
+        )
+        follower.mode = "geodesic_path"
 
-    agg_metrics: Dict = defaultdict(float)
-    for i in range(num_episodes):
-        env.reset()
+        agg_metrics: Dict = defaultdict(float)
+        for i in range(num_episodes):
+            env.reset()
 
-        for point in env.current_episode.reference_path:
+            for point in env.current_episode.reference_path:
+                while not env.episode_over:
+                    best_action = follower.get_next_action(point)
+                    if best_action == None:
+                        break
+                    env.step(best_action)
+
             while not env.episode_over:
-                best_action = follower.get_next_action(point)
+                best_action = follower.get_next_action(
+                    env.current_episode.goals[0].position
+                )
                 if best_action == None:
-                    break
+                    best_action = HabitatSimActions.STOP
                 env.step(best_action)
 
-        while not env.episode_over:
-            best_action = follower.get_next_action(
-                env.current_episode.goals[0].position
-            )
-            if best_action == None:
-                best_action = HabitatSimActions.STOP
-            env.step(best_action)
-
-        for m, v in env.get_metrics().items():
-            agg_metrics[m] += v
+            for m, v in env.get_metrics().items():
+                agg_metrics[m] += v
 
     avg_metrics = {k: v / num_episodes for k, v in agg_metrics.items()}
     return avg_metrics

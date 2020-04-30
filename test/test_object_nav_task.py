@@ -123,21 +123,20 @@ def test_object_nav_task():
     dataset = make_dataset(
         id_dataset=config.DATASET.TYPE, config=config.DATASET
     )
-    env = habitat.Env(config=config, dataset=dataset)
+    with habitat.Env(config=config, dataset=dataset) as env:
+        for i in range(10):
+            env.reset()
+            while not env.episode_over:
+                action = env.action_space.sample()
+                habitat.logger.info(
+                    f"Action : "
+                    f"{action['action']}, "
+                    f"args: {action['action_args']}."
+                )
+                env.step(action)
 
-    for i in range(10):
-        env.reset()
-        while not env.episode_over:
-            action = env.action_space.sample()
-            habitat.logger.info(
-                f"Action : "
-                f"{action['action']}, "
-                f"args: {action['action_args']}."
-            )
-            env.step(action)
+            metrics = env.get_metrics()
+            logger.info(metrics)
 
-        metrics = env.get_metrics()
-        logger.info(metrics)
-
-    with pytest.raises(AssertionError):
-        env.step({"action": MoveForwardAction.name})
+        with pytest.raises(AssertionError):
+            env.step({"action": MoveForwardAction.name})
