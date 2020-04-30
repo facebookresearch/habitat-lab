@@ -20,6 +20,8 @@ def example():
         count_steps += 1
     print("Episode finished after {} steps.".format(count_steps))
 
+    env.close()
+
 
 if __name__ == "__main__":
     example()
