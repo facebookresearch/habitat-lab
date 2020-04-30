@@ -84,4 +84,4 @@ def test_simple_agents():
         habitat.logger.info(agent_class.__name__)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=100))
 
-        benchmark._env.close()
+    benchmark._env.close()
