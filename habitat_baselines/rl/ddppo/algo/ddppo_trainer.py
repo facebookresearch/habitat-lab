@@ -76,7 +76,6 @@ class DDPPOTrainer(PPOTrainer):
             rnn_type=self.config.RL.DDPPO.rnn_type,
             num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
             backbone=self.config.RL.DDPPO.backbone,
-            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
         )
