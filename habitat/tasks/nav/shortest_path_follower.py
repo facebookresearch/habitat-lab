@@ -56,7 +56,7 @@ class ShortestPathFollower:
                 0, self._goal_radius
             )
             self._follower.action_mapping = {
-                habitat_sim.nav.GreedyFollowerCodes.STOP: None,
+                habitat_sim.nav.GreedyFollowerCodes.STOP: HabitatSimActions.STOP,
                 habitat_sim.nav.GreedyFollowerCodes.FORWARD: HabitatSimActions.MOVE_FORWARD,
                 habitat_sim.nav.GreedyFollowerCodes.RIGHT: HabitatSimActions.TURN_RIGHT,
                 habitat_sim.nav.GreedyFollowerCodes.LEFT: HabitatSimActions.TURN_LEFT,
