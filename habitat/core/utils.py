@@ -121,8 +121,12 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
             return object.tolist()
         if isinstance(object, np.quaternion):
             return quaternion_to_list(object)
-        quaternion
-        return object.__dict__
+
+        return (
+            object.__getstate__()
+            if hasattr(object, "__getstate__")
+            else object.__dict__
+        )
 
     # Overriding method to inject own `_repr` function for floats with needed
     # precision.
