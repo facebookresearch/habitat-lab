@@ -63,7 +63,6 @@ class PPOTrainer(BaseRLTrainer):
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,
-            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
         )
         self.actor_critic.to(self.device)
 
@@ -115,12 +114,17 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
+    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
+            if k in cls.METRICS_BLACKLIST:
+                continue
+
             if isinstance(v, dict):
                 result.update(
                     {
@@ -128,6 +132,7 @@ class PPOTrainer(BaseRLTrainer):
                         for subk, subv in cls._extract_scalars_from_info(
                             v
                         ).items()
+                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -184,7 +189,7 @@ class PPOTrainer(BaseRLTrainer):
         env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=current_episode_reward.device
         )
@@ -294,7 +299,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
@@ -470,7 +475,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
-        batch = batch_obs(observations, self.device)
+        batch = batch_obs(observations, device=self.device)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -496,10 +501,23 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
-        pbar = tqdm.tqdm(total=self.config.TEST_EPISODE_COUNT)
+        number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
+        if number_of_eval_episodes == -1:
+            number_of_eval_episodes = sum(self.envs.number_of_episodes)
+        else:
+            total_num_eps = sum(self.envs.number_of_episodes)
+            if total_num_eps < number_of_eval_episodes:
+                logger.warn(
+                    f"Config specified {number_of_eval_episodes} eval episodes"
+                    ", dataset only has {total_num_eps}."
+                )
+                logger.warn(f"Evaluating with {total_num_eps} instead.")
+                number_of_eval_episodes = total_num_eps
+
+        pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
         while (
-            len(stats_episodes) < self.config.TEST_EPISODE_COUNT
+            len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
@@ -525,7 +543,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, self.device)
+            batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -571,8 +589,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metric_name=self.metric_uuid,
-                            metric_value=infos[i][self.metric_uuid],
+                            metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
                         )
 

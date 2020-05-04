@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from gym.spaces import Box
 
-from habitat_baselines.common.utils import Flatten
+from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
 
 
 class SimpleCNN(nn.Module):
@@ -15,8 +16,20 @@ class SimpleCNN(nn.Module):
         output_size: The size of the embedding vector
     """
 
-    def __init__(self, observation_space, output_size):
+    def __init__(
+        self,
+        observation_space,
+        output_size,
+        obs_transform: nn.Module = ResizeCenterCropper(size=(256, 256)),
+    ):
         super().__init__()
+
+        self.obs_transform = obs_transform
+        if self.obs_transform is not None:
+            observation_space = obs_transform.transform_observation_space(
+                observation_space
+            )
+
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
         else:
@@ -141,6 +154,9 @@ class SimpleCNN(nn.Module):
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
+
+        if self.obs_transform:
+            cnn_input = [self.obs_transform(inp) for inp in cnn_input]
 
         cnn_input = torch.cat(cnn_input, dim=1)
 

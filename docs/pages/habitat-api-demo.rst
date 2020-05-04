@@ -109,9 +109,9 @@ override parameters and freeze the config.
 .. code:: py
     :class: m-console-wrap
 
-    from PIL import Image
-    from habitat_sim.utils import d3_40_colors_rgb
     import numpy as np
+    from PIL import Image
+    from habitat_sim.utils.common import d3_40_colors_rgb
 
     def display_sample(rgb_obs, semantic_obs, depth_obs):
         rgb_img = Image.fromarray(rgb_obs, mode="RGB")

@@ -61,7 +61,7 @@ def draw_top_down_map(info, heading, output_size):
     return top_down_map
 
 
-def shortest_path_example(mode):
+def shortest_path_example():
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
@@ -72,13 +72,12 @@ def shortest_path_example(mode):
     if goal_radius is None:
         goal_radius = config.SIMULATOR.FORWARD_STEP_SIZE
     follower = ShortestPathFollower(env.habitat_env.sim, goal_radius, False)
-    follower.mode = mode
 
     print("Environment creation successful")
     for episode in range(3):
         env.reset()
         dirname = os.path.join(
-            IMAGE_DIR, "shortest_path_example", mode, "%02d" % episode
+            IMAGE_DIR, "shortest_path_example", "%02d" % episode
         )
         if os.path.exists(dirname):
             shutil.rmtree(dirname)
@@ -89,8 +88,6 @@ def shortest_path_example(mode):
             best_action = follower.get_next_action(
                 env.habitat_env.current_episode.goals[0].position
             )
-            if best_action is None:
-                break
 
             observations, reward, done, info = env.step(best_action)
             im = observations["rgb"]
@@ -102,13 +99,11 @@ def shortest_path_example(mode):
         images_to_video(images, dirname, "trajectory")
         print("Episode finished")
 
+    env.close()
+
 
 def main():
-    # When using Habitat-Sim, the exact_gradient mode should be used
-    shortest_path_example("exact_gradient")
-
-    # approximate_gradient mode is used here for testing/demo purposes only
-    shortest_path_example("approximate_gradient")
+    shortest_path_example()
 
 
 if __name__ == "__main__":

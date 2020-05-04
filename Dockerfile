@@ -1,5 +1,5 @@
 # Base image
-FROM nvidia/cudagl:9.0-runtime-ubuntu16.04
+FROM nvidia/cudagl:10.1-devel-ubuntu16.04
 
 # Setup basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -31,22 +31,22 @@ RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-la
 ENV PATH /opt/conda/bin:$PATH
 
 # Install cmake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh
 RUN mkdir /opt/cmake
-RUN sh /cmake-3.13.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+RUN sh /cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
 # Conda environment
-RUN conda create -n habitat python=3.6
+RUN conda create -n habitat python=3.6 cmake=3.14.0
 
-# Setup habtiat-sim
-RUN git clone https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; git checkout 62bc01be8cbc148eb099e96fa0b123e16b21f95f; python setup.py install --headless"
+# Setup habitat-sim
+RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
+RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless"
 
 # Install challenge specific habitat-api
-RUN git clone https://github.com/facebookresearch/habitat-api.git
-RUN /bin/bash -c ". activate habitat; cd habitat-api; git checkout 0985c6ffd17557150488d238d79574c60612faa9; pip install -e ."
+RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
+RUN /bin/bash -c ". activate habitat; cd habitat-api; pip install -e ."
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2

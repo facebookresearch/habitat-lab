@@ -45,6 +45,7 @@ RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
+NUMBER_OF_EPISODES_COMMAND = "number_of_episodes"
 CALL_COMMAND = "call"
 EPISODE_COMMAND = "current_episode"
 COUNT_EPISODES_COMMAND = "count_episodes"
@@ -77,6 +78,7 @@ class VectorEnv:
     """
 
     observation_spaces: List[SpaceDict]
+    number_of_episodes: List[Optional[int]]
     action_spaces: List[SpaceDict]
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
@@ -142,6 +144,11 @@ class VectorEnv:
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
+        for write_fn in self._connection_write_fns:
+            write_fn((NUMBER_OF_EPISODES_COMMAND, None))
+        self.number_of_episodes = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
         self._paused = []
 
     @property
@@ -194,13 +201,12 @@ class VectorEnv:
                 elif command == RENDER_COMMAND:
                     connection_write_fn(env.render(*data[0], **data[1]))
 
-                elif (
-                    command == OBSERVATION_SPACE_COMMAND
-                    or command == ACTION_SPACE_COMMAND
-                ):
-                    if isinstance(command, str):
-                        connection_write_fn(getattr(env, command))
-
+                elif command in {
+                    OBSERVATION_SPACE_COMMAND,
+                    ACTION_SPACE_COMMAND,
+                    NUMBER_OF_EPISODES_COMMAND,
+                }:
+                    connection_write_fn(getattr(env, command))
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
                     if function_args is None or len(function_args) == 0:

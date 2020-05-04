@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import gym
+import numba
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 
@@ -37,6 +39,7 @@ class Env:
     action_space: SpaceDict
     _config: Config
     _dataset: Optional[Dataset]
+    number_of_episodes: Optional[int]
     _episodes: List[Type[Episode]]
     _current_episode_index: Optional[int]
     _current_episode: Optional[Type[Episode]]
@@ -91,6 +94,10 @@ class Env:
             self._config.defrost()
             self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
             self._config.freeze()
+
+            self.number_of_episodes = len(self._dataset.episodes)
+        else:
+            self.number_of_episodes = None
 
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
@@ -196,6 +203,14 @@ class Env:
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
+
+        # Delete the shortest path cache of the current episode
+        # Caching it for the next time we see this episode isn't really worth
+        # it
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
@@ -253,7 +268,16 @@ class Env:
 
         return observations
 
+    @staticmethod
+    @numba.njit
+    def _seed_numba(seed: int):
+        random.seed(seed)
+        np.random.seed(seed)
+
     def seed(self, seed: int) -> None:
+        random.seed(seed)
+        np.random.seed(seed)
+        self._seed_numba(seed)
         self._sim.seed(seed)
         self._task.seed(seed)
 
@@ -300,6 +324,7 @@ class RLEnv(gym.Env):
         self._env = Env(config, dataset)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
+        self.number_of_episodes = self._env.number_of_episodes
         self.reward_range = self.get_reward_range()
 
     @property

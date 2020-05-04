@@ -82,7 +82,7 @@ class CorrectAnswer(Measure):
         self._dataset = dataset
         super().__init__(**kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "correct_answer"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -103,7 +103,7 @@ class EpisodeInfo(Measure):
 
         super().__init__(**kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "episode_info"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -122,7 +122,7 @@ class AnswerAccuracy(Measure):
         self._dataset = dataset
         super().__init__(**kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "answer_accuracy"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):

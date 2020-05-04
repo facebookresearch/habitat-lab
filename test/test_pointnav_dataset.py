@@ -222,3 +222,4 @@ def test_pointnav_episode_generator():
     dataset = habitat.Dataset()
     dataset.episodes = episodes
     assert dataset.to_json(), "Generated episodes aren't json serializable."
+    env.close()

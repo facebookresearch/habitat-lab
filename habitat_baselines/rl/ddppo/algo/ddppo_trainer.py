@@ -76,7 +76,6 @@ class DDPPOTrainer(PPOTrainer):
             rnn_type=self.config.RL.DDPPO.rnn_type,
             num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
             backbone=self.config.RL.DDPPO.backbone,
-            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
         )
@@ -149,13 +148,18 @@ class DDPPOTrainer(PPOTrainer):
         self.world_rank = distrib.get_rank()
         self.world_size = distrib.get_world_size()
 
-        random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
-        np.random.seed(self.config.TASK_CONFIG.SEED + self.world_rank)
-
         self.config.defrost()
         self.config.TORCH_GPU_ID = self.local_rank
         self.config.SIMULATOR_GPU_ID = self.local_rank
+        # Multiply by the number of simulators to make sure they also get unique seeds
+        self.config.TASK_CONFIG.SEED += (
+            self.world_rank * self.config.NUM_PROCESSES
+        )
         self.config.freeze()
+
+        random.seed(self.config.TASK_CONFIG.SEED)
+        np.random.seed(self.config.TASK_CONFIG.SEED)
+        torch.manual_seed(self.config.TASK_CONFIG.SEED)
 
         if torch.cuda.is_available():
             self.device = torch.device("cuda", self.local_rank)
@@ -189,7 +193,7 @@ class DDPPOTrainer(PPOTrainer):
             )
 
         observations = self.envs.reset()
-        batch = batch_obs(observations)
+        batch = batch_obs(observations, device=self.device)
 
         obs_space = self.envs.observation_spaces[0]
         if self._static_encoder:

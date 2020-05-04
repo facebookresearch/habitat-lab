@@ -132,11 +132,8 @@ def test_r2r_vln_sim():
             env.current_episode.goals[0].position
         ]
         for point in path:
-            done = False
-            while not done:
+            while not env.episode_over:
                 best_action = follower.get_next_action(point)
-                if best_action == None:
-                    break
                 obs = env.step(best_action)
                 assert "rgb" in obs, "RGB image is missing in observation."
                 assert (
