@@ -48,6 +48,9 @@ ACTION_SPACE_COMMAND = "action_space"
 NUMBER_OF_EPISODES_COMMAND = "number_of_episodes"
 CALL_COMMAND = "call"
 EPISODE_COMMAND = "current_episode"
+COUNT_EPISODES_COMMAND = "count_episodes"
+EPISODE_OVER = "episode_over"
+GET_METRICS = "get_metrics"
 
 
 def _make_env_fn(
@@ -215,6 +218,17 @@ class VectorEnv:
                 # TODO: update CALL_COMMAND for getting attribute like this
                 elif command == EPISODE_COMMAND:
                     connection_write_fn(env.current_episode)
+
+                elif command == COUNT_EPISODES_COMMAND:
+                    connection_write_fn(len(env.episodes))
+
+                elif command == EPISODE_OVER:
+                    connection_write_fn(env.episode_over)
+
+                elif command == GET_METRICS:
+                    result = env.get_metrics()
+                    connection_write_fn(result)
+
                 else:
                     raise NotImplementedError
 
@@ -264,6 +278,36 @@ class VectorEnv:
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((EPISODE_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def count_episodes(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((COUNT_EPISODES_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def episode_over(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((EPISODE_OVER, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def get_metrics(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((GET_METRICS, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
