@@ -10,6 +10,7 @@ and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 """
 
 from collections import defaultdict
+import os
 from typing import Dict, Optional
 
 from habitat.config.default import get_config
@@ -63,7 +64,8 @@ class Benchmark:
             )
             return res_env["episode_over"]
 
-        channel = grpc.insecure_channel("localhost:8085")
+        env_address_port = os.environ.get("EVALENV_ADDPORT", "localhost:8085")
+        channel = grpc.insecure_channel(env_address_port)
         stub = evaluation_pb2_grpc.EnvironmentStub(channel)
 
         base_num_episodes = unpack_for_grpc(
