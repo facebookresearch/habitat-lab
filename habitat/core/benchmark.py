@@ -80,9 +80,9 @@ class Benchmark:
             res_env = unpack_for_grpc(
                 stub.reset(evaluation_pb2.Package()).SerializedEntity
             )
-            obs = res_env["observations"]
 
             while not remote_ep_over(stub):
+                obs = res_env["observations"]
                 action = agent.act(obs)
 
                 res_env = unpack_for_grpc(
