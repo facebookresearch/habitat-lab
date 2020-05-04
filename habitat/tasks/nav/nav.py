@@ -988,13 +988,11 @@ class DistanceToGoal(Measure):
         ):
             if self._config.DISTANCE_TO == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
-                    current_position,
-                    [goal.position for goal in episode.goals],
-                    episode,
+                    current_position, [goal.position for goal in episode.goals]
                 )
             elif self._config.DISTANCE_TO == "VIEW_POINTS":
                 distance_to_target = self._sim.geodesic_distance(
-                    current_position, self._episode_view_points, episode
+                    current_position, self._episode_view_points
                 )
             else:
                 logger.error(
