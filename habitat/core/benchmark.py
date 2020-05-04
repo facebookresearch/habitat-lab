@@ -9,8 +9,8 @@ the ``config_env`` parameter in constructor. The evaluation is task agnostic
 and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 """
 
-from collections import defaultdict
 import os
+from collections import defaultdict
 from typing import Dict, Optional
 
 from habitat.config.default import get_config
