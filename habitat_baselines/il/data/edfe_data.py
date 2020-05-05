@@ -94,7 +94,7 @@ class EDFEDataset(Dataset):
             elif self.mode == "val":
                 self.lmdb_txn = self.val_txn
         else:
-            lmdb_env = lmdb.open(self.dataset_path.format(split=self.mode))
+            lmdb_env = lmdb.open(self.dataset_path.format(split=self.mode), readonly=True, lock=False)
             self.lmdb_txn = lmdb_env.begin()
 
         self.lmdb_cursor = self.lmdb_txn.cursor()
