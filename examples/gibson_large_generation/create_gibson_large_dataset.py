@@ -15,15 +15,19 @@ import tqdm
 
 import habitat
 import habitat_sim
-from habitat.datasets.pointnav.pointnav_generator import generate_pointnav_episode
+from habitat.datasets.pointnav.pointnav_generator import (
+    generate_pointnav_episode,
+)
 
 num_episodes_per_scene = int(1e2)
+
 
 def safe_mkdir(path):
     try:
         os.mkdir(path)
     except:
         pass
+
 
 def _generate_fn(scene):
     cfg = habitat.get_config()
@@ -43,16 +47,19 @@ def _generate_fn(scene):
     for ep in dset.episodes:
         ep.scene_id = ep.scene_id[len("./data/scene_datasets/") :]
 
-    scene_key = scene.split('/')[-1].split('.')[0]
-    out_file = f"./data/datasets/pointnav/gibson/v2/train_large/content/"\
-               f"{scene_key}.json.gz"
+    scene_key = scene.split("/")[-1].split(".")[0]
+    out_file = (
+        f"./data/datasets/pointnav/gibson/v2/train_large/content/"
+        f"{scene_key}.json.gz"
+    )
     os.makedirs(osp.dirname(out_file), exist_ok=True)
     with gzip.open(out_file, "wt") as f:
         f.write(dset.to_json())
 
+
 # Load train / val statistics
 dataset_statistics = json.load(
-    open('./examples/gibson_large_generation/gibson_dset_with_qual.json')
+    open("./examples/gibson_large_generation/gibson_dset_with_qual.json")
 )
 
 # all Sample scenes with a minimum quality
@@ -60,15 +67,15 @@ q_thresh = 2
 
 gibson_large_scene_keys = []
 for k, v in dataset_statistics.items():
-    qual = v['qual']
-    if v['split_full+'] == 'train' and qual is not None and qual >= q_thresh:
+    qual = v["qual"]
+    if v["split_full+"] == "train" and qual is not None and qual >= q_thresh:
         gibson_large_scene_keys.append(k)
 
 scenes = glob.glob("./data/scene_datasets/gibson/*.glb")
 # Filter out invalid scenes
-_fltr = lambda x: x.split('/')[-1].split('.')[0] in gibson_large_scene_keys
-scenes = list(filter(_fltr , scenes))
-print(f'Total number of training scenes: {len(scenes)}')
+_fltr = lambda x: x.split("/")[-1].split(".")[0] in gibson_large_scene_keys
+scenes = list(filter(_fltr, scenes))
+print(f"Total number of training scenes: {len(scenes)}")
 
 safe_mkdir("./data/datasets/pointnav/gibson/v2/train_large")
 with multiprocessing.Pool(8) as pool, tqdm.tqdm(total=len(scenes)) as pbar:
