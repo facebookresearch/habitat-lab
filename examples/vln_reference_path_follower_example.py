@@ -52,46 +52,45 @@ def reference_path_example(mode):
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
-    env = SimpleRLEnv(config=config)
-
-    follower = ShortestPathFollower(
-        env.habitat_env.sim, goal_radius=0.5, return_one_hot=False
-    )
-    follower.mode = mode
-    print("Environment creation successful")
-
-    for episode in range(3):
-        env.reset()
-        episode_id = env.habitat_env.current_episode.episode_id
-        print(
-            f"Agent stepping around inside environment. Episode id: {episode_id}"
+    with SimpleRLEnv(config=config) as env:
+        follower = ShortestPathFollower(
+            env.habitat_env.sim, goal_radius=0.5, return_one_hot=False
         )
+        follower.mode = mode
+        print("Environment creation successful")
 
-        dirname = os.path.join(
-            IMAGE_DIR, "vln_reference_path_example", mode, "%02d" % episode
-        )
-        if os.path.exists(dirname):
-            shutil.rmtree(dirname)
-        os.makedirs(dirname)
+        for episode in range(3):
+            env.reset()
+            episode_id = env.habitat_env.current_episode.episode_id
+            print(
+                f"Agent stepping around inside environment. Episode id: {episode_id}"
+            )
 
-        images = []
-        steps = 0
-        reference_path = env.habitat_env.current_episode.reference_path + [
-            env.habitat_env.current_episode.goals[0].position
-        ]
-        for point in reference_path:
-            done = False
-            while not done:
-                best_action = follower.get_next_action(point)
-                if best_action == None:
-                    break
-                observations, reward, done, info = env.step(best_action)
-                save_map(observations, info, images)
-                steps += 1
+            dirname = os.path.join(
+                IMAGE_DIR, "vln_reference_path_example", mode, "%02d" % episode
+            )
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
+            os.makedirs(dirname)
 
-        print(f"Navigated to goal in {steps} steps.")
-        images_to_video(images, dirname, str(episode_id))
-        images = []
+            images = []
+            steps = 0
+            reference_path = env.habitat_env.current_episode.reference_path + [
+                env.habitat_env.current_episode.goals[0].position
+            ]
+            for point in reference_path:
+                done = False
+                while not done:
+                    best_action = follower.get_next_action(point)
+                    if best_action == None:
+                        break
+                    observations, reward, done, info = env.step(best_action)
+                    save_map(observations, info, images)
+                    steps += 1
+
+            print(f"Navigated to goal in {steps} steps.")
+            images_to_video(images, dirname, str(episode_id))
+            images = []
 
 
 if __name__ == "__main__":

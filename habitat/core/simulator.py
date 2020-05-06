@@ -366,7 +366,7 @@ class Simulator:
         raise NotImplementedError
 
     def close(self) -> None:
-        raise NotImplementedError
+        pass
 
     def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
@@ -375,3 +375,9 @@ class Simulator:
             :py:`False` otherwise
         """
         raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

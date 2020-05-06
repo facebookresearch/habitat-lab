@@ -97,11 +97,11 @@ def main():
     config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
     config.freeze()
 
-    env = habitat.Env(config=config)
-    print(env.reset()["agent_position"])
-    print(env.get_metrics()["episode_info"])
-    print(env.step("MOVE_FORWARD")["agent_position"])
-    print(env.get_metrics()["episode_info"])
+    with habitat.Env(config=config) as env:
+        print(env.reset()["agent_position"])
+        print(env.get_metrics()["episode_info"])
+        print(env.step("MOVE_FORWARD")["agent_position"])
+        print(env.get_metrics()["episode_info"])
 
 
 if __name__ == "__main__":

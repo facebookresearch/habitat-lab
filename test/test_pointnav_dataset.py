@@ -191,35 +191,36 @@ def test_pointnav_episode_generator():
     config.freeze()
     if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
         pytest.skip("Test skipped as dataset files are missing.")
-    env = habitat.Env(config)
-    env.seed(config.SEED)
-    random.seed(config.SEED)
-    generator = pointnav_generator.generate_pointnav_episode(
-        sim=env.sim,
-        shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
-        shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
-    )
-    episodes = []
-    for i in range(NUM_EPISODES):
-        episode = next(generator)
-        episodes.append(episode)
+    with habitat.Env(config) as env:
+        env.seed(config.SEED)
+        random.seed(config.SEED)
+        generator = pointnav_generator.generate_pointnav_episode(
+            sim=env.sim,
+            shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
+            shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
+        )
+        episodes = []
+        for i in range(NUM_EPISODES):
+            episode = next(generator)
+            episodes.append(episode)
 
-    for episode in pointnav_generator.generate_pointnav_episode(
-        sim=env.sim,
-        num_episodes=NUM_EPISODES,
-        shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
-        shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
-        geodesic_to_euclid_min_ratio=0,
-    ):
-        episodes.append(episode)
+        for episode in pointnav_generator.generate_pointnav_episode(
+            sim=env.sim,
+            num_episodes=NUM_EPISODES,
+            shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
+            shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
+            geodesic_to_euclid_min_ratio=0,
+        ):
+            episodes.append(episode)
 
-    assert len(episodes) == 2 * NUM_EPISODES
-    env.episode_iterator = iter(episodes)
+        assert len(episodes) == 2 * NUM_EPISODES
+        env.episode_iterator = iter(episodes)
 
-    for episode in episodes:
-        check_shortest_path(env, episode)
+        for episode in episodes:
+            check_shortest_path(env, episode)
 
-    dataset = habitat.Dataset()
-    dataset.episodes = episodes
-    assert dataset.to_json(), "Generated episodes aren't json serializable."
-    env.close()
+        dataset = habitat.Dataset()
+        dataset.episodes = episodes
+        assert (
+            dataset.to_json()
+        ), "Generated episodes aren't json serializable."

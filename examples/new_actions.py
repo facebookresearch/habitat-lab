@@ -162,21 +162,19 @@ def main():
     config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    env.step("STRAFE_LEFT")
-    env.step("STRAFE_RIGHT")
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        env.step("STRAFE_LEFT")
+        env.step("STRAFE_RIGHT")
 
     config.defrost()
     config.SIMULATOR.ACTION_SPACE_CONFIG = "NoiseStrafe"
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    env.step("STRAFE_LEFT")
-    env.step("STRAFE_RIGHT")
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        env.step("STRAFE_LEFT")
+        env.step("STRAFE_RIGHT")
 
 
 if __name__ == "__main__":

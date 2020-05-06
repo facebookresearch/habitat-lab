@@ -23,27 +23,26 @@ def test_task_actions():
     config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    action = {
-        "action": "TELEPORT",
-        "action_args": {
-            "position": TELEPORT_POSITION,
-            "rotation": TELEPORT_ROTATION,
-        },
-    }
-    assert env.action_space.contains(action)
-    env.step(action)
-    agent_state = env.sim.get_agent_state()
-    assert np.allclose(
-        np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
-    ), "mismatch in position after teleport"
-    assert np.allclose(
-        np.array(TELEPORT_ROTATION, dtype=np.float32),
-        np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
-    ), "mismatch in rotation after teleport"
-    env.step("TURN_RIGHT")
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        action = {
+            "action": "TELEPORT",
+            "action_args": {
+                "position": TELEPORT_POSITION,
+                "rotation": TELEPORT_ROTATION,
+            },
+        }
+        assert env.action_space.contains(action)
+        env.step(action)
+        agent_state = env.sim.get_agent_state()
+        assert np.allclose(
+            np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
+        ), "mismatch in position after teleport"
+        assert np.allclose(
+            np.array(TELEPORT_ROTATION, dtype=np.float32),
+            np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
+        ), "mismatch in rotation after teleport"
+        env.step("TURN_RIGHT")
 
 
 def test_task_actions_sampling_for_teleport():
@@ -52,20 +51,19 @@ def test_task_actions_sampling_for_teleport():
     config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
     config.freeze()
 
-    env = habitat.Env(config=config)
-    env.reset()
-    while not env.episode_over:
-        action = sample_non_stop_action(env.action_space)
-        assert env.action_space.contains(action)
-        habitat.logger.info(
-            f"Action : "
-            f"{action['action']}, "
-            f"args: {action['action_args']}."
-        )
-        env.step(action)
-        agent_state = env.sim.get_agent_state()
-        habitat.logger.info(agent_state)
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        while not env.episode_over:
+            action = sample_non_stop_action(env.action_space)
+            assert env.action_space.contains(action)
+            habitat.logger.info(
+                f"Action : "
+                f"{action['action']}, "
+                f"args: {action['action_args']}."
+            )
+            env.step(action)
+            agent_state = env.sim.get_agent_state()
+            habitat.logger.info(agent_state)
 
 
 @pytest.mark.parametrize(
@@ -86,17 +84,16 @@ def test_task_actions_sampling(config_file):
             f"{config.DATASET.DATA_PATH}."
         )
 
-    env = habitat.Env(config=config)
-    env.reset()
-    while not env.episode_over:
-        action = sample_non_stop_action(env.action_space)
-        assert env.action_space.contains(action)
-        habitat.logger.info(
-            f"Action : "
-            f"{action['action']}, "
-            f"args: {action['action_args']}."
-        )
-        env.step(action)
-        agent_state = env.sim.get_agent_state()
-        habitat.logger.info(agent_state)
-    env.close()
+    with habitat.Env(config=config) as env:
+        env.reset()
+        while not env.episode_over:
+            action = sample_non_stop_action(env.action_space)
+            assert env.action_space.contains(action)
+            habitat.logger.info(
+                f"Action : "
+                f"{action['action']}, "
+                f"args: {action['action_args']}."
+            )
+            env.step(action)
+            agent_state = env.sim.get_agent_state()
+            habitat.logger.info(agent_state)
