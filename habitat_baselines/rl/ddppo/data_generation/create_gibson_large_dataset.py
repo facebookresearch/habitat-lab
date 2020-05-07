@@ -19,7 +19,7 @@ from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )
 
-num_episodes_per_scene = int(1e2)
+num_episodes_per_scene = int(1e4)
 
 
 def safe_mkdir(path):
