@@ -62,31 +62,6 @@ def merge_sim_episode_config(
     return sim_config
 
 
-def compute_state_delta(
-    prev_agent_state: AgentState,
-    cur_agent_state: AgentState
-) -> AgentState:
-    
-    state_delta = AgentState(position=np.zeros(3), rotation=np.quaternion(1, 0, 0, 0))
-    
-    # compute change for rotation
-    if isinstance(prev_agent_state.rotation, (List, np.ndarray)):
-        prev_agent_state.rotation = quaternion_from_coeff(prev_agent_state.rotation)
-    if isinstance(cur_agent_state.rotation, (List, np.ndarray)):
-        cur_agent_state.rotation = quaternion_from_coeff(cur_agent_state.rotation)
-        
-    state_delta.rotation = prev_agent_state.rotation.inverse() * cur_agent_state.rotation
-    
-    # compute change for position along negative-z
-    # if you want to get the absolute magnitude along axis, pay attention to the sign
-    state_delta.position = quaternion_rotate_vector(
-        prev_agent_state.rotation.inverse(),
-        cur_agent_state.position - prev_agent_state.position
-    )
-    
-    return state_delta
-
-
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
     r"""Base class for a goal specification hierarchy.

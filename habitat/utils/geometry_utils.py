@@ -7,6 +7,9 @@
 import numpy as np
 import quaternion
 
+from habitat.core.simulator import AgentState
+from habitat.tasks.utils import quaternion_from_coeff, quaternion_rotate_vector
+
 EPSILON = 1e-8
 
 
@@ -54,3 +57,41 @@ def quaternion_to_list(q: np.quaternion):
     return quaternion.as_float_array(
         quaternion_wxyz_to_xyzw(quaternion.as_float_array(q))
     ).tolist()
+
+
+def agent_state_target2ref(
+    ref_agent_state: AgentState, target_agent_state: AgentState
+) -> AgentState:
+    r"""Computes the target agent_state's position and rotation representation
+    with respect to the coordinate system defined by reference agent's position and rotation.
+
+    :param ref_agent_state: reference agent_state,
+        whose global position and rotation attributes define a local coordinate system.
+    :param target_agent_state: target agent_state,
+        whose global position and rotation attributes need to be transformed to
+        the local coordinate system defined by ref_agent_state.
+    """
+
+    target_in_ref_coordinate = AgentState(
+        position=np.zeros(3), rotation=np.quaternion(1, 0, 0, 0)
+    )
+
+    if isinstance(ref_agent_state.rotation, (List, np.ndarray)):
+        ref_agent_state.rotation = quaternion_from_coeff(
+            ref_agent_state.rotation
+        )
+    if isinstance(target_agent_state.rotation, (List, np.ndarray)):
+        target_agent_state.rotation = quaternion_from_coeff(
+            target_agent_state.rotation
+        )
+
+    target_in_ref_coordinate.rotation = (
+        ref_agent_state.rotation.inverse() * target_agent_state.rotation
+    )
+
+    target_in_ref_coordinate.position = quaternion_rotate_vector(
+        ref_agent_state.rotation.inverse(),
+        target_agent_state.position - ref_agent_state.position,
+    )
+
+    return target_in_ref_coordinate
