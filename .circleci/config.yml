@@ -205,7 +205,7 @@ jobs:
               # TODO: take it from github.com/facebookmicrosites/habitat-website
               #   instead
               mkdir -p ../habitat-sim/build/docs/habitat-sim
-              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs/habitat-sim/objects.inv
+              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
 
               cd docs
               conda install -y -c conda-forge doxygen==1.8.16
