@@ -21,7 +21,8 @@ from habitat.datasets.pointnav.pointnav_dataset import (
     DEFAULT_SCENE_PATH_PREFIX,
     PointNavDatasetV1,
 )
-from habitat.utils.geometry_utils import quaternion_xyzw_to_wxyz
+from habitat.tasks.utils import quaternion_from_coeff
+from habitat.utils.geometry_utils import angle_between_quaternions
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_MULTI_TEST = "configs/datasets/pointnav/gibson.yaml"
@@ -159,8 +160,11 @@ def test_dataset_splitting(split):
 
 def check_shortest_path(env, episode):
     def check_state(agent_state, position, rotation):
-        assert np.allclose(
-            agent_state.rotation, quaternion_xyzw_to_wxyz(rotation)
+        assert (
+            angle_between_quaternions(
+                agent_state.rotation, quaternion_from_coeff(rotation)
+            )
+            < 1e-5
         ), "Agent's rotation diverges from the shortest path."
 
         assert np.allclose(

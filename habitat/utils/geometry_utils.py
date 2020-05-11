@@ -45,6 +45,10 @@ def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
 
 
 def quaternion_to_list(q: np.quaternion):
+    return q.imag.tolist() + [q.real]
+
+
+def quaternion_to_list2(q: np.quaternion):
     r"""Creates coeffs in [x, y, z, w] format from quaternions
     """
     return q.imag.tolist() + [q.real]
