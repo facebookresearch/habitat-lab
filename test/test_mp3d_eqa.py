@@ -17,6 +17,8 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.tasks.eqa.eqa import AnswerAction
 from habitat.tasks.nav.nav import MoveForwardAction, StopAction
+from habitat.tasks.utils import quaternion_from_coeff
+from habitat.utils.geometry_utils import angle_between_quaternions
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -237,9 +239,9 @@ def test_mp3d_eqa_sim_correspondence():
                     "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
                     "".format(
                         cur_state.position - point.position,
-                        cur_state.rotation
-                        - habitat.utils.geometry_utils.quaternion_wxyz_to_xyzw(
-                            point.rotation
+                        angle_between_quaternions(
+                            cur_state.rotation,
+                            quaternion_from_coeff(point.rotation),
                         ),
                         cur_state.position,
                         point.position,
