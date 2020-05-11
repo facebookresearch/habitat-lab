@@ -204,7 +204,7 @@ jobs:
               # the whole sim docs for that)
               # TODO: take it from github.com/facebookmicrosites/habitat-website
               #   instead
-              mkdir -p ../habitat-sim/build/docs/habitat-sim
+              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
               curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
 
               cd docs
