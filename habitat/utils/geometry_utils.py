@@ -4,11 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import List, Union
+
 import numpy as np
 import quaternion
-
-from habitat.core.simulator import AgentState
-from habitat.tasks.utils import quaternion_from_coeff, quaternion_rotate_vector
 
 EPSILON = 1e-8
 
@@ -59,39 +58,115 @@ def quaternion_to_list(q: np.quaternion):
     ).tolist()
 
 
+def quaternion_to_list_xyzw(q: np.quaternion):
+    return quaternion.as_float_array(
+        quaternion_wxyz_to_xyzw(quaternion.as_float_array(q))
+    ).tolist()
+
+
+def quaternion_to_list_wxyz(q: np.quaternion):
+    return quaternion.as_float_array(q).tolist()
+
+
+def quaternion_from_list_xyzw(coeffs: np.ndarray) -> np.quaternion:
+    r"""Creates a quaternions from coeffs in [x, y, z, w] format
+    """
+    quat = np.quaternion(0, 0, 0, 0)
+    quat.real = coeffs[3]
+    quat.imag = coeffs[0:3]
+    return quat
+
+
+def quaternion_from_list_wxyz(coeffs: np.ndarray) -> np.quaternion:
+    r"""Creates a quaternions from coeffs in [w, x, y, z] format
+    """
+    quat = np.quaternion(0, 0, 0, 0)
+    quat.real = coeffs[0]
+    quat.imag = coeffs[1:4]
+    return quat
+
+
+def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
+    r"""Rotates a vector by a quaternion
+    Args:
+        quaternion: The quaternion to rotate by
+        v: The vector to rotate
+    Returns:
+        np.array: The rotated vector
+    """
+    vq = np.quaternion(0, 0, 0, 0)
+    vq.imag = v
+    return (quat * vq * quat.inverse()).imag
+
+
 def agent_state_target2ref(
-    ref_agent_state: AgentState, target_agent_state: AgentState
-) -> AgentState:
+    ref_agent_state: List, target_agent_state: List, rotation_format: str
+) -> List:
     r"""Computes the target agent_state's position and rotation representation
     with respect to the coordinate system defined by reference agent's position and rotation.
 
-    :param ref_agent_state: reference agent_state,
-        whose global position and rotation attributes define a local coordinate system.
-    :param target_agent_state: target agent_state,
-        whose global position and rotation attributes need to be transformed to
-        the local coordinate system defined by ref_agent_state.
+    :param ref_agent_state: reference agent_state in the format of [position, rotation].
+         The position and roation are from a common/global coordinate systems.
+         They define a local coordinate system.
+    :param target_agent_state: target agent_state in the format of [position, rotation].
+        The position and roation are from a common/global coordinate systems.
+        and need to be transformed to the local coordinate system defined by ref_agent_state.
+    :param rotation_format: specify the format of quaternion.
+        Choices are 'xyzw' and 'wxyz'.
     """
 
-    target_in_ref_coordinate = AgentState(
-        position=np.zeros(3), rotation=np.quaternion(1, 0, 0, 0)
-    )
+    assert rotation_format in [
+        "xyzw",
+        "wxyz",
+    ], "Incompatible format of roatation."
+    assert (
+        len(ref_agent_state[0]) == 3
+    ), "Only support Cartesian format currently."
+    assert (
+        len(target_agent_state[0]) == 3
+    ), "Only support Cartesian format currently."
 
-    if isinstance(ref_agent_state.rotation, (List, np.ndarray)):
-        ref_agent_state.rotation = quaternion_from_coeff(
-            ref_agent_state.rotation
+    target_in_ref_coordinate = []
+
+    # convert to all rotation representations to np.quaternion
+    if not isinstance(ref_agent_state[1], np.quaternion):
+        if rotation_format == "xyzw":
+            ref_agent_state[1] = quaternion_from_list_xyzw(ref_agent_state[1])
+        else:
+            ref_agent_state[1] = quaternion_from_list_wxyz(ref_agent_state[1])
+    ref_agent_state[1] = ref_agent_state[1].normalized()
+
+    if not isinstance(target_agent_state[1], np.quaternion):
+        if rotation_format == "xyzw":
+            target_agent_state[1] = quaternion_from_list_xyzw(
+                target_agent_state[1]
+            )
+        else:
+            target_agent_state[1] = quaternion_from_list_wxyz(
+                target_agent_state[1]
+            )
+    target_agent_state[1] = target_agent_state[1].normalized()
+
+    # position value
+    target_in_ref_coordinate.append(
+        quaternion_rotate_vector(
+            ref_agent_state[1].inverse(),
+            target_agent_state[0] - ref_agent_state[0],
         )
-    if isinstance(target_agent_state.rotation, (List, np.ndarray)):
-        target_agent_state.rotation = quaternion_from_coeff(
-            target_agent_state.rotation
+    )
+
+    # rotation value
+    if rotation_format == "xyzw":
+        target_in_ref_coordinate.append(
+            quaternion_to_list_xyzw(
+                ref_agent_state[1].inverse() * target_agent_state[1]
+            )
         )
-
-    target_in_ref_coordinate.rotation = (
-        ref_agent_state.rotation.inverse() * target_agent_state.rotation
-    )
-
-    target_in_ref_coordinate.position = quaternion_rotate_vector(
-        ref_agent_state.rotation.inverse(),
-        target_agent_state.position - ref_agent_state.position,
-    )
+    else:
+        target_in_ref_coordinate.append(
+            quaternion_to_list_wxyz(
+                ref_agent_state[1].inverse() * target_agent_state[1]
+            )
+        )
 
     return target_in_ref_coordinate
