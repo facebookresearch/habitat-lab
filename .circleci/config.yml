@@ -63,6 +63,11 @@ jobs:
                   wget \
                   zip \
                   unzip || true
+              sudo apt install --allow-change-held-packages \
+                  texlive-base \
+                  texlive-latex-extra \
+                  texlive-fonts-extra \
+                  texlive-fonts-recommended
       - run:
           name: Install cuda
           no_output_timeout: 20m
