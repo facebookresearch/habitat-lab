@@ -44,45 +44,18 @@ def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
     return np.quaternion(s * 0.5, *(axis / s))
 
 
-def quaternion_xyzw_to_wxyz(v: np.array):
-    return np.quaternion(v[3], *v[0:3])
-
-
-def quaternion_wxyz_to_xyzw(v: np.array):
-    return np.quaternion(*v[1:4], v[0])
-
-
 def quaternion_to_list(q: np.quaternion):
-    return quaternion.as_float_array(
-        quaternion_wxyz_to_xyzw(quaternion.as_float_array(q))
-    ).tolist()
+    r"""Creates coeffs in [x, y, z, w] format from quaternions
+    """
+    return q.imag.tolist() + [q.real]
 
 
-def quaternion_to_list_xyzw(q: np.quaternion):
-    return quaternion.as_float_array(
-        quaternion_wxyz_to_xyzw(quaternion.as_float_array(q))
-    ).tolist()
-
-
-def quaternion_to_list_wxyz(q: np.quaternion):
-    return quaternion.as_float_array(q).tolist()
-
-
-def quaternion_from_list_xyzw(coeffs: np.ndarray) -> np.quaternion:
+def quaternion_from_list(coeffs: np.ndarray) -> np.quaternion:
     r"""Creates a quaternions from coeffs in [x, y, z, w] format
     """
     quat = np.quaternion(0, 0, 0, 0)
     quat.real = coeffs[3]
     quat.imag = coeffs[0:3]
-    return quat
-
-
-def quaternion_from_list_wxyz(coeffs: np.ndarray) -> np.quaternion:
-    r"""Creates a quaternions from coeffs in [w, x, y, z] format
-    """
-    quat = np.quaternion(0, 0, 0, 0)
-    quat.real = coeffs[0]
-    quat.imag = coeffs[1:4]
     return quat
 
 
@@ -100,10 +73,11 @@ def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
 
 
 def agent_state_target2ref(
-    ref_agent_state: List, target_agent_state: List, rotation_format: str
+    ref_agent_state: List, target_agent_state: List
 ) -> List:
     r"""Computes the target agent_state's position and rotation representation
     with respect to the coordinate system defined by reference agent's position and rotation.
+    All rotations must be in [x, y, z, w] format.
 
     :param ref_agent_state: reference agent_state in the format of [position, rotation].
          The position and roation are from a common/global coordinate systems.
@@ -115,10 +89,6 @@ def agent_state_target2ref(
         Choices are 'xyzw' and 'wxyz'.
     """
 
-    assert rotation_format in [
-        "xyzw",
-        "wxyz",
-    ], "Incompatible format of roatation."
     assert (
         len(ref_agent_state[0]) == 3
     ), "Only support Cartesian format currently."
@@ -130,21 +100,11 @@ def agent_state_target2ref(
 
     # convert to all rotation representations to np.quaternion
     if not isinstance(ref_agent_state[1], np.quaternion):
-        if rotation_format == "xyzw":
-            ref_agent_state[1] = quaternion_from_list_xyzw(ref_agent_state[1])
-        else:
-            ref_agent_state[1] = quaternion_from_list_wxyz(ref_agent_state[1])
+        ref_agent_state[1] = quaternion_from_list(ref_agent_state[1])
     ref_agent_state[1] = ref_agent_state[1].normalized()
 
     if not isinstance(target_agent_state[1], np.quaternion):
-        if rotation_format == "xyzw":
-            target_agent_state[1] = quaternion_from_list_xyzw(
-                target_agent_state[1]
-            )
-        else:
-            target_agent_state[1] = quaternion_from_list_wxyz(
-                target_agent_state[1]
-            )
+        target_agent_state[1] = quaternion_from_list(target_agent_state[1])
     target_agent_state[1] = target_agent_state[1].normalized()
 
     # position value
@@ -156,17 +116,10 @@ def agent_state_target2ref(
     )
 
     # rotation value
-    if rotation_format == "xyzw":
-        target_in_ref_coordinate.append(
-            quaternion_to_list_xyzw(
-                ref_agent_state[1].inverse() * target_agent_state[1]
-            )
+    target_in_ref_coordinate.append(
+        quaternion_to_list(
+            ref_agent_state[1].inverse() * target_agent_state[1]
         )
-    else:
-        target_in_ref_coordinate.append(
-            quaternion_to_list_wxyz(
-                ref_agent_state[1].inverse() * target_agent_state[1]
-            )
-        )
+    )
 
     return target_in_ref_coordinate
