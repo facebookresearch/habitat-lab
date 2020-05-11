@@ -53,8 +53,6 @@ def quaternion_wxyz_to_xyzw(v: np.array):
 
 
 def quaternion_to_list(q: np.quaternion):
-    r"""Creates coeffs in [x, y, z, w] format from quaternions
-    """
     return q.imag.tolist() + [q.real]
 
 
