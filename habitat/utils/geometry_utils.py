@@ -44,6 +44,14 @@ def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
     return np.quaternion(s * 0.5, *(axis / s))
 
 
+def quaternion_xyzw_to_wxyz(v: np.array):
+    return np.quaternion(v[3], *v[0:3])
+
+
+def quaternion_wxyz_to_xyzw(v: np.array):
+    return np.quaternion(*v[1:4], v[0])
+
+
 def quaternion_to_list(q: np.quaternion):
     r"""Creates coeffs in [x, y, z, w] format from quaternions
     """
