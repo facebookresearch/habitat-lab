@@ -200,6 +200,13 @@ jobs:
               . activate habitat; cd habitat-api
               python setup.py develop --all
 
+              # Download sim inventory for crosslinking (no need to build
+              # the whole sim docs for that)
+              # TODO: take it from github.com/facebookmicrosites/habitat-website
+              #   instead
+              mkdir -p ../habitat-sim/build/docs/habitat-sim
+              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs/habitat-sim/objects.inv
+
               cd docs
               conda install -y -c conda-forge doxygen==1.8.16
               conda install -y  jinja2 pygments docutils
