@@ -159,31 +159,11 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
-      - run:
-          name: Build sim documentation
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat;
-              cd habitat-sim
-              # Rebuild with all options enabled
-              ./build.sh --with-cuda --with-bullet
-              cd docs
-              conda install -y -c conda-forge doxygen==1.8.16
-              conda install -y  jinja2 pygments docutils
-              conda install -y -c conda-forge pelican
-              mkdir -p ../build/docs
-              git submodule update --init
-              ./build-public.sh
       - save_cache:
           key: habitat-sim-{{ checksum "./hsim_sha" }}
           background: true
           paths:
             - ./habitat-sim
-      - save_cache:
-          key: docs-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
-          background: true
-          paths:
-            - ./habitat-sim/build/docs-public
       - save_cache:
           key: ccache-{{ arch }}-master
           background: true
