@@ -21,8 +21,10 @@ from habitat.datasets.pointnav.pointnav_dataset import (
     DEFAULT_SCENE_PATH_PREFIX,
     PointNavDatasetV1,
 )
-from habitat.tasks.utils import quaternion_from_coeff
-from habitat.utils.geometry_utils import angle_between_quaternions
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_from_coeff,
+)
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_MULTI_TEST = "configs/datasets/pointnav/gibson.yaml"

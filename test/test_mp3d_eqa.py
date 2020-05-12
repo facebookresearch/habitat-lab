@@ -17,8 +17,10 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.tasks.eqa.eqa import AnswerAction
 from habitat.tasks.nav.nav import MoveForwardAction, StopAction
-from habitat.tasks.utils import quaternion_from_coeff
-from habitat.utils.geometry_utils import angle_between_quaternions
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_from_coeff,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
