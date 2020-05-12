@@ -18,8 +18,10 @@ from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
 )
-from habitat.tasks.utils import quaternion_rotate_vector
-from habitat.utils.geometry_utils import angle_between_quaternions
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_rotate_vector,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 from habitat.utils.visualizations.utils import (
     images_to_video,
