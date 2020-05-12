@@ -63,6 +63,11 @@ jobs:
                   wget \
                   zip \
                   unzip || true
+              sudo apt install --allow-change-held-packages \
+                  texlive-base \
+                  texlive-latex-extra \
+                  texlive-fonts-extra \
+                  texlive-fonts-recommended
       - run:
           name: Install cuda
           no_output_timeout: 20m
@@ -193,6 +198,25 @@ jobs:
               python setup.py develop --all
               python setup.py test
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Build api documentation
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-api
+              python setup.py develop --all
+
+              # Download sim inventory for crosslinking (no need to build
+              # the whole sim docs for that)
+              # TODO: take it from github.com/facebookmicrosites/habitat-website
+              #   instead
+              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
+              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
+
+              cd docs
+              conda install -y -c conda-forge doxygen==1.8.16
+              conda install -y  jinja2 pygments docutils
+              mkdir -p ../build/docs
+              ./build-public.sh
 
 
 workflows:
