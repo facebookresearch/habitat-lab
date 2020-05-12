@@ -88,4 +88,4 @@ data
 # vim
 *.swp
 
-habitat_baselines/config/_dev/
+habitat_baselines/_dev/
