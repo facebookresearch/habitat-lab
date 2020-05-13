@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from gym import spaces
 from gym.spaces import Box
 
+from habitat import logger
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -72,6 +73,7 @@ class ImageNavResNetPolicy(Policy):
         backbone="resnet50",
         normalize_visual_inputs=False,
         obs_transform=ResizeCenterCropper(size=(256, 256)),
+        blind_policy=False,
     ):
         super().__init__(
             ImageNavResNetNet(
@@ -85,6 +87,7 @@ class ImageNavResNetPolicy(Policy):
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
                 obs_transform=obs_transform,
+                blind_policy=blind_policy,
             ),
             action_space.n,
         )
@@ -425,6 +428,7 @@ class ImageNavResNetNet(Net):
         resnet_baseplanes,
         normalize_visual_inputs,
         obs_transform=ResizeCenterCropper(size=(256, 256)),
+        blind_policy=False,
     ):
         super().__init__()
         self.goal_sensor_uuid = goal_sensor_uuid
@@ -433,6 +437,23 @@ class ImageNavResNetNet(Net):
         self._n_prev_action = 32
 
         self._hidden_size = hidden_size
+
+        goal_observation_space = spaces.Dict(
+            {"rgb": observation_space.spaces[goal_sensor_uuid]}
+        )
+        if blind_policy:
+            # we need to keep RGB SENSOR in simulator for ImageGoalSensor
+            # So we remove it here
+            observation_space = spaces.Dict({})
+        else:
+            space_dict = observation_space.spaces
+            space_dict.pop(goal_sensor_uuid)
+            observation_space = spaces.Dict(space_dict)
+
+        logger.info(
+            f"ImageNavPolicy observation space: {observation_space} "
+            f"and goal_space: {goal_observation_space}"
+        )
 
         self.visual_encoder = ResNetEncoder(
             observation_space,
@@ -452,9 +473,6 @@ class ImageNavResNetNet(Net):
                 nn.ReLU(True),
             )
 
-        goal_observation_space = spaces.Dict(
-            {"rgb": observation_space.spaces[goal_sensor_uuid]}
-        )
         self.goal_visual_encoder = ResNetEncoder(
             goal_observation_space,
             baseplanes=resnet_baseplanes,
