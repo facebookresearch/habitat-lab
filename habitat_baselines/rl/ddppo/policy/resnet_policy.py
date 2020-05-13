@@ -446,7 +446,7 @@ class ImageNavResNetNet(Net):
             # So we remove it here
             observation_space = spaces.Dict({})
         else:
-            space_dict = observation_space.spaces
+            space_dict = observation_space.spaces.copy()
             space_dict.pop(goal_sensor_uuid)
             observation_space = spaces.Dict(space_dict)
 
