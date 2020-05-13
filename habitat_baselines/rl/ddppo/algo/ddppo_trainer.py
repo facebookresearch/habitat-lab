@@ -81,6 +81,7 @@ class DDPPOTrainer(PPOTrainer):
                 goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
                 normalize_visual_inputs="rgb"
                 in self.envs.observation_spaces[0].spaces,
+                blind_policy=self.config.IMAGENAV_BLIND_POLICY,
             )
         else:
             self.actor_critic = PointNavResNetPolicy(
