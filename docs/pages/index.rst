@@ -7,18 +7,18 @@ tasks, environments, and simulators.
 `Tutorials`_
 ============
 
--   `Quickstart <std:doc:quickstart>`
--   `Habitat Sim Demo <std:doc:habitat-sim-demo>`
--   `Habitat API Demo <std:doc:habitat-api-demo>`
--   `View, Transform and Warp <std:doc:view-transform-warp>`
+-   :ref:`Quickstart <std:doc:quickstart>`
+-   :ref:`Habitat Sim Demo <std:doc:habitat-sim-demo>`
+-   :ref:`Habitat API Demo <std:doc:habitat-api-demo>`
+-   :ref:`View, Transform and Warp <std:doc:view-transform-warp>`
 
 `Package reference`_
 ====================
 
--   `habitat.core.env`
--   `habitat.core.embodied_task`
--   `habitat.core.dataset`
--   `habitat.core.simulator`
--   `habitat.core.vector_env`
--   `habitat.Agent`
--   `habitat.Benchmark`
+-   :ref:`habitat.core.env`
+-   :ref:`habitat.core.embodied_task`
+-   :ref:`habitat.core.dataset`
+-   :ref:`habitat.core.simulator`
+-   :ref:`habitat.core.vector_env`
+-   :ref:`habitat.Agent`
+-   :ref:`habitat.Benchmark`

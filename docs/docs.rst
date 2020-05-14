@@ -1,11 +1,8 @@
 ..
     Stuff defined here gets set globally for everything else:
 
-    -   use `thing` as a shortcut for :ref:`thing`
     -   use :py:`code` for inline code with highlighted Python syntax
 ..
-
-.. default-role:: ref
 
 .. role:: py(code)
     :language: py

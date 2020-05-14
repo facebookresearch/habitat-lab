@@ -95,7 +95,7 @@ def load_interrupted_state(filename: str = None) -> Optional[Any]:
 
 
 def requeue_job():
-    r"""Requeues the job by calling `scontrol requeue ${SLURM_JOBID}`
+    r"""Requeues the job by calling ``scontrol requeue ${SLURM_JOBID}``
     """
     if SLURM_JOBID is None:
         return
@@ -118,7 +118,7 @@ def init_distrib_slurm(
     backend: str = "nccl",
 ) -> Tuple[int, torch.distributed.TCPStore]:
     r"""Initializes torch.distributed by parsing environment variables set
-        by SLURM when `srun` is used or by parsing environment variables set
+        by SLURM when ``srun`` is used or by parsing environment variables set
         by torch.distributed.launch
 
     :param backend: Which torch.distributed backend to use

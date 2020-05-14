@@ -56,12 +56,12 @@ GET_METRICS = "get_metrics"
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
-    """Constructor for default habitat `env.Env`.
+    """Constructor for default habitat :ref:`env.Env`.
 
     :param config: configuration for environment.
     :param dataset: dataset for environment.
     :param rank: rank for setting seed of environment
-    :return: `env.Env` / `env.RLEnv` object
+    :return: :ref:`env.Env` / :ref:`env.RLEnv` object
     """
     habitat_env = Env(config=config, dataset=dataset)
     habitat_env.seed(config.SEED + rank)
@@ -98,9 +98,9 @@ class VectorEnv:
         """..
 
         :param make_env_fn: function which creates a single environment. An
-            environment can be of type `env.Env` or `env.RLEnv`
+            environment can be of type :ref:`env.Env` or :ref:`env.RLEnv`
         :param env_fn_args: tuple of tuple of args to pass to the
-            `_make_env_fn`.
+            :ref:`_make_env_fn`.
         :param auto_reset_done: automatically reset the environment when
             done. This functionality is provided for seamless training
             of vectorized environments.
@@ -357,7 +357,7 @@ class VectorEnv:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
         # Backward compatibility
@@ -381,7 +381,7 @@ class VectorEnv:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
@@ -525,12 +525,13 @@ class VectorEnv:
 
 
 class ThreadedVectorEnv(VectorEnv):
-    r"""Provides same functionality as `VectorEnv`, the only difference is it
-    runs in a multi-thread setup inside a single process.
+    r"""Provides same functionality as :ref:`VectorEnv`, the only difference
+    is it runs in a multi-thread setup inside a single process.
 
-    `VectorEnv` runs in a multi-proc setup. This makes it much easier to debug
-    when using `VectorEnv` because you can actually put break points in the
-    environment methods. It should not be used for best performance.
+    The :ref:`VectorEnv` runs in a multi-proc setup. This makes it much easier
+    to debug when using :ref:`VectorEnv` because you can actually put break
+    points in the environment methods. It should not be used for best
+    performance.
     """
 
     def _spawn_workers(

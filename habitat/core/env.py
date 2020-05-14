@@ -23,16 +23,17 @@ from habitat.tasks import make_task
 
 
 class Env:
-    r"""Fundamental environment class for `habitat`.
+    r"""Fundamental environment class for :ref:`habitat`.
 
     :data observation_space: ``SpaceDict`` object corresponding to sensor in
         sim and task.
     :data action_space: ``gym.space`` object corresponding to valid actions.
 
     All the information  needed for working on embodied tasks with simulator
-    is abstracted inside `Env`. Acts as a base for other derived environment
-    classes. `Env` consists of three major components: ``dataset`` (`episodes`), ``simulator`` (`sim`) and `task` and connects all the three components
-    together.
+    is abstracted inside :ref:`Env`. Acts as a base for other derived
+    environment classes. :ref:`Env` consists of three major components:
+    ``dataset`` (`episodes`), ``simulator`` (:ref:`sim`) and :ref:`task` and
+    connects all the three components together.
     """
 
     observation_space: SpaceDict
@@ -238,10 +239,11 @@ class Env:
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to `action_space`) to be performed
-            inside the environment. Action is a name or index of allowed
-            task's action and action arguments (belonging to action's
-            `action_space`) to support parametrized and continuous actions.
+        :param action: action (belonging to :ref:`action_space`) to be
+            performed inside the environment. Action is a name or index of
+            allowed task's action and action arguments (belonging to action's
+            :ref:`action_space`) to support parametrized and continuous
+            actions.
         :return: observations after taking action in environment.
         """
 
@@ -308,9 +310,10 @@ class Env:
 class RLEnv(gym.Env):
     r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
 
-    This is a wrapper over `Env` for RL users. To create custom RL
+    This is a wrapper over :ref:`Env` for RL users. To create custom RL
     environments users should subclass `RLEnv` and define the following
-    methods: `get_reward_range()`, `get_reward()`, `get_done()`, `get_info()`.
+    methods: :ref:`get_reward_range()`, :ref:`get_reward()`,
+    :ref:`get_done()`, :ref:`get_info()`.
 
     As this is a subclass of ``gym.Env``, it implements `reset()` and
     `step()`.
@@ -323,8 +326,8 @@ class RLEnv(gym.Env):
     ) -> None:
         """Constructor
 
-        :param config: config to construct `Env`
-        :param dataset: dataset to construct `Env`.
+        :param config: config to construct :ref:`Env`
+        :param dataset: dataset to construct :ref:`Env`.
         """
 
         self._env = Env(config, dataset)
@@ -365,7 +368,7 @@ class RLEnv(gym.Env):
         :param observations: observations from simulator and task.
         :return: reward after performing the last action.
 
-        This method is called inside the `step()` method.
+        This method is called inside the :ref:`step()` method.
         """
         raise NotImplementedError
 
