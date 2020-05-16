@@ -35,19 +35,20 @@ def make_env_fn(
 
 
 def construct_envs(
-    config: Config, env_class: Type[Union[Env, RLEnv]]
+    config: Config,
+    env_class: Type[Union[Env, RLEnv]],
+    workers_ignore_signals: bool = False,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
 
-    Args:
-        config: configs that contain num_processes as well as information
-        necessary to create individual environments.
-        env_class: class type of the envs to be created.
+    :param config: configs that contain num_processes as well as information
+    :param necessary to create individual environments.
+    :param env_class: class type of the envs to be created.
+    :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
 
-    Returns:
-        VectorEnv object created according to specification.
+    :return: VectorEnv object created according to specification.
     """
 
     num_processes = config.NUM_PROCESSES
@@ -100,5 +101,6 @@ def construct_envs(
         env_fn_args=tuple(
             tuple(zip(configs, env_classes, range(num_processes)))
         ),
+        workers_ignore_signals=workers_ignore_signals,
     )
     return envs

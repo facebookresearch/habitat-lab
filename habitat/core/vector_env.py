@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import signal
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -94,6 +95,7 @@ class VectorEnv:
         env_fn_args: Sequence[Tuple] = None,
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
+        workers_ignore_signals: bool = False,
     ) -> None:
         """..
 
@@ -109,6 +111,8 @@ class VectorEnv:
             :py:`{'spawn', 'forkserver', 'fork'}`; :py:`'forkserver'` is the
             recommended method as it works well with CUDA. If :py:`'fork'` is
             used, the subproccess  must be started before any other GPU useage.
+        :param workers_ignore_signals: Whether or not workers will ignore SIGINT and SIGTERM
+            and instead will only exit when :ref:`close` is called
         """
         self._is_waiting = False
         self._is_closed = True
@@ -166,9 +170,17 @@ class VectorEnv:
         auto_reset_done: bool,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
+        mask_signals: bool = False,
     ) -> None:
         r"""process worker for creating and interacting with the environment.
         """
+        if mask_signals:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+            signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+            signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+
         env = env_fn(*env_fn_args)
         if parent_pipe is not None:
             parent_pipe.close()
@@ -245,6 +257,7 @@ class VectorEnv:
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
+        workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
@@ -263,6 +276,7 @@ class VectorEnv:
                     self._auto_reset_done,
                     worker_conn,
                     parent_conn,
+                    workers_ignore_signals,
                 ),
             )
             self._workers.append(ps)
