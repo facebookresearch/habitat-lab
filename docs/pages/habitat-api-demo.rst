@@ -24,7 +24,7 @@ All the boilerplate code in the habitat-sim to set sensor config and agent
 config is abstracted out in the Habitat-API config system. Default config is at
 :gh:`habitat/config/default.py <facebookresearch/habitat-api/blob/master/habitat/config/default.py>`.
 You can override defaults by specifying them in a separate file and pass it to
-the `habitat.config.get_config()` function or defrost the config object,
+the :ref:`habitat.config.get_config()` function or defrost the config object,
 override parameters and freeze the config.
 
 .. code-figure::

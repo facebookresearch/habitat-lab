@@ -14,7 +14,7 @@ from habitat.core.simulator import Observations
 
 
 class Agent:
-    r"""Abstract class for defining agents which act inside `core.env.Env`.
+    r"""Abstract class for defining agents which act inside :ref:`core.env.Env`.
 
     This abstract class standardizes agents to allow seamless benchmarking.
     """

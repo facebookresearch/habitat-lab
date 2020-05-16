@@ -157,7 +157,7 @@ class PyRobot(Simulator):
     python3 version. Please refer to the PyRobot repository
     for setting it up. The user will also have to export a
     ROS_PATH environment variable to use this integration,
-    please refer to `habitat.core.utils.try_cv2_import` for
+    please refer to :ref:`habitat.core.utils.try_cv2_import` for
     more details on this.
 
     This abstraction assumes that reality is a simulation
@@ -242,8 +242,8 @@ class PyRobot(Simulator):
 
     def step(self, action, action_params):
         r"""Step in reality. Currently the supported
-        actions are the ones defined in `_locobot_base_action_space`
-        and `_locobot_camera_action_space`. For details on how
+        actions are the ones defined in :ref:`_locobot_base_action_space`
+        and :ref:`_locobot_camera_action_space`. For details on how
         to use these actions please refer to the documentation
         of namesake methods in PyRobot
         (https://github.com/facebookresearch/pyrobot).

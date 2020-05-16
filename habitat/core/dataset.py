@@ -47,7 +47,7 @@ class Episode:
         (https://en.wikipedia.org/wiki/Versor). The rotation specifying the
         agent's orientation is relative to the world coordinate axes.
 
-    This information is provided by a `Dataset` instance.
+    This information is provided by a :ref:`Dataset` instance.
     """
 
     episode_id: str = attr.ib(default=None, validator=not_none_validator)
@@ -153,15 +153,15 @@ class Dataset(Generic[T]):
 
     def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
         r"""Gets episode iterator with options. Options are specified in
-        `EpisodeIterator` documentation.
+        :ref:`EpisodeIterator` documentation.
 
         :param args: positional args for iterator constructor
         :param kwargs: keyword args for iterator constructor
         :return: episode iterator with specified behavior
 
-        To further customize iterator behavior for your `Dataset` subclass,
-        create a customized iterator class like `EpisodeIterator` and override
-        this method.
+        To further customize iterator behavior for your :ref:`Dataset`
+        subclass, create a customized iterator class like
+        :ref:`EpisodeIterator` and override this method.
         """
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
