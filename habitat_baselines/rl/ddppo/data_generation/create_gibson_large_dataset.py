@@ -25,7 +25,7 @@ from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )
 
-num_episodes_per_scene = int(1e4)
+NUM_EPISODES_PER_SCENE = int(1e4)
 
 
 def safe_mkdir(path):
@@ -47,7 +47,7 @@ def _generate_fn(scene):
     dset = habitat.datasets.make_dataset("PointNav-v1")
     dset.episodes = list(
         generate_pointnav_episode(
-            sim, num_episodes_per_scene, is_gen_shortest_path=False
+            sim, NUM_EPISODES_PER_SCENE, is_gen_shortest_path=False
         )
     )
     for ep in dset.episodes:
