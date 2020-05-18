@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 """This script is used to generate customized Gibson training splits for the
 PointNav task. The scenes in Gibson are ranked from 1-5 based on the
 reconstruction quality (see https://arxiv.org/pdf/1904.01201.pdf for more
