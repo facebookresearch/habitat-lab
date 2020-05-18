@@ -26,6 +26,8 @@ from habitat.datasets.pointnav.pointnav_generator import (
 )
 
 NUM_EPISODES_PER_SCENE = int(1e4)
+# Sample all scenes with a minimum quality
+QUAL_THRESH = 2
 
 
 def safe_mkdir(path):
@@ -63,31 +65,39 @@ def _generate_fn(scene):
         f.write(dset.to_json())
 
 
-# Load train / val statistics
-dataset_statistics = json.load(
-    open("./examples/gibson_large_generation/gibson_dset_with_qual.json")
-)
+def generate_gibson_large_dataset():
+    # Load train / val statistics
+    dataset_statistics = json.load(
+        open(
+            osp.join(osp.dirname(__file__), "gibson_dset_with_qual.json"), "r"
+        )
+    )
 
-# all Sample scenes with a minimum quality
-q_thresh = 2
+    gibson_large_scene_keys = []
+    for k, v in dataset_statistics.items():
+        qual = v["qual"]
+        if (
+            v["split_full+"] == "train"
+            and qual is not None
+            and qual >= QUAL_THRESH
+        ):
+            gibson_large_scene_keys.append(k)
 
-gibson_large_scene_keys = []
-for k, v in dataset_statistics.items():
-    qual = v["qual"]
-    if v["split_full+"] == "train" and qual is not None and qual >= q_thresh:
-        gibson_large_scene_keys.append(k)
+    scenes = glob.glob("./data/scene_datasets/gibson/*.glb")
+    # Filter out invalid scenes
+    _fltr = lambda x: x.split("/")[-1].split(".")[0] in gibson_large_scene_keys
+    scenes = list(filter(_fltr, scenes))
+    print(f"Total number of training scenes: {len(scenes)}")
 
-scenes = glob.glob("./data/scene_datasets/gibson/*.glb")
-# Filter out invalid scenes
-_fltr = lambda x: x.split("/")[-1].split(".")[0] in gibson_large_scene_keys
-scenes = list(filter(_fltr, scenes))
-print(f"Total number of training scenes: {len(scenes)}")
+    safe_mkdir("./data/datasets/pointnav/gibson/v2/train_large")
+    with multiprocessing.Pool(8) as pool, tqdm.tqdm(total=len(scenes)) as pbar:
+        for _ in pool.imap_unordered(_generate_fn, scenes):
+            pbar.update()
 
-safe_mkdir("./data/datasets/pointnav/gibson/v2/train_large")
-with multiprocessing.Pool(8) as pool, tqdm.tqdm(total=len(scenes)) as pbar:
-    for _ in pool.imap_unordered(_generate_fn, scenes):
-        pbar.update()
+    path = "./data/datasets/pointnav/gibson/v2/train_large/train_large.json.gz"
+    with gzip.open(path, "wt") as f:
+        json.dump(dict(episodes=[]), f)
 
-path = "./data/datasets/pointnav/gibson/v2/train_large/train_large.json.gz"
-with gzip.open(path, "wt") as f:
-    json.dump(dict(episodes=[]), f)
+
+if __name__ == "__main__":
+    generate_gibson_large_dataset()
