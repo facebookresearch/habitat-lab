@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
+import numpy as np
 from typing import Type, Union
 
 import habitat
@@ -26,6 +27,9 @@ def make_env_fn(
     Returns:
         env object created according to specification.
     """
+    random.seed(config.TASK_CONFIG.SEED + rank)
+    np.random.seed(config.TASK_CONFIG.SEED + rank)
+    
     dataset = make_dataset(
         config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
     )
