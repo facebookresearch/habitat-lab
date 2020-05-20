@@ -5,7 +5,7 @@ ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "/data/logs/objectnav_mp3d"
+TENSORBOARD_DIR: "data/logs/objectnav_mp3d"
 VIDEO_DIR: "data/video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/checkpoints/objectnav_mp3d"
@@ -44,7 +44,7 @@ RL:
     hidden_size: 512
 
   DDPPO:
-    sync_frac: 0.6
+    ne 8 in c3d52b1sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: NCCL
     # Visual encoder backbone
