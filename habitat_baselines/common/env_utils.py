@@ -28,11 +28,9 @@ def make_env_fn(
     Returns:
         env object created according to specification.
     """
-
     dataset = make_dataset(
         config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
     )
-
     env = env_class(config=config, dataset=dataset)
     env.seed(config.TASK_CONFIG.SEED + rank)
     return env
