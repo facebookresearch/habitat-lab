@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import gym
+import numba
 import numpy as np
 from gym.spaces.dict_space import Dict as SpaceDict
 
@@ -21,22 +23,24 @@ from habitat.tasks import make_task
 
 
 class Env:
-    r"""Fundamental environment class for `habitat`.
+    r"""Fundamental environment class for :ref:`habitat`.
 
     :data observation_space: ``SpaceDict`` object corresponding to sensor in
         sim and task.
     :data action_space: ``gym.space`` object corresponding to valid actions.
 
     All the information  needed for working on embodied tasks with simulator
-    is abstracted inside `Env`. Acts as a base for other derived environment
-    classes. `Env` consists of three major components: ``dataset`` (`episodes`), ``simulator`` (`sim`) and `task` and connects all the three components
-    together.
+    is abstracted inside :ref:`Env`. Acts as a base for other derived
+    environment classes. :ref:`Env` consists of three major components:
+    ``dataset`` (`episodes`), ``simulator`` (:ref:`sim`) and :ref:`task` and
+    connects all the three components together.
     """
 
     observation_space: SpaceDict
     action_space: SpaceDict
     _config: Config
     _dataset: Optional[Dataset]
+    number_of_episodes: Optional[int]
     _episodes: List[Type[Episode]]
     _current_episode_index: Optional[int]
     _current_episode: Optional[Type[Episode]]
@@ -91,6 +95,10 @@ class Env:
             self._config.defrost()
             self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
             self._config.freeze()
+
+            self.number_of_episodes = len(self._dataset.episodes)
+        else:
+            self.number_of_episodes = None
 
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
@@ -196,6 +204,14 @@ class Env:
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
+
+        # Delete the shortest path cache of the current episode
+        # Caching it for the next time we see this episode isn't really worth
+        # it
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
         self.reconfigure(self._config)
@@ -223,10 +239,11 @@ class Env:
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to `action_space`) to be performed
-            inside the environment. Action is a name or index of allowed
-            task's action and action arguments (belonging to action's
-            `action_space`) to support parametrized and continuous actions.
+        :param action: action (belonging to :ref:`action_space`) to be
+            performed inside the environment. Action is a name or index of
+            allowed task's action and action arguments (belonging to action's
+            :ref:`action_space`) to support parametrized and continuous
+            actions.
         :return: observations after taking action in environment.
         """
 
@@ -253,7 +270,16 @@ class Env:
 
         return observations
 
+    @staticmethod
+    @numba.njit
+    def _seed_numba(seed: int):
+        random.seed(seed)
+        np.random.seed(seed)
+
     def seed(self, seed: int) -> None:
+        random.seed(seed)
+        np.random.seed(seed)
+        self._seed_numba(seed)
         self._sim.seed(seed)
         self._task.seed(seed)
 
@@ -274,13 +300,20 @@ class Env:
     def close(self) -> None:
         self._sim.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 
 class RLEnv(gym.Env):
     r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
 
-    This is a wrapper over `Env` for RL users. To create custom RL
+    This is a wrapper over :ref:`Env` for RL users. To create custom RL
     environments users should subclass `RLEnv` and define the following
-    methods: `get_reward_range()`, `get_reward()`, `get_done()`, `get_info()`.
+    methods: :ref:`get_reward_range()`, :ref:`get_reward()`,
+    :ref:`get_done()`, :ref:`get_info()`.
 
     As this is a subclass of ``gym.Env``, it implements `reset()` and
     `step()`.
@@ -293,13 +326,14 @@ class RLEnv(gym.Env):
     ) -> None:
         """Constructor
 
-        :param config: config to construct `Env`
-        :param dataset: dataset to construct `Env`.
+        :param config: config to construct :ref:`Env`
+        :param dataset: dataset to construct :ref:`Env`.
         """
 
         self._env = Env(config, dataset)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
+        self.number_of_episodes = self._env.number_of_episodes
         self.reward_range = self.get_reward_range()
 
     @property
@@ -334,7 +368,7 @@ class RLEnv(gym.Env):
         :param observations: observations from simulator and task.
         :return: reward after performing the last action.
 
-        This method is called inside the `step()` method.
+        This method is called inside the :ref:`step()` method.
         """
         raise NotImplementedError
 
@@ -378,3 +412,9 @@ class RLEnv(gym.Env):
 
     def close(self) -> None:
         self._env.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

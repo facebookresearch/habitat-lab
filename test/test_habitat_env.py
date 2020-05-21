@@ -81,17 +81,17 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
         cfg.freeze()
 
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    envs = habitat.VectorEnv(
+    with habitat.VectorEnv(
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method,
-    )
-    envs.reset()
+    ) as envs:
+        envs.reset()
 
-    for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        observations = envs.step(
-            sample_non_stop_action(envs.action_spaces[0], num_envs)
-        )
-        assert len(observations) == num_envs
+        for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+            observations = envs.step(
+                sample_non_stop_action(envs.action_spaces[0], num_envs)
+            )
+            assert len(observations) == num_envs
 
 
 @pytest.mark.parametrize(
@@ -137,20 +137,28 @@ def test_with_scope():
     assert envs._is_closed
 
 
+def test_number_of_episodes():
+    configs, datasets = _load_test_data()
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+    ) as envs:
+        assert envs.number_of_episodes == [10000, 10000, 10000, 10000]
+
+
 def test_threaded_vectorized_env():
     configs, datasets = _load_test_data()
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    envs = habitat.ThreadedVectorEnv(env_fn_args=env_fn_args)
-    envs.reset()
+    with habitat.ThreadedVectorEnv(env_fn_args=env_fn_args) as envs:
+        envs.reset()
 
-    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        observations = envs.step(
-            sample_non_stop_action(envs.action_spaces[0], num_envs)
-        )
-        assert len(observations) == num_envs
-
-    envs.close()
+        for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+            observations = envs.step(
+                sample_non_stop_action(envs.action_spaces[0], num_envs)
+            )
+            assert len(observations) == num_envs
 
 
 @pytest.mark.parametrize("gpu2gpu", [False, True])
@@ -167,36 +175,38 @@ def test_env(gpu2gpu):
     config.defrost()
     config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
     config.freeze()
-    env = habitat.Env(config=config, dataset=None)
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=[-3.0133917, 0.04623024, 7.3064547],
-            start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[
-                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
-            ],
-            info={"geodesic_distance": 0.001},
+    with habitat.Env(config=config, dataset=None) as env:
+        env.episodes = [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=[-3.0133917, 0.04623024, 7.3064547],
+                start_rotation=[0, 0.163276, 0, 0.98658],
+                goals=[
+                    NavigationGoal(
+                        position=[-3.0133917, 0.04623024, 7.3064547]
+                    )
+                ],
+                info={"geodesic_distance": 0.001},
+            )
+        ]
+        env.reset()
+
+        for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
+            env.step(sample_non_stop_action(env.action_space))
+
+        # check for steps limit on environment
+        assert env.episode_over is True, (
+            "episode should be over after " "max_episode_steps"
         )
-    ]
-    env.reset()
 
-    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
-        env.step(sample_non_stop_action(env.action_space))
+        env.reset()
 
-    # check for steps limit on environment
-    assert env.episode_over is True, (
-        "episode should be over after " "max_episode_steps"
-    )
-
-    env.reset()
-
-    env.step(action={"action": StopAction.name})
-    # check for STOP action
-    assert env.episode_over is True, "episode should be over after STOP action"
-
-    env.close()
+        env.step(action={"action": StopAction.name})
+        # check for STOP action
+        assert (
+            env.episode_over is True
+        ), "episode should be over after STOP action"
 
 
 def make_rl_env(config, dataset, rank: int = 0):
@@ -226,34 +236,38 @@ def test_rl_vectorized_envs(gpu2gpu):
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    envs = habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args)
-    envs.reset()
+    with habitat.VectorEnv(
+        make_env_fn=make_rl_env, env_fn_args=env_fn_args
+    ) as envs:
+        envs.reset()
 
-    for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-        outputs = envs.step(
-            sample_non_stop_action(envs.action_spaces[0], num_envs)
-        )
-        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
-        assert len(observations) == num_envs
-        assert len(rewards) == num_envs
-        assert len(dones) == num_envs
-        assert len(infos) == num_envs
+        for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+            outputs = envs.step(
+                sample_non_stop_action(envs.action_spaces[0], num_envs)
+            )
+            observations, rewards, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
+            assert len(observations) == num_envs
+            assert len(rewards) == num_envs
+            assert len(dones) == num_envs
+            assert len(infos) == num_envs
 
-        tiled_img = envs.render(mode="rgb_array")
-        new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
-        new_width = int(np.ceil(float(NUM_ENVS) / new_height))
-        print(f"observations: {observations}")
-        h, w, c = observations[0]["rgb"].shape
-        assert tiled_img.shape == (
-            h * new_height,
-            w * new_width,
-            c,
-        ), "vector env render is broken"
+            tiled_img = envs.render(mode="rgb_array")
+            new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+            new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+            print(f"observations: {observations}")
+            h, w, c = observations[0]["rgb"].shape
+            assert tiled_img.shape == (
+                h * new_height,
+                w * new_width,
+                c,
+            ), "vector env render is broken"
 
-        if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
-            assert all(dones), "dones should be true after max_episode steps"
-
-    envs.close()
+            if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
+                assert all(
+                    dones
+                ), "dones should be true after max_episode steps"
 
 
 @pytest.mark.parametrize("gpu2gpu", [False, True])
@@ -271,38 +285,38 @@ def test_rl_env(gpu2gpu):
     config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
     config.freeze()
 
-    env = DummyRLEnv(config=config, dataset=None)
-    env.episodes = [
-        NavigationEpisode(
-            episode_id="0",
-            scene_id=config.SIMULATOR.SCENE,
-            start_position=[-3.0133917, 0.04623024, 7.3064547],
-            start_rotation=[0, 0.163276, 0, 0.98658],
-            goals=[
-                NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])
-            ],
-            info={"geodesic_distance": 0.001},
-        )
-    ]
+    with DummyRLEnv(config=config, dataset=None) as env:
+        env.episodes = [
+            NavigationEpisode(
+                episode_id="0",
+                scene_id=config.SIMULATOR.SCENE,
+                start_position=[-3.0133917, 0.04623024, 7.3064547],
+                start_rotation=[0, 0.163276, 0, 0.98658],
+                goals=[
+                    NavigationGoal(
+                        position=[-3.0133917, 0.04623024, 7.3064547]
+                    )
+                ],
+                info={"geodesic_distance": 0.001},
+            )
+        ]
 
-    done = False
-    env.reset()
+        done = False
+        env.reset()
 
-    for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
+        for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
+            observation, reward, done, info = env.step(
+                action=sample_non_stop_action(env.action_space)
+            )
+
+        # check for steps limit on environment
+        assert done is True, "episodes should be over after max_episode_steps"
+
+        env.reset()
         observation, reward, done, info = env.step(
-            action=sample_non_stop_action(env.action_space)
+            action={"action": StopAction.name}
         )
-
-    # check for steps limit on environment
-    assert done is True, "episodes should be over after max_episode_steps"
-
-    env.reset()
-    observation, reward, done, info = env.step(
-        action={"action": StopAction.name}
-    )
-    assert done is True, "done should be true after STOP action"
-
-    env.close()
+        assert done is True, "done should be true after STOP action"
 
 
 def _make_dummy_env_func(config, dataset, id):
@@ -314,42 +328,41 @@ def test_vec_env_call_func():
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     true_env_ids = list(range(num_envs))
-    envs = habitat.VectorEnv(
+    with habitat.VectorEnv(
         make_env_fn=_make_dummy_env_func,
         env_fn_args=env_fn_args,
         multiprocessing_start_method="forkserver",
-    )
-    envs.reset()
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == true_env_ids
+    ) as envs:
+        envs.reset()
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == true_env_ids
 
-    env_id = envs.call_at(1, "get_env_ind")
-    assert env_id == true_env_ids[1]
+        env_id = envs.call_at(1, "get_env_ind")
+        assert env_id == true_env_ids[1]
 
-    envs.call_at(2, "set_env_ind", {"new_env_ind": 20})
-    true_env_ids[2] = 20
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == true_env_ids
+        envs.call_at(2, "set_env_ind", {"new_env_ind": 20})
+        true_env_ids[2] = 20
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == true_env_ids
 
-    envs.call_at(2, "set_env_ind", {"new_env_ind": 2})
-    true_env_ids[2] = 2
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == true_env_ids
+        envs.call_at(2, "set_env_ind", {"new_env_ind": 2})
+        true_env_ids[2] = 2
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == true_env_ids
 
-    envs.pause_at(0)
-    true_env_ids.pop(0)
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == true_env_ids
+        envs.pause_at(0)
+        true_env_ids.pop(0)
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == true_env_ids
 
-    envs.pause_at(0)
-    true_env_ids.pop(0)
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == true_env_ids
+        envs.pause_at(0)
+        true_env_ids.pop(0)
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == true_env_ids
 
-    envs.resume_all()
-    env_ids = envs.call(["get_env_ind"] * num_envs)
-    assert env_ids == list(range(num_envs))
-    envs.close()
+        envs.resume_all()
+        env_ids = envs.call(["get_env_ind"] * num_envs)
+        assert env_ids == list(range(num_envs))
 
 
 def test_close_with_paused():

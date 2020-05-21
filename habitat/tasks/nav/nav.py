@@ -21,6 +21,7 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    RGBSensor,
     Sensor,
     SensorTypes,
     ShortestPathPoint,
@@ -28,8 +29,8 @@ from habitat.core.simulator import (
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.utils import (
-    cartesian_to_polar,
+from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
@@ -126,9 +127,10 @@ class PointGoalSensor(Sensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+    cls_uuid: str = "pointgoal"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -140,8 +142,8 @@ class PointGoalSensor(Sensor):
 
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "pointgoal"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.PATH
@@ -191,7 +193,7 @@ class PointGoalSensor(Sensor):
                 return direction_vector_agent
 
     def get_observation(
-        self, *args: Any, observations, episode: Episode, **kwargs: Any
+        self, observations, episode: Episode, *args: Any, **kwargs: Any
     ):
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
@@ -200,6 +202,79 @@ class PointGoalSensor(Sensor):
         return self._compute_pointgoal(
             source_position, rotation_world_start, goal_position
         )
+
+
+@registry.register_sensor
+class ImageGoalSensor(Sensor):
+    r"""Sensor for ImageGoal observations which are used in ImageGoal Navigation.
+
+    RGBSensor needs to be one of the Simulator sensors.
+    This sensor return the rgb image taken from the goal position to reach with
+    random rotation.
+
+    Args:
+        sim: reference to the simulator for calculating task observations.
+        config: config for the ImageGoal sensor.
+    """
+    cls_uuid: str = "imagegoal"
+
+    def __init__(
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+    ):
+        self._sim = sim
+        sensors = self._sim.sensor_suite.sensors
+        rgb_sensor_uuids = [
+            uuid
+            for uuid, sensor in sensors.items()
+            if isinstance(sensor, RGBSensor)
+        ]
+        if len(rgb_sensor_uuids) != 1:
+            raise ValueError(
+                f"ImageGoalNav requires one RGB sensor, {len(rgb_sensor_uuids)} detected"
+            )
+
+        (self._rgb_sensor_uuid,) = rgb_sensor_uuids
+        self._current_episode_id = None
+        self._current_image_goal = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.PATH
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return self._sim.sensor_suite.observation_spaces.spaces[
+            self._rgb_sensor_uuid
+        ]
+
+    def _get_pointnav_episode_image_goal(self, episode: Episode):
+        goal_position = np.array(episode.goals[0].position, dtype=np.float32)
+        # to be sure that the rotation is the same for the same episode_id
+        # since the task is currently using pointnav Dataset.
+        seed = abs(hash(episode.episode_id)) % (2 ** 32)
+        rng = np.random.RandomState(seed)
+        angle = rng.uniform(0, 2 * np.pi)
+        source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+        goal_observation = self._sim.get_observations_at(
+            position=goal_position.tolist(), rotation=source_rotation
+        )
+        return goal_observation[self._rgb_sensor_uuid]
+
+    def get_observation(
+        self, *args: Any, observations, episode: Episode, **kwargs: Any
+    ):
+        episode_uniq_id = episode.scene_id + episode.episode_id
+        if episode_uniq_id == self._current_episode_id:
+            return self._current_image_goal
+
+        self._current_image_goal = self._get_pointnav_episode_image_goal(
+            episode
+        )
+        self._current_episode_id = episode_uniq_id
+
+        return self._current_image_goal
 
 
 @registry.register_sensor(name="PointGoalWithGPSCompassSensor")
@@ -224,12 +299,13 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+    cls_uuid: str = "pointgoal_with_gps_compass"
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "pointgoal_with_gps_compass"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
@@ -250,6 +326,7 @@ class HeadingSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+    cls_uuid: str = "heading"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -257,8 +334,8 @@ class HeadingSensor(Sensor):
         self._sim = sim
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "heading"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.HEADING
@@ -288,12 +365,13 @@ class EpisodicCompassSensor(HeadingSensor):
     r"""The agents heading in the coordinate frame defined by the epiosde,
     theta=0 is defined by the agents state at t=0
     """
+    cls_uuid: str = "compass"
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "compass"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
@@ -315,6 +393,7 @@ class EpisodicGPSSensor(Sensor):
     Attributes:
         _dimensionality: number of dimensions used to specify the agents position
     """
+    cls_uuid: str = "gps"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -325,8 +404,8 @@ class EpisodicGPSSensor(Sensor):
         assert self._dimensionality in [2, 3]
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "gps"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.POSITION
@@ -341,7 +420,7 @@ class EpisodicGPSSensor(Sensor):
         )
 
     def get_observation(
-        self, *args: Any, observations, episode, **kwargs: Any
+        self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
 
@@ -369,6 +448,7 @@ class ProximitySensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+    cls_uuid: str = "proximity"
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
@@ -377,8 +457,8 @@ class ProximitySensor(Sensor):
         )
         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
-        return "proximity"
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.TACTILE
@@ -416,24 +496,24 @@ class Success(Measure):
     cls_uuid: str = "success"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
 
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(
-        self, *args: Any, episode, task: EmbodiedTask, **kwargs: Any
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
@@ -472,10 +552,10 @@ class SPL(Measure):
 
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "spl"
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
         )
@@ -485,7 +565,7 @@ class SPL(Measure):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(position_b - position_a, ord=2)
@@ -518,10 +598,10 @@ class SoftSPL(SPL):
     success is now calculated as 1 - (ratio of distance covered to target).
     """
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "softspl"
 
-    def reset_metric(self, *args: Any, episode, task, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
@@ -531,7 +611,7 @@ class SoftSPL(SPL):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(*args, episode=episode, task=task, **kwargs)
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
@@ -565,7 +645,7 @@ class Collisions(Measure):
         self._metric = None
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "collisions"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -586,7 +666,7 @@ class TopDownMap(Measure):
     """
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -614,7 +694,7 @@ class TopDownMap(Measure):
         )
         super().__init__()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "top_down_map"
 
     def _check_valid_nav_point(self, point: List[float]):
@@ -750,7 +830,7 @@ class TopDownMap(Measure):
                 self.line_thickness,
             )
 
-    def reset_metric(self, *args: Any, episode, **kwargs: Any):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map()
@@ -886,7 +966,7 @@ class DistanceToGoal(Measure):
 
         super().__init__(**kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -904,7 +984,7 @@ class DistanceToGoal(Measure):
         current_position = self._sim.get_agent_state().position
 
         if self._previous_position is None or not np.allclose(
-            self._previous_position, current_position
+            self._previous_position, current_position, atol=1e-4
         ):
             if self._config.DISTANCE_TO == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
@@ -922,7 +1002,6 @@ class DistanceToGoal(Measure):
                 )
 
             self._previous_position = current_position
-
             self._metric = distance_to_target
 
 
@@ -959,10 +1038,10 @@ class TurnRightAction(SimulatorTaskAction):
 class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
-    def reset(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False
 
-    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
+    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """

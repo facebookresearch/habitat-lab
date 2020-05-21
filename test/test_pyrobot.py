@@ -53,15 +53,15 @@ def test_pyrobot(mocker):
         _try_register_pyrobot()
 
     config = get_config()
-    reality = make_sim("PyRobot-v0", config=config.PYROBOT)
+    with make_sim("PyRobot-v0", config=config.PYROBOT) as reality:
 
-    observations = reality.reset()
-    observations = reality.step(
-        "go_to_relative",
-        {
-            "xyt_position": [0, 0, (10 / 180) * np.pi],
-            "use_map": False,
-            "close_loop": True,
-            "smooth": False,
-        },
-    )
+        observations = reality.reset()
+        observations = reality.step(
+            "go_to_relative",
+            {
+                "xyt_position": [0, 0, (10 / 180) * np.pi],
+                "use_map": False,
+                "close_loop": True,
+                "smooth": False,
+            },
+        )

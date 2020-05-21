@@ -109,7 +109,7 @@ class RGBSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any):
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "rgb"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
@@ -202,7 +202,7 @@ class SensorSuite:
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
         r"""Collects data from all sensors and returns it packaged inside
-            `Observations`.
+        :ref:`Observations`.
         """
         return Observations(self.sensors, *args, **kwargs)
 
@@ -264,12 +264,13 @@ class Simulator:
 
         :param position_a: coordinates of first point.
         :param position_b: coordinates of second point or list of goal points
-        coordinates.
-        :param episode: The episode with these ends points.  This is used for shortest path computation caching
+            coordinates.
+        :param episode: The episode with these ends points.  This is used for
+            shortest path computation caching
         :return:
             the geodesic distance in the cartesian space between points
             :p:`position_a` and :p:`position_b`, if no path is found between
-            the points then `math.inf` is returned.
+            the points then :ref:`math.inf` is returned.
         """
         raise NotImplementedError
 
@@ -366,7 +367,7 @@ class Simulator:
         raise NotImplementedError
 
     def close(self) -> None:
-        raise NotImplementedError
+        pass
 
     def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
@@ -375,3 +376,9 @@ class Simulator:
             :py:`False` otherwise
         """
         raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

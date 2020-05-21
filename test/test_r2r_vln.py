@@ -118,45 +118,40 @@ def test_r2r_vln_sim():
         id_dataset=vln_config.DATASET.TYPE, config=vln_config.DATASET
     )
 
-    env = habitat.Env(config=vln_config, dataset=dataset)
-    env.episodes = dataset.episodes[:EPISODES_LIMIT]
+    with habitat.Env(config=vln_config, dataset=dataset) as env:
+        env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
-    follower = ShortestPathFollower(
-        env.sim, goal_radius=0.5, return_one_hot=False
-    )
-    assert env
+        follower = ShortestPathFollower(
+            env.sim, goal_radius=0.5, return_one_hot=False
+        )
 
-    for i in range(len(env.episodes)):
-        env.reset()
-        path = env.current_episode.reference_path + [
-            env.current_episode.goals[0].position
-        ]
-        for point in path:
-            done = False
-            while not done:
-                best_action = follower.get_next_action(point)
-                if best_action == None:
-                    break
-                obs = env.step(best_action)
-                assert "rgb" in obs, "RGB image is missing in observation."
-                assert (
-                    "instruction" in obs
-                ), "Instruction is missing in observation."
-                assert (
-                    obs["instruction"]["text"]
-                    == env.current_episode.instruction.instruction_text
-                ), "Instruction from sensor does not match the intruction from the episode"
+        for i in range(len(env.episodes)):
+            env.reset()
+            path = env.current_episode.reference_path + [
+                env.current_episode.goals[0].position
+            ]
+            for point in path:
+                while env.episode_over:
+                    best_action = follower.get_next_action(point)
 
-                assert obs["rgb"].shape[:2] == (
-                    vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                    vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                ), (
-                    "Observation resolution {} doesn't correspond to config "
-                    "({}, {}).".format(
-                        obs["rgb"].shape[:2],
+                    obs = env.step(best_action)
+                    assert "rgb" in obs, "RGB image is missing in observation."
+                    assert (
+                        "instruction" in obs
+                    ), "Instruction is missing in observation."
+                    assert (
+                        obs["instruction"]["text"]
+                        == env.current_episode.instruction.instruction_text
+                    ), "Instruction from sensor does not match the intruction from the episode"
+
+                    assert obs["rgb"].shape[:2] == (
                         vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                         vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                    ), (
+                        "Observation resolution {} doesn't correspond to config "
+                        "({}, {}).".format(
+                            obs["rgb"].shape[:2],
+                            vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                            vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                        )
                     )
-                )
-
-    env.close()

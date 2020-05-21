@@ -34,9 +34,8 @@ def get_default_config():
 
 class PPOAgent(Agent):
     def __init__(self, config: Config):
-        self.goal_sensor_uuid = config.GOAL_SENSOR_UUID
         spaces = {
-            self.goal_sensor_uuid: Box(
+            get_default_config().GOAL_SENSOR_UUID: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),
@@ -79,7 +78,6 @@ class PPOAgent(Agent):
             observation_space=observation_spaces,
             action_space=action_spaces,
             hidden_size=self.hidden_size,
-            goal_sensor_uuid=self.goal_sensor_uuid,
         )
         self.actor_critic.to(self.device)
 
@@ -155,7 +153,6 @@ def main():
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
-    agent_config.GOAL_SENSOR_UUID = config.TASK.GOAL_SENSOR_UUID
 
     agent = PPOAgent(agent_config)
     benchmark = habitat.Benchmark(config_paths=args.task_config)

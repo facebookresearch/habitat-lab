@@ -25,6 +25,7 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
    1. [Citing Habitat](#citing-habitat)
    1. [Installation](#installation)
    1. [Example](#example)
+   1. [Documentation](#documentation)
    1. [Docker Setup](#docker-setup)
    1. [Details](#details)
    1. [Data](#data)
@@ -99,6 +100,13 @@ while not env.episode_over:
 ```
 
 See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures) for an example of how to extend habitat-api from _outside_ the source code
+
+## Documentation
+
+Habitat-API documentation is available [here](https://aihabitat.org/docs/habitat-api/index.html). 
+
+For example, see [this page](https://aihabitat.org/docs/habitat-api/quickstart.html) for a quickstart example. 
+
 
 ## Docker Setup
 We also provide a docker setup for habitat. This works on machines with an NVIDIA GPU and requires users to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). The following [Dockerfile](Dockerfile) was used to build the habitat docker. To setup the habitat stack using docker follow the below steps:

@@ -33,7 +33,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
     be removed nor can their mapping be altered. This also ensures that all
     actions are always contigously mapped in :py:`[0, len(HabitatSimActions) - 1]`
 
-    This accesible as the global singleton `HabitatSimActions`
+    This accesible as the global singleton :ref:`HabitatSimActions`
     """
 
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
@@ -172,5 +172,20 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.LOOK_DOWN: habitat_sim.ActionSpec(
                 "look_down",
                 habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+            ),
+            # The perfect actions are needed for the oracle planner
+            "_forward": habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.FORWARD_STEP_SIZE
+                ),
+            ),
+            "_left": habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+            ),
+            "_right": habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
         }

@@ -45,19 +45,23 @@ RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
+NUMBER_OF_EPISODES_COMMAND = "number_of_episodes"
 CALL_COMMAND = "call"
 EPISODE_COMMAND = "current_episode"
+COUNT_EPISODES_COMMAND = "count_episodes"
+EPISODE_OVER = "episode_over"
+GET_METRICS = "get_metrics"
 
 
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
-    """Constructor for default habitat `env.Env`.
+    """Constructor for default habitat :ref:`env.Env`.
 
     :param config: configuration for environment.
     :param dataset: dataset for environment.
     :param rank: rank for setting seed of environment
-    :return: `env.Env` / `env.RLEnv` object
+    :return: :ref:`env.Env` / :ref:`env.RLEnv` object
     """
     habitat_env = Env(config=config, dataset=dataset)
     habitat_env.seed(config.SEED + rank)
@@ -74,6 +78,7 @@ class VectorEnv:
     """
 
     observation_spaces: List[SpaceDict]
+    number_of_episodes: List[Optional[int]]
     action_spaces: List[SpaceDict]
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
@@ -93,9 +98,9 @@ class VectorEnv:
         """..
 
         :param make_env_fn: function which creates a single environment. An
-            environment can be of type `env.Env` or `env.RLEnv`
+            environment can be of type :ref:`env.Env` or :ref:`env.RLEnv`
         :param env_fn_args: tuple of tuple of args to pass to the
-            `_make_env_fn`.
+            :ref:`_make_env_fn`.
         :param auto_reset_done: automatically reset the environment when
             done. This functionality is provided for seamless training
             of vectorized environments.
@@ -137,6 +142,11 @@ class VectorEnv:
         for write_fn in self._connection_write_fns:
             write_fn((ACTION_SPACE_COMMAND, None))
         self.action_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+        for write_fn in self._connection_write_fns:
+            write_fn((NUMBER_OF_EPISODES_COMMAND, None))
+        self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         self._paused = []
@@ -191,13 +201,12 @@ class VectorEnv:
                 elif command == RENDER_COMMAND:
                     connection_write_fn(env.render(*data[0], **data[1]))
 
-                elif (
-                    command == OBSERVATION_SPACE_COMMAND
-                    or command == ACTION_SPACE_COMMAND
-                ):
-                    if isinstance(command, str):
-                        connection_write_fn(getattr(env, command))
-
+                elif command in {
+                    OBSERVATION_SPACE_COMMAND,
+                    ACTION_SPACE_COMMAND,
+                    NUMBER_OF_EPISODES_COMMAND,
+                }:
+                    connection_write_fn(getattr(env, command))
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
                     if function_args is None or len(function_args) == 0:
@@ -209,6 +218,17 @@ class VectorEnv:
                 # TODO: update CALL_COMMAND for getting attribute like this
                 elif command == EPISODE_COMMAND:
                     connection_write_fn(env.current_episode)
+
+                elif command == COUNT_EPISODES_COMMAND:
+                    connection_write_fn(len(env.episodes))
+
+                elif command == EPISODE_OVER:
+                    connection_write_fn(env.episode_over)
+
+                elif command == GET_METRICS:
+                    result = env.get_metrics()
+                    connection_write_fn(result)
+
                 else:
                     raise NotImplementedError
 
@@ -264,6 +284,36 @@ class VectorEnv:
         self._is_waiting = False
         return results
 
+    def count_episodes(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((COUNT_EPISODES_COMMAND, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def episode_over(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((EPISODE_OVER, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def get_metrics(self):
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((GET_METRICS, None))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
     def reset(self):
         r"""Reset all the vectorized environments
 
@@ -307,7 +357,7 @@ class VectorEnv:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
         # Backward compatibility
@@ -331,7 +381,7 @@ class VectorEnv:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
@@ -475,12 +525,13 @@ class VectorEnv:
 
 
 class ThreadedVectorEnv(VectorEnv):
-    r"""Provides same functionality as `VectorEnv`, the only difference is it
-    runs in a multi-thread setup inside a single process.
+    r"""Provides same functionality as :ref:`VectorEnv`, the only difference
+    is it runs in a multi-thread setup inside a single process.
 
-    `VectorEnv` runs in a multi-proc setup. This makes it much easier to debug
-    when using `VectorEnv` because you can actually put break points in the
-    environment methods. It should not be used for best performance.
+    The :ref:`VectorEnv` runs in a multi-proc setup. This makes it much easier
+    to debug when using :ref:`VectorEnv` because you can actually put break
+    points in the environment methods. It should not be used for best
+    performance.
     """
 
     def _spawn_workers(

@@ -63,7 +63,6 @@ class PPOTrainer(BaseRLTrainer):
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,
-            goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
         )
         self.actor_critic.to(self.device)
 
@@ -502,10 +501,23 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
-        pbar = tqdm.tqdm(total=self.config.TEST_EPISODE_COUNT)
+        number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
+        if number_of_eval_episodes == -1:
+            number_of_eval_episodes = sum(self.envs.number_of_episodes)
+        else:
+            total_num_eps = sum(self.envs.number_of_episodes)
+            if total_num_eps < number_of_eval_episodes:
+                logger.warn(
+                    f"Config specified {number_of_eval_episodes} eval episodes"
+                    ", dataset only has {total_num_eps}."
+                )
+                logger.warn(f"Evaluating with {total_num_eps} instead.")
+                number_of_eval_episodes = total_num_eps
+
+        pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
         while (
-            len(stats_episodes) < self.config.TEST_EPISODE_COUNT
+            len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()

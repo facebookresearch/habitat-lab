@@ -17,6 +17,10 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.tasks.eqa.eqa import AnswerAction
 from habitat.tasks.nav.nav import MoveForwardAction, StopAction
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_from_coeff,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -164,28 +168,25 @@ def test_mp3d_eqa_sim():
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
     )
-    env = habitat.Env(config=eqa_config, dataset=dataset)
-    env.episodes = dataset.episodes[:EPISODES_LIMIT]
+    with habitat.Env(config=eqa_config, dataset=dataset) as env:
+        env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
-    assert env
-    env.reset()
-    while not env.episode_over:
-        obs = env.step(env.task.action_space.sample())
-        if not env.episode_over:
-            assert "rgb" in obs, "RGB image is missing in observation."
-            assert obs["rgb"].shape[:2] == (
-                eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-            ), (
-                "Observation resolution {} doesn't correspond to config "
-                "({}, {}).".format(
-                    obs["rgb"].shape[:2],
+        env.reset()
+        while not env.episode_over:
+            obs = env.step(env.task.action_space.sample())
+            if not env.episode_over:
+                assert "rgb" in obs, "RGB image is missing in observation."
+                assert obs["rgb"].shape[:2] == (
                     eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                     eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                ), (
+                    "Observation resolution {} doesn't correspond to config "
+                    "({}, {}).".format(
+                        obs["rgb"].shape[:2],
+                        eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                        eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                    )
                 )
-            )
-
-    env.close()
 
 
 def test_mp3d_eqa_sim_correspondence():
@@ -199,82 +200,83 @@ def test_mp3d_eqa_sim_correspondence():
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
     )
-    env = habitat.Env(config=eqa_config, dataset=dataset)
-    env.episodes = [
-        episode
-        for episode in dataset.episodes
-        if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
-    ]
+    with habitat.Env(config=eqa_config, dataset=dataset) as env:
+        env.episodes = [
+            episode
+            for episode in dataset.episodes
+            if int(episode.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT]
+        ]
 
-    ep_i = 0
-    cycles_n = 2
-    while cycles_n > 0:
-        env.reset()
-        episode = env.current_episode
-        assert (
-            len(episode.goals) == 1
-        ), "Episode has no goals or more than one."
-        assert (
-            len(episode.shortest_paths) == 1
-        ), "Episode has no shortest paths or more than one."
-        start_state = env.sim.get_agent_state()
-        assert np.allclose(
-            start_state.position, episode.start_position
-        ), "Agent's start position diverges from the shortest path's one."
+        ep_i = 0
+        cycles_n = 2
+        while cycles_n > 0:
+            env.reset()
+            episode = env.current_episode
+            assert (
+                len(episode.goals) == 1
+            ), "Episode has no goals or more than one."
+            assert (
+                len(episode.shortest_paths) == 1
+            ), "Episode has no shortest paths or more than one."
+            start_state = env.sim.get_agent_state()
+            assert np.allclose(
+                start_state.position, episode.start_position
+            ), "Agent's start position diverges from the shortest path's one."
 
-        rgb_mean = 0
-        logger.info(
-            "{id} {question}\n{answer}".format(
-                id=episode.episode_id,
-                question=episode.question.question_text,
-                answer=episode.question.answer_text,
-            )
-        )
-
-        for step_id, point in enumerate(episode.shortest_paths[0]):
-            cur_state = env.sim.get_agent_state()
-
+            rgb_mean = 0
             logger.info(
-                "diff position: {} diff rotation: {} "
-                "cur_state.position: {} shortest_path.position: {} "
-                "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
-                "".format(
-                    cur_state.position - point.position,
-                    cur_state.rotation
-                    - habitat.utils.geometry_utils.quaternion_wxyz_to_xyzw(
-                        point.rotation
-                    ),
-                    cur_state.position,
-                    point.position,
-                    cur_state.rotation,
-                    point.rotation,
-                    point.action,
+                "{id} {question}\n{answer}".format(
+                    id=episode.episode_id,
+                    question=episode.question.question_text,
+                    answer=episode.question.answer_text,
                 )
             )
 
-            assert np.allclose(
-                [cur_state.position[0], cur_state.position[2]],
-                [point.position[0], point.position[2]],
-                atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
-            ), "Agent's path diverges from the shortest path."
+            for step_id, point in enumerate(episode.shortest_paths[0]):
+                cur_state = env.sim.get_agent_state()
 
-            if point.action != OLD_STOP_ACTION_ID:
-                obs = env.step(action=point.action)
+                logger.info(
+                    "diff position: {} diff rotation: {} "
+                    "cur_state.position: {} shortest_path.position: {} "
+                    "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
+                    "".format(
+                        cur_state.position - point.position,
+                        angle_between_quaternions(
+                            cur_state.rotation,
+                            quaternion_from_coeff(point.rotation),
+                        ),
+                        cur_state.position,
+                        point.position,
+                        cur_state.rotation,
+                        point.rotation,
+                        point.action,
+                    )
+                )
 
-            if not env.episode_over:
-                rgb_mean += obs["rgb"][:, :, :3].mean()
+                assert np.allclose(
+                    [cur_state.position[0], cur_state.position[2]],
+                    [point.position[0], point.position[2]],
+                    atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
+                ), "Agent's path diverges from the shortest path."
 
-        if ep_i < len(RGB_EPISODE_MEANS):
-            rgb_mean = rgb_mean / len(episode.shortest_paths[0])
-            assert np.isclose(
-                RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean
-            ), "RGB output doesn't match the ground truth."
+                if point.action != OLD_STOP_ACTION_ID:
+                    obs = env.step(action=point.action)
 
-        ep_i = (ep_i + 1) % EPISODES_LIMIT
-        if ep_i == 0:
-            cycles_n -= 1
+                if not env.episode_over:
+                    rgb_mean += obs["rgb"][:, :, :3].mean()
 
-    env.close()
+            if ep_i < len(RGB_EPISODE_MEANS):
+                # Slightly bigger atol for basis meshes
+                rgb_mean = rgb_mean / len(episode.shortest_paths[0])
+                assert np.isclose(
+                    RGB_EPISODE_MEANS[int(episode.episode_id)],
+                    rgb_mean,
+                    atol=0.5,
+                ), "RGB output doesn't match the ground truth."
+
+            ep_i = (ep_i + 1) % EPISODES_LIMIT
+            if ep_i == 0:
+                cycles_n -= 1
 
 
 def test_eqa_task():
@@ -288,36 +290,37 @@ def test_eqa_task():
     dataset = make_dataset(
         id_dataset=eqa_config.DATASET.TYPE, config=eqa_config.DATASET
     )
-    env = habitat.Env(config=eqa_config, dataset=dataset)
-    env.episodes = list(
-        filter(
-            lambda e: int(e.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT],
-            dataset.episodes,
+    with habitat.Env(config=eqa_config, dataset=dataset) as env:
+        env.episodes = list(
+            filter(
+                lambda e: int(e.episode_id)
+                in TEST_EPISODE_SET[:EPISODES_LIMIT],
+                dataset.episodes,
+            )
         )
-    )
 
-    env.reset()
+        env.reset()
 
-    for i in range(10):
-        action = sample_non_stop_action(env.action_space)
-        if action["action"] != AnswerAction.name:
-            env.step(action)
+        for i in range(10):
+            action = sample_non_stop_action(env.action_space)
+            if action["action"] != AnswerAction.name:
+                env.step(action)
+            metrics = env.get_metrics()
+            del metrics["episode_info"]
+            logger.info(metrics)
+
+        correct_answer_id = env.current_episode.question.answer_token
+        env.step(
+            {
+                "action": AnswerAction.name,
+                "action_args": {"answer_id": correct_answer_id},
+            }
+        )
+
         metrics = env.get_metrics()
         del metrics["episode_info"]
         logger.info(metrics)
+        assert metrics["answer_accuracy"] == 1
 
-    correct_answer_id = env.current_episode.question.answer_token
-    env.step(
-        {
-            "action": AnswerAction.name,
-            "action_args": {"answer_id": correct_answer_id},
-        }
-    )
-
-    metrics = env.get_metrics()
-    del metrics["episode_info"]
-    logger.info(metrics)
-    assert metrics["answer_accuracy"] == 1
-
-    with pytest.raises(AssertionError):
-        env.step({"action": MoveForwardAction.name})
+        with pytest.raises(AssertionError):
+            env.step({"action": MoveForwardAction.name})

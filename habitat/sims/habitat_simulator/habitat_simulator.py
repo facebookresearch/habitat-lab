@@ -31,8 +31,9 @@ RGBSENSOR_DIMENSION = 3
 
 def overwrite_config(config_from: Config, config_to: Any) -> None:
     r"""Takes Habitat-API config and Habitat-Sim config structures. Overwrites
-     Habitat-Sim config with Habitat-API values, where a field name is present
-     in lowercase. Mostly used to avoid `sim_cfg.field = hapi_cfg.FIELD` code.
+    Habitat-Sim config with Habitat-API values, where a field name is present
+    in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
+    code.
 
     Args:
         config_from: Habitat-API config node.
@@ -448,12 +449,7 @@ class HabitatSim(Simulator):
         # state for the sensors. This will cause them to follow the agent's
         # body
         new_state.sensor_states = dict()
-
         agent.set_state(new_state, reset_sensors)
-
-        if not self._check_agent_position(position, agent_id):
-            agent.set_state(original_state, reset_sensors)
-            return False
         return True
 
     def get_observations_at(
@@ -485,13 +481,6 @@ class HabitatSim(Simulator):
             return observations
         else:
             return None
-
-    # TODO(maksymets): Remove check after simulator becomes stable
-    def _check_agent_position(self, position, agent_id=0) -> bool:
-        if not np.allclose(position, self.get_agent_state(agent_id).position):
-            logger.info("Agent state diverges from configured start position.")
-            return False
-        return True
 
     def distance_to_closest_obstacle(self, position, max_search_radius=2.0):
         return self._sim.pathfinder.distance_to_closest_obstacle(
