@@ -40,6 +40,7 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
 _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_EPISODES = -1
 _C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS = int(1e4)
 _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
+_C.ENVIRONMENT.ITERATOR_OPTIONS.SEED = _C.SEED
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
