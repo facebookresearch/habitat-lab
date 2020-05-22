@@ -14,7 +14,7 @@ from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
 
 
 def make_env_fn(
-    config: Config, env_class: Type[Union[Env, RLEnv]], rank: int
+    config: Config, env_class: Type[Union[Env, RLEnv]]
 ) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
@@ -23,7 +23,6 @@ def make_env_fn(
         config: root exp config that has core env config node as well as
             env-specific config node.
         env_class: class type of the env to be created.
-        rank: rank of env to be created (for seeding).
 
     Returns:
         env object created according to specification.
@@ -32,7 +31,7 @@ def make_env_fn(
         config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
     )
     env = env_class(config=config, dataset=dataset)
-    env.seed(config.TASK_CONFIG.SEED + rank)
+    env.seed(config.TASK_CONFIG.SEED)
     return env
 
 
@@ -85,6 +84,7 @@ def construct_envs(
         proc_config.defrost()
 
         task_config = proc_config.TASK_CONFIG
+        task_config.SEED = task_config.SEED + i
         if len(scenes) > 0:
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
@@ -105,7 +105,7 @@ def construct_envs(
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
         env_fn_args=tuple(
-            tuple(zip(configs, env_classes, range(num_processes)))
+            tuple(zip(configs, env_classes))
         ),
     )
     return envs
