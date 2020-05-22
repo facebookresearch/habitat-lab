@@ -94,11 +94,6 @@ def construct_envs(
 
         task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
 
-        # Set the seed for the environment iterator before it's initialized in env.
-        task_config.ENVIRONMENT.ITERATOR_OPTIONS.SEED = (
-            config.TASK_CONFIG.SEED + i
-        )
-
         proc_config.freeze()
         configs.append(proc_config)
 
