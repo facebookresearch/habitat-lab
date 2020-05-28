@@ -83,6 +83,7 @@ class Env:
             k.lower(): v
             for k, v in config.ENVIRONMENT.ITERATOR_OPTIONS.items()
         }
+        iter_option_dict["seed"] = config.SEED
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )
