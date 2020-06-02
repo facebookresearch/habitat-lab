@@ -17,6 +17,7 @@ from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
     HeadingSensor,
+    ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
     ProximitySensor,
@@ -65,7 +66,6 @@ class ImageNavResNetPolicy(Policy):
         self,
         observation_space,
         action_space,
-        goal_sensor_uuid="pointgoal_with_gps_compass",
         hidden_size=512,
         num_recurrent_layers=2,
         rnn_type="LSTM",
@@ -79,7 +79,6 @@ class ImageNavResNetPolicy(Policy):
             ImageNavResNetNet(
                 observation_space=observation_space,
                 action_space=action_space,
-                goal_sensor_uuid=goal_sensor_uuid,
                 hidden_size=hidden_size,
                 num_recurrent_layers=num_recurrent_layers,
                 rnn_type=rnn_type,
@@ -420,7 +419,6 @@ class ImageNavResNetNet(Net):
         self,
         observation_space,
         action_space,
-        goal_sensor_uuid,
         hidden_size,
         num_recurrent_layers,
         rnn_type,
@@ -431,7 +429,7 @@ class ImageNavResNetNet(Net):
         blind_policy=False,
     ):
         super().__init__()
-        self.goal_sensor_uuid = goal_sensor_uuid
+        self.goal_sensor_uuid = ImageGoalSensor.cls_uuid
 
         self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         self._n_prev_action = 32
@@ -439,7 +437,7 @@ class ImageNavResNetNet(Net):
         self._hidden_size = hidden_size
 
         goal_observation_space = spaces.Dict(
-            {"rgb": observation_space.spaces[goal_sensor_uuid]}
+            {"rgb": observation_space.spaces[self.goal_sensor_uuid]}
         )
         if blind_policy:
             # we need to keep RGB SENSOR in simulator for ImageGoalSensor
@@ -447,7 +445,7 @@ class ImageNavResNetNet(Net):
             observation_space = spaces.Dict({})
         else:
             space_dict = observation_space.spaces.copy()
-            space_dict.pop(goal_sensor_uuid)
+            space_dict.pop(self.goal_sensor_uuid)
             observation_space = spaces.Dict(space_dict)
 
         logger.info(
