@@ -70,29 +70,17 @@ class DDPPOTrainer(PPOTrainer):
         """
         logger.add_filehandler(self.config.LOG_FILE)
 
-        if "IMAGEGOAL_SENSOR" in self.config.TASK_CONFIG.TASK.SENSORS:
-            self.actor_critic = ImageNavResNetPolicy(
-                observation_space=self.envs.observation_spaces[0],
-                action_space=self.envs.action_spaces[0],
-                hidden_size=ppo_cfg.hidden_size,
-                rnn_type=self.config.RL.DDPPO.rnn_type,
-                num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
-                backbone=self.config.RL.DDPPO.backbone,
-                normalize_visual_inputs="rgb"
-                in self.envs.observation_spaces[0].spaces,
-                blind_policy=self.config.IMAGENAV_BLIND_POLICY,
-            )
-        else:
-            self.actor_critic = PointNavResNetPolicy(
-                observation_space=self.envs.observation_spaces[0],
-                action_space=self.envs.action_spaces[0],
-                hidden_size=ppo_cfg.hidden_size,
-                rnn_type=self.config.RL.DDPPO.rnn_type,
-                num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
-                backbone=self.config.RL.DDPPO.backbone,
-                normalize_visual_inputs="rgb"
-                in self.envs.observation_spaces[0].spaces,
-            )
+        self.actor_critic = PointNavResNetPolicy(
+            observation_space=self.envs.observation_spaces[0],
+            action_space=self.envs.action_spaces[0],
+            hidden_size=ppo_cfg.hidden_size,
+            rnn_type=self.config.RL.DDPPO.rnn_type,
+            num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
+            backbone=self.config.RL.DDPPO.backbone,
+            normalize_visual_inputs="rgb"
+            in self.envs.observation_spaces[0].spaces,
+            force_blind_policy=self.config.FORCE_BLIND_POLICY,
+        )
         self.actor_critic.to(self.device)
 
         if (
