@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: "configs/datasets/imagenav/gibson.yaml"
+BASE_TASK_CONFIG_PATH: "configs/tasks/imagenav_gibson.yaml"
 TRAINER_NAME: "ddppo"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
