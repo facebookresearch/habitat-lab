@@ -87,3 +87,5 @@ data
 
 # vim
 *.swp
+
+habitat_baselines/_dev/
