@@ -36,7 +36,6 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-    ImageNavResNetPolicy,
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
