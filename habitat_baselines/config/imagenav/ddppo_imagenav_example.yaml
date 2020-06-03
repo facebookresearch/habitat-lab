@@ -18,7 +18,7 @@ CHECKPOINT_INTERVAL: 50
 
 RL:
   SUCCESS_REWARD: 2.5
-  SLACK_REWARD: 1e-3
+  SLACK_REWARD: -1e-4
   PPO:
     # ppo params
     clip_param: 0.2
