@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gym import spaces
-from gym.spaces import Box
 
 from habitat import logger
 from habitat.tasks.nav.nav import (
