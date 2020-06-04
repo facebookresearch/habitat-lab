@@ -170,9 +170,9 @@ class VectorEnv:
         env_fn: Callable,
         env_fn_args: Tuple[Any],
         auto_reset_done: bool,
+        mask_signals: bool = False,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
-        mask_signals: bool = False,
     ) -> None:
         r"""process worker for creating and interacting with the environment.
         """
@@ -276,9 +276,9 @@ class VectorEnv:
                     make_env_fn,
                     env_args,
                     self._auto_reset_done,
+                    workers_ignore_signals,
                     worker_conn,
                     parent_conn,
-                    workers_ignore_signals,
                 ),
             )
             self._workers.append(ps)
@@ -554,6 +554,7 @@ class ThreadedVectorEnv(VectorEnv):
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
+        workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_read_queues, parent_write_queues = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]

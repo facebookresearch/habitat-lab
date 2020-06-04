@@ -1,20 +1,20 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
-TRAINER_NAME: "ddppo"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "/data/logs/objectnav_mp3d"
-VIDEO_DIR: "data/video_dir"
+VIDEO_OPTION: []
+TENSORBOARD_DIR: "tb"
+VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/checkpoints/objectnav_mp3d"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_PROCESSES: 4
+CHECKPOINT_FOLDER: "data/new_checkpoints"
+TRAINER_NAME: "ddppo"
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-CHECKPOINT_FOLDER: "data/checkpoints/objectnav_mp3d"
 NUM_UPDATES: 270000
 LOG_INTERVAL: 10
-CHECKPOINT_INTERVAL: 50
+CHECKPOINT_INTERVAL: 250
 EVAL:
   SPLIT: "val"
 

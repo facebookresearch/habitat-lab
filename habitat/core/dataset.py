@@ -345,6 +345,7 @@ class EpisodeIterator(Iterator):
         max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
         step_repetition_range: float = 0.2,
+        seed: int = None,
     ):
         r"""..
 
@@ -367,6 +368,9 @@ class EpisodeIterator(Iterator):
             on each scene switch.  This stops all workers from swapping scenes at
             the same time
         """
+        if seed:
+            random.seed(seed)
+            np.random.seed(seed)
 
         # sample episodes
         if num_episode_sample >= 0:
