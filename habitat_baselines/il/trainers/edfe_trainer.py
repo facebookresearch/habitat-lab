@@ -114,7 +114,6 @@ class EDFETrainer(BaseILTrainer):
 
                     loss.backward()
                     optim.step()
-                    exit()
 
                 end_time = time.time()
                 time_taken = "%.01f" % ((end_time - start_time) / 60)
