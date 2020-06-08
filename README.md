@@ -56,7 +56,7 @@ If you use the Habitat platform in your research, please cite the following [pap
 1. Clone a stable version from the github repository and install habitat-api using the commands below. Note that python>=3.6 is required for working with habitat-api. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
 
     ```bash
-    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
+    git clone --branch stable https://github.com/facebookresearch/habitat-api.git
     cd habitat-api
     pip install -e .
     ```
@@ -64,7 +64,7 @@ If you use the Habitat platform in your research, please cite the following [pap
     The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
 
     ```bash
-    git clone --branch stable git@github.com:facebookresearch/habitat-api.git
+    git clone --branch stable https://github.com/facebookresearch/habitat-api.git
     cd habitat-api
     pip install -r requirements.txt
     python setup.py develop --all # install habitat and habitat_baselines
@@ -103,9 +103,9 @@ See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sens
 
 ## Documentation
 
-Habitat-API documentation is available [here](https://aihabitat.org/docs/habitat-api/index.html). 
+Habitat-API documentation is available [here](https://aihabitat.org/docs/habitat-api/index.html).
 
-For example, see [this page](https://aihabitat.org/docs/habitat-api/quickstart.html) for a quickstart example. 
+For example, see [this page](https://aihabitat.org/docs/habitat-api/quickstart.html) for a quickstart example.
 
 
 ## Docker Setup
