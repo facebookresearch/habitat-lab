@@ -103,9 +103,9 @@ See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sens
 
 ## Documentation
 
-Habitat-API documentation is available [here](https://aihabitat.org/docs/habitat-api/index.html). 
+Habitat-API documentation is available [here](https://aihabitat.org/docs/habitat-api/index.html).
 
-For example, see [this page](https://aihabitat.org/docs/habitat-api/quickstart.html) for a quickstart example. 
+For example, see [this page](https://aihabitat.org/docs/habitat-api/quickstart.html) for a quickstart example.
 
 
 ## Docker Setup
@@ -188,7 +188,7 @@ Habitat-API is MIT licensed. See the [LICENSE file](habitat_baselines/LICENSE) f
 
 The trained models and the task datasets are considered data derived from the correspondent scene datasets.
 - Matterport3D based task datasets and trained models are distributed with [Matterport3D Terms of Use](http://kaldir.vc.in.tum.de/matterport/MP_TOS.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
-- Gibson based task datasets and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
+- Gibson based task datasets, the code for generating such datasets, and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
 
 ## References and Citation
 1. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.
