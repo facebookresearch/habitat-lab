@@ -286,16 +286,10 @@ class PointNavResNetNet(Net):
 
             rnn_input_size += hidden_size
 
-        if force_blind_policy:
-            # we need to keep RGB SENSOR in simulator for ImageGoalSensor
-            # So we remove it here if we want blind policy
-            logger.info(f"Removing sensors from observation space")
-            observation_space = spaces.Dict({})
-
         self._hidden_size = hidden_size
 
         self.visual_encoder = ResNetEncoder(
-            observation_space,
+            observation_space if not force_blind_policy else spaces.Dict({}),
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
