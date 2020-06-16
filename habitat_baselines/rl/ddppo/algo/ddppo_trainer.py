@@ -78,6 +78,7 @@ class DDPPOTrainer(PPOTrainer):
             backbone=self.config.RL.DDPPO.backbone,
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
+            force_blind_policy=self.config.FORCE_BLIND_POLICY,
         )
         self.actor_critic.to(self.device)
 

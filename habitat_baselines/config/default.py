@@ -37,6 +37,7 @@ _C.NUM_UPDATES = 10000
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.CHECKPOINT_INTERVAL = 50
+_C.FORCE_BLIND_POLICY = False
 # -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------

@@ -183,6 +183,15 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
         egocentric_view.append(depth_map)
 
+    # add image goal if observation has image_goal info
+    if "imagegoal" in observation:
+        observation_size = observation["imagegoal"].shape[0]
+        rgb = observation["imagegoal"]
+        if not isinstance(rgb, np.ndarray):
+            rgb = rgb.cpu().numpy()
+
+        egocentric_view.append(rgb)
+
     assert (
         len(egocentric_view) > 0
     ), "Expected at least one visual sensor enabled."
