@@ -1,5 +1,5 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/objectnav_mp3d.yaml"
-CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
+BASE_TASK_CONFIG_PATH: "configs/tasks/imagenav.yaml"
+TRAINER_NAME: "ddppo"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -9,22 +9,20 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_PROCESSES: 4
+SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-TRAINER_NAME: "ddppo"
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 270000
+NUM_UPDATES: 10000
 LOG_INTERVAL: 10
-CHECKPOINT_INTERVAL: 250
-EVAL:
-  SPLIT: "val"
+CHECKPOINT_INTERVAL: 50
+
 
 RL:
   SUCCESS_REWARD: 2.5
-  SLACK_REWARD: -1e-3
+  SLACK_REWARD: -1e-4
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 4
+    ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
@@ -42,11 +40,10 @@ RL:
     use_normalized_advantage: False
 
     hidden_size: 512
-
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
-    distrib_backend: NCCL
+    distrib_backend: GLOO
     # Visual encoder backbone
     pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
     # Initialize with pretrained weights

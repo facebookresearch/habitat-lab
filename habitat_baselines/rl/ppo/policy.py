@@ -7,8 +7,10 @@ import abc
 
 import torch
 import torch.nn as nn
+from gym import spaces
 
 from habitat.tasks.nav.nav import (
+    ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
 )
@@ -136,6 +138,14 @@ class PointNavBaselineNet(Net):
             self._n_input_goal = observation_space.spaces[
                 PointGoalSensor.cls_uuid
             ].shape[0]
+        elif ImageGoalSensor.cls_uuid in observation_space.spaces:
+            goal_observation_space = spaces.Dict(
+                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
+            )
+            self.goal_visual_encoder = SimpleCNN(
+                goal_observation_space, hidden_size
+            )
+            self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size
 
@@ -168,6 +178,9 @@ class PointNavBaselineNet(Net):
 
         elif PointGoalSensor.cls_uuid in observations:
             target_encoding = observations[PointGoalSensor.cls_uuid]
+        elif ImageGoalSensor.cls_uuid in observations:
+            image_goal = observations[ImageGoalSensor.cls_uuid]
+            target_encoding = self.goal_visual_encoder({"rgb": image_goal})
 
         x = [target_encoding]
 
