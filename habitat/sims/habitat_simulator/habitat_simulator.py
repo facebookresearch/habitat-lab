@@ -166,12 +166,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     """
 
     def __init__(self, config: Config) -> None:
-        self.hab_config = config
+        self.habitat_config = config
         agent_config = self._get_agent_config()
 
         sim_sensors = []
         for sensor_name in agent_config.SENSORS:
-            sensor_cfg = getattr(self.hab_config, sensor_name)
+            sensor_cfg = getattr(self.habitat_config, sensor_name)
             sensor_type = registry.get_sensor(sensor_cfg.TYPE)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
@@ -193,9 +193,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
         overwrite_config(
-            config_from=self.hab_config.HABITAT_SIM_V0, config_to=sim_config
+            config_from=self.habitat_config.HABITAT_SIM_V0,
+            config_to=sim_config,
         )
-        sim_config.scene.id = self.hab_config.SCENE
+        sim_config.scene.id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -217,14 +218,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             # accessing child attributes through parent interface
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
             sim_sensor_cfg.gpu2gpu_transfer = (
-                self.hab_config.HABITAT_SIM_V0.GPU_GPU
+                self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             )
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = registry.get_action_space_configuration(
-            self.hab_config.ACTION_SPACE_CONFIG
-        )(self.hab_config).get()
+            self.habitat_config.ACTION_SPACE_CONFIG
+        )(self.habitat_config).get()
 
         return habitat_sim.Configuration(sim_config, [agent_config])
 
@@ -238,7 +239,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def _update_agents_state(self) -> bool:
         is_updated = False
-        for agent_id, _ in enumerate(self.hab_config.AGENTS):
+        for agent_id, _ in enumerate(self.habitat_config.AGENTS):
             agent_cfg = self._get_agent_config(agent_id)
             if agent_cfg.IS_SET_START_STATE:
                 self.set_agent_state(
@@ -285,13 +286,13 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         return output
 
-    def reconfigure(self, hab_config: Config) -> None:
+    def reconfigure(self, habitat_config: Config) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
-        is_same_scene = hab_config.SCENE == self._current_scene
-        self.hab_config = hab_config
+        is_same_scene = habitat_config.SCENE == self._current_scene
+        self.habitat_config = habitat_config
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
-            self._current_scene = hab_config.SCENE
+            self._current_scene = habitat_config.SCENE
             self.close()
             super().reconfigure(self.sim_config)
 
@@ -395,9 +396,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
         if agent_id is None:
-            agent_id = self.hab_config.DEFAULT_AGENT_ID
-        agent_name = self.hab_config.AGENTS[agent_id]
-        agent_config = getattr(self.hab_config, agent_name)
+            agent_id = self.habitat_config.DEFAULT_AGENT_ID
+        agent_name = self.habitat_config.AGENTS[agent_id]
+        agent_config = getattr(self.habitat_config, agent_name)
         return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
