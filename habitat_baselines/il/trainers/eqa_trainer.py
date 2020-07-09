@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat import logger
-from habitat_baselines.common.base_trainer import BaseILTrainer
+from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
-from habitat_baselines.common.base_trainer import BaseILTrainer
+from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.data import EQADataset
@@ -23,8 +23,6 @@ from habitat_baselines.il.models.models import (
     MaskedNLLCriterion,
     NavPlannerControllerModel,
 )
-
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 
 @baseline_registry.register_trainer(name="nav")
@@ -64,15 +62,15 @@ class NavTrainer(BaseILTrainer):
             nav_dataset, batch_size=config.IL.NAV.batch_size, shuffle=True
         )
 
-        logger.info("train_loader has %d samples" % len(nav_dataset))
+        logger.info("train_loader has {} samples".format(len(nav_dataset)))
 
         q_vocab_dict, _ = nav_dataset.get_vocab_dicts()
 
         model_kwargs = {"q_vocab": q_vocab_dict}
         model = NavPlannerControllerModel(**model_kwargs)
 
-        planner_lossFn = MaskedNLLCriterion()
-        controller_lossFn = MaskedNLLCriterion()
+        planner_loss_fn = MaskedNLLCriterion()
+        controller_loss_fn = MaskedNLLCriterion()
 
         metrics = NavMetric(
             info={"split": "train"},
@@ -171,7 +169,7 @@ class NavTrainer(BaseILTrainer):
                         controller_scores, dim=1
                     )
 
-                    planner_loss = planner_lossFn(
+                    planner_loss = planner_loss_fn(
                         planner_logprob,
                         planner_actions_out[:, : planner_action_lengths.max()]
                         .contiguous()
@@ -181,7 +179,7 @@ class NavTrainer(BaseILTrainer):
                         .view(-1, 1),
                     )
 
-                    controller_loss = controller_lossFn(
+                    controller_loss = controller_loss_fn(
                         controller_logprob,
                         controller_outs[:, : controller_action_lengths.max()]
                         .contiguous()
@@ -209,8 +207,8 @@ class NavTrainer(BaseILTrainer):
                     avg_c_loss += controller_loss
 
                     if t % config.LOG_INTERVAL == 0:
-                        print("Epoch", epoch)
-                        print(metrics.get_stat_string())
+                        logger.info("Epoch: {}".format(epoch))
+                        logger.info(metrics.get_stat_string())
 
                         writer.add_scalar("planner loss", planner_loss, t)
                         writer.add_scalar(
@@ -223,7 +221,7 @@ class NavTrainer(BaseILTrainer):
                 avg_c_loss /= len(train_loader)
 
                 end_time = time.time()
-                time_taken = "%.01f" % ((end_time - start_time) / 60)
+                time_taken = "{:.1f}".format((end_time - start_time) / 60)
 
                 logger.info(
                     "Epoch {} completed. Time taken: {} minutes.".format(
@@ -231,8 +229,10 @@ class NavTrainer(BaseILTrainer):
                     )
                 )
 
-                logger.info("Average planner loss: %.02f" % avg_p_loss)
-                logger.info("Average controller loss: %.02f" % avg_c_loss)
+                logger.info("Average planner loss: {:.2f}".format(avg_p_loss))
+                logger.info(
+                    "Average controller loss: {:.2f}".format(avg_c_loss)
+                )
 
                 print("-----------------------------------------")
 
@@ -283,7 +283,7 @@ class NavTrainer(BaseILTrainer):
             shuffle=False,
         )
 
-        logger.info("eval_loader has %d samples" % len(nav_dataset))
+        logger.info("eval_loader has {} samples".format(len(nav_dataset)))
 
         q_vocab_dict, ans_vocab_dict = nav_dataset.get_vocab_dicts()
 
@@ -521,7 +521,7 @@ class NavTrainer(BaseILTrainer):
             metrics.update(metrics_list)
 
             if t % config.LOG_INTERVAL == 0:
-                print("Number of invalids: ", len(invalids) / 3)
+                logger.info("Number of invalids: {}".format(len(invalids) / 3))
 
                 logger.info(
                     "EVAL: Avg metrics: {}".format(
@@ -544,7 +544,7 @@ class NavTrainer(BaseILTrainer):
                         else:
                             break
                     q_string += "?"
-                    print("Question:", q_string)
+                    logger.info("Question: {}".format(q_string))
 
                     self._save_nav_results(
                         checkpoint_path,

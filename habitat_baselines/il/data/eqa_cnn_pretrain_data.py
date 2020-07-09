@@ -9,10 +9,11 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import habitat
+from habitat import logger
 from habitat.core.simulator import ShortestPathPoint
 
 
-class EDFEDataset(Dataset):
+class EQACNNPretrainDataset(Dataset):
     """Pytorch dataset for Embodied Q&A's feature-extractor"""
 
     def __init__(self, env, config, mode="train"):
@@ -45,23 +46,23 @@ class EDFEDataset(Dataset):
         self.disk_cache_exists = self.check_cache_exists()
 
         if not self.disk_cache_exists:
-            try:
-                self.make_dataset_dirs()
-            except FileExistsError:
-                pass
             """
             for each scene > load scene in memory > save frames for each
             episode corresponding to each scene
             """
-            print("Saving rgb, seg, depth data to database.")
+            try:
+                self.make_dataset_dirs()
+            except FileExistsError:
+                pass
+            logger.info("Saving rgb, seg, depth data to database.")
 
-            train_lmdb = lmdb.open(
+            self.train_lmdb = lmdb.open(
                 self.dataset_path.format(split="train"),
                 map_size=int(1e11),
                 writemap=True,
             )
 
-            val_lmdb = lmdb.open(
+            self.val_lmdb = lmdb.open(
                 self.dataset_path.format(split="val"),
                 map_size=int(0.5e11),
                 writemap=True,
@@ -69,9 +70,6 @@ class EDFEDataset(Dataset):
 
             self.train_count = -1
             self.val_count = -1
-
-            self.train_txn = train_lmdb.begin(write=True)
-            self.val_txn = val_lmdb.begin(write=True)
 
             for scene in tqdm(list(self.scene_episode_dict.keys())):
 
@@ -87,16 +85,21 @@ class EDFEDataset(Dataset):
                     random_pos = random.sample(pos_queue, 9)
                     self.save_frames(random_pos)
 
-            print("EDFE database ready!")
+            logger.info("EQA-CNN-PRETRAIN database ready!")
 
             if self.mode == "train":
-                self.lmdb_txn = self.train_txn
+                lmdb_env = self.train_lmdb
             elif self.mode == "val":
-                self.lmdb_txn = self.val_txn
-        else:
-            lmdb_env = lmdb.open(self.dataset_path.format(split=self.mode), readonly=True, lock=False)
-            self.lmdb_txn = lmdb_env.begin()
+                lmdb_env = self.val_lmdb
 
+        else:
+            lmdb_env = lmdb.open(
+                self.dataset_path.format(split=self.mode),
+                readonly=True,
+                lock=False,
+            )
+
+        self.lmdb_txn = lmdb_env.begin()
         self.lmdb_cursor = self.lmdb_txn.cursor()
         self.env.close()
 
@@ -129,19 +132,19 @@ class EDFEDataset(Dataset):
             seg = seg.astype("uint8")
 
             if random.random() < 0.8:
-                txn = self.train_txn
+                lmdb_env = self.train_lmdb
                 self.train_count += 1
                 count = self.train_count
             else:
-                txn = self.val_txn
+                lmdb_env = self.val_lmdb
                 self.val_count += 1
                 count = self.val_count
 
             sample_key = "{0:0=6d}".format(count)
-
-            txn.put((sample_key + "_rgb").encode(), rgb.tobytes())
-            txn.put((sample_key + "_depth").encode(), depth.tobytes())
-            txn.put((sample_key + "_seg").encode(), seg.tobytes())
+            with lmdb_env.begin(write=True) as txn:
+                txn.put((sample_key + "_rgb").encode(), rgb.tobytes())
+                txn.put((sample_key + "_depth").encode(), depth.tobytes())
+                txn.put((sample_key + "_seg").encode(), seg.tobytes())
 
     def get_frames(self, frames_path, num=0):
         r"""Fetches frames from disk.

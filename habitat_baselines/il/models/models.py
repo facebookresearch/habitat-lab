@@ -138,32 +138,32 @@ class MultitaskCNNOutput(nn.Module):
         score_pool2_ae = self.score_pool2_ae(conv2)
         score_pool3_ae = self.score_pool3_ae(conv3)
 
-        score_seg = F.upsample(
+        score_seg = F.interpolate(
             encoder_output_seg,
             score_pool3_seg.size()[2:],
             mode="bilinear",
             align_corners=True,
         )
         score_seg += score_pool3_seg
-        score_seg = F.upsample(
+        score_seg = F.interpolate(
             score_seg,
             score_pool2_seg.size()[2:],
             mode="bilinear",
             align_corners=True,
         )
         score_seg += score_pool2_seg
-        out_seg = F.upsample(
+        out_seg = F.interpolate(
             score_seg, x.size()[2:], mode="bilinear", align_corners=True
         )
 
-        score_depth = F.upsample(
+        score_depth = F.interpolate(
             encoder_output_depth,
             score_pool3_depth.size()[2:],
             mode="bilinear",
             align_corners=True,
         )
         score_depth += score_pool3_depth
-        score_depth = F.upsample(
+        score_depth = F.interpolate(
             score_depth,
             score_pool2_depth.size()[2:],
             mode="bilinear",
@@ -171,19 +171,19 @@ class MultitaskCNNOutput(nn.Module):
         )
         score_depth += score_pool2_depth
         out_depth = torch.sigmoid(
-            F.upsample(
+            F.interpolate(
                 score_depth, x.size()[2:], mode="bilinear", align_corners=True
             )
         )
 
-        score_ae = F.upsample(
+        score_ae = F.interpolate(
             encoder_output_ae,
             score_pool3_ae.size()[2:],
             mode="bilinear",
             align_corners=True,
         )
         score_ae += score_pool3_ae
-        score_ae = F.upsample(
+        score_ae = F.interpolate(
             score_ae,
             score_pool2_ae.size()[2:],
             mode="bilinear",
@@ -191,7 +191,7 @@ class MultitaskCNNOutput(nn.Module):
         )
         score_ae += score_pool2_ae
         out_ae = torch.sigmoid(
-            F.upsample(
+            F.interpolate(
                 score_ae, x.size()[2:], mode="bilinear", align_corners=True
             )
         )
@@ -204,7 +204,7 @@ class MultitaskCNN(nn.Module):
         self,
         num_classes=41,
         pretrained=True,
-        checkpoint_path="data/eqa/edfe/checkpoints/epoch_5.ckpt",
+        checkpoint_path="data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
     ):
         super(MultitaskCNN, self).__init__()
 
@@ -345,7 +345,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         self,
         q_vocab,
         ans_vocab,
-        edfe_ckpt_path,
+        eqa_cnn_pretrain_ckpt_path,
         image_feat_dim=64,
         question_wordvec_dim=64,
         question_hidden_dim=64,
@@ -360,7 +360,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         cnn_kwargs = {
             "num_classes": 41,
             "pretrained": True,
-            "checkpoint_path": edfe_ckpt_path,
+            "checkpoint_path": eqa_cnn_pretrain_ckpt_path,
         }
         self.cnn = MultitaskCNN(**cnn_kwargs)
         self.cnn_fc_layer = nn.Sequential(
@@ -724,9 +724,6 @@ class NavPlannerControllerModel(nn.Module):
             .repeat(1, 1, planner_states.size(2))
         )
 
-        # controller_hidden_in = planner_states.cpu().gather(
-        #     1, planner_hidden_index.cpu().long()
-        # )
         controller_hidden_in = planner_states.gather(
             1, planner_hidden_index.long()
         )

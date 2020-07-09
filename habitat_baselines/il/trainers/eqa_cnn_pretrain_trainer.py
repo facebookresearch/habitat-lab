@@ -12,15 +12,17 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
-from habitat_baselines.common.base_trainer import BaseILTrainer
+from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.il.data.edfe_data import EDFEDataset
+from habitat_baselines.il.data.eqa_cnn_pretrain_data import (
+    EQACNNPretrainDataset,
+)
 from habitat_baselines.il.models.models import MultitaskCNNOutput
 
 
-@baseline_registry.register_trainer(name="edfe")
-class EDFETrainer(BaseILTrainer):
+@baseline_registry.register_trainer(name="eqa-cnn-pretrain")
+class EQACNNPretrainTrainer(BaseILTrainer):
     r"""Trainer class for Encoder-Decoder for Feature Extraction
     used in EmbodiedQA (Das et. al.;CVPR 2018)
     Paper: https://embodiedqa.org/paper.pdf.
@@ -41,25 +43,37 @@ class EDFETrainer(BaseILTrainer):
         """
         config = self.config
 
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+
         assert torch.cuda.is_available(), "Cuda-enabled GPU required"
         torch.cuda.set_device(config.TORCH_GPU_ID)
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
-        edfe_dataset = EDFEDataset(env, config)
+        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(env, config)
 
         train_loader = DataLoader(
-            edfe_dataset, batch_size=config.IL.EDFE.batch_size, shuffle=True
+            eqa_cnn_pretrain_dataset,
+            batch_size=config.IL.EQACNNPretrain.batch_size,
+            shuffle=True,
         )
 
-        logger.info("train_loader has %d samples" % len(edfe_dataset))
+        logger.info(
+            "[ train_loader has {} samples ]".format(
+                len(eqa_cnn_pretrain_dataset)
+            )
+        )
 
         model = MultitaskCNNOutput(num_classes=41)
         model.train().cuda()
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=float(0.003),
+            lr=float(config.IL.EQACNNPretrain.lr),
         )
 
         depth_loss = torch.nn.SmoothL1Loss()
@@ -70,7 +84,7 @@ class EDFETrainer(BaseILTrainer):
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
-            while epoch <= int(config.IL.EDFE.max_epochs):
+            while epoch <= int(config.IL.EQACNNPretrain.max_epochs):
                 start_time = time.time()
                 avg_loss = 0.0
 
@@ -96,13 +110,10 @@ class EDFETrainer(BaseILTrainer):
                     avg_loss += loss.item()
 
                     if t % config.LOG_INTERVAL == 0:
-                        print(
-                            "Epoch: ",
-                            epoch,
-                            "; iter: ",
-                            t,
-                            "; loss: ",
-                            loss.item(),
+                        logger.info(
+                            "[ Epoch: {}; iter: {}; loss: {} ]".format(
+                                epoch, t, loss.item()
+                            )
                         )
 
                         writer.add_scalar("total_loss", loss, t)
@@ -116,15 +127,15 @@ class EDFETrainer(BaseILTrainer):
                     optim.step()
 
                 end_time = time.time()
-                time_taken = "%.01f" % ((end_time - start_time) / 60)
+                time_taken = "{:.1f}".format((end_time - start_time) / 60)
                 avg_loss = avg_loss / len(train_loader)
 
                 logger.info(
-                    "Epoch {} completed. Time taken: {} minutes.".format(
+                    "[ Epoch {} completed. Time taken: {} minutes. ]".format(
                         epoch, time_taken
                     )
                 )
-                logger.info("Average loss: %.02f" % avg_loss)
+                logger.info("[ Average loss: {:.2f} ]".format(avg_loss))
 
                 print("-----------------------------------------")
 
@@ -162,13 +173,21 @@ class EDFETrainer(BaseILTrainer):
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
-        edfe_dataset = EDFEDataset(env, config, mode="val")
-
-        eval_loader = DataLoader(
-            edfe_dataset, batch_size=config.IL.EDFE.batch_size, shuffle=False
+        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(
+            env, config, mode="val"
         )
 
-        logger.info("eval_loader has %d samples" % len(edfe_dataset))
+        eval_loader = DataLoader(
+            eqa_cnn_pretrain_dataset,
+            batch_size=config.IL.EQACNNPretrain.batch_size,
+            shuffle=False,
+        )
+
+        logger.info(
+            "[ eval_loader has {} samples ]".format(
+                len(eqa_cnn_pretrain_dataset)
+            )
+        )
 
         model = MultitaskCNNOutput(num_classes=41)
 
@@ -212,14 +231,14 @@ class EDFETrainer(BaseILTrainer):
                 avg_l3 += l3.item()
 
                 if t % config.LOG_INTERVAL == 0:
-                    print(
-                        "Iter: ", t, "; loss: ", loss.item(),
+                    logger.info(
+                        "[ Iter: {}; loss: {} ]".format(t, loss.item()),
                     )
 
                 if config.EVAL_SAVE_RESULTS:
                     if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
-                        self._save_edfe_results(
+                        self._save_eqa_cnn_pretrain_results(
                             checkpoint_index,
                             idx,
                             rgb,
@@ -242,7 +261,7 @@ class EDFETrainer(BaseILTrainer):
             checkpoint_index,
         )
 
-        logger.info("Average loss: %.03f" % avg_loss)
-        logger.info("Average seg loss: %.03f" % avg_l1)
-        logger.info("Average autoencoder loss: %.04f" % avg_l2)
-        logger.info("Average depthloss: %.04f" % avg_l3)
+        logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
+        logger.info("[ Average seg loss: {:.3f} ]".format(avg_l1))
+        logger.info("[ Average autoencoder loss: {:.4f} ]".format(avg_l2))
+        logger.info("[ Average depthloss: {:.4f} ]".format(avg_l3))

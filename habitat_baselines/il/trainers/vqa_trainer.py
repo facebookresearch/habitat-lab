@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
-from habitat_baselines.common.base_trainer import BaseILTrainer
+from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.data import EQADataset
@@ -54,14 +54,14 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
         )
 
-        logger.info("train_loader has %d samples" % len(vqa_dataset))
+        logger.info("train_loader has {} samples".format(len(vqa_dataset)))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
         model_kwargs = {
             "q_vocab": q_vocab_dict,
             "ans_vocab": ans_vocab_dict,
-            "edfe_ckpt_path": config.EDFE_CKPT_PATH,
+            "eqa_cnn_pretrain_ckpt_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
         }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
@@ -89,7 +89,7 @@ class VQATrainer(BaseILTrainer):
         avg_accuracy = 0.0
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
-        print(model)
+        logger.info(model)
         model.train().cuda()
 
         if config.IL.VQA.freeze_encoder:
@@ -136,8 +136,8 @@ class VQATrainer(BaseILTrainer):
                     avg_mean_reciprocal_rank += mean_reciprocal_rank
 
                     if t % config.LOG_INTERVAL == 0:
-                        print("Epoch", epoch)
-                        print(metrics.get_stat_string())
+                        logger.info("Epoch: {}".format(epoch))
+                        logger.info(metrics.get_stat_string())
 
                         writer.add_scalar("loss", metrics_loss, t)
                         writer.add_scalar("accuracy", accuracy, t)
@@ -154,7 +154,7 @@ class VQATrainer(BaseILTrainer):
                 avg_mean_reciprocal_rank /= len(train_loader)
 
                 end_time = time.time()
-                time_taken = "%.01f" % ((end_time - start_time) / 60)
+                time_taken = "{:.1f}".format((end_time - start_time) / 60)
 
                 logger.info(
                     "Epoch {} completed. Time taken: {} minutes.".format(
@@ -162,12 +162,13 @@ class VQATrainer(BaseILTrainer):
                     )
                 )
 
-                logger.info("Average loss: %.02f" % avg_loss)
-                logger.info("Average accuracy: %.02f" % avg_accuracy)
-                logger.info("Average mean rank: %.02f" % avg_mean_rank)
+                logger.info("Average loss: {:.2f}".format(avg_loss))
+                logger.info("Average accuracy: {:.2f}".format(avg_accuracy))
+                logger.info("Average mean rank: {:.2f}".format(avg_mean_rank))
                 logger.info(
-                    "Average mean reciprocal rank: %.02f"
-                    % avg_mean_reciprocal_rank
+                    "Average mean reciprocal rank: {:.2f}".format(
+                        avg_mean_reciprocal_rank
+                    )
                 )
 
                 print("-----------------------------------------")
@@ -214,14 +215,14 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=False
         )
 
-        logger.info("eval_loader has %d samples" % len(vqa_dataset))
+        logger.info("eval_loader has {} samples".format(len(vqa_dataset)))
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
         model_kwargs = {
             "q_vocab": q_vocab_dict,
             "ans_vocab": ans_vocab_dict,
-            "edfe_ckpt_path": config.EDFE_CKPT_PATH,
+            "eqa_cnn_pretrain_ckpt_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
         }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
@@ -281,7 +282,7 @@ class VQATrainer(BaseILTrainer):
                 avg_mean_reciprocal_rank += mean_reciprocal_rank
 
                 if t % config.LOG_INTERVAL == 0:
-                    print(metrics.get_stat_string(mode=0))
+                    logger.info(metrics.get_stat_string(mode=0))
                     metrics.dump_log()
 
                 if config.EVAL_SAVE_RESULTS:
@@ -312,9 +313,11 @@ class VQATrainer(BaseILTrainer):
             checkpoint_index,
         )
 
-        logger.info("Average loss: %.02f" % avg_loss)
-        logger.info("Average accuracy: %.02f" % avg_accuracy)
-        logger.info("Average mean rank: %.02f" % avg_mean_rank)
+        logger.info("Average loss: {:.2f}".format(avg_loss))
+        logger.info("Average accuracy: {:.2f}".format(avg_accuracy))
+        logger.info("Average mean rank: {:.2f}".format(avg_mean_rank))
         logger.info(
-            "Average mean reciprocal rank: %.02f" % avg_mean_reciprocal_rank
+            "Average mean reciprocal rank: {:.2f}".format(
+                avg_mean_reciprocal_rank
+            )
         )

@@ -71,7 +71,7 @@ class EQADataset(Dataset):
             cnn_kwargs = {
                 "num_classes": 40,
                 "pretrained": True,
-                "checkpoint_path": config.EDFE_CKPT_PATH,
+                "checkpoint_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
             }
             self.cnn = MultitaskCNN(**cnn_kwargs)
             self.cnn.eval()
@@ -114,7 +114,7 @@ class EQADataset(Dataset):
                 os.listdir(os.path.join(self.frame_dataset_path, self.mode))
             ) == len(self.episodes):
                 self.disk_cache_exists = True
-                print("Disk cache exists.")
+                logger.info("[ Disk cache exists. ]")
 
         if not self.disk_cache_exists:
             """
@@ -122,13 +122,16 @@ class EQADataset(Dataset):
             episode corresponding to each scene
             """
 
-            print("Disk cache not present / incomplete.")
-            print("Saving episode frames to disk.")
+            logger.info(
+                "[ Disk cache not present / isincomplete. ]\
+                \n[ Saving episode frames to disk. ]"
+            )
+
             ctr = 0
 
             for scene in tqdm(
                 list(self.scene_episode_dict.keys()),
-                desc="going through all scenes from dataset",
+                desc="Going through all scenes from dataset",
             ):
 
                 self.config.defrost()
@@ -138,7 +141,7 @@ class EQADataset(Dataset):
 
                 for ep_id in tqdm(
                     self.scene_episode_dict[scene],
-                    desc="saving episode frames for each scene",
+                    desc="Saving episode frames for each scene",
                 ):
                     episode = next(
                         ep for ep in self.episodes if ep.episode_id == ep_id
@@ -158,7 +161,7 @@ class EQADataset(Dataset):
                         self.save_frame_queue(pos_queue, ep_id, self.mode)
 
             logger.info(
-                "Saved all episodes' frames to disk. Frame dataset ready."
+                "[ Saved all episodes' frames to disk. Frame dataset ready. ]"
             )
 
         if self.input_type != "pacman" and self.mode != "val":
@@ -215,7 +218,7 @@ class EQADataset(Dataset):
             frame_path = os.path.join(
                 episode_frames_path, "{0:0=3d}".format(idx)
             )
-            cv2.imwrite(frame_path + ".jpg", img)
+            cv2.imwrite(frame_path + ".jpg", img[..., ::-1])
 
     def get_frames(self, frames_path, num=0):
         r"""Fetches frames from disk.
@@ -223,7 +226,7 @@ class EQADataset(Dataset):
         frames = []
         for img in sorted(os.listdir(frames_path))[-num:]:
             img_path = os.path.join(frames_path, img)
-            img = cv2.imread(img_path)
+            img = cv2.imread(img_path)[..., ::-1]
             img = img.transpose(2, 0, 1)
             img = img / 255.0
             frames.append(img)
@@ -438,7 +441,7 @@ class EQADataset(Dataset):
                 scene = self.eval_episodes[idx].scene_id
 
                 if scene != self.temp_scene_id:
-                    print("Loading scene - ", scene)
+                    logger.info("[ Loading scene - {}]".format(scene))
                     self.temp_scene_id = scene
                     self.config.defrost()
                     self.config.SIMULATOR.SCENE = scene
