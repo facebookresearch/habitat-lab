@@ -32,6 +32,15 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def __init__(self, config=None):
         super().__init__(config)
 
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+
+        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
+        torch.cuda.set_device(config.TORCH_GPU_ID)
+
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -42,15 +51,6 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             None
         """
         config = self.config
-
-        self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
-            if torch.cuda.is_available()
-            else torch.device("cpu")
-        )
-
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
@@ -69,7 +69,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         )
 
         model = MultitaskCNNOutput(num_classes=41)
-        model.train().cuda()
+        model.train().to(self.device)
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -95,9 +95,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    rgb = rgb.cuda()
-                    depth = depth.cuda()
-                    seg = seg.cuda()
+                    rgb = rgb.to(self.device)
+                    depth = depth.to(self.device)
+                    seg = seg.to(self.device)
 
                     out_seg, out_depth, out_ae = model(rgb)
 
@@ -164,12 +164,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         """
         config = self.config
 
-        # config.defrost()
-        # config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
-        # config.freeze()
-
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
+        config.defrost()
+        config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
+        config.freeze()
 
         env = habitat.Env(config=config.TASK_CONFIG)
 
@@ -194,7 +191,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
 
-        model.cuda().eval()
+        model.to(self.device).eval()
 
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
@@ -214,9 +211,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                 t += 1
 
                 idx, rgb, depth, seg = batch
-                rgb = rgb.cuda()
-                depth = depth.cuda()
-                seg = seg.cuda()
+                rgb = rgb.to(self.device)
+                depth = depth.to(self.device)
+                seg = seg.to(self.device)
 
                 out_seg, out_depth, out_ae = model(rgb)
                 l1 = seg_loss(out_seg, seg.long())

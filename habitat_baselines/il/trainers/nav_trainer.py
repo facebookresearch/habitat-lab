@@ -35,8 +35,17 @@ class NavTrainer(BaseILTrainer):
     def __init__(self, config=None):
         super().__init__(config)
 
-        # if config is not None:
-        # logger.info(f"config: {config}")
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+
+        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
+        torch.cuda.set_device(config.TORCH_GPU_ID)
+
+        if config is not None:
+            logger.info(f"config: {config}")
 
     def train(self) -> None:
         r"""Main method for training Navigation model of EQA.
@@ -46,14 +55,12 @@ class NavTrainer(BaseILTrainer):
         """
         config = self.config
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         env = habitat.Env(config=config.TASK_CONFIG)
 
         nav_dataset = EQADataset(
             env,
             config,
+            self.device,
             input_type="pacman",
             max_controller_actions=config.IL.NAV.max_controller_actions,
         )
@@ -88,7 +95,7 @@ class NavTrainer(BaseILTrainer):
         avg_p_loss = 0.0
         avg_c_loss = 0.0
 
-        model.train().cuda()
+        model.train().to(self.device)
 
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
@@ -115,22 +122,26 @@ class NavTrainer(BaseILTrainer):
                         controller_masks,
                     ) = batch
 
-                    questions = questions.cuda()
+                    questions = questions.to(self.device)
 
-                    planner_img_feats = planner_img_feats.cuda()
-                    planner_actions_in = planner_actions_in.cuda()
-                    planner_actions_out = planner_actions_out.cuda()
-                    planner_action_lengths = planner_action_lengths.cuda()
-                    planner_masks = planner_masks.cuda()
-
-                    controller_img_feats = controller_img_feats.cuda()
-                    controller_actions_in = controller_actions_in.cuda()
-                    planner_hidden_idx = planner_hidden_idx.cuda()
-                    controller_outs = controller_outs.cuda()
-                    controller_action_lengths = (
-                        controller_action_lengths.cuda()
+                    planner_img_feats = planner_img_feats.to(self.device)
+                    planner_actions_in = planner_actions_in.to(self.device)
+                    planner_actions_out = planner_actions_out.to(self.device)
+                    planner_action_lengths = planner_action_lengths.to(
+                        self.device
                     )
-                    controller_masks = controller_masks.cuda()
+                    planner_masks = planner_masks.to(self.device)
+
+                    controller_img_feats = controller_img_feats.to(self.device)
+                    controller_actions_in = controller_actions_in.to(
+                        self.device
+                    )
+                    planner_hidden_idx = planner_hidden_idx.to(self.device)
+                    controller_outs = controller_outs.to(self.device)
+                    controller_action_lengths = controller_action_lengths.to(
+                        self.device
+                    )
+                    controller_masks = controller_masks.to(self.device)
 
                     (
                         planner_action_lengths,
@@ -261,9 +272,6 @@ class NavTrainer(BaseILTrainer):
         """
         config = self.config
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
         config.freeze()
@@ -273,6 +281,7 @@ class NavTrainer(BaseILTrainer):
         nav_dataset = EQADataset(
             env,
             config,
+            self.device, 
             input_type="pacman",
             max_controller_actions=config.IL.NAV.max_controller_actions,
         )
@@ -294,7 +303,7 @@ class NavTrainer(BaseILTrainer):
 
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
-        model.eval().cuda()
+        model.eval().to(self.device)
 
         results_dir = config.RESULTS_DIR.format(split="val")
 
@@ -338,7 +347,7 @@ class NavTrainer(BaseILTrainer):
                     invalids.append([idx.item(), i])
                     continue
 
-                question = question.cuda()
+                question = question.to(self.device)
 
                 controller_step = False
                 planner_hidden = model.planner_nav_rnn.init_hidden(1)
@@ -359,8 +368,8 @@ class NavTrainer(BaseILTrainer):
                     config.IL.NAV.max_controller_actions,
                 )
 
-                planner_actions_in = planner_actions_in.cuda()
-                planner_img_feats = planner_img_feats.cuda()
+                planner_actions_in = planner_actions_in.to(self.device)
+                planner_img_feats = planner_img_feats.to(self.device)
 
                 # forward planner till spawn to update hidden state
                 for step in range(planner_actions_in.size(0)):
@@ -413,15 +422,19 @@ class NavTrainer(BaseILTrainer):
                             / 255.0
                         )
                         img_feat = eval_loader.dataset.cnn(
-                            img.view(1, 3, 256, 256).cuda()
+                            img.view(1, 3, 256, 256).to(self.device)
                         ).view(1, 1, 4608)
                     else:
-                        img_feat = controller_img_feats.cuda().view(1, 1, 4608)
+                        img_feat = controller_img_feats.to(self.device).view(
+                            1, 1, 4608
+                        )
 
                     if not first_step or first_step_is_controller:
                         # query controller to continue or not
                         controller_action_in = (
-                            torch.LongTensor(1, 1).fill_(action).cuda()
+                            torch.LongTensor(1, 1)
+                            .fill_(action)
+                            .to(self.device)
                         )
                         controller_scores = model.controller_step(
                             img_feat, controller_action_in, planner_hidden[0],
@@ -450,7 +463,9 @@ class NavTrainer(BaseILTrainer):
                     if planner_step:
                         if not first_step:
                             action_in = (
-                                torch.LongTensor(1, 1).fill_(action + 1).cuda()
+                                torch.LongTensor(1, 1)
+                                .fill_(action + 1)
+                                .to(self.device)
                             )
                             (
                                 planner_scores,

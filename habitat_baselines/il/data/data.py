@@ -17,18 +17,26 @@ class EQADataset(Dataset):
     """Pytorch dataset for Embodied Q&A (both VQA and NAV)"""
 
     def __init__(
-        self, env, config, input_type, num_frames=5, max_controller_actions=5,
+        self,
+        env,
+        config,
+        device,
+        input_type,
+        num_frames=5,
+        max_controller_actions=5,
     ):
         """
         Args:
             env (habitat.Env): Habitat environment
             config: Config
+            device: CUDA/CPU device
             input_type (string): Type of model being trained ("vqa", "pacman")
             num_frames (int): number of frames used as input to VQA model
             max_controller_actions (int):
         """
         self.env = env
         self.config = config.TASK_CONFIG
+        self.device = device
         self.input_type = input_type
         self.num_frames = num_frames
 
@@ -75,7 +83,7 @@ class EQADataset(Dataset):
             }
             self.cnn = MultitaskCNN(**cnn_kwargs)
             self.cnn.eval()
-            self.cnn.cuda()
+            self.cnn.to(self.device)
 
             self.max_controller_actions = max_controller_actions
             self.preprocess_actions()
@@ -361,7 +369,7 @@ class EQADataset(Dataset):
 
         images = self.get_frames(frames_path)
         raw_img_feats = (
-            self.cnn(torch.FloatTensor(images).cuda())
+            self.cnn(torch.FloatTensor(images).to(self.device))
             .data.cpu()
             .numpy()
             .copy()
@@ -465,7 +473,7 @@ class EQADataset(Dataset):
             frame_queue = self.get_frames(frames_path)
 
             raw_img_feats = (
-                self.cnn(torch.FloatTensor(frame_queue).cuda())
+                self.cnn(torch.FloatTensor(frame_queue).to(self.device))
                 .data.cpu()
                 .numpy()
                 .copy()

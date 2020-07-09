@@ -30,6 +30,15 @@ class VQATrainer(BaseILTrainer):
     def __init__(self, config=None):
         super().__init__(config)
 
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+
+        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
+        torch.cuda.set_device(config.TORCH_GPU_ID)
+
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -41,13 +50,10 @@ class VQATrainer(BaseILTrainer):
         """
         config = self.config
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         env = habitat.Env(config=config.TASK_CONFIG)
 
         vqa_dataset = EQADataset(
-            env, config, input_type="vqa", num_frames=config.IL.VQA.num_frames,
+            env, config, self.device, input_type="vqa", num_frames=config.IL.VQA.num_frames,
         )
 
         train_loader = DataLoader(
@@ -90,7 +96,7 @@ class VQATrainer(BaseILTrainer):
         avg_mean_rank = 0.0
         avg_mean_reciprocal_rank = 0.0
         logger.info(model)
-        model.train().cuda()
+        model.train().to(self.device)
 
         if config.IL.VQA.freeze_encoder:
             model.cnn.eval()
@@ -107,9 +113,9 @@ class VQATrainer(BaseILTrainer):
 
                     optim.zero_grad()
 
-                    questions = questions.cuda()
-                    answers = answers.cuda()
-                    frame_queue = frame_queue.cuda()
+                    questions = questions.to(self.device)
+                    answers = answers.to(self.device)
+                    frame_queue = frame_queue.to(self.device)
 
                     scores, att_probs = model(frame_queue, questions)
                     loss = lossFn(scores, answers)
@@ -198,9 +204,6 @@ class VQATrainer(BaseILTrainer):
         """
         config = self.config
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
         config.freeze()
@@ -208,7 +211,7 @@ class VQATrainer(BaseILTrainer):
         env = habitat.Env(config=config.TASK_CONFIG)
 
         vqa_dataset = EQADataset(
-            env, config, input_type="vqa", num_frames=config.IL.VQA.num_frames,
+            env, config, self.device, input_type="vqa", num_frames=config.IL.VQA.num_frames,
         )
 
         eval_loader = DataLoader(
@@ -240,7 +243,7 @@ class VQATrainer(BaseILTrainer):
 
         model.eval()
         model.cnn.eval()
-        model.cuda()
+        model.to(self.device)
 
         metrics = VqaMetric(
             info={"split": "val"},
@@ -256,9 +259,9 @@ class VQATrainer(BaseILTrainer):
             for batch in eval_loader:
                 t += 1
                 idx, questions, answers, frame_queue = batch
-                questions = questions.cuda()
-                answers = answers.cuda()
-                frame_queue = frame_queue.cuda()
+                questions = questions.to(self.device)
+                answers = answers.to(self.device)
+                frame_queue = frame_queue.to(self.device)
 
                 scores, att_probs = model(frame_queue, questions)
 
