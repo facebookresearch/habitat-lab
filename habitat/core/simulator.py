@@ -224,6 +224,7 @@ class Simulator:
     r"""Basic simulator class for habitat. New simulators to be added to habtiat
     must derive from this class and implement the abstarct methods.
     """
+    habitat_config: Config
 
     @property
     def sensor_suite(self) -> SensorSuite:

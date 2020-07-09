@@ -162,7 +162,7 @@ def generate_pointnav_episode(
 
             episode = _create_episode(
                 episode_id=episode_count,
-                scene_id=sim.config.SCENE,
+                scene_id=sim.habitat_config.SCENE,
                 start_position=source_position,
                 start_rotation=source_rotation,
                 target_position=target_position,
