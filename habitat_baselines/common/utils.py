@@ -244,7 +244,7 @@ def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
     return images
 
 
-def tensor_to_rgb_images(tensor: torch.Tensor) -> List[np.ndarray]:
+def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
     r"""Converts tensor of n image tensors to list of n images.
     Args:
         tensor: tensor containing n image tensors
@@ -258,7 +258,7 @@ def tensor_to_rgb_images(tensor: torch.Tensor) -> List[np.ndarray]:
     for img_tensor in tensor:
         img = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
         img = img.astype(np.uint8)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         images.append(img)
 
     return images
