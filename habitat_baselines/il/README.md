@@ -25,7 +25,7 @@ followed by fine-tuning the NAV model.
 
 ---
 
-## EQA-CNN-Pretrain model -
+## EQA-CNN-Pretrain model
 
 ### Information:
 This is an encoder-decoder network that takes RGB input and generates an RGB reconstruction, a depth map and a a Segmentation map. The encoder from this network is extracted and used as a feature extractor for subsequent VQA and NAV trainers.
