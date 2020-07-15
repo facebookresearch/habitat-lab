@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import signal
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -94,6 +95,7 @@ class VectorEnv:
         env_fn_args: Sequence[Tuple] = None,
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
+        workers_ignore_signals: bool = False,
     ) -> None:
         """..
 
@@ -109,6 +111,8 @@ class VectorEnv:
             :py:`{'spawn', 'forkserver', 'fork'}`; :py:`'forkserver'` is the
             recommended method as it works well with CUDA. If :py:`'fork'` is
             used, the subproccess  must be started before any other GPU useage.
+        :param workers_ignore_signals: Whether or not workers will ignore SIGINT and SIGTERM
+            and instead will only exit when :ref:`close` is called
         """
         self._is_waiting = False
         self._is_closed = True
@@ -129,7 +133,9 @@ class VectorEnv:
             self._connection_read_fns,
             self._connection_write_fns,
         ) = self._spawn_workers(  # noqa
-            env_fn_args, make_env_fn
+            env_fn_args,
+            make_env_fn,
+            workers_ignore_signals=workers_ignore_signals,
         )
 
         self._is_closed = False
@@ -164,11 +170,19 @@ class VectorEnv:
         env_fn: Callable,
         env_fn_args: Tuple[Any],
         auto_reset_done: bool,
+        mask_signals: bool = False,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
         r"""process worker for creating and interacting with the environment.
         """
+        if mask_signals:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+            signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+            signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+
         env = env_fn(*env_fn_args)
         if parent_pipe is not None:
             parent_pipe.close()
@@ -245,6 +259,7 @@ class VectorEnv:
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
+        workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
@@ -261,6 +276,7 @@ class VectorEnv:
                     make_env_fn,
                     env_args,
                     self._auto_reset_done,
+                    workers_ignore_signals,
                     worker_conn,
                     parent_conn,
                 ),
@@ -538,6 +554,7 @@ class ThreadedVectorEnv(VectorEnv):
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
+        workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_read_queues, parent_write_queues = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]

@@ -51,8 +51,8 @@ class ShortestPathFollower:
         self._stop_on_error = stop_on_error
 
     def _build_follower(self):
-        if self._current_scene != self._sim.config.SCENE:
-            self._follower = self._sim._sim.make_greedy_follower(
+        if self._current_scene != self._sim.habitat_config.SCENE:
+            self._follower = self._sim.make_greedy_follower(
                 0,
                 self._goal_radius,
                 stop_key=HabitatSimActions.STOP,
@@ -60,7 +60,7 @@ class ShortestPathFollower:
                 left_key=HabitatSimActions.TURN_LEFT,
                 right_key=HabitatSimActions.TURN_RIGHT,
             )
-            self._current_scene = self._sim.config.SCENE
+            self._current_scene = self._sim.habitat_config.SCENE
 
     def _get_return_value(self, action) -> Union[int, np.array]:
         if self._return_one_hot:

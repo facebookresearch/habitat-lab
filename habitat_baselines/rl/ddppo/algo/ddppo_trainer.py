@@ -169,7 +169,9 @@ class DDPPOTrainer(PPOTrainer):
             self.device = torch.device("cpu")
 
         self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
+            self.config,
+            get_env_class(self.config.ENV_NAME),
+            workers_ignore_signals=True,
         )
 
         ppo_cfg = self.config.RL.PPO
