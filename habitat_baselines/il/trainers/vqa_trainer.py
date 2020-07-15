@@ -53,7 +53,11 @@ class VQATrainer(BaseILTrainer):
         env = habitat.Env(config=config.TASK_CONFIG)
 
         vqa_dataset = EQADataset(
-            env, config, self.device, input_type="vqa", num_frames=config.IL.VQA.num_frames,
+            env,
+            config,
+            self.device,
+            input_type="vqa",
+            num_frames=config.IL.VQA.num_frames,
         )
 
         train_loader = DataLoader(
@@ -211,7 +215,11 @@ class VQATrainer(BaseILTrainer):
         env = habitat.Env(config=config.TASK_CONFIG)
 
         vqa_dataset = EQADataset(
-            env, config, self.device, input_type="vqa", num_frames=config.IL.VQA.num_frames,
+            env,
+            config,
+            self.device,
+            input_type="vqa",
+            num_frames=config.IL.VQA.num_frames,
         )
 
         eval_loader = DataLoader(

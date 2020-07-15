@@ -3,7 +3,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
@@ -325,14 +324,10 @@ class QuestionLstmEncoder(nn.Module):
         idx = torch.LongTensor(N).fill_(T - 1)
 
         # Find the last non-null element in each sequence
-        x_cpu = x.data.cpu()
-        for i in range(N):
-            for t in range(T - 1):
-                if x_cpu[i, t] != self.NULL and x_cpu[i, t + 1] == self.NULL:
-                    idx[i] = t
-                    break
+        idx = (x != self.NULL).long().sum(-1) - 1
         idx = idx.type_as(x.data).long()
-        idx = Variable(idx, requires_grad=False)
+        idx.requires_grad = False
+
         hs, _ = self.rnn(self.embed(x.long()))
 
         idx = idx.view(N, 1, 1).expand(N, 1, hs.size(2))
@@ -505,23 +500,17 @@ class NavRnn(nn.Module):
         weight = next(self.parameters()).data
         if self.rnn_type == "LSTM":
             return (
-                Variable(
-                    weight.new(
-                        self.rnn_num_layers, bsz, self.rnn_hidden_dim
-                    ).zero_()
-                ),
-                Variable(
-                    weight.new(
-                        self.rnn_num_layers, bsz, self.rnn_hidden_dim
-                    ).zero_()
-                ),
-            )
-        elif self.rnn_type == "GRU":
-            return Variable(
                 weight.new(
                     self.rnn_num_layers, bsz, self.rnn_hidden_dim
-                ).zero_()
+                ).zero_(),
+                weight.new(
+                    self.rnn_num_layers, bsz, self.rnn_hidden_dim
+                ).zero_(),
             )
+        elif self.rnn_type == "GRU":
+            return weight.new(
+                self.rnn_num_layers, bsz, self.rnn_hidden_dim
+            ).zero_()
 
     def forward(
         self,
@@ -531,7 +520,6 @@ class NavRnn(nn.Module):
         action_lengths,
         hidden=False,
     ):
-        input_feats = Variable()
 
         T = False
         if self.image_input is True:
@@ -574,7 +562,6 @@ class NavRnn(nn.Module):
             return output, hidden
 
     def step_forward(self, img_feats, question_feats, actions_in, hidden):
-        input_feats = Variable()
 
         T = False
         if self.image_input is True:

@@ -281,7 +281,7 @@ class NavTrainer(BaseILTrainer):
         nav_dataset = EQADataset(
             env,
             config,
-            self.device, 
+            self.device,
             input_type="pacman",
             max_controller_actions=config.IL.NAV.max_controller_actions,
         )

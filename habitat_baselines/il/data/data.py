@@ -77,7 +77,7 @@ class EQADataset(Dataset):
         if self.input_type == "pacman":
 
             cnn_kwargs = {
-                "num_classes": 40,
+                "num_classes": 41,
                 "pretrained": True,
                 "checkpoint_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
             }
