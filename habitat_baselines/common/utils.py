@@ -9,7 +9,7 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -226,6 +226,42 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+
+
+def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
+    r"""Converts tensor (or list) of n image tensors to list of n images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    images = []
+
+    for img_tensor in tensor:
+        image = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        images.append(image)
+
+    return images
+
+
+def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
+    r"""Converts tensor of n image tensors to list of n images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    import cv2
+
+    images = []
+
+    for img_tensor in tensor:
+        img = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        img = img.astype(np.uint8)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        images.append(img)
+
+    return images
 
 
 def image_resize_shortest_edge(
