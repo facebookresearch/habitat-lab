@@ -52,6 +52,13 @@ Training checkpoints are by default stored in `data/eqa/eqa_cnn_pretrain/checkpo
 
 Results from evaluation are stored in `data/eqa/eqa_cnn_pretrain/results/val`.
 
+
+### Pre-trained model
+
+Pre-trained EQA-CNN-Pretrain model can be downloaded from [here](https://drive.google.com/file/d/1bZbv6LVsxRMStZ7CjbnCFZIo1mnbuRXG/view?usp=sharing). 
+
+After downloading the pre-trained model, it's path needs to be added to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation. 
+
 ### Example results:
 
 <img src="https://user-images.githubusercontent.com/24846546/76339759-6f788b00-62f2-11ea-90e0-a8ac16c34f76.jpg" width=40%>
