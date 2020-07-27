@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import time
 from collections import OrderedDict
 from typing import Dict, List
 
@@ -9,14 +8,14 @@ import cv2
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import Config
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.base_trainer import BaseTrainer
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
-    poll_checkpoint_folder,
     tensor_to_bgr_images,
     tensor_to_depth_images,
+    put_vqa_text_on_image,
 )
 
 
@@ -75,80 +74,6 @@ class BaseILTrainer(BaseTrainer):
     def train(self) -> None:
         raise NotImplementedError
 
-    def eval(self) -> None:
-        r"""Main method of trainer evaluation. Calls _eval_checkpoint() that
-        is specified in Trainer class that inherits from BaseILTrainer
-
-        Returns:
-            None
-        """
-        self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
-            if torch.cuda.is_available()
-            else torch.device("cpu")
-        )
-
-        with TensorboardWriter(
-            self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
-        ) as writer:
-            if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
-                # evaluate singe checkpoint
-                self._eval_checkpoint(self.config.EVAL_CKPT_PATH_DIR, writer)
-            else:
-                # evaluate multiple checkpoints in order
-                prev_ckpt_ind = -1
-                while True:
-                    current_ckpt = None
-                    while current_ckpt is None:
-                        current_ckpt = poll_checkpoint_folder(
-                            self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind
-                        )
-                        time.sleep(2)  # sleep for 2 secs before polling again
-                    logger.info(f"=======current_ckpt: {current_ckpt}=======")
-                    prev_ckpt_ind += 1
-                    self._eval_checkpoint(
-                        checkpoint_path=current_ckpt,
-                        writer=writer,
-                        checkpoint_index=prev_ckpt_ind,
-                    )
-
-    def _setup_eval_config(self, checkpoint_config: Config) -> Config:
-        r"""Sets up and returns a merged config for evaluation. Config
-            object saved from checkpoint is merged into config file specified
-            at evaluation time with the following overwrite priority:
-                  eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
-            If the saved config is outdated, only the eval config is returned.
-
-        Args:
-            checkpoint_config: saved config from checkpoint.
-
-        Returns:
-            Config: merged config for eval.
-        """
-
-        config = self.config.clone()
-
-        ckpt_cmd_opts = checkpoint_config.CMD_TRAILING_OPTS
-        eval_cmd_opts = config.CMD_TRAILING_OPTS
-
-        try:
-            config.merge_from_other_cfg(checkpoint_config)
-            config.merge_from_other_cfg(self.config)
-            config.merge_from_list(ckpt_cmd_opts)
-            config.merge_from_list(eval_cmd_opts)
-        except KeyError:
-            logger.info("Saved config is outdated, using solely eval config")
-            config = self.config.clone()
-            config.merge_from_list(eval_cmd_opts)
-        if config.TASK_CONFIG.DATASET.SPLIT == "train":
-            config.TASK_CONFIG.defrost()
-            config.TASK_CONFIG.DATASET.SPLIT = "val"
-
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
-        config.freeze()
-
-        return config
-
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -203,60 +128,6 @@ class BaseILTrainer(BaseTrainer):
 
         return q_string
 
-    def _put_vqa_text_on_image(
-        self,
-        image: np.ndarray,
-        question: str,
-        prediction: str,
-        ground_truth: str,
-    ) -> np.ndarray:
-        r"""For writing question, prediction and ground truth answer
-            on image.
-
-        Args:
-            image: image on which text has to be written
-            question: input question to model
-            prediction: model's answer prediction
-            ground_truth: ground truth answer
-
-        Returns:
-            image with text
-        """
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        color = (0, 0, 0)
-        scale = 0.4
-        thickness = 1
-
-        cv2.putText(
-            image,
-            "Question: " + question,
-            (10, 15),
-            font,
-            scale,
-            color,
-            thickness,
-        )
-        cv2.putText(
-            image,
-            "Prediction: " + prediction,
-            (10, 30),
-            font,
-            scale,
-            color,
-            thickness,
-        )
-        cv2.putText(
-            image,
-            "Ground truth: " + ground_truth,
-            (10, 45),
-            font,
-            scale,
-            color,
-            thickness,
-        )
-
-        return image
-
     def _save_image_results(
         self,
         ckpt_idx: int,
@@ -296,7 +167,7 @@ class BaseILTrainer(BaseTrainer):
             value=(255, 255, 255),
         )
 
-        image = self._put_vqa_text_on_image(
+        image = put_vqa_text_on_image(
             collage_image, question, prediction, ground_truth
         )
 
@@ -470,7 +341,7 @@ class BaseILTrainer(BaseTrainer):
 
         question = questions[0]
 
-        ckpt_epoch = ckpt_path[ckpt_path.rfind("/") + 1 :]
+        ckpt_epoch = os.path.basename(ckpt_path)
         results_dir = os.path.join(results_dir, ckpt_epoch)
 
         q_string = self._get_q_string(question, q_vocab_dict)

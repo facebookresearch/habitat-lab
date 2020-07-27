@@ -9,8 +9,9 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -61,8 +62,8 @@ class ResizeCenterCropper(nn.Module):
     def __init__(self, size, channels_last: bool = False):
         r"""An nn module the resizes and center crops your input.
         Args:
-            size: A sequence (w, h) or int of the size you wish to resize/center_crop.
-                    If int, assumes square crop
+            size: A sequence (w, h) or int of the size you wish to
+                resize/center_crop. If int, assumes square crop
             channels_list: indicates if channels is the last dimension
         """
         super().__init__()
@@ -264,6 +265,57 @@ def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
     return images
 
 
+def put_vqa_text_on_image(
+    self, image: np.ndarray, question: str, prediction: str, ground_truth: str,
+) -> np.ndarray:
+    r"""For writing question, prediction and ground truth answer
+        on image.
+
+    Args:
+        image: image on which text has to be written
+        question: input question to model
+        prediction: model's answer prediction
+        ground_truth: ground truth answer
+
+    Returns:
+        image with text
+    """
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    color = (0, 0, 0)
+    scale = 0.4
+    thickness = 1
+
+    cv2.putText(
+        image,
+        "Question: " + question,
+        (10, 15),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+    cv2.putText(
+        image,
+        "Prediction: " + prediction,
+        (10, 30),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+    cv2.putText(
+        image,
+        "Ground truth: " + ground_truth,
+        (10, 45),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+
+    return image
+
+
 def image_resize_shortest_edge(
     img, size: int, channels_last: bool = False
 ) -> torch.Tensor:
@@ -318,7 +370,8 @@ def center_crop(img, size, channels_last: bool = False):
     """Performs a center crop on an image.
 
     Args:
-        img: the array object that needs to be resized (either batched or unbatched)
+        img: the array object that needs to be resized (either batched or
+            unbatched)
         size: A sequence (w, h) or a python(int) that you want cropped
         channels_last: If the channels are the last dimension.
     Returns:

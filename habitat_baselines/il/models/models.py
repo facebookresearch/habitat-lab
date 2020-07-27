@@ -161,6 +161,7 @@ class MultitaskCNN(nn.Module):
         num_classes=41,
         pretrained=True,
         checkpoint_path="data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
+        freeze_encoder=False,
     ):
         super(MultitaskCNN, self).__init__()
 
@@ -221,8 +222,10 @@ class MultitaskCNN(nn.Module):
                 checkpoint_path, map_location={"cuda:0": "cpu"}
             )
             self.load_state_dict(checkpoint)
-            for param in self.parameters():
-                param.requires_grad = False
+
+            if freeze_encoder:
+                for param in self.parameters():
+                    param.requires_grad = False
         else:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):

@@ -38,9 +38,6 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             else torch.device("cpu")
         )
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -84,7 +81,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
-            while epoch <= int(config.IL.EQACNNPretrain.max_epochs):
+            while epoch <= config.IL.EQACNNPretrain.max_epochs:
                 start_time = time.time()
                 avg_loss = 0.0
 
@@ -197,7 +194,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         ae_loss = torch.nn.SmoothL1Loss()
         seg_loss = torch.nn.CrossEntropyLoss()
 
-        np.random.seed(2)
+        np.random.seed(config.EVAL_SEG_COLORS_SEED)
         self.colors = np.random.randint(255, size=(41, 3))
 
         t = 0
