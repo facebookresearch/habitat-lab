@@ -18,7 +18,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.eqa_cnn_pretrain_data import (
     EQACNNPretrainDataset,
 )
-from habitat_baselines.il.models.models import MultitaskCNNOutput
+from habitat_baselines.il.models.models import MultitaskCNN
 
 
 @baseline_registry.register_trainer(name="eqa-cnn-pretrain")
@@ -68,7 +68,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             )
         )
 
-        model = MultitaskCNNOutput(num_classes=41)
+        model = MultitaskCNN(num_classes=41)
         model.train().to(self.device)
 
         optim = torch.optim.Adam(
@@ -186,7 +186,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             )
         )
 
-        model = MultitaskCNNOutput(num_classes=41)
+        model = MultitaskCNN(num_classes=41)
 
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)

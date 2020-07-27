@@ -36,9 +36,6 @@ class VQATrainer(BaseILTrainer):
             else torch.device("cpu")
         )
 
-        assert torch.cuda.is_available(), "Cuda-enabled GPU required"
-        torch.cuda.set_device(config.TORCH_GPU_ID)
-
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -110,7 +107,7 @@ class VQATrainer(BaseILTrainer):
         with TensorboardWriter(
             config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
-            while epoch <= int(config.IL.VQA.max_epochs):
+            while epoch <= config.IL.VQA.max_epochs:
                 start_time = time.time()
                 for batch in train_loader:
                     t += 1

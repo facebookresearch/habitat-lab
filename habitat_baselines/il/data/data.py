@@ -78,6 +78,7 @@ class EQADataset(Dataset):
 
             cnn_kwargs = {
                 "num_classes": 41,
+                "only_encoder": True,
                 "pretrained": True,
                 "checkpoint_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
             }
@@ -494,7 +495,9 @@ class EQADataset(Dataset):
 
             planner_img_feats[
                 : self.episodes[idx].planner_action_length
-            ] = img_feats[planner_pos_queue_idx]
+            ] = img_feats[
+                tuple(planner_pos_queue_idx)
+            ]
 
             planner_actions_in = planner_actions.clone() - 1
             planner_actions_out = planner_actions[1:].clone() - 2
@@ -509,7 +512,7 @@ class EQADataset(Dataset):
                 (self.max_action_len, img_feats.shape[1]), dtype=np.float32
             )
             controller_img_feats[:controller_action_length] = img_feats[
-                controller_pos_queue_idx
+                tuple(controller_pos_queue_idx)
             ]
 
             controller_actions_in = self.episodes[idx].actions.clone() - 2
