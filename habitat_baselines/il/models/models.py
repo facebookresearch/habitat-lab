@@ -204,6 +204,7 @@ class MultitaskCNN(nn.Module):
         num_classes=41,
         pretrained=True,
         checkpoint_path="data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
+        freeze_encoder=False,
     ):
         super(MultitaskCNN, self).__init__()
 
@@ -264,8 +265,10 @@ class MultitaskCNN(nn.Module):
                 checkpoint_path, map_location={"cuda:0": "cpu"}
             )
             self.load_state_dict(checkpoint)
-            for param in self.parameters():
-                param.requires_grad = False
+
+            if freeze_encoder:
+                for param in self.parameters():
+                    param.requires_grad = False
         else:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
@@ -341,6 +344,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         q_vocab,
         ans_vocab,
         eqa_cnn_pretrain_ckpt_path,
+        freeze_encoder=False,
         image_feat_dim=64,
         question_wordvec_dim=64,
         question_hidden_dim=64,
@@ -356,6 +360,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "num_classes": 41,
             "pretrained": True,
             "checkpoint_path": eqa_cnn_pretrain_ckpt_path,
+            "freeze_encoder": freeze_encoder,
         }
         self.cnn = MultitaskCNN(**cnn_kwargs)
         self.cnn_fc_layer = nn.Sequential(

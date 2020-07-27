@@ -72,7 +72,9 @@ class VQATrainer(BaseILTrainer):
             "q_vocab": q_vocab_dict,
             "ans_vocab": ans_vocab_dict,
             "eqa_cnn_pretrain_ckpt_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
+            "freeze_encoder": config.IL.VQA.freeze_encoder
         }
+
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
         lossFn = torch.nn.CrossEntropyLoss()
