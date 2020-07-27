@@ -65,7 +65,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             )
         )
 
-        model = MultitaskCNN(num_classes=41)
+        model = MultitaskCNN()
         model.train().to(self.device)
 
         optim = torch.optim.Adam(
@@ -183,7 +183,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             )
         )
 
-        model = MultitaskCNN(num_classes=41)
+        model = MultitaskCNN()
 
         state_dict = torch.load(checkpoint_path)
         model.load_state_dict(state_dict)
