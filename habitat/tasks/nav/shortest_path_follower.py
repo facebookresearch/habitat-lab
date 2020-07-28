@@ -7,9 +7,9 @@
 import warnings
 from typing import Optional, Union
 
-import habitat_sim
 import numpy as np
 
+import habitat_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
@@ -68,7 +68,9 @@ class ShortestPathFollower:
         else:
             return action
 
-    def get_next_action(self, goal_pos: np.array) -> Optional[Union[int, np.array]]:
+    def get_next_action(
+        self, goal_pos: np.array
+    ) -> Optional[Union[int, np.array]]:
         """Returns the next action along the shortest path.
         """
         self._build_follower()

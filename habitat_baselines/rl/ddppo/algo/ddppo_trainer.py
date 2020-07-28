@@ -35,7 +35,9 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     save_interrupted_state,
 )
 from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
-from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetPolicy
+from habitat_baselines.rl.ddppo.policy.resnet_policy import (
+    PointNavResNetPolicy,
+)
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 
@@ -74,12 +76,16 @@ class DDPPOTrainer(PPOTrainer):
             rnn_type=self.config.RL.DDPPO.rnn_type,
             num_recurrent_layers=self.config.RL.DDPPO.num_recurrent_layers,
             backbone=self.config.RL.DDPPO.backbone,
-            normalize_visual_inputs="rgb" in self.envs.observation_spaces[0].spaces,
+            normalize_visual_inputs="rgb"
+            in self.envs.observation_spaces[0].spaces,
             force_blind_policy=self.config.FORCE_BLIND_POLICY,
         )
         self.actor_critic.to(self.device)
 
-        if self.config.RL.DDPPO.pretrained_encoder or self.config.RL.DDPPO.pretrained:
+        if (
+            self.config.RL.DDPPO.pretrained_encoder
+            or self.config.RL.DDPPO.pretrained
+        ):
             pretrained_state = torch.load(
                 self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
             )
@@ -135,7 +141,9 @@ class DDPPOTrainer(PPOTrainer):
         add_signal_handlers()
 
         # Stores the number of workers that have finished their rollout
-        num_rollouts_done_store = distrib.PrefixStore("rollout_tracker", tcp_store)
+        num_rollouts_done_store = distrib.PrefixStore(
+            "rollout_tracker", tcp_store
+        )
         num_rollouts_done_store.set("num_done", "0")
 
         self.world_rank = distrib.get_rank()
@@ -145,7 +153,9 @@ class DDPPOTrainer(PPOTrainer):
         self.config.TORCH_GPU_ID = self.local_rank
         self.config.SIMULATOR_GPU_ID = self.local_rank
         # Multiply by the number of simulators to make sure they also get unique seeds
-        self.config.TASK_CONFIG.SEED += self.world_rank * self.config.NUM_PROCESSES
+        self.config.TASK_CONFIG.SEED += (
+            self.world_rank * self.config.NUM_PROCESSES
+        )
         self.config.freeze()
 
         random.seed(self.config.TASK_CONFIG.SEED)
@@ -165,7 +175,10 @@ class DDPPOTrainer(PPOTrainer):
         )
 
         ppo_cfg = self.config.RL.PPO
-        if not os.path.isdir(self.config.CHECKPOINT_FOLDER) and self.world_rank == 0:
+        if (
+            not os.path.isdir(self.config.CHECKPOINT_FOLDER)
+            and self.world_rank == 0
+        ):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
         self._setup_actor_critic_agent(ppo_cfg)
@@ -221,7 +234,9 @@ class DDPPOTrainer(PPOTrainer):
         batch = None
         observations = None
 
-        current_episode_reward = torch.zeros(self.envs.num_envs, 1, device=self.device)
+        current_episode_reward = torch.zeros(
+            self.envs.num_envs, 1, device=self.device
+        )
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1, device=self.device),
             reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
@@ -246,7 +261,9 @@ class DDPPOTrainer(PPOTrainer):
         interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
             self.agent.load_state_dict(interrupted_state["state_dict"])
-            self.agent.optimizer.load_state_dict(interrupted_state["optim_state"])
+            self.agent.optimizer.load_state_dict(
+                interrupted_state["optim_state"]
+            )
             lr_scheduler.load_state_dict(interrupted_state["lr_sched_state"])
 
             requeue_stats = interrupted_state["requeue_stats"]
@@ -258,7 +275,9 @@ class DDPPOTrainer(PPOTrainer):
             prev_time = requeue_stats["prev_time"]
 
         with (
-            TensorboardWriter(self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs)
+            TensorboardWriter(
+                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+            )
             if self.world_rank == 0
             else contextlib.suppress()
         ) as writer:
@@ -314,7 +333,8 @@ class DDPPOTrainer(PPOTrainer):
                     # This is where the preemption of workers happens.  If a
                     # worker detects it will be a straggler, it preempts itself!
                     if (
-                        step >= ppo_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+                        step
+                        >= ppo_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
                     ) and int(num_rollouts_done_store.get("num_done")) > (
                         self.config.RL.DDPPO.sync_frac * self.world_size
                     ):
@@ -344,7 +364,8 @@ class DDPPOTrainer(PPOTrainer):
                     window_episode_stats[k].append(stats[i].clone())
 
                 stats = torch.tensor(
-                    [value_loss, action_loss, count_steps_delta], device=self.device,
+                    [value_loss, action_loss, count_steps_delta],
+                    device=self.device,
                 )
                 distrib.all_reduce(stats)
                 count_steps += stats[2].item()
@@ -367,7 +388,9 @@ class DDPPOTrainer(PPOTrainer):
                     deltas["count"] = max(deltas["count"], 1.0)
 
                     writer.add_scalar(
-                        "reward", deltas["reward"] / deltas["count"], count_steps,
+                        "reward",
+                        deltas["reward"] / deltas["count"],
+                        count_steps,
                     )
 
                     # Check to see if there are any metrics
@@ -391,13 +414,16 @@ class DDPPOTrainer(PPOTrainer):
                         logger.info(
                             "update: {}\tfps: {:.3f}\t".format(
                                 update,
-                                count_steps / ((time.time() - t_start) + prev_time),
+                                count_steps
+                                / ((time.time() - t_start) + prev_time),
                             )
                         )
 
                         logger.info(
                             "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                            "frames: {}".format(update, env_time, pth_time, count_steps)
+                            "frames: {}".format(
+                                update, env_time, pth_time, count_steps
+                            )
                         )
                         logger.info(
                             "Average window size: {}  {}".format(
@@ -413,7 +439,8 @@ class DDPPOTrainer(PPOTrainer):
                     # checkpoint model
                     if update % self.config.CHECKPOINT_INTERVAL == 0:
                         self.save_checkpoint(
-                            f"ckpt.{count_checkpoints}.pth", dict(step=count_steps),
+                            f"ckpt.{count_checkpoints}.pth",
+                            dict(step=count_steps),
                         )
                         count_checkpoints += 1
 

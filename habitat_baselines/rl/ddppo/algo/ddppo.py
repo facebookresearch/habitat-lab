@@ -43,7 +43,9 @@ def distributed_mean_and_var(
 
 
 class DecentralizedDistributedMixin:
-    def _get_advantages_distributed(self, rollouts: RolloutStorage) -> torch.Tensor:
+    def _get_advantages_distributed(
+        self, rollouts: RolloutStorage
+    ) -> torch.Tensor:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
         if not self.use_normalized_advantage:
             return advantages

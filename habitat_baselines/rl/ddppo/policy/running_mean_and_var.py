@@ -59,5 +59,7 @@ class RunningMeanAndVar(nn.Module):
 
             self._count += new_count
 
-        stdev = torch.sqrt(torch.max(self._var, torch.full_like(self._var, 1e-2)))
+        stdev = torch.sqrt(
+            torch.max(self._var, torch.full_like(self._var, 1e-2))
+        )
         return (x - self._mean) / stdev

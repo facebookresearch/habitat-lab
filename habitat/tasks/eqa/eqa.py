@@ -41,7 +41,9 @@ class EQAEpisode(NavigationEpisode):
         question: question related to goal object.
     """
 
-    question: QuestionData = attr.ib(default=None, validator=not_none_validator)
+    question: QuestionData = attr.ib(
+        default=None, validator=not_none_validator
+    )
 
 
 @registry.register_sensor
@@ -66,7 +68,9 @@ class QuestionSensor(Sensor):
         return episode.question.question_tokens
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
-        return ListSpace(spaces.Discrete(self._dataset.question_vocab.get_size()))
+        return ListSpace(
+            spaces.Discrete(self._dataset.question_vocab.get_size())
+        )
 
 
 @registry.register_measure
@@ -124,14 +128,17 @@ class AnswerAccuracy(Measure):
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = 0
 
-    def update_metric(self, action=None, episode=None, *args: Any, **kwargs: Any):
+    def update_metric(
+        self, action=None, episode=None, *args: Any, **kwargs: Any
+    ):
         if episode is None:
             return
 
         if action["action"] == AnswerAction.name:
             self._metric = (
                 1
-                if episode.question.answer_token == action["action_args"]["answer_id"]
+                if episode.question.answer_token
+                == action["action_args"]["answer_id"]
                 else 0
             )
 
@@ -197,5 +204,9 @@ class AnswerAction(Action):
         """Answer expected to be single token.
         """
         return spaces.Dict(
-            {"answer_id": spaces.Discrete(self._dataset.answer_vocab.get_size())}
+            {
+                "answer_id": spaces.Discrete(
+                    self._dataset.answer_vocab.get_size()
+                )
+            }
         )

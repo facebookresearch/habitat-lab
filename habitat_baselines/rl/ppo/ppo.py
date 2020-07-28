@@ -98,10 +98,14 @@ class PPO(nn.Module):
                     actions_batch,
                 )
 
-                ratio = torch.exp(action_log_probs - old_action_log_probs_batch)
+                ratio = torch.exp(
+                    action_log_probs - old_action_log_probs_batch
+                )
                 surr1 = ratio * adv_targ
                 surr2 = (
-                    torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param)
+                    torch.clamp(
+                        ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
+                    )
                     * adv_targ
                 )
                 action_loss = -torch.min(surr1, surr2).mean()
@@ -111,9 +115,12 @@ class PPO(nn.Module):
                         values - value_preds_batch
                     ).clamp(-self.clip_param, self.clip_param)
                     value_losses = (values - return_batch).pow(2)
-                    value_losses_clipped = (value_pred_clipped - return_batch).pow(2)
+                    value_losses_clipped = (
+                        value_pred_clipped - return_batch
+                    ).pow(2)
                     value_loss = (
-                        0.5 * torch.max(value_losses, value_losses_clipped).mean()
+                        0.5
+                        * torch.max(value_losses, value_losses_clipped).mean()
                     )
                 else:
                     value_loss = 0.5 * (return_batch - values).pow(2).mean()
@@ -152,7 +159,9 @@ class PPO(nn.Module):
         pass
 
     def before_step(self):
-        nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+        nn.utils.clip_grad_norm_(
+            self.actor_critic.parameters(), self.max_grad_norm
+        )
 
     def after_step(self):
         pass

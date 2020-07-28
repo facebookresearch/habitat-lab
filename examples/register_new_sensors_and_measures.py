@@ -68,7 +68,9 @@ class AgentPositionSensor(habitat.Sensor):
         )
 
     # This is called whenver reset is called or an action is taken
-    def get_observation(self, observations, *args: Any, episode, **kwargs: Any):
+    def get_observation(
+        self, observations, *args: Any, episode, **kwargs: Any
+    ):
         return self._sim.get_agent_state().position
 
 

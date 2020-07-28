@@ -84,7 +84,9 @@ class PyRobotRGBSensor(RGBSensor):
     def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         obs = robot_obs.get(self.uuid, None)
 
-        assert obs is not None, "Invalid observation for {} sensor".format(self.uuid)
+        assert obs is not None, "Invalid observation for {} sensor".format(
+            self.uuid
+        )
 
         obs = _resize_observation(obs, self.observation_space, self.config)
 
@@ -117,7 +119,9 @@ class PyRobotDepthSensor(DepthSensor):
     def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         obs = robot_obs.get(self.uuid, None)
 
-        assert obs is not None, "Invalid observation for {} sensor".format(self.uuid)
+        assert obs is not None, "Invalid observation for {} sensor".format(
+            self.uuid
+        )
 
         obs = _resize_observation(obs, self.observation_space, self.config)
 
@@ -193,7 +197,9 @@ class PyRobot(Simulator):
             self._config.ROBOT, self._robot_config
         )
 
-        self._robot = pyrobot.Robot(self._config.ROBOT, base_config=config_pyrobot)
+        self._robot = pyrobot.Robot(
+            self._config.ROBOT, base_config=config_pyrobot
+        )
 
     def get_robot_observations(self):
         return {
@@ -217,7 +223,9 @@ class PyRobot(Simulator):
     def _robot_action_space(self, robot_type, robot_config):
         action_spaces_dict = {}
         for action in robot_config.ACTIONS:
-            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][action]
+            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][
+                action
+            ]
         return spaces.Dict(action_spaces_dict)
 
     @property
@@ -263,7 +271,9 @@ class PyRobot(Simulator):
 
         return output
 
-    def get_agent_state(self, agent_id: int = 0, base_state_type: str = "odom"):
+    def get_agent_state(
+        self, agent_id: int = 0, base_state_type: str = "odom"
+    ):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )

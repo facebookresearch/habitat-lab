@@ -56,7 +56,9 @@ def download(url, filename):
                 downloaded += len(data)
                 f.write(data)
                 done = int(50 * downloaded / total)
-                sys.stdout.write("\r[{}{}]".format("█" * done, "." * (50 - done)))
+                sys.stdout.write(
+                    "\r[{}{}]".format("█" * done, "." * (50 - done))
+                )
                 sys.stdout.flush()
     sys.stdout.write("\n")
 
@@ -72,9 +74,15 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[1]
-    config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
-    config.TRAINER.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
+    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
+        1
+    ]
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
+        0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
+    )
+    config.TRAINER.ORBSLAM2.H_OBSTACLE_MAX = (
+        1.0 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
+    )
     config.TRAINER.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
         config.SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
     )
@@ -214,7 +222,9 @@ class ORBSLAM2Agent(RandomAgent):
         self.planned_waypoints = []
         self.map2DObstacles = self.init_map2d()
         n, ch, height, width = self.map2DObstacles.size()
-        self.coordinatesGrid = generate_2dgrid(height, width, False).to(self.device)
+        self.coordinatesGrid = generate_2dgrid(height, width, False).to(
+            self.device
+        )
         self.pose6D = self.init_pose6d()
         self.action_history = []
         self.pose6D_history = []
@@ -248,7 +258,9 @@ class ORBSLAM2Agent(RandomAgent):
         if self.tracking_is_OK:
             trajectory_history = np.array(self.slam.get_trajectory_points())
             self.pose6D = homogenize_p(
-                torch.from_numpy(trajectory_history[-1])[1:].view(3, 4).to(self.device)
+                torch.from_numpy(trajectory_history[-1])[1:]
+                .view(3, 4)
+                .to(self.device)
             ).view(1, 4, 4)
             self.trajectory_history = trajectory_history
             if len(self.position_history) > 1:
@@ -281,7 +293,9 @@ class ORBSLAM2Agent(RandomAgent):
 
     def init_map2d(self):
         return (
-            torch.zeros(1, 1, self.map_size_in_cells(), self.map_size_in_cells())
+            torch.zeros(
+                1, 1, self.map_size_in_cells(), self.map_size_in_cells()
+            )
             .float()
             .to(self.device)
         )
@@ -332,7 +346,10 @@ class ORBSLAM2Agent(RandomAgent):
         # Act
         if self.waypointPose6D is None:
             self.waypointPose6D = self.get_valid_waypoint_pose6d()
-        if self.is_waypoint_reached(self.waypointPose6D) or not self.tracking_is_OK:
+        if (
+            self.is_waypoint_reached(self.waypointPose6D)
+            or not self.tracking_is_OK
+        ):
             self.waypointPose6D = self.get_valid_waypoint_pose6d()
             self.waypoint_id += 1
         action = self.decide_what_to_do()
@@ -362,7 +379,9 @@ class ORBSLAM2Agent(RandomAgent):
         angle = get_direction(
             self.pose6D.squeeze(), self.waypointPose6D.squeeze(), 0, 0
         )
-        dist = get_distance(self.pose6D.squeeze(), self.waypointPose6D.squeeze())
+        dist = get_distance(
+            self.pose6D.squeeze(), self.waypointPose6D.squeeze()
+        )
         return torch.cat(
             [
                 dist.view(1, 1),
@@ -385,7 +404,9 @@ class ORBSLAM2Agent(RandomAgent):
 
     def set_offset_to_goal(self, observation):
         self.offset_to_goal = (
-            torch.from_numpy(observation[GOAL_SENSOR_UUID]).float().to(self.device)
+            torch.from_numpy(observation[GOAL_SENSOR_UUID])
+            .float()
+            .to(self.device)
         )
         self.estimatedGoalPos2D = habitat_goalpos_to_mapgoal_pos(
             self.offset_to_goal,
@@ -394,7 +415,10 @@ class ORBSLAM2Agent(RandomAgent):
             self.map_size_meters,
         )
         self.estimatedGoalPos6D = planned_path2tps(
-            [self.estimatedGoalPos2D], self.map_cell_size, self.map_size_meters, 1.0,
+            [self.estimatedGoalPos2D],
+            self.map_cell_size,
+            self.map_size_meters,
+            1.0,
         ).to(self.device)[0]
         return
 
@@ -435,7 +459,9 @@ class ORBSLAM2Agent(RandomAgent):
         self.waypointPose6D = None
         current_pos = self.get_position_on_map()
         start_map = torch.zeros_like(self.map2DObstacles).to(self.device)
-        start_map[0, 0, current_pos[0, 0].long(), current_pos[0, 1].long()] = 1.0
+        start_map[
+            0, 0, current_pos[0, 0].long(), current_pos[0, 1].long()
+        ] = 1.0
         goal_map = torch.zeros_like(self.map2DObstacles).to(self.device)
         goal_map[
             0,
@@ -444,9 +470,9 @@ class ORBSLAM2Agent(RandomAgent):
             self.estimatedGoalPos2D[0, 1].long(),
         ] = 1.0
         path, cost = self.planner(
-            self.rawmap2_planner_ready(self.map2DObstacles, start_map, goal_map).to(
-                self.device
-            ),
+            self.rawmap2_planner_ready(
+                self.map2DObstacles, start_map, goal_map
+            ).to(self.device),
             self.coordinatesGrid.to(self.device),
             goal_map.to(self.device),
             start_map.to(self.device),
@@ -546,12 +572,8 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         self.checkpoint = monocheckpoint
         if not os.path.isfile(self.checkpoint):
             mp3d_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/mp3d_ft_monodepth_resnet50.pth"
-            suncg_me_url = (
-                "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth"
-            )
-            suncg_mf_url = (
-                "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth"
-            )
+            suncg_me_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth"
+            suncg_mf_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth"
             url = mp3d_url
             print("No monodepth checkpoint found. Downloading...", url)
             download(url, self.checkpoint)
@@ -562,7 +584,9 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
     def rgb_d_from_observation(self, habitat_observation):
         rgb = habitat_observation["rgb"]
         depth = ResizePIL2(
-            self.monodepth.compute_depth(PIL.Image.fromarray(rgb).resize((320, 320))),
+            self.monodepth.compute_depth(
+                PIL.Image.fromarray(rgb).resize((320, 320))
+            ),
             256,
         )  # /1.75
         depth[depth > 3.0] = 0
@@ -577,7 +601,9 @@ def main():
         default="orbslam2-rgbd",
         choices=["blind", "orbslam2-rgbd", "orbslam2-rgb-monod"],
     )
-    parser.add_argument("--task-config", type=str, default="tasks/pointnav_rgbd.yaml")
+    parser.add_argument(
+        "--task-config", type=str, default="tasks/pointnav_rgbd.yaml"
+    )
     args = parser.parse_args()
 
     config = get_config()

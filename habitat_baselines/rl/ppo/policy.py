@@ -34,7 +34,12 @@ class Policy(nn.Module):
         raise NotImplementedError
 
     def act(
-        self, observations, rnn_hidden_states, prev_actions, masks, deterministic=False,
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        deterministic=False,
     ):
         features, rnn_hidden_states = self.net(
             observations, rnn_hidden_states, prev_actions, masks
@@ -52,7 +57,9 @@ class Policy(nn.Module):
         return value, action, action_log_probs, rnn_hidden_states
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _ = self.net(observations, rnn_hidden_states, prev_actions, masks)
+        features, _ = self.net(
+            observations, rnn_hidden_states, prev_actions, masks
+        )
         return self.critic(features)
 
     def evaluate_actions(
@@ -120,7 +127,10 @@ class PointNavBaselineNet(Net):
     def __init__(self, observation_space, hidden_size):
         super().__init__()
 
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
+        if (
+            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+            in observation_space.spaces
+        ):
             self._n_input_goal = observation_space.spaces[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ].shape[0]
@@ -132,7 +142,9 @@ class PointNavBaselineNet(Net):
             goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
-            self.goal_visual_encoder = SimpleCNN(goal_observation_space, hidden_size)
+            self.goal_visual_encoder = SimpleCNN(
+                goal_observation_space, hidden_size
+            )
             self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size

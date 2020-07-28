@@ -12,7 +12,11 @@ from typing import List, Optional
 from habitat.config import Config
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, ShortestPathPoint
+from habitat.tasks.nav.nav import (
+    NavigationEpisode,
+    NavigationGoal,
+    ShortestPathPoint,
+)
 
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -38,7 +42,9 @@ class PointNavDatasetV1(Dataset):
         episodes.
         """
         assert cls.check_config_paths_exist(config)
-        dataset_dir = os.path.dirname(config.DATA_PATH.format(split=config.SPLIT))
+        dataset_dir = os.path.dirname(
+            config.DATA_PATH.format(split=config.SPLIT)
+        )
 
         cfg = config.clone()
         cfg.defrost()
@@ -89,7 +95,9 @@ class PointNavDatasetV1(Dataset):
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
         has_individual_scene_files = os.path.exists(
-            self.content_scenes_path.split("{scene}")[0].format(data_path=dataset_dir)
+            self.content_scenes_path.split("{scene}")[0].format(
+                data_path=dataset_dir
+            )
         )
         if has_individual_scene_files:
             scenes = config.CONTENT_SCENES
@@ -111,7 +119,9 @@ class PointNavDatasetV1(Dataset):
                 filter(self.build_content_scenes_filter(config), self.episodes)
             )
 
-    def from_json(self, json_str: str, scenes_dir: Optional[str] = None) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
         deserialized = json.loads(json_str)
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]

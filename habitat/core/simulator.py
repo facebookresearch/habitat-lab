@@ -89,7 +89,9 @@ class Observations(dict):
     r"""Dictionary containing sensor observations
     """
 
-    def __init__(self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
+    ) -> None:
         """Constructor
 
         :param sensors: list of sensors whose observations are fetched and

@@ -13,10 +13,10 @@ We will use the strafe action outline in the habitat_sim example
 """
 
 import attr
-import habitat_sim
 import numpy as np
 
 import habitat
+import habitat_sim
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
@@ -81,7 +81,9 @@ class NoisyStrafeRight(habitat_sim.SceneNodeControl):
         scene_node: habitat_sim.SceneNode,
         actuation_spec: NoisyStrafeActuationSpec,
     ):
-        print(f"strafing right with noise_amount={actuation_spec.noise_amount}")
+        print(
+            f"strafing right with noise_amount={actuation_spec.noise_amount}"
+        )
         _strafe_impl(
             scene_node,
             actuation_spec.move_amount,
@@ -96,10 +98,12 @@ class NoNoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         config = super().get()
 
         config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
-            "noisy_strafe_left", NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
+            "noisy_strafe_left",
+            NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
         config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
-            "noisy_strafe_right", NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
+            "noisy_strafe_right",
+            NoisyStrafeActuationSpec(0.25, noise_amount=0.0),
         )
 
         return config
@@ -111,10 +115,12 @@ class NoiseStrafe(HabitatSimV1ActionSpaceConfiguration):
         config = super().get()
 
         config[HabitatSimActions.STRAFE_LEFT] = habitat_sim.ActionSpec(
-            "noisy_strafe_left", NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
+            "noisy_strafe_left",
+            NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
         config[HabitatSimActions.STRAFE_RIGHT] = habitat_sim.ActionSpec(
-            "noisy_strafe_right", NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
+            "noisy_strafe_right",
+            NoisyStrafeActuationSpec(0.25, noise_amount=0.05),
         )
 
         return config

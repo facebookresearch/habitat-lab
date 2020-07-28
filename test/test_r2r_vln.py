@@ -23,7 +23,9 @@ EPISODES_LIMIT = 1
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
-    logger.info("JSON conversion finished. {} sec".format((time.time() - start_time)))
+    logger.info(
+        "JSON conversion finished. {} sec".format((time.time() - start_time))
+    )
     decoded_dataset = dataset.__class__()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) > 0
@@ -36,7 +38,9 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 def test_r2r_vln_dataset():
     vln_config = get_config(CFG_TEST)
-    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(vln_config.DATASET):
+    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(
+        vln_config.DATASET
+    ):
         pytest.skip("Please download Matterport3D R2R dataset to data folder.")
 
     dataset = make_dataset(
@@ -56,23 +60,41 @@ def test_dataset_splitting(split):
     dataset_config.defrost()
     dataset_config.SPLIT = split
 
-    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(dataset_config):
+    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(
+        dataset_config
+    ):
         pytest.skip("Please download Matterport3D R2R dataset to data folder.")
 
-    scenes = r2r_vln_dataset.VLNDatasetV1.get_scenes_to_load(config=dataset_config)
-    assert len(scenes) > 0, "Expected dataset contains separate episode file per scene."
+    scenes = r2r_vln_dataset.VLNDatasetV1.get_scenes_to_load(
+        config=dataset_config
+    )
+    assert (
+        len(scenes) > 0
+    ), "Expected dataset contains separate episode file per scene."
 
     dataset_config.CONTENT_SCENES = scenes
-    full_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
-    full_episodes = {(ep.scene_id, ep.episode_id) for ep in full_dataset.episodes}
+    full_dataset = make_dataset(
+        id_dataset=dataset_config.TYPE, config=dataset_config
+    )
+    full_episodes = {
+        (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
+    }
 
     dataset_config.CONTENT_SCENES = scenes[0 : len(scenes) // 2]
-    split1_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
-    split1_episodes = {(ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes}
+    split1_dataset = make_dataset(
+        id_dataset=dataset_config.TYPE, config=dataset_config
+    )
+    split1_episodes = {
+        (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
+    }
 
     dataset_config.CONTENT_SCENES = scenes[len(scenes) // 2 :]
-    split2_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
-    split2_episodes = {(ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes}
+    split2_dataset = make_dataset(
+        id_dataset=dataset_config.TYPE, config=dataset_config
+    )
+    split2_episodes = {
+        (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
+    }
 
     assert full_episodes == split1_episodes.union(
         split2_episodes
@@ -85,8 +107,12 @@ def test_dataset_splitting(split):
 def test_r2r_vln_sim():
     vln_config = get_config(CFG_TEST)
 
-    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(vln_config.DATASET):
-        pytest.skip("Please download Matterport3D R2R VLN dataset to data folder.")
+    if not r2r_vln_dataset.VLNDatasetV1.check_config_paths_exist(
+        vln_config.DATASET
+    ):
+        pytest.skip(
+            "Please download Matterport3D R2R VLN dataset to data folder."
+        )
 
     dataset = make_dataset(
         id_dataset=vln_config.DATASET.TYPE, config=vln_config.DATASET
@@ -95,7 +121,9 @@ def test_r2r_vln_sim():
     with habitat.Env(config=vln_config, dataset=dataset) as env:
         env.episodes = dataset.episodes[:EPISODES_LIMIT]
 
-        follower = ShortestPathFollower(env.sim, goal_radius=0.5, return_one_hot=False)
+        follower = ShortestPathFollower(
+            env.sim, goal_radius=0.5, return_one_hot=False
+        )
 
         for i in range(len(env.episodes)):
             env.reset()

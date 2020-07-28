@@ -44,7 +44,9 @@ class NavRLEnv(habitat.RLEnv):
     def reset(self):
         self._previous_action = None
         observations = super().reset()
-        self._previous_measure = self._env.get_metrics()[self._reward_measure_name]
+        self._previous_measure = self._env.get_metrics()[
+            self._reward_measure_name
+        ]
         return observations
 
     def step(self, *args, **kwargs):

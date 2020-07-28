@@ -13,7 +13,16 @@ import json
 import os
 import random
 from itertools import groupby
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+)
 
 import attr
 import numpy as np
@@ -43,14 +52,20 @@ class Episode:
 
     episode_id: str = attr.ib(default=None, validator=not_none_validator)
     scene_id: str = attr.ib(default=None, validator=not_none_validator)
-    start_position: List[float] = attr.ib(default=None, validator=not_none_validator)
-    start_rotation: List[float] = attr.ib(default=None, validator=not_none_validator)
+    start_position: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
+    start_rotation: List[float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     info: Optional[Dict[str, str]] = None
     _shortest_path_cache: Any = attr.ib(init=False, default=None)
 
     def __getstate__(self):
         return {
-            k: v for k, v in self.__dict__.items() if k not in {"_shortest_path_cache"}
+            k: v
+            for k, v in self.__dict__.items()
+            if k not in {"_shortest_path_cache"}
         }
 
     def __setstate__(self, state):
@@ -124,7 +139,9 @@ class Dataset(Generic[T]):
         :param scene_id: id of scene in scene dataset.
         :return: list of episodes for the :p:`scene_id`.
         """
-        return list(filter(lambda x: x.scene_id == scene_id, iter(self.episodes)))
+        return list(
+            filter(lambda x: x.scene_id == scene_id, iter(self.episodes))
+        )
 
     def get_episodes(self, indexes: List[int]) -> List[T]:
         r"""..
@@ -163,7 +180,9 @@ class Dataset(Generic[T]):
         result = DatasetJSONEncoder().encode(self)
         return result
 
-    def from_json(self, json_str: str, scenes_dir: Optional[str] = None) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
         r"""Creates dataset from :p:`json_str`.
 
         :param json_str: JSON string containing episodes information.
@@ -228,7 +247,9 @@ class Dataset(Generic[T]):
         be duplicated.
         """
         if self.num_episodes < num_splits:
-            raise ValueError("Not enough episodes to create those many splits.")
+            raise ValueError(
+                "Not enough episodes to create those many splits."
+            )
 
         if episodes_per_split is not None:
             if allow_uneven_splits:
@@ -238,7 +259,9 @@ class Dataset(Generic[T]):
                 )
 
             if num_splits * episodes_per_split > self.num_episodes:
-                raise ValueError("Not enough episodes to create those many splits.")
+                raise ValueError(
+                    "Not enough episodes to create those many splits."
+                )
 
         new_datasets = []
 
@@ -255,7 +278,9 @@ class Dataset(Generic[T]):
 
         num_episodes = sum(split_lengths)
 
-        rand_items = np.random.choice(self.num_episodes, num_episodes, replace=False)
+        rand_items = np.random.choice(
+            self.num_episodes, num_episodes, replace=False
+        )
         if collate_scene_ids:
             scene_ids = {}
             for rand_ind in rand_items:
@@ -349,7 +374,9 @@ class EpisodeIterator(Iterator):
 
         # sample episodes
         if num_episode_sample >= 0:
-            episodes = np.random.choice(episodes, num_episode_sample, replace=False)
+            episodes = np.random.choice(
+                episodes, num_episode_sample, replace=False
+            )
 
         self.episodes = episodes
         self.cycle = cycle
@@ -411,7 +438,8 @@ class EpisodeIterator(Iterator):
         from current scene to the end and switch to next scene episodes.
         """
         grouped_episodes = [
-            list(g) for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
+            list(g)
+            for k, g in groupby(self._iterator, key=lambda x: x.scene_id)
         ]
 
         if len(grouped_episodes) > 1:
@@ -485,7 +513,10 @@ class EpisodeIterator(Iterator):
             do_switch = True
 
         # Shuffle if a scene has been used for more than _max_rep_step steps in a row
-        if self._max_rep_step is not None and self._step_count >= self._max_rep_step:
+        if (
+            self._max_rep_step is not None
+            and self._step_count >= self._max_rep_step
+        ):
             do_switch = True
 
         if do_switch:

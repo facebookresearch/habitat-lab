@@ -35,7 +35,9 @@ class BaselineRegistry(Registry):
         """
         from habitat_baselines.common.base_trainer import BaseTrainer
 
-        return cls._register_impl("trainer", to_register, name, assert_type=BaseTrainer)
+        return cls._register_impl(
+            "trainer", to_register, name, assert_type=BaseTrainer
+        )
 
     @classmethod
     def get_trainer(cls, name):

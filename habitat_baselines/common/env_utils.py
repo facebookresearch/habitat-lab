@@ -89,7 +89,9 @@ def construct_envs(
         if len(scenes) > 0:
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
-        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_ID
+        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
+            config.SIMULATOR_GPU_ID
+        )
 
         task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
 

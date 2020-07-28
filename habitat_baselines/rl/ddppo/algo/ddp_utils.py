@@ -127,7 +127,9 @@ def init_distrib_slurm(
     :returns: Tuple of the local_rank (aka which GPU to use for this process)
         and the TCPStore used for the rendezvous
     """
-    assert torch.distributed.is_available(), "torch.distributed must be available"
+    assert (
+        torch.distributed.is_available()
+    ), "torch.distributed must be available"
 
     if "GLOO_SOCKET_IFNAME" not in os.environ:
         os.environ["GLOO_SOCKET_IFNAME"] = get_ifname()
@@ -154,7 +156,9 @@ def init_distrib_slurm(
         world_rank = 0
         world_size = 1
 
-    tcp_store = distrib.TCPStore(master_addr, master_port, world_size, world_rank == 0)
+    tcp_store = distrib.TCPStore(
+        master_addr, master_port, world_size, world_rank == 0
+    )
     distrib.init_process_group(
         backend, store=tcp_store, rank=world_rank, world_size=world_size
     )

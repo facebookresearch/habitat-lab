@@ -17,7 +17,11 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Sensor, SensorTypes
 from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, NavigationTask
+from habitat.tasks.nav.nav import (
+    NavigationEpisode,
+    NavigationGoal,
+    NavigationTask,
+)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -122,16 +126,26 @@ class ObjectGoalSensor(Sensor):
         sensor_shape = (1,)
         max_value = (self.config.GOAL_SPEC_MAX_VAL - 1,)
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
-            max_value = max(self._dataset.category_to_task_category_id.values())
+            max_value = max(
+                self._dataset.category_to_task_category_id.values()
+            )
 
-        return spaces.Box(low=0, high=max_value, shape=sensor_shape, dtype=np.int64)
+        return spaces.Box(
+            low=0, high=max_value, shape=sensor_shape, dtype=np.int64
+        )
 
     def get_observation(
-        self, observations, *args: Any, episode: ObjectGoalNavEpisode, **kwargs: Any,
+        self,
+        observations,
+        *args: Any,
+        episode: ObjectGoalNavEpisode,
+        **kwargs: Any,
     ) -> Optional[int]:
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
             if len(episode.goals) == 0:
-                logger.error(f"No goal specified for episode {episode.episode_id}.")
+                logger.error(
+                    f"No goal specified for episode {episode.episode_id}."
+                )
                 return None
             if not isinstance(episode.goals[0], ObjectGoal):
                 logger.error(
@@ -146,7 +160,9 @@ class ObjectGoalSensor(Sensor):
         elif self.config.GOAL_SPEC == "OBJECT_ID":
             return np.array([episode.goals[0].object_name_id], dtype=np.int64)
         else:
-            raise RuntimeError("Wrong GOAL_SPEC specified for ObjectGoalSensor.")
+            raise RuntimeError(
+                "Wrong GOAL_SPEC specified for ObjectGoalSensor."
+            )
 
 
 @registry.register_task(name="ObjectNav-v1")

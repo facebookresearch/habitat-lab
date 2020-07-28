@@ -13,13 +13,20 @@ import quaternion
 
 import habitat
 from habitat.config.default import get_config
-from habitat.tasks.nav.nav import MoveForwardAction, NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.nav import (
+    MoveForwardAction,
+    NavigationEpisode,
+    NavigationGoal,
+)
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_rotate_vector,
 )
 from habitat.utils.test_utils import sample_non_stop_action
-from habitat.utils.visualizations.utils import images_to_video, observations_to_image
+from habitat.utils.visualizations.utils import (
+    images_to_video,
+    observations_to_image,
+)
 
 
 def _random_episode(env, config):
@@ -360,7 +367,9 @@ def test_get_observations_at():
                 assert np.allclose(val, obs[key])
 
         obs_at_point = env.sim.get_observations_at(
-            start_state.position, start_state.rotation, keep_agent_at_new_pose=True,
+            start_state.position,
+            start_state.rotation,
+            keep_agent_at_new_pose=True,
         )
         for key, val in obs_at_point.items():
             assert np.allclose(val, obs[key])
@@ -406,7 +415,9 @@ def test_noise_models_rgbd():
         no_noise_obs = [env.reset()]
         no_noise_states = [env.sim.get_agent_state()]
 
-        actions = [sample_non_stop_action(env.action_space) for _ in range(N_STEPS)]
+        actions = [
+            sample_non_stop_action(env.action_space) for _ in range(N_STEPS)
+        ]
         for action in actions:
             no_noise_obs.append(env.step(action))
             no_noise_states.append(env.sim.get_agent_state())
@@ -433,13 +444,15 @@ def test_noise_models_rgbd():
 
         obs = env.reset()
         assert np.linalg.norm(
-            obs["rgb"].astype(np.float) - no_noise_obs[0]["rgb"].astype(np.float)
+            obs["rgb"].astype(np.float)
+            - no_noise_obs[0]["rgb"].astype(np.float)
         ) > 1.5e-2 * np.linalg.norm(
             no_noise_obs[0]["rgb"].astype(np.float)
         ), f"No RGB noise detected."
 
         assert np.linalg.norm(
-            obs["depth"].astype(np.float) - no_noise_obs[0]["depth"].astype(np.float)
+            obs["depth"].astype(np.float)
+            - no_noise_obs[0]["depth"].astype(np.float)
         ) > 1.5e-2 * np.linalg.norm(
             no_noise_obs[0]["depth"].astype(np.float)
         ), f"No Depth noise detected."
@@ -458,7 +471,9 @@ def test_noise_models_rgbd():
 
             if action["action"][:5] == "TURN_":
                 angle_diff = abs(
-                    angle_between_quaternions(state.rotation, prev_state.rotation)
+                    angle_between_quaternions(
+                        state.rotation, prev_state.rotation
+                    )
                     - np.deg2rad(config.SIMULATOR.TURN_ANGLE)
                 )
                 angle_diffs.append(angle_diff)
@@ -473,5 +488,9 @@ def test_noise_models_rgbd():
         if DEMO_MODE:
             images_to_video(images, "data/video/test_noise", "test_noise")
 
-        assert np.mean(angle_diffs) > 0.025, "No turn action actuation noise detected."
-        assert np.mean(pos_diffs) > 0.025, "No forward action actuation noise detected."
+        assert (
+            np.mean(angle_diffs) > 0.025
+        ), "No turn action actuation noise detected."
+        assert (
+            np.mean(pos_diffs) > 0.025
+        ), "No forward action actuation noise detected."

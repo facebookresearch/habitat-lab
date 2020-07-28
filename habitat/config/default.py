@@ -90,7 +90,9 @@ _C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
 # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
-_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = "PointGoalWithGPSCompassSensor"
+_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+    "PointGoalWithGPSCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # OBJECTGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -210,7 +212,9 @@ _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
 _C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
-_C.SIMULATOR.SCENE = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+_C.SIMULATOR.SCENE = (
+    "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+)
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
@@ -336,7 +340,8 @@ _C.DATASET.DATA_PATH = (
 
 
 def get_config(
-    config_paths: Optional[Union[List[str], str]] = None, opts: Optional[list] = None,
+    config_paths: Optional[Union[List[str], str]] = None,
+    opts: Optional[list] = None,
 ) -> CN:
     r"""Create a unified config with default values overwritten by values from
     :p:`config_paths` and overwritten by options from :p:`opts`.

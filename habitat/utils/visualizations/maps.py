@@ -20,7 +20,10 @@ cv2 = try_cv2_import()
 
 AGENT_SPRITE = imageio.imread(
     os.path.join(
-        os.path.dirname(__file__), "assets", "maps_topdown_agent_sprite", "100x100.png",
+        os.path.dirname(__file__),
+        "assets",
+        "maps_topdown_agent_sprite",
+        "100x100.png",
     )
 )
 AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
@@ -74,9 +77,13 @@ def draw_agent(
     # the agent sprite size should stay the same.
     initial_agent_size = AGENT_SPRITE.shape[0]
     new_size = rotated_agent.shape[0]
-    agent_size_px = max(1, int(agent_radius_px * 2 * new_size / initial_agent_size))
+    agent_size_px = max(
+        1, int(agent_radius_px * 2 * new_size / initial_agent_size)
+    )
     resized_agent = cv2.resize(
-        rotated_agent, (agent_size_px, agent_size_px), interpolation=cv2.INTER_LINEAR,
+        rotated_agent,
+        (agent_size_px, agent_size_px),
+        interpolation=cv2.INTER_LINEAR,
     )
     utils.paste_overlapping_image(image, resized_agent, agent_center_coord)
     return image
@@ -135,7 +142,9 @@ def pointnav_draw_target_birdseye_view(
     )
     movement_scale = 1.0 / goal_distance_padding
     half_res = resolution_px // 2
-    im_position = np.full((resolution_px, resolution_px, 3), 255, dtype=np.uint8)
+    im_position = np.full(
+        (resolution_px, resolution_px, 3), 255, dtype=np.uint8
+    )
 
     # Draw bands:
     for scale, color in zip(target_band_radii, target_band_colors):
@@ -298,8 +307,12 @@ def get_topdown_map(
             realworld_x, realworld_y = from_grid(
                 ii, jj, COORDINATE_MIN, COORDINATE_MAX, map_resolution
             )
-            valid_point = sim.is_navigable([realworld_x, start_height, realworld_y])
-            top_down_map[ii, jj] = MAP_VALID_POINT if valid_point else MAP_INVALID_POINT
+            valid_point = sim.is_navigable(
+                [realworld_x, start_height, realworld_y]
+            )
+            top_down_map[ii, jj] = (
+                MAP_VALID_POINT if valid_point else MAP_INVALID_POINT
+            )
 
     # Draw border if necessary
     if draw_border:
@@ -315,7 +328,9 @@ def get_topdown_map(
             min(range_y[-1] + border_padding + 1, top_down_map.shape[1]),
         )
 
-        _outline_border(top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]])
+        _outline_border(
+            top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]
+        )
     return top_down_map
 
 
@@ -343,15 +358,18 @@ def colorize_topdown_map(
         # Only desaturate things that are valid points as only valid points get revealed
         desat_mask = top_down_map != MAP_INVALID_POINT
 
-        _map[desat_mask] = (_map * fog_of_war_desat_values[fog_of_war_mask]).astype(
-            np.uint8
-        )[desat_mask]
+        _map[desat_mask] = (
+            _map * fog_of_war_desat_values[fog_of_war_mask]
+        ).astype(np.uint8)[desat_mask]
 
     return _map
 
 
 def draw_path(
-    top_down_map: np.ndarray, path_points: List[Tuple], color: int, thickness: int = 2,
+    top_down_map: np.ndarray,
+    path_points: List[Tuple],
+    color: int,
+    thickness: int = 2,
 ) -> None:
     r"""Draw path on top_down_map (in place) with specified color.
         Args:
@@ -363,5 +381,9 @@ def draw_path(
     for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
         # Swapping x y
         cv2.line(
-            top_down_map, prev_pt[::-1], next_pt[::-1], color, thickness=thickness,
+            top_down_map,
+            prev_pt[::-1],
+            next_pt[::-1],
+            color,
+            thickness=thickness,
         )

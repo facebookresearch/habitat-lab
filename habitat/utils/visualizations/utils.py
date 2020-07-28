@@ -60,10 +60,14 @@ def paste_overlapping_image(
 
     background_patch = background[
         (location[0] - foreground_size[0] // 2 + min_pad[0]) : (
-            location[0] + (foreground_size[0] - foreground_size[0] // 2) - max_pad[0]
+            location[0]
+            + (foreground_size[0] - foreground_size[0] // 2)
+            - max_pad[0]
         ),
         (location[1] - foreground_size[1] // 2 + min_pad[1]) : (
-            location[1] + (foreground_size[1] - foreground_size[1] // 2) - max_pad[1]
+            location[1]
+            + (foreground_size[1] - foreground_size[1] // 2)
+            - max_pad[1]
         ),
     ]
     foreground = foreground[
@@ -120,7 +124,10 @@ def images_to_video(
         os.makedirs(output_dir)
     video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
     writer = imageio.get_writer(
-        os.path.join(output_dir, video_name), fps=fps, quality=quality, **kwargs,
+        os.path.join(output_dir, video_name),
+        fps=fps,
+        quality=quality,
+        **kwargs,
     )
     logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
     for im in tqdm.tqdm(images):
@@ -185,7 +192,9 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
         egocentric_view.append(rgb)
 
-    assert len(egocentric_view) > 0, "Expected at least one visual sensor enabled."
+    assert (
+        len(egocentric_view) > 0
+    ), "Expected at least one visual sensor enabled."
     egocentric_view = np.concatenate(egocentric_view, axis=1)
 
     # draw collision

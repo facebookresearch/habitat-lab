@@ -12,7 +12,11 @@ from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorTaskAction
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    Measure,
+    SimulatorTaskAction,
+)
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -26,7 +30,10 @@ from habitat.core.simulator import (
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
-from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
 from habitat.utils.visualizations import fog_of_war, maps
 
 cv2 = try_cv2_import()
@@ -35,11 +42,16 @@ cv2 = try_cv2_import()
 MAP_THICKNESS_SCALAR: int = 1250
 
 
-def merge_sim_episode_config(sim_config: Config, episode: Type[Episode]) -> Any:
+def merge_sim_episode_config(
+    sim_config: Config, episode: Type[Episode]
+) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
-    if episode.start_position is not None and episode.start_rotation is not None:
+    if (
+        episode.start_position is not None
+        and episode.start_rotation is not None
+    ):
         agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
         agent_cfg = getattr(sim_config, agent_name)
         agent_cfg.defrost()
@@ -86,7 +98,9 @@ class NavigationEpisode(Episode):
         shortest_paths: list containing shortest paths to goals
     """
 
-    goals: List[NavigationGoal] = attr.ib(default=None, validator=not_none_validator)
+    goals: List[NavigationGoal] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     start_room: Optional[str] = None
     shortest_paths: Optional[List[ShortestPathPoint]] = None
 
@@ -115,7 +129,9 @@ class PointGoalSensor(Sensor):
     """
     cls_uuid: str = "pointgoal"
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._sim = sim
 
         self._goal_format = getattr(config, "GOAL_FORMAT", "CARTESIAN")
@@ -142,7 +158,9 @@ class PointGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def _compute_pointgoal(self, source_position, source_rotation, goal_position):
+    def _compute_pointgoal(
+        self, source_position, source_rotation, goal_position
+    ):
         direction_vector = goal_position - source_position
         direction_vector_agent = quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
@@ -159,7 +177,8 @@ class PointGoalSensor(Sensor):
                     -direction_vector_agent[2], direction_vector_agent[0]
                 )
                 theta = np.arccos(
-                    direction_vector_agent[1] / np.linalg.norm(direction_vector_agent)
+                    direction_vector_agent[1]
+                    / np.linalg.norm(direction_vector_agent)
                 )
                 rho = np.linalg.norm(direction_vector_agent)
 
@@ -199,11 +218,15 @@ class ImageGoalSensor(Sensor):
     """
     cls_uuid: str = "imagegoal"
 
-    def __init__(self, *args: Any, sim: Simulator, config: Config, **kwargs: Any):
+    def __init__(
+        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+    ):
         self._sim = sim
         sensors = self._sim.sensor_suite.sensors
         rgb_sensor_uuids = [
-            uuid for uuid, sensor in sensors.items() if isinstance(sensor, RGBSensor)
+            uuid
+            for uuid, sensor in sensors.items()
+            if isinstance(sensor, RGBSensor)
         ]
         if len(rgb_sensor_uuids) != 1:
             raise ValueError(
@@ -222,7 +245,9 @@ class ImageGoalSensor(Sensor):
         return SensorTypes.PATH
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return self._sim.sensor_suite.observation_spaces.spaces[self._rgb_sensor_uuid]
+        return self._sim.sensor_suite.observation_spaces.spaces[
+            self._rgb_sensor_uuid
+        ]
 
     def _get_pointnav_episode_image_goal(self, episode: Episode):
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
@@ -244,7 +269,9 @@ class ImageGoalSensor(Sensor):
         if episode_uniq_id == self._current_episode_id:
             return self._current_image_goal
 
-        self._current_image_goal = self._get_pointnav_episode_image_goal(episode)
+        self._current_image_goal = self._get_pointnav_episode_image_goal(
+            episode
+        )
         self._current_episode_id = episode_uniq_id
 
         return self._current_image_goal
@@ -277,7 +304,9 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
@@ -299,7 +328,9 @@ class HeadingSensor(Sensor):
     """
     cls_uuid: str = "heading"
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._sim = sim
         super().__init__(config=config)
 
@@ -320,7 +351,9 @@ class HeadingSensor(Sensor):
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
         return np.array([phi], dtype=np.float32)
 
-    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
 
@@ -337,7 +370,9 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
@@ -360,7 +395,9 @@ class EpisodicGPSSensor(Sensor):
     """
     cls_uuid: str = "gps"
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._sim = sim
 
         self._dimensionality = getattr(config, "DIMENSIONALITY", 2)
@@ -382,7 +419,9 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, observations, episode, *args: Any, **kwargs: Any):
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ):
         agent_state = self._sim.get_agent_state()
 
         origin = np.array(episode.start_position, dtype=np.float32)
@@ -394,7 +433,9 @@ class EpisodicGPSSensor(Sensor):
             rotation_world_start.inverse(), agent_position - origin
         )
         if self._dimensionality == 2:
-            return np.array([-agent_position[2], agent_position[0]], dtype=np.float32)
+            return np.array(
+                [-agent_position[2], agent_position[0]], dtype=np.float32
+            )
         else:
             return agent_position.astype(np.float32)
 
@@ -411,7 +452,9 @@ class ProximitySensor(Sensor):
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
-        self._max_detection_radius = getattr(config, "MAX_DETECTION_RADIUS", 2.0)
+        self._max_detection_radius = getattr(
+            config, "MAX_DETECTION_RADIUS", 2.0
+        )
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -422,10 +465,15 @@ class ProximitySensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=0.0, high=self._max_detection_radius, shape=(1,), dtype=np.float32,
+            low=0.0,
+            high=self._max_detection_radius,
+            shape=(1,),
+            dtype=np.float32,
         )
 
-    def get_observation(self, observations, *args: Any, episode, **kwargs: Any):
+    def get_observation(
+        self, observations, *args: Any, episode, **kwargs: Any
+    ):
         current_position = self._sim.get_agent_state().position
 
         return np.array(
@@ -447,7 +495,9 @@ class Success(Measure):
 
     cls_uuid: str = "success"
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._sim = sim
         self._config = config
 
@@ -462,7 +512,9 @@ class Success(Measure):
         )
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
-    def update_metric(self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any):
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
@@ -488,7 +540,9 @@ class SPL(Measure):
     performance for sophisticated goal areas.
     """
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._previous_position = None
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
@@ -516,7 +570,9 @@ class SPL(Measure):
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(position_b - position_a, ord=2)
 
-    def update_metric(self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any):
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
         ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
 
         current_position = self._sim.get_agent_state().position
@@ -528,7 +584,9 @@ class SPL(Measure):
 
         self._metric = ep_success * (
             self._start_end_episode_distance
-            / max(self._start_end_episode_distance, self._agent_episode_distance)
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
         )
 
 
@@ -573,7 +631,9 @@ class SoftSPL(SPL):
 
         self._metric = ep_soft_success * (
             self._start_end_episode_distance
-            / max(self._start_end_episode_distance, self._agent_episode_distance)
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
         )
 
 
@@ -605,7 +665,9 @@ class TopDownMap(Measure):
     r"""Top Down Map measure
     """
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._sim = sim
         self._config = config
         self._grid_delta = config.MAP_PADDING
@@ -690,7 +752,9 @@ class TopDownMap(Measure):
 
             for goal in episode.goals:
                 try:
-                    self._draw_point(goal.position, maps.MAP_TARGET_POINT_INDICATOR)
+                    self._draw_point(
+                        goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                    )
                 except AttributeError:
                     pass
 
@@ -700,12 +764,16 @@ class TopDownMap(Measure):
                 try:
                     sem_scene = self._sim.semantic_annotations()
                     object_id = goal.object_id
-                    assert int(sem_scene.objects[object_id].id.split("_")[-1]) == int(
+                    assert int(
+                        sem_scene.objects[object_id].id.split("_")[-1]
+                    ) == int(
                         goal.object_id
                     ), f"Object_id doesn't correspond to id in semantic scene objects dictionary for episode: {episode}"
 
                     center = sem_scene.objects[object_id].aabb.center
-                    x_len, _, z_len = sem_scene.objects[object_id].aabb.sizes / 2.0
+                    x_len, _, z_len = (
+                        sem_scene.objects[object_id].aabb.sizes / 2.0
+                    )
                     # Nodes to draw rectangle
                     corners = [
                         center + np.array([x, 0, z])
@@ -738,7 +806,9 @@ class TopDownMap(Measure):
                 except AttributeError:
                     pass
 
-    def _draw_shortest_path(self, episode: Episode, agent_position: AgentState):
+    def _draw_shortest_path(
+        self, episode: Episode, agent_position: AgentState
+    ):
         if self._config.DRAW_SHORTEST_PATH:
             self._shortest_path_points = self._sim.get_straight_shortest_path_points(
                 agent_position, episode.goals[0].position
@@ -784,12 +854,18 @@ class TopDownMap(Measure):
         self._draw_shortest_path(episode, agent_position)
 
         if self._config.DRAW_SOURCE:
-            self._draw_point(episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR)
+            self._draw_point(
+                episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
+            )
 
     def _clip_map(self, _map):
         return _map[
-            self._ind_x_min - self._grid_delta : self._ind_x_max + self._grid_delta,
-            self._ind_y_min - self._grid_delta : self._ind_y_max + self._grid_delta,
+            self._ind_x_min
+            - self._grid_delta : self._ind_x_max
+            + self._grid_delta,
+            self._ind_y_min
+            - self._grid_delta : self._ind_y_max
+            + self._grid_delta,
         ]
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
@@ -880,7 +956,9 @@ class DistanceToGoal(Measure):
 
     cls_uuid: str = "distance_to_goal"
 
-    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
         self._previous_position = None
         self._sim = sim
         self._config = config
@@ -1000,7 +1078,11 @@ class TeleportAction(SimulatorTaskAction):
         return "TELEPORT"
 
     def step(
-        self, *args: Any, position: List[float], rotation: List[float], **kwargs: Any,
+        self,
+        *args: Any,
+        position: List[float],
+        rotation: List[float],
+        **kwargs: Any,
     ):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
@@ -1041,7 +1123,9 @@ class NavigationTask(EmbodiedTask):
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
 
-    def overwrite_sim_config(self, sim_config: Any, episode: Type[Episode]) -> Any:
+    def overwrite_sim_config(
+        self, sim_config: Any, episode: Type[Episode]
+    ) -> Any:
         return merge_sim_episode_config(sim_config, episode)
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
