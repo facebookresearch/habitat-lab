@@ -181,9 +181,7 @@ def test_get_splits_func(num_episodes: int, num_splits: int):
 
 def test_sample_episodes():
     dataset = _construct_dataset(1000)
-    ep_iter = dataset.get_episode_iterator(
-        num_episode_sample=1000, cycle=False
-    )
+    ep_iter = dataset.get_episode_iterator(num_episode_sample=1000, cycle=False)
     assert len(list(ep_iter)) == 1000
 
     ep_iter = dataset.get_episode_iterator(num_episode_sample=0, cycle=False)
@@ -346,10 +344,7 @@ def test_iterator_scene_switching_steps():
 
     assert len(set(e.scene_id for e in remaining_episodes)) == len(
         list(groupby(remaining_episodes, lambda ep: ep.scene_id))
-    ), (
-        "Next episodes should still be grouped by scene (before next "
-        "switching)."
-    )
+    ), ("Next episodes should still be grouped by scene (before next " "switching).")
 
 
 def test_preserve_order():

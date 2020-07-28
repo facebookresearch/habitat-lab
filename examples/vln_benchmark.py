@@ -27,9 +27,7 @@ def reference_path_benchmark(config, num_episodes=None):
         if num_episodes is None:
             num_episodes = len(env.episodes)
 
-        follower = ShortestPathFollower(
-            env.sim, goal_radius=0.5, return_one_hot=False
-        )
+        follower = ShortestPathFollower(env.sim, goal_radius=0.5, return_one_hot=False)
         follower.mode = "geodesic_path"
 
         agg_metrics: Dict = defaultdict(float)
@@ -60,9 +58,7 @@ def reference_path_benchmark(config, num_episodes=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--task-config", type=str, default="configs/tasks/vln_r2r.yaml"
-    )
+    parser.add_argument("--task-config", type=str, default="configs/tasks/vln_r2r.yaml")
     args = parser.parse_args()
     config = get_config(args.task_config)
 

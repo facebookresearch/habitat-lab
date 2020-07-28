@@ -100,12 +100,7 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
 
 @numba.jit(nopython=True)
 def _draw_loop(
-    top_down_map,
-    fog_of_war_mask,
-    current_point,
-    current_angle,
-    max_line_len,
-    angles,
+    top_down_map, fog_of_war_mask, current_point, current_angle, max_line_len, angles,
 ):
     for angle in angles:
         draw_fog_of_war_line(
@@ -114,9 +109,7 @@ def _draw_loop(
             current_point,
             current_point
             + max_line_len
-            * np.array(
-                [np.cos(current_angle + angle), np.sin(current_angle + angle)]
-            ),
+            * np.array([np.cos(current_angle + angle), np.sin(current_angle + angle)]),
         )
 
 
@@ -147,9 +140,7 @@ def reveal_fog_of_war(
     fov = np.deg2rad(fov)
 
     # Set the angle step to a value such that delta_angle * max_line_len = 1
-    angles = np.arange(
-        -fov / 2, fov / 2, step=1.0 / max_line_len, dtype=np.float32
-    )
+    angles = np.arange(-fov / 2, fov / 2, step=1.0 / max_line_len, dtype=np.float32)
 
     fog_of_war_mask = current_fog_of_war_mask.copy()
     _draw_loop(

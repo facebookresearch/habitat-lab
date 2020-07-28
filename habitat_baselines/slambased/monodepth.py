@@ -54,12 +54,7 @@ model_urls = {
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
     return nn.Conv2d(
-        in_planes,
-        out_planes,
-        kernel_size=3,
-        stride=stride,
-        padding=1,
-        bias=False,
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False,
     )
 
 
@@ -139,9 +134,7 @@ class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
         super(ResNet, self).__init__()
-        self.conv1 = nn.Conv2d(
-            3, 64, kernel_size=7, stride=2, padding=3, bias=False
-        )
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -230,9 +223,7 @@ def resnet50(pretrained=False, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         model.load_state_dict(
-            model_zoo.load_url(
-                model_urls["resnet50"], "pretrained_model/encoder"
-            )
+            model_zoo.load_url(model_urls["resnet50"], "pretrained_model/encoder")
         )
     return model
 
@@ -360,36 +351,28 @@ class D(nn.Module):
     def __init__(self, num_features=2048):
         super(D, self).__init__()
         self.conv = nn.Conv2d(
-            num_features,
-            num_features // 2,
-            kernel_size=1,
-            stride=1,
-            bias=False,
+            num_features, num_features // 2, kernel_size=1, stride=1, bias=False,
         )
         num_features = num_features // 2
         self.bn = nn.BatchNorm2d(num_features)
 
         self.up1 = _UpProjection(
-            num_input_features=num_features,
-            num_output_features=num_features // 2,
+            num_input_features=num_features, num_output_features=num_features // 2,
         )
         num_features = num_features // 2
 
         self.up2 = _UpProjection(
-            num_input_features=num_features,
-            num_output_features=num_features // 2,
+            num_input_features=num_features, num_output_features=num_features // 2,
         )
         num_features = num_features // 2
 
         self.up3 = _UpProjection(
-            num_input_features=num_features,
-            num_output_features=num_features // 2,
+            num_input_features=num_features, num_output_features=num_features // 2,
         )
         num_features = num_features // 2
 
         self.up4 = _UpProjection(
-            num_input_features=num_features,
-            num_output_features=num_features // 2,
+            num_input_features=num_features, num_output_features=num_features // 2,
         )
         num_features = num_features // 2
 
@@ -425,12 +408,7 @@ class MFF(nn.Module):
         )
 
         self.conv = nn.Conv2d(
-            num_features,
-            num_features,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            bias=False,
+            num_features, num_features, kernel_size=5, stride=1, padding=2, bias=False,
         )
         self.bn = nn.BatchNorm2d(num_features)
 
@@ -453,22 +431,12 @@ class R(nn.Module):
 
         num_features = 64 + block_channel[3] // 32
         self.conv0 = nn.Conv2d(
-            num_features,
-            num_features,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            bias=False,
+            num_features, num_features, kernel_size=5, stride=1, padding=2, bias=False,
         )
         self.bn0 = nn.BatchNorm2d(num_features)
 
         self.conv1 = nn.Conv2d(
-            num_features,
-            num_features,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            bias=False,
+            num_features, num_features, kernel_size=5, stride=1, padding=2, bias=False,
         )
         self.bn1 = nn.BatchNorm2d(num_features)
 
@@ -560,9 +528,7 @@ class ToTensor(object):
             return img.float().div(255)
 
         if accimage is not None and isinstance(pic, accimage.Image):
-            nppic = np.zeros(
-                [pic.channels, pic.height, pic.width], dtype=np.float32
-            )
+            nppic = np.zeros([pic.channels, pic.height, pic.width], dtype=np.float32)
             pic.copyto(nppic)
             return torch.from_numpy(nppic)
 
@@ -572,9 +538,7 @@ class ToTensor(object):
         elif pic.mode == "I;16":
             img = torch.from_numpy(np.array(pic, np.int16, copy=False))
         else:
-            img = torch.ByteTensor(
-                torch.ByteStorage.from_buffer(pic.tobytes())
-            )
+            img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
         # PIL image mode: 1, L, P, I, F, RGB, YCbCr, RGBA, CMYK
         if pic.mode == "YCbCr":
             nchannel = 3
@@ -613,30 +577,22 @@ def define_model(is_resnet, is_densenet, is_senet):
     if is_resnet:
         original_model = resnet50(pretrained=False)
         Encoder = E_resnet(original_model)
-        model1 = model(
-            Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
-        )
+        model1 = model(Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048])
     if is_densenet:
         original_model = dendensenet161(pretrained=False)
         Encoder = E_densenet(original_model)
-        model1 = model(
-            Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208]
-        )
+        model1 = model(Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208])
     if is_senet:
         original_model = senet154(pretrained=False)
         Encoder = E_senet(original_model)
-        model1 = model(
-            Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
-        )
+        model1 = model(Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048])
 
     return model1
 
 
 class MonoDepthEstimator:
     def __init__(self, checkpoint="./pretrained_model/model_resnet"):
-        self.model = define_model(
-            is_resnet=True, is_densenet=False, is_senet=False
-        )
+        self.model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
         self.model = torch.nn.DataParallel(self.model).cuda()
         cpt = torch.load(checkpoint)
         if "state_dict" in cpt.keys():

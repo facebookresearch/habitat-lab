@@ -22,9 +22,7 @@ SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 """
 
 
-def tokenize(
-    sentence, regex=SENTENCE_SPLIT_REGEX, keep=["'s"], remove=[",", "?"]
-):
+def tokenize(sentence, regex=SENTENCE_SPLIT_REGEX, keep=["'s"], remove=[",", "?"]):
     sentence = sentence.lower()
 
     for token in keep:
@@ -112,11 +110,7 @@ class VocabDict:
             )
 
     def tokenize_and_index(
-        self,
-        sentence,
-        regex=SENTENCE_SPLIT_REGEX,
-        keep=["'s"],
-        remove=[",", "?"],
+        self, sentence, regex=SENTENCE_SPLIT_REGEX, keep=["'s"], remove=[",", "?"],
     ) -> List[int]:
         inds = [
             self.word2idx(w)
@@ -177,15 +171,11 @@ def get_action_shortest_path(
     shortest_path = []
     step_count = 0
     action = follower.get_next_action(goal_position)
-    while (
-        action is not HabitatSimActions.STOP and step_count < max_episode_steps
-    ):
+    while action is not HabitatSimActions.STOP and step_count < max_episode_steps:
         state = sim.get_agent_state()
         shortest_path.append(
             ShortestPathPoint(
-                state.position.tolist(),
-                quaternion_to_list(state.rotation),
-                action,
+                state.position.tolist(), quaternion_to_list(state.rotation), action,
             )
         )
         sim.step(action)

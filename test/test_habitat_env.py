@@ -58,9 +58,7 @@ def _load_test_data():
             pytest.skip("Please download Habitat test data to data folder.")
 
         datasets.append(
-            habitat.make_dataset(
-                id_dataset=config.DATASET.TYPE, config=config.DATASET
-            )
+            habitat.make_dataset(id_dataset=config.DATASET.TYPE, config=config.DATASET)
         )
 
         config.defrost()
@@ -120,9 +118,7 @@ def test_vectorized_envs(multiprocessing_start_method, gpu2gpu):
         p.join()
         assert p.exitcode == 0
     else:
-        _vec_env_test_fn(
-            configs, datasets, multiprocessing_start_method, gpu2gpu
-        )
+        _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu)
 
 
 def test_with_scope():
@@ -182,11 +178,7 @@ def test_env(gpu2gpu):
                 scene_id=config.SIMULATOR.SCENE,
                 start_position=[-3.0133917, 0.04623024, 7.3064547],
                 start_rotation=[0, 0.163276, 0, 0.98658],
-                goals=[
-                    NavigationGoal(
-                        position=[-3.0133917, 0.04623024, 7.3064547]
-                    )
-                ],
+                goals=[NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])],
                 info={"geodesic_distance": 0.001},
             )
         ]
@@ -204,9 +196,7 @@ def test_env(gpu2gpu):
 
         env.step(action={"action": StopAction.name})
         # check for STOP action
-        assert (
-            env.episode_over is True
-        ), "episode should be over after STOP action"
+        assert env.episode_over is True, "episode should be over after STOP action"
 
 
 def make_rl_env(config, dataset, rank: int = 0):
@@ -236,18 +226,12 @@ def test_rl_vectorized_envs(gpu2gpu):
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    with habitat.VectorEnv(
-        make_env_fn=make_rl_env, env_fn_args=env_fn_args
-    ) as envs:
+    with habitat.VectorEnv(make_env_fn=make_rl_env, env_fn_args=env_fn_args) as envs:
         envs.reset()
 
         for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
-            outputs = envs.step(
-                sample_non_stop_action(envs.action_spaces[0], num_envs)
-            )
-            observations, rewards, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
+            outputs = envs.step(sample_non_stop_action(envs.action_spaces[0], num_envs))
+            observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
             assert len(observations) == num_envs
             assert len(rewards) == num_envs
             assert len(dones) == num_envs
@@ -265,9 +249,7 @@ def test_rl_vectorized_envs(gpu2gpu):
             ), "vector env render is broken"
 
             if (i + 1) % configs[0].ENVIRONMENT.MAX_EPISODE_STEPS == 0:
-                assert all(
-                    dones
-                ), "dones should be true after max_episode steps"
+                assert all(dones), "dones should be true after max_episode steps"
 
 
 @pytest.mark.parametrize("gpu2gpu", [False, True])
@@ -292,11 +274,7 @@ def test_rl_env(gpu2gpu):
                 scene_id=config.SIMULATOR.SCENE,
                 start_position=[-3.0133917, 0.04623024, 7.3064547],
                 start_rotation=[0, 0.163276, 0, 0.98658],
-                goals=[
-                    NavigationGoal(
-                        position=[-3.0133917, 0.04623024, 7.3064547]
-                    )
-                ],
+                goals=[NavigationGoal(position=[-3.0133917, 0.04623024, 7.3064547])],
                 info={"geodesic_distance": 0.001},
             )
         ]
@@ -313,9 +291,7 @@ def test_rl_env(gpu2gpu):
         assert done is True, "episodes should be over after max_episode_steps"
 
         env.reset()
-        observation, reward, done, info = env.step(
-            action={"action": StopAction.name}
-        )
+        observation, reward, done, info = env.step(action={"action": StopAction.name})
         assert done is True, "done should be true after STOP action"
 
 

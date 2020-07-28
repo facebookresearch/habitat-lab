@@ -23,9 +23,7 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1):
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
-    return nn.Conv2d(
-        in_planes, out_planes, kernel_size=1, stride=stride, bias=False
-    )
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
 class BasicBlock(nn.Module):
@@ -33,13 +31,7 @@ class BasicBlock(nn.Module):
     resneXt = False
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
         super(BasicBlock, self).__init__()
         self.convs = nn.Sequential(
@@ -63,9 +55,7 @@ class BasicBlock(nn.Module):
         return self.relu(out + residual)
 
 
-def _build_bottleneck_branch(
-    inplanes, planes, ngroups, stride, expansion, groups=1
-):
+def _build_bottleneck_branch(inplanes, planes, ngroups, stride, expansion, groups=1):
     return nn.Sequential(
         conv1x1(inplanes, planes),
         nn.GroupNorm(ngroups, planes),
@@ -107,22 +97,11 @@ class Bottleneck(nn.Module):
     resneXt = False
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
         super().__init__()
         self.convs = _build_bottleneck_branch(
-            inplanes,
-            planes,
-            ngroups,
-            stride,
-            self.expansion,
-            groups=cardinality,
+            inplanes, planes, ngroups, stride, self.expansion, groups=cardinality,
         )
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -143,17 +122,9 @@ class Bottleneck(nn.Module):
 
 class SEBottleneck(Bottleneck):
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
-        super().__init__(
-            inplanes, planes, ngroups, stride, downsample, cardinality
-        )
+        super().__init__(inplanes, planes, ngroups, stride, downsample, cardinality)
 
         self.se = _build_se_branch(planes * self.expansion)
 
@@ -180,9 +151,7 @@ class ResNeXtBottleneck(Bottleneck):
 
 
 class ResNet(nn.Module):
-    def __init__(
-        self, in_channels, base_planes, ngroups, block, layers, cardinality=1
-    ):
+    def __init__(self, in_channels, base_planes, ngroups, block, layers, cardinality=1):
         super(ResNet, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
@@ -280,9 +249,7 @@ def resneXt50(in_channels, base_planes, ngroups):
 
 
 def se_resnet50(in_channels, base_planes, ngroups):
-    model = ResNet(
-        in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3]
-    )
+    model = ResNet(in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3])
 
     return model
 

@@ -63,9 +63,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
 
         for i in range(len(self.episodes)):
-            self.episodes[i].goals = self.goals_by_category[
-                self.episodes[i].goals_key
-            ]
+            self.episodes[i].goals = self.goals_by_category[self.episodes[i].goals_key]
 
         return result
 
@@ -84,9 +82,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         return g
 
-    def from_json(
-        self, json_str: str, scenes_dir: Optional[str] = None
-    ) -> None:
+    def from_json(self, json_str: str, scenes_dir: Optional[str] = None) -> None:
         deserialized = json.loads(json_str)
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]

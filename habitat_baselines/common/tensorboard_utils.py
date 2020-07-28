@@ -57,12 +57,8 @@ class TensorboardWriter:
         if not self.writer:
             return
         # initial shape of np.ndarray list: N * (H, W, 3)
-        frame_tensors = [
-            torch.from_numpy(np_arr).unsqueeze(0) for np_arr in images
-        ]
+        frame_tensors = [torch.from_numpy(np_arr).unsqueeze(0) for np_arr in images]
         video_tensor = torch.cat(tuple(frame_tensors))
         video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)
         # final shape of video tensor: (1, n, 3, H, W)
-        self.writer.add_video(
-            video_name, video_tensor, fps=fps, global_step=step_idx
-        )
+        self.writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)

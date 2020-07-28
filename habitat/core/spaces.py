@@ -94,9 +94,7 @@ class ListSpace(Space):
         self.min_seq_length = min_seq_length
         self.max_seq_length = max_seq_length
         self.space = space
-        self.length_select = gym.spaces.Discrete(
-            max_seq_length - min_seq_length
-        )
+        self.length_select = gym.spaces.Discrete(max_seq_length - min_seq_length)
 
     def sample(self):
         seq_length = self.length_select.sample() + self.min_seq_length

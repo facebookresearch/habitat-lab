@@ -98,9 +98,7 @@ class SimpleCNN(nn.Module):
 
         self.layer_init()
 
-    def _conv_output_dim(
-        self, dimension, padding, dilation, kernel_size, stride
-    ):
+    def _conv_output_dim(self, dimension, padding, dilation, kernel_size, stride):
         r"""Calculates the output height and width based on the input
         height and width to the convolution layer.
 
@@ -130,9 +128,7 @@ class SimpleCNN(nn.Module):
     def layer_init(self):
         for layer in self.cnn:
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
-                nn.init.kaiming_normal_(
-                    layer.weight, nn.init.calculate_gain("relu")
-                )
+                nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
 

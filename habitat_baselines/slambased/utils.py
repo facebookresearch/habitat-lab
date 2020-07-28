@@ -18,9 +18,7 @@ def generate_2dgrid(h, w, centered=False):
     else:
         x = torch.linspace(0, w - 1, w)
         y = torch.linspace(0, h - 1, h)
-    grid2d = torch.stack(
-        [y.repeat(w, 1).t().contiguous().view(-1), x.repeat(h)], 1
-    )
+    grid2d = torch.stack([y.repeat(w, 1).t().contiguous().view(-1), x.repeat(h)], 1)
     return grid2d.view(1, h, w, 2).permute(0, 3, 1, 2)
 
 
@@ -40,9 +38,7 @@ def resize_pil(np_img, size=128):
 def find_map_size(h, w):
     map_size_in_meters = int(0.1 * 3 * max(h, w))
     if map_size_in_meters % 10 != 0:
-        map_size_in_meters = map_size_in_meters + (
-            10 - (map_size_in_meters % 10)
-        )
+        map_size_in_meters = map_size_in_meters + (10 - (map_size_in_meters % 10))
     return map_size_in_meters
 
 

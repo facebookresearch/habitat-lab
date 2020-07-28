@@ -45,9 +45,7 @@ def get_direction(p_init, p_fin, ang_th=0.2, pos_th=0.1):
     else:
         needed_angle = torch.atan2(pos_diff[1], pos_diff[0])
         current_angle = torch.atan2(p_init[2, 0], p_init[0, 0])
-    to_rotate = angle_to_pi_2_minus_pi_2(
-        -np.pi / 2.0 + needed_angle - current_angle
-    )
+    to_rotate = angle_to_pi_2_minus_pi_2(-np.pi / 2.0 + needed_angle - current_angle)
     if torch.abs(to_rotate).item() < ang_th:
         return 0
     return to_rotate
@@ -58,18 +56,13 @@ def reproject_local_to_global(xyz_local, p):
     num, dim = xyz_local.size()
     if dim == 3:
         xyz = torch.cat(
-            [
-                xyz_local,
-                torch.ones((num, 1), dtype=torch.float32, device=device),
-            ],
+            [xyz_local, torch.ones((num, 1), dtype=torch.float32, device=device),],
             dim=1,
         )
     elif dim == 4:
         xyz = xyz_local
     else:
-        raise ValueError(
-            "3d point cloud dim is neighter 3, or 4 (homogenious)"
-        )
+        raise ValueError("3d point cloud dim is neighter 3, or 4 (homogenious)")
     # print(xyz.shape, P.shape)
     xyz_global = torch.mm(p.squeeze(), xyz.t())
     return xyz_global.t()
@@ -112,8 +105,7 @@ def normalize_zx_ori(p):
     out = torch.cat(
         [
             torch.cat(
-                [p[:, :3, :3] / norms.expand(p.size(0), 3, 3), p[:, 3:, :3]],
-                dim=1,
+                [p[:, :3, :3] / norms.expand(p.size(0), 3, 3), p[:, 3:, :3]], dim=1,
             ),
             p[:, :, 3:],
         ],
@@ -169,9 +161,7 @@ def planned_path2tps(path, cell_size, map_size, agent_h, add_rot=False):
             [0, 0, 0, 1],
         ]
     )
-    planned_tps = torch.bmm(
-        p.inverse().unsqueeze(0).expand(num_pts, 4, 4), planned_tps
-    )
+    planned_tps = torch.bmm(p.inverse().unsqueeze(0).expand(num_pts, 4, 4), planned_tps)
     if add_rot:
         return add_rot_wps(planned_tps)
     return planned_tps
@@ -184,11 +174,7 @@ def habitat_goalpos_to_tp(ro_phi, p_curr):
     """
     device = ro_phi.device
     offset = torch.tensor(
-        [
-            -ro_phi[0] * torch.sin(ro_phi[1]),
-            0,
-            ro_phi[0] * torch.cos(ro_phi[1]),
-        ]
+        [-ro_phi[0] * torch.sin(ro_phi[1]), 0, ro_phi[0] * torch.cos(ro_phi[1]),]
     ).to(device)
     if p_curr.size(1) == 3:
         p_curr = homogenize_p(p_curr)
@@ -197,9 +183,7 @@ def habitat_goalpos_to_tp(ro_phi, p_curr):
         torch.cat(
             [
                 offset
-                * torch.tensor(
-                    [1.0, 1.0, 1.0], dtype=torch.float32, device=device
-                ),
+                * torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32, device=device),
                 torch.tensor([1.0], device=device),
             ]
         ).reshape(4, 1),
@@ -215,9 +199,7 @@ def habitat_goalpos_to_mapgoal_pos(offset, p_curr, cell_size, map_size):
     goal_tp = habitat_goalpos_to_tp(offset, p_curr)
     goal_tp1 = torch.eye(4).to(device)
     goal_tp1[:, 3:] = goal_tp
-    projected_p = project_tps_into_worldmap(
-        goal_tp1.view(1, 4, 4), cell_size, map_size
-    )
+    projected_p = project_tps_into_worldmap(goal_tp1.view(1, 4, 4), cell_size, map_size)
     return projected_p
 
 
@@ -247,8 +229,7 @@ def project_tps_into_worldmap(tps, cell_size, map_size, do_floor=True):
     device = tps.device
     topdown_p = torch.tensor([[1.0, 0, 0, 0], [0, 0, 1.0, 0]]).to(device)
     world_coords = torch.bmm(
-        topdown_p.view(1, 2, 4).expand(tps.size(0), 2, 4),
-        tps[:, :, 3:].view(-1, 4, 1),
+        topdown_p.view(1, 2, 4).expand(tps.size(0), 2, 4), tps[:, :, 3:].view(-1, 4, 1),
     )
     shift = int(floor(get_map_size_in_cells(map_size, cell_size) / 2.0))
     topdown2index = torch.tensor(
@@ -258,8 +239,7 @@ def project_tps_into_worldmap(tps, cell_size, map_size, do_floor=True):
         [world_coords, torch.ones((len(world_coords), 1, 1)).to(device)], dim=1
     )
     world_coords = torch.bmm(
-        topdown2index.unsqueeze(0).expand(world_coords_h.size(0), 3, 3),
-        world_coords_h,
+        topdown2index.unsqueeze(0).expand(world_coords_h.size(0), 3, 3), world_coords_h,
     )[:, :2, 0]
     if do_floor:
         return (

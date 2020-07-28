@@ -79,9 +79,7 @@ def get_minos_for_sim_eqa_config():
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
-    logger.info(
-        "JSON conversion finished. {} sec".format((time.time() - start_time))
-    )
+    logger.info("JSON conversion finished. {} sec".format((time.time() - start_time)))
     decoded_dataset = dataset.__class__()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) > 0
@@ -94,9 +92,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 
 def test_mp3d_eqa_dataset():
     dataset_config = get_config(CFG_TEST).DATASET
-    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        dataset_config
-    ):
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     dataset = mp3d_dataset.Matterport3dDatasetV1(config=dataset_config)
@@ -113,41 +109,25 @@ def test_dataset_splitting(split):
     dataset_config = get_config(CFG_TEST).DATASET
     dataset_config.defrost()
     dataset_config.SPLIT = split
-    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(
-        dataset_config
-    ):
+    if not mp3d_dataset.Matterport3dDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Please download Matterport3D EQA dataset to data folder.")
 
     scenes = mp3d_dataset.Matterport3dDatasetV1.get_scenes_to_load(
         config=dataset_config
     )
-    assert (
-        len(scenes) > 0
-    ), "Expected dataset contains separate episode file per scene."
+    assert len(scenes) > 0, "Expected dataset contains separate episode file per scene."
 
     dataset_config.CONTENT_SCENES = scenes
-    full_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    full_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
-    }
+    full_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    full_episodes = {(ep.scene_id, ep.episode_id) for ep in full_dataset.episodes}
 
     dataset_config.CONTENT_SCENES = scenes[0 : len(scenes) // 2]
-    split1_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split1_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
-    }
+    split1_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    split1_episodes = {(ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes}
 
     dataset_config.CONTENT_SCENES = scenes[len(scenes) // 2 :]
-    split2_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split2_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
-    }
+    split2_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    split2_episodes = {(ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes}
 
     assert full_episodes == split1_episodes.union(
         split2_episodes
@@ -212,9 +192,7 @@ def test_mp3d_eqa_sim_correspondence():
         while cycles_n > 0:
             env.reset()
             episode = env.current_episode
-            assert (
-                len(episode.goals) == 1
-            ), "Episode has no goals or more than one."
+            assert len(episode.goals) == 1, "Episode has no goals or more than one."
             assert (
                 len(episode.shortest_paths) == 1
             ), "Episode has no shortest paths or more than one."
@@ -242,8 +220,7 @@ def test_mp3d_eqa_sim_correspondence():
                     "".format(
                         cur_state.position - point.position,
                         angle_between_quaternions(
-                            cur_state.rotation,
-                            quaternion_from_coeff(point.rotation),
+                            cur_state.rotation, quaternion_from_coeff(point.rotation),
                         ),
                         cur_state.position,
                         point.position,
@@ -269,9 +246,7 @@ def test_mp3d_eqa_sim_correspondence():
                 # Slightly bigger atol for basis meshes
                 rgb_mean = rgb_mean / len(episode.shortest_paths[0])
                 assert np.isclose(
-                    RGB_EPISODE_MEANS[int(episode.episode_id)],
-                    rgb_mean,
-                    atol=0.5,
+                    RGB_EPISODE_MEANS[int(episode.episode_id)], rgb_mean, atol=0.5,
                 ), "RGB output doesn't match the ground truth."
 
             ep_i = (ep_i + 1) % EPISODES_LIMIT
@@ -293,8 +268,7 @@ def test_eqa_task():
     with habitat.Env(config=eqa_config, dataset=dataset) as env:
         env.episodes = list(
             filter(
-                lambda e: int(e.episode_id)
-                in TEST_EPISODE_SET[:EPISODES_LIMIT],
+                lambda e: int(e.episode_id) in TEST_EPISODE_SET[:EPISODES_LIMIT],
                 dataset.episodes,
             )
         )

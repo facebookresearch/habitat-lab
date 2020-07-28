@@ -38,9 +38,7 @@ def test_action_space():
     assert not space.contains({"zero": None})
     assert not space.contains({"action": "bad"})
     assert not space.contains({"action": "move"})
-    assert not space.contains(
-        {"action": "move", "action_args": {"position": 0}}
-    )
+    assert not space.contains({"action": "move", "action_args": {"position": 0}})
     assert not space.contains(
         {"action": "move_forward", "action_args": {"position": 0}}
     )

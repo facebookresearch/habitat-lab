@@ -109,19 +109,12 @@ class PPOAgent(Agent):
             device=self.device,
         )
         self.not_done_masks = torch.zeros(1, 1, device=self.device)
-        self.prev_actions = torch.zeros(
-            1, 1, dtype=torch.long, device=self.device
-        )
+        self.prev_actions = torch.zeros(1, 1, dtype=torch.long, device=self.device)
 
     def act(self, observations):
         batch = batch_obs([observations], device=self.device)
         with torch.no_grad():
-            (
-                _,
-                actions,
-                _,
-                self.test_recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            (_, actions, _, self.test_recurrent_hidden_states,) = self.actor_critic.act(
                 batch,
                 self.test_recurrent_hidden_states,
                 self.prev_actions,
@@ -138,9 +131,7 @@ class PPOAgent(Agent):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input-type",
-        default="blind",
-        choices=["blind", "rgb", "depth", "rgbd"],
+        "--input-type", default="blind", choices=["blind", "rgb", "depth", "rgbd"],
     )
     parser.add_argument("--model-path", default="", type=str)
     parser.add_argument(

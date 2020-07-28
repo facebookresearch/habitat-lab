@@ -191,9 +191,7 @@ class BaseRLTrainer(BaseTrainer):
                 envs.pause_at(idx)
 
             # indexing along the batch dimensions
-            test_recurrent_hidden_states = test_recurrent_hidden_states[
-                :, state_index
-            ]
+            test_recurrent_hidden_states = test_recurrent_hidden_states[:, state_index]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]

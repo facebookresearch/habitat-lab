@@ -26,9 +26,7 @@ class RNNStateEncoder(nn.Module):
         self._rnn_type = rnn_type
 
         self.rnn = getattr(nn, rnn_type)(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
+            input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
         )
 
         self.layer_init()
@@ -42,15 +40,11 @@ class RNNStateEncoder(nn.Module):
 
     @property
     def num_recurrent_layers(self):
-        return self._num_recurrent_layers * (
-            2 if "LSTM" in self._rnn_type else 1
-        )
+        return self._num_recurrent_layers * (2 if "LSTM" in self._rnn_type else 1)
 
     def _pack_hidden(self, hidden_states):
         if "LSTM" in self._rnn_type:
-            hidden_states = torch.cat(
-                [hidden_states[0], hidden_states[1]], dim=0
-            )
+            hidden_states = torch.cat([hidden_states[0], hidden_states[1]], dim=0)
 
         return hidden_states
 
@@ -76,8 +70,7 @@ class RNNStateEncoder(nn.Module):
         """
         hidden_states = self._unpack_hidden(hidden_states)
         x, hidden_states = self.rnn(
-            x.unsqueeze(0),
-            self._mask_hidden(hidden_states, masks.unsqueeze(0)),
+            x.unsqueeze(0), self._mask_hidden(hidden_states, masks.unsqueeze(0)),
         )
         x = x.squeeze(0)
         hidden_states = self._pack_hidden(hidden_states)
@@ -122,9 +115,7 @@ class RNNStateEncoder(nn.Module):
 
             rnn_scores, hidden_states = self.rnn(
                 x[start_idx:end_idx],
-                self._mask_hidden(
-                    hidden_states, masks[start_idx].view(1, -1, 1)
-                ),
+                self._mask_hidden(hidden_states, masks[start_idx].view(1, -1, 1)),
             )
 
             outputs.append(rnn_scores)

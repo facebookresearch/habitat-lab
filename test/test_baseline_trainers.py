@@ -23,15 +23,11 @@ except ImportError:
     baseline_installed = False
 
 
-@pytest.mark.skipif(
-    not baseline_installed, reason="baseline sub-module not installed"
-)
+@pytest.mark.skipif(not baseline_installed, reason="baseline sub-module not installed")
 @pytest.mark.parametrize(
     "test_cfg_path,mode,gpu2gpu",
     itertools.product(
-        glob("habitat_baselines/config/test/*"),
-        ["train", "eval"],
-        [True, False],
+        glob("habitat_baselines/config/test/*"), ["train", "eval"], [True, False],
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu):
@@ -55,9 +51,7 @@ def test_trainers(test_cfg_path, mode, gpu2gpu):
         torch.distributed.destroy_process_group()
 
 
-@pytest.mark.skipif(
-    not baseline_installed, reason="baseline sub-module not installed"
-)
+@pytest.mark.skipif(not baseline_installed, reason="baseline sub-module not installed")
 def test_eval_config():
     ckpt_opts = ["VIDEO_OPTION", "[]"]
     eval_opts = ["VIDEO_OPTION", "['disk']"]
@@ -100,9 +94,7 @@ def __do_pause_test(num_envs, envs_to_pause):
     current_episode_reward = torch.arange(num_envs).view(num_envs, 1)
     prev_actions = torch.arange(num_envs).view(num_envs, 1)
     batch = {
-        k: torch.arange(num_envs)
-        .view(num_envs, 1, 1, 1)
-        .expand(num_envs, 3, 256, 256)
+        k: torch.arange(num_envs).view(num_envs, 1, 1, 1).expand(num_envs, 3, 256, 256)
         for k in ["a", "b"]
     }
     rgb_frames = [[idx] for idx in range(num_envs)]
@@ -143,9 +135,7 @@ def __do_pause_test(num_envs, envs_to_pause):
         assert v[:, 0, 0, 0].numpy().tolist() == expected
 
 
-@pytest.mark.skipif(
-    not baseline_installed, reason="baseline sub-module not installed"
-)
+@pytest.mark.skipif(not baseline_installed, reason="baseline sub-module not installed")
 def test_pausing():
     random.seed(0)
     for _ in range(100):

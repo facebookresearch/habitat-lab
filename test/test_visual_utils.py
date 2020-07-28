@@ -18,16 +18,10 @@ def test_observations_to_image():
         "collisions": {"is_collision": True},
         "top_down_map": {
             "map": np.random.randint(low=0, high=255, size=(300, 300)),
-            "fog_of_war_mask": np.random.randint(
-                low=0, high=1, size=(300, 300)
-            ),
+            "fog_of_war_mask": np.random.randint(low=0, high=1, size=(300, 300)),
             "agent_map_coord": (10, 10),
             "agent_angle": np.random.random(),
         },
     }
     image = observations_to_image(observations, info)
-    assert image.shape == (
-        200,
-        1000,
-        3,
-    ), "Resulted image resolution doesn't match."
+    assert image.shape == (200, 1000, 3,), "Resulted image resolution doesn't match."

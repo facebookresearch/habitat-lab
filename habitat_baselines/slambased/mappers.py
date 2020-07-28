@@ -41,16 +41,12 @@ def pcl_to_obstacles(pts3d, map_size=40, cell_size=0.2, min_pts=10):
     """
     device = pts3d.device
     map_size_in_cells = get_map_size_in_cells(map_size, cell_size) - 1
-    init_map = torch.zeros(
-        (map_size_in_cells, map_size_in_cells), device=device
-    )
+    init_map = torch.zeros((map_size_in_cells, map_size_in_cells), device=device)
     if len(pts3d) <= 1:
         return init_map
     num_pts, dim = pts3d.size()
     pts2d = torch.cat([pts3d[:, 2:3], pts3d[:, 0:1]], dim=1)
-    data_idxs = torch.round(
-        project2d_pcl_into_worldmap(pts2d, map_size, cell_size)
-    )
+    data_idxs = torch.round(project2d_pcl_into_worldmap(pts2d, map_size, cell_size))
     if len(data_idxs) > min_pts:
         u, counts = np.unique(
             data_idxs.detach().cpu().numpy(), axis=0, return_counts=True
@@ -107,8 +103,7 @@ class DirectDepthMapper(nn.Module):
         survived_points = local_3d_pcl[idxs]
         if len(survived_points) < 20:
             map_size_in_cells = (
-                get_map_size_in_cells(self.map_size_meters, self.map_cell_size)
-                - 1
+                get_map_size_in_cells(self.map_size_meters, self.map_cell_size) - 1
             )
             init_map = torch.zeros(
                 (map_size_in_cells, map_size_in_cells), device=self.device

@@ -79,13 +79,8 @@ class ResizeCenterCropper(nn.Module):
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
-                if (
-                    key in trans_keys
-                    and observation_space.spaces[key].shape != size
-                ):
-                    logger.info(
-                        "Overwriting CNN input size of %s: %s" % (key, size)
-                    )
+                if key in trans_keys and observation_space.spaces[key].shape != size:
+                    logger.info("Overwriting CNN input size of %s: %s" % (key, size))
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], size
                     )
@@ -149,9 +144,7 @@ def batch_obs(
 
     for sensor in batch:
         batch[sensor] = (
-            torch.stack(batch[sensor], dim=0)
-            .to(device=device)
-            .to(dtype=torch.float)
+            torch.stack(batch[sensor], dim=0).to(device=device).to(dtype=torch.float)
         )
 
     return batch
@@ -174,9 +167,7 @@ def poll_checkpoint_folder(
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
-    models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
-    )
+    models_paths = list(filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")))
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
     if ind < len(models_paths):
@@ -216,9 +207,7 @@ def generate_video(
     for k, v in metrics.items():
         metric_strs.append(f"{k}={v:.2f}")
 
-    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
-        metric_strs
-    )
+    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(metric_strs)
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name)
@@ -263,9 +252,9 @@ def image_resize_shortest_edge(
     scale = size / min(h, w)
     h = int(h * scale)
     w = int(w * scale)
-    img = torch.nn.functional.interpolate(
-        img.float(), size=(h, w), mode="area"
-    ).to(dtype=img.dtype)
+    img = torch.nn.functional.interpolate(img.float(), size=(h, w), mode="area").to(
+        dtype=img.dtype
+    )
     if channels_last:
         if len(img.shape) == 4:
             # NCHW -> NHWC

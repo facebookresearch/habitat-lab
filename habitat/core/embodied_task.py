@@ -135,9 +135,7 @@ class Metrics(dict):
         :param measures: list of :ref:`Measure` whose metrics are fetched and
             packaged.
         """
-        data = [
-            (uuid, measure.get_metric()) for uuid, measure in measures.items()
-        ]
+        data = [(uuid, measure.get_metric()) for uuid, measure in measures.items()]
         super().__init__(data)
 
 
@@ -178,9 +176,7 @@ class Measurements:
     def _get_measure_index(self, measure_name):
         return list(self.measures.keys()).index(measure_name)
 
-    def check_measure_dependencies(
-        self, measure_name: str, dependencies: List[str]
-    ):
+    def check_measure_dependencies(self, measure_name: str, dependencies: List[str]):
         r"""Checks if dependencies measures are enabled and calculatethat the measure
         :param measure_name: a name of the measure for which has dependencies.
         :param dependencies: a list of a measure names that are required by
@@ -271,10 +267,7 @@ class EmbodiedTask:
                 entity_type is not None
             ), f"invalid {entity_name} type {entity_cfg.TYPE}"
             entities[entity_name] = entity_type(
-                sim=self._sim,
-                config=entity_cfg,
-                dataset=self._dataset,
-                task=self,
+                sim=self._sim, config=entity_cfg, dataset=self._dataset, task=self,
             )
         return entities
 
@@ -305,10 +298,7 @@ class EmbodiedTask:
         observations = task_action.step(**action["action_args"], task=self)
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations,
-                episode=episode,
-                action=action,
-                task=self,
+                observations=observations, episode=episode, action=action, task=self,
             )
         )
 

@@ -28,9 +28,7 @@ PARTIAL_LOAD_SCENES = 3
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
-    logger.info(
-        "JSON conversion finished. {} sec".format((time.time() - start_time))
-    )
+    logger.info("JSON conversion finished. {} sec".format((time.time() - start_time)))
     decoded_dataset = ObjectNavDatasetV1()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) == len(dataset.episodes)
@@ -47,9 +45,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
 def test_mp3d_object_nav_dataset():
     dataset_config = get_config(CFG_TEST).DATASET
     if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
-        pytest.skip(
-            "Please download Matterport3D ObjectNav Dataset to data folder."
-        )
+        pytest.skip("Please download Matterport3D ObjectNav Dataset to data folder.")
 
     dataset = habitat.make_dataset(
         id_dataset=dataset_config.TYPE, config=dataset_config
@@ -74,35 +70,21 @@ def test_dataset_splitting(split):
         pytest.skip("Test skipped as dataset files are missing.")
 
     scenes = ObjectNavDatasetV1.get_scenes_to_load(config=dataset_config)
-    assert (
-        len(scenes) > 0
-    ), "Expected dataset contains separate episode file per scene."
+    assert len(scenes) > 0, "Expected dataset contains separate episode file per scene."
 
     dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
-    full_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    full_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
-    }
+    full_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    full_episodes = {(ep.scene_id, ep.episode_id) for ep in full_dataset.episodes}
 
     dataset_config.CONTENT_SCENES = scenes[: PARTIAL_LOAD_SCENES // 2]
-    split1_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split1_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
-    }
+    split1_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    split1_episodes = {(ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes}
 
     dataset_config.CONTENT_SCENES = scenes[
         PARTIAL_LOAD_SCENES // 2 : PARTIAL_LOAD_SCENES
     ]
-    split2_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split2_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
-    }
+    split2_dataset = make_dataset(id_dataset=dataset_config.TYPE, config=dataset_config)
+    split2_episodes = {(ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes}
 
     assert full_episodes == split1_episodes.union(
         split2_episodes
@@ -120,9 +102,7 @@ def test_object_nav_task():
             "Please download Matterport3D scene and ObjectNav Datasets to data folder."
         )
 
-    dataset = make_dataset(
-        id_dataset=config.DATASET.TYPE, config=config.DATASET
-    )
+    dataset = make_dataset(id_dataset=config.DATASET.TYPE, config=config.DATASET)
     with habitat.Env(config=config, dataset=dataset) as env:
         for i in range(10):
             env.reset()

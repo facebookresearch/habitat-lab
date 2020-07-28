@@ -47,9 +47,7 @@ class VLNEpisode(NavigationEpisode):
     reference_path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )
-    instruction: InstructionData = attr.ib(
-        default=None, validator=not_none_validator
-    )
+    instruction: InstructionData = attr.ib(default=None, validator=not_none_validator)
     trajectory_id: int = attr.ib(default=None, validator=not_none_validator)
 
 
@@ -63,10 +61,7 @@ class InstructionSensor(Sensor):
         return self.uuid
 
     def _get_observation(
-        self,
-        observations: Dict[str, Observations],
-        episode: VLNEpisode,
-        **kwargs
+        self, observations: Dict[str, Observations], episode: VLNEpisode, **kwargs
     ):
         return {
             "text": episode.instruction.instruction_text,

@@ -57,9 +57,7 @@ def test_task_actions_sampling_for_teleport():
             action = sample_non_stop_action(env.action_space)
             assert env.action_space.contains(action)
             habitat.logger.info(
-                f"Action : "
-                f"{action['action']}, "
-                f"args: {action['action_args']}."
+                f"Action : " f"{action['action']}, " f"args: {action['action_args']}."
             )
             env.step(action)
             agent_state = env.sim.get_agent_state()
@@ -76,12 +74,9 @@ def test_task_actions_sampling_for_teleport():
 )
 def test_task_actions_sampling(config_file):
     config = habitat.get_config(config_paths=config_file)
-    if not os.path.exists(
-        config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)
-    ):
+    if not os.path.exists(config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)):
         pytest.skip(
-            f"Please download dataset to data folder "
-            f"{config.DATASET.DATA_PATH}."
+            f"Please download dataset to data folder " f"{config.DATASET.DATA_PATH}."
         )
 
     with habitat.Env(config=config) as env:
@@ -90,9 +85,7 @@ def test_task_actions_sampling(config_file):
             action = sample_non_stop_action(env.action_space)
             assert env.action_space.contains(action)
             habitat.logger.info(
-                f"Action : "
-                f"{action['action']}, "
-                f"args: {action['action_args']}."
+                f"Action : " f"{action['action']}, " f"args: {action['action_args']}."
             )
             env.step(action)
             agent_state = env.sim.get_agent_state()

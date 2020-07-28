@@ -97,23 +97,17 @@ _C.RL.DDPPO.reset_critic = True
 # -----------------------------------------------------------------------------
 _C.ORBSLAM2 = CN()
 _C.ORBSLAM2.SLAM_VOCAB_PATH = "habitat_baselines/slambased/data/ORBvoc.txt"
-_C.ORBSLAM2.SLAM_SETTINGS_PATH = (
-    "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
-)
+_C.ORBSLAM2.SLAM_SETTINGS_PATH = "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
 _C.ORBSLAM2.MAP_CELL_SIZE = 0.1
 _C.ORBSLAM2.MAP_SIZE = 40
-_C.ORBSLAM2.CAMERA_HEIGHT = get_task_config().SIMULATOR.DEPTH_SENSOR.POSITION[
-    1
-]
+_C.ORBSLAM2.CAMERA_HEIGHT = get_task_config().SIMULATOR.DEPTH_SENSOR.POSITION[1]
 _C.ORBSLAM2.BETA = 100
 _C.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * _C.ORBSLAM2.CAMERA_HEIGHT
 _C.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * _C.ORBSLAM2.CAMERA_HEIGHT
 _C.ORBSLAM2.D_OBSTACLE_MIN = 0.1
 _C.ORBSLAM2.D_OBSTACLE_MAX = 4.0
 _C.ORBSLAM2.PREPROCESS_MAP = True
-_C.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
-    get_task_config().SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
-)
+_C.ORBSLAM2.MIN_PTS_IN_OBSTACLE = get_task_config().SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
 _C.ORBSLAM2.ANGLE_TH = float(np.deg2rad(15))
 _C.ORBSLAM2.DIST_REACHED_TH = 0.15
 _C.ORBSLAM2.NEXT_WAYPOINT_TH = 0.5
@@ -124,8 +118,7 @@ _C.ORBSLAM2.DEPTH_DENORM = get_task_config().SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
 
 
 def get_config(
-    config_paths: Optional[Union[List[str], str]] = None,
-    opts: Optional[list] = None,
+    config_paths: Optional[Union[List[str], str]] = None, opts: Optional[list] = None,
 ) -> CN:
     r"""Create a unified config with default values overwritten by values from
     :ref:`config_paths` and overwritten by options from :ref:`opts`.

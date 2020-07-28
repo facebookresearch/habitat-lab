@@ -22,11 +22,7 @@ from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import (
-    batch_obs,
-    generate_video,
-    linear_decay,
-)
+from habitat_baselines.common.utils import batch_obs, generate_video, linear_decay
 from habitat_baselines.rl.ppo import PPO, PointNavBaselinePolicy
 
 
@@ -97,9 +93,7 @@ class PPOTrainer(BaseRLTrainer):
         if extra_state is not None:
             checkpoint["extra_state"] = extra_state
 
-        torch.save(
-            checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
-        )
+        torch.save(checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name))
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
         r"""Load checkpoint of specified path as a dict.
@@ -117,9 +111,7 @@ class PPOTrainer(BaseRLTrainer):
     METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
 
     @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _extract_scalars_from_info(cls, info: Dict[str, Any]) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
             if k in cls.METRICS_BLACKLIST:
@@ -129,9 +121,7 @@ class PPOTrainer(BaseRLTrainer):
                 result.update(
                     {
                         k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(
-                            v
-                        ).items()
+                        for subk, subv in cls._extract_scalars_from_info(v).items()
                         if (k + "." + subk) not in cls.METRICS_BLACKLIST
                     }
                 )
@@ -270,9 +260,7 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
 
-        self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
-        )
+        self.envs = construct_envs(self.config, get_env_class(self.config.ENV_NAME))
 
         ppo_cfg = self.config.RL.PPO
         self.device = (
@@ -367,9 +355,7 @@ class PPOTrainer(BaseRLTrainer):
 
                 deltas = {
                     k: (
-                        (v[-1] - v[0]).sum().item()
-                        if len(v) > 1
-                        else v[0].sum().item()
+                        (v[-1] - v[0]).sum().item() if len(v) > 1 else v[0].sum().item()
                     )
                     for k, v in window_episode_stats.items()
                 }
@@ -406,9 +392,7 @@ class PPOTrainer(BaseRLTrainer):
 
                     logger.info(
                         "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                        "frames: {}".format(
-                            update, env_time, pth_time, count_steps
-                        )
+                        "frames: {}".format(update, env_time, pth_time, count_steps)
                     )
 
                     logger.info(
@@ -477,9 +461,7 @@ class PPOTrainer(BaseRLTrainer):
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
 
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
+        current_episode_reward = torch.zeros(self.envs.num_envs, 1, device=self.device)
 
         test_recurrent_hidden_states = torch.zeros(
             self.actor_critic.net.num_recurrent_layers,
@@ -490,9 +472,7 @@ class PPOTrainer(BaseRLTrainer):
         prev_actions = torch.zeros(
             self.config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
         )
-        not_done_masks = torch.zeros(
-            self.config.NUM_PROCESSES, 1, device=self.device
-        )
+        not_done_masks = torch.zeros(self.config.NUM_PROCESSES, 1, device=self.device)
         stats_episodes = dict()  # dict of dicts that stores stats per episode
 
         rgb_frames = [
@@ -516,19 +496,11 @@ class PPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
-        while (
-            len(stats_episodes) < number_of_eval_episodes
-            and self.envs.num_envs > 0
-        ):
+        while len(stats_episodes) < number_of_eval_episodes and self.envs.num_envs > 0:
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
+                (_, actions, _, test_recurrent_hidden_states,) = self.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
@@ -540,9 +512,7 @@ class PPOTrainer(BaseRLTrainer):
 
             outputs = self.envs.step([a[0].item() for a in actions])
 
-            observations, rewards, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
+            observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
             batch = batch_obs(observations, device=self.device)
 
             not_done_masks = torch.tensor(
@@ -570,16 +540,11 @@ class PPOTrainer(BaseRLTrainer):
                     pbar.update()
                     episode_stats = dict()
                     episode_stats["reward"] = current_episode_reward[i].item()
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
+                    episode_stats.update(self._extract_scalars_from_info(infos[i]))
                     current_episode_reward[i] = 0
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
-                        (
-                            current_episodes[i].scene_id,
-                            current_episodes[i].episode_id,
-                        )
+                        (current_episodes[i].scene_id, current_episodes[i].episode_id,)
                     ] = episode_stats
 
                     if len(self.config.VIDEO_OPTION) > 0:
@@ -623,8 +588,7 @@ class PPOTrainer(BaseRLTrainer):
         aggregated_stats = dict()
         for stat_key in next(iter(stats_episodes.values())).keys():
             aggregated_stats[stat_key] = (
-                sum([v[stat_key] for v in stats_episodes.values()])
-                / num_episodes
+                sum([v[stat_key] for v in stats_episodes.values()]) / num_episodes
             )
 
         for k, v in aggregated_stats.items():
@@ -635,9 +599,7 @@ class PPOTrainer(BaseRLTrainer):
             step_id = ckpt_dict["extra_state"]["step"]
 
         writer.add_scalars(
-            "eval_reward",
-            {"average reward": aggregated_stats["reward"]},
-            step_id,
+            "eval_reward", {"average reward": aggregated_stats["reward"]}, step_id,
         )
 
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}

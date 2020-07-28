@@ -22,9 +22,7 @@ class Benchmark:
     r"""Benchmark for evaluating agents in environments.
     """
 
-    def __init__(
-        self, config_paths: Optional[str] = None, eval_remote=False
-    ) -> None:
+    def __init__(self, config_paths: Optional[str] = None, eval_remote=False) -> None:
         r"""..
 
         :param config_paths: file to be used for creating the environment
@@ -38,9 +36,7 @@ class Benchmark:
         else:
             self._env = Env(config=config_env)
 
-    def remote_evaluate(
-        self, agent: Agent, num_episodes: Optional[int] = None
-    ):
+    def remote_evaluate(self, agent: Agent, num_episodes: Optional[int] = None):
         # The modules imported below are specific to habitat-challenge remote evaluation.
         # These modules are not part of the habitat-api repository.
         import pickle
@@ -90,17 +86,13 @@ class Benchmark:
 
                 res_env = unpack_for_grpc(
                     stub.act_on_environment(
-                        evaluation_pb2.Package(
-                            SerializedEntity=pack_for_grpc(action)
-                        )
+                        evaluation_pb2.Package(SerializedEntity=pack_for_grpc(action))
                     ).SerializedEntity
                 )
 
             metrics = unpack_for_grpc(
                 stub.get_metrics(
-                    evaluation_pb2.Package(
-                        SerializedEntity=pack_for_grpc(action)
-                    )
+                    evaluation_pb2.Package(SerializedEntity=pack_for_grpc(action))
                 ).SerializedEntity
             )
 
@@ -120,9 +112,7 @@ class Benchmark:
         else:
             assert num_episodes <= len(self._env.episodes), (
                 "num_episodes({}) is larger than number of episodes "
-                "in environment ({})".format(
-                    num_episodes, len(self._env.episodes)
-                )
+                "in environment ({})".format(num_episodes, len(self._env.episodes))
             )
 
         assert num_episodes > 0, "num_episodes should be greater than 0"

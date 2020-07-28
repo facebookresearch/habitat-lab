@@ -85,12 +85,8 @@ def agent_state_target2ref(
         and need to be transformed to the local coordinate system defined by ref_agent_state.
     """
 
-    assert (
-        len(ref_agent_state[1]) == 3
-    ), "Only support Cartesian format currently."
-    assert (
-        len(target_agent_state[1]) == 3
-    ), "Only support Cartesian format currently."
+    assert len(ref_agent_state[1]) == 3, "Only support Cartesian format currently."
+    assert len(target_agent_state[1]) == 3, "Only support Cartesian format currently."
 
     ref_rotation, ref_position = ref_agent_state
     target_rotation, target_position = target_agent_state

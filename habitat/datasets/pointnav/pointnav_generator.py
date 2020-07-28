@@ -7,11 +7,11 @@
 from typing import Optional
 
 import numpy as np
+from habitat_sim.errors import GreedyFollowerError
 
 from habitat.core.simulator import Simulator
 from habitat.datasets.utils import get_action_shortest_path
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
-from habitat_sim.errors import GreedyFollowerError
 
 r"""A minimum radius of a plane that a point should be part of to be
 considered  as a target or source location. Used to filter isolated points
@@ -34,9 +34,7 @@ def _ratio_sample_rate(ratio: float, ratio_threshold: float) -> float:
     return 20 * (ratio - 0.98) ** 2
 
 
-def is_compatible_episode(
-    s, t, sim, near_dist, far_dist, geodesic_to_euclid_ratio
-):
+def is_compatible_episode(s, t, sim, near_dist, far_dist, geodesic_to_euclid_ratio):
     euclid_dist = np.power(np.power(np.array(s) - np.array(t), 2).sum(0), 0.5)
     if np.abs(s[1] - t[1]) > 0.5:  # check height difference to assure s and
         #  t are from same floor
@@ -48,8 +46,7 @@ def is_compatible_episode(
         return False, 0
     distances_ratio = d_separation / euclid_dist
     if distances_ratio < geodesic_to_euclid_ratio and (
-        np.random.rand()
-        > _ratio_sample_rate(distances_ratio, geodesic_to_euclid_ratio)
+        np.random.rand() > _ratio_sample_rate(distances_ratio, geodesic_to_euclid_ratio)
     ):
         return False, 0
     if sim.island_radius(s) < ISLAND_RADIUS_LIMIT:
