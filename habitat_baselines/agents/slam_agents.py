@@ -16,7 +16,7 @@ import orbslam2
 import PIL
 import requests
 import torch
-import torch.nn.functional as F
+from torch.nn import functional as F
 
 import habitat
 from habitat.config.default import get_config

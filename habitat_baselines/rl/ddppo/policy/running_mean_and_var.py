@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-import torch.distributed as distrib
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import distributed as distrib
+from torch import nn as nn
+from torch.nn import functional as F
 
 
 class RunningMeanAndVar(nn.Module):

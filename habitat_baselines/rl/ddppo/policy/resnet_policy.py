@@ -7,9 +7,9 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from gym import spaces
+from torch import nn as nn
+from torch.nn import functional as F
 
 from habitat import logger
 from habitat.tasks.nav.nav import (

@@ -69,8 +69,8 @@ def try_cv2_import():
     needs to export environment variable ROS_PATH which will look something like:
     /opt/ros/kinetic/lib/python2.7/dist-packages
     """
-    import sys
     import os
+    import sys
 
     ros_path = os.environ.get("ROS_PATH")
     if ros_path is not None and ros_path in sys.path:

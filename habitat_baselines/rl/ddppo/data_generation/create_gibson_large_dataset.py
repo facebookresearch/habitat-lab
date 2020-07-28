@@ -15,7 +15,7 @@ import gzip
 import json
 import multiprocessing
 import os
-import os.path as osp
+from os import path as osp
 
 import tqdm
 

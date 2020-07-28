@@ -12,10 +12,10 @@ from collections import OrderedDict, defaultdict, deque
 
 import numpy as np
 import torch
-import torch.distributed as distrib
-import torch.nn as nn
 from gym import spaces
 from gym.spaces.dict_space import Dict as SpaceDict
+from torch import distributed as distrib
+from torch import nn as nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger

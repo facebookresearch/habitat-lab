@@ -36,7 +36,7 @@ try:
     # We have yet to find a reason to not use it and
     # you are required to use it when sending a torch.Tensor
     # between processes
-    import torch.multiprocessing as mp
+    from torch import multiprocessing as mp
 except ImportError:
     import multiprocessing as mp
 

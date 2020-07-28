@@ -14,9 +14,9 @@ try:
     import torch
     import torch.distributed
 
-    from habitat_baselines.run import run_exp
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.config.default import get_config
+    from habitat_baselines.run import run_exp
 
     baseline_installed = True
 except ImportError:

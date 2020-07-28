@@ -12,11 +12,11 @@ import numpy as np
 import pytest
 
 import habitat
-import habitat.datasets.pointnav.pointnav_generator as pointnav_generator
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.datasets.pointnav import pointnav_generator as pointnav_generator
 from habitat.datasets.pointnav.pointnav_dataset import (
     DEFAULT_SCENE_PATH_PREFIX,
     PointNavDatasetV1,
