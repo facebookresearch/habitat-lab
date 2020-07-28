@@ -8,10 +8,10 @@ import time
 import pytest
 
 import habitat
-import habitat.datasets.vln.r2r_vln_dataset as r2r_vln_dataset
 from habitat.config.default import get_config
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.datasets.vln import r2r_vln_dataset as r2r_vln_dataset
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.tasks.vln.vln import VLNEpisode
 

@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn as nn
+from torch import optim as optim
 
 EPS_PPO = 1e-5
 

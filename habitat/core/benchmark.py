@@ -43,12 +43,13 @@ class Benchmark:
     ):
         # The modules imported below are specific to habitat-challenge remote evaluation.
         # These modules are not part of the habitat-api repository.
-        import evaluation_pb2
-        import evaluation_pb2_grpc
-        import evalai_environment_habitat
-        import grpc
         import pickle
         import time
+
+        import evalai_environment_habitat
+        import evaluation_pb2
+        import evaluation_pb2_grpc
+        import grpc
 
         time.sleep(60)
 

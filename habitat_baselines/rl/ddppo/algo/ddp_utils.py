@@ -1,14 +1,14 @@
 import os
-import os.path as osp
 import shlex
 import signal
 import subprocess
 import threading
+from os import path as osp
 from typing import Any, Optional, Tuple
 
 import ifcfg
 import torch
-import torch.distributed as distrib
+from torch import distributed as distrib
 
 from habitat import logger
 

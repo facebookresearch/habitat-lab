@@ -7,7 +7,7 @@
 from typing import Tuple
 
 import torch
-import torch.distributed as distrib
+from torch import distributed as distrib
 
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo import PPO
