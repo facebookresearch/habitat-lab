@@ -12,8 +12,7 @@ import habitat
 from habitat.config import Config as CN
 
 try:
-    from habitat_baselines.agents import ppo_agents
-    from habitat_baselines.agents import simple_agents
+    from habitat_baselines.agents import ppo_agents, simple_agents
 
     baseline_installed = True
 except ImportError:
