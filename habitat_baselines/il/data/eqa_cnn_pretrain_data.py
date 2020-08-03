@@ -16,16 +16,16 @@ from habitat.core.simulator import ShortestPathPoint
 class EQACNNPretrainDataset(Dataset):
     """Pytorch dataset for Embodied Q&A's feature-extractor"""
 
-    def __init__(self, env, config, mode="train"):
+    def __init__(self, config, mode="train"):
         """
         Args:
             env (habitat.Env): Habitat environment
             config: Config
             mode: 'train'/'val'
         """
-        self.env = env
-        self.sim = self.env.sim
         self.config = config.TASK_CONFIG
+        self.env = habitat.Env(config=self.config)
+        self.sim = self.env.sim
         self.mode = mode
 
         self.episodes = self.get_all_episodes(config)
