@@ -161,9 +161,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
         config.freeze()
 
-        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(
-            config, mode="val"
-        )
+        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(config, mode="val")
 
         eval_loader = DataLoader(
             eqa_cnn_pretrain_dataset,

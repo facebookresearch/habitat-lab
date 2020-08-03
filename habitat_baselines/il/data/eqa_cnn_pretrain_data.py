@@ -24,24 +24,8 @@ class EQACNNPretrainDataset(Dataset):
             mode: 'train'/'val'
         """
         self.config = config.TASK_CONFIG
-        self.env = habitat.Env(config=self.config)
-        self.sim = self.env.sim
         self.mode = mode
-
-        self.episodes = self.get_all_episodes(config)
-
         self.dataset_path = config.DATASET_PATH
-
-        self.scene_ids = []
-        self.scene_episode_dict = {}
-
-        # preparing a dict that stores list of episodes for each scene
-        for ep in self.episodes:
-            if ep.scene_id not in self.scene_ids:
-                self.scene_ids.append(ep.scene_id)
-                self.scene_episode_dict[ep.scene_id] = [ep.episode_id]
-            else:
-                self.scene_episode_dict[ep.scene_id].append(ep.episode_id)
 
         self.disk_cache_exists = self.check_cache_exists()
 
@@ -54,7 +38,22 @@ class EQACNNPretrainDataset(Dataset):
                 self.make_dataset_dirs()
             except FileExistsError:
                 pass
+
             logger.info("Saving rgb, seg, depth data to database.")
+
+            self.env = habitat.Env(config=self.config)
+            self.episodes = self.get_all_episodes(config)
+
+            self.scene_ids = []
+            self.scene_episode_dict = {}
+
+            # preparing a dict that stores list of episodes for each scene
+            for ep in self.episodes:
+                if ep.scene_id not in self.scene_ids:
+                    self.scene_ids.append(ep.scene_id)
+                    self.scene_episode_dict[ep.scene_id] = [ep.episode_id]
+                else:
+                    self.scene_episode_dict[ep.scene_id].append(ep.episode_id)
 
             self.train_lmdb = lmdb.open(
                 self.dataset_path.format(split="train"),
@@ -92,6 +91,8 @@ class EQACNNPretrainDataset(Dataset):
             elif self.mode == "val":
                 lmdb_env = self.val_lmdb
 
+            self.env.close()
+
         else:
             lmdb_env = lmdb.open(
                 self.dataset_path.format(split=self.mode),
@@ -101,7 +102,6 @@ class EQACNNPretrainDataset(Dataset):
 
         self.lmdb_txn = lmdb_env.begin()
         self.lmdb_cursor = self.lmdb_txn.cursor()
-        self.env.close()
 
     def save_frames(self, pos_queue: List[ShortestPathPoint]) -> None:
         r"""Writes rgb, seg, depth frames to LMDB.

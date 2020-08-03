@@ -8,14 +8,14 @@ import cv2
 import numpy as np
 import torch
 
-from habitat import Config
+from habitat import Config, logger
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.base_trainer import BaseTrainer
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
+    put_vqa_text_on_image,
     tensor_to_bgr_images,
     tensor_to_depth_images,
-    put_vqa_text_on_image,
 )
 from habitat_sim.utils.common import d3_40_colors_rgb
 
@@ -213,9 +213,9 @@ class BaseILTrainer(BaseTrainer):
         prediction = list(ans_vocab_dict.keys())[index]
         ground_truth = list(ans_vocab_dict.keys())[answer]
 
-        print("Question: ", q_string)
-        print("Predicted answer:", prediction)
-        print("Ground-truth answer:", ground_truth)
+        logger.info("Question: ", q_string)
+        logger.info("Predicted answer:", prediction)
+        logger.info("Ground-truth answer:", ground_truth)
 
         self._save_image_results(
             idx, ckpt_idx, images, q_string, prediction, ground_truth
