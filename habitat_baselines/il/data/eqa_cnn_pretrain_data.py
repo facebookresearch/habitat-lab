@@ -79,8 +79,12 @@ class EQACNNPretrainDataset(Dataset):
                     episode = next(
                         ep for ep in self.episodes if ep.episode_id == ep_id
                     )
+                    try:
+                        # TODO: Consider alternative for shortest_paths
+                        pos_queue = episode.shortest_paths[0]
+                    except AttributeError as e:
+                        logger.error(e)
 
-                    pos_queue = episode.shortest_paths[0]
                     random_pos = random.sample(pos_queue, 9)
                     self.save_frames(random_pos)
 
