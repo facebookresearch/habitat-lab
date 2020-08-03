@@ -6,11 +6,9 @@
 
 import time
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-import habitat
 from habitat import logger
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -49,9 +47,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         """
         config = self.config
 
-        env = habitat.Env(config=config.TASK_CONFIG)
-
-        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(env, config)
+        eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(config)
 
         train_loader = DataLoader(
             eqa_cnn_pretrain_dataset,
@@ -165,10 +161,8 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
         config.freeze()
 
-        env = habitat.Env(config=config.TASK_CONFIG)
-
         eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(
-            env, config, mode="val"
+            config, mode="val"
         )
 
         eval_loader = DataLoader(
@@ -193,9 +187,6 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         depth_loss = torch.nn.SmoothL1Loss()
         ae_loss = torch.nn.SmoothL1Loss()
         seg_loss = torch.nn.CrossEntropyLoss()
-
-        np.random.seed(config.EVAL_SEG_COLORS_SEED)
-        self.colors = np.random.randint(255, size=(41, 3))
 
         t = 0
         avg_loss = 0.0

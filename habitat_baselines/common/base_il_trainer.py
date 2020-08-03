@@ -17,6 +17,7 @@ from habitat_baselines.common.utils import (
     tensor_to_depth_images,
     put_vqa_text_on_image,
 )
+from habitat_sim.utils.common import d3_40_colors_rgb
 
 
 class BaseILTrainer(BaseTrainer):
@@ -250,11 +251,11 @@ class BaseILTrainer(BaseTrainer):
 
         seg_path = self.results_path.format(split="val", type="seg")
 
-        seg_img = seg.cpu().numpy()
-        out_seg_img = torch.argmax(out_seg, 0).cpu().numpy()
+        seg_img = seg.cpu().numpy() % 40
+        out_seg_img = torch.argmax(out_seg, 0).cpu().numpy() % 40
 
-        seg_img_color = self.colors[seg_img]
-        out_seg_img_color = self.colors[out_seg_img]
+        seg_img_color = d3_40_colors_rgb[seg_img]
+        out_seg_img_color = d3_40_colors_rgb[out_seg_img]
 
         cv2.imwrite(
             os.path.join(seg_path, self.result_id + "_gt.jpg"), seg_img_color
