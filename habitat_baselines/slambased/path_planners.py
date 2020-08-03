@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from matplotlib import pyplot as plt
+from torch import nn as nn
+from torch.nn import functional as F
 
 from habitat_baselines.slambased.utils import generate_2dgrid
 

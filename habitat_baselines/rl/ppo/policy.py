@@ -6,8 +6,8 @@
 import abc
 
 import torch
-import torch.nn as nn
 from gym import spaces
+from torch import nn as nn
 
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,

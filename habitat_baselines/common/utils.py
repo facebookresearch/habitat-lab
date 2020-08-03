@@ -14,8 +14,8 @@ from typing import Dict, List, Optional, Union
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 from gym.spaces import Box
+from torch import nn as nn
 
 from habitat import logger
 from habitat.utils.visualizations.utils import images_to_video

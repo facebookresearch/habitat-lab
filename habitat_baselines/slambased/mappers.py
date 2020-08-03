@@ -6,7 +6,7 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn as nn
 
 from habitat_baselines.slambased.reprojection import (
     get_map_size_in_cells,

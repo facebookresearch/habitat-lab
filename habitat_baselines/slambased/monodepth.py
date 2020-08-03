@@ -14,15 +14,14 @@ WACV 2019
 
 import math
 import os
-import pdb
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.nn.parallel
-import torch.utils.model_zoo as model_zoo
 from PIL import Image
+from torch import nn as nn
+from torch.nn import functional as F
+from torch.utils import model_zoo as model_zoo
 from torchvision import transforms, utils
 
 r"""ResNet code gently borrowed from
