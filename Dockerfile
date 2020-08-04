@@ -42,6 +42,7 @@ RUN conda install \
 
 # Conda environment
 RUN conda create -n habitat
+WORKDIR /opt
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
