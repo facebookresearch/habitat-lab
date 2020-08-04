@@ -47,11 +47,10 @@ SHELL ["/bin/bash", "-c"]
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-ARG SIM_INSTALL_OPTION="--headless"
 RUN source activate habitat && \
     cd habitat-sim && \
     pip install -r requirements.txt && \
-    pip install -e . --install-option="$SIM_INSTALL_OPTION"
+    python setup.py install --headless
 
 # Install challenge specific habitat-api
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
