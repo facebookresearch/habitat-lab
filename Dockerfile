@@ -1,5 +1,5 @@
 # Base image
-FROM nvidia/cudagl:10.1-devel-ubuntu16.04
+FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
 # Setup basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
