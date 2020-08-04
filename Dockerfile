@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     vim \
     ca-certificates \
+    cmake \
     libjpeg-dev \
     libpng-dev \
     libglfw3-dev \
@@ -37,15 +38,8 @@ RUN conda install \
         mkl-include \
     && conda clean -ya
 
-# Install cmake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh
-RUN mkdir /opt/cmake
-RUN sh /cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
-RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
-RUN cmake --version
-
 # Conda environment
-RUN conda create -n habitat cmake=3.14.0
+RUN conda create -n habitat
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
