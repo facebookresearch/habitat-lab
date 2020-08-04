@@ -28,6 +28,7 @@ RUN apt-get update && \
         cmake \
         curl \
         git \
+        libbullet-dev \
         libegl1-mesa-dev \
         libglfw3-dev \
         libglm-dev \
@@ -70,7 +71,7 @@ RUN git clone --branch master \
 RUN source activate habitat && \
     cd habitat-sim && \
     pip install -r requirements.txt && \
-    python setup.py install --headless
+    python setup.py install --headless --bullet
 
 # Install challenge specific habitat-api
 COPY ./ ./habitat-api
