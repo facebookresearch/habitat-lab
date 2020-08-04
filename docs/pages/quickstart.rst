@@ -106,7 +106,7 @@ you can install using: :sh:`pip install opencv-python`.
         print("Episode finished after {} steps.".format(count_steps))
 
         if (
-            action == habitat.SimulatorActions.stop
+            action == HabitatSimActions.STOP
             and observations["pointgoal_with_gps_compass"][0] < 0.2
         ):
             print("you successfully navigated to destination point")
@@ -131,7 +131,7 @@ Below is a demo of what the example output will look like:
 .. image:: quickstart.png
 
 For more examples refer to
-:gh:`Habitat-API examples <facebookresearch/habitat-sim/tree/master/examples>`
+:gh:`Habitat-API examples <facebookresearch/habitat-api/tree/master/examples>`
 and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/master/examples>`.
 
 
