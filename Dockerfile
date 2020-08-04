@@ -43,24 +43,22 @@ RUN conda install \
 # Conda environment
 RUN conda create -n habitat
 WORKDIR /opt
+SHELL ["/bin/bash", "-c"]
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
 ARG SIM_INSTALL_OPTION="--headless"
-RUN . activate habitat && \
+RUN source activate habitat && \
     cd habitat-sim && \
     pip install -r requirements.txt && \
-    pip install -e . \
-        --install-option="$SIM_INSTALL_OPTION"
+    pip install -e . --install-option="$SIM_INSTALL_OPTION"
 
 # Install challenge specific habitat-api
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
-ARG API_INSTALL_OPTION=""
-RUN . activate habitat && \
+RUN source activate habitat && \
     cd habitat-api && \
     pip install -r requirements.txt && \
-    pip install -e . \
-        --install-option="$API_INSTALL_OPTION"
+    pip install -e .
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
@@ -69,6 +67,7 @@ ENV MAGNUM_LOG="quiet"
 # setup entrypoint
 COPY ./entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
+SHELL ["/bin/sh", "-c"]
 CMD ["bash"]
 
 # WORKDIR /opt/habitat-api
