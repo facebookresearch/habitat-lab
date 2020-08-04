@@ -71,7 +71,7 @@ RUN git clone --branch master \
 RUN source activate habitat && \
     cd habitat-sim && \
     pip install -r requirements.txt && \
-    python setup.py install --headless --bullet
+    python setup.py install --headless --with-cuda --bullet
 
 # Install challenge specific habitat-api
 COPY ./ ./habitat-api
