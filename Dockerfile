@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=opengl \
     /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
     /usr/share/glvnd/egl_vendor.d/10_nvidia.json
-ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
 ENV NVIDIA_DRIVER_CAPABILITIES \
     ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
 
