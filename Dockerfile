@@ -64,14 +64,15 @@ WORKDIR /opt
 SHELL ["/bin/bash", "-c"]
 
 # Setup habitat-sim
-RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
+RUN git clone --branch master \
+        https://github.com/facebookresearch/habitat-sim.git
 RUN source activate habitat && \
     cd habitat-sim && \
     pip install -r requirements.txt && \
     python setup.py install --headless
 
 # Install challenge specific habitat-api
-RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
+COPY ./ ./habitat-api
 RUN source activate habitat && \
     cd habitat-api && \
     pip install -r requirements.txt && \
