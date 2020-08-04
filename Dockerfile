@@ -70,3 +70,7 @@ ENV MAGNUM_LOG="quiet"
 COPY ./entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
+
+# WORKDIR /opt/habitat-api
+# RUN wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip && \
+#     unzip habitat-test-scenes.zip
