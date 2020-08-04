@@ -1,7 +1,25 @@
+FROM nvidia/opengl:1.0-glvnd-devel-ubuntu18.04 as opengl
+FROM nvidia/cuda:10.1-devel-ubuntu18.04 as cudagl
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    	libglvnd0 \
+        libgl1 \
+        libglx0 \
+        libegl1 \
+        libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=opengl \
+    /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
+    /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
+
 # Base image
-FROM nvidia/cuda:10.1-devel-ubuntu18.04
+FROM cudagl
 
 # Setup basic packages
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
