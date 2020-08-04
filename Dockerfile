@@ -45,11 +45,17 @@ RUN conda create -n habitat
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless"
+RUN . activate habitat && \
+    cd habitat-sim && \
+    pip install -r requirements.txt && \
+    python setup.py install --headless
 
 # Install challenge specific habitat-api
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
-RUN /bin/bash -c ". activate habitat; cd habitat-api; pip install -e ."
+RUN . activate habitat && \
+    cd habitat-api && \
+    pip install -r requirements.txt && \
+    pip install -e .
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
