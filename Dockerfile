@@ -22,13 +22,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install conda
-RUN curl -o ~/miniconda.sh -O  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh  &&\ 
-    chmod +x ~/miniconda.sh &&\
-    ~/miniconda.sh -b -p /opt/conda &&\
-    rm ~/miniconda.sh &&\
-    /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include &&\
-    /opt/conda/bin/conda clean -ya
+RUN curl -o ~/miniconda.sh \
+        -O  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
+RUN conda install \
+        numpy \
+        pyyaml \
+        scipy \
+        ipython \
+        mkl \
+        mkl-include \
+    && conda clean -ya
 
 # Install cmake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh
