@@ -5,23 +5,23 @@ FROM nvidia/cuda:10.1-devel-ubuntu18.04
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
-        git \
-        curl \
-        vim \
         ca-certificates \
         cmake \
-        libjpeg-dev \
-        libpng-dev \
+        curl \
+        git \
+        libegl1-mesa-dev \
         libglfw3-dev \
         libglm-dev \
+        libjpeg-dev \
+        libomp-dev \
+        libpng-dev \
         libsm6 \
         libx11-dev \
-        libomp-dev \
-        libegl1-mesa-dev \
         pkg-config \
+        unzip \
+        vim \
         wget \
         zip \
-        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install conda
