@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libglfw3-dev \
     libglm-dev \
+    libsm6 \
     libx11-dev \
     libomp-dev \
     libegl1-mesa-dev \
