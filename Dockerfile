@@ -32,12 +32,12 @@ RUN curl -o ~/miniconda.sh \
     rm ~/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
 RUN conda install \
-        numpy \
-        pyyaml \
-        scipy \
         ipython \
         mkl \
         mkl-include \
+        numpy \
+        pyyaml \
+        scipy \
     && conda clean -ya
 
 # Conda environment
