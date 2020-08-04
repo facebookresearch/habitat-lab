@@ -48,7 +48,7 @@ def _strafe_impl(
     )
 
     rotation = habitat_sim.utils.quat_from_angle_axis(
-        np.deg2rad(strafe_angle), habitat_sim.geo.UP
+        strafe_angle, habitat_sim.geo.UP
     )
     move_ax = habitat_sim.utils.quat_rotate_vector(rotation, forward_ax)
 
