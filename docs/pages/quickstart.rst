@@ -28,7 +28,7 @@ Habitat is a platform for embodied AI research that consists of:
     :gh:`[github-repo] <facebookresearch/habitat-api>`
 
 For installing Habitat-Sim and Habitat-API follow instructions
-:gh:`here <facebookresearch/habitat-api#installation>`.
+`here <https://github.com/facebookresearch/habitat-api#installation>`_.
 
 `Example`_
 ==========
@@ -40,7 +40,7 @@ keys.
 
 For running this example both Habitat-Sim and Habitat-API should be installed
 successfully. The data for scene should also be downloaded (steps to do this
-are provided in the :gh:`installation instructions <facebookresearch/habitat-api#installation>`
+are provided in the `installation instructions <https://github.com/facebookresearch/habitat-api#installation>`_
 of Habitat-API). Running the code below also requires installation of cv2 which
 you can install using: :sh:`pip install opencv-python`.
 
