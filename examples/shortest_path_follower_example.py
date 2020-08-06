@@ -36,36 +36,16 @@ class SimpleRLEnv(habitat.RLEnv):
         return self.habitat_env.get_metrics()
 
 
-def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(
-        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+def draw_top_down_map(info, output_size):
+    return maps.colorize_draw_agent_and_fit_to_height(
+        info["top_down_map"], output_size
     )
-    original_map_size = top_down_map.shape[:2]
-    map_scale = np.array(
-        (1, original_map_size[1] * 1.0 / original_map_size[0])
-    )
-    new_map_size = np.round(output_size * map_scale).astype(np.int32)
-    # OpenCV expects w, h but map size is in h, w
-    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
-
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(
-        map_agent_pos * new_map_size / original_map_size
-    ).astype(np.int32)
-    top_down_map = maps.draw_agent(
-        top_down_map,
-        map_agent_pos,
-        heading - np.pi / 2,
-        agent_radius_px=top_down_map.shape[0] / 40,
-    )
-    return top_down_map
 
 
 def shortest_path_example():
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-    config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
@@ -95,9 +75,7 @@ def shortest_path_example():
 
                 observations, reward, done, info = env.step(best_action)
                 im = observations["rgb"]
-                top_down_map = draw_top_down_map(
-                    info, observations["heading"][0], im.shape[0]
-                )
+                top_down_map = draw_top_down_map(info, im.shape[0])
                 output_im = np.concatenate((im, top_down_map), axis=1)
                 images.append(output_im)
             images_to_video(images, dirname, "trajectory")

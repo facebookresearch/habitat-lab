@@ -39,7 +39,7 @@ from habitat.utils.visualizations import fog_of_war, maps
 cv2 = try_cv2_import()
 
 
-MAP_THICKNESS_SCALAR: int = 1250
+MAP_THICKNESS_SCALAR: int = 128
 
 
 def merge_sim_episode_config(
@@ -672,62 +672,45 @@ class TopDownMap(Measure):
         self._config = config
         self._grid_delta = config.MAP_PADDING
         self._step_count = None
-        self._map_resolution = (config.MAP_RESOLUTION, config.MAP_RESOLUTION)
-        self._num_samples = config.NUM_TOPDOWN_MAP_SAMPLE_POINTS
+        self._map_resolution = config.MAP_RESOLUTION
         self._ind_x_min = None
         self._ind_x_max = None
         self._ind_y_min = None
         self._ind_y_max = None
         self._previous_xy_location = None
-        self._coordinate_min = maps.COORDINATE_MIN
-        self._coordinate_max = maps.COORDINATE_MAX
         self._top_down_map = None
         self._shortest_path_points = None
-        self._cell_scale = (
-            self._coordinate_max - self._coordinate_min
-        ) / self._map_resolution[0]
         self.line_thickness = int(
-            np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
+            np.round(self._map_resolution * 2 / MAP_THICKNESS_SCALAR)
         )
         self.point_padding = 2 * int(
-            np.ceil(self._map_resolution[0] / MAP_THICKNESS_SCALAR)
+            np.ceil(self._map_resolution / MAP_THICKNESS_SCALAR)
         )
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "top_down_map"
 
-    def _check_valid_nav_point(self, point: List[float]):
-        self._sim.is_navigable(point)
-
     def get_original_map(self):
-        top_down_map = maps.get_topdown_map(
+        top_down_map = maps.get_topdown_map_from_sim(
             self._sim,
-            self._map_resolution,
-            self._num_samples,
-            self._config.DRAW_BORDER,
+            map_resolution=self._map_resolution,
+            draw_border=self._config.DRAW_BORDER,
         )
-
-        range_x = np.where(np.any(top_down_map, axis=1))[0]
-        range_y = np.where(np.any(top_down_map, axis=0))[0]
-
-        self._ind_x_min = range_x[0]
-        self._ind_x_max = range_x[-1]
-        self._ind_y_min = range_y[0]
-        self._ind_y_max = range_y[-1]
 
         if self._config.FOG_OF_WAR.DRAW:
             self._fog_of_war_mask = np.zeros_like(top_down_map)
+        else:
+            self._fog_of_war_mask = None
 
         return top_down_map
 
     def _draw_point(self, position, point_type):
         t_x, t_y = maps.to_grid(
-            position[0],
             position[2],
-            self._coordinate_min,
-            self._coordinate_max,
-            self._map_resolution,
+            position[0],
+            self._top_down_map.shape[0:2],
+            sim=self._sim,
         )
         self._top_down_map[
             t_x - self.point_padding : t_x + self.point_padding + 1,
@@ -788,11 +771,10 @@ class TopDownMap(Measure):
 
                     map_corners = [
                         maps.to_grid(
-                            p[0],
                             p[2],
-                            self._coordinate_min,
-                            self._coordinate_max,
-                            self._map_resolution,
+                            p[0],
+                            self._top_down_map.shape[0:2],
+                            sim=self._sim,
                         )
                         for p in corners
                     ]
@@ -815,11 +797,7 @@ class TopDownMap(Measure):
             )
             self._shortest_path_points = [
                 maps.to_grid(
-                    p[0],
-                    p[2],
-                    self._coordinate_min,
-                    self._coordinate_max,
-                    self._map_resolution,
+                    p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim
                 )
                 for p in self._shortest_path_points
             ]
@@ -836,11 +814,10 @@ class TopDownMap(Measure):
         self._top_down_map = self.get_original_map()
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
-            agent_position[0],
             agent_position[2],
-            self._coordinate_min,
-            self._coordinate_max,
-            self._map_resolution,
+            agent_position[0],
+            self._top_down_map.shape[0:2],
+            sim=self._sim,
         )
         self._previous_xy_location = (a_y, a_x)
 
@@ -858,37 +835,16 @@ class TopDownMap(Measure):
                 episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
             )
 
-    def _clip_map(self, _map):
-        return _map[
-            self._ind_x_min
-            - self._grid_delta : self._ind_x_max
-            + self._grid_delta,
-            self._ind_y_min
-            - self._grid_delta : self._ind_y_max
-            + self._grid_delta,
-        ]
-
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
         house_map, map_agent_x, map_agent_y = self.update_map(
             self._sim.get_agent_state().position
         )
 
-        # Rather than return the whole map which may have large empty regions,
-        # only return the occupied part (plus some padding).
-        clipped_house_map = self._clip_map(house_map)
-
-        clipped_fog_of_war_map = None
-        if self._config.FOG_OF_WAR.DRAW:
-            clipped_fog_of_war_map = self._clip_map(self._fog_of_war_mask)
-
         self._metric = {
-            "map": clipped_house_map,
-            "fog_of_war_mask": clipped_fog_of_war_map,
-            "agent_map_coord": (
-                map_agent_x - (self._ind_x_min - self._grid_delta),
-                map_agent_y - (self._ind_y_min - self._grid_delta),
-            ),
+            "map": house_map,
+            "fog_of_war_mask": self._fog_of_war_mask,
+            "agent_map_coord": (map_agent_x, map_agent_y),
             "agent_angle": self.get_polar_angle(),
         }
 
@@ -902,16 +858,15 @@ class TopDownMap(Measure):
         )
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        x_y_flip = -np.pi / 2
-        return np.array(phi) + x_y_flip
+        z_neg_z_flip = np.pi
+        return np.array(phi) + z_neg_z_flip
 
     def update_map(self, agent_position):
         a_x, a_y = maps.to_grid(
-            agent_position[0],
             agent_position[2],
-            self._coordinate_min,
-            self._coordinate_max,
-            self._map_resolution,
+            agent_position[0],
+            self._top_down_map.shape[0:2],
+            sim=self._sim,
         )
         # Don't draw over the source point
         if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
@@ -919,9 +874,7 @@ class TopDownMap(Measure):
                 self._step_count * 245 // self._config.MAX_EPISODE_STEPS, 245
             )
 
-            thickness = int(
-                np.round(self._map_resolution[0] * 2 / MAP_THICKNESS_SCALAR)
-            )
+            thickness = self.line_thickness
             cv2.line(
                 self._top_down_map,
                 self._previous_xy_location,
@@ -944,8 +897,9 @@ class TopDownMap(Measure):
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                * max(self._map_resolution)
-                / (self._coordinate_max - self._coordinate_min),
+                / maps.calculate_meters_per_pixel(
+                    self._map_resolution, sim=self._sim
+                ),
             )
 
 
