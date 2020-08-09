@@ -2,7 +2,6 @@ import os
 import random
 from typing import List
 
-import cv2
 import lmdb
 import numpy as np
 from torch.utils.data import Dataset
@@ -24,61 +23,43 @@ class EQACNNPretrainDataset(Dataset):
             mode: 'train'/'val'
         """
         self.config = config.TASK_CONFIG
-        self.mode = mode
-        self.dataset_path = config.DATASET_PATH
+        self.dataset_path = config.DATASET_PATH.format(split=mode)
 
-        self.disk_cache_exists = self.check_cache_exists()
-
-        if not self.disk_cache_exists:
+        if not self.cache_exists():
             """
             for each scene > load scene in memory > save frames for each
-            episode corresponding to each scene
+            episode corresponding to that scene
             """
-            try:
-                self.make_dataset_dirs()
-            except FileExistsError:
-                pass
-
-            logger.info("Saving rgb, seg, depth data to database.")
-
             self.env = habitat.Env(config=self.config)
-            self.episodes = self.get_all_episodes(config)
+            self.episodes = self.env._dataset.episodes
+
+            logger.info(
+                "Dataset cache not found. Saving rgb, seg, depth scene images"
+            )
+            logger.info(
+                "Number of {} episodes: {}".format(mode, len(self.episodes))
+            )
 
             self.scene_ids = []
             self.scene_episode_dict = {}
 
-            # preparing a dict that stores list of episodes for each scene
-            for ep in self.episodes:
-                if ep.scene_id not in self.scene_ids:
-                    self.scene_ids.append(ep.scene_id)
-                    self.scene_episode_dict[ep.scene_id] = [ep.episode_id]
+            # dict for storing list of episodes for each scene
+            for episode in self.episodes:
+                if episode.scene_id not in self.scene_ids:
+                    self.scene_ids.append(episode.scene_id)
+                    self.scene_episode_dict[episode.scene_id] = [episode]
                 else:
-                    self.scene_episode_dict[ep.scene_id].append(ep.episode_id)
+                    self.scene_episode_dict[episode.scene_id].append(episode)
 
-            self.train_lmdb = lmdb.open(
-                self.dataset_path.format(split="train"),
-                map_size=int(1e11),
-                writemap=True,
+            self.lmdb_env = lmdb.open(
+                self.dataset_path, map_size=int(1e11), writemap=True,
             )
 
-            self.val_lmdb = lmdb.open(
-                self.dataset_path.format(split="val"),
-                map_size=int(0.5e11),
-                writemap=True,
-            )
-
-            self.train_count = -1
-            self.val_count = -1
+            self.count = 0
 
             for scene in tqdm(list(self.scene_episode_dict.keys())):
-
                 self.load_scene(scene)
-
-                for ep_id in tqdm(self.scene_episode_dict[scene]):
-
-                    episode = next(
-                        ep for ep in self.episodes if ep.episode_id == ep_id
-                    )
+                for episode in tqdm(self.scene_episode_dict[scene]):
                     try:
                         # TODO: Consider alternative for shortest_paths
                         pos_queue = episode.shortest_paths[0]
@@ -89,26 +70,21 @@ class EQACNNPretrainDataset(Dataset):
                     self.save_frames(random_pos)
 
             logger.info("EQA-CNN-PRETRAIN database ready!")
-
-            if self.mode == "train":
-                lmdb_env = self.train_lmdb
-            elif self.mode == "val":
-                lmdb_env = self.val_lmdb
-
             self.env.close()
 
         else:
-            lmdb_env = lmdb.open(
-                self.dataset_path.format(split=self.mode),
-                readonly=True,
-                lock=False,
+            logger.info("Dataset cache found.")
+            self.lmdb_env = lmdb.open(
+                self.dataset_path, readonly=True, lock=False,
             )
 
-        self.lmdb_txn = lmdb_env.begin()
-        self.lmdb_cursor = self.lmdb_txn.cursor()
+        self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 3)
+        self.lmdb_env.close()
+        self.lmdb_env = None
 
     def save_frames(self, pos_queue: List[ShortestPathPoint]) -> None:
-        r"""Writes rgb, seg, depth frames to LMDB.
+        r"""
+        Writes rgb, seg, depth frames to LMDB.
         """
 
         for pos in pos_queue:
@@ -135,63 +111,21 @@ class EQACNNPretrainDataset(Dataset):
             seg[seg == -1] = 0
             seg = seg.astype("uint8")
 
-            if random.random() < 0.8:
-                lmdb_env = self.train_lmdb
-                self.train_count += 1
-                count = self.train_count
-            else:
-                lmdb_env = self.val_lmdb
-                self.val_count += 1
-                count = self.val_count
-
-            sample_key = "{0:0=6d}".format(count)
-            with lmdb_env.begin(write=True) as txn:
+            sample_key = "{0:0=6d}".format(self.count)
+            with self.lmdb_env.begin(write=True) as txn:
                 txn.put((sample_key + "_rgb").encode(), rgb.tobytes())
                 txn.put((sample_key + "_depth").encode(), depth.tobytes())
                 txn.put((sample_key + "_seg").encode(), seg.tobytes())
 
-    def get_frames(self, frames_path, num=0):
-        r"""Fetches frames from disk.
-        """
-        frames = []
-        for img in sorted(os.listdir(frames_path))[-num:]:
-            img_path = os.path.join(frames_path, img)
-            img = cv2.imread(img_path)
-            img = img.transpose(2, 0, 1)
-            img = img / 255.0
-            frames.append(img)
-        return np.array(frames)
+            self.count += 1
 
-    def get_all_episodes(self, config) -> List:
-        r"""Fetches all episodes (train, val) from EQAMP3D dataset
-        """
-
-        train_episodes = self.env._dataset.episodes
-
-        config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
-        config.freeze()
-
-        self.env.close()
-        self.env = habitat.Env(config.TASK_CONFIG)
-
-        val_episodes = self.env._dataset.episodes
-        for ep in val_episodes:
-            # most val episodes share 'episode_id' with train episodes
-            ep.episode_id = str(int(ep.episode_id) + 11796)
-        all_episodes = train_episodes + val_episodes
-
-        return all_episodes
-
-    def make_dataset_dirs(self) -> None:
-        for split in ["train", "val"]:
-            os.makedirs(self.dataset_path.format(split=split))
-
-    def check_cache_exists(self) -> bool:
-        for split in ["train", "val"]:
-            if not os.path.exists(self.dataset_path.format(split=split)):
-                return False
-        return True
+    def cache_exists(self) -> bool:
+        if os.path.exists(self.dataset_path):
+            if os.listdir(self.dataset_path):
+                return True
+        else:
+            os.makedirs(self.dataset_path)
+        return False
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
@@ -200,7 +134,7 @@ class EQACNNPretrainDataset(Dataset):
         self.env.sim.reconfigure(self.config.SIMULATOR)
 
     def __len__(self) -> int:
-        return int(self.lmdb_txn.stat()["entries"] / 3)
+        return self.dataset_length
 
     def __getitem__(self, idx: int):
         r"""Returns batches to trainer.
@@ -208,6 +142,13 @@ class EQACNNPretrainDataset(Dataset):
         batch: (rgb, depth, seg)
 
         """
+        if self.lmdb_env is None:
+            self.lmdb_env = lmdb.open(
+                self.dataset_path, map_size=int(1e11), writemap=True,
+            )
+            self.lmdb_txn = self.lmdb_env.begin()
+            self.lmdb_cursor = self.lmdb_txn.cursor()
+
         rgb_idx = "{0:0=6d}_rgb".format(idx)
         rgb_binary = self.lmdb_cursor.get(rgb_idx.encode())
         rgb_np = np.frombuffer(rgb_binary, dtype="uint8")
