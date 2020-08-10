@@ -55,7 +55,7 @@ Results from evaluation are stored in `data/eqa/eqa_cnn_pretrain/results/val`.
 
 ### Pre-trained model
 
-Pre-trained EQA-CNN-Pretrain model can be downloaded from [here](https://drive.google.com/file/d/1bZbv6LVsxRMStZ7CjbnCFZIo1mnbuRXG/view?usp=sharing). 
+Pre-trained EQA-CNN-Pretrain model can be downloaded from [here](https://drive.google.com/drive/folders/1yO8Pnyt-oxqAz0ozxwyI3OcaFRiKZKgd?usp=sharing). 
 
 After downloading the pre-trained model, it's path needs to be added to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation. 
 
