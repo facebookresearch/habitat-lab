@@ -33,49 +33,40 @@
 # @title Colab Setup and Imports { display-mode: "form" }
 # @markdown (double click to see the code)
 
-import os, sys
-
-try:
-    import habitat_sim
-except ImportError:
-    import sys, os
-
-    if "google.colab" in sys.modules:
-        # ADDS conda installed libraries to the PYTHONPATH
-        conda_path = "/usr/local/lib/python3.6/site-packages/"
-        user_path = "/root/.local/lib/python3.6/site-packages/"
-        sys.path.insert(0, conda_path)
-        sys.path.insert(0, user_path)
-os.chdir("/content/habitat-sim")
-
-import habitat_sim.utils.common as utils
-from habitat_sim.utils import viz_utils as vut
-import magnum as mn
 import math
-
+import os
 import random
+import sys
 
-# %matplotlib inline
-import matplotlib.pyplot as plt
-
+import magnum as mn
 import numpy as np
 from gym import spaces
+
+# %matplotlib inline
+from matplotlib import pyplot as plt
+
+import habitat_sim
+from habitat_sim.utils import common as utils
+from habitat_sim.utils import viz_utils as vut
+
+# %cd "/content/habitat-api"
+
 
 if "google.colab" in sys.modules:
     # This tells imageio to use the system FFMPEG that has hardware acceleration.
     os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 
-sys.path.append("/content/habitat-api/")
+
+from PIL import Image
 
 import habitat
-from habitat.core.embodied_task import EmbodiedTask
-from habitat.tasks.nav.nav import NavigationTask
-from habitat.core.registry import registry
-from habitat.core.logging import logger
-
 import habitat_baselines
-from habitat_baselines.config.default import get_config as get_baselines_config
+from habitat.core.embodied_task import EmbodiedTask
+from habitat.core.logging import logger
+from habitat.core.registry import registry
+from habitat.tasks.nav.nav import NavigationTask
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.config.default import get_config as get_baselines_config
 
 # %%
 # @title Define Observation Display Utility Function { display-mode: "form" }
@@ -84,7 +75,6 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 
 # @markdown (double click to see the code)
 
-from PIL import Image
 
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
 def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
@@ -117,7 +107,7 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
         ax.axis("off")
         ax.set_title(titles[i])
         plt.imshow(data)
-    plt.show()
+    plt.show(block=False)
 
 
 # %% [markdown]
@@ -128,7 +118,7 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
 
 # %%
 config = habitat.get_config(
-    config_paths="/content/habitat-api/configs/test/habitat_all_sensors_test.yaml"
+    config_paths="./configs/test/habitat_all_sensors_test.yaml"
 )
 
 env = habitat.Env(config=config)
@@ -167,7 +157,7 @@ print(env.get_metrics())
 
 # %%
 config = get_baselines_config(
-    "/content/habitat-api/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
+    "./habitat-api/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
 )
 
 # %%
@@ -196,13 +186,15 @@ trainer.train()
 # example tensorboard visualization
 # for more details refer to [link](https://github.com/facebookresearch/habitat-api/tree/master/habitat_baselines#additional-utilities).
 
-from IPython import display
+try:
+    from IPython import display
 
-with open(
-    "/content/habitat-api/res/img/tensorboard_video_demo.gif", "rb"
-) as f:
-    display.display(display.Image(data=f.read(), format="png"))
-
+    with open(
+        "/content/habitat-api/res/img/tensorboard_video_demo.gif", "rb"
+    ) as f:
+        display.display(display.Image(data=f.read(), format="png"))
+except ImportError:
+    pass
 # %% [markdown]
 # ## Key Concepts
 #
@@ -240,7 +232,7 @@ with open(
 
 # %%
 config = habitat.get_config(
-    config_paths="/content/habitat-api/configs/test/habitat_all_sensors_test.yaml"
+    config_paths="./configs/test/habitat_all_sensors_test.yaml"
 )
 
 
@@ -319,7 +311,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 # %%
 config = habitat.get_config(
-    config_paths="/content/habitat-api/configs/test/habitat_all_sensors_test.yaml"
+    config_paths="./configs/test/habitat_all_sensors_test.yaml"
 )
 
 config.defrost()
@@ -383,11 +375,14 @@ class ForwardOnlyAgent(habitat.Agent):
 # %%
 # @title Sim2Real with Habitat { display-mode: "form" }
 
-from IPython.display import HTML
+try:
+    from IPython.display import HTML
 
-HTML(
-    '<iframe width="560" height="315" src="https://www.youtube.com/embed/Hun2rhgnWLU" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
-)
+    HTML(
+        '<iframe width="560" height="315" src="https://www.youtube.com/embed/Hun2rhgnWLU" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+    )
+except ImportError:
+    pass
 
 # %% [markdown]
 # Deploy habitat-sim trained models on real robots with the [habitat-pyrobot bridge](https://github.com/facebookresearch/habitat-api/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/sims/pyrobot/pyrobot.py)
