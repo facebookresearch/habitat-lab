@@ -1,53 +1,95 @@
+FROM nvidia/opengl:1.0-glvnd-devel-ubuntu18.04 as opengl
+FROM nvidia/cuda:10.1-devel-ubuntu18.04 as cudagl
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    	libglvnd0 \
+        libgl1 \
+        libglx0 \
+        libegl1 \
+        libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=opengl \
+    /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
+    /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
+
 # Base image
-FROM nvidia/cudagl:10.1-devel-ubuntu16.04
+FROM cudagl
 
 # Setup basic packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    curl \
-    vim \
-    ca-certificates \
-    libjpeg-dev \
-    libpng-dev \
-    libglfw3-dev \
-    libglm-dev \
-    libx11-dev \
-    libomp-dev \
-    libegl1-mesa-dev \
-    pkg-config \
-    wget \
-    zip \
-    unzip &&\
-    rm -rf /var/lib/apt/lists/*
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        git \
+        libbullet-dev \
+        libegl1-mesa-dev \
+        libglfw3-dev \
+        libglm-dev \
+        libjpeg-dev \
+        libomp-dev \
+        libpng-dev \
+        libsm6 \
+        libx11-dev \
+        pkg-config \
+        unzip \
+        vim \
+        wget \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install conda
-RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh  &&\
-    chmod +x ~/miniconda.sh &&\
-    ~/miniconda.sh -b -p /opt/conda &&\
-    rm ~/miniconda.sh &&\
-    /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include &&\
-    /opt/conda/bin/conda clean -ya
+RUN curl -o ~/miniconda.sh \
+        -O  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
-
-# Install cmake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh
-RUN mkdir /opt/cmake
-RUN sh /cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
-RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
-RUN cmake --version
+RUN conda install \
+        ipython \
+        mkl \
+        mkl-include \
+        numpy \
+        pyyaml \
+        scipy \
+    && conda clean -ya
 
 # Conda environment
-RUN conda create -n habitat python=3.6 cmake=3.14.0
+RUN conda create -n habitat
+WORKDIR /opt
+SHELL ["/bin/bash", "-c"]
 
 # Setup habitat-sim
-RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless"
+RUN git clone --branch master \
+        https://github.com/facebookresearch/habitat-sim.git
+RUN source activate habitat && \
+    cd habitat-sim && \
+    pip install -r requirements.txt && \
+    python setup.py install --headless --with-cuda --bullet
 
 # Install challenge specific habitat-api
-RUN git clone --branch stable https://github.com/facebookresearch/habitat-api.git
-RUN /bin/bash -c ". activate habitat; cd habitat-api; pip install -e ."
+COPY ./ ./habitat-api
+RUN source activate habitat && \
+    cd habitat-api && \
+    pip install -r requirements.txt && \
+    pip install -e .
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
 ENV MAGNUM_LOG="quiet"
+
+# setup entrypoint
+COPY ./entrypoint.sh /
+ENTRYPOINT ["/entrypoint.sh"]
+SHELL ["/bin/sh", "-c"]
+CMD ["bash"]
+
+# WORKDIR /opt/habitat-api
+# RUN wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip && \
+#     unzip habitat-test-scenes.zip
