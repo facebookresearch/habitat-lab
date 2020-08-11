@@ -21,6 +21,10 @@ EVAL:
 RL:
   SUCCESS_REWARD: 2.5
   SLACK_REWARD: -1e-3
+
+  POLICY:
+    name: "PointNavResNetPolicy"
+
   PPO:
     # ppo params
     clip_param: 0.2
