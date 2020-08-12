@@ -156,7 +156,7 @@ if __name__ == "__main__":
     env.close()
 
 # %%
-print(env.get_metrics())
+    print(env.get_metrics())
 
 # %% [markdown]
 # ## RL Training
