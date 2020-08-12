@@ -21,7 +21,7 @@ def test_demo_notebook():
             "Please download the Matterport3D PointNav val dataset and Matterport3D val scenes"
         )
     else:
-        pytest.main(["--nbval-lax", "notebooks/habitat-api-demo.ipynb"])
+        pytest.main(["--nbval-lax", "notebooks/habitat-lab-demo.ipynb"])
 
         # NB: Force a gc collect run as it can take a little bit for
         # the cleanup to happen after the notebook and we get

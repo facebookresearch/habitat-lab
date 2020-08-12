@@ -19,16 +19,16 @@ Habitat is a platform for embodied AI research that consists of:
     `Gibson <http://gibsonenv.stanford.edu/database/>`_ and other datasets).
     :gh:`[github-repo] <facebookresearch/habitat-sim>`
 
-2.  **Habitat-API**: A modular high-level library for end-to-end development in
+2.  **Habitat Lab**: A modular high-level library for end-to-end development in
     embodied AI --- defining embodied AI tasks (e.g. navigation, instruction
     following, question answering), configuring embodied agents (physical form,
     sensors, capabilities), training these agents (via imitation or
     reinforcement learning, or no learning at all as in classical SLAM), and
     benchmarking their performance on the defined tasks using standard metrics.
-    :gh:`[github-repo] <facebookresearch/habitat-api>`
+    :gh:`[github-repo] <facebookresearch/habitat-lab>`
 
-For installing Habitat-Sim and Habitat-API follow instructions
-`here <https://github.com/facebookresearch/habitat-api#installation>`_.
+For installing Habitat-Sim and Habitat Lab follow instructions
+`here <https://github.com/facebookresearch/habitat-lab#installation>`_.
 
 `Example`_
 ==========
@@ -38,10 +38,10 @@ go from a source location to a target location. For this example the agent will
 be you (the user). You will be able to step around in an environment using
 keys.
 
-For running this example both Habitat-Sim and Habitat-API should be installed
+For running this example both Habitat-Sim and Habitat Lab should be installed
 successfully. The data for scene should also be downloaded (steps to do this
-are provided in the `installation instructions <https://github.com/facebookresearch/habitat-api#installation>`_
-of Habitat-API). Running the code below also requires installation of cv2 which
+are provided in the `installation instructions <https://github.com/facebookresearch/habitat-lab#installation>`_
+of Habitat Lab). Running the code below also requires installation of cv2 which
 you can install using: :sh:`pip install opencv-python`.
 
 .. code:: py
@@ -131,7 +131,7 @@ Below is a demo of what the example output will look like:
 .. image:: quickstart.png
 
 For more examples refer to
-:gh:`Habitat-API examples <facebookresearch/habitat-api/tree/master/examples>`
+:gh:`Habitat Lab examples <facebookresearch/habitat-lab/tree/master/examples>`
 and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/master/examples>`.
 
 
