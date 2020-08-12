@@ -127,7 +127,7 @@ env = habitat.Env(config=config)
 action = None
 obs = env.reset()
 valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
-
+interactive_control = False  # @param {type:"boolean"}
 while action != "STOP":
     display_sample(obs["rgb"])
     print(
@@ -138,13 +138,16 @@ while action != "STOP":
             obs["pointgoal_with_gps_compass"][1]
         )
     )
-    action = input(
-        "enter action out of {}:\n".format(", ".join(valid_actions))
-    )
-    assert action in valid_actions, (
-        "invalid action {} entered, choose one amongst "
-        + ",".join(valid_actions)
-    )
+    if interactive_control:
+        action = input(
+            "enter action out of {}:\n".format(", ".join(valid_actions))
+        )
+        assert action in valid_actions, (
+            "invalid action {} entered, choose one amongst "
+            + ",".join(valid_actions)
+        )
+    else:
+        action = valid_actions.pop()
     obs = env.step({"action": action,})
 
 env.close()
@@ -157,7 +160,7 @@ print(env.get_metrics())
 
 # %%
 config = get_baselines_config(
-    "./habitat-api/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
+    "./habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
 )
 
 # %%
@@ -189,9 +192,7 @@ trainer.train()
 try:
     from IPython import display
 
-    with open(
-        "/content/habitat-api/res/img/tensorboard_video_demo.gif", "rb"
-    ) as f:
+    with open("./res/img/tensorboard_video_demo.gif", "rb") as f:
         display.display(display.Image(data=f.read(), format="png"))
 except ImportError:
     pass
@@ -261,16 +262,19 @@ env = habitat.Env(config=config)
 action = None
 env.reset()
 valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
-
+interactive_control = False  # @param {type:"boolean"}
 while env.episode_over is not True:
     display_sample(obs["rgb"])
-    action = input(
-        "enter action out of {}:\n".format(", ".join(valid_actions))
-    )
-    assert action in valid_actions, (
-        "invalid action {} entered, choose one amongst "
-        + ",".join(valid_actions)
-    )
+    if interactive_control:
+        action = input(
+            "enter action out of {}:\n".format(", ".join(valid_actions))
+        )
+    else:
+        action = valid_actions.pop()
+        assert action in valid_actions, (
+            "invalid action {} entered, choose one amongst "
+            + ",".join(valid_actions)
+        )
     obs = env.step({"action": action, "action_args": None,})
     print("Episode over:", env.episode_over)
 
