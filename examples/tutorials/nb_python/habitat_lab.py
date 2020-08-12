@@ -276,12 +276,12 @@ if __name__ == "__main__":
             action = input(
                 "enter action out of {}:\n".format(", ".join(valid_actions))
             )
-        else:
-            action = valid_actions.pop()
             assert action in valid_actions, (
                 "invalid action {} entered, choose one amongst "
                 + ",".join(valid_actions)
             )
+        else:
+            action = valid_actions.pop()
         obs = env.step({"action": action, "action_args": None,})
         print("Episode over:", env.episode_over)
 
