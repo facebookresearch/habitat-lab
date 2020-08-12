@@ -20,8 +20,8 @@ jobs:
       - run:
           name: run black
           command: |
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
+              black --config pyproject.toml habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black --config pyproject.toml habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
