@@ -141,7 +141,7 @@ An important objective of Habitat Lab is to make it easy for users to set up a v
 * `Episode`: a class for episode specification that includes the initial position and orientation of an Agent, a scene id, a goal position and optionally shortest paths to the goal. An episode is a description of one task instance for the agent.
 
 <p align="center">
-  <img src='res/img/habitat_api_structure.png' alt="teaser results" width="100%"/>
+  <img src='res/img/habitat_lab_structure.png' alt="teaser results" width="100%"/>
   <p align="center"><i>Architecture of Habitat Lab</i></p>
 </p>
 
