@@ -1,12 +1,6 @@
 Habitat API Demo
 ################
 
-.. button-primary:: https://dl.fbaipublicfiles.com/habitat/notebooks/habitat-lab-demo.ipynb
-
-    Download notebook
-
-    habitat-lab-demo.ipynb
-
 .. contents::
     :class: m-block m-default
 
