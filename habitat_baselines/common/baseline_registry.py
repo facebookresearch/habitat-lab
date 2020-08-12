@@ -10,12 +10,15 @@ in habitat core intact.
 
 Import the baseline registry object using
 
-``from habitat_baselines.common.baseline_registry import baseline_registry``
+.. code:: py
+
+    from habitat_baselines.common.baseline_registry import baseline_registry
 
 Various decorators for registry different kind of classes with unique keys
 
-- Register a environment: ``@registry.register_env``
-- Register a trainer: ``@registry.register_trainer``
+-   Register a environment: ``@baseline_registry.register_env``
+-   Register a trainer: ``@baseline_registry.register_trainer``
+-   Register a policy: ``@baseline_registry.register_policy``
 """
 
 from typing import Optional
@@ -60,6 +63,43 @@ class BaselineRegistry(Registry):
     @classmethod
     def get_env(cls, name):
         return cls._get_impl("env", name)
+
+    @classmethod
+    def register_policy(cls, to_register=None, *, name: Optional[str] = None):
+        r"""Register a RL policy with :p:`name`.
+
+        :param name: Key with which the policy will be registered.
+            If :py:`None` will use the name of the class
+
+        .. code:: py
+
+            from habitat_baselines.rl.ppo.policy import Policy
+            from habitat_baselines.common.baseline_registry import (
+                baseline_registry
+            )
+
+            @baseline_registry.register_policy
+            class MyPolicy(Policy):
+                pass
+
+
+            # or
+
+            @baseline_registry.register_policy(name="MyPolicyName")
+            class MyPolicy(Policy):
+                pass
+
+        """
+        from habitat_baselines.rl.ppo.policy import Policy
+
+        return cls._register_impl(
+            "policy", to_register, name, assert_type=Policy
+        )
+
+    @classmethod
+    def get_policy(cls, name: str):
+        r"""Get the RL policy with :p:`name`."""
+        return cls._get_impl("policy", name)
 
 
 baseline_registry = BaselineRegistry()
