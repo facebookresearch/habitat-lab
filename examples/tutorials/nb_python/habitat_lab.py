@@ -117,40 +117,43 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
 # cat "/content/habitat-api/configs/test/habitat_all_sensors_test.yaml"
 
 # %%
-config = habitat.get_config(
-    config_paths="./configs/test/habitat_all_sensors_test.yaml"
-)
+if __name__ == "__main__":
+    config = habitat.get_config(
+        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+    )
 
-env = habitat.Env(config=config)
+    env = habitat.Env(config=config)
 
 # %%
-action = None
-obs = env.reset()
-valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
-interactive_control = False  # @param {type:"boolean"}
-while action != "STOP":
-    display_sample(obs["rgb"])
-    print(
-        "distance to goal: {:.2f}".format(obs["pointgoal_with_gps_compass"][0])
-    )
-    print(
-        "angle to goal (radians): {:.2f}".format(
-            obs["pointgoal_with_gps_compass"][1]
+    action = None
+    obs = env.reset()
+    valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
+    interactive_control = False  # @param {type:"boolean"}
+    while action != "STOP":
+        display_sample(obs["rgb"])
+        print(
+            "distance to goal: {:.2f}".format(
+                obs["pointgoal_with_gps_compass"][0]
+            )
         )
-    )
-    if interactive_control:
-        action = input(
-            "enter action out of {}:\n".format(", ".join(valid_actions))
+        print(
+            "angle to goal (radians): {:.2f}".format(
+                obs["pointgoal_with_gps_compass"][1]
+            )
         )
-        assert action in valid_actions, (
-            "invalid action {} entered, choose one amongst "
-            + ",".join(valid_actions)
-        )
-    else:
-        action = valid_actions.pop()
-    obs = env.step({"action": action,})
+        if interactive_control:
+            action = input(
+                "enter action out of {}:\n".format(", ".join(valid_actions))
+            )
+            assert action in valid_actions, (
+                "invalid action {} entered, choose one amongst "
+                + ",".join(valid_actions)
+            )
+        else:
+            action = valid_actions.pop()
+        obs = env.step({"action": action,})
 
-env.close()
+    env.close()
 
 # %%
 print(env.get_metrics())
@@ -159,24 +162,25 @@ print(env.get_metrics())
 # ## RL Training
 
 # %%
-config = get_baselines_config(
-    "./habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
-)
+if __name__ == "__main__":
+    config = get_baselines_config(
+        "./habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
+    )
 
 # %%
 # set random seeds
+if __name__ == "__main__":
+    seed = "42"  # @param {type:"string"}
+    num_updates = "20"  # @param {type:"string"}
 
-seed = "42"  # @param {type:"string"}
-num_updates = "20"  # @param {type:"string"}
+    config.defrost()
+    config.TASK_CONFIG.SEED = int(seed)
+    config.NUM_UPDATES = int(num_updates)
+    config.LOG_INTERVAL = 1
+    config.freeze()
 
-config.defrost()
-config.TASK_CONFIG.SEED = int(seed)
-config.NUM_UPDATES = int(num_updates)
-config.LOG_INTERVAL = 1
-config.freeze()
-
-random.seed(config.TASK_CONFIG.SEED)
-np.random.seed(config.TASK_CONFIG.SEED)
+    random.seed(config.TASK_CONFIG.SEED)
+    np.random.seed(config.TASK_CONFIG.SEED)
 
 # %%
 if __name__ == "__main__":
@@ -233,9 +237,10 @@ except ImportError:
 # ## Create a new Task
 
 # %%
-config = habitat.get_config(
-    config_paths="./configs/test/habitat_all_sensors_test.yaml"
-)
+if __name__ == "__main__":
+    config = habitat.get_config(
+        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+    )
 
 
 @registry.register_task(name="TestNav-v0")
@@ -253,33 +258,34 @@ class NewNavigationTask(NavigationTask):
         return collision or stop_called
 
 
-config.defrost()
-config.TASK.TYPE = "TestNav-v0"
-config.freeze()
+if __name__ == "__main__":
+    config.defrost()
+    config.TASK.TYPE = "TestNav-v0"
+    config.freeze()
 
-env = habitat.Env(config=config)
+    env = habitat.Env(config=config)
 
 # %%
-action = None
-env.reset()
-valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
-interactive_control = False  # @param {type:"boolean"}
-while env.episode_over is not True:
-    display_sample(obs["rgb"])
-    if interactive_control:
-        action = input(
-            "enter action out of {}:\n".format(", ".join(valid_actions))
-        )
-    else:
-        action = valid_actions.pop()
-        assert action in valid_actions, (
-            "invalid action {} entered, choose one amongst "
-            + ",".join(valid_actions)
-        )
-    obs = env.step({"action": action, "action_args": None,})
-    print("Episode over:", env.episode_over)
+    action = None
+    env.reset()
+    valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
+    interactive_control = False  # @param {type:"boolean"}
+    while env.episode_over is not True:
+        display_sample(obs["rgb"])
+        if interactive_control:
+            action = input(
+                "enter action out of {}:\n".format(", ".join(valid_actions))
+            )
+        else:
+            action = valid_actions.pop()
+            assert action in valid_actions, (
+                "invalid action {} entered, choose one amongst "
+                + ",".join(valid_actions)
+            )
+        obs = env.step({"action": action, "action_args": None,})
+        print("Episode over:", env.episode_over)
 
-env.close()
+    env.close()
 
 
 # %% [markdown]
@@ -315,32 +321,33 @@ class AgentPositionSensor(habitat.Sensor):
 
 
 # %%
-config = habitat.get_config(
-    config_paths="./configs/test/habitat_all_sensors_test.yaml"
-)
+if __name__ == "__main__":
+    config = habitat.get_config(
+        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+    )
 
-config.defrost()
-# Now define the config for the sensor
-config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
-# Use the custom name
-config.TASK.AGENT_POSITION_SENSOR.TYPE = "agent_position_sensor"
-# Add the sensor to the list of sensors in use
-config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
-config.freeze()
+    config.defrost()
+    # Now define the config for the sensor
+    config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
+    # Use the custom name
+    config.TASK.AGENT_POSITION_SENSOR.TYPE = "agent_position_sensor"
+    # Add the sensor to the list of sensors in use
+    config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
+    config.freeze()
 
-env = habitat.Env(config=config)
-
-# %%
-obs = env.reset()
+    env = habitat.Env(config=config)
 
 # %%
-obs.keys()
+    obs = env.reset()
 
 # %%
-print(obs["agent_position"])
+    obs.keys()
 
 # %%
-env.close()
+    print(obs["agent_position"])
+
+# %%
+    env.close()
 
 # %% [markdown]
 # ## Create a new Agent
