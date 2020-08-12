@@ -179,9 +179,10 @@ random.seed(config.TASK_CONFIG.SEED)
 np.random.seed(config.TASK_CONFIG.SEED)
 
 # %%
-trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-trainer = trainer_init(config)
-trainer.train()
+if __name__ == "__main__":
+    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
+    trainer = trainer_init(config)
+    trainer.train()
 
 # %%
 # @markdown (double click to see the code)
