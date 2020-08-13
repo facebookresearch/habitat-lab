@@ -49,7 +49,7 @@
 # %cd /content
 
 # !gdown --id 1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853
-# !unzip /content/coda.zip -d /content/habitat-sim/data/scene_datasets
+# !unzip -o /content/coda.zip -d /content/habitat-sim/data/scene_datasets
 
 # %%
 # @title Path Setup and Imports { display-mode: "form" }
@@ -2020,7 +2020,7 @@ class RearrangementTrainer(PPOTrainer):
 # %tensorboard --logdir data/tb
 
 # %%
-# !rm -r data/tb
+# !if [ -d "data/tb" ]; then rm -r data/tb; fi
 import random
 
 import numpy as np
