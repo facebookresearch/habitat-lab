@@ -54,7 +54,7 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
-		  libbullet-dev \
+                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
