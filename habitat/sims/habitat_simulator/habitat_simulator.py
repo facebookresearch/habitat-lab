@@ -30,13 +30,13 @@ RGBSENSOR_DIMENSION = 3
 
 
 def overwrite_config(config_from: Config, config_to: Any) -> None:
-    r"""Takes Habitat-API config and Habitat-Sim config structures. Overwrites
-    Habitat-Sim config with Habitat-API values, where a field name is present
+    r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
+    Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
     code.
 
     Args:
-        config_from: Habitat-API config node.
+        config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
     """
 

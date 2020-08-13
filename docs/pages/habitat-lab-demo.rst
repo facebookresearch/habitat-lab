@@ -1,12 +1,6 @@
 Habitat API Demo
 ################
 
-.. button-primary:: https://dl.fbaipublicfiles.com/habitat/notebooks/habitat-api-demo.ipynb
-
-    Download notebook
-
-    habitat-api-demo.ipynb
-
 .. contents::
     :class: m-block m-default
 
@@ -21,8 +15,8 @@ Habitat API Demo
     import matplotlib.pyplot as plt
 
 All the boilerplate code in the habitat-sim to set sensor config and agent
-config is abstracted out in the Habitat-API config system. Default config is at
-:gh:`habitat/config/default.py <facebookresearch/habitat-api/blob/master/habitat/config/default.py>`.
+config is abstracted out in the Habitat Lab config system. Default config is at
+:gh:`habitat/config/default.py <facebookresearch/habitat-lab/blob/master/habitat/config/default.py>`.
 You can override defaults by specifying them in a separate file and pass it to
 the :ref:`habitat.config.get_config()` function or defrost the config object,
 override parameters and freeze the config.
@@ -174,5 +168,5 @@ override parameters and freeze the config.
 
     env.close()
 
-.. image:: habitat-api-demo.png
+.. image:: habitat-lab-demo.png
     :alt: Actions and sensors

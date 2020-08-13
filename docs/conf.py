@@ -35,7 +35,7 @@ INPUT_PAGES = [
     "pages/index.rst",
     "pages/quickstart.rst",
     "pages/habitat-sim-demo.rst",
-    "pages/habitat-api-demo.rst",
+    "pages/habitat-lab-demo.rst",
     "pages/view-transform-warp.rst",
 ]
 
@@ -59,7 +59,7 @@ ATTRS_COMPATIBILITY = True
 
 # Putting output into the sim repository so relative linking works the same
 # way as on the website
-OUTPUT = "../../habitat-sim/build/docs/habitat-api/"
+OUTPUT = "../../habitat-sim/build/docs/habitat-lab/"
 
 LINKS_NAVBAR1 = [
     (
@@ -68,7 +68,7 @@ LINKS_NAVBAR1 = [
         [
             ("Quickstart", "quickstart"),
             ("Habitat Sim Demo", "habitat-sim-demo"),
-            ("Habitat API Demo", "habitat-api-demo"),
+            ("Habitat API Demo", "habitat-lab-demo"),
             ("View, Transform and Warp", "view-transform-warp"),
         ],
     ),

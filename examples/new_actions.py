@@ -6,7 +6,7 @@
 
 
 r"""
-This is an example of how to add new actions to habitat-api
+This is an example of how to add new actions to habitat-lab
 
 
 We will use the strafe action outline in the habitat_sim example

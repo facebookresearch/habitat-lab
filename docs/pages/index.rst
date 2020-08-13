@@ -9,7 +9,7 @@ tasks, environments, and simulators.
 
 -   :ref:`Quickstart <std:doc:quickstart>`
 -   :ref:`Habitat Sim Demo <std:doc:habitat-sim-demo>`
--   :ref:`Habitat API Demo <std:doc:habitat-api-demo>`
+-   :ref:`Habitat API Demo <std:doc:habitat-lab-demo>`
 -   :ref:`View, Transform and Warp <std:doc:view-transform-warp>`
 
 `Package reference`_

@@ -21,7 +21,7 @@ This will also install additional requirements for each sub-module in `habitat_b
 
 **dependencies**: pytorch 1.0, for installing refer to [pytorch.org](https://pytorch.org/)
 
-For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat-api/`, extraction will create a data folder at `habitat-api/data`) and run the below training command.
+For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat-lab/`, extraction will create a data folder at `habitat-lab/data`) and run the below training command.
 
 **train**:
 ```bash
