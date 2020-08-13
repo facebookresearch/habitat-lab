@@ -523,7 +523,8 @@ with habitat_sim.Simulator(cfg) as sim:
 # @title Dataset class to read the saved dataset in Habitat-API.
 # @markdown To read the saved episodes in Habitat-API, we will extend the `Dataset` class and the `Episode` base class. It will help provide all the relevant details about the episode through a consistent API to all downstream tasks.
 
-# @markdown - We will first create a `RearrangementEpisode` by extending the `NavigationEpisode` to include additional information about object's initial configuration and desired final configuration. - We will then define a `RearrangementDatasetV0` class that builds on top of `PointNavDatasetV1` class to read the JSON file stored earlier and initialize a list of `RearrangementEpisode`.
+# @markdown - We will first create a `RearrangementEpisode` by extending the `NavigationEpisode` to include additional information about object's initial configuration and desired final configuration.
+# @markdown - We will then define a `RearrangementDatasetV0` class that builds on top of `PointNavDatasetV1` class to read the JSON file stored earlier and initialize a list of `RearrangementEpisode`.
 
 from habitat.core.utils import DatasetFloatJSONEncoder, not_none_validator
 from habitat.datasets.pointnav.pointnav_dataset import (
@@ -741,11 +742,10 @@ with habitat_sim.Simulator(cfg) as sim:
     print(f"Closest Object ID: {closest_object} using 1.0 threshold")
     assert closest_object == -1, f"Agent shoud not be able to pick any object"
 
-    remove_all_objects(sim)
-
 
 # %%
-# @title Define a Grab/Release action and create a new action space. Each new action is defined by a `ActionSpec` and an `ActuationSpec`. `ActionSpec` is mapping between the action name and its corresponding `ActuationSpec`. `ActuationSpec` contains all the necessary specifications required to define the action.
+# @title Define a Grab/Release action and create a new action space.
+# @markdown Each new action is defined by a `ActionSpec` and an `ActuationSpec`. `ActionSpec` is mapping between the action name and its corresponding `ActuationSpec`. `ActuationSpec` contains all the necessary specifications required to define the action.
 
 from habitat.config.default import _C, CN
 from habitat.core.embodied_task import SimulatorTaskAction
