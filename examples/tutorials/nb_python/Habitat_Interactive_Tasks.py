@@ -5,6 +5,7 @@
 #     collapsed_sections: []
 #     name: Habitat Interactive Tasks
 #     provenance: []
+#     toc_visible: true
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,colabs//ipynb
@@ -61,6 +62,7 @@ import os
 import random
 import sys
 import time
+from typing import Any, Dict, List, Optional, Type
 
 # %cd /content/habitat-api
 ## [setup]
@@ -69,19 +71,6 @@ import cv2
 import git
 import magnum as mn
 import numpy as np
-
-try:
-    import ipywidgets as widgets
-    from IPython.display import display as ipydisplay
-
-    # For using jupyter/ipywidget IO components
-    from ipywidgets import fixed, interact, interact_manual, interactive
-
-    HAS_WIDGETS = True
-except ImportError:
-    HAS_WIDGETS = False
-
-from typing import Any, Dict, List, Optional, Type
 
 # %matplotlib inline
 from matplotlib import pyplot as plt
@@ -1326,42 +1315,32 @@ class RearrangementTask(NavigationTask):
 # @title Load the `RearrangementTask` in Habitat-Lab and run a hard-coded agent
 import habitat
 
-config_file = """
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 50
-  ITERATOR_OPTIONS:
-    SHUFFLE: True
-SIMULATOR:
-  TYPE: "RearrangementSim-v0"
-  ACTION_SPACE_CONFIG: "RearrangementActions-v0"
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR']
-  RGB_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-  GRAB_DISTANCE: 2.0
-  HABITAT_SIM_V0:
-    ENABLE_PHYSICS: True
-TASK:
-  TYPE: RearrangementTask-v0
-  SUCCESS_DISTANCE: 1.0
-  SENSORS: ['GRIPPED_OBJECT_SENSOR', 'OBJECT_POSITION', 'OBJECT_GOAL']
-  GOAL_SENSOR_UUID: object_goal
-  MEASUREMENTS: ['OBJECT_TO_GOAL_DISTANCE', 'AGENT_TO_OBJECT_DISTANCE']
-  POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'GRAB_RELEASE']
-DATASET:
-  TYPE: RearrangementDataset-v0
-  SPLIT: train
-  DATA_PATH: data/datasets/rearrangement/coda/v1/{split}/{split}.json.gz
-
-"""
-with open("configs/tasks/rearrangement.yaml", "w") as f:
-    f.write(config_file)
-
-config = habitat.get_config("configs/tasks/rearrangement.yaml")
+config = habitat.get_config("configs/tasks/pointnav.yaml")
+config.defrost()
+config.ENVIRONMENT.MAX_EPISODE_STEPS = 50
+config.SIMULATOR.TYPE = "RearrangementSim-v0"
+config.SIMULATOR.ACTION_SPACE_CONFIG = "RearrangementActions-v0"
+config.SIMULATOR.GRAB_DISTANCE = 2.0
+config.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = True
+config.TASK.TYPE = "RearrangementTask-v0"
+config.TASK.SUCCESS_DISTANCE = 1.0
+config.TASK.SENSORS = [
+    "GRIPPED_OBJECT_SENSOR",
+    "OBJECT_POSITION",
+    "OBJECT_GOAL",
+]
+config.TASK.GOAL_SENSOR_UUID = "object_goal"
+config.TASK.MEASUREMENTS = [
+    "OBJECT_TO_GOAL_DISTANCE",
+    "AGENT_TO_OBJECT_DISTANCE",
+]
+config.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "GRAB_RELEASE"]
+config.DATASET.TYPE = "RearrangementDataset-v0"
+config.DATASET.SPLIT = "train"
+config.DATASET.DATA_PATH = (
+    "data/datasets/rearrangement/coda/v1/{split}/{split}.json.gz"
+)
+config.freeze()
 
 
 def print_info(obs, metrics):
@@ -1375,51 +1354,53 @@ def print_info(obs, metrics):
 
 
 try:  # Got to make initialization idiot proof
-    env.close()
+    sim.close()
 except NameError:
     pass
 
-env = habitat.Env(config)
-obs = env.reset()
-obs_list = []
-# Get closer to the object
-while True:
-    obs = env.step(1)
+with habitat.Env(config) as env:
+    obs = env.reset()
+    obs_list = []
+    # Get closer to the object
+    while True:
+        obs = env.step(1)
+        obs_list.append(obs)
+        metrics = env.get_metrics()
+        print_info(obs, metrics)
+        if metrics["agent_to_object_distance"] < 2.0:
+            break
+
+    # Grab the object
+    obs = env.step(2)
     obs_list.append(obs)
     metrics = env.get_metrics()
     print_info(obs, metrics)
-    if metrics["agent_to_object_distance"] < 2.0:
-        break
+    assert obs["gripped_object_id"] != -1
 
-# Grab the object
-obs = env.step(2)
-obs_list.append(obs)
-metrics = env.get_metrics()
-print_info(obs, metrics)
-assert obs["gripped_object_id"] != -1
+    # Get closer to the goal
+    while True:
+        obs = env.step(1)
+        obs_list.append(obs)
+        metrics = env.get_metrics()
+        print_info(obs, metrics)
+        if metrics["object_to_goal_distance"] < 2.0:
+            break
 
-# Get closer to the goal
-while True:
-    obs = env.step(1)
+    # Release the object
+    obs = env.step(2)
     obs_list.append(obs)
     metrics = env.get_metrics()
     print_info(obs, metrics)
-    if metrics["object_to_goal_distance"] < 2.0:
-        break
+    assert obs["gripped_object_id"] == -1
 
-# Release the object
-obs = env.step(2)
-obs_list.append(obs)
-metrics = env.get_metrics()
-print_info(obs, metrics)
-assert obs["gripped_object_id"] == -1
-
-if make_video:
-    make_video_cv2(
-        obs_list, [190, 128], "hard-coded-agent", fps=5.0, open_vid=show_video
-    )
-
-env.close()
+    if make_video:
+        make_video_cv2(
+            obs_list,
+            [190, 128],
+            "hard-coded-agent",
+            fps=5.0,
+            open_vid=show_video,
+        )
 
 # %%
 # @title Create a task specific RL Environment with a new reward definition.
@@ -1977,160 +1958,111 @@ class RearrangementTrainer(PPOTrainer):
             config.freeze()
 
         logger.info(f"env config: {config}")
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
-
-        observations = self.envs.reset()
-        batch = batch_obs(observations, device=self.device)
-
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
-        ppo_cfg = self.config.RL.PPO
-        test_recurrent_hidden_states = torch.zeros(
-            self.actor_critic.net.num_recurrent_layers,
-            config.NUM_PROCESSES,
-            ppo_cfg.hidden_size,
-            device=self.device,
-        )
-        prev_actions = torch.zeros(
-            config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
-        )
-        not_done_masks = torch.zeros(
-            config.NUM_PROCESSES, 1, device=self.device
-        )
-        stats_episodes = dict()  # dict of dicts that stores stats per episode
-
-        rgb_frames = [
-            [] for _ in range(self.config.NUM_PROCESSES)
-        ]  # type: List[List[np.ndarray]]
-
-        if len(config.VIDEO_OPTION) > 0:
-            os.makedirs(config.VIDEO_DIR, exist_ok=True)
-
-        num_of_eval_episodes = 1
-        self.actor_critic.eval()
-
-        for i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
-            current_episodes = self.envs.current_episodes()
-
-            with torch.no_grad():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    prev_actions,
-                    not_done_masks,
-                    deterministic=False,
-                )
-
-                prev_actions.copy_(actions)
-
-            outputs = self.envs.step([a[0].item() for a in actions])
-
-            observations, rewards, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
+        with construct_envs(config, get_env_class(config.ENV_NAME)) as envs:
+            observations = envs.reset()
             batch = batch_obs(observations, device=self.device)
 
-            not_done_masks = torch.tensor(
-                [[0.0] if done else [1.0] for done in dones],
-                dtype=torch.float,
+            current_episode_reward = torch.zeros(
+                envs.num_envs, 1, device=self.device
+            )
+            ppo_cfg = self.config.RL.PPO
+            test_recurrent_hidden_states = torch.zeros(
+                self.actor_critic.net.num_recurrent_layers,
+                config.NUM_PROCESSES,
+                ppo_cfg.hidden_size,
                 device=self.device,
             )
+            prev_actions = torch.zeros(
+                config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
+            )
+            not_done_masks = torch.zeros(
+                config.NUM_PROCESSES, 1, device=self.device
+            )
 
-            rewards = torch.tensor(
-                rewards, dtype=torch.float, device=self.device
-            ).unsqueeze(1)
+            rgb_frames = [
+                [] for _ in range(self.config.NUM_PROCESSES)
+            ]  # type: List[List[np.ndarray]]
 
-            current_episode_reward += rewards
-            next_episodes = self.envs.current_episodes()
+            if len(config.VIDEO_OPTION) > 0:
+                os.makedirs(config.VIDEO_DIR, exist_ok=True)
 
-            # episode ended
-            if not_done_masks[0].item() == 0:
-                generate_video(
-                    video_option=self.config.VIDEO_OPTION,
-                    video_dir=self.config.VIDEO_DIR,
-                    images=rgb_frames[0],
-                    episode_id=current_episodes[0].episode_id,
-                    checkpoint_idx=0,
-                    metrics=self._extract_scalars_from_info(infos[0]),
-                    tb_writer=None,
-                )
+            self.actor_critic.eval()
 
-                print("Evaluation Finished.")
-                print("Success: {}".format(infos[0]["episode_success"]))
-                print("Reward: {}".format(current_episode_reward[0].item()))
-                print(
-                    "Distance To Goal: {}".format(
-                        infos[0]["object_to_goal_distance"]
+            for i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
+                current_episodes = envs.current_episodes()
+
+                with torch.no_grad():
+                    (
+                        _,
+                        actions,
+                        _,
+                        test_recurrent_hidden_states,
+                    ) = self.actor_critic.act(
+                        batch,
+                        test_recurrent_hidden_states,
+                        prev_actions,
+                        not_done_masks,
+                        deterministic=False,
                     )
+
+                    prev_actions.copy_(actions)
+
+                outputs = envs.step([a[0].item() for a in actions])
+
+                observations, rewards, dones, infos = [
+                    list(x) for x in zip(*outputs)
+                ]
+                batch = batch_obs(observations, device=self.device)
+
+                not_done_masks = torch.tensor(
+                    [[0.0] if done else [1.0] for done in dones],
+                    dtype=torch.float,
+                    device=self.device,
                 )
 
-                return
+                rewards = torch.tensor(
+                    rewards, dtype=torch.float, device=self.device
+                ).unsqueeze(1)
 
-            # episode continues
-            elif len(self.config.VIDEO_OPTION) > 0:
-                frame = observations_to_image(observations[0], infos[0])
-                rgb_frames[0].append(frame)
+                current_episode_reward += rewards
 
-        self.envs.close()
+                # episode ended
+                if not_done_masks[0].item() == 0:
+                    generate_video(
+                        video_option=self.config.VIDEO_OPTION,
+                        video_dir=self.config.VIDEO_DIR,
+                        images=rgb_frames[0],
+                        episode_id=current_episodes[0].episode_id,
+                        checkpoint_idx=0,
+                        metrics=self._extract_scalars_from_info(infos[0]),
+                        tb_writer=None,
+                    )
+
+                    print("Evaluation Finished.")
+                    print("Success: {}".format(infos[0]["episode_success"]))
+                    print(
+                        "Reward: {}".format(current_episode_reward[0].item())
+                    )
+                    print(
+                        "Distance To Goal: {}".format(
+                            infos[0]["object_to_goal_distance"]
+                        )
+                    )
+
+                    return
+
+                # episode continues
+                elif len(self.config.VIDEO_OPTION) > 0:
+                    frame = observations_to_image(observations[0], infos[0])
+                    rgb_frames[0].append(frame)
 
 
 # %%
-config_file = """
-BASE_TASK_CONFIG_PATH: "configs/tasks/rearrangement.yaml"
-TRAINER_NAME: "ddppo"
-ENV_NAME: "RearrangementRLEnv"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "data/tb"
-VIDEO_DIR: "data/videos"
-NUM_PROCESSES: 2
-SENSORS: ['RGB_SENSOR','DEPTH_SENSOR']
-CHECKPOINT_FOLDER: "data/checkpoints"
-NUM_UPDATES: 400
-LOG_INTERVAL: 10
-CHECKPOINT_INTERVAL: 50
-LOG_FILE: data/checkpoints/train.log
-EVAL:
-  SPLIT: "train"
-RL:
-  SUCCESS_REWARD: 2.5
-  SUCCESS_MEASURE: 'object_to_goal_distance'
-  REWARD_MEASURE: 'object_to_goal_distance'
-  GRIPPED_SUCCESS_REWARD: 2.5
-  PPO:
-    # ppo params
-    clip_param: 0.2
-    ppo_epoch: 2
-    num_mini_batch: 2
-    value_loss_coef: 0.5
-    entropy_coef: 0.01
-    lr: 2.5e-4
-    eps: 1e-5
-    max_grad_norm: 0.2
-    num_steps: 50
-    use_gae: True
-    gamma: 0.99
-    tau: 0.95
-    use_linear_clip_decay: False
-    use_linear_lr_decay: False
-    reward_window_size: 50
-    use_normalized_advantage: False
-    hidden_size: 256
-"""
-
-with open("configs/rl.yaml", "w") as f:
-    f.write(config_file)
+# %load_ext tensorboard
+# %tensorboard --logdir data/tb
 
 # %%
 # !rm -r data/tb
-
 import random
 
 import numpy as np
@@ -2142,27 +2074,47 @@ from habitat.config import get_config
 from habitat_baselines.config.default import get_config as get_baseline_config
 
 # only run this if in colab environment
-if "google.colab" in sys.modules:
 
-    config = get_baseline_config("configs/rl.yaml")
+baseline_config = get_baseline_config(
+    "habitat_baselines/config/pointnav/ppo_pointnav.yaml"
+)
+baseline_config.defrost()
 
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
+baseline_config.TASK_CONFIG = config
+baseline_config.TRAINER_NAME = "ddppo"
+baseline_config.ENV_NAME = "RearrangementRLEnv"
+baseline_config.SIMULATOR_GPU_ID = 0
+baseline_config.TORCH_GPU_ID = 0
+baseline_config.VIDEO_OPTION = ["disk"]
+baseline_config.TENSORBOARD_DIR = "data/tb"
+baseline_config.VIDEO_DIR = "data/videos"
+baseline_config.NUM_PROCESSES = 2
+baseline_config.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
+baseline_config.CHECKPOINT_FOLDER = "data/checkpoints"
 
-    trainer = RearrangementTrainer(config)
-    trainer.train()
-    trainer.eval()
+if vut.is_notebook():
+    baseline_config.NUM_UPDATES = 400
+else:
+    baseline_config.NUM_UPDATES = 1
 
-    vut.display_video(
-        "data/videos/episode=0-ckpt=0-object_to_goal_distance=0.25-agent_to_object_distance=0.90-episode_success=1.00.mp4"
-    )
+baseline_config.LOG_INTERVAL = 10
+baseline_config.CHECKPOINT_INTERVAL = 50
+baseline_config.LOG_FILE = "data/checkpoints/train.log"
+baseline_config.EVAL.SPLIT = "train"
+baseline_config.RL.SUCCESS_REWARD = 2.5
+baseline_config.RL.SUCCESS_MEASURE = "object_to_goal_distance"
+baseline_config.RL.REWARD_MEASURE = "object_to_goal_distance"
+baseline_config.RL.GRIPPED_SUCCESS_REWARD = 2.5
 
-# %%
-# %load_ext tensorboard
-# %tensorboard --logdir data/tb
+baseline_config.freeze()
+random.seed(baseline_config.TASK_CONFIG.SEED)
+np.random.seed(baseline_config.TASK_CONFIG.SEED)
+torch.manual_seed(baseline_config.TASK_CONFIG.SEED)
 
-# %%
-if os.path.exists("configs/rl.yaml"):
-    os.remove("configs/tasks/rearrangement.yaml")
-    os.remove("configs/rl.yaml")
+trainer = RearrangementTrainer(baseline_config)
+trainer.train()
+trainer.eval()
+
+if make_video:
+    video_file = os.listdir("data/videos")[0]
+    vut.display_video(os.path.join("data/videos", video_file))
