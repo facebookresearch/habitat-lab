@@ -25,7 +25,7 @@ habitat.core.__all__ = [
 habitat.config.__all__.remove("Config")
 
 PROJECT_TITLE = "Habitat"
-PROJECT_SUBTITLE = "API Docs"
+PROJECT_SUBTITLE = "Lab Docs"
 PROJECT_LOGO = "../../habitat-sim/docs/habitat.svg"
 FAVICON = "../../habitat-sim/docs/habitat-blue.png"
 MAIN_PROJECT_URL = "/"
@@ -68,7 +68,7 @@ LINKS_NAVBAR1 = [
         [
             ("Quickstart", "quickstart"),
             ("Habitat Sim Demo", "habitat-sim-demo"),
-            ("Habitat API Demo", "habitat-lab-demo"),
+            ("Habitat Lab Demo", "habitat-lab-demo"),
             ("View, Transform and Warp", "view-transform-warp"),
         ],
     ),

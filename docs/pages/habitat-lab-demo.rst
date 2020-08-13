@@ -1,4 +1,4 @@
-Habitat API Demo
+Habitat Lab Demo
 ################
 
 .. contents::

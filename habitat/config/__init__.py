@@ -61,7 +61,7 @@ env = habitat.Env(config)
 ```
 
 ## Extending the config with default values
-Example of how to extend a config outside of `habtiat-api` repository.
+Example of how to extend a config outside of `habtiat-lab` repository.
 First, we create a config extending the default config in the code and re-use
 `habitat.get_config()`:
 ```
