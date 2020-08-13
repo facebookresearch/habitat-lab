@@ -307,38 +307,35 @@ cfg = make_cfg(settings)
 # %%
 # @title Spawn the agent at a pre-defined location
 
-try:  # Got to make initialization idiot proof
-    sim.close()
-except NameError:
-    pass
+
+def init_agent(sim):
+    agent_pos = np.array([-0.15776923, 0.18244143, 0.2988735])
+
+    # Place the agent
+    sim.agents[0].scene_node.translation = agent_pos
+    agent_orientation_y = -40
+    sim.agents[0].scene_node.rotation = mn.Quaternion.rotation(
+        mn.Deg(agent_orientation_y), mn.Vector3(0, 1.0, 0)
+    )
+
 
 cfg.sim_cfg.default_agent_id = 0
-sim = habitat_sim.Simulator(cfg)
-
-agent_pos = np.array([-0.15776923, 0.18244143, 0.2988735])
-
-# Place the agent
-sim.agents[0].scene_node.translation = agent_pos
-agent_orientation_y = -40
-sim.agents[0].scene_node.rotation = mn.Quaternion.rotation(
-    mn.Deg(agent_orientation_y), mn.Vector3(0, 1.0, 0)
-)
-
-if make_video:
-    # Visualize the agent's initial position
-    simulate_and_make_vid(sim, None, "sim-init", dt=1.0, open_vid=show_video)
+with habitat_sim.Simulator(cfg) as sim:
+    init_agent(sim)
+    if make_video:
+        # Visualize the agent's initial position
+        simulate_and_make_vid(
+            sim, None, "sim-init", dt=1.0, open_vid=show_video
+        )
 
 
 # %%
 # @title Set the object's initial and final position
 # @markdown Defines two utility functions:
 # @markdown - `remove_all_objects`: This will remove all objects from the scene
-# @markdown - `set_object_in_front_of_agent`: This will add an object in
-# @markdown the scene in front of the agent at the specified distance.
+# @markdown - `set_object_in_front_of_agent`: This will add an object in the scene in front of the agent at the specified distance.
 
-# @markdown Here we add a chair *3.0m* away from the agent and the task
-# @markdown is to place the agent at the desired final position which is *7.0*
-# @markdown in front of the agent.
+# @markdown Here we add a chair *3.0m* away from the agent and the task is to place the agent at the desired final position which is *7.0m* in front of the agent.
 
 
 def remove_all_objects(sim):
@@ -369,35 +366,40 @@ def set_object_in_front_of_agent(sim, obj_id, z_offset=-1.5):
     sim.set_translation(y_translation + sim.get_translation(obj_id), obj_id)
 
 
-# Manager of Object Attributes Templates
-obj_attr_mgr = sim.get_object_template_manager()
-# Manager of Primitive Asset Attributes Templates
-prim_attr_mgr = sim.get_asset_template_manager()
+def init_objects(sim):
+    # Manager of Object Attributes Templates
+    obj_attr_mgr = sim.get_object_template_manager()
+
+    # Add a chair into the scene.
+    obj_path = "test_assets/objects/chair"
+    chair_template_id = obj_attr_mgr.load_object_configs(
+        str(os.path.join(data_path, obj_path))
+    )[0]
+    chair_attr = obj_attr_mgr.get_template_by_ID(chair_template_id)
+    obj_attr_mgr.register_template(chair_attr)
+
+    # Object's initial position 3m away from the agent.
+    object_id = sim.add_object_by_handle(chair_attr.handle)
+    set_object_in_front_of_agent(sim, object_id, -3.0)
+    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
+
+    # Object's final position 7m away from the agent
+    goal_id = sim.add_object_by_handle(chair_attr.handle)
+    set_object_in_front_of_agent(sim, goal_id, -7.0)
+    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, goal_id)
+
+    return object_id, goal_id
 
 
-# Add a chair into the scene.
-obj_path = "test_assets/objects/chair"
-chair_template_id = obj_attr_mgr.load_object_configs(
-    str(os.path.join(data_path, obj_path))
-)[0]
-chair_attr = obj_attr_mgr.get_template_by_ID(chair_template_id)
-obj_attr_mgr.register_template(chair_attr)
+with habitat_sim.Simulator(cfg) as sim:
+    init_agent(sim)
+    init_objects(sim)
 
-# Object's initial position 3m away from the agent.
-object_id = sim.add_object_by_handle(chair_attr.handle)
-set_object_in_front_of_agent(sim, object_id, -3.0)
-sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
-
-# Object's final position 7m away from the agent
-goal_id = sim.add_object_by_handle(chair_attr.handle)
-set_object_in_front_of_agent(sim, goal_id, -7.0)
-sim.set_object_motion_type(habitat_sim.MotionType.STATIC, goal_id)
-
-# Visualize the scene after the chair is added into the scene.
-if make_video:
-    simulate_and_make_vid(
-        sim, None, "object-init", dt=1.0, open_vid=show_video
-    )
+    # Visualize the scene after the chair is added into the scene.
+    if make_video:
+        simulate_and_make_vid(
+            sim, None, "object-init", dt=1.0, open_vid=show_video
+        )
 
 
 # %% [markdown]
@@ -430,8 +432,7 @@ if make_video:
 
 # %%
 # @title Create a new dataset
-# @markdown Utility functions to define and save the dataset for the
-# @markdown rearrangement task
+# @markdown Utility functions to define and save the dataset for the rearrangement task
 
 
 def get_rotation(sim, object_id):
@@ -496,35 +497,33 @@ def build_episode(sim, episode_num, object_id, goal_id):
     return episodes
 
 
-episodes = build_episode(sim, 1, object_id, goal_id)
+with habitat_sim.Simulator(cfg) as sim:
+    init_agent(sim)
+    object_id, goal_id = init_objects(sim)
 
-dataset_content_path = "data/datasets/rearrangement/coda/v1/train/"
-if not os.path.exists(dataset_content_path):
-    os.makedirs(dataset_content_path)
+    episodes = build_episode(sim, 1, object_id, goal_id)
 
-with gzip.open(os.path.join(dataset_content_path, "train.json.gz"), "wt") as f:
-    json.dump(episodes, f)
+    dataset_content_path = "data/datasets/rearrangement/coda/v1/train/"
+    if not os.path.exists(dataset_content_path):
+        os.makedirs(dataset_content_path)
 
-print(
-    "Dataset written to {}".format(
-        os.path.join(dataset_content_path, "train.json.gz")
+    with gzip.open(
+        os.path.join(dataset_content_path, "train.json.gz"), "wt"
+    ) as f:
+        json.dump(episodes, f)
+
+    print(
+        "Dataset written to {}".format(
+            os.path.join(dataset_content_path, "train.json.gz")
+        )
     )
-)
 
 
 # %%
 # @title Dataset class to read the saved dataset in Habitat-API.
-# @markdown To read the saved episodes in Habitat-API, we will extend
-# @markdown the `Dataset` class and the `Episode` base class. It will help
-# @markdown provide all the relevant details about the episode through
-# @markdown a consistent API to all downstream tasks.
+# @markdown To read the saved episodes in Habitat-API, we will extend the `Dataset` class and the `Episode` base class. It will help provide all the relevant details about the episode through a consistent API to all downstream tasks.
 
-# @markdown - We will first create a `RearrangementEpisode` by extending
-# @markdown the `NavigationEpisode` to include additional information about
-# @markdown object's initial configuration and desired final configuration.
-# @markdown - We will then define a `RearrangementDatasetV0` class that
-# @markdown builds on top of `PointNavDatasetV1` class to read the JSON file
-# @markdown stored earlier and initialize a list of `RearrangementEpisode`.
+# @markdown - We will first create a `RearrangementEpisode` by extending the `NavigationEpisode` to include additional information about object's initial configuration and desired final configuration. - We will then define a `RearrangementDatasetV0` class that builds on top of `PointNavDatasetV1` class to read the JSON file stored earlier and initialize a list of `RearrangementEpisode`.
 
 from habitat.core.utils import DatasetFloatJSONEncoder, not_none_validator
 from habitat.datasets.pointnav.pointnav_dataset import (
@@ -667,9 +666,7 @@ assert dataset.episodes[0].goals.rotation == [0.0, 0.0, 0.0, 1.0]
 
 # %%
 # @title RayCast utility to implement Grab/Release Under Cross-Hair Action
-# @markdown Cast a ray in the direction of crosshair from the camera
-# @markdown and check if it collides with another object within a certain
-# @markdown distance threshold
+# @markdown Cast a ray in the direction of crosshair from the camera and check if it collides with another object within a certain distance threshold
 
 
 def raycast(sim, sensor_name, crosshair_pos=[128, 128], max_distance=2.0):
@@ -706,42 +703,49 @@ def raycast(sim, sensor_name, crosshair_pos=[128, 128], max_distance=2.0):
 # %%
 # Test the raycast utility.
 
-remove_all_objects(sim)
+with habitat_sim.Simulator(cfg) as sim:
+    init_agent(sim)
+    obj_attr_mgr = sim.get_object_template_manager()
+    obj_path = "test_assets/objects/chair"
+    chair_template_id = obj_attr_mgr.load_object_configs(
+        str(os.path.join(data_path, obj_path))
+    )[0]
+    chair_attr = obj_attr_mgr.get_template_by_ID(chair_template_id)
+    obj_attr_mgr.register_template(chair_attr)
+    object_id = sim.add_object_by_handle(chair_attr.handle)
+    print(f"Chair's object id is {object_id}")
 
-object_id = sim.add_object_by_handle(chair_attr.handle)
-print(f"Chair's object id is {object_id}")
-set_object_in_front_of_agent(sim, object_id, -1.5)
-sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
-if make_video:
-    # Visualize the agent's initial position
-    simulate_and_make_vid(
-        sim, [190, 128], "sim-before-grab", dt=1.0, open_vid=show_video
+    set_object_in_front_of_agent(sim, object_id, -1.5)
+    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
+    if make_video:
+        # Visualize the agent's initial position
+        simulate_and_make_vid(
+            sim, [190, 128], "sim-before-grab", dt=1.0, open_vid=show_video
+        )
+
+    # Distance threshold=2 is greater than agent-to-chair distance.
+    # Should return chair's object id
+    closest_object = raycast(
+        sim, "rgb", crosshair_pos=[128, 190], max_distance=2.0
     )
+    print(f"Closest Object ID: {closest_object} using 2.0 threshold")
+    assert (
+        closest_object == object_id
+    ), f"Could not pick chair with ID: {object_id}"
 
-# Distance threshold=2 is greater than agent-to-chair distance.
-# Should return chair's object id
-closest_object = raycast(
-    sim, "rgb", crosshair_pos=[128, 190], max_distance=2.0
-)
-print(f"Closest Object ID: {closest_object} using 2.0 threshold")
-assert closest_object == 1
+    # Distance threshold=1 is smaller than agent-to-chair distance .
+    # Should return -1
+    closest_object = raycast(
+        sim, "rgb", crosshair_pos=[128, 190], max_distance=1.0
+    )
+    print(f"Closest Object ID: {closest_object} using 1.0 threshold")
+    assert closest_object == -1, f"Agent shoud not be able to pick any object"
 
-# Distance threshold=1 is smaller than agent-to-chair distance .
-# Should return -1
-closest_object = raycast(
-    sim, "rgb", crosshair_pos=[128, 190], max_distance=1.0
-)
-print(f"Closest Object ID: {closest_object} using 1.0 threshold")
-assert closest_object == -1
+    remove_all_objects(sim)
 
-sim.close()
 
 # %%
-# @title Define a Grab/Release action and create a new action space.
-# @markdown Each new action is defined by a `ActionSpec` and an `ActuationSpec`.
-# @markdown `ActionSpec` is mapping between the action name and its corresponding
-# @markdown `ActuationSpec`. `ActuationSpec` contains all the necessary
-# @markdown specifications required to define the action.
+# @title Define a Grab/Release action and create a new action space. Each new action is defined by a `ActionSpec` and an `ActuationSpec`. `ActionSpec` is mapping between the action name and its corresponding `ActuationSpec`. `ActuationSpec` contains all the necessary specifications required to define the action.
 
 from habitat.config.default import _C, CN
 from habitat.core.embodied_task import SimulatorTaskAction
@@ -754,13 +758,9 @@ from habitat_sim.agent.controls.controls import ActuationSpec
 
 
 # @markdown For instance, `GrabReleaseActuationSpec` contains the following:
-# @markdown - `visual_sensor_name` defines which viewport (rgb, depth, etc) to
-# @markdown to use to cast the ray.
-# @markdown - `crosshair_pos` stores the position in the viewport through which
-# @markdown the ray passes. Any object which intersects with this ray
-# @markdown can be grabbed by the agent.
-# @markdown - `amount` defines a distance threshold. Objects which are
-# @markdown farther than the treshold cannot be picked up by the agent.
+# @markdown - `visual_sensor_name` defines which viewport (rgb, depth, etc) to to use to cast the ray.
+# @markdown - `crosshair_pos` stores the position in the viewport through which the ray passes. Any object which intersects with this ray can be grabbed by the agent.
+# @markdown - `amount` defines a distance threshold. Objects which are farther than the treshold cannot be picked up by the agent.
 @attr.s(auto_attribs=True, slots=True)
 class GrabReleaseActuationSpec(ActuationSpec):
     visual_sensor_name: str = "rgb"
@@ -768,10 +768,7 @@ class GrabReleaseActuationSpec(ActuationSpec):
     amount: float = 2.0
 
 
-# @markdown Then, we extend the `HabitatSimV1ActionSpaceConfiguration` to add
-# @markdown the above action into the agent's action space.
-# @markdown `ActionSpaceConfiguration` is a mapping between action name
-# @markdown and the corresponding `ActionSpec`
+# @markdown Then, we extend the `HabitatSimV1ActionSpaceConfiguration` to add the above action into the agent's action space. `ActionSpaceConfiguration` is a mapping between action name and the corresponding `ActionSpec`
 @registry.register_action_space_configuration(name="RearrangementActions-v0")
 class RearrangementSimV0ActionSpaceConfiguration(
     HabitatSimV1ActionSpaceConfiguration
@@ -799,9 +796,7 @@ class RearrangementSimV0ActionSpaceConfiguration(
         return config
 
 
-# @markdown Finally, we extend `SimualtorTaskAction` which tells the
-# @markdown simulator which action to call when a named action
-# @markdown ('GRAB_RELEASE' in this case) is predicte by the agent's policy.
+# @markdown Finally, we extend `SimualtorTaskAction` which tells the simulator which action to call when a named action ('GRAB_RELEASE' in this case) is predicte by the agent's policy.
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
@@ -823,33 +818,17 @@ _C.SIMULATOR.VISUAL_SENSOR = "rgb"
 
 # %%
 # @title RearrangementSim Class
-# @markdown Here we will extend the `HabitatSim` class for the rearrangement
-# @markdown task. We will make the following changes:
-# @markdown - define a new `_initialize_objects` function which will load the
-# @markdown object in its initial configuration as defined by the episode.
-# @markdown - define a `gripped_object_id` property that stores whether
-# @markdown the agent is holding any object or not.
-# @markdown - modify the `step` function of the simulator to use the
-# @markdown `grab/release` action we define earlier.
+# @markdown Here we will extend the `HabitatSim` class for the rearrangement task. We will make the following changes:
+# @markdown - define a new `_initialize_objects` function which will load the object in its initial configuration as defined by the episode.
+# @markdown - define a `gripped_object_id` property that stores whether the agent is holding any object or not.
+# @markdown - modify the `step` function of the simulator to use the `grab/release` action we define earlier.
 
 # @markdown #### Writing the `step` function:
-# @markdown Since we added a new action for this task, we have to modify the
-# @markdown `step` function to define what happens when `grab/release` action is
-# @markdown called. If a simple navigation action (`move_forward`, `turn_left`,
-# @markdown `turn_right`) is called, we pass it forward to `act` function of the
-# @markdown agent which already defines the behavior of these actions.
+# @markdown Since we added a new action for this task, we have to modify the `step` function to define what happens when `grab/release` action is called. If a simple navigation action (`move_forward`, `turn_left`, `turn_right`) is called, we pass it forward to `act` function of the agent which already defines the behavior of these actions.
 
-# @markdown For the `grab/release` action, if the agent is not already holding
-# @markdown an object, we first call the `raycast` function
-# @markdown using the values from the `ActuationSpec` to see if any object is
-# @markdown grippable. If it returns a valid object id, we put the object in a
-# @markdown "invisible" inventory and remove it from the scene.
+# @markdown For the `grab/release` action, if the agent is not already holding an object, we first call the `raycast` function using the values from the `ActuationSpec` to see if any object is grippable. If it returns a valid object id, we put the object in a "invisible" inventory and remove it from the scene.
 
-# @markdown If the agent was already holding an object, `grab/release` action
-# @markdown will try release the object at the same relative position as it was
-# @markdown grabbed. If the object can be placed without any collision, then the
-# @markdown `release` action is successful.
-
+# @markdown If the agent was already holding an object, `grab/release` action will try release the object at the same relative position as it was grabbed. If the object can be placed without any collision, then the `release` action is successful.
 
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.nav import NavMeshSettings
@@ -1032,33 +1011,18 @@ class RearrangementSim(HabitatSim):
 
 # %%
 # @title Implement new sensors and measurements
-# @markdown After defining the dataset, action space and simulator functions for
-# @markdown the rearrangement task, we are one step closer to training agents
-# @markdown to solve this task.
+# @markdown After defining the dataset, action space and simulator functions for the rearrangement task, we are one step closer to training agents to solve this task.
 
-# @markdown Here we define inputs to the policy and other measurements required
-# @markdown to design reward functions.
+# @markdown Here we define inputs to the policy and other measurements required to design reward functions.
 
-# @markdown **Sensors**: These define various part of the simulator state that's
-# @markdown visible to the agent. For simplicity, we'll assume that agent knows the
-# @markdown object's current position, object's final goal position relative to
-# @markdown the agent's current position.
-# @markdown - Object's current position will be made
-# @markdown given by the `ObjectPosition` sensor
-# @markdown - Object's goal position
-# @markdown will be available through the `ObjectGoal` sensor.
-# @markdown - Finally, we will also use `GrippedObject` sensor to tell the agent
-# @markdown if it's holding any object or not.
+# @markdown **Sensors**: These define various part of the simulator state that's visible to the agent. For simplicity, we'll assume that agent knows the object's current position, object's final goal position relative to the agent's current position.
+# @markdown - Object's current position will be made given by the `ObjectPosition` sensor
+# @markdown - Object's goal position will be available through the `ObjectGoal` sensor.
+# @markdown - Finally, we will also use `GrippedObject` sensor to tell the agent if it's holding any object or not.
 
-# @markdown **Measures**: These define various metrics about the task which can
-# @markdown be used to measure task progress and define rewards. Note that
-# @markdown measurements are *privileged* information not accessible to the agent
-# @markdown as part of the observation space.
-# @markdown We will need the following measurements:
-# @markdown - `AgentToObjectDistance` which measure the euclidean distance
-# @markdown between the agent and the object.
-# @markdown - `ObjectToGoalDistance` which measures the euclidean distance
-# @markdown between the object and the goal.
+# @markdown **Measures**: These define various metrics about the task which can be used to measure task progress and define rewards. Note that measurements are *privileged* information not accessible to the agent as part of the observation space. We will need the following measurements:
+# @markdown - `AgentToObjectDistance` which measure the euclidean distance between the agent and the object.
+# @markdown - `ObjectToGoalDistance` which measures the euclidean distance between the object and the goal.
 
 from gym import spaces
 
@@ -1404,19 +1368,13 @@ with habitat.Env(config) as env:
 
 # %%
 # @title Create a task specific RL Environment with a new reward definition.
-# @markdown We create a `RearragenmentRLEnv` class and modify the `get_reward()`
-# @markdown function.
+# @markdown We create a `RearragenmentRLEnv` class and modify the `get_reward()` function.
 # @markdown The reward sturcture is as follows:
-# @markdown - The agent gets a positive reward if the agent gets closer to the
-# @markdown object otherwise a negative reward.
-# @markdown - The agent gets a positive reward if it moves the object closer to
-# @markdown goal otherwise a negative reward.
-# @markdown - The agent gets a positive reward when the agent "picks" up an object for the
-# @markdown first time. For all other "grab/release" action, it gets a negative reward.
-# @markdown - The agent gets a slack penalty of -0.01 for every action it takes
-# @markdown in the environment.
-# @markdown - Finally the agent gets a large success reward when the episode is
-# @markdown completed successfully.
+# @markdown - The agent gets a positive reward if the agent gets closer to the object otherwise a negative reward.
+# @markdown - The agent gets a positive reward if it moves the object closer to goal otherwise a negative reward.
+# @markdown - The agent gets a positive reward when the agent "picks" up an object for the first time. For all other "grab/release" action, it gets a negative reward.
+# @markdown - The agent gets a slack penalty of -0.01 for every action it takes in the environment.
+# @markdown - Finally the agent gets a large success reward when the episode is completed successfully.
 
 import math
 from collections import defaultdict
@@ -2073,8 +2031,6 @@ from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
 from habitat.config import get_config
 from habitat_baselines.config.default import get_config as get_baseline_config
 
-# only run this if in colab environment
-
 baseline_config = get_baseline_config(
     "habitat_baselines/config/pointnav/ppo_pointnav.yaml"
 )
@@ -2111,10 +2067,11 @@ random.seed(baseline_config.TASK_CONFIG.SEED)
 np.random.seed(baseline_config.TASK_CONFIG.SEED)
 torch.manual_seed(baseline_config.TASK_CONFIG.SEED)
 
-trainer = RearrangementTrainer(baseline_config)
-trainer.train()
-trainer.eval()
+if __name__ == "__main__":
+    trainer = RearrangementTrainer(baseline_config)
+    trainer.train()
+    trainer.eval()
 
-if make_video:
-    video_file = os.listdir("data/videos")[0]
-    vut.display_video(os.path.join("data/videos", video_file))
+    if make_video:
+        video_file = os.listdir("data/videos")[0]
+        vut.display_video(os.path.join("data/videos", video_file))
