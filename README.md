@@ -68,7 +68,7 @@ If you use the Habitat platform in your research, please cite the following [pap
     pip install -e .
     ```
 
-    The command above will install only habitat core API. To include habitat_baselines along with all additional requirements, use the command below instead:
+    The command above will install only core of Habitat Lab. To include habitat_baselines along with all additional requirements, use the command below instead:
 
     ```bash
     git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
