@@ -20,8 +20,8 @@ jobs:
       - run:
           name: run black
           command: |
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
