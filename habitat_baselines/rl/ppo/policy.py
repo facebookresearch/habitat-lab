@@ -77,6 +77,10 @@ class Policy(nn.Module):
 
         return value, action_log_probs, distribution_entropy, rnn_hidden_states
 
+    @classmethod
+    def from_config(cls, config, envs):
+        raise NotImplementedError
+
 
 class CriticHead(nn.Module):
     def __init__(self, input_size):
@@ -99,6 +103,14 @@ class PointNavBaselinePolicy(Policy):
                 observation_space=observation_space, hidden_size=hidden_size
             ),
             action_space.n,
+        )
+
+    @classmethod
+    def from_config(cls, config, envs):
+        return cls(
+            observation_space=envs.observation_spaces[0],
+            action_space=envs.action_spaces[0],
+            hidden_size=config.RL.PPO.hidden_size,
         )
 
 
