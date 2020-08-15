@@ -21,7 +21,7 @@
 # ---
 
 # %% [markdown]
-# # Furniture Rearrangement - How to setup a new interaction task in Habitat Lab
+# # Furniture Rearrangement - How to setup a new interaction task in Habitat-Lab
 #
 # This tutorial demonstrates how to setup a new task in Habitat that utilizes interaction capabilities in Habitat Simulator.
 #
@@ -55,6 +55,9 @@
 # @title Path Setup and Imports { display-mode: "form" }
 # @markdown (double click to show code).
 
+# %cd /content/habitat-lab
+
+## [setup]
 import gzip
 import json
 import math
@@ -64,8 +67,6 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Type
 
-# %cd /content/habitat-api
-## [setup]
 import attr
 import cv2
 import git
@@ -92,7 +93,25 @@ data_path = os.path.join(dir_path, "data")
 output_directory = "data/tutorials/output/"  # @param {type:"string"}
 output_path = os.path.join(dir_path, output_directory)
 
-if not os.path.exists(output_path):
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-display", dest="display", action="store_false")
+    parser.add_argument(
+        "--no-make-video", dest="make_video", action="store_false"
+    )
+    parser.set_defaults(show_video=True, make_video=True)
+    args, _ = parser.parse_known_args()
+    show_video = args.display
+    display = args.display
+    make_video = args.make_video
+else:
+    show_video = False
+    make_video = False
+    display = False
+
+if make_video and not os.path.exists(output_path):
     os.makedirs(output_path)
 
 
@@ -197,25 +216,6 @@ def display_sample(
         plt.imshow(data)
 
     plt.show(block=False)
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--no-display", dest="display", action="store_false")
-    parser.add_argument(
-        "--no-make-video", dest="make_video", action="store_false"
-    )
-    parser.set_defaults(show_video=True, make_video=True)
-    args, _ = parser.parse_known_args()
-    show_video = args.display
-    display = args.display
-    make_video = args.make_video
-else:
-    show_video = False
-    make_video = False
-    display = False
 
 
 # %% [markdown]
@@ -520,8 +520,8 @@ with habitat_sim.Simulator(cfg) as sim:
 
 
 # %%
-# @title Dataset class to read the saved dataset in Habitat-API.
-# @markdown To read the saved episodes in Habitat-API, we will extend the `Dataset` class and the `Episode` base class. It will help provide all the relevant details about the episode through a consistent API to all downstream tasks.
+# @title Dataset class to read the saved dataset in Habitat-Lab.
+# @markdown To read the saved episodes in Habitat-Lab, we will extend the `Dataset` class and the `Episode` base class. It will help provide all the relevant details about the episode through a consistent API to all downstream tasks.
 
 # @markdown - We will first create a `RearrangementEpisode` by extending the `NavigationEpisode` to include additional information about object's initial configuration and desired final configuration.
 # @markdown - We will then define a `RearrangementDatasetV0` class that builds on top of `PointNavDatasetV1` class to read the JSON file stored earlier and initialize a list of `RearrangementEpisode`.
@@ -1560,7 +1560,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
-import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
@@ -2020,7 +2019,9 @@ class RearrangementTrainer(PPOTrainer):
 # %tensorboard --logdir data/tb
 
 # %%
+# @title Train an RL agent on a single episode
 # !if [ -d "data/tb" ]; then rm -r data/tb; fi
+
 import random
 
 import numpy as np
@@ -2049,7 +2050,7 @@ baseline_config.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 baseline_config.CHECKPOINT_FOLDER = "data/checkpoints"
 
 if vut.is_notebook():
-    baseline_config.NUM_UPDATES = 400
+    baseline_config.NUM_UPDATES = 400  # @param {type:"number"}
 else:
     baseline_config.NUM_UPDATES = 1
 
@@ -2057,10 +2058,10 @@ baseline_config.LOG_INTERVAL = 10
 baseline_config.CHECKPOINT_INTERVAL = 50
 baseline_config.LOG_FILE = "data/checkpoints/train.log"
 baseline_config.EVAL.SPLIT = "train"
-baseline_config.RL.SUCCESS_REWARD = 2.5
+baseline_config.RL.SUCCESS_REWARD = 2.5  # @param {type:"number"}
 baseline_config.RL.SUCCESS_MEASURE = "object_to_goal_distance"
 baseline_config.RL.REWARD_MEASURE = "object_to_goal_distance"
-baseline_config.RL.GRIPPED_SUCCESS_REWARD = 2.5
+baseline_config.RL.GRIPPED_SUCCESS_REWARD = 2.5  # @param {type:"number"}
 
 baseline_config.freeze()
 random.seed(baseline_config.TASK_CONFIG.SEED)
