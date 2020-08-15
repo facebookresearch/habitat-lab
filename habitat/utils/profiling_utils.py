@@ -58,13 +58,17 @@ def range_push(msg: str):
 
 
 def range_pop():
-    r"""Annotates the end of a range for profiling. See also range_push."
+    r"""Annotates the end of a range for profiling. See also range_push.
     """
     if enable_profiling:
         nvtx.range_pop()
 
 
 class RangeContext(ContextDecorator):
+    r"""Annotate a range for profiling. Use as a function decorator or in a with
+    statement. See also range_push.
+    """
+
     def __init__(self, msg: str):
         self._msg = msg
 
