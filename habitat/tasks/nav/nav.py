@@ -707,6 +707,7 @@ class TopDownMap(Measure):
             self._num_samples,
             self._config.DRAW_BORDER,
         )
+        # import ipdb; ipdb.set_trace()
 
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
@@ -906,13 +907,16 @@ class TopDownMap(Measure):
         return np.array(phi) + x_y_flip
 
     def update_map(self, agent_position):
-        a_x, a_y = maps.to_grid(
+        a_x_float, a_y_float= maps.to_grid(
             agent_position[0],
             agent_position[2],
             self._coordinate_min,
             self._coordinate_max,
             self._map_resolution,
+            keep_float=True,
         )
+        a_x = int(a_x_float)
+        a_y = int(a_y_float)
         # Don't draw over the source point
         if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
             color = 10 + min(
@@ -933,7 +937,7 @@ class TopDownMap(Measure):
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
         self._previous_xy_location = (a_y, a_x)
-        return self._top_down_map, a_x, a_y
+        return self._top_down_map, a_x_float, a_y_float
 
     def update_fog_of_war_mask(self, agent_position):
         if self._config.FOG_OF_WAR.DRAW:

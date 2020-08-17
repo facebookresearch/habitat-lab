@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import imageio
 import numpy as np
@@ -30,6 +30,7 @@ AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
 COORDINATE_EPSILON = 1e-6
 COORDINATE_MIN = -62.3241 - COORDINATE_EPSILON
 COORDINATE_MAX = 90.0399 + COORDINATE_EPSILON
+COORDINATE_MAX = np.ceil(COORDINATE_MAX - COORDINATE_MIN) + COORDINATE_MIN
 
 MAP_INVALID_POINT = 0
 MAP_VALID_POINT = 1
@@ -190,7 +191,8 @@ def to_grid(
     coordinate_min: float,
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
-) -> Tuple[int, int]:
+    keep_float: bool = False,
+) -> Union[Tuple[int, int], Tuple[float, float]]:
     r"""Return gridworld index of realworld coordinates assuming top-left corner
     is the origin. The real world coordinates of lower left corner are
     (coordinate_min, coordinate_min) and of top right corner are
@@ -200,9 +202,11 @@ def to_grid(
         (coordinate_max - coordinate_min) / grid_resolution[0],
         (coordinate_max - coordinate_min) / grid_resolution[1],
     )
-    grid_x = int((coordinate_max - realworld_x) / grid_size[0])
-    grid_y = int((realworld_y - coordinate_min) / grid_size[1])
-    return grid_x, grid_y
+    grid_x = (coordinate_max - realworld_x) / float(grid_size[0])
+    grid_y = (realworld_y - coordinate_min) / float(grid_size[1])
+    if keep_float:
+        return grid_x, grid_y
+    return int(grid_x), int(grid_y)
 
 
 def from_grid(
@@ -286,6 +290,8 @@ def get_topdown_map(
         g_x, g_y = to_grid(
             point[0], point[2], COORDINATE_MIN, COORDINATE_MAX, map_resolution
         )
+        g_x = int(g_x)
+        g_y = int(g_y)
         range_x = (min(range_x[0], g_x), max(range_x[1], g_x))
         range_y = (min(range_y[0], g_y), max(range_y[1], g_y))
 

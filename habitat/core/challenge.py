@@ -15,7 +15,7 @@ class Challenge(Benchmark):
         config_paths = os.environ["CHALLENGE_CONFIG_FILE"]
         super().__init__(config_paths, eval_remote=eval_remote)
 
-    def submit(self, agent):
-        metrics = super().evaluate(agent)
+    def submit(self, agent, num_episodes=None, skip_first_n=0):
+        metrics = super().evaluate(agent, num_episodes=num_episodes, skip_first_n=skip_first_n)
         for k, v in metrics.items():
             logger.info("{}: {}".format(k, v))

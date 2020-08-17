@@ -1,5 +1,10 @@
 ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
+  ITERATOR_OPTIONS:
+    CYCLE: False
+    SHUFFLE: True
+    GROUP_BY_SCENE: False
+
 SIMULATOR:
   AGENT_0:
     SENSORS: ['RGB_SENSOR']
@@ -24,3 +29,10 @@ TASK:
   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
   SUCCESS:
     SUCCESS_DISTANCE: 0.2
+
+
+# # DATASET:
+#  TYPE: PointNav-v1
+#   SPLIT: train
+#  DATA_PATH: ../habitat-challenge/habitat-challenge-data/data/datasets/pointnav/gibson/v2/{split}/{split}.json.gz
+#  SCENES_DIR: "../habitat-challenge/habitat-challenge-data/data/scene_datasets/"
