@@ -16,6 +16,12 @@ repos:
     -   id: check-case-conflict
     -   id: check-merge-conflict
 
+-   repo: https://github.com/asottile/seed-isort-config
+    rev: v2.2.0
+    hooks:
+    -   id: seed-isort-config
+        language_version: python
+
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.3.2
     hooks:
