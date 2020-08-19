@@ -44,6 +44,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_sim.utils import profiling_utils
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -133,6 +134,7 @@ class DDPPOTrainer(PPOTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
         )
 
+    @profiling_utils.RangeContext("train")
     def train(self) -> None:
         r"""Main method for DD-PPO.
 
@@ -143,6 +145,12 @@ class DDPPOTrainer(PPOTrainer):
             self.config.RL.DDPPO.distrib_backend
         )
         add_signal_handlers()
+        # Reference code. profiling_utils.configure is not available yet but it
+        # will merge to Habitat-sim soon.
+        # profiling_utils.configure(
+        #     capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
+        #     num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
+        # )
 
         # Stores the number of workers that have finished their rollout
         num_rollouts_done_store = distrib.PrefixStore(
@@ -287,6 +295,9 @@ class DDPPOTrainer(PPOTrainer):
             else contextlib.suppress()
         ) as writer:
             for update in range(start_update, self.config.NUM_UPDATES):
+                # profiling_utils.on_start_step()
+                profiling_utils.range_push("train update")
+
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
 
@@ -296,6 +307,8 @@ class DDPPOTrainer(PPOTrainer):
                     )
 
                 if EXIT.is_set():
+                    profiling_utils.range_pop()  # train update
+
                     self.envs.close()
 
                     if REQUEUE.is_set() and self.world_rank == 0:
@@ -322,6 +335,7 @@ class DDPPOTrainer(PPOTrainer):
 
                 count_steps_delta = 0
                 self.agent.eval()
+                profiling_utils.range_push("rollouts loop")
                 for step in range(ppo_cfg.num_steps):
 
                     (
@@ -344,6 +358,7 @@ class DDPPOTrainer(PPOTrainer):
                         self.config.RL.DDPPO.sync_frac * self.world_size
                     ):
                         break
+                profiling_utils.range_pop()  # rollouts loop
 
                 num_rollouts_done_store.add("num_done", 1)
 
@@ -448,5 +463,7 @@ class DDPPOTrainer(PPOTrainer):
                             dict(step=count_steps),
                         )
                         count_checkpoints += 1
+
+                profiling_utils.range_pop()  # train update
 
             self.envs.close()

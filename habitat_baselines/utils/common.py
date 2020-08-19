@@ -28,6 +28,7 @@ from torch import nn as nn
 
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_sim.utils import profiling_utils
 
 
 class Flatten(nn.Module):
@@ -91,6 +92,7 @@ def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:
 
 
 @torch.no_grad()
+@profiling_utils.RangeContext("batch_obs")
 def batch_obs(
     observations: List[Dict],
     device: Optional[torch.device] = None,

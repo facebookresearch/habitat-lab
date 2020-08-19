@@ -146,6 +146,12 @@ _C.ORBSLAM2.NUM_ACTIONS = 3
 _C.ORBSLAM2.DIST_TO_STOP = 0.05
 _C.ORBSLAM2.PLANNER_MAX_STEPS = 500
 _C.ORBSLAM2.DEPTH_DENORM = get_task_config().SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
+# -----------------------------------------------------------------------------
+# PROFILING
+# -----------------------------------------------------------------------------
+_C.PROFILING = CN()
+_C.PROFILING.CAPTURE_START_STEP = -1
+_C.PROFILING.NUM_STEPS_TO_CAPTURE = -1
 
 
 def get_config(
