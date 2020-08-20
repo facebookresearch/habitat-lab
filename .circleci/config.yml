@@ -54,6 +54,7 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
+                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
@@ -139,7 +140,7 @@ jobs:
               fi
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              python setup.py install --headless --with-cuda
+              python setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
           when: always
@@ -157,6 +158,16 @@ jobs:
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
               fi
+      - run:
+          name: Download coda scene
+          command: |
+            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
+            then
+              cd habitat-sim
+              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
+              unzip coda.zip -d data/scene_datasets
+              rm coda.zip
+            fi
       - run:
           name: Run sim benchmark
           command: |
