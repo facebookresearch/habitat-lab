@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import sys
 from collections import defaultdict
 
 import habitat

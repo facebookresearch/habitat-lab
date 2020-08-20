@@ -8,7 +8,7 @@ import contextlib
 import os
 import random
 import time
-from collections import OrderedDict, defaultdict, deque
+from collections import defaultdict, deque
 
 import numpy as np
 import torch
