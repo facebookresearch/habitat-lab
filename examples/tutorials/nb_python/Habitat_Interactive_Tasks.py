@@ -51,6 +51,16 @@
 # !gdown --id 1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853
 # !unzip -o /content/coda.zip -d /content/habitat-sim/data/scene_datasets
 
+# reload the cffi version
+import sys
+
+if "google.colab" in sys.modules:
+    import importlib
+
+    import cffi
+
+    importlib.reload(cffi)
+
 # %%
 # @title Path Setup and Imports { display-mode: "form" }
 # @markdown (double click to show code).
@@ -906,10 +916,8 @@ class RearrangementSim(HabitatSim):
 
             self.set_object_motion_type(MotionType.STATIC, object_id)
 
-            # Recompute the navmesh after placing all the objects.
-            self.recompute_navmesh(
-                self.pathfinder, self.navmesh_settings, True
-            )
+        # Recompute the navmesh after placing all the objects.
+        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
 
     def _sync_gripped_object(self, gripped_object_id):
         r"""
