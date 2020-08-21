@@ -21,7 +21,7 @@ from PIL import Image
 from torch import nn as nn
 from torch.nn import functional as F
 from torch.utils import model_zoo as model_zoo
-from torchvision import transforms, utils
+from torchvision import transforms
 
 r"""ResNet code gently borrowed from
 https://github.com/pytorch/vision/blob/master/torchvision/models/py

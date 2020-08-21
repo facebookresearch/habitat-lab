@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_nav_task():
     try:
-        from habitat.tasks.nav.nav import NavigationTask
+        pass
 
         has_navtask = True
     except ImportError as e:
@@ -18,7 +18,7 @@ def _try_register_nav_task():
         navtask_import_error = e
 
     if has_navtask:
-        from habitat.tasks.nav.nav import NavigationTask
+        pass
     else:
 
         @registry.register_task(name="Nav-v0")

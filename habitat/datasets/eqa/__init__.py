@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_mp3d_eqa_dataset():
     try:
-        from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
+        pass
 
         has_mp3deqa = True
     except ImportError as e:
@@ -18,7 +18,7 @@ def _try_register_mp3d_eqa_dataset():
         mp3deqa_import_error = e
 
     if has_mp3deqa:
-        from habitat.datasets.eqa.mp3d_eqa_dataset import Matterport3dDatasetV1
+        pass
     else:
 
         @registry.register_dataset(name="MP3DEQA-v1")

@@ -9,7 +9,6 @@ import os
 import pytest
 
 import habitat
-from habitat.config import Config as CN
 
 try:
     from habitat_baselines.agents import ppo_agents, simple_agents

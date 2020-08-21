@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_r2r_vln_dataset():
     try:
-        from habitat.datasets.vln.r2r_vln_dataset import VLNDatasetV1
+        pass
 
         has_r2r_vln = True
     except ImportError as e:
@@ -18,7 +18,7 @@ def _try_register_r2r_vln_dataset():
         r2r_vln_import_error = e
 
     if has_r2r_vln:
-        from habitat.datasets.vln.r2r_vln_dataset import VLNDatasetV1
+        pass
     else:
 
         @registry.register_dataset(name="R2RVLN-v1")

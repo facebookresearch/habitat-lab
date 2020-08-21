@@ -18,7 +18,7 @@ def _try_register_pyrobot():
         pyrobot_import_error = e
 
     if has_pyrobot:
-        from habitat.sims.pyrobot.pyrobot import PyRobot
+        pass
     else:
 
         @registry.register_simulator(name="PyRobot-v0")

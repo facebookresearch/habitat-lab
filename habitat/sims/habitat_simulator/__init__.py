@@ -19,7 +19,6 @@ def _try_register_habitat_sim():
         from habitat.sims.habitat_simulator.actions import (
             HabitatSimV1ActionSpaceConfiguration,
         )
-        from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
     else:
 
         @registry.register_simulator(name="Sim-v0")

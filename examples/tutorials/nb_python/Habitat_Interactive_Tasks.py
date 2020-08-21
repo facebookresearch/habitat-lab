@@ -1569,9 +1569,7 @@ import torch
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
-from habitat.core.vector_env import ThreadedVectorEnv
 from habitat.utils.visualizations.utils import observations_to_image
-from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs, make_env_fn
 from habitat_baselines.common.environments import get_env_class
@@ -1583,7 +1581,7 @@ from habitat_baselines.common.utils import (
     linear_decay,
 )
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
-from habitat_baselines.rl.ppo import PPO, PointNavBaselinePolicy
+from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Net, Policy
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
@@ -2034,8 +2032,7 @@ import numpy as np
 import torch
 
 import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
-from habitat.config import get_config
+from habitat import Config, make_dataset
 from habitat_baselines.config.default import get_config as get_baseline_config
 
 baseline_config = get_baseline_config(
