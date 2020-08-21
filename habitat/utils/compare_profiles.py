@@ -44,25 +44,28 @@ import argparse
 import glob
 import os
 import sqlite3
+from collections import defaultdict
+
+import attr
 
 
+@attr.s(auto_attribs=True)
 class Event:
     """Python in-memory representation for an NVTX event from an sqlite
     database"""
 
-    def __init__(self, name, thread_id, start, end):
-        self._name = name
-        self._thread_id = thread_id
-        self._start = start
-        self._end = end
+    name: str
+    thread_id: int
+    start: int
+    end: int
 
 
+@attr.s(auto_attribs=True)
 class SummaryItem:
     """Summary item, for accumulating time for a set of events."""
 
-    def __init__(self):
-        self._time_exclusive = 0
-        self._time_inclusive = 0
+    time_exclusive: int = 0
+    time_inclusive: int = 0
 
 
 def get_sqlite_events(conn):
@@ -84,7 +87,7 @@ def get_sqlite_events(conn):
     )
 
     for row in cursor:
-        events.append(Event(row[0], row[1], row[2], row[3]))
+        events.append(Event(*row))
 
     return events
 
@@ -95,37 +98,35 @@ def create_summary_from_events(events):
     # sort by start time (ascending). For ties, sort by end time (descending). In this way,
     # a (shorter) child event that starts at the same time as a (longer) parent event
     # will occur later in the sort.
-    events.sort(reverse=True, key=lambda event: event._end)
-    events.sort(reverse=False, key=lambda event: event._start)
+    events.sort(reverse=True, key=lambda event: event.end)
+    events.sort(reverse=False, key=lambda event: event.start)
 
-    items = {}
+    items = defaultdict(lambda: SummaryItem())
 
-    for i in range(len(events)):
+    for i, event in enumerate(events):
 
-        event = events[i]
+        item = items[event.name]
 
-        item = items.setdefault(event._name, SummaryItem())
-
-        event_duration = event._end - event._start
-        item._time_inclusive += event_duration
+        event_duration = event.end - event.start
+        item.time_inclusive += event_duration
 
         exclusive_duration = 0
 
         # iterate chronologically through later events. Our accumulated
         #  "exclusive duration" is time during which we aren't inside any
         #  overlapping, same-thread event ("child event").
-        recent_exclusive_start_time = event._start
+        recent_exclusive_start_time = event.start
         child_end_times = set()
         for j in range(i + 1, len(events) + 1):  # note one extra iteration
 
             other_event = None if j == len(events) else events[j]
             if other_event:
-                if other_event._thread_id != event._thread_id:
+                if other_event.thread_id != event.thread_id:
                     continue
-                if other_event._start > event._end:
+                if other_event.start > event.end:
                     other_event = None
 
-            current_time = other_event._start if other_event else event._end
+            current_time = other_event.start if other_event else event.end
 
             if len(child_end_times):
                 latest_child_end_time = max(child_end_times)
@@ -148,14 +149,12 @@ def create_summary_from_events(events):
                 )
 
             if other_event:
-                child_end_times.add(other_event._end)
+                child_end_times.add(other_event.end)
             else:
                 break
 
         assert event_duration >= exclusive_duration
-        item._time_exclusive += exclusive_duration
-
-        items[event._name] = item
+        item.time_exclusive += exclusive_duration
 
     return items
 
@@ -185,9 +184,9 @@ def print_summaries(summaries, args, labels=None):
         for name in summary:
             all_names_with_times.setdefault(
                 name,
-                summary[name]._time_exclusive
+                summary[name].time_exclusive
                 if sort_by_exclusive
-                else summary[name]._time_inclusive,
+                else summary[name].time_inclusive,
             )
             max_name_len = max(max_name_len, len(name))
 
@@ -233,15 +232,15 @@ def print_summaries(summaries, args, labels=None):
                 ):
                     base_item = base_summary[name]
                     time_inclusive = (
-                        item._time_inclusive - base_item._time_inclusive
+                        item.time_inclusive - base_item.time_inclusive
                     )
                     time_exclusive = (
-                        item._time_exclusive - base_item._time_exclusive
+                        item.time_exclusive - base_item.time_exclusive
                     )
                     show_sign = True
                 else:
-                    time_inclusive = item._time_inclusive
-                    time_exclusive = item._time_exclusive
+                    time_inclusive = item.time_inclusive
+                    time_exclusive = item.time_exclusive
                     show_sign = False
                 print(
                     _display_time_ms(time_inclusive, args, show_sign=show_sign)
@@ -282,7 +281,7 @@ def create_arg_parser():
         help="Sort rows by inclusive or exclusive time.",
     )
     parser.add_argument(
-        "--source_time_units_per_second",
+        "--source-time-units-per-second",
         type=int,
         default=1000 * 1000 * 1000,
         metavar="N",

@@ -112,7 +112,7 @@ def test_compare_profiles():
         compare_profiles.print_summaries(
             [summary],
             compare_profiles.create_arg_parser().parse_args(
-                ["--source_time_units_per_second", "1000"]
+                ["--source-time-units-per-second", "1000"]
             ),
         )
         assert fake_out.getvalue() == expected_output
