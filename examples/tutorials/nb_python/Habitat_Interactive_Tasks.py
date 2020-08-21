@@ -2026,7 +2026,7 @@ import numpy as np  # noqa: 841
 import torch  # noqa: 841
 
 import habitat  # noqa: 841
-from habitat import Config, make_datase  # noqa: 841
+from habitat import Config, make_dataset  # noqa: 841
 from habitat_baselines.config.default import (
     get_config as get_baseline_config,  # noqa: 841
 )
