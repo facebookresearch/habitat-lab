@@ -90,7 +90,6 @@ import habitat
 import habitat_sim
 from habitat.config import Config
 from habitat.core.registry import registry
-from habitat_sim.utils import common as ut
 from habitat_sim.utils import viz_utils as vut
 
 if "google.colab" in sys.modules:
@@ -141,10 +140,6 @@ def make_video_cv2(
     video_file = output_path + prefix + ".mp4"
     print("Encoding the video: %s " % video_file)
     writer = vut.get_fast_video_writer(video_file, fps=fps)
-    thumb_size = (int(videodims[0] / 5), int(videodims[1] / 5))
-    outline_frame = (
-        np.ones((thumb_size[1] + 2, thumb_size[0] + 2, 3), np.uint8) * 150
-    )
     for ob in observations:
         # If in RGB/RGBA format, remove the alpha channel
         rgb_im_1st_person = cv2.cvtColor(ob["rgb"], cv2.COLOR_RGBA2RGB)
@@ -749,7 +744,7 @@ with habitat_sim.Simulator(cfg) as sim:
         sim, "rgb", crosshair_pos=[128, 190], max_distance=1.0
     )
     print(f"Closest Object ID: {closest_object} using 1.0 threshold")
-    assert closest_object == -1, f"Agent shoud not be able to pick any object"
+    assert closest_object == -1, "Agent shoud not be able to pick any object"
 
 
 # %%
@@ -1039,7 +1034,6 @@ from habitat.core.dataset import Episode
 from habitat.core.embodied_task import Measure
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.tasks.nav.nav import PointGoalSensor
-from habitat_sim.utils.common import quat_from_magnum
 
 
 @registry.register_sensor
@@ -1445,7 +1439,7 @@ class RearrangementRLEnv(NavRLEnv):
             action_name == "GRAB_RELEASE"
             and observations["gripped_object_id"] >= 0
         ):
-            obj_id = observations["gripped_object_id"]
+            obj_id = observations["gripped_object_id"]  # noqa: 841
             self._prev_measure["gripped_object_count"] += 1
 
             gripped_success_reward = (
@@ -1559,13 +1553,13 @@ class RearrangementRLEnv(NavRLEnv):
 
 
 # %%
-import os
-import time
-from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+import os  # noqa: 841
+import time  # noqa: 841
+from collections import defaultdict, deque  # noqa: 841
+from typing import Any, Dict, List, Optional  # noqa :841
 
-import numpy as np
-import torch
+import numpy as np  # noqa: 841
+import torch  # noqa: 841
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
@@ -1586,7 +1580,7 @@ from habitat_baselines.rl.ppo.policy import Net, Policy
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 
-def construct_envs(
+def construct_envs(  # noqa: 841
     config, env_class, workers_ignore_signals=False,
 ):
     r"""Create VectorEnv object with specified config and env class type.
@@ -1604,7 +1598,7 @@ def construct_envs(
     num_processes = config.NUM_PROCESSES
     configs = []
     env_classes = [env_class for _ in range(num_processes)]
-    dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
+    dataset = habitat.datasets.make_dataset(config.TASK_CONFIG.DATASET.TYPE)
     scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
@@ -2026,14 +2020,16 @@ class RearrangementTrainer(PPOTrainer):
 # @title Train an RL agent on a single episode
 # !if [ -d "data/tb" ]; then rm -r data/tb; fi
 
-import random
+import random  # noqa: 841
 
-import numpy as np
-import torch
+import numpy as np  # noqa: 841
+import torch  # noqa: 841
 
-import habitat
-from habitat import Config, make_dataset
-from habitat_baselines.config.default import get_config as get_baseline_config
+import habitat  # noqa: 841
+from habitat import Config, make_datase  # noqa: 841
+from habitat_baselines.config.default import (
+    get_config as get_baseline_config,  # noqa: 841
+)
 
 baseline_config = get_baseline_config(
     "habitat_baselines/config/pointnav/ppo_pointnav.yaml"
