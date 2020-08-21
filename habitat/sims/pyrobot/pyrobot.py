@@ -191,8 +191,6 @@ class PyRobot(Simulator):
         ), "Invalid robot type {}".format(self._config.ROBOT)
         self._robot_config = getattr(self._config, self._config.ROBOT.upper())
 
-        action_spaces_dict = {}
-
         self._action_space = self._robot_action_space(
             self._config.ROBOT, self._robot_config
         )

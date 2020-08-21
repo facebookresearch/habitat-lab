@@ -8,7 +8,7 @@ import json
 from typing import List
 
 import numpy as np
-import quaternion
+import quaternion  # noqa: F401
 
 from habitat.utils.geometry_utils import quaternion_to_list
 

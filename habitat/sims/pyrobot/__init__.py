@@ -10,16 +10,14 @@ from habitat.core.simulator import Simulator
 
 def _try_register_pyrobot():
     try:
-        import pyrobot
+        import pyrobot  # noqa: F401
 
         has_pyrobot = True
     except ImportError as e:
         has_pyrobot = False
         pyrobot_import_error = e
 
-    if has_pyrobot:
-        pass
-    else:
+    if not has_pyrobot:
 
         @registry.register_simulator(name="PyRobot-v0")
         class PyRobotImportError(Simulator):
