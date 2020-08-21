@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from gym.spaces import Box
 from torch import nn as nn
 
 from habitat_baselines.common.utils import Flatten, ResizeCenterCropper

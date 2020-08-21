@@ -26,7 +26,7 @@ from habitat_baselines.slambased.mappers import DirectDepthMapper
 from habitat_baselines.slambased.monodepth import MonoDepthEstimator
 from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
-    angle_to_pi_2_minus_pi_2 as norm_ang,
+    angle_to_pi_2_minus_pi_2 as norm_ang,  # noqa; This might be an error
 )
 from habitat_baselines.slambased.reprojection import (
     get_direction,
@@ -494,7 +494,7 @@ class ORBSLAM2Agent(RandomAgent):
         pos_th = self.pos_th
         if get_distance(p_init, p_next) <= pos_th:
             return command
-        d_angle = angle_to_pi_2_minus_pi_2(
+        d_angle = norm_ang(
             get_direction(p_init, p_next, ang_th=d_angle_rot_th, pos_th=pos_th)
         )
         if abs(d_angle) < d_angle_rot_th:
@@ -572,8 +572,8 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         self.checkpoint = monocheckpoint
         if not os.path.isfile(self.checkpoint):
             mp3d_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/mp3d_ft_monodepth_resnet50.pth"
-            suncg_me_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth"
-            suncg_mf_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth"
+            # suncg_me_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_me_resnet.pth"
+            # suncg_mf_url = "http://cmp.felk.cvut.cz/~mishkdmy/navigation/suncg_mf_resnet.pth"
             url = mp3d_url
             print("No monodepth checkpoint found. Downloading...", url)
             download(url, self.checkpoint)

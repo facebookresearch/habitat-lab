@@ -14,7 +14,6 @@ from gym.spaces import Box, Dict, Discrete
 
 import habitat
 from habitat.config import Config
-from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat_baselines.common.utils import batch_obs
 from habitat_baselines.rl.ppo import PointNavBaselinePolicy
@@ -147,8 +146,6 @@ def main():
         "--task-config", type=str, default="configs/tasks/pointnav.yaml"
     )
     args = parser.parse_args()
-
-    config = get_config(args.task_config)
 
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
