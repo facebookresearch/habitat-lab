@@ -10,16 +10,11 @@ from habitat.core.registry import registry
 
 def _try_register_r2r_vln_dataset():
     try:
-        pass
-
-        has_r2r_vln = True
+        from habitat.datasets.vln.r2r_vln_dataset import (  # noqa: F401 isort:skip
+            VLNDatasetV1,
+        )
     except ImportError as e:
-        has_r2r_vln = False
         r2r_vln_import_error = e
-
-    if has_r2r_vln:
-        pass
-    else:
 
         @registry.register_dataset(name="R2RVLN-v1")
         class R2RDatasetImportError(Dataset):
