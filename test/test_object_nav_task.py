@@ -7,7 +7,6 @@
 import json
 import time
 
-import numpy as np
 import pytest
 
 import habitat
