@@ -7,7 +7,6 @@
 
 import importlib
 import os
-import sys
 
 from habitat.utils import profiling_utils
 

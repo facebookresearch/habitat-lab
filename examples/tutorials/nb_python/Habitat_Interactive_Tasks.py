@@ -70,7 +70,6 @@ if "google.colab" in sys.modules:
 ## [setup]
 import gzip
 import json
-import math
 import os
 import random
 import sys
@@ -1384,7 +1383,6 @@ with habitat.Env(config) as env:
 # @markdown - The agent gets a slack penalty of -0.01 for every action it takes in the environment.
 # @markdown - Finally the agent gets a large success reward when the episode is completed successfully.
 
-import math
 from collections import defaultdict
 from typing import Optional, Type
 
