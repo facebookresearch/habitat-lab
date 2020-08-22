@@ -3,7 +3,7 @@
 #   accelerator: GPU
 #   colab:
 #     collapsed_sections: []
-#     name: habitat-lab.ipynb
+#     name: Habitat Lab
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
