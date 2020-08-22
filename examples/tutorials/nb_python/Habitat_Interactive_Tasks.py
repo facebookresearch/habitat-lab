@@ -77,18 +77,18 @@ from typing import Any, Dict, List, Optional, Type
 import attr
 import cv2
 import git
-import habitat_sim
 import magnum as mn
 import numpy as np
-from habitat_sim.utils import viz_utils as vut
 
 # %matplotlib inline
 from matplotlib import pyplot as plt
 from PIL import Image
 
 import habitat
+import habitat_sim
 from habitat.config import Config
 from habitat.core.registry import registry
+from habitat_sim.utils import viz_utils as vut
 
 if "google.colab" in sys.modules:
     os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
@@ -749,15 +749,14 @@ with habitat_sim.Simulator(cfg) as sim:
 # @title Define a Grab/Release action and create a new action space.
 # @markdown Each new action is defined by a `ActionSpec` and an `ActuationSpec`. `ActionSpec` is mapping between the action name and its corresponding `ActuationSpec`. `ActuationSpec` contains all the necessary specifications required to define the action.
 
-from habitat_sim import MotionType
-from habitat_sim.agent.controls.controls import ActuationSpec
-
 from habitat.config.default import _C, CN
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
+from habitat_sim import MotionType
+from habitat_sim.agent.controls.controls import ActuationSpec
 
 
 # @markdown For instance, `GrabReleaseActuationSpec` contains the following:
@@ -833,10 +832,9 @@ _C.SIMULATOR.VISUAL_SENSOR = "rgb"
 
 # @markdown If the agent was already holding an object, `grab/release` action will try release the object at the same relative position as it was grabbed. If the object can be placed without any collision, then the `release` action is successful.
 
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
-
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
 
 @registry.register_simulator(name="RearrangementSim-v0")
@@ -1026,9 +1024,9 @@ class RearrangementSim(HabitatSim):
 # @markdown - `AgentToObjectDistance` which measure the euclidean distance between the agent and the object.
 # @markdown - `ObjectToGoalDistance` which measures the euclidean distance between the object and the goal.
 
-import habitat_sim
 from gym import spaces
 
+import habitat_sim
 from habitat.config.default import CN, Config
 from habitat.core.dataset import Episode
 from habitat.core.embodied_task import Measure
