@@ -37,16 +37,11 @@ import os
 import random
 import sys
 
-import magnum as mn
 import numpy as np
 from gym import spaces
 
 # %matplotlib inline
 from matplotlib import pyplot as plt
-
-import habitat_sim
-from habitat_sim.utils import common as utils
-from habitat_sim.utils import viz_utils as vut
 
 # %cd "/content/habitat-lab"
 
@@ -59,10 +54,9 @@ if "google.colab" in sys.modules:
 from PIL import Image
 
 import habitat
-import habitat_baselines
-from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.logging import logger
 from habitat.core.registry import registry
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import NavigationTask
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config as get_baselines_config
