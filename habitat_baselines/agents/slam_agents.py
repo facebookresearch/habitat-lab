@@ -95,7 +95,7 @@ class RandomAgent(object):
     """
 
     def __init__(self, config):
-        super(RandomAgent, self).__init__()
+        super(RandomAgent, self).__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.reset()
@@ -127,7 +127,7 @@ class RandomAgent(object):
 
 class BlindAgent(RandomAgent):
     def __init__(self, config):
-        super(BlindAgent, self).__init__()
+        super(BlindAgent, self).__init__(config)
         self.pos_th = config.DIST_TO_STOP
         self.angle_th = config.ANGLE_TH
         self.reset()
@@ -170,6 +170,7 @@ class BlindAgent(RandomAgent):
 
 class ORBSLAM2Agent(RandomAgent):
     def __init__(self, config, device=torch.device("cuda:0")):
+        super(ORBSLAM2Agent, self).__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.slam_vocab_path = config.SLAM_VOCAB_PATH
@@ -530,6 +531,7 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         device=torch.device("cuda:0"),
         monocheckpoint="habitat_baselines/slambased/data/mp3d_resnet50.pth",
     ):
+        super(ORBSLAM2MonodepthAgent, self).__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.slam_vocab_path = config.SLAM_VOCAB_PATH
