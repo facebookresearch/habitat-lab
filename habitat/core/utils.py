@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import cmath
 import json
 from typing import List
 
@@ -148,7 +149,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
             _inf=float("inf"),
             _neginf=-float("inf"),
         ):
-            if o != o:
+            if cmath.isnan(o):
                 text = "NaN"
             elif o == _inf:
                 text = "Infinity"
