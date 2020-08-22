@@ -12,14 +12,14 @@ def _try_register_pyrobot():
     try:
         import pyrobot  # noqa: F401
 
-        from habitat.sims.pyrobot.pyrobot import PyRobot  # noqa: F401
-
         has_pyrobot = True
     except ImportError as e:
         has_pyrobot = False
         pyrobot_import_error = e
 
-    if not has_pyrobot:
+    if has_pyrobot:
+        from habitat.sims.pyrobot.pyrobot import PyRobot  # noqa: F401
+    else:
 
         @registry.register_simulator(name="PyRobot-v0")
         class PyRobotImportError(Simulator):
