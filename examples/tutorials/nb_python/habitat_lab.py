@@ -121,6 +121,10 @@ if __name__ == "__main__":
         config_paths="./configs/test/habitat_all_sensors_test.yaml"
     )
 
+    try:
+        env.close()
+    except NameError:
+        pass
     env = habitat.Env(config=config)
 
 # %%
@@ -262,6 +266,10 @@ if __name__ == "__main__":
     config.TASK.TYPE = "TestNav-v0"
     config.freeze()
 
+    try:
+        env.close()
+    except NameError:
+        pass
     env = habitat.Env(config=config)
 
 # %%
@@ -334,6 +342,10 @@ if __name__ == "__main__":
     config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
     config.freeze()
 
+    try:
+        env.close()
+    except NameError:
+        pass
     env = habitat.Env(config=config)
 
 # %%
