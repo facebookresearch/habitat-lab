@@ -3,6 +3,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from habitat.utils import geometry_utils, profiling_utils
 
-__all__ = ["geometry_utils", "profiling_utils", "vizualizations"]
+__all__ = ["visualizations", "geometry_utils"]
