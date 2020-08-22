@@ -20,6 +20,12 @@ repos:
     -   id: mixed-line-ending
         args: ['--fix=lf']
 
+-   repo: https://github.com/asottile/seed-isort-config
+    rev: v2.2.0
+    hooks:
+    -   id: seed-isort-config
+        language_version: python3
+
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.3.2
     hooks:
