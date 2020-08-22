@@ -20,7 +20,6 @@ from os import path as osp
 import tqdm
 
 import habitat
-import habitat_sim
 from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )

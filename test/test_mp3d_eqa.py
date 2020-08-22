@@ -16,7 +16,7 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.eqa import mp3d_eqa_dataset as mp3d_dataset
 from habitat.tasks.eqa.eqa import AnswerAction
-from habitat.tasks.nav.nav import MoveForwardAction, StopAction
+from habitat.tasks.nav.nav import MoveForwardAction
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_coeff,

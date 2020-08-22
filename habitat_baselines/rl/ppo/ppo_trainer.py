@@ -27,7 +27,7 @@ from habitat_baselines.common.utils import (
     generate_video,
     linear_decay,
 )
-from habitat_baselines.rl.ppo import PPO, PointNavBaselinePolicy
+from habitat_baselines.rl.ppo import PPO
 
 
 @baseline_registry.register_trainer(name="ppo")

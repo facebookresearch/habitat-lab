@@ -13,7 +13,7 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
-from habitat.datasets.utils import VocabDict, VocabFromText
+from habitat.datasets.utils import VocabDict
 from habitat.tasks.eqa.eqa import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav import ShortestPathPoint
 from habitat.tasks.nav.object_nav_task import ObjectGoal

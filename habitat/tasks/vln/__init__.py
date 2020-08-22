@@ -10,16 +10,9 @@ from habitat.core.registry import registry
 
 def _try_register_vln_task():
     try:
-        from habitat.tasks.vln.vln import VLNTask
-
-        has_vlntask = True
+        from habitat.tasks.vln.vln import VLNTask  # noqa: F401
     except ImportError as e:
-        has_vlntask = False
         vlntask_import_error = e
-
-    if has_vlntask:
-        from habitat.tasks.vln.vln import VLNTask
-    else:
 
         @registry.register_task(name="VLN-v0")
         class VLNTaskImportError(EmbodiedTask):

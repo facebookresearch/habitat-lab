@@ -6,6 +6,7 @@
 
 import argparse
 from collections import defaultdict
+from typing import Dict
 
 import habitat
 from habitat.config.default import get_config
