@@ -71,26 +71,24 @@ if "google.colab" in sys.modules:
 import gzip
 import json
 import os
-import random
 import sys
-import time
 from typing import Any, Dict, List, Optional, Type
 
 import attr
 import cv2
 import git
+import habitat_sim
 import magnum as mn
 import numpy as np
+from habitat_sim.utils import viz_utils as vut
 
 # %matplotlib inline
 from matplotlib import pyplot as plt
 from PIL import Image
 
 import habitat
-import habitat_sim
 from habitat.config import Config
 from habitat.core.registry import registry
-from habitat_sim.utils import viz_utils as vut
 
 if "google.colab" in sys.modules:
     os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
@@ -751,14 +749,15 @@ with habitat_sim.Simulator(cfg) as sim:
 # @title Define a Grab/Release action and create a new action space.
 # @markdown Each new action is defined by a `ActionSpec` and an `ActuationSpec`. `ActionSpec` is mapping between the action name and its corresponding `ActuationSpec`. `ActuationSpec` contains all the necessary specifications required to define the action.
 
+from habitat_sim import MotionType
+from habitat_sim.agent.controls.controls import ActuationSpec
+
 from habitat.config.default import _C, CN
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat_sim import MotionType
-from habitat_sim.agent.controls.controls import ActuationSpec
 
 
 # @markdown For instance, `GrabReleaseActuationSpec` contains the following:
@@ -834,9 +833,10 @@ _C.SIMULATOR.VISUAL_SENSOR = "rgb"
 
 # @markdown If the agent was already holding an object, `grab/release` action will try release the object at the same relative position as it was grabbed. If the object can be placed without any collision, then the `release` action is successful.
 
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
+
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
 
 @registry.register_simulator(name="RearrangementSim-v0")
@@ -1026,9 +1026,9 @@ class RearrangementSim(HabitatSim):
 # @markdown - `AgentToObjectDistance` which measure the euclidean distance between the agent and the object.
 # @markdown - `ObjectToGoalDistance` which measures the euclidean distance between the object and the goal.
 
+import habitat_sim
 from gym import spaces
 
-import habitat_sim
 from habitat.config.default import CN, Config
 from habitat.core.dataset import Episode
 from habitat.core.embodied_task import Measure
@@ -1377,7 +1377,6 @@ with habitat.Env(config) as env:
 # @markdown - The agent gets a slack penalty of -0.01 for every action it takes in the environment.
 # @markdown - Finally the agent gets a large success reward when the episode is completed successfully.
 
-from collections import defaultdict
 from typing import Optional, Type
 
 import numpy as np
@@ -1439,7 +1438,7 @@ class RearrangementRLEnv(NavRLEnv):
             action_name == "GRAB_RELEASE"
             and observations["gripped_object_id"] >= 0
         ):
-            obj_id = observations["gripped_object_id"]  # noqa: 841
+            obj_id = observations["gripped_object_id"]
             self._prev_measure["gripped_object_count"] += 1
 
             gripped_success_reward = (
@@ -1553,19 +1552,18 @@ class RearrangementRLEnv(NavRLEnv):
 
 
 # %%
-import os  # noqa: 841
-import time  # noqa: 841
-from collections import defaultdict, deque  # noqa: 841
-from typing import Any, Dict, List, Optional  # noqa :841
+import os
+import time
+from collections import defaultdict, deque
+from typing import Any, Dict, List, Optional
 
-import numpy as np  # noqa: 841
-import torch  # noqa: 841
+import numpy as np
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_utils import construct_envs, make_env_fn
+from habitat_baselines.common.env_utils import make_env_fn
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -1580,7 +1578,7 @@ from habitat_baselines.rl.ppo.policy import Net, Policy
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 
-def construct_envs(  # noqa: 841
+def construct_envs(
     config, env_class, workers_ignore_signals=False,
 ):
     r"""Create VectorEnv object with specified config and env class type.
@@ -2020,16 +2018,14 @@ class RearrangementTrainer(PPOTrainer):
 # @title Train an RL agent on a single episode
 # !if [ -d "data/tb" ]; then rm -r data/tb; fi
 
-import random  # noqa: 841
+import random
 
-import numpy as np  # noqa: 841
-import torch  # noqa: 841
+import numpy as np
+import torch
 
-import habitat  # noqa: 841
-from habitat import Config, make_dataset  # noqa: 841
-from habitat_baselines.config.default import (
-    get_config as get_baseline_config,  # noqa: 841
-)
+import habitat
+from habitat import Config
+from habitat_baselines.config.default import get_config as get_baseline_config
 
 baseline_config = get_baseline_config(
     "habitat_baselines/config/pointnav/ppo_pointnav.yaml"
