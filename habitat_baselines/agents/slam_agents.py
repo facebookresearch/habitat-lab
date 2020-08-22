@@ -26,7 +26,7 @@ from habitat_baselines.slambased.mappers import DirectDepthMapper
 from habitat_baselines.slambased.monodepth import MonoDepthEstimator
 from habitat_baselines.slambased.path_planners import DifferentiableStarPlanner
 from habitat_baselines.slambased.reprojection import (
-    angle_to_pi_2_minus_pi_2 as norm_ang,  # noqa; This might be an error
+    angle_to_pi_2_minus_pi_2 as norm_ang,
 )
 from habitat_baselines.slambased.reprojection import (
     get_direction,

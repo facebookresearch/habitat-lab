@@ -5,4 +5,4 @@
 # LICENSE file in the root directory of this source tree.
 from habitat.utils import geometry_utils, profiling_utils
 
-__all__ = ["geometry_utils", "profiling_utils"]
+__all__ = ["geometry_utils", "profiling_utils", "vizualizations"]
