@@ -113,7 +113,7 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
 # ## Setup PointNav Task
 
 # %%
-# cat "/content/habitat-lab/configs/test/habitat_all_sensors_test.yaml"
+# cat "./configs/test/habitat_all_sensors_test.yaml"
 
 # %%
 if __name__ == "__main__":
