@@ -26,8 +26,8 @@ repos:
     -   id: seed-isort-config
         language_version: python3
 
--   repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.3.2
+-   repo: https://github.com/timothycrosley/isort
+    rev: 5.4.2
     hooks:
     -   id: isort
         exclude: docs/
@@ -47,7 +47,7 @@ repos:
         exclude: docs/
 
 -   repo: https://gitlab.com/pycqa/flake8
-    rev: '3.8.3'
+    rev: 3.8.3
     hooks:
     -   id: flake8
 
