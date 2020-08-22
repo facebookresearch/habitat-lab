@@ -10,16 +10,9 @@ from habitat.core.registry import registry
 
 def _try_register_eqa_task():
     try:
-        from habitat.tasks.eqa.eqa import EQATask
-
-        has_eqatask = True
+        from habitat.tasks.eqa.eqa import EQATask  # noqa: F401
     except ImportError as e:
-        has_eqatask = False
         eqatask_import_error = e
-
-    if has_eqatask:
-        from habitat.tasks.eqa.eqa import EQATask
-    else:
 
         @registry.register_task(name="EQA-v0")
         class EQATaskImportError(EmbodiedTask):

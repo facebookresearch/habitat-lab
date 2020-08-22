@@ -11,7 +11,6 @@ from gym import spaces
 
 import habitat_sim
 from habitat.core.dataset import Episode
-from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,

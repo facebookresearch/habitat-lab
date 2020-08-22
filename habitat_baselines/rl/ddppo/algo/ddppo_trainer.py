@@ -35,7 +35,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     save_interrupted_state,
 )
 from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
-from habitat_baselines.rl.ddppo.policy.resnet_policy import (
+from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer

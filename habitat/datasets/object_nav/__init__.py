@@ -17,20 +17,12 @@ from habitat.core.registry import registry
 # Post that PR we would no longer need try register blocks.
 def _try_register_objectnavdatasetv1():
     try:
-        from habitat.datasets.object_nav.object_nav_dataset import (
+        from habitat.datasets.object_nav.object_nav_dataset import (  # noqa: F401
             ObjectNavDatasetV1,
         )
 
-        has_pointnav = True
     except ImportError as e:
-        has_pointnav = False
         pointnav_import_error = e
-
-    if has_pointnav:
-        from habitat.datasets.object_nav.object_nav_dataset import (
-            ObjectNavDatasetV1,
-        )
-    else:
 
         @registry.register_dataset(name="ObjectNav-v1")
         class ObjectNavDatasetImportError(Dataset):
