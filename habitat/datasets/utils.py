@@ -3,7 +3,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""
+ Tokenize and vocabulary utils originally authored by @apsdehal and are
+ taken from Pythia.
+"""
 import re
 from collections import Counter
 from typing import List
@@ -15,11 +18,6 @@ from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
 SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
-
-"""
- Tokenize and vocabulary utils originally authored by @apsdehal and are
- taken from Pythia.
-"""
 
 
 def tokenize(
@@ -158,8 +156,7 @@ class VocabFromText(VocabDict):
         if only_unk_extra:
             extras = [self.UNK_TOKEN]
 
-        self.word_list = extras + token_list
-        self._build()
+        super(VocabFromText, self).__init__(word_list=extras + token_list)
 
 
 def get_action_shortest_path(
