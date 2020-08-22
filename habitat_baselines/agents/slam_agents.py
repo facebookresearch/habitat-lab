@@ -95,7 +95,7 @@ class RandomAgent(object):
     """
 
     def __init__(self, config):
-        super(RandomAgent, self).__init__(config)
+        super(RandomAgent, self).__init__()
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.reset()
