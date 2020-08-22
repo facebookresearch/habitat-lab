@@ -165,7 +165,6 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     """
     egocentric_view = []
     if "rgb" in observation:
-        observation_size = observation["rgb"].shape[0]
         rgb = observation["rgb"]
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
@@ -174,7 +173,6 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
     # draw depth map if observation has depth info
     if "depth" in observation:
-        observation_size = observation["depth"].shape[0]
         depth_map = observation["depth"].squeeze() * 255.0
         if not isinstance(depth_map, np.ndarray):
             depth_map = depth_map.cpu().numpy()
@@ -185,7 +183,6 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:
-        observation_size = observation["imagegoal"].shape[0]
         rgb = observation["imagegoal"]
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
@@ -204,30 +201,8 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     frame = egocentric_view
 
     if "top_down_map" in info:
-        top_down_map = info["top_down_map"]["map"]
-        top_down_map = maps.colorize_topdown_map(
-            top_down_map, info["top_down_map"]["fog_of_war_mask"]
-        )
-        map_agent_pos = info["top_down_map"]["agent_map_coord"]
-        top_down_map = maps.draw_agent(
-            image=top_down_map,
-            agent_center_coord=map_agent_pos,
-            agent_rotation=info["top_down_map"]["agent_angle"],
-            agent_radius_px=top_down_map.shape[0] // 16,
-        )
-
-        if top_down_map.shape[0] > top_down_map.shape[1]:
-            top_down_map = np.rot90(top_down_map, 1)
-
-        # scale top down map to align with rgb view
-        old_h, old_w, _ = top_down_map.shape
-        top_down_height = observation_size
-        top_down_width = int(float(top_down_height) / old_h * old_w)
-        # cv2 resize (dsize is width first)
-        top_down_map = cv2.resize(
-            top_down_map,
-            (top_down_width, top_down_height),
-            interpolation=cv2.INTER_CUBIC,
+        top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+            info["top_down_map"], egocentric_view.shape[0]
         )
         frame = np.concatenate((egocentric_view, top_down_map), axis=1)
     return frame

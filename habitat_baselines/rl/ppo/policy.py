@@ -14,6 +14,7 @@ from habitat.tasks.nav.nav import (
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
 )
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.utils import CategoricalNet, Flatten
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
@@ -88,8 +89,11 @@ class CriticHead(nn.Module):
         return self.fc(x)
 
 
+@baseline_registry.register_policy
 class PointNavBaselinePolicy(Policy):
-    def __init__(self, observation_space, action_space, hidden_size=512):
+    def __init__(
+        self, observation_space, action_space, hidden_size=512, **kwargs
+    ):
         super().__init__(
             PointNavBaselineNet(
                 observation_space=observation_space, hidden_size=hidden_size
