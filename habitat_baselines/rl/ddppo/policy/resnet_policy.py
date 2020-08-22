@@ -22,6 +22,7 @@ from habitat.tasks.nav.nav import (
     ProximitySensor,
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -31,6 +32,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo import Net, Policy
 
 
+@baseline_registry.register_policy
 class PointNavResNetPolicy(Policy):
     def __init__(
         self,
@@ -44,6 +46,7 @@ class PointNavResNetPolicy(Policy):
         normalize_visual_inputs=False,
         obs_transform=ResizeCenterCropper(size=(256, 256)),
         force_blind_policy=False,
+        **kwargs
     ):
         super().__init__(
             PointNavResNetNet(

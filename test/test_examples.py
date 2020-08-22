@@ -1,6 +1,5 @@
 import itertools
 import multiprocessing
-import os
 import runpy
 import sys
 from os import path as osp
@@ -44,11 +43,20 @@ def run_main_subproc(args):
     )
     or not osp.exists(
         "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-    ),
+    )
+    or not osp.exists("data/scene_datasets/coda/coda.glb"),
     reason="Requires the habitat-test-scenes",
 )
 @pytest.mark.parametrize(
-    "args", [("examples/tutorials/nb_python/habitat_lab.py",),],
+    "args",
+    [
+        (
+            "examples/tutorials/nb_python/Habitat_Interactive_Tasks.py",
+            "--no-show-video",
+            "--no-make-video",
+        ),
+        ("examples/tutorials/nb_python/habitat_lab.py",),
+    ],
 )
 def test_example_modules(args):
     run_main_subproc(args)

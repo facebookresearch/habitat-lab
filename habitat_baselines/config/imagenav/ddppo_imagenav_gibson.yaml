@@ -18,6 +18,10 @@ CHECKPOINT_INTERVAL: 1000
 RL:
   SUCCESS_REWARD: 2.5
   SLACK_REWARD: -1e-4
+
+  POLICY:
+    name: "PointNavResNetPolicy"
+
   PPO:
     # ppo params
     clip_param: 0.2

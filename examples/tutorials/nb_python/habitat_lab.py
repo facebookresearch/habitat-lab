@@ -33,7 +33,6 @@
 # @title Colab Setup and Imports { display-mode: "form" }
 # @markdown (double click to see the code)
 
-import math
 import os
 import random
 import sys
@@ -49,7 +48,7 @@ import habitat_sim
 from habitat_sim.utils import common as utils
 from habitat_sim.utils import viz_utils as vut
 
-# %cd "/content/habitat-api"
+# %cd "/content/habitat-lab"
 
 
 if "google.colab" in sys.modules:
@@ -114,7 +113,7 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
 # ## Setup PointNav Task
 
 # %%
-# cat "/content/habitat-api/configs/test/habitat_all_sensors_test.yaml"
+# cat "/content/habitat-lab/configs/test/habitat_all_sensors_test.yaml"
 
 # %%
 if __name__ == "__main__":
@@ -192,7 +191,7 @@ if __name__ == "__main__":
 # @markdown (double click to see the code)
 
 # example tensorboard visualization
-# for more details refer to [link](https://github.com/facebookresearch/habitat-api/tree/master/habitat_baselines#additional-utilities).
+# for more details refer to [link](https://github.com/facebookresearch/habitat-lab/tree/master/habitat_baselines#additional-utilities).
 
 try:
     from IPython import display
@@ -206,31 +205,31 @@ except ImportError:
 #
 # All the concepts link to their definitions:
 #
-# 1. [`habitat.sims.habitat_simulator.HabitatSim`](https://github.com/facebookresearch/habitat-api/blob/master/habitat/sims/habitat_simulator/habitat_simulator.py#L159)
+# 1. [`habitat.sims.habitat_simulator.HabitatSim`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/sims/habitat_simulator/habitat_simulator.py#L159)
 # Thin wrapper over `habitat_sim` providing seamless integration with experimentation framework.
 #
 #
-# 2. [`habitat.core.env.Env`](https://github.com/facebookresearch/habitat-api/blob/master/habitat/core/env.py)
+# 2. [`habitat.core.env.Env`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/core/env.py)
 # Abstraction for the universe of agent, task and simulator. Agents that you train and evaluate operate inside the environment.
 #
 #
-# 3. [`habitat.core.env.RLEnv`](https://github.com/facebookresearch/habitat-api/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/core/env.py#L278)
+# 3. [`habitat.core.env.RLEnv`](https://github.com/facebookresearch/habitat-lab/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/core/env.py#L278)
 # Extends the `Env` class for reinforcement learning by defining the reward and other required components.
 #
 #
-# 4. [`habitat.core.embodied_task.EmbodiedTask`](https://github.com/facebookresearch/habitat-api/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/core/embodied_task.py#L242)
+# 4. [`habitat.core.embodied_task.EmbodiedTask`](https://github.com/facebookresearch/habitat-lab/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/core/embodied_task.py#L242)
 # Defines the task that the agent needs to solve. This class holds the definition of observation space, action space, measures, simulator usage. Eg: PointNav, ObjectNav.
 #
 #
-# 5. [`habitat.core.dataset.Dataset`](https://github.com/facebookresearch/habitat-api/blob/4b6da1c4f8eb287cea43e70c50fe1d615a261198/habitat/core/dataset.py#L63)
+# 5. [`habitat.core.dataset.Dataset`](https://github.com/facebookresearch/habitat-lab/blob/4b6da1c4f8eb287cea43e70c50fe1d615a261198/habitat/core/dataset.py#L63)
 # Wrapper over information required for the dataset of embodied task, contains definition and interaction with an `episode`.
 #
 #
-# 6. [`habitat.core.embodied_task.Measure`](https://github.com/facebookresearch/habitat-api/blob/master/habitat/core/embodied_task.py#L82)
-# Defines the metrics for embodied task, eg: [SPL](https://github.com/facebookresearch/habitat-api/blob/d0db1b55be57abbacc5563dca2ca14654c545552/habitat/tasks/nav/nav.py#L533).
+# 6. [`habitat.core.embodied_task.Measure`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/core/embodied_task.py#L82)
+# Defines the metrics for embodied task, eg: [SPL](https://github.com/facebookresearch/habitat-lab/blob/d0db1b55be57abbacc5563dca2ca14654c545552/habitat/tasks/nav/nav.py#L533).
 #
 #
-# 7. [`habitat_baselines`](https://github.com/facebookresearch/habitat-api/tree/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat_baselines)
+# 7. [`habitat_baselines`](https://github.com/facebookresearch/habitat-lab/tree/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat_baselines)
 # RL, SLAM, heuristic baseline implementations for the different embodied tasks.
 
 # %% [markdown]
@@ -382,7 +381,7 @@ class ForwardOnlyAgent(habitat.Agent):
 # %% [markdown]
 # ### Other Examples
 #
-# [Create a new action space](https://github.com/facebookresearch/habitat-api/blob/master/examples/new_actions.py)
+# [Create a new action space](https://github.com/facebookresearch/habitat-lab/blob/master/examples/new_actions.py)
 
 # %%
 # @title Sim2Real with Habitat { display-mode: "form" }
@@ -397,7 +396,7 @@ except ImportError:
     pass
 
 # %% [markdown]
-# Deploy habitat-sim trained models on real robots with the [habitat-pyrobot bridge](https://github.com/facebookresearch/habitat-api/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/sims/pyrobot/pyrobot.py)
+# Deploy habitat-sim trained models on real robots with the [habitat-pyrobot bridge](https://github.com/facebookresearch/habitat-lab/blob/71d409ab214a7814a9bd9b7e44fd25f57a0443ba/habitat/sims/pyrobot/pyrobot.py)
 #
 # ```python
 # # Are we in sim or reality?
