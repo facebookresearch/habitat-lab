@@ -383,12 +383,14 @@ def init_objects(sim):
     # Object's initial position 3m away from the agent.
     object_id = sim.add_object_by_handle(chair_attr.handle)
     set_object_in_front_of_agent(sim, object_id, -3.0)
-    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
+    sim.set_object_motion_type(
+        habitat_sim.physics.MotionType.STATIC, object_id
+    )
 
     # Object's final position 7m away from the agent
     goal_id = sim.add_object_by_handle(chair_attr.handle)
     set_object_in_front_of_agent(sim, goal_id, -7.0)
-    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, goal_id)
+    sim.set_object_motion_type(habitat_sim.physics.MotionType.STATIC, goal_id)
 
     return object_id, goal_id
 
@@ -719,7 +721,9 @@ with habitat_sim.Simulator(cfg) as sim:
     print(f"Chair's object id is {object_id}")
 
     set_object_in_front_of_agent(sim, object_id, -1.5)
-    sim.set_object_motion_type(habitat_sim.MotionType.STATIC, object_id)
+    sim.set_object_motion_type(
+        habitat_sim.physics.MotionType.STATIC, object_id
+    )
     if make_video:
         # Visualize the agent's initial position
         simulate_and_make_vid(
