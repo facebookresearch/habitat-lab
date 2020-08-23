@@ -55,7 +55,7 @@ def run_main_subproc(args):
             "--no-show-video",
             "--no-make-video",
         ),
-        ("examples/tutorials/nb_python/habitat_lab.py",),
+        ("examples/tutorials/nb_python/Habitat_Lab.py",),
     ],
 )
 def test_example_modules(args):
