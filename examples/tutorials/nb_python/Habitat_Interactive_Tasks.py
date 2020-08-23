@@ -759,8 +759,8 @@ from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
 )
-from habitat_sim import MotionType
 from habitat_sim.agent.controls.controls import ActuationSpec
+from habitat_sim.physics import MotionType
 
 
 # @markdown For instance, `GrabReleaseActuationSpec` contains the following:
