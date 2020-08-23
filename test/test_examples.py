@@ -38,8 +38,14 @@ def run_main_subproc(args):
 
 
 @pytest.mark.skipif(
-    not osp.exists("data/scene_datasets/coda/coda.glb"),
-    reason="Requires the coda scene",
+    not osp.exists(
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    or not osp.exists(
+        "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+    )
+    or not osp.exists("data/scene_datasets/coda/coda.glb"),
+    reason="Requires the habitat-test-scenes",
 )
 @pytest.mark.parametrize(
     "args",
@@ -49,6 +55,7 @@ def run_main_subproc(args):
             "--no-show-video",
             "--no-make-video",
         ),
+        ("examples/tutorials/nb_python/Habitat_Lab.py",),
     ],
 )
 def test_example_modules(args):
