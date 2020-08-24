@@ -20,7 +20,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 
 
-class Policy(nn.Module):
+class Policy(nn.Module, metaclass=abc.ABCMeta):
     def __init__(self, net, dim_actions):
         super().__init__()
         self.net = net
@@ -78,8 +78,9 @@ class Policy(nn.Module):
         return value, action_log_probs, distribution_entropy, rnn_hidden_states
 
     @classmethod
+    @abc.abstractmethod
     def from_config(cls, config, envs):
-        raise NotImplementedError
+        pass
 
 
 class CriticHead(nn.Module):
