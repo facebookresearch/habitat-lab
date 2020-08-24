@@ -55,8 +55,8 @@ def test_pyrobot(mocker):
     config = get_config()
     with make_sim("PyRobot-v0", config=config.PYROBOT) as reality:
 
-        observations = reality.reset()
-        observations = reality.step(
+        _ = reality.reset()
+        _ = reality.step(
             "go_to_relative",
             {
                 "xyt_position": [0, 0, (10 / 180) * np.pi],

@@ -46,7 +46,7 @@ class Benchmark:
         import pickle
         import time
 
-        import evalai_environment_habitat
+        import evalai_environment_habitat  # noqa: F401
         import evaluation_pb2
         import evaluation_pb2_grpc
         import grpc

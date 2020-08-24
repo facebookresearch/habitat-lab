@@ -7,7 +7,6 @@
 import json
 import time
 
-import numpy as np
 import pytest
 
 import habitat
@@ -16,9 +15,7 @@ from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
-from habitat.tasks.eqa.eqa import AnswerAction
 from habitat.tasks.nav.nav import MoveForwardAction
-from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_object_nav_test.yaml"
 EPISODES_LIMIT = 6

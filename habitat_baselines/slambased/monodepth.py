@@ -21,7 +21,7 @@ from PIL import Image
 from torch import nn as nn
 from torch.nn import functional as F
 from torch.utils import model_zoo as model_zoo
-from torchvision import transforms, utils
+from torchvision import transforms
 
 r"""ResNet code gently borrowed from
 https://github.com/pytorch/vision/blob/master/torchvision/models/py
@@ -616,18 +616,19 @@ def define_model(is_resnet, is_densenet, is_senet):
             Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
         )
     if is_densenet:
-        original_model = dendensenet161(pretrained=False)
-        Encoder = E_densenet(original_model)
-        model1 = model(
-            Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208]
-        )
+        # original_model = dendensenet161(pretrained=False)
+        # Encoder = E_densenet(original_model)
+        # model1 = model(
+        #    Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208]
+        # )
+        raise NotImplementedError()
     if is_senet:
-        original_model = senet154(pretrained=False)
-        Encoder = E_senet(original_model)
-        model1 = model(
-            Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
-        )
-
+        # original_model = senet154(pretrained=False)
+        # Encoder = E_senet(original_model)
+        # model1 = model(
+        #    Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
+        # )
+        raise NotImplementedError()
     return model1
 
 

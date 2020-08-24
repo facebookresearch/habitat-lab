@@ -4,4 +4,4 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat.tasks.registration import make_task
+from habitat.tasks.registration import make_task  # noqa: F401

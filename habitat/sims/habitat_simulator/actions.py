@@ -11,7 +11,7 @@ import attr
 
 import habitat_sim
 from habitat.core.registry import registry
-from habitat.core.simulator import ActionSpaceConfiguration, Config
+from habitat.core.simulator import ActionSpaceConfiguration
 from habitat.core.utils import Singleton
 
 
