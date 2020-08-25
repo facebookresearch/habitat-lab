@@ -94,7 +94,7 @@ if __name__ == "__main__":
         author=AUTHOR,
         license=LICENSE,
         setup_requires=["pytest-runner"],
-        tests_require=["pytest", "pytest-mock"],
+        tests_require=["pytest-cov", "pytest-mock", "pytest"],
         include_package_data=True,
         cmdclass={"install": InstallCommand, "develop": DevelopCommand},
     )
