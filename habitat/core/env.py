@@ -205,9 +205,6 @@ class Env:
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
-        if self._current_episode is not None:
-            self._current_episode._shortest_path_cache = None
-
         # Delete the shortest path cache of the current episode
         # Caching it for the next time we see this episode isn't really worth
         # it
