@@ -75,8 +75,7 @@ class QuestionSensor(Sensor):
 
 @registry.register_measure
 class CorrectAnswer(Measure):
-    """CorrectAnswer
-    """
+    """CorrectAnswer"""
 
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
@@ -94,8 +93,7 @@ class CorrectAnswer(Measure):
 
 @registry.register_measure
 class EpisodeInfo(Measure):
-    """Episode Info
-    """
+    """Episode Info"""
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
@@ -115,8 +113,7 @@ class EpisodeInfo(Measure):
 
 @registry.register_measure
 class AnswerAccuracy(Measure):
-    """AnswerAccuracy
-    """
+    """AnswerAccuracy"""
 
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
@@ -146,27 +143,27 @@ class AnswerAccuracy(Measure):
 @registry.register_task(name="EQA-v0")
 class EQATask(NavigationTask):
     """
-        Embodied Question Answering Task
-        Usage example:
-            env = habitat.Env(config=eqa_config)
+    Embodied Question Answering Task
+    Usage example:
+        env = habitat.Env(config=eqa_config)
 
-            env.reset()
+        env.reset()
 
-            for i in range(10):
-                action = sample_non_stop_action(env.action_space)
-                if action["action"] != AnswerAction.name:
-                    env.step(action)
-                metrics = env.get_metrics() # to check distance to target
+        for i in range(10):
+            action = sample_non_stop_action(env.action_space)
+            if action["action"] != AnswerAction.name:
+                env.step(action)
+            metrics = env.get_metrics() # to check distance to target
 
-            correct_answer_id = env.current_episode.question.answer_token
-            env.step(
-                {
-                    "action": AnswerAction.name,
-                    "action_args": {"answer_id": correct_answer_id},
-                }
-            )
+        correct_answer_id = env.current_episode.question.answer_token
+        env.step(
+            {
+                "action": AnswerAction.name,
+                "action_args": {"answer_id": correct_answer_id},
+            }
+        )
 
-            metrics = env.get_metrics()
+        metrics = env.get_metrics()
     """
 
     def _check_episode_is_active(
@@ -201,8 +198,7 @@ class AnswerAction(Action):
 
     @property
     def action_space(self) -> Space:
-        """Answer expected to be single token.
-        """
+        """Answer expected to be single token."""
         return spaces.Dict(
             {
                 "answer_id": spaces.Discrete(

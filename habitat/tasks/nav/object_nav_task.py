@@ -34,8 +34,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
 
     @property
     def goals_key(self) -> str:
-        r"""The key to retrieve the goals
-        """
+        r"""The key to retrieve the goals"""
         return f"{os.path.basename(self.scene_id)}_{self.object_category}"
 
 
@@ -168,5 +167,5 @@ class ObjectGoalSensor(Sensor):
 @registry.register_task(name="ObjectNav-v1")
 class ObjectNavigationTask(NavigationTask):
     r"""An Object Navigation Task class for a task specific methods.
-        Used to explicitly state a type of the task in config.
+    Used to explicitly state a type of the task in config.
     """

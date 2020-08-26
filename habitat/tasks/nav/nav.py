@@ -64,8 +64,7 @@ def merge_sim_episode_config(
 
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
-    r"""Base class for a goal specification hierarchy.
-    """
+    r"""Base class for a goal specification hierarchy."""
 
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
     radius: Optional[float] = None
@@ -73,8 +72,7 @@ class NavigationGoal:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RoomGoal(NavigationGoal):
-    r"""Room goal that can be specified by room_id or position with radius.
-    """
+    r"""Room goal that can be specified by room_id or position with radius."""
 
     room_id: str = attr.ib(default=None, validator=not_none_validator)
     room_name: Optional[str] = None
@@ -662,8 +660,7 @@ class Collisions(Measure):
 
 @registry.register_measure
 class TopDownMap(Measure):
-    r"""Top Down Map measure
-    """
+    r"""Top Down Map measure"""
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -792,8 +789,10 @@ class TopDownMap(Measure):
         self, episode: Episode, agent_position: AgentState
     ):
         if self._config.DRAW_SHORTEST_PATH:
-            self._shortest_path_points = self._sim.get_straight_shortest_path_points(
-                agent_position, episode.goals[0].position
+            self._shortest_path_points = (
+                self._sim.get_straight_shortest_path_points(
+                    agent_position, episode.goals[0].position
+                )
             )
             self._shortest_path_points = [
                 maps.to_grid(
@@ -905,8 +904,7 @@ class TopDownMap(Measure):
 
 @registry.register_measure
 class DistanceToGoal(Measure):
-    """The measure calculates a distance towards the goal.
-    """
+    """The measure calculates a distance towards the goal."""
 
     cls_uuid: str = "distance_to_goal"
 

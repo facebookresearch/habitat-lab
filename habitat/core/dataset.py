@@ -77,8 +77,7 @@ T = TypeVar("T", bound=Episode)
 
 
 class Dataset(Generic[T]):
-    r"""Base class for dataset specification.
-    """
+    r"""Base class for dataset specification."""
     episodes: List[T]
 
     @staticmethod
@@ -123,14 +122,12 @@ class Dataset(Generic[T]):
 
     @property
     def num_episodes(self) -> int:
-        r"""number of episodes in the dataset
-        """
+        r"""number of episodes in the dataset"""
         return len(self.episodes)
 
     @property
     def scene_ids(self) -> List[str]:
-        r"""unique scene ids present in the dataset.
-        """
+        r"""unique scene ids present in the dataset."""
         return sorted(list({episode.scene_id for episode in self.episodes}))
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
@@ -450,7 +447,7 @@ class EpisodeIterator(Iterator):
 
     def _shuffle(self) -> None:
         r"""Internal method that shuffles the remaining episodes.
-            If self.group_by_scene is true, then shuffle groups of scenes.
+        If self.group_by_scene is true, then shuffle groups of scenes.
         """
         assert self.shuffle
         episodes = list(self._iterator)
@@ -464,11 +461,11 @@ class EpisodeIterator(Iterator):
 
     def _group_scenes(self, episodes):
         r"""Internal method that groups episodes by scene
-            Groups will be ordered by the order the first episode of a given
-            scene is in the list of episodes
+        Groups will be ordered by the order the first episode of a given
+        scene is in the list of episodes
 
-            So if the episodes list shuffled before calling this method,
-            the scenes will be in a random order
+        So if the episodes list shuffled before calling this method,
+        the scenes will be in a random order
         """
         assert self.group_by_scene
 

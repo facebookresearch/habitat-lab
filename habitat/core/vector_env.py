@@ -159,8 +159,7 @@ class VectorEnv:
 
     @property
     def num_envs(self):
-        r"""number of individual environments.
-        """
+        r"""number of individual environments."""
         return self._num_envs - len(self._paused)
 
     @staticmethod
@@ -174,8 +173,7 @@ class VectorEnv:
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
-        r"""process worker for creating and interacting with the environment.
-        """
+        r"""process worker for creating and interacting with the environment."""
         if mask_signals:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -385,8 +383,7 @@ class VectorEnv:
             write_fn((STEP_COMMAND, args))
 
     def wait_step(self) -> List[Observations]:
-        r"""Wait until all the asynchronized environments have synchronized.
-        """
+        r"""Wait until all the asynchronized environments have synchronized."""
         observations = []
         for read_fn in self._connection_read_fns:
             observations.append(read_fn())
@@ -445,8 +442,7 @@ class VectorEnv:
         self._paused.append((index, read_fn, write_fn, worker))
 
     def resume_all(self) -> None:
-        r"""Resumes any paused envs.
-        """
+        r"""Resumes any paused envs."""
         for index, read_fn, write_fn, worker in reversed(self._paused):
             self._connection_read_fns.insert(index, read_fn)
             self._connection_write_fns.insert(index, write_fn)
@@ -507,8 +503,7 @@ class VectorEnv:
     def render(
         self, mode: str = "human", *args, **kwargs
     ) -> Union[np.ndarray, None]:
-        r"""Render observations from all environments in a tiled image.
-        """
+        r"""Render observations from all environments in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]

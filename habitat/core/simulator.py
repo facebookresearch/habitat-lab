@@ -25,8 +25,7 @@ class ActionSpaceConfiguration:
 
 
 class SensorTypes(Enum):
-    r"""Enumeration of types of sensors.
-    """
+    r"""Enumeration of types of sensors."""
 
     NULL = 0
     COLOR = 1
@@ -86,8 +85,7 @@ class Sensor:
 
 
 class Observations(dict):
-    r"""Dictionary containing sensor observations
-    """
+    r"""Dictionary containing sensor observations"""
 
     def __init__(
         self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any

@@ -160,7 +160,7 @@ def batch_obs(
 def poll_checkpoint_folder(
     checkpoint_folder: str, previous_ckpt_ind: int
 ) -> Optional[str]:
-    r""" Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
+    r"""Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
     (sorted by time of last modification).
 
     Args:
