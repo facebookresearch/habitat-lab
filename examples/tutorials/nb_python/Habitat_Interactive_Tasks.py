@@ -617,9 +617,11 @@ class RearrangementDatasetV0(PointNavDatasetV1):
                 if rearrangement_episode.scene_id.startswith(
                     DEFAULT_SCENE_PATH_PREFIX
                 ):
-                    rearrangement_episode.scene_id = rearrangement_episode.scene_id[
-                        len(DEFAULT_SCENE_PATH_PREFIX) :
-                    ]
+                    rearrangement_episode.scene_id = (
+                        rearrangement_episode.scene_id[
+                            len(DEFAULT_SCENE_PATH_PREFIX) :
+                        ]
+                    )
 
                 rearrangement_episode.scene_id = os.path.join(
                     scenes_dir, rearrangement_episode.scene_id
@@ -1580,7 +1582,9 @@ from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 
 def construct_envs(
-    config, env_class, workers_ignore_signals=False,
+    config,
+    env_class,
+    workers_ignore_signals=False,
 ):
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -1670,7 +1674,8 @@ class RearrangementBaselineNet(Net):
         self._hidden_size = hidden_size
 
         self.state_encoder = RNNStateEncoder(
-            2 * self._n_input_goal, self._hidden_size,
+            2 * self._n_input_goal,
+            self._hidden_size,
         )
 
         self.train()
