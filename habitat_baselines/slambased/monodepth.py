@@ -9,6 +9,9 @@ https://github.com/JunjH/Revisiting_Single_Depth_Estimation
 Revisiting Single Image Depth Estimation: Toward Higher Resolution Maps With Accurate Object Boundaries
 Junjie Hu and Mete Ozay and Yan Zhang and Takayuki Okatani
 WACV 2019
+
+ResNet code gently borrowed from
+https://github.com/pytorch/vision/blob/master/torchvision/models/py
 """
 
 
@@ -22,11 +25,6 @@ from torch import nn as nn
 from torch.nn import functional as F
 from torch.utils import model_zoo as model_zoo
 from torchvision import transforms
-
-r"""ResNet code gently borrowed from
-https://github.com/pytorch/vision/blob/master/torchvision/models/py
-"""
-
 
 accimage = None
 
@@ -176,7 +174,7 @@ class ResNet(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes))
 
         return nn.Sequential(*layers)

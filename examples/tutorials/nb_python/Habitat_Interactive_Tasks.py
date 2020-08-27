@@ -180,7 +180,10 @@ def simulate_and_make_vid(sim, crosshair, prefix, dt=1.0, open_vid=True):
 
 
 def display_sample(
-    rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([]), key_points=None
+    rgb_obs,
+    semantic_obs=np.array([]),
+    depth_obs=np.array([]),
+    key_points=None,  # noqa: B006
 ):
     from habitat_sim.utils.common import d3_40_colors_rgb
 
@@ -212,7 +215,7 @@ def display_sample(
         ax.set_title(titles[i])
         # plot points on images
         if key_points is not None:
-            for pix, point in enumerate(key_points):
+            for point in key_points:
                 plt.plot(
                     point[0], point[1], marker="o", markersize=10, alpha=0.8
                 )
@@ -674,7 +677,7 @@ assert dataset.episodes[0].goals.rotation == [0.0, 0.0, 0.0, 1.0]
 # @markdown Cast a ray in the direction of crosshair from the camera and check if it collides with another object within a certain distance threshold
 
 
-def raycast(sim, sensor_name, crosshair_pos=[128, 128], max_distance=2.0):
+def raycast(sim, sensor_name, crosshair_pos=(128, 128), max_distance=2.0):
     r"""Cast a ray in the direction of crosshair and check if it collides
     with another object within a certain distance threshold
     :param sim: Simulator object
@@ -1636,7 +1639,7 @@ def construct_envs(
 
     envs = habitat.ThreadedVectorEnv(
         make_env_fn=make_env_fn,
-        env_fn_args=tuple(tuple(zip(configs, env_classes))),
+        env_fn_args=tuple(zip(configs, env_classes)),
         workers_ignore_signals=workers_ignore_signals,
     )
     return envs
@@ -1810,7 +1813,7 @@ class RearrangementTrainer(PPOTrainer):
                         update, self.config.NUM_UPDATES
                     )
 
-                for step in range(ppo_cfg.num_steps):
+                for _step in range(ppo_cfg.num_steps):
                     (
                         delta_pth_time,
                         delta_env_time,
@@ -1939,7 +1942,7 @@ class RearrangementTrainer(PPOTrainer):
 
             self.actor_critic.eval()
 
-            for i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
+            for _i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
                 current_episodes = envs.current_episodes()
 
                 with torch.no_grad():

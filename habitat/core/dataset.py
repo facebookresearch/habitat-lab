@@ -128,7 +128,7 @@ class Dataset(Generic[T]):
     @property
     def scene_ids(self) -> List[str]:
         r"""unique scene ids present in the dataset."""
-        return sorted(list({episode.scene_id for episode in self.episodes}))
+        return sorted({episode.scene_id for episode in self.episodes})
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
         r"""..
@@ -293,7 +293,7 @@ class Dataset(Generic[T]):
             new_dataset = copy.copy(self)  # Creates a shallow copy
             new_dataset.episodes = []
             new_datasets.append(new_dataset)
-            for ii in range(split_lengths[nn]):
+            for _ii in range(split_lengths[nn]):
                 new_dataset.episodes.append(self.episodes[rand_items[ep_ind]])
                 ep_ind += 1
             if sort_by_episode_id:

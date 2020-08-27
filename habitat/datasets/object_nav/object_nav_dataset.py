@@ -38,7 +38,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         if len(dataset["episodes"]) == 0:
             return dataset
 
-        goals_by_category = dict()
+        goals_by_category = {}
         for i, ep in enumerate(dataset["episodes"]):
             dataset["episodes"][i]["object_category"] = ep["goals"][0][
                 "object_category"

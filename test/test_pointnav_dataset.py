@@ -183,7 +183,7 @@ def check_shortest_path(env, episode):
     start_state = env.sim.get_agent_state()
     check_state(start_state, episode.start_position, episode.start_rotation)
 
-    for step_id, point in enumerate(episode.shortest_paths[0]):
+    for point in episode.shortest_paths[0]:
         cur_state = env.sim.get_agent_state()
         check_state(cur_state, point.position, point.rotation)
         env.step(point.action)
@@ -206,7 +206,7 @@ def test_pointnav_episode_generator():
             shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
         )
         episodes = []
-        for i in range(NUM_EPISODES):
+        for _ in range(NUM_EPISODES):
             episode = next(generator)
             episodes.append(episode)
 

@@ -32,7 +32,7 @@ QUAL_THRESH = 2
 def safe_mkdir(path):
     try:
         os.mkdir(path)
-    except:
+    except OSError:
         pass
 
 

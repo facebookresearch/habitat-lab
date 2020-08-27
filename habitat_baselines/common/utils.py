@@ -27,7 +27,7 @@ class Flatten(nn.Module):
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):
-    def sample(self, sample_shape=torch.Size()):
+    def sample(self, sample_shape=torch.Size()):  # noqa: B008
         return super().sample(sample_shape).unsqueeze(-1)
 
     def log_probs(self, actions):
@@ -73,7 +73,7 @@ class ResizeCenterCropper(nn.Module):
         self.channels_last = channels_last
 
     def transform_observation_space(
-        self, observation_space, trans_keys=["rgb", "depth", "semantic"]
+        self, observation_space, trans_keys=("rgb", "depth", "semantic")
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)

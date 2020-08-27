@@ -44,6 +44,10 @@ repos:
     rev: 3.8.3
     hooks:
     -   id: flake8
+        exclude: docs/
+        additional_dependencies:
+        - flake8-bugbear
+        - flake8-comprehensions
 
 -   repo: https://github.com/kynan/nbstripout
     rev: master

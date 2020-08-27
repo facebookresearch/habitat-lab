@@ -71,7 +71,7 @@ class DifferentiableStarPlanner(nn.Module):
         preprocess=False,
         beta=100,
         connectivity="eight",
-        device=torch.device("cpu"),
+        device=torch.device("cpu"),  # noqa: B008
         **kwargs
     ):
         super(DifferentiableStarPlanner, self).__init__()
@@ -301,7 +301,7 @@ class DifferentiableStarPlanner(nn.Module):
             ) or (self.g_map.view(-1)[goal_idx].item() >= 0.1 * self.inf)
             rad += 1
         if not stopped_by_max_iter:
-            for i in range(additional_steps):
+            for _ in range(additional_steps):
                 # now propagating beyong start point
                 self.g_map = torch.min(
                     self.g_map,
