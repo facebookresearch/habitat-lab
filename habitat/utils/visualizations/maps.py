@@ -210,8 +210,8 @@ def to_grid(
 
 
 def from_grid(
-    grid_x: int,
-    grid_y: int,
+    grid_x: Union[int, float],
+    grid_y: Union[int, float],
     coordinate_min: float,
     coordinate_max: float,
     grid_resolution: Tuple[int, int],
