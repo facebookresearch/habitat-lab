@@ -269,8 +269,7 @@ def _outline_border(top_down_map):
 def calculate_meters_per_pixel(
     map_resolution: int, sim: Optional[Simulator] = None, pathfinder=None
 ):
-    r"""Calculate the meters_per_pixel for a given map resolution
-    """
+    r"""Calculate the meters_per_pixel for a given map resolution"""
     if sim is None and pathfinder is None:
         raise RuntimeError(
             "Must provide either a simulator or pathfinder instance"
@@ -349,16 +348,16 @@ def colorize_topdown_map(
     fog_of_war_desat_amount: float = 0.5,
 ) -> np.ndarray:
     r"""Convert the top down map to RGB based on the indicator values.
-        Args:
-            top_down_map: A non-colored version of the map.
-            fog_of_war_mask: A mask used to determine which parts of the
-                top_down_map are visible
-                Non-visible parts will be desaturated
-            fog_of_war_desat_amount: Amount to desaturate the color of unexplored areas
-                Decreasing this value will make unexplored areas darker
-                Default: 0.5
-        Returns:
-            A colored version of the top-down map.
+    Args:
+        top_down_map: A non-colored version of the map.
+        fog_of_war_mask: A mask used to determine which parts of the
+            top_down_map are visible
+            Non-visible parts will be desaturated
+        fog_of_war_desat_amount: Amount to desaturate the color of unexplored areas
+            Decreasing this value will make unexplored areas darker
+            Default: 0.5
+    Returns:
+        A colored version of the top-down map.
     """
     _map = TOP_DOWN_MAP_COLORS[top_down_map]
 
@@ -381,11 +380,11 @@ def draw_path(
     thickness: int = 2,
 ) -> None:
     r"""Draw path on top_down_map (in place) with specified color.
-        Args:
-            top_down_map: A colored version of the map.
-            color: color code of the path, from TOP_DOWN_MAP_COLORS.
-            path_points: list of points that specify the path to be drawn
-            thickness: thickness of the path.
+    Args:
+        top_down_map: A colored version of the map.
+        color: color code of the path, from TOP_DOWN_MAP_COLORS.
+        path_points: list of points that specify the path to be drawn
+        thickness: thickness of the path.
     """
     for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
         # Swapping x y

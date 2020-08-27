@@ -37,6 +37,7 @@ import os
 import random
 import sys
 
+import git
 import numpy as np
 from gym import spaces
 
@@ -49,7 +50,9 @@ from matplotlib import pyplot as plt
 if "google.colab" in sys.modules:
     # This tells imageio to use the system FFMPEG that has hardware acceleration.
     os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
-
+repo = git.Repo(".", search_parent_directories=True)
+dir_path = repo.working_tree_dir
+# %cd $dir_path
 
 from PIL import Image
 

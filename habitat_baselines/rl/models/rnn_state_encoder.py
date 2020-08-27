@@ -72,8 +72,7 @@ class RNNStateEncoder(nn.Module):
         return hidden_states
 
     def single_forward(self, x, hidden_states, masks):
-        r"""Forward for a non-sequence input
-        """
+        r"""Forward for a non-sequence input"""
         hidden_states = self._unpack_hidden(hidden_states)
         x, hidden_states = self.rnn(
             x.unsqueeze(0),

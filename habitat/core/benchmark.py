@@ -19,8 +19,7 @@ from habitat.core.env import Env
 
 
 class Benchmark:
-    r"""Benchmark for evaluating agents in environments.
-    """
+    r"""Benchmark for evaluating agents in environments."""
 
     def __init__(
         self, config_paths: Optional[str] = None, eval_remote=False

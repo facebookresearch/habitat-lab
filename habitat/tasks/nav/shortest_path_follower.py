@@ -71,8 +71,7 @@ class ShortestPathFollower:
     def get_next_action(
         self, goal_pos: np.array
     ) -> Optional[Union[int, np.array]]:
-        """Returns the next action along the shortest path.
-        """
+        """Returns the next action along the shortest path."""
         self._build_follower()
         try:
             next_action = self._follower.next_action_along(goal_pos)

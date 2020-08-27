@@ -95,6 +95,7 @@ if "google.colab" in sys.modules:
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
+# %cd $dir_path
 data_path = os.path.join(dir_path, "data")
 output_directory = "data/tutorials/output/"  # @param {type:"string"}
 output_path = os.path.join(dir_path, output_directory)
@@ -347,7 +348,7 @@ def remove_all_objects(sim):
 
 def set_object_in_front_of_agent(sim, obj_id, z_offset=-1.5):
     r"""
-      Adds an object in front of the agent at some distance.
+    Adds an object in front of the agent at some distance.
     """
     agent_transform = sim.agents[0].scene_node.transformation_matrix()
     obj_translation = agent_transform.transform_point(
@@ -553,7 +554,7 @@ class RearrangementSpec:
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangementObjectSpec(RearrangementSpec):
     r"""Object specifications that capture position of each object in the scene,
-     the associated object template.
+    the associated object template.
     """
     object_id: str = attr.ib(default=None, validator=not_none_validator)
     object_template: Optional[str] = attr.ib(
@@ -587,8 +588,7 @@ class RearrangementEpisode(NavigationEpisode):
 
 @registry.register_dataset(name="RearrangementDataset-v0")
 class RearrangementDatasetV0(PointNavDatasetV1):
-    r"""Class inherited from PointNavDataset that loads Rearrangement dataset.
-    """
+    r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
     episodes: List[RearrangementEpisode]
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
@@ -676,13 +676,13 @@ assert dataset.episodes[0].goals.rotation == [0.0, 0.0, 0.0, 1.0]
 
 def raycast(sim, sensor_name, crosshair_pos=[128, 128], max_distance=2.0):
     r"""Cast a ray in the direction of crosshair and check if it collides
-        with another object within a certain distance threshold
-        :param sim: Simulator object
-        :param sensor_name: name of the visual sensor to be used for raycasting
-        :param crosshair_pos: 2D coordiante in the viewport towards which the
-            ray will be cast
-        :param max_distance: distance threshold beyond which objects won't
-            be considered
+    with another object within a certain distance threshold
+    :param sim: Simulator object
+    :param sensor_name: name of the visual sensor to be used for raycasting
+    :param crosshair_pos: 2D coordiante in the viewport towards which the
+        ray will be cast
+    :param max_distance: distance threshold beyond which objects won't
+        be considered
     """
     visual_sensor = sim._sensors[sensor_name]
     scene_graph = sim.get_active_scene_graph()
@@ -806,8 +806,7 @@ class RearrangementSimV0ActionSpaceConfiguration(
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
-        r"""This method is called from ``Env`` on each ``step``.
-        """
+        r"""This method is called from ``Env`` on each ``step``."""
         return self._sim.step(HabitatSimActions.GRAB_RELEASE)
 
 
@@ -1131,8 +1130,7 @@ class ObjectGoal(PointGoalSensor):
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
-    """The measure calculates distance of object towards the goal.
-    """
+    """The measure calculates distance of object towards the goal."""
 
     cls_uuid: str = "object_to_goal_distance"
 
@@ -1173,8 +1171,7 @@ class ObjectToGoalDistance(Measure):
 
 @registry.register_measure
 class AgentToObjectDistance(Measure):
-    """The measure calculates the distance of objects from the agent
-    """
+    """The measure calculates the distance of objects from the agent"""
 
     cls_uuid: str = "agent_to_object_distance"
 
@@ -1494,7 +1491,7 @@ class RearrangementRLEnv(NavRLEnv):
 
     def get_agent_to_object_dist_reward(self, observations):
         """
-            Encourage the agent to move towards the closest object which is not already in place.
+        Encourage the agent to move towards the closest object which is not already in place.
         """
         curr_metric = self._env.get_metrics()["agent_to_object_distance"]
         prev_metric = self._prev_measure["agent_to_object_distance"]
@@ -1514,8 +1511,7 @@ class RearrangementRLEnv(NavRLEnv):
         return dist_reward
 
     def _episode_success(self, observations):
-        r"""Returns True if object is within distance threshold of the goal.
-        """
+        r"""Returns True if object is within distance threshold of the goal."""
         dist = self._env.get_metrics()["object_to_goal_distance"]
         if (
             abs(dist) > self._success_distance

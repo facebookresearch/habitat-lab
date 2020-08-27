@@ -112,8 +112,8 @@ def center_crop(obs, new_shape):
 
 class DatasetFloatJSONEncoder(json.JSONEncoder):
     r"""JSON Encoder that sets a float precision for a space saving purpose and
-        encodes ndarray and quaternion. The encoder is compatible with JSON
-        version 2.0.9.
+    encodes ndarray and quaternion. The encoder is compatible with JSON
+    version 2.0.9.
     """
 
     def default(self, object):

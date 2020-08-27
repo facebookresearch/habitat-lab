@@ -96,8 +96,7 @@ def load_interrupted_state(filename: str = None) -> Optional[Any]:
 
 
 def requeue_job():
-    r"""Requeues the job by calling ``scontrol requeue ${SLURM_JOBID}``
-    """
+    r"""Requeues the job by calling ``scontrol requeue ${SLURM_JOBID}``"""
     if SLURM_JOBID is None:
         return
 

@@ -23,8 +23,7 @@ def angle_between_quaternions(q1: np.quaternion, q2: np.quaternion) -> float:
 
 
 def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
-    r"""Computes the quaternion representation of v1 using v0 as the origin.
-    """
+    r"""Computes the quaternion representation of v1 using v0 as the origin."""
     v0 = v0 / np.linalg.norm(v0)
     v1 = v1 / np.linalg.norm(v1)
     c = v0.dot(v1)
@@ -49,8 +48,7 @@ def quaternion_to_list(q: np.quaternion):
 
 
 def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
-    r"""Creates a quaternions from coeffs in [x, y, z, w] format
-    """
+    r"""Creates a quaternions from coeffs in [x, y, z, w] format"""
     quat = np.quaternion(0, 0, 0, 0)
     quat.real = coeffs[3]
     quat.imag = coeffs[0:3]

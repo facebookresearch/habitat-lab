@@ -74,9 +74,9 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
-        1
-    ]
+    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = (
+        config.SIMULATOR.DEPTH_SENSOR.POSITION[1]
+    )
     config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
         0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
