@@ -3,7 +3,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from habitat.config.default import Config, get_config
 
 r"""Habitat Lab Configuration
 ==============================
@@ -120,5 +119,7 @@ def main():
     env = habitat.Env(config)
 
 ```"""
+
+from habitat.config.default import Config, get_config
 
 __all__ = ["Config", "get_config"]
