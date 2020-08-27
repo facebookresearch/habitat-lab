@@ -18,6 +18,7 @@ from habitat.core.agent import Agent
 from habitat.core.env import Env
 
 import time
+import sys
 
 
 class Benchmark:
@@ -194,6 +195,12 @@ class Benchmark:
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         avg_metrics['num_episodes'] = count_episodes
+
+        try:
+            print (" ".join(sys.argv))
+            print (agent.params.name)
+        except:
+            pass
 
         import json
         timestamp_str = time.strftime('%m-%d-%H-%M-%S', time.localtime())
