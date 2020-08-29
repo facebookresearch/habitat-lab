@@ -63,6 +63,19 @@ class PointNavResNetPolicy(Policy):
             action_space.n,
         )
 
+    @classmethod
+    def from_config(cls, config, envs):
+        return cls(
+            observation_space=envs.observation_spaces[0],
+            action_space=envs.action_spaces[0],
+            hidden_size=config.RL.PPO.hidden_size,
+            rnn_type=config.RL.DDPPO.rnn_type,
+            num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
+            backbone=config.RL.DDPPO.backbone,
+            normalize_visual_inputs="rgb" in envs.observation_spaces[0].spaces,
+            force_blind_policy=config.FORCE_BLIND_POLICY,
+        )
+
 
 class ResNetEncoder(nn.Module):
     def __init__(
