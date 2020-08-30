@@ -1,4 +1,4 @@
-# Contributing to habitat-api
+# Contributing to habitat-lab
 We want to make contributing to this project as easy and transparent as
 possible.
 
@@ -56,5 +56,5 @@ mypy . --ignore-missing-imports
 - Documentation of PRs is highly encouraged!
 
 ## License
-By contributing to habitat-api, you agree that your contributions will be licensed
+By contributing to habitat-lab, you agree that your contributions will be licensed
 under the LICENSE file in the root directory of this source tree.

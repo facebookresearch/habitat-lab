@@ -42,11 +42,11 @@ class Benchmark:
         self, agent: Agent, num_episodes: Optional[int] = None
     ):
         # The modules imported below are specific to habitat-challenge remote evaluation.
-        # These modules are not part of the habitat-api repository.
+        # These modules are not part of the habitat-lab repository.
         import pickle
         import time
 
-        import evalai_environment_habitat
+        import evalai_environment_habitat  # noqa: F401
         import evaluation_pb2
         import evaluation_pb2_grpc
         import grpc

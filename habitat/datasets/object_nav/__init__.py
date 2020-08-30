@@ -11,26 +11,18 @@ from habitat.core.registry import registry
 # TODO(akadian): This is a result of moving SimulatorActions away from core
 # and into simulators specifically. As a result of that the connection points
 # for our tasks and datasets for actions is coming from inside habitat-sim
-# which makes it impossible for anyone to use habitat-api without having
+# which makes it impossible for anyone to use habitat-lab without having
 # habitat-sim installed. In a future PR we will implement a base simulator
 # action class which will be the connection point for tasks and datasets.
 # Post that PR we would no longer need try register blocks.
 def _try_register_objectnavdatasetv1():
     try:
-        from habitat.datasets.object_nav.object_nav_dataset import (
+        from habitat.datasets.object_nav.object_nav_dataset import (  # noqa: F401
             ObjectNavDatasetV1,
         )
 
-        has_pointnav = True
     except ImportError as e:
-        has_pointnav = False
         pointnav_import_error = e
-
-    if has_pointnav:
-        from habitat.datasets.object_nav.object_nav_dataset import (
-            ObjectNavDatasetV1,
-        )
-    else:
 
         @registry.register_dataset(name="ObjectNav-v1")
         class ObjectNavDatasetImportError(Dataset):

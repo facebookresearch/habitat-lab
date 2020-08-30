@@ -8,7 +8,7 @@ import contextlib
 import os
 import random
 import time
-from collections import OrderedDict, defaultdict, deque
+from collections import defaultdict, deque
 
 import numpy as np
 import torch
@@ -35,7 +35,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     save_interrupted_state,
 )
 from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
-from habitat_baselines.rl.ddppo.policy.resnet_policy import (
+from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
@@ -69,7 +69,8 @@ class DDPPOTrainer(PPOTrainer):
         """
         logger.add_filehandler(self.config.LOG_FILE)
 
-        self.actor_critic = PointNavResNetPolicy(
+        policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
+        self.actor_critic = policy(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             hidden_size=ppo_cfg.hidden_size,

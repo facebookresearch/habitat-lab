@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import gym
-import pytest
 
 from habitat.core.spaces import ActionSpace, EmptySpace, ListSpace
 

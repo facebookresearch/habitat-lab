@@ -8,7 +8,7 @@ from habitat_baselines.common.base_trainer import BaseRLTrainer, BaseTrainer
 from habitat_baselines.il.trainers.eqa_cnn_pretrain_trainer import (
     EQACNNPretrainTrainer,
 )
-from habitat_baselines.rl.ddppo import DDPPOTrainer
+from habitat_baselines.rl.ddppo import DDPPOTrainer  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
 
 __all__ = [

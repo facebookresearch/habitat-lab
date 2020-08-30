@@ -15,25 +15,29 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black flake8 "isort[pyproject]" numpy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
               isort --version
-              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
-
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
+      - run:
+          name: run flake8
+          command: |
+              flake8 --version
+              flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
   install_and_test_ubuntu:
     <<: *gpu
     steps:
       - checkout:
-          path: ./habitat-api
+          path: ./habitat-lab
       - run:
           name: Install cmake
           no_output_timeout: 5m
@@ -54,6 +58,7 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
+                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
@@ -81,7 +86,7 @@ jobs:
               nvidia-smi
       - restore_cache:
           keys:
-            - conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -139,7 +144,7 @@ jobs:
               fi
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              python setup.py install --headless --with-cuda
+              python setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
           when: always
@@ -157,6 +162,16 @@ jobs:
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
               fi
+      - run:
+          name: Download coda scene
+          command: |
+            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
+            then
+              cd habitat-sim
+              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
+              unzip coda.zip -d data/scene_datasets
+              rm coda.zip
+            fi
       - run:
           name: Run sim benchmark
           command: |
@@ -179,13 +194,13 @@ jobs:
           no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-api
+              . activate habitat; cd habitat-lab
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
               pip install -r requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
       - save_cache:
-          key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
           background: true
           paths:
             - ~/miniconda
@@ -194,7 +209,7 @@ jobs:
           no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-api
+              . activate habitat; cd habitat-lab
               python setup.py develop --all
               python setup.py test
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
@@ -202,7 +217,7 @@ jobs:
           name: Build api documentation
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-api
+              . activate habitat; cd habitat-lab
               python setup.py develop --all
 
               # Download sim inventory for crosslinking (no need to build

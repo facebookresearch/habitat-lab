@@ -170,4 +170,3 @@ class ObjectNavigationTask(NavigationTask):
     r"""An Object Navigation Task class for a task specific methods.
         Used to explicitly state a type of the task in config.
     """
-    pass

@@ -27,9 +27,7 @@ if not os.path.exists(IMAGE_DIR):
 
 def save_map(observations, info, images):
     im = observations["rgb"]
-    top_down_map = draw_top_down_map(
-        info, observations["heading"], im.shape[0]
-    )
+    top_down_map = draw_top_down_map(info, im.shape[0])
     output_im = np.concatenate((im, top_down_map), axis=1)
     output_im = append_text_to_image(
         output_im, observations["instruction"]["text"]

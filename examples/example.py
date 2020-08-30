@@ -14,12 +14,12 @@ def example():
         config=habitat.get_config("configs/tasks/pointnav.yaml")
     ) as env:
         print("Environment creation successful")
-        observations = env.reset()
+        observations = env.reset()  # noqa: F841
 
         print("Agent stepping around inside environment.")
         count_steps = 0
         while not env.episode_over:
-            observations = env.step(env.action_space.sample())
+            observations = env.step(env.action_space.sample())  # noqa: F841
             count_steps += 1
         print("Episode finished after {} steps.".format(count_steps))
 

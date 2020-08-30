@@ -25,4 +25,4 @@ echo "------------------------------------------------------------------------"
 echo "Public docs were successfully generated to the following location. Note"
 echo "that the search functionality requires a web server in this case."
 echo
-echo "file://$(pwd)/../../habitat-sim/build/docs-public/habitat-api/index.html"
+echo "file://$(pwd)/../../habitat-sim/build/docs-public/habitat-lab/index.html"

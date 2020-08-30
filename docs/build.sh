@@ -35,4 +35,4 @@ $mcss_path/documentation/python.py conf.py
 echo "------------------------------------------------------------------------"
 echo "Docs were successfully generated. Open the following link to view them:"
 echo
-echo "file://$(pwd)/../../habitat-sim/build/docs/habitat-api/index.html"
+echo "file://$(pwd)/../../habitat-sim/build/docs/habitat-lab/index.html"

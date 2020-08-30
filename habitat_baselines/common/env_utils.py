@@ -7,8 +7,6 @@
 import random
 from typing import Type, Union
 
-import numpy as np
-
 import habitat
 from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
 
