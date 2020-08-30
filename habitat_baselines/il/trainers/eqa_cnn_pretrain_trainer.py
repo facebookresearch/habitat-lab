@@ -48,15 +48,8 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results.
         """
-        if self.config.TRAINER_NAME == "eqa-cnn-pretrain":
-            for type in ["rgb", "seg", "depth"]:
-                dir_name = self.config.RESULTS_DIR.format(
-                    split="val", type=type
-                )
-                if not os.path.isdir(dir_name):
-                    os.makedirs(dir_name)
-        else:
-            dir_name = self.config.RESULTS_DIR.format(split="val")
+        for type in ["rgb", "seg", "depth"]:
+            dir_name = self.config.RESULTS_DIR.format(split="val", type=type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
@@ -70,7 +63,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         pred_depth: torch.Tensor,
         path: str,
     ) -> None:
-        r"""For saving EQA-CNN-Pretrained model's results.
+        r"""For saving EQA-CNN-Pretrain reconstruction results.
 
         Args:
             gt_rgb: rgb ground truth
@@ -87,7 +80,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         save_depth_results(gt_depth[0], pred_depth[0], path)
 
     def train(self) -> None:
-        r"""Main method for training Navigation model of EQA.
+        r"""Main method for pre-training Encoder-Decoder Feature Extractor for EQA.
 
         Returns:
             None

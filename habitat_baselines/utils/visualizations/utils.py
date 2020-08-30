@@ -18,11 +18,12 @@ from habitat_sim.utils.common import d3_40_colors_rgb
 def save_rgb_results(
     gt_rgb: torch.Tensor, pred_rgb: torch.Tensor, path: str
 ) -> None:
-    r"""For saving RGB reconstruction results.
+    r"""For saving RGB reconstruction results during EQA-CNN-Pretrain eval.
 
     Args:
         gt_rgb: RGB ground truth tensor
         pred_rgb: RGB reconstruction tensor
+        path: to save images
     """
     path = path.format(split="val", type="rgb")
     gt_bgr, pred_bgr = tensor_to_bgr_images([gt_rgb, pred_rgb])
@@ -33,12 +34,13 @@ def save_rgb_results(
 def save_seg_results(
     gt_seg: torch.Tensor, pred_seg: torch.Tensor, path: str
 ) -> None:
-    r"""For saving predicted and ground truth seg maps.
+    r"""For saving predicted and ground truth seg maps during
+    EQA-CNN-Pretrain eval.
 
     Args:
         gt_seg: ground truth segmentation tensor
         pred_seg: ouput segmentation tensor
-        path: to save files
+        path: to save images
     """
 
     path = path.format(split="val", type="seg")
@@ -56,12 +58,13 @@ def save_seg_results(
 def save_depth_results(
     gt_depth: torch.Tensor, pred_depth: torch.Tensor, path: str
 ) -> None:
-    r"""For saving predicted and ground truth depth maps.
-    Being used during eval.
+    r"""For saving predicted and ground truth depth maps during
+    EQA-CNN-Pretrain eval.
+
     Args:
         gt_depth: ground truth depth tensor
         pred_depth: ouput depth tensor
-        path: to save files
+        path: to save images
     """
     path = path.format(split="val", type="depth")
 
@@ -72,9 +75,9 @@ def save_depth_results(
 
 
 def put_vqa_text_on_image(
-    self, image: np.ndarray, question: str, prediction: str, ground_truth: str,
+    image: np.ndarray, question: str, prediction: str, ground_truth: str,
 ) -> np.ndarray:
-    r"""For writing question, prediction and ground truth answer
+    r"""For writing VQA question, prediction and ground truth answer
         on image.
 
     Args:
