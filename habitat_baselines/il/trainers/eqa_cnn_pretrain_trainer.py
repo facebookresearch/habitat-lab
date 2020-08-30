@@ -17,12 +17,12 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.eqa_cnn_pretrain_data import (
     EQACNNPretrainDataset,
 )
+from habitat_baselines.il.models.models import MultitaskCNN
 from habitat_baselines.utils.visualizations.utils import (
+    save_depth_results,
     save_rgb_results,
     save_seg_results,
-    save_depth_results,
 )
-from habitat_baselines.il.models.models import MultitaskCNN
 
 
 @baseline_registry.register_trainer(name="eqa-cnn-pretrain")

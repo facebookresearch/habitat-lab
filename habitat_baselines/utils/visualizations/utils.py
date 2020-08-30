@@ -8,11 +8,11 @@ import cv2
 import numpy as np
 import torch
 
-from habitat_sim.utils.common import d3_40_colors_rgb
 from habitat_baselines.common.utils import (
     tensor_to_bgr_images,
     tensor_to_depth_images,
 )
+from habitat_sim.utils.common import d3_40_colors_rgb
 
 
 def save_rgb_results(
