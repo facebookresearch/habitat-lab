@@ -18,7 +18,7 @@ from torch import nn as nn
 
 from habitat import logger
 from habitat.utils.visualizations.utils import images_to_video
-from habitat_baselines.common.board_utils import TensorboardWriter
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 
 class Flatten(nn.Module):
