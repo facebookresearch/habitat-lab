@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import time
 
 import torch
@@ -15,6 +16,11 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.eqa_cnn_pretrain_data import (
     EQACNNPretrainDataset,
+)
+from habitat_baselines.utils.visualizations.utils import (
+    save_rgb_results,
+    save_seg_results,
+    save_depth_results,
 )
 from habitat_baselines.il.models.models import MultitaskCNN
 
@@ -38,6 +44,47 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         if config is not None:
             logger.info(f"config: {config}")
+
+    def _make_results_dir(self):
+        r"""Makes directory for saving eqa-cnn-pretrain eval results.
+        """
+        if self.config.TRAINER_NAME == "eqa-cnn-pretrain":
+            for type in ["rgb", "seg", "depth"]:
+                dir_name = self.config.RESULTS_DIR.format(
+                    split="val", type=type
+                )
+                if not os.path.isdir(dir_name):
+                    os.makedirs(dir_name)
+        else:
+            dir_name = self.config.RESULTS_DIR.format(split="val")
+            if not os.path.isdir(dir_name):
+                os.makedirs(dir_name)
+
+    def _save_results(
+        self,
+        gt_rgb: torch.Tensor,
+        pred_rgb: torch.Tensor,
+        gt_seg: torch.Tensor,
+        pred_seg: torch.Tensor,
+        gt_depth: torch.Tensor,
+        pred_depth: torch.Tensor,
+        path: str,
+    ) -> None:
+        r"""For saving EQA-CNN-Pretrained model's results.
+
+        Args:
+            gt_rgb: rgb ground truth
+            preg_rgb: autoencoder output rgb reconstruction
+            gt_seg: segmentation ground truth
+            pred_seg: segmentation output
+            gt_depth: depth map ground truth
+            pred_depth: depth map output
+            path: to write file
+        """
+
+        save_rgb_results(gt_rgb[0], pred_rgb[0], path)
+        save_seg_results(gt_seg[0], pred_seg[0], path)
+        save_depth_results(gt_depth[0], pred_depth[0], path)
 
     def train(self) -> None:
         r"""Main method for training Navigation model of EQA.
@@ -84,19 +131,19 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    idx, rgb, depth, seg = batch
+                    idx, gt_rgb, gt_depth, gt_seg = batch
 
                     optim.zero_grad()
 
-                    rgb = rgb.to(self.device)
-                    depth = depth.to(self.device)
-                    seg = seg.to(self.device)
+                    gt_rgb = gt_rgb.to(self.device)
+                    gt_depth = gt_depth.to(self.device)
+                    gt_seg = gt_seg.to(self.device)
 
-                    out_seg, out_depth, out_ae = model(rgb)
+                    pred_seg, pred_depth, pred_rgb = model(gt_rgb)
 
-                    l1 = seg_loss(out_seg, seg.long())
-                    l2 = ae_loss(out_ae, rgb)
-                    l3 = depth_loss(out_depth, depth)
+                    l1 = seg_loss(pred_seg, gt_seg.long())
+                    l2 = ae_loss(pred_rgb, gt_rgb)
+                    l3 = depth_loss(pred_depth, gt_depth)
 
                     loss = l1 + (10 * l2) + (10 * l3)
 
@@ -196,15 +243,15 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             for batch in eval_loader:
                 t += 1
 
-                idx, rgb, depth, seg = batch
-                rgb = rgb.to(self.device)
-                depth = depth.to(self.device)
-                seg = seg.to(self.device)
+                idx, gt_rgb, gt_depth, gt_seg = batch
+                gt_rgb = gt_rgb.to(self.device)
+                gt_depth = gt_depth.to(self.device)
+                gt_seg = gt_seg.to(self.device)
 
-                out_seg, out_depth, out_ae = model(rgb)
-                l1 = seg_loss(out_seg, seg.long())
-                l2 = ae_loss(out_ae, rgb)
-                l3 = depth_loss(out_depth, depth)
+                pred_seg, pred_depth, pred_rgb = model(gt_rgb)
+                l1 = seg_loss(pred_seg, gt_seg.long())
+                l2 = ae_loss(pred_rgb, gt_rgb)
+                l3 = depth_loss(pred_depth, gt_depth)
 
                 loss = l1 + (10 * l2) + (10 * l3)
 
@@ -221,15 +268,21 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                 if config.EVAL_SAVE_RESULTS:
                     if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
 
-                        self._save_eqa_cnn_pretrain_results(
-                            checkpoint_index,
-                            idx,
-                            rgb,
-                            out_ae,
-                            seg,
-                            out_seg,
-                            depth,
-                            out_depth,
+                        result_id = "ckpt_{}_{}".format(
+                            checkpoint_index, idx[0].item()
+                        )
+                        result_path = os.path.join(
+                            self.config.RESULTS_DIR, result_id
+                        )
+
+                        self._save_results(
+                            gt_rgb,
+                            pred_rgb,
+                            gt_seg,
+                            pred_seg,
+                            gt_depth,
+                            pred_depth,
+                            result_path,
                         )
 
         avg_loss /= len(eval_loader)

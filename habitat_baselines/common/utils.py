@@ -11,7 +11,6 @@ import os
 from collections import defaultdict
 from typing import Dict, List, Optional, Union
 
-import cv2
 import numpy as np
 import torch
 from gym.spaces import Box
@@ -246,7 +245,7 @@ def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
 
 
 def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
-    r"""Converts tensor of n image tensors to list of n images.
+    r"""Converts tensor of n image tensors to list of n BGR images.
     Args:
         tensor: tensor containing n image tensors
     Returns:
@@ -265,55 +264,23 @@ def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
     return images
 
 
-def put_vqa_text_on_image(
-    self, image: np.ndarray, question: str, prediction: str, ground_truth: str,
-) -> np.ndarray:
-    r"""For writing question, prediction and ground truth answer
-        on image.
-
-    Args:
-        image: image on which text has to be written
-        question: input question to model
-        prediction: model's answer prediction
-        ground_truth: ground truth answer
-
-    Returns:
-        image with text
+def get_q_string(question: List, q_vocab_dict: Dict) -> str:
+    r"""
+    Converts question tokens to question string.
     """
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    color = (0, 0, 0)
-    scale = 0.4
-    thickness = 1
+    q_string = ""
+    for token in question:
+        if token != 0:
+            for word, idx in q_vocab_dict.items():
+                if idx == token:
+                    q_word = word
+                    break
+            q_string += q_word + " "
+        else:
+            break
+    q_string += "?"
 
-    cv2.putText(
-        image,
-        "Question: " + question,
-        (10, 15),
-        font,
-        scale,
-        color,
-        thickness,
-    )
-    cv2.putText(
-        image,
-        "Prediction: " + prediction,
-        (10, 30),
-        font,
-        scale,
-        color,
-        thickness,
-    )
-    cv2.putText(
-        image,
-        "Ground truth: " + ground_truth,
-        (10, 45),
-        font,
-        scale,
-        color,
-        thickness,
-    )
-
-    return image
+    return q_string
 
 
 def image_resize_shortest_edge(
