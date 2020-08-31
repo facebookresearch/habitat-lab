@@ -1658,6 +1658,9 @@ class RearrangementBaselinePolicy(Policy):
             action_space.n,
         )
 
+    def from_config(cls, config, envs):
+        pass
+
 
 class RearrangementBaselineNet(Net):
     r"""Network which passes the input image through CNN and concatenates
