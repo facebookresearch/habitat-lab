@@ -33,7 +33,7 @@ def reference_path_benchmark(config, num_episodes=None):
         follower.mode = "geodesic_path"
 
         agg_metrics: Dict = defaultdict(float)
-        for i in range(num_episodes):
+        for _ in range(num_episodes):
             env.reset()
 
             for point in env.current_episode.reference_path:

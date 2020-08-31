@@ -126,7 +126,7 @@ def __do_pause_test(num_envs, envs_to_pause):
         rgb_frames,
     )
 
-    expected = list(sorted(set(range(num_envs)) - set(envs_to_pause)))
+    expected = sorted(set(range(num_envs)) - set(envs_to_pause))
 
     assert envs._running == expected
 

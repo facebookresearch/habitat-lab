@@ -298,7 +298,7 @@ def test_eqa_task():
 
         env.reset()
 
-        for i in range(10):
+        for _ in range(10):
             action = sample_non_stop_action(env.action_space)
             if action["action"] != AnswerAction.name:
                 env.step(action)

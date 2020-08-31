@@ -77,7 +77,7 @@ class DirectDepthMapper(nn.Module):
         h_max=1.0,
         map_size=40,
         map_cell_size=0.1,
-        device=torch.device("cpu"),
+        device=torch.device("cpu"),  # noqa: B008
         **kwargs
     ):
         super(DirectDepthMapper, self).__init__()
@@ -91,7 +91,7 @@ class DirectDepthMapper(nn.Module):
         self.map_cell_size = map_cell_size
         return
 
-    def forward(self, depth, pose=torch.eye(4).float()):
+    def forward(self, depth, pose=torch.eye(4).float()):  # noqa: B008
         self.device = depth.device
         # Works for FOV = 90 degrees
         # Should be adjusted, if FOV changed

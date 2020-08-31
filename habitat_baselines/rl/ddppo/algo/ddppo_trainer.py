@@ -345,7 +345,7 @@ class DDPPOTrainer(PPOTrainer):
                 ) = self._update_agent(ppo_cfg, rollouts)
                 pth_time += delta_pth_time
 
-                stats_ordering = list(sorted(running_episode_stats.keys()))
+                stats_ordering = sorted(running_episode_stats.keys())
                 stats = torch.stack(
                     [running_episode_stats[k] for k in stats_ordering], 0
                 )

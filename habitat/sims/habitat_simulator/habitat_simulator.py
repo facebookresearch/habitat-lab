@@ -440,7 +440,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         # location and have the sensors follow, we must not provide any
         # state for the sensors. This will cause them to follow the agent's
         # body
-        new_state.sensor_states = dict()
+        new_state.sensor_states = {}
         agent.set_state(new_state, reset_sensors)
         return True
 

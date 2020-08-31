@@ -170,7 +170,7 @@ def test_get_splits_func(num_episodes: int, num_splits: int):
     dataset = _construct_dataset(num_episodes)
     splits = dataset.get_splits(num_splits, allow_uneven_splits=True)
     assert len(splits) == num_splits
-    assert sum([len(split.episodes) for split in splits]) == num_episodes
+    assert sum(len(split.episodes) for split in splits) == num_episodes
     splits = dataset.get_splits(num_splits, allow_uneven_splits=False)
     assert len(splits) == num_splits
     assert (
@@ -250,7 +250,7 @@ def test_iterator_scene_switching_episodes():
     )
     episodes = sorted(dataset.episodes, key=lambda x: x.scene_id)
 
-    for i in range(max_repeat):
+    for _ in range(max_repeat):
         episode = next(episode_iter)
         assert (
             episode.episode_id == episodes.pop(0).episode_id
@@ -266,7 +266,7 @@ def test_iterator_scene_switching_episodes():
         episodes
     ), "Remaining episodes should be identical."
 
-    assert len(set(e.scene_id for e in remaining_episodes)) == len(
+    assert len({e.scene_id for e in remaining_episodes}) == len(
         set(map(lambda ep: ep.scene_id, remaining_episodes))
     ), "Next episodes should still include all scenes."
 
@@ -286,7 +286,7 @@ def test_iterator_scene_switching_episodes():
     ), "The number of scene switches is unexpected."
 
     assert all(
-        [len(group) == max_repeat for group in grouped_episodes]
+        len(group) == max_repeat for group in grouped_episodes
     ), "Not all scene switches are equal to required number."
 
 
@@ -309,7 +309,7 @@ def test_iterator_scene_switching_episodes_without_shuffle_cycle():
     ), "The number of scene switches is unexpected."
 
     assert all(
-        [len(group) == max_repeat for group in grouped_episodes]
+        len(group) == max_repeat for group in grouped_episodes
     ), "Not all scene stitches are equal to requirement."
 
 
@@ -344,7 +344,7 @@ def test_iterator_scene_switching_steps():
         episodes
     ), "Remaining episodes numbers aren't equal."
 
-    assert len(set(e.scene_id for e in remaining_episodes)) == len(
+    assert len({e.scene_id for e in remaining_episodes}) == len(
         list(groupby(remaining_episodes, lambda ep: ep.scene_id))
     ), (
         "Next episodes should still be grouped by scene (before next "
