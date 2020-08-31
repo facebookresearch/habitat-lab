@@ -60,11 +60,7 @@ class PPOTrainer(BaseRLTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
-        self.actor_critic = policy(
-            observation_space=self.envs.observation_spaces[0],
-            action_space=self.envs.action_spaces[0],
-            hidden_size=ppo_cfg.hidden_size,
-        )
+        self.actor_critic = policy.from_config(self.config, self.envs)
         self.actor_critic.to(self.device)
 
         self.agent = PPO(
