@@ -105,10 +105,15 @@ class Observations(dict):
 
 class RGBSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.uuid = "rgb"
         super().__init__(*args, **kwargs)
+        if "config" in kwargs:
+            config = kwargs["config"]
+            if hasattr(config, "UUID"):
+                self.uuid = config.UUID
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "rgb"
+        return self.uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.COLOR
@@ -122,10 +127,15 @@ class RGBSensor(Sensor):
 
 class DepthSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.uuid = "depth"
         super().__init__(*args, **kwargs)
+        if "config" in kwargs:
+            config = kwargs["config"]
+            if hasattr(config, "UUID"):
+                self.uuid = config.UUID
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "depth"
+        return self.uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.DEPTH
@@ -139,10 +149,15 @@ class DepthSensor(Sensor):
 
 class SemanticSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.uuid = "semantic"
         super().__init__(*args, **kwargs)
+        if "config" in kwargs:
+            config = kwargs["config"]
+            if hasattr(config, "UUID"):
+                self.uuid = config.UUID
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "semantic"
+        return self.uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.SEMANTIC
