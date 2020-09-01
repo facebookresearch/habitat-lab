@@ -74,7 +74,8 @@ ACTIONS.LOOK_DOWN = CN()
 ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
 ACTIONS.TELEPORT = CN()
 ACTIONS.TELEPORT.TYPE = "TeleportAction"
-
+ACTIONS.GRAB_RELEASE = CN()
+ACTIONS.GRAB_RELEASE.TYPE = "GrabOrReleaseAction"
 _C.TASK.ACTIONS = ACTIONS
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
@@ -218,6 +219,12 @@ _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
+_C.SIMULATOR.INITIAL_LOOK_DOWN_ANGLE = (
+    30  # angle to look down at the start of the episode
+)
+_C.SIMULATOR.CROSSHAIR_POS = [128, 160]
+_C.SIMULATOR.GRAB_DISTANCE = 2.0
+_C.SIMULATOR.VISUAL_SENSOR = "rgb"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
