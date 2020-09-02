@@ -52,7 +52,7 @@ class DummyRLEnv(habitat.RLEnv):
 def _load_test_data():
     configs = []
     datasets = []
-    for i in range(NUM_ENVS):
+    for _ in range(NUM_ENVS):
         config = get_config(CFG_TEST)
         if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
             pytest.skip("Please download Habitat test data to data folder.")
@@ -154,7 +154,7 @@ def test_threaded_vectorized_env():
     with habitat.ThreadedVectorEnv(env_fn_args=env_fn_args) as envs:
         envs.reset()
 
-        for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
+        for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
             observations = envs.step(
                 sample_non_stop_action(envs.action_spaces[0], num_envs)
             )
@@ -391,7 +391,7 @@ def test_action_space_shortest_path():
 
     # action space shortest path
     source_position = env.sim.sample_navigable_point()
-    angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+    angles = list(range(-180, 180, config.SIMULATOR.TURN_ANGLE))
     angle = np.radians(np.random.choice(angles))
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
@@ -400,7 +400,7 @@ def test_action_space_shortest_path():
     unreachable_targets = []
     while len(reachable_targets) < 5:
         position = env.sim.sample_navigable_point()
-        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+        angles = list(range(-180, 180, config.SIMULATOR.TURN_ANGLE))
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.sim.geodesic_distance(source_position, [position]) != np.inf:
@@ -410,7 +410,7 @@ def test_action_space_shortest_path():
         position = env.sim.sample_navigable_point()
         # Change height of the point to make it unreachable
         position[1] = 100
-        angles = [x for x in range(-180, 180, config.SIMULATOR.TURN_ANGLE)]
+        angles = list(range(-180, 180, config.SIMULATOR.TURN_ANGLE))
         angle = np.radians(np.random.choice(angles))
         rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         if env.sim.geodesic_distance(source_position, [position]) == np.inf:

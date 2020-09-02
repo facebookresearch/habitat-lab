@@ -66,7 +66,7 @@ class PPO(nn.Module):
         action_loss_epoch = 0
         dist_entropy_epoch = 0
 
-        for e in range(self.ppo_epoch):
+        for _e in range(self.ppo_epoch):
             data_generator = rollouts.recurrent_generator(
                 advantages, self.num_mini_batch
             )

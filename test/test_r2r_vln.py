@@ -125,7 +125,7 @@ def test_r2r_vln_sim():
             env.sim, goal_radius=0.5, return_one_hot=False
         )
 
-        for i in range(len(env.episodes)):
+        for _ in range(len(env.episodes)):
             env.reset()
             path = env.current_episode.reference_path + [
                 env.current_episode.goals[0].position

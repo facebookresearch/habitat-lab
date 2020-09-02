@@ -46,7 +46,7 @@ class ActionSpace(gym.spaces.Dict):
 
     def __init__(self, spaces):
         if isinstance(spaces, dict):
-            self.spaces = OrderedDict(sorted(list(spaces.items())))
+            self.spaces = OrderedDict(sorted(spaces.items()))
         if isinstance(spaces, list):
             self.spaces = OrderedDict(spaces)
         self.actions_select = gym.spaces.Discrete(len(self.spaces))
@@ -109,7 +109,7 @@ class ListSpace(Space):
         if not (self.min_seq_length <= len(x) <= self.max_seq_length):
             return False
 
-        return all([self.space.contains(el) for el in x])
+        return all(self.space.contains(el) for el in x)
 
     def __repr__(self):
         return (

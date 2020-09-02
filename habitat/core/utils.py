@@ -6,6 +6,7 @@
 
 import cmath
 import json
+import math
 from typing import List
 
 import numpy as np
@@ -146,8 +147,8 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
             o,
             allow_nan=self.allow_nan,
             _repr=lambda x: format(x, ".5f"),
-            _inf=float("inf"),
-            _neginf=-float("inf"),
+            _inf=math.inf,
+            _neginf=-math.inf,
         ):
             if cmath.isnan(o):
                 text = "NaN"

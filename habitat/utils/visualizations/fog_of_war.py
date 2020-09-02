@@ -35,7 +35,7 @@ def bresenham_supercover_line(pt1, pt2):
     if ddx > ddy:
         errorprev = dx
         error = dx
-        for i in range(int(dx)):
+        for _ in range(int(dx)):
             x += xstep
             error += ddy
 
@@ -56,7 +56,7 @@ def bresenham_supercover_line(pt1, pt2):
     else:
         errorprev = dx
         error = dx
-        for i in range(int(dy)):
+        for _ in range(int(dy)):
             y += ystep
             error += ddx
 

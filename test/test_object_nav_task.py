@@ -56,7 +56,7 @@ def test_mp3d_object_nav_dataset():
     dataset.goals_by_category = {
         k: v
         for k, v in dataset.goals_by_category.items()
-        if k in {ep.goals_key for ep in dataset.episodes}
+        if k in (ep.goals_key for ep in dataset.episodes)
     }
     check_json_serializaiton(dataset)
 
@@ -121,7 +121,7 @@ def test_object_nav_task():
         id_dataset=config.DATASET.TYPE, config=config.DATASET
     )
     with habitat.Env(config=config, dataset=dataset) as env:
-        for i in range(10):
+        for _ in range(10):
             env.reset()
             while not env.episode_over:
                 action = env.action_space.sample()

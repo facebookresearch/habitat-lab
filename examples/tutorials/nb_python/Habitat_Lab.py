@@ -73,7 +73,9 @@ from habitat_baselines.config.default import get_config as get_baselines_config
 
 
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
-def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
+def display_sample(
+    rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])
+):  # noqa B006
     from habitat_sim.utils.common import d3_40_colors_rgb
 
     rgb_img = Image.fromarray(rgb_obs, mode="RGB")
@@ -145,13 +147,18 @@ if __name__ == "__main__":
             action = input(
                 "enter action out of {}:\n".format(", ".join(valid_actions))
             )
-            assert action in valid_actions, (
-                "invalid action {} entered, choose one amongst "
-                + ",".join(valid_actions)
+            assert (
+                action in valid_actions
+            ), "invalid action {} entered, choose one amongst " + ",".join(
+                valid_actions
             )
         else:
             action = valid_actions.pop()
-        obs = env.step({"action": action,})
+        obs = env.step(
+            {
+                "action": action,
+            }
+        )
 
     env.close()
 
@@ -280,13 +287,19 @@ if __name__ == "__main__":
             action = input(
                 "enter action out of {}:\n".format(", ".join(valid_actions))
             )
-            assert action in valid_actions, (
-                "invalid action {} entered, choose one amongst "
-                + ",".join(valid_actions)
+            assert (
+                action in valid_actions
+            ), "invalid action {} entered, choose one amongst " + ",".join(
+                valid_actions
             )
         else:
             action = valid_actions.pop()
-        obs = env.step({"action": action, "action_args": None,})
+        obs = env.step(
+            {
+                "action": action,
+                "action_args": None,
+            }
+        )
         print("Episode over:", env.episode_over)
 
     env.close()
