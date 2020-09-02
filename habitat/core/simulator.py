@@ -105,6 +105,8 @@ class Observations(dict):
 
 class RGBSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Default UUID. Can be overriden by config.
+        # Overide UUID for multisensors
         self.uuid = "rgb"
         super().__init__(*args, **kwargs)
         if "config" in kwargs:
@@ -127,6 +129,8 @@ class RGBSensor(Sensor):
 
 class DepthSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Default UUID. Can be overriden by config.
+        # Overide UUID for multisensors
         self.uuid = "depth"
         super().__init__(*args, **kwargs)
         if "config" in kwargs:
@@ -149,6 +153,8 @@ class DepthSensor(Sensor):
 
 class SemanticSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Default UUID. Can be overriden by config.
+        # Overide UUID for multisensors
         self.uuid = "semantic"
         super().__init__(*args, **kwargs)
         if "config" in kwargs:
@@ -171,10 +177,17 @@ class SemanticSensor(Sensor):
 
 class BumpSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Default UUID. Can be overriden by config.
+        # Overide UUID for multisensors
+        self.uuid = "bump"
         super().__init__(*args, **kwargs)
+        if "config" in kwargs:
+            config = kwargs["config"]
+            if hasattr(config, "UUID"):
+                self.uuid = config.UUID
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "bump"
+        return self.uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.FORCE
