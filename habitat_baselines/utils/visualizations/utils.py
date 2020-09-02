@@ -75,7 +75,10 @@ def save_depth_results(
 
 
 def put_vqa_text_on_image(
-    image: np.ndarray, question: str, prediction: str, ground_truth: str,
+    image: np.ndarray,
+    question: str,
+    prediction: str,
+    ground_truth: str,
 ) -> np.ndarray:
     r"""For writing VQA question, prediction and ground truth answer
         on image.
@@ -149,7 +152,13 @@ def save_vqa_image_results(
 
     collage_image = cv2.hconcat(images)
     collage_image = cv2.copyMakeBorder(
-        collage_image, 55, 0, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255),
+        collage_image,
+        55,
+        0,
+        0,
+        0,
+        cv2.BORDER_CONSTANT,
+        value=(255, 255, 255),
     )
 
     image = put_vqa_text_on_image(

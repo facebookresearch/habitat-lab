@@ -36,23 +36,20 @@ class BaseILTrainer(BaseTrainer):
         self._flush_secs = value
 
     def _make_dirs(self) -> None:
-        r"""Makes directories for log files, checkpoints & results.
-        """
+        r"""Makes directories for log files, checkpoints & results."""
         self._make_log_dir()
         self._make_ckpt_dir()
         if self.config.EVAL_SAVE_RESULTS:
             self._make_results_dir()
 
     def _make_log_dir(self) -> None:
-        r"""Makes directory for writing log files.
-        """
+        r"""Makes directory for writing log files."""
         if self.config.LOG_METRICS:
             if not os.path.isdir(self.config.OUTPUT_LOG_DIR):
                 os.makedirs(self.config.OUTPUT_LOG_DIR)
 
     def _make_ckpt_dir(self) -> None:
-        r"""Makes directory for saving model checkpoints.
-        """
+        r"""Makes directory for saving model checkpoints."""
         if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 

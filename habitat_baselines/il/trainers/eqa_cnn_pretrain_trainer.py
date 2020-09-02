@@ -46,8 +46,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             logger.info(f"config: {config}")
 
     def _make_results_dir(self):
-        r"""Makes directory for saving eqa-cnn-pretrain eval results.
-        """
+        r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for type in ["rgb", "seg", "depth"]:
             dir_name = self.config.RESULTS_DIR.format(split="val", type=type)
             if not os.path.isdir(dir_name):
