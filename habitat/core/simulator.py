@@ -105,14 +105,7 @@ class Observations(dict):
 
 class RGBSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # Default UUID. Can be overriden by config.
-        # Overide UUID for multisensors
-        self.uuid = "rgb"
         super().__init__(*args, **kwargs)
-        if "config" in kwargs:
-            config = kwargs["config"]
-            if hasattr(config, "UUID"):
-                self.uuid = config.UUID
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         if hasattr(self.config, "UUID"):
