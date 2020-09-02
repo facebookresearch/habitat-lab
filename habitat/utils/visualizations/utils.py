@@ -209,7 +209,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
 
 def append_text_to_image(image: np.ndarray, text: str):
-    r""" Appends text underneath an image of size (height, width, channels).
+    r"""Appends text underneath an image of size (height, width, channels).
     The returned image has white text on a black background. Uses textwrap to
     split long text into multiple lines.
     Args:

@@ -60,11 +60,7 @@ class PPOTrainer(BaseRLTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
-        self.actor_critic = policy(
-            observation_space=self.envs.observation_spaces[0],
-            action_space=self.envs.action_spaces[0],
-            hidden_size=ppo_cfg.hidden_size,
-        )
+        self.actor_critic = policy.from_config(self.config, self.envs)
         self.actor_critic.to(self.device)
 
         self.agent = PPO(
@@ -343,7 +339,7 @@ class PPOTrainer(BaseRLTrainer):
                         update, self.config.NUM_UPDATES
                     )
 
-                for step in range(ppo_cfg.num_steps):
+                for _step in range(ppo_cfg.num_steps):
                     (
                         delta_pth_time,
                         delta_env_time,
@@ -494,7 +490,7 @@ class PPOTrainer(BaseRLTrainer):
         not_done_masks = torch.zeros(
             self.config.NUM_PROCESSES, 1, device=self.device
         )
-        stats_episodes = dict()  # dict of dicts that stores stats per episode
+        stats_episodes = {}  # dict of dicts that stores stats per episode
 
         rgb_frames = [
             [] for _ in range(self.config.NUM_PROCESSES)
@@ -569,7 +565,7 @@ class PPOTrainer(BaseRLTrainer):
                 # episode ended
                 if not_done_masks[i].item() == 0:
                     pbar.update()
-                    episode_stats = dict()
+                    episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
@@ -621,10 +617,10 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         num_episodes = len(stats_episodes)
-        aggregated_stats = dict()
+        aggregated_stats = {}
         for stat_key in next(iter(stats_episodes.values())).keys():
             aggregated_stats[stat_key] = (
-                sum([v[stat_key] for v in stats_episodes.values()])
+                sum(v[stat_key] for v in stats_episodes.values())
                 / num_episodes
             )
 

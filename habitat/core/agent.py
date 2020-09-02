@@ -20,8 +20,7 @@ class Agent:
     """
 
     def reset(self) -> None:
-        r"""Called before starting a new episode in environment.
-        """
+        r"""Called before starting a new episode in environment."""
         raise NotImplementedError
 
     def act(

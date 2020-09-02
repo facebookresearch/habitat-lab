@@ -76,7 +76,6 @@ LINKS_NAVBAR1 = [
 ]
 LINKS_NAVBAR2 = [
     ("Sim Docs", "../habitat-sim/index.html", []),
-    ("Sim C++ Docs", "../habitat-cpp/index.html", []),
 ]
 
 FINE_PRINT = f"""

@@ -50,8 +50,7 @@ class Action:
 
     @property
     def action_space(self) -> Space:
-        r"""a current Action's action space.
-        """
+        r"""a current Action's action space."""
         raise NotImplementedError
 
 
@@ -74,8 +73,7 @@ class SimulatorTaskAction(Action):
         return None
 
     def step(self, *args: Any, **kwargs: Any) -> Observations:
-        r"""Step method is called from ``Env`` on each ``step``.
-        """
+        r"""Step method is called from ``Env`` on each ``step``."""
         raise NotImplementedError
 
 
@@ -126,8 +124,7 @@ class Measure:
 
 
 class Metrics(dict):
-    r"""Dictionary containing measurements.
-    """
+    r"""Dictionary containing measurements."""
 
     def __init__(self, measures: Dict[str, Measure]) -> None:
         """Constructor

@@ -74,9 +74,9 @@ def make_good_config_for_orbslam2(config):
     config.SIMULATOR.RGB_SENSOR.HEIGHT = 256
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = 256
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = 256
-    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = config.SIMULATOR.DEPTH_SENSOR.POSITION[
-        1
-    ]
+    config.TRAINER.ORBSLAM2.CAMERA_HEIGHT = (
+        config.SIMULATOR.DEPTH_SENSOR.POSITION[1]
+    )
     config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
         0.3 * config.TRAINER.ORBSLAM2.CAMERA_HEIGHT
     )
@@ -169,7 +169,7 @@ class BlindAgent(RandomAgent):
 
 
 class ORBSLAM2Agent(RandomAgent):
-    def __init__(self, config, device=torch.device("cuda:0")):
+    def __init__(self, config, device=torch.device("cuda:0")):  # noqa: B008
         super(ORBSLAM2Agent, self).__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
@@ -528,7 +528,7 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
     def __init__(
         self,
         config,
-        device=torch.device("cuda:0"),
+        device=torch.device("cuda:0"),  # noqa: B008
         monocheckpoint="habitat_baselines/slambased/data/mp3d_resnet50.pth",
     ):
         super(ORBSLAM2MonodepthAgent, self).__init__(config)

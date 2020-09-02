@@ -6,6 +6,7 @@
 
 import cmath
 import json
+import math
 from typing import List
 
 import numpy as np
@@ -112,8 +113,8 @@ def center_crop(obs, new_shape):
 
 class DatasetFloatJSONEncoder(json.JSONEncoder):
     r"""JSON Encoder that sets a float precision for a space saving purpose and
-        encodes ndarray and quaternion. The encoder is compatible with JSON
-        version 2.0.9.
+    encodes ndarray and quaternion. The encoder is compatible with JSON
+    version 2.0.9.
     """
 
     def default(self, object):
@@ -146,8 +147,8 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
             o,
             allow_nan=self.allow_nan,
             _repr=lambda x: format(x, ".5f"),
-            _inf=float("inf"),
-            _neginf=-float("inf"),
+            _inf=math.inf,
+            _neginf=-math.inf,
         ):
             if cmath.isnan(o):
                 text = "NaN"

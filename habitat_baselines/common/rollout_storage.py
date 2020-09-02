@@ -10,9 +10,7 @@ import torch
 
 
 class RolloutStorage:
-    r"""Class for storing rollout information for RL trainers.
-
-    """
+    r"""Class for storing rollout information for RL trainers."""
 
     def __init__(
         self,

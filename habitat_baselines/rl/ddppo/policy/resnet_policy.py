@@ -43,7 +43,7 @@ class PointNavResNetPolicy(Policy):
         resnet_baseplanes=32,
         backbone="resnet50",
         normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa : B008
         force_blind_policy=False,
         **kwargs
     ):
@@ -63,6 +63,19 @@ class PointNavResNetPolicy(Policy):
             action_space.n,
         )
 
+    @classmethod
+    def from_config(cls, config, envs):
+        return cls(
+            observation_space=envs.observation_spaces[0],
+            action_space=envs.action_spaces[0],
+            hidden_size=config.RL.PPO.hidden_size,
+            rnn_type=config.RL.DDPPO.rnn_type,
+            num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
+            backbone=config.RL.DDPPO.backbone,
+            normalize_visual_inputs="rgb" in envs.observation_spaces[0].spaces,
+            force_blind_policy=config.FORCE_BLIND_POLICY,
+        )
+
 
 class ResNetEncoder(nn.Module):
     def __init__(
@@ -73,7 +86,7 @@ class ResNetEncoder(nn.Module):
         spatial_size=128,
         make_backbone=None,
         normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa: B008
     ):
         super().__init__()
 
@@ -191,7 +204,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),
+        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa: B008
         force_blind_policy=False,
     ):
         super().__init__()

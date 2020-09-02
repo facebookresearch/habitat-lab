@@ -3,7 +3,7 @@ from habitat.tasks.nav.nav import StopAction
 
 def sample_non_stop_action(action_space, num_samples=1):
     samples = []
-    for i in range(num_samples):
+    for _ in range(num_samples):
         action = action_space.sample()
         while action["action"] == StopAction.name:
             action = action_space.sample()

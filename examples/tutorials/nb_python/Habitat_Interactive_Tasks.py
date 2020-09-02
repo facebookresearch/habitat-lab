@@ -95,6 +95,7 @@ if "google.colab" in sys.modules:
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
+# %cd $dir_path
 data_path = os.path.join(dir_path, "data")
 output_directory = "data/tutorials/output/"  # @param {type:"string"}
 output_path = os.path.join(dir_path, output_directory)
@@ -179,7 +180,10 @@ def simulate_and_make_vid(sim, crosshair, prefix, dt=1.0, open_vid=True):
 
 
 def display_sample(
-    rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([]), key_points=None
+    rgb_obs,
+    semantic_obs=np.array([]),
+    depth_obs=np.array([]),
+    key_points=None,  # noqa: B006
 ):
     from habitat_sim.utils.common import d3_40_colors_rgb
 
@@ -211,7 +215,7 @@ def display_sample(
         ax.set_title(titles[i])
         # plot points on images
         if key_points is not None:
-            for pix, point in enumerate(key_points):
+            for point in key_points:
                 plt.plot(
                     point[0], point[1], marker="o", markersize=10, alpha=0.8
                 )
@@ -347,7 +351,7 @@ def remove_all_objects(sim):
 
 def set_object_in_front_of_agent(sim, obj_id, z_offset=-1.5):
     r"""
-      Adds an object in front of the agent at some distance.
+    Adds an object in front of the agent at some distance.
     """
     agent_transform = sim.agents[0].scene_node.transformation_matrix()
     obj_translation = agent_transform.transform_point(
@@ -553,7 +557,7 @@ class RearrangementSpec:
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangementObjectSpec(RearrangementSpec):
     r"""Object specifications that capture position of each object in the scene,
-     the associated object template.
+    the associated object template.
     """
     object_id: str = attr.ib(default=None, validator=not_none_validator)
     object_template: Optional[str] = attr.ib(
@@ -587,8 +591,7 @@ class RearrangementEpisode(NavigationEpisode):
 
 @registry.register_dataset(name="RearrangementDataset-v0")
 class RearrangementDatasetV0(PointNavDatasetV1):
-    r"""Class inherited from PointNavDataset that loads Rearrangement dataset.
-    """
+    r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
     episodes: List[RearrangementEpisode]
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
@@ -614,9 +617,11 @@ class RearrangementDatasetV0(PointNavDatasetV1):
                 if rearrangement_episode.scene_id.startswith(
                     DEFAULT_SCENE_PATH_PREFIX
                 ):
-                    rearrangement_episode.scene_id = rearrangement_episode.scene_id[
-                        len(DEFAULT_SCENE_PATH_PREFIX) :
-                    ]
+                    rearrangement_episode.scene_id = (
+                        rearrangement_episode.scene_id[
+                            len(DEFAULT_SCENE_PATH_PREFIX) :
+                        ]
+                    )
 
                 rearrangement_episode.scene_id = os.path.join(
                     scenes_dir, rearrangement_episode.scene_id
@@ -674,15 +679,15 @@ assert dataset.episodes[0].goals.rotation == [0.0, 0.0, 0.0, 1.0]
 # @markdown Cast a ray in the direction of crosshair from the camera and check if it collides with another object within a certain distance threshold
 
 
-def raycast(sim, sensor_name, crosshair_pos=[128, 128], max_distance=2.0):
+def raycast(sim, sensor_name, crosshair_pos=(128, 128), max_distance=2.0):
     r"""Cast a ray in the direction of crosshair and check if it collides
-        with another object within a certain distance threshold
-        :param sim: Simulator object
-        :param sensor_name: name of the visual sensor to be used for raycasting
-        :param crosshair_pos: 2D coordiante in the viewport towards which the
-            ray will be cast
-        :param max_distance: distance threshold beyond which objects won't
-            be considered
+    with another object within a certain distance threshold
+    :param sim: Simulator object
+    :param sensor_name: name of the visual sensor to be used for raycasting
+    :param crosshair_pos: 2D coordiante in the viewport towards which the
+        ray will be cast
+    :param max_distance: distance threshold beyond which objects won't
+        be considered
     """
     visual_sensor = sim._sensors[sensor_name]
     scene_graph = sim.get_active_scene_graph()
@@ -806,8 +811,7 @@ class RearrangementSimV0ActionSpaceConfiguration(
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
-        r"""This method is called from ``Env`` on each ``step``.
-        """
+        r"""This method is called from ``Env`` on each ``step``."""
         return self._sim.step(HabitatSimActions.GRAB_RELEASE)
 
 
@@ -1131,8 +1135,7 @@ class ObjectGoal(PointGoalSensor):
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
-    """The measure calculates distance of object towards the goal.
-    """
+    """The measure calculates distance of object towards the goal."""
 
     cls_uuid: str = "object_to_goal_distance"
 
@@ -1173,8 +1176,7 @@ class ObjectToGoalDistance(Measure):
 
 @registry.register_measure
 class AgentToObjectDistance(Measure):
-    """The measure calculates the distance of objects from the agent
-    """
+    """The measure calculates the distance of objects from the agent"""
 
     cls_uuid: str = "agent_to_object_distance"
 
@@ -1494,7 +1496,7 @@ class RearrangementRLEnv(NavRLEnv):
 
     def get_agent_to_object_dist_reward(self, observations):
         """
-            Encourage the agent to move towards the closest object which is not already in place.
+        Encourage the agent to move towards the closest object which is not already in place.
         """
         curr_metric = self._env.get_metrics()["agent_to_object_distance"]
         prev_metric = self._prev_measure["agent_to_object_distance"]
@@ -1514,8 +1516,7 @@ class RearrangementRLEnv(NavRLEnv):
         return dist_reward
 
     def _episode_success(self, observations):
-        r"""Returns True if object is within distance threshold of the goal.
-        """
+        r"""Returns True if object is within distance threshold of the goal."""
         dist = self._env.get_metrics()["object_to_goal_distance"]
         if (
             abs(dist) > self._success_distance
@@ -1581,7 +1582,9 @@ from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
 
 def construct_envs(
-    config, env_class, workers_ignore_signals=False,
+    config,
+    env_class,
+    workers_ignore_signals=False,
 ):
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -1640,7 +1643,7 @@ def construct_envs(
 
     envs = habitat.ThreadedVectorEnv(
         make_env_fn=make_env_fn,
-        env_fn_args=tuple(tuple(zip(configs, env_classes))),
+        env_fn_args=tuple(zip(configs, env_classes)),
         workers_ignore_signals=workers_ignore_signals,
     )
     return envs
@@ -1654,6 +1657,9 @@ class RearrangementBaselinePolicy(Policy):
             ),
             action_space.n,
         )
+
+    def from_config(cls, config, envs):
+        pass
 
 
 class RearrangementBaselineNet(Net):
@@ -1671,7 +1677,8 @@ class RearrangementBaselineNet(Net):
         self._hidden_size = hidden_size
 
         self.state_encoder = RNNStateEncoder(
-            2 * self._n_input_goal, self._hidden_size,
+            2 * self._n_input_goal,
+            self._hidden_size,
         )
 
         self.train()
@@ -1814,7 +1821,7 @@ class RearrangementTrainer(PPOTrainer):
                         update, self.config.NUM_UPDATES
                     )
 
-                for step in range(ppo_cfg.num_steps):
+                for _step in range(ppo_cfg.num_steps):
                     (
                         delta_pth_time,
                         delta_env_time,
@@ -1943,7 +1950,7 @@ class RearrangementTrainer(PPOTrainer):
 
             self.actor_critic.eval()
 
-            for i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
+            for _i in range(config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS):
                 current_episodes = envs.current_episodes()
 
                 with torch.no_grad():

@@ -35,7 +35,7 @@ def bresenham_supercover_line(pt1, pt2):
     if ddx > ddy:
         errorprev = dx
         error = dx
-        for i in range(int(dx)):
+        for _ in range(int(dx)):
             x += xstep
             error += ddy
 
@@ -56,7 +56,7 @@ def bresenham_supercover_line(pt1, pt2):
     else:
         errorprev = dx
         error = dx
-        for i in range(int(dy)):
+        for _ in range(int(dy)):
             y += ystep
             error += ddx
 
@@ -80,8 +80,7 @@ def bresenham_supercover_line(pt1, pt2):
 
 @numba.jit(nopython=True)
 def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
-    r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2
-    """
+    r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2"""
 
     for pt in bresenham_supercover_line(pt1, pt2):
         x, y = pt

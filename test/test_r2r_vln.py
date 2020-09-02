@@ -125,7 +125,7 @@ def test_r2r_vln_sim():
             env.sim, goal_radius=0.5, return_one_hot=False
         )
 
-        for i in range(len(env.episodes)):
+        for _ in range(len(env.episodes)):
             env.reset()
             path = env.current_episode.reference_path + [
                 env.current_episode.goals[0].position
@@ -147,11 +147,8 @@ def test_r2r_vln_sim():
                     assert obs["rgb"].shape[:2] == (
                         vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                         vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                    ), (
-                        "Observation resolution {} doesn't correspond to config "
-                        "({}, {}).".format(
-                            obs["rgb"].shape[:2],
-                            vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                            vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                        )
+                    ), "Observation resolution {} doesn't correspond to config " "({}, {}).".format(
+                        obs["rgb"].shape[:2],
+                        vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                        vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
                     )

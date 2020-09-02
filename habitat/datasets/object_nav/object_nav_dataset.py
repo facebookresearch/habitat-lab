@@ -26,8 +26,7 @@ from habitat.tasks.nav.object_nav_task import (
 
 @registry.register_dataset(name="ObjectNav-v1")
 class ObjectNavDatasetV1(PointNavDatasetV1):
-    r"""Class inherited from PointNavDataset that loads Object Navigation dataset.
-    """
+    r"""Class inherited from PointNavDataset that loads Object Navigation dataset."""
     category_to_task_category_id: Dict[str, int]
     category_to_scene_annotation_category_id: Dict[str, int]
     episodes: List[ObjectGoalNavEpisode]
@@ -39,7 +38,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         if len(dataset["episodes"]) == 0:
             return dataset
 
-        goals_by_category = dict()
+        goals_by_category = {}
         for i, ep in enumerate(dataset["episodes"]):
             dataset["episodes"][i]["object_category"] = ep["goals"][0][
                 "object_category"

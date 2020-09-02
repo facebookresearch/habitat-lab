@@ -179,13 +179,10 @@ def test_mp3d_eqa_sim():
                 assert obs["rgb"].shape[:2] == (
                     eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                     eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                ), (
-                    "Observation resolution {} doesn't correspond to config "
-                    "({}, {}).".format(
-                        obs["rgb"].shape[:2],
-                        eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                        eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                    )
+                ), "Observation resolution {} doesn't correspond to config " "({}, {}).".format(
+                    obs["rgb"].shape[:2],
+                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
                 )
 
 
@@ -301,7 +298,7 @@ def test_eqa_task():
 
         env.reset()
 
-        for i in range(10):
+        for _ in range(10):
             action = sample_non_stop_action(env.action_space)
             if action["action"] != AnswerAction.name:
                 env.step(action)

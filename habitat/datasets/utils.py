@@ -21,7 +21,7 @@ SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
 
 def tokenize(
-    sentence, regex=SENTENCE_SPLIT_REGEX, keep=["'s"], remove=[",", "?"]
+    sentence, regex=SENTENCE_SPLIT_REGEX, keep=("'s"), remove=(",", "?")
 ):
     sentence = sentence.lower()
 
@@ -113,8 +113,8 @@ class VocabDict:
         self,
         sentence,
         regex=SENTENCE_SPLIT_REGEX,
-        keep=["'s"],
-        remove=[",", "?"],
+        keep=("'s"),
+        remove=(",", "?"),
     ) -> List[int]:
         inds = [
             self.word2idx(w)
@@ -136,8 +136,8 @@ class VocabFromText(VocabDict):
         sentences,
         min_count=1,
         regex=SENTENCE_SPLIT_REGEX,
-        keep=[],
-        remove=[],
+        keep=(),
+        remove=(),
         only_unk_extra=False,
     ):
         token_counter = Counter()
