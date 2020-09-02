@@ -52,7 +52,9 @@ class EQACNNPretrainDataset(Dataset):
                     self.scene_episode_dict[episode.scene_id].append(episode)
 
             self.lmdb_env = lmdb.open(
-                self.dataset_path, map_size=int(1e11), writemap=True,
+                self.dataset_path,
+                map_size=int(1e11),
+                writemap=True,
             )
 
             self.count = 0
@@ -75,7 +77,9 @@ class EQACNNPretrainDataset(Dataset):
         else:
             logger.info("Dataset cache found.")
             self.lmdb_env = lmdb.open(
-                self.dataset_path, readonly=True, lock=False,
+                self.dataset_path,
+                readonly=True,
+                lock=False,
             )
 
         self.dataset_length = int(self.lmdb_env.begin().stat()["entries"] / 3)
@@ -144,7 +148,9 @@ class EQACNNPretrainDataset(Dataset):
         """
         if self.lmdb_env is None:
             self.lmdb_env = lmdb.open(
-                self.dataset_path, map_size=int(1e11), writemap=True,
+                self.dataset_path,
+                map_size=int(1e11),
+                writemap=True,
             )
             self.lmdb_txn = self.lmdb_env.begin()
             self.lmdb_cursor = self.lmdb_txn.cursor()

@@ -11,7 +11,7 @@ EVAL_CKPT_PATH_DIR: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
 
 CHECKPOINT_FOLDER: "data/eqa/eqa_cnn_pretrain/checkpoints"
 TENSORBOARD_DIR: "data/eqa/eqa_cnn_pretrain/tb"
-RESULTS_DIR: "data/eqa/eqa_cnn_pretrain/results/{split}/{type}" 
+RESULTS_DIR: "data/eqa/eqa_cnn_pretrain/results/{split}/{type}"
 OUTPUT_LOG_DIR: data/eqa/eqa_cnn_pretrain/logs
 
 LOG_METRICS: True
