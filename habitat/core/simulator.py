@@ -63,7 +63,11 @@ class Sensor:
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.config = kwargs["config"] if "config" in kwargs else None
-        self.uuid = self._get_uuid(*args, **kwargs)
+        if hasattr(self.config, "UUID"):
+            # We allow any sensor config to override the UUID
+            self.uuid = self.config.UUID
+        else:
+            self.uuid = self._get_uuid(*args, **kwargs)
         self.sensor_type = self._get_sensor_type(*args, **kwargs)
         self.observation_space = self._get_observation_space(*args, **kwargs)
 
@@ -108,10 +112,7 @@ class RGBSensor(Sensor):
         super().__init__(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        if hasattr(self.config, "UUID"):
-            return self.config.UUID
-        else:
-            return "rgb"
+        return "rgb"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.COLOR
@@ -128,10 +129,7 @@ class DepthSensor(Sensor):
         super().__init__(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        if hasattr(self.config, "UUID"):
-            return self.config.UUID
-        else:
-            return "depth"
+        return "depth"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.DEPTH
@@ -148,10 +146,7 @@ class SemanticSensor(Sensor):
         super().__init__(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        if hasattr(self.config, "UUID"):
-            return self.config.UUID
-        else:
-            return "semantic"
+        return "semantic"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.SEMANTIC
@@ -168,10 +163,7 @@ class BumpSensor(Sensor):
         super().__init__(*args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        if hasattr(self.config, "UUID"):
-            return self.config.UUID
-        else:
-            return "bump"
+        return "bump"
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.FORCE
