@@ -1,10 +1,12 @@
 import json
 import os
-from typing import List, Optional
+from typing import Dict, List, Optional
+
+import attr
 
 from habitat.config import Config
 from habitat.core.registry import registry
-from habitat.core.utils import DatasetFloatJSONEncoder
+from habitat.core.utils import DatasetFloatJSONEncoder, not_none_validator
 from habitat.datasets.pointnav.pointnav_dataset import (
     CONTENT_SCENES_PATH_FIELD,
     DEFAULT_SCENE_PATH_PREFIX,
@@ -17,10 +19,11 @@ from habitat.tasks.rearrangement.rearrangement_task import (
 )
 
 
-@registry.register_dataset(name="Rearrangement-v0")
+@registry.register_dataset(name="RearrangementDataset-v0")
 class RearrangementDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads the Rearrangement dataset."""
     episodes: List[RearrangementEpisode]
+    object_templates: Dict = attr.ib(default={}, validator=not_none_validator)
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def to_json(self) -> str:
@@ -37,6 +40,9 @@ class RearrangementDatasetV0(PointNavDatasetV1):
         if CONTENT_SCENES_PATH_FIELD in deserialized:
             self.content_scenes_path = deserialized[CONTENT_SCENES_PATH_FIELD]
 
+        if "object_templates" in deserialized:
+            self.object_templates = deserialized["object_templates"]
+        # self.object_templates = deserialized['object_templates']
         for i, episode in enumerate(deserialized["episodes"]):
             episode_obj = RearrangementEpisode(**episode)
             episode_obj.episode_id = str(i)
@@ -52,11 +58,10 @@ class RearrangementDatasetV0(PointNavDatasetV1):
                 )
 
             for i, obj in enumerate(episode_obj.objects):
-                idx = obj["object_key"]
+                idx = obj["object_handle"]
                 if type(idx) is not str:
                     template = episode_obj.object_templates[idx]
-                    obj["object_key"] = template["object_key"]
-                    obj["object_template"] = template["object_template"]
+                    obj["object_handle"] = template["object_handle"]
                 episode_obj.objects[i] = RearrangementObjectSpec(**obj)
 
             for i, goal in enumerate(episode_obj.goals):

@@ -17,7 +17,7 @@ def _try_register_rearrangement_task():
     except ImportError as e:
         rearrangement_task_import_error = e
 
-        @registry.register_task(name="rearrangement-v0")
+        @registry.register_task(name="RearrangementTask-v0")
         class RearrangementTaskImportError(EmbodiedTask):
             def __init__(self, *args, **kwargs):
                 raise rearrangement_task_import_error

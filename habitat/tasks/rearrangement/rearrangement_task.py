@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Type
+
+import os
+from typing import Any, Dict, List, Type
 
 import attr
 import numpy as np
@@ -26,6 +28,7 @@ from habitat.tasks.nav.nav import (
     merge_sim_episode_config,
 )
 from habitat_sim.physics import MotionType
+from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
 
 
 def merge_sim_episode_with_object_config(
@@ -67,10 +70,7 @@ class RearrangementObjectSpec(RearrangementSpec):
     """
 
     object_id: str = attr.ib(default=None, validator=not_none_validator)
-    object_key: str = attr.ib(default=None, validator=not_none_validator)
-    object_template: Optional[str] = attr.ib(
-        default="data/test_assets/objects/sphere.glb"
-    )
+    object_handle: str = attr.ib(default=None, validator=not_none_validator)
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -93,9 +93,6 @@ class RearrangementEpisode(NavigationEpisode):
         default=None, validator=not_none_validator
     )
     goals: List[RearrangementSpec] = attr.ib(
-        default=None, validator=not_none_validator
-    )
-    object_templates: List = attr.ib(
         default=None, validator=not_none_validator
     )
 
@@ -131,15 +128,12 @@ class ObjectToGoalDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
-        habitat_sim = self._sim._sim
 
-        for i, sim_obj_id in enumerate(
-            habitat_sim.get_existing_object_ids()[1:]
-        ):
-            obj_id = habitat_sim.sim_object_to_objid_mapping[sim_obj_id]
+        for sim_obj_id in self._sim.get_existing_object_ids():
+            obj_id = self._sim.sim_object_to_objid_mapping[sim_obj_id]
 
             previous_position = np.array(
-                habitat_sim.get_translation(sim_obj_id)
+                self._sim.get_translation(sim_obj_id)
             ).tolist()
 
             goal_position = episode.goals[obj_id].position
@@ -179,13 +173,10 @@ class AgentToObjectDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
-        habitat_sim = self._sim._sim
-        for i, sim_obj_id in enumerate(
-            habitat_sim.get_existing_object_ids()[1:]
-        ):
-            obj_id = habitat_sim.sim_object_to_objid_mapping[sim_obj_id]
+        for sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
+            obj_id = self._sim.sim_object_to_objid_mapping[sim_obj_id]
             previous_position = np.array(
-                habitat_sim.get_translation(sim_obj_id)
+                self._sim.get_translation(sim_obj_id)
             ).tolist()
             agent_state = self._sim.get_agent_state()
             agent_position = agent_state.position
@@ -206,8 +197,7 @@ class GrippedObjectSensor(Sensor):
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        habitat_sim = self._sim._sim
-        return spaces.Discrete(habitat_sim.get_existing_object_ids())
+        return spaces.Discrete(self._sim.get_existing_object_ids())
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "gripped_object_id"
@@ -222,8 +212,7 @@ class GrippedObjectSensor(Sensor):
         *args: Any,
         **kwargs: Any
     ):
-        habitat_sim = self._sim._sim
-        obj_id = habitat_sim.sim_object_to_objid_mapping.get(
+        obj_id = self._sim.sim_object_to_objid_mapping.get(
             self._sim.gripped_object_id, -1
         )
         return obj_id
@@ -254,13 +243,10 @@ class AllObjectPositions(PointGoalSensor):
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
         sensor_data = np.zeros((5, 2))
-        habitat_sim = self._sim._sim
 
-        for i, sim_obj_id in enumerate(
-            habitat_sim.get_existing_object_ids()[1:]
-        ):
-            obj_id = habitat_sim.sim_object_to_objid_mapping[sim_obj_id]
-            object_position = habitat_sim.get_translation(sim_obj_id)
+        for sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
+            obj_id = self._sim.sim_object_to_objid_mapping[sim_obj_id]
+            object_position = self._sim.get_translation(sim_obj_id)
             sensor_data[obj_id] = self._compute_pointgoal(
                 agent_position, rotation_world_agent, object_position
             )
@@ -290,14 +276,11 @@ class AllObjectGoals(PointGoalSensor):
         self, *args: Any, observations, episode, **kwargs: Any
     ):
         sensor_data = np.zeros((5, 2))
-        habitat_sim = self._sim._sim
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
 
-        for i, sim_obj_id in enumerate(
-            habitat_sim.get_existing_object_ids()[1:]
-        ):
+        for i, _ in enumerate(self._sim.get_existing_object_ids()):
             goal_position = np.array(
                 episode.goals[i].position, dtype=np.float32
             )
@@ -379,7 +362,7 @@ class GrabOrReleaseAction(SimulatorTaskAction):
         return observations
 
 
-@registry.register_task(name="Rearrangement-v0")
+@registry.register_task(name="RearrangementTask-v0")
 class RearrangementTask(NavigationTask):
     r"""Embodied Rearrangement Task
     Goal: An agent must place objects at their corresponding goal position.
@@ -388,5 +371,60 @@ class RearrangementTask(NavigationTask):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
+    def register_object_templates(self):
+        r"""
+        Register object temmplates from the dataset into the simulator
+        """
+        obj_attr_mgr = self._sim.get_object_template_manager()
+        object_templates = self._dataset.object_templates
+        for name, template_info in object_templates.items():
+            name = os.path.basename(name).split(".")[0]
+            obj_handle = obj_attr_mgr.get_file_template_handles(name)[0]
+            obj_template = obj_attr_mgr.get_template_by_handle(obj_handle)
+            obj_template.scale = np.array(template_info["scale"])
+            obj_attr_mgr.register_template(obj_template)
+
+    def _initialize_objects(self, episode: RearrangementEpisode):
+        r"""
+        Initialize the stage with the objects in the episode.
+        """
+        obj_attr_mgr = self._sim.get_object_template_manager()
+
+        # first remove all existing objects
+        existing_object_ids = self._sim.get_existing_object_ids()
+        if len(existing_object_ids) > 0:
+            for obj_id in existing_object_ids:
+                self._sim.remove_object(obj_id)
+
+        self.sim_object_to_objid_mapping = {}
+        self.objid_to_sim_object_mapping = {}
+
+        for obj in episode.objects:
+            object_rot = obj.rotation
+            object_handle = obj_attr_mgr.get_file_template_handles(
+                obj.object_handle
+            )[0]
+            object_id = self._sim.add_object_by_handle(object_handle)
+            self._sim.sim_object_to_objid_mapping[object_id] = obj.object_id
+            self._sim.objid_to_sim_object_mapping[obj.object_id] = object_id
+
+            self._sim.set_translation(obj.position, object_id)
+            if isinstance(object_rot, list):
+                object_rot = quat_from_coeffs(object_rot)
+            object_rot = quat_to_magnum(object_rot)
+            self._sim.set_rotation(object_rot, object_id)
+            self._sim.set_object_motion_type(MotionType.STATIC, object_id)
+
+        # Recompute the navmesh after placing all the objects.
+        self._sim.recompute_navmesh(
+            self._sim.pathfinder, self._sim.navmesh_settings, True
+        )
+
+    def reset(self, episode: Episode):
+        self._initialize_objects(episode)
+        return super().reset(episode)
+
     def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
+        sim_config = super().overwrite_sim_config(sim_config, episode)
+        self.register_object_templates()
+        return sim_config

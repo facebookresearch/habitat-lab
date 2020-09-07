@@ -17,7 +17,7 @@ def _try_register_rearrangement_dataset():
     except ImportError as e:
         rearrangement_import_error = e
 
-        @registry.register_dataset(name="rearrangement-v0")
+        @registry.register_dataset(name="RearrangementDataset-v0")
         class RearrangementDatasetImportError(Dataset):
             def __init__(self, *args, **kwargs):
                 raise rearrangement_import_error

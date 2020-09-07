@@ -213,17 +213,17 @@ _C.TASK.GRIPPED_OBJECT_SENSOR.TYPE = "GrippedObjectSensor"
 # -----------------------------------------------------------------------------
 # # REARRANGEMENT TASK ALL OBJECT POSITIONS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.OBJECT_POSITION = CN()
-_C.TASK.OBJECT_POSITION.TYPE = "ObjectPosition"
-_C.TASK.OBJECT_POSITION.GOAL_FORMAT = "POLAR"
-_C.TASK.OBJECT_POSITION.DIMENSIONALITY = 2
+_C.TASK.ALL_OBJECT_POSITIONS = CN()
+_C.TASK.ALL_OBJECT_POSITIONS.TYPE = "AllObjectPositions"
+_C.TASK.ALL_OBJECT_POSITIONS.GOAL_FORMAT = "POLAR"
+_C.TASK.ALL_OBJECT_POSITIONS.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
 # # REARRANGEMENT TASK ALL OBJECT GOALS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.OBJECT_GOAL = CN()
-_C.TASK.OBJECT_GOAL.TYPE = "ObjectGoal"
-_C.TASK.OBJECT_GOAL.GOAL_FORMAT = "POLAR"
-_C.TASK.OBJECT_GOAL.DIMENSIONALITY = 2
+_C.TASK.ALL_OBJECT_GOALS = CN()
+_C.TASK.ALL_OBJECT_GOALS.TYPE = "AllObjectGoals"
+_C.TASK.ALL_OBJECT_GOALS.GOAL_FORMAT = "POLAR"
+_C.TASK.ALL_OBJECT_GOALS.DIMENSIONALITY = 2
 # -----------------------------------------------------------------------------
 # # OBJECT_DISTANCE_TO_GOAL MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -249,7 +249,7 @@ _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.INITIAL_LOOK_DOWN_ANGLE = (
-    30  # angle to look down at the start of the episode
+    0  # angle to look down at the start of the episode
 )
 _C.SIMULATOR.CROSSHAIR_POS = [128, 160]
 _C.SIMULATOR.GRAB_DISTANCE = 2.0

@@ -1,0 +1,5 @@
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: train
+  DATA_PATH: data/datasets/rearrangement/gibson/v1/{split}/{split}.json.gz
+  CONTENT_SCENES: ["rearrangement_obj_5_scene_28_episode_1_gibson"]

@@ -11,8 +11,6 @@ from habitat.core.simulator import Config
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.agent import ActionSpec, ActuationSpec
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.physics import MotionType
-from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
 
 
 @registry.register_simulator(name="RearrangementSim-v0")
@@ -35,10 +33,11 @@ class RearrangementSim(HabitatSim):
         self.navmesh_settings.agent_height = agent_config.HEIGHT
 
         self._prev_sim_obs = {}
+        self.sim_object_to_objid_mapping = {}
+        self.objid_to_sim_object_mapping = {}
 
     def reconfigure(self, config: Config) -> None:
         super().reconfigure(config)
-        self._initialize_objects()
 
     def _rotate_agent_sensors(self):
         r"""Rotates the sensor to look down at the start of the episode.
@@ -55,7 +54,7 @@ class RearrangementSim(HabitatSim):
             action = ActionSpec(
                 name="look_down",
                 actuation=ActuationSpec(
-                    amount=self.sim_config.INITIAL_LOOK_DOWN_ANGLE
+                    amount=self.habitat_config.INITIAL_LOOK_DOWN_ANGLE
                 ),
             )
 
@@ -76,46 +75,6 @@ class RearrangementSim(HabitatSim):
         self.did_reset = True
         self.grip_offset = np.eye(4)
         return self._sensor_suite.get_observations(sim_obs)
-
-    def _initialize_objects(self):
-        objects = self.habitat_config.objects[0]
-        obj_attr_mgr = self.get_object_template_manager()
-
-        # first remove all existing objects
-        existing_object_ids = self.get_existing_object_ids()
-        if len(existing_object_ids) > 0:
-            for obj_id in existing_object_ids:
-                self.remove_object(obj_id)
-
-        self.sim_object_to_objid_mapping = {}
-        self.objid_to_sim_object_mapping = {}
-
-        if objects is not None:
-            object_template = objects["object_template"]
-            object_pos = objects["position"]
-            object_rot = objects["rotation"]
-
-            object_template_id = obj_attr_mgr.load_object_configs(
-                object_template
-            )[0]
-            object_attr = obj_attr_mgr.get_template_by_ID(object_template_id)
-            obj_attr_mgr.register_template(object_attr)
-
-            object_id = self.add_object_by_handle(object_attr.handle)
-            self.sim_object_to_objid_mapping[object_id] = objects["object_id"]
-            self.objid_to_sim_object_mapping[objects["object_id"]] = object_id
-
-            self.set_translation(object_pos, object_id)
-            if isinstance(object_rot, list):
-                object_rot = quat_from_coeffs(object_rot)
-
-            object_rot = quat_to_magnum(object_rot)
-            self.set_rotation(object_rot, object_id)
-
-            self.set_object_motion_type(MotionType.STATIC, object_id)
-
-        # Recompute the navmesh after placing all the objects.
-        self.recompute_navmesh(self.pathfinder, self.navmesh_settings, True)
 
     def _sync_gripped_object(self, gripped_object_id):
         r"""
