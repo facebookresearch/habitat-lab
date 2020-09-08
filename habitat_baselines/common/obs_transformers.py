@@ -9,6 +9,7 @@ import numbers
 from typing import List
 
 import torch
+from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn
 
 from habitat.config import Config
@@ -26,7 +27,9 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    def transform_observation_space(self, observation_space, **kwargs):
+    def transform_observation_space(
+        self, observation_space: SpaceDict, **kwargs
+    ):
         return observation_space
 
     @classmethod
@@ -51,7 +54,9 @@ class ResizeShortestEdge(ObservationTransformer):
         self.channels_last = channels_last
 
     def transform_observation_space(
-        self, observation_space, trans_keys=("rgb", "depth", "semantic")
+        self,
+        observation_space: SpaceDict,
+        trans_keys=("rgb", "depth", "semantic"),
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
@@ -108,7 +113,9 @@ class CenterCropper(ObservationTransformer):
         self.channels_last = channels_last
 
     def transform_observation_space(
-        self, observation_space, trans_keys=("rgb", "depth", "semantic")
+        self,
+        observation_space: SpaceDict,
+        trans_keys=("rgb", "depth", "semantic"),
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)

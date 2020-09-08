@@ -7,6 +7,7 @@ import abc
 
 import torch
 from gym import spaces
+from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 
 from habitat.tasks.nav.nav import (
@@ -98,7 +99,11 @@ class CriticHead(nn.Module):
 @baseline_registry.register_policy
 class PointNavBaselinePolicy(Policy):
     def __init__(
-        self, observation_space, action_space, hidden_size=512, **kwargs
+        self,
+        observation_space: SpaceDict,
+        action_space,
+        hidden_size: int = 512,
+        **kwargs
     ):
         super().__init__(
             PointNavBaselineNet(
@@ -146,7 +151,12 @@ class PointNavBaselineNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size, obs_transforms=tuple()):
+    def __init__(
+        self,
+        observation_space: SpaceDict,
+        hidden_size: int,
+        obs_transforms=tuple(),
+    ):
         super().__init__()
 
         if (
