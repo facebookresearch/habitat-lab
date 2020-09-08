@@ -1,8 +1,15 @@
+from typing import Optional, Tuple
+
 import numpy as np
 import torch
 from torch import nn as nn
 
-from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
+from habitat_baselines.common.obs_transformers import (
+    CenterCropper,
+    ObservationTransformer,
+    ResizeShortestEdge,
+)
+from habitat_baselines.common.utils import Flatten
 
 
 class SimpleCNN(nn.Module):
@@ -19,17 +26,20 @@ class SimpleCNN(nn.Module):
         self,
         observation_space,
         output_size,
-        obs_transform: nn.Module = ResizeCenterCropper(  # noqa: B008
-            size=(256, 256)
+        obs_transforms: Optional[Tuple[ObservationTransformer]] = (
+            ResizeShortestEdge(256),
+            CenterCropper((256, 256)),
         ),
     ):
         super().__init__()
 
-        self.obs_transform = obs_transform
-        if self.obs_transform is not None:
-            observation_space = obs_transform.transform_observation_space(
-                observation_space
-            )
+        self.obs_transforms = obs_transforms
+        if self.obs_transforms is not None:
+            for obs_transform in obs_transforms:
+                observation_space = obs_transform.transform_observation_space(
+                    observation_space
+                )
+                assert observation_space is not None, obs_transform
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -156,8 +166,9 @@ class SimpleCNN(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
 
-        if self.obs_transform:
-            cnn_input = [self.obs_transform(inp) for inp in cnn_input]
+        if self.obs_transforms:
+            for obs_transform in self.obs_transforms:
+                cnn_input = [obs_transform(inp) for inp in cnn_input]
 
         cnn_input = torch.cat(cnn_input, dim=1)
 

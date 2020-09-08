@@ -59,6 +59,16 @@ _C.RL.SLACK_REWARD = -0.01
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavBaselinePolicy"
 # -----------------------------------------------------------------------------
+# OBS_TRANSFORMS CONFIG
+# -----------------------------------------------------------------------------
+_C.RL.POLICY.OBS_TRANSFORMS = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.active = ("ResizeShortestEdge", "CenterCropper")
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.SIZE = 256
+_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.HEIGHT = 256
+_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.WIDTH = 256
+# -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
 _C.RL.PPO = CN()
