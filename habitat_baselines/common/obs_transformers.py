@@ -44,7 +44,8 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 @baseline_registry.register_obs_transformer()
 class ResizeShortestEdge(ObservationTransformer):
     def __init__(self, size: int, channels_last: bool = False):
-        r"""An nn module the resizes and center crops your input.
+        r"""An nn module the resizes your the shortest edge of the input while maintaining aspect ratio.
+        This module assumes that all images in the batch are of the same size.
         Args:
             size: The size you want to resize the shortest edge to
             channels_list: indicates if channels is the last dimension
@@ -99,7 +100,7 @@ class ResizeShortestEdge(ObservationTransformer):
 @baseline_registry.register_obs_transformer()
 class CenterCropper(ObservationTransformer):
     def __init__(self, size, channels_last: bool = False):
-        r"""An nn module the resizes and center crops your input.
+        r"""An nn module that center crops your input.
         Args:
             size: A sequence (h, w) or int of the size you wish to resize/center_crop.
                     If int, assumes square crop
