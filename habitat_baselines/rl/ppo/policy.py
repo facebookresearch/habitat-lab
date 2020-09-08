@@ -15,6 +15,7 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.obs_transformers import get_active_obs_transforms
 from habitat_baselines.common.utils import CategoricalNet
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
@@ -101,17 +102,21 @@ class PointNavBaselinePolicy(Policy):
     ):
         super().__init__(
             PointNavBaselineNet(
-                observation_space=observation_space, hidden_size=hidden_size
+                observation_space=observation_space,
+                hidden_size=hidden_size,
+                **kwargs,
             ),
             action_space.n,
         )
 
     @classmethod
     def from_config(cls, config, envs):
+        active_obs_transforms = get_active_obs_transforms(config, envs)
         return cls(
             observation_space=envs.observation_spaces[0],
             action_space=envs.action_spaces[0],
             hidden_size=config.RL.PPO.hidden_size,
+            obs_transforms=active_obs_transforms,
         )
 
 
@@ -141,7 +146,7 @@ class PointNavBaselineNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size):
+    def __init__(self, observation_space, hidden_size, obs_transforms=tuple()):
         super().__init__()
 
         if (
@@ -166,7 +171,9 @@ class PointNavBaselineNet(Net):
 
         self._hidden_size = hidden_size
 
-        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        self.visual_encoder = SimpleCNN(
+            observation_space, hidden_size, obs_transforms=obs_transforms
+        )
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
