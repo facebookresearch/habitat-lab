@@ -56,7 +56,7 @@ class PointNavResNetPolicy(Policy):
             ResizeShortestEdge(256),
             CenterCropper((256, 256)),
         ),  # noqa : B008
-        force_blind_policy=False,
+        force_blind_policy: bool = False,
         **kwargs
     ):
         super().__init__(
@@ -229,7 +229,7 @@ class PointNavResNetNet(Net):
             ResizeShortestEdge(256),
             CenterCropper((256, 256)),
         ),  # noqa: B008
-        force_blind_policy=False,
+        force_blind_policy: bool = False,
     ):
         super().__init__()
 

@@ -72,9 +72,6 @@ class ResizeShortestEdge(ObservationTransformer):
                         "Resizing observation of %s: from %s to %s"
                         % (key, (h, w), new_size)
                     )
-                    import traceback
-
-                    traceback.print_stack()
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], new_size
                     )
@@ -128,9 +125,7 @@ class CenterCropper(ObservationTransformer):
                         "Center cropping observation size of %s from %s to %s"
                         % (key, (h, w), size)
                     )
-                    import traceback
 
-                    traceback.print_stack()
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], size
                     )
