@@ -3,7 +3,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import abc
 import glob
 import numbers
 import os
@@ -53,20 +52,6 @@ class CategoricalNet(nn.Module):
     def forward(self, x):
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
-
-
-class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    @abc.abstractmethod
-    def transform_observation_space(self, observation_space, **kwargs):
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    def from_config(cls, config, envs):
-        pass
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
