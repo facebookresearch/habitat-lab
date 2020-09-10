@@ -6,7 +6,7 @@
 import abc
 import copy
 import numbers
-from typing import List
+from typing import List, Tuple
 
 import torch
 from gym.spaces.dict_space import Dict as SpaceDict
@@ -57,7 +57,7 @@ class ResizeShortestEdge(ObservationTransformer):
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
-        trans_keys=("rgb", "depth", "semantic"),
+        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
@@ -81,7 +81,6 @@ class ResizeShortestEdge(ObservationTransformer):
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], new_size
                     )
-        self.observation_space = observation_space
         return observation_space
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -116,7 +115,7 @@ class CenterCropper(ObservationTransformer):
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
-        trans_keys=("rgb", "depth", "semantic"),
+        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
