@@ -48,7 +48,7 @@ class ResizeShortestEdge(ObservationTransformer):
         This module assumes that all images in the batch are of the same size.
         Args:
             size: The size you want to resize the shortest edge to
-            channels_list: indicates if channels is the last dimension
+            channels_last: indicates if channels is the last dimension
         """
         super().__init__()
         self._size = size
@@ -137,7 +137,6 @@ class CenterCropper(ObservationTransformer):
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], size
                     )
-        self.observation_space = observation_space
         return observation_space
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
