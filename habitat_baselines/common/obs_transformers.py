@@ -6,7 +6,7 @@
 import abc
 import copy
 import numbers
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import attr
 import torch
@@ -32,11 +32,13 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def from_config(cls, config, envs):
+    def from_config(cls, config: Config, envs):
         pass
 
-    def forward(self, *args):
-        return args
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        return observations
 
 
 @baseline_registry.register_obs_transformer()
@@ -50,17 +52,17 @@ class ResizeShortestEdge(ObservationTransformer):
     """
     size: int
     channels_last: bool = False
+    trans_keys: Tuple[str] = ("rgb", "depth", "semantic")
 
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
-        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
         size = self.size
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
-                if key in trans_keys:
+                if key in self.trans_keys:
                     # In the observation space dict, the channels are always last
                     h, w = get_image_height_width(
                         observation_space.spaces[key], channels_last=True
@@ -80,22 +82,38 @@ class ResizeShortestEdge(ObservationTransformer):
                     )
         return observation_space
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        if self._size is None:
-            return input
-
+    def _transform_obs(self, obs: torch.Tensor) -> torch.Tensor:
         return image_resize_shortest_edge(
-            input, self._size, channels_last=self.channels_last
+            obs, self._size, channels_last=self.channels_last
         )
+
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        if self._size is not None:
+            observations.update(
+                {
+                    sensor: self._transform_obs(observations[sensor])
+                    for sensor in self._trans_keys
+                }
+            )
+        return observations
 
     @classmethod
     def from_config(cls, config, envs):
-        return cls(config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE)
+        return cls(
+            size=config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE
+        )
 
 
 @baseline_registry.register_obs_transformer()
 class CenterCropper(ObservationTransformer):
-    def __init__(self, size, channels_last: bool = False):
+    def __init__(
+        self,
+        size,
+        channels_last: bool = False,
+        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
+    ):
         r"""An nn module that center crops your input.
         Args:
             size: A sequence (h, w) or int of the size you wish to resize/center_crop.
@@ -108,18 +126,18 @@ class CenterCropper(ObservationTransformer):
         assert len(size) == 2, "forced input size must be len of 2 (h, w)"
         self._size = size
         self.channels_last = channels_last
+        self.trans_keys = trans_keys
 
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
-        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
                 if (
-                    key in trans_keys
+                    key in self.trans_keys
                     and observation_space.spaces[key].shape[-3:-1] != size
                 ):
                     h, w = get_image_height_width(
@@ -135,18 +153,25 @@ class CenterCropper(ObservationTransformer):
                     )
         return observation_space
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        if self._size is None:
-            return input
-
+    def _transform_obs(self, obs: torch.Tensor) -> torch.Tensor:
         return center_crop(
-            input,
+            obs,
             self._size,
             channels_last=self.channels_last,
         )
 
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        if self._size is None:
+            return observations
+        return {
+            sensor: self._transform_obs(observations[sensor])
+            for sensor in self.trans_keys
+        }
+
     @classmethod
-    def from_config(cls, config, envs):
+    def from_config(cls, config: Config, envs):
         return cls(
             (
                 config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT,

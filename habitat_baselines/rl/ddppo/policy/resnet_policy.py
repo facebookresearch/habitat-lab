@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -14,6 +14,7 @@ from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 from torch.nn import functional as F
 
+from habitat.config import Config
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -26,9 +27,7 @@ from habitat.tasks.nav.nav import (
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (
-    CenterCropper,
     ObservationTransformer,
-    ResizeShortestEdge,
     get_active_obs_transforms,
 )
 from habitat_baselines.common.utils import Flatten
@@ -52,10 +51,7 @@ class PointNavResNetPolicy(Policy):
         resnet_baseplanes: int = 32,
         backbone: str = "resnet50",
         normalize_visual_inputs: bool = False,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = (
-            ResizeShortestEdge(256),
-            CenterCropper((256, 256)),
-        ),  # noqa : B008
+        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
         force_blind_policy: bool = False,
         **kwargs
     ):
@@ -76,7 +72,7 @@ class PointNavResNetPolicy(Policy):
         )
 
     @classmethod
-    def from_config(cls, config, envs):
+    def from_config(cls, config: Config, envs):
         active_obs_transforms = get_active_obs_transforms(config, envs)
         return cls(
             observation_space=envs.observation_spaces[0],
@@ -100,10 +96,7 @@ class ResNetEncoder(nn.Module):
         spatial_size: int = 128,
         make_backbone=None,
         normalize_visual_inputs: bool = False,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = (
-            ResizeShortestEdge(256),
-            CenterCropper((256, 256)),
-        ),  # noqa: B008
+        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
     ):
         super().__init__()
 
@@ -114,7 +107,6 @@ class ResNetEncoder(nn.Module):
                 observation_space = obs_transform.transform_observation_space(
                     observation_space
                 )
-                assert observation_space is not None
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -177,9 +169,13 @@ class ResNetEncoder(nn.Module):
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
 
-    def forward(self, observations):
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         if self.is_blind:
             return None
+
+        if self.obs_transforms:
+            for obs_transform in self.obs_transforms:
+                observations = obs_transform(observations)
 
         cnn_input = []
         if self._n_input_rgb > 0:
@@ -196,10 +192,6 @@ class ResNetEncoder(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
 
             cnn_input.append(depth_observations)
-
-        if self.obs_transforms:
-            for obs_transform in self.obs_transforms:
-                cnn_input = [obs_transform(inp) for inp in cnn_input]
 
         x = torch.cat(cnn_input, dim=1)
         x = F.avg_pool2d(x, 2)
@@ -225,10 +217,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = (
-            ResizeShortestEdge(256),
-            CenterCropper((256, 256)),
-        ),  # noqa: B008
+        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
         force_blind_policy: bool = False,
     ):
         super().__init__()
@@ -366,7 +355,13 @@ class PointNavResNetNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(
+        self,
+        observations: Dict[str, torch.Tensor],
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> Tuple[torch.Tensor]:
         x = []
         if not self.is_blind:
             if "visual_features" in observations:
