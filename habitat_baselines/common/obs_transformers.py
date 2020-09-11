@@ -163,12 +163,14 @@ class CenterCropper(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        if self._size is None:
-            return observations
-        return {
-            sensor: self._transform_obs(observations[sensor])
-            for sensor in self.trans_keys
-        }
+        if self._size is not None:
+            observations.update(
+                {
+                    sensor: self._transform_obs(observations[sensor])
+                    for sensor in self.trans_keys
+                }
+            )
+        return observations
 
     @classmethod
     def from_config(cls, config: Config, envs):

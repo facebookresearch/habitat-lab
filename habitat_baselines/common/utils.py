@@ -224,7 +224,9 @@ def image_resize_shortest_edge(
     return img
 
 
-def center_crop(img, size, channels_last: bool = False):
+def center_crop(
+    img, size: Union[int, tuple[int]], channels_last: bool = False
+):
     """Performs a center crop on an image.
 
     Args:
@@ -250,7 +252,7 @@ def center_crop(img, size, channels_last: bool = False):
 
 
 def get_image_height_width(
-    img: Union[np.array, torch.Tensor], channels_last: bool = False
+    img: Union[np.ndarray, torch.Tensor], channels_last: bool = False
 ):
     if img.shape is None or len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
