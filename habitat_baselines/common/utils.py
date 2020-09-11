@@ -7,7 +7,7 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -225,7 +225,7 @@ def image_resize_shortest_edge(
 
 
 def center_crop(
-    img, size: Union[int, tuple[int]], channels_last: bool = False
+    img, size: Union[int, Tuple[int]], channels_last: bool = False
 ):
     """Performs a center crop on an image.
 

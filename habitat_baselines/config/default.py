@@ -62,7 +62,7 @@ _C.RL.POLICY.name = "PointNavBaselinePolicy"
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------
 _C.RL.POLICY.OBS_TRANSFORMS = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.active = ("ResizeShortestEdge", "CenterCropper")
+_C.RL.POLICY.OBS_TRANSFORMS.active = tuple()
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.WIDTH = 256
