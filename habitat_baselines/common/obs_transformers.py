@@ -8,6 +8,7 @@ import copy
 import numbers
 from typing import List, Tuple
 
+import attr
 import torch
 from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn
@@ -24,9 +25,6 @@ from habitat_baselines.common.utils import (
 
 
 class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
     def transform_observation_space(
         self, observation_space: SpaceDict, **kwargs
     ):
@@ -42,24 +40,23 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 
 
 @baseline_registry.register_obs_transformer()
+@attr.s(auto_attribs=True)
 class ResizeShortestEdge(ObservationTransformer):
-    def __init__(self, size: int, channels_last: bool = False):
-        r"""An nn module the resizes your the shortest edge of the input while maintaining aspect ratio.
-        This module assumes that all images in the batch are of the same size.
-        Args:
-            size: The size you want to resize the shortest edge to
-            channels_last: indicates if channels is the last dimension
-        """
-        super().__init__()
-        self._size = size
-        self.channels_last = channels_last
+    r"""An nn module the resizes your the shortest edge of the input while maintaining aspect ratio.
+    This module assumes that all images in the batch are of the same size.
+    Args:
+        size: The size you want to resize the shortest edge to
+        channels_last: indicates if channels is the last dimension
+    """
+    size: int
+    channels_last: bool = False
 
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
-        size = self._size
+        size = self.size
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
