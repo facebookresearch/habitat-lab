@@ -6,7 +6,7 @@
 import abc
 import copy
 import numbers
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import attr
 import torch
@@ -95,6 +95,7 @@ class ResizeShortestEdge(ObservationTransformer):
                 {
                     sensor: self._transform_obs(observations[sensor])
                     for sensor in self._trans_keys
+                    if sensor in observations
                 }
             )
         return observations
@@ -110,7 +111,7 @@ class ResizeShortestEdge(ObservationTransformer):
 class CenterCropper(ObservationTransformer):
     def __init__(
         self,
-        size,
+        size: Union[int, Tuple[int]],
         channels_last: bool = False,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
@@ -168,6 +169,7 @@ class CenterCropper(ObservationTransformer):
                 {
                     sensor: self._transform_obs(observations[sensor])
                     for sensor in self.trans_keys
+                    if sensor in observations
                 }
             )
         return observations
