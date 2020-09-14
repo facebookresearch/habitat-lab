@@ -264,25 +264,6 @@ def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
     return images
 
 
-def get_q_string(question: List, q_vocab_dict: Dict) -> str:
-    r"""
-    Converts question tokens to question string.
-    """
-    q_string = ""
-    for token in question:
-        if token != 0:
-            for word, idx in q_vocab_dict.items():
-                if idx == token:
-                    q_word = word
-                    break
-            q_string += q_word + " "
-        else:
-            break
-    q_string += "?"
-
-    return q_string
-
-
 def image_resize_shortest_edge(
     img, size: int, channels_last: bool = False
 ) -> torch.Tensor:
