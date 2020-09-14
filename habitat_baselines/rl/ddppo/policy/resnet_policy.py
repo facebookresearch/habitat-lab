@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
@@ -26,7 +26,6 @@ from habitat.tasks.nav.nav import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.obs_transformers import ObservationTransformer
 from habitat_baselines.common.utils import Flatten
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -48,7 +47,6 @@ class PointNavResNetPolicy(Policy):
         resnet_baseplanes: int = 32,
         backbone: str = "resnet50",
         normalize_visual_inputs: bool = False,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
         force_blind_policy: bool = False,
         **kwargs
     ):
@@ -62,14 +60,15 @@ class PointNavResNetPolicy(Policy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
-                obs_transforms=obs_transforms,
                 force_blind_policy=force_blind_policy,
             ),
             action_space.n,
         )
 
     @classmethod
-    def from_config(cls, config: Config, observation_space, action_space):
+    def from_config(
+        cls, config: Config, observation_space: SpaceDict, action_space
+    ):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
@@ -199,7 +198,6 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
         force_blind_policy: bool = False,
     ):
         super().__init__()
@@ -283,7 +281,6 @@ class PointNavResNetNet(Net):
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
                 normalize_visual_inputs=normalize_visual_inputs,
-                obs_transforms=obs_transforms,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -304,7 +301,6 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
             normalize_visual_inputs=normalize_visual_inputs,
-            obs_transforms=obs_transforms,
         )
 
         if not self.visual_encoder.is_blind:
