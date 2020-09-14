@@ -26,10 +26,7 @@ from habitat.tasks.nav.nav import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.obs_transformers import (
-    ObservationTransformer,
-    get_active_obs_transforms,
-)
+from habitat_baselines.common.obs_transformers import ObservationTransformer
 from habitat_baselines.common.utils import Flatten
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -72,18 +69,16 @@ class PointNavResNetPolicy(Policy):
         )
 
     @classmethod
-    def from_config(cls, config: Config, envs):
-        active_obs_transforms = get_active_obs_transforms(config, envs)
+    def from_config(cls, config: Config, observation_space, action_space):
         return cls(
-            observation_space=envs.observation_spaces[0],
-            action_space=envs.action_spaces[0],
+            observation_space=observation_space,
+            action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
             rnn_type=config.RL.DDPPO.rnn_type,
             num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
             backbone=config.RL.DDPPO.backbone,
-            normalize_visual_inputs="rgb" in envs.observation_spaces[0].spaces,
+            normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
-            obs_transforms=active_obs_transforms,
         )
 
 
@@ -96,17 +91,8 @@ class ResNetEncoder(nn.Module):
         spatial_size: int = 128,
         make_backbone=None,
         normalize_visual_inputs: bool = False,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
     ):
         super().__init__()
-
-        self.obs_transforms = obs_transforms
-        assert observation_space is not None
-        if self.obs_transforms is not None:
-            for obs_transform in self.obs_transforms:
-                observation_space = obs_transform.transform_observation_space(
-                    observation_space
-                )
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -172,10 +158,6 @@ class ResNetEncoder(nn.Module):
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         if self.is_blind:
             return None
-
-        if self.obs_transforms:
-            for obs_transform in self.obs_transforms:
-                observations = obs_transform(observations)
 
         cnn_input = []
         if self._n_input_rgb > 0:

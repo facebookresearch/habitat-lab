@@ -1,10 +1,9 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict
 
 import numpy as np
 import torch
 from torch import nn as nn
 
-from habitat_baselines.common.obs_transformers import ObservationTransformer
 from habitat_baselines.common.utils import Flatten
 
 
@@ -22,17 +21,8 @@ class SimpleCNN(nn.Module):
         self,
         observation_space,
         output_size,
-        obs_transforms: Optional[Tuple[ObservationTransformer]] = None,
     ):
         super().__init__()
-
-        self.obs_transforms = obs_transforms
-        if self.obs_transforms is not None:
-            for obs_transform in obs_transforms:
-                observation_space = obs_transform.transform_observation_space(
-                    observation_space
-                )
-                assert observation_space is not None, obs_transform
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -145,9 +135,6 @@ class SimpleCNN(nn.Module):
         return self._n_input_rgb + self._n_input_depth == 0
 
     def forward(self, observations: Dict[str, torch.Tensor]):
-        if self.obs_transforms:
-            for obs_transform in self.obs_transforms:
-                observations = obs_transform(observations)
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
