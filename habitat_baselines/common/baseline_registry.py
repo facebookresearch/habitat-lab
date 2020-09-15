@@ -112,7 +112,7 @@ class BaselineRegistry(Registry):
 
         .. code:: py
 
-            from habitat_baselines.common.obs_transformer import ObservationTransformer
+            from habitat_baselines.common.obs_transforms import ObservationTransformer
             from habitat_baselines.common.baseline_registry import (
                 baseline_registry
             )
