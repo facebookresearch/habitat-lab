@@ -4,6 +4,22 @@
 # This source code is licensed under the MIT license found in the
 
 # LICENSE file in the root directory of this source tree.
+
+r"""This module defines various ObservationTransformers that can be used
+to transform the output of the simulator before they are fed into the
+policy of the neural network. This can include various useful preprocessing
+including faking a semantic sensor using RGB input and MaskRCNN or faking
+a depth sensor using RGB input. You can also stich together multiple sensors.
+This code runs on the batched of inputs to these networks efficiently.
+ObservationTransformer all run as nn.modules and can be used for encoders or
+any other neural networks preprocessing steps.
+Assumes the input is on CUDA.
+
+They also implement a function that transforms that observation space so help
+fake or modify sensor input from the simulator.
+
+This module API is experimental and likely to change
+"""
 import abc
 import copy
 import math
@@ -458,25 +474,32 @@ class Cube2Equirec(nn.Module):
 
 @baseline_registry.register_obs_transformer()
 class CubeMap2Equirec(ObservationTransformer):
-    r"""This is a hacky use of ObservationTransformer that converts a cubemap
+    r"""This is an experimental use of ObservationTransformer that converts a cubemap
     output to an equirectangular one through projection. This needs to be fed
     a list of 6 cameras at various orientations but will be able to stitch a
     360 sensor out of these inputs. The code below will generate a config that
     has the 6 sensors in the proper orientations. This code also assumes a 90
     FOV.
 
-    The required Sensor order is
-    Back, Down, Front, Left, Right, Up.
+    Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
+    The output will be writen the UUID of the first sensor.
     """
 
     def __init__(
-        self, sensors: List[str], eq_shape: Tuple[int], cubemap_length: int
+        self,
+        sensor_uuids: List[str],
+        eq_shape: Tuple[int],
+        cubemap_length: int,
     ):
+        r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
+        :param eq_shape: The shape of the equirectangular output (height, width)
+        :param cubemap_length: int length of the each side of the cubemap
+        """
         super(CubeMap2Equirec, self).__init__()
-        num_sensors = len(sensors)
+        num_sensors = len(sensor_uuids)
         assert (
             num_sensors % 6 == 0 and num_sensors != 0
-        ), f"{len(sensors)}: length of sensors is not a multiple of 6"
+        ), f"{len(sensor_uuids)}: length of sensors is not a multiple of 6"
         # TODO verify attributes of the sensors in the config if possible. Think about API design
         assert (
             len(eq_shape) == 2
@@ -484,7 +507,7 @@ class CubeMap2Equirec(ObservationTransformer):
         assert (
             cubemap_length > 0
         ), f"cubemap_length must be greater than 0: provided {cubemap_length}"
-        self.sensors: List[str] = sensors
+        self.sensor_uuids: List[str] = sensor_uuids
         self.eq_shape: Tuple[int] = eq_shape
         self.cubemap_length: int = cubemap_length
         self.c2eq: nn.Module = Cube2Equirec(
@@ -496,13 +519,13 @@ class CubeMap2Equirec(ObservationTransformer):
         observation_space: SpaceDict,
     ):
         observation_space = copy.deepcopy(observation_space)
-        for i, key in enumerate(self.sensors[::6]):
+        for i, key in enumerate(self.sensor_uuids[::6]):
             assert (
                 key in observation_space.spaces
             ), f"{key} not found in observation space: {observation_space.spaces}"
             c = self.cubemap_length
             logger.info(
-                f"Overwrite sensors: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensors[i*6:(i+1)*6]}"
+                f"Overwrite sensors: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
             )
             if (c, c) != self.eq_shape:
                 observation_space.spaces[key] = overwrite_gym_box_shape(
@@ -550,12 +573,14 @@ class CubeMap2Equirec(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        for i in range(0, len(self.sensors), 6):
+        for i in range(0, len(self.sensor_uuids), 6):
             sensor_obs = [
-                observations[sensor] for sensor in self.sensors[i : i + 6]
+                observations[sensor] for sensor in self.sensor_uuids[i : i + 6]
             ]
             sensor_dtype = sensor_obs[0].dtype
-            sensor_obs_space = self.observation_space.spaces[self.sensors[i]]
+            sensor_obs_space = self.observation_space.spaces[
+                self.sensor_uuids[i]
+            ]
             imgs = torch.stack(sensor_obs, axis=1)
             imgs = torch.flatten(imgs, end_dim=1)
             imgs = imgs.permute((0, 3, 1, 2))  # NCHW
@@ -566,7 +591,7 @@ class CubeMap2Equirec(ObservationTransformer):
                 dtype=sensor_dtype
             )
             equirect = equirect.permute((0, 2, 3, 1))  # NHWC
-            observations[self.sensors[i]] = equirect
+            observations[self.sensor_uuids[i]] = equirect
             # TODO: Maybe we should have the target UUID be front instead of back even if it's not the first in the list
             # I could also define our own mapping and then have it go through the list out of order.
 
