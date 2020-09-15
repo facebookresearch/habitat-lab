@@ -10,6 +10,7 @@ import random
 import numpy as np
 import torch
 
+from habitat.config import Config
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
 
@@ -39,19 +40,7 @@ def main():
     run_exp(**vars(args))
 
 
-def run_exp(exp_config: str, run_type: str, opts=None) -> None:
-    r"""Runs experiment given mode and config
-
-    Args:
-        exp_config: path to config file.
-        run_type: "train" or "eval.
-        opts: list of strings of additional config options.
-
-    Returns:
-        None.
-    """
-    config = get_config(exp_config, opts)
-
+def execute_exp(config: Config, run_type: str) -> None:
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
     torch.manual_seed(config.TASK_CONFIG.SEED)
@@ -64,6 +53,21 @@ def run_exp(exp_config: str, run_type: str, opts=None) -> None:
         trainer.train()
     elif run_type == "eval":
         trainer.eval()
+
+
+def run_exp(exp_config: str, run_type: str, opts=None) -> None:
+    r"""Runs experiment given mode and config
+
+    Args:
+        exp_config: path to config file.
+        run_type: "train" or "eval.
+        opts: list of strings of additional config options.
+
+    Returns:
+        None.
+    """
+    config = get_config(exp_config, opts)
+    execute_exp(config, run_type)
 
 
 if __name__ == "__main__":

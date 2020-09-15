@@ -54,9 +54,17 @@ class ResizeShortestEdge(ObservationTransformer):
         size: The size you want to resize the shortest edge to
         channels_last: indicates if channels is the last dimension
     """
-    size: int
-    channels_last: bool = False
-    trans_keys: Tuple[str] = ("rgb", "depth", "semantic")
+
+    def __init__(
+        self,
+        size: int,
+        channels_last: bool = True,
+        trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
+    ):
+        super(ObservationTransformer, self).__init__()
+        self.size: int = size
+        self.channels_last: bool = channels_last
+        self.trans_keys: Tuple[str] = trans_keys
 
     def transform_observation_space(
         self,
@@ -117,7 +125,7 @@ class CenterCropper(ObservationTransformer):
     def __init__(
         self,
         size: Union[int, Tuple[int]],
-        channels_last: bool = False,
+        channels_last: bool = True,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
         r"""An nn module that center crops your input.
@@ -530,7 +538,7 @@ class CubeMap2Equirec(ObservationTransformer):
     @classmethod
     def from_config(cls, config):
         return cls(
-            config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSORS,
+            config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS,
             eq_shape=(
                 config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT,
                 config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH,

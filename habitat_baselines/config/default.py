@@ -72,7 +72,7 @@ _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.CUBE_LENGTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSORS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = list()
 # -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
