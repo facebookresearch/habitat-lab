@@ -47,6 +47,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = None
         self.agent = None
         self.envs = None
+        self.obs_transforms = None
         if config is not None:
             logger.info(f"config: {config}")
 
