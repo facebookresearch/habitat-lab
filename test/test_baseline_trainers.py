@@ -44,8 +44,8 @@ def _powerset(s):
         [True, False],
         _powerset(
             [
-                "ResizeShortestEdge",
                 "CenterCropper",
+                "ResizeShortestEdge",
             ]
         ),
     ),

@@ -121,7 +121,7 @@ class ResizeShortestEdge(ObservationTransformer):
             observations.update(
                 {
                     sensor: self._transform_obs(observations[sensor])
-                    for sensor in self._trans_keys
+                    for sensor in self.trans_keys
                     if sensor in observations
                 }
             )
@@ -211,7 +211,7 @@ class CenterCropper(ObservationTransformer):
 
 
 class Cube2Equirec(nn.Module):
-    def __init__(self, equ_h, equ_w, cube_length, CUDA=False):
+    def __init__(self, equ_h, equ_w, cube_length):
         super(Cube2Equirec, self).__init__()
         self.batch_size = 1  # NOTE: not in use at all
         self.cube_h = cube_length
@@ -220,7 +220,6 @@ class Cube2Equirec(nn.Module):
         self.equ_w = equ_w
         self.fov = 90
         self.fov_rad = self.fov * np.pi / 180
-        self.CUDA = CUDA
 
         # Compute the parameters for projection
         assert self.cube_w == self.cube_h
@@ -248,13 +247,6 @@ class Cube2Equirec(nn.Module):
 
         # Project each face to 3D cube and convert to pixel coordinates
         self.grid, self.orientation_mask = self.get_grid2()
-
-        if self.CUDA:
-            self.grid = self.grid.cuda()
-            self.orientation_mask = self.orientation_mask.cuda()
-            self.device = "cuda"
-        else:
-            self.device = "cpu"
 
     def get_grid2(self):
         # Get the point of equirectangular on 3D ball
@@ -413,7 +405,9 @@ class Cube2Equirec(nn.Module):
         if batch_size != 6:
             raise ValueError("Batch size mismatch!!")
 
-        output = torch.zeros(1, ch, self.equ_h, self.equ_w, device=self.device)
+        output = torch.zeros(
+            1, ch, self.equ_h, self.equ_w, device=batch.device
+        )
 
         for ori in range(6):
             grid = self.grid[ori, :, :, :].unsqueeze(
@@ -449,6 +443,9 @@ class Cube2Equirec(nn.Module):
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor):
+        # Move the params to the right device
+        self.grid = self.grid.to(batch.device)
+        self.orientation_mask = self.orientation_mask.to(batch.device)
         # Check whether batch size is 6x
         batch_size = batch.size()[0]
         if batch_size % 6 != 0:
@@ -507,7 +504,7 @@ class CubeMap2Equirec(ObservationTransformer):
         self.eq_shape: Tuple[int] = eq_shape
         self.cubemap_length: int = cubemap_length
         self.c2eq: nn.Module = Cube2Equirec(
-            eq_shape[0], eq_shape[1], cubemap_length, CUDA=True
+            eq_shape[0], eq_shape[1], cubemap_length
         )
 
     def transform_observation_space(
