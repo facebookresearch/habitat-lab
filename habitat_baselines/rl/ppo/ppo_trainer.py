@@ -71,8 +71,6 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
-        # for active_obs in self.obs_transforms:
-        #    observation_space = active_obs.transform_observation_space(self.envs.observation_spaces[0])
         self.actor_critic = policy.from_config(
             self.config, observation_space, self.envs.action_spaces[0]
         )
