@@ -9,7 +9,7 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -61,8 +61,8 @@ class ResizeCenterCropper(nn.Module):
     def __init__(self, size, channels_last: bool = False):
         r"""An nn module the resizes and center crops your input.
         Args:
-            size: A sequence (w, h) or int of the size you wish to resize/center_crop.
-                    If int, assumes square crop
+            size: A sequence (w, h) or int of the size you wish to
+                resize/center_crop. If int, assumes square crop
             channels_list: indicates if channels is the last dimension
         """
         super().__init__()
@@ -228,6 +228,42 @@ def generate_video(
         )
 
 
+def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
+    r"""Converts tensor (or list) of n image tensors to list of n images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    images = []
+
+    for img_tensor in tensor:
+        image = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        images.append(image)
+
+    return images
+
+
+def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
+    r"""Converts tensor of n image tensors to list of n BGR images.
+    Args:
+        tensor: tensor containing n image tensors
+    Returns:
+        list of images
+    """
+    import cv2
+
+    images = []
+
+    for img_tensor in tensor:
+        img = img_tensor.permute(1, 2, 0).cpu().numpy() * 255
+        img = img.astype(np.uint8)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        images.append(img)
+
+    return images
+
+
 def image_resize_shortest_edge(
     img, size: int, channels_last: bool = False
 ) -> torch.Tensor:
@@ -282,7 +318,8 @@ def center_crop(img, size, channels_last: bool = False):
     """Performs a center crop on an image.
 
     Args:
-        img: the array object that needs to be resized (either batched or unbatched)
+        img: the array object that needs to be resized (either batched or
+            unbatched)
         size: A sequence (w, h) or a python(int) that you want cropped
         channels_last: If the channels are the last dimension.
     Returns:

@@ -26,45 +26,47 @@ class BaseTrainer:
     def train(self) -> None:
         raise NotImplementedError
 
-    def eval(self) -> None:
-        raise NotImplementedError
+    def _setup_eval_config(self, checkpoint_config: Config) -> Config:
+        r"""Sets up and returns a merged config for evaluation. Config
+            object saved from checkpoint is merged into config file specified
+            at evaluation time with the following overwrite priority:
+                  eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
+            If the saved config is outdated, only the eval config is returned.
 
-    def save_checkpoint(self, file_name) -> None:
-        raise NotImplementedError
+        Args:
+            checkpoint_config: saved config from checkpoint.
 
-    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
-        raise NotImplementedError
+        Returns:
+            Config: merged config for eval.
+        """
 
+        config = self.config.clone()
 
-class BaseRLTrainer(BaseTrainer):
-    r"""Base trainer class for RL trainers. Future RL-specific
-    methods should be hosted here.
-    """
-    device: torch.device
-    config: Config
-    video_option: List[str]
-    _flush_secs: int
+        ckpt_cmd_opts = checkpoint_config.CMD_TRAILING_OPTS
+        eval_cmd_opts = config.CMD_TRAILING_OPTS
 
-    def __init__(self, config: Config):
-        super().__init__()
-        assert config is not None, "needs config file to initialize trainer"
-        self.config = config
-        self._flush_secs = 30
+        try:
+            config.merge_from_other_cfg(checkpoint_config)
+            config.merge_from_other_cfg(self.config)
+            config.merge_from_list(ckpt_cmd_opts)
+            config.merge_from_list(eval_cmd_opts)
+        except KeyError:
+            logger.info("Saved config is outdated, using solely eval config")
+            config = self.config.clone()
+            config.merge_from_list(eval_cmd_opts)
+        if config.TASK_CONFIG.DATASET.SPLIT == "train":
+            config.TASK_CONFIG.defrost()
+            config.TASK_CONFIG.DATASET.SPLIT = "val"
 
-    @property
-    def flush_secs(self):
-        return self._flush_secs
+        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
+        config.freeze()
 
-    @flush_secs.setter
-    def flush_secs(self, value: int):
-        self._flush_secs = value
-
-    def train(self) -> None:
-        raise NotImplementedError
+        return config
 
     def eval(self) -> None:
         r"""Main method of trainer evaluation. Calls _eval_checkpoint() that
         is specified in Trainer class that inherits from BaseRLTrainer
+        or BaseILTrainer
 
         Returns:
             None
@@ -109,43 +111,46 @@ class BaseRLTrainer(BaseTrainer):
                         checkpoint_index=prev_ckpt_ind,
                     )
 
-    def _setup_eval_config(self, checkpoint_config: Config) -> Config:
-        r"""Sets up and returns a merged config for evaluation. Config
-            object saved from checkpoint is merged into config file specified
-            at evaluation time with the following overwrite priority:
-                  eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
-            If the saved config is outdated, only the eval config is returned.
+    def _eval_checkpoint(
+        self,
+        checkpoint_path: str,
+        writer: TensorboardWriter,
+        checkpoint_index: int = 0,
+    ) -> None:
+        raise NotImplementedError
 
-        Args:
-            checkpoint_config: saved config from checkpoint.
+    def save_checkpoint(self, file_name) -> None:
+        raise NotImplementedError
 
-        Returns:
-            Config: merged config for eval.
-        """
+    def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
+        raise NotImplementedError
 
-        config = self.config.clone()
-        config.defrost()
 
-        ckpt_cmd_opts = checkpoint_config.CMD_TRAILING_OPTS
-        eval_cmd_opts = config.CMD_TRAILING_OPTS
+class BaseRLTrainer(BaseTrainer):
+    r"""Base trainer class for RL trainers. Future RL-specific
+    methods should be hosted here.
+    """
+    device: torch.device
+    config: Config
+    video_option: List[str]
+    _flush_secs: int
 
-        try:
-            config.merge_from_other_cfg(checkpoint_config)
-            config.merge_from_other_cfg(self.config)
-            config.merge_from_list(ckpt_cmd_opts)
-            config.merge_from_list(eval_cmd_opts)
-        except KeyError:
-            logger.info("Saved config is outdated, using solely eval config")
-            config = self.config.clone()
-            config.merge_from_list(eval_cmd_opts)
-        if config.TASK_CONFIG.DATASET.SPLIT == "train":
-            config.TASK_CONFIG.defrost()
-            config.TASK_CONFIG.DATASET.SPLIT = "val"
+    def __init__(self, config: Config):
+        super().__init__()
+        assert config is not None, "needs config file to initialize trainer"
+        self.config = config
+        self._flush_secs = 30
 
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
-        config.freeze()
+    @property
+    def flush_secs(self):
+        return self._flush_secs
 
-        return config
+    @flush_secs.setter
+    def flush_secs(self, value: int):
+        self._flush_secs = value
+
+    def train(self) -> None:
+        raise NotImplementedError
 
     def _eval_checkpoint(
         self,
