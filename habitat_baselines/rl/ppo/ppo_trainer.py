@@ -71,6 +71,7 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
+        self.obs_space = observation_space
         self.actor_critic = policy.from_config(
             self.config, observation_space, self.envs.action_spaces[0]
         )
@@ -304,7 +305,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
-            self.envs.observation_spaces[0],
+            self.obs_space,
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
         )

@@ -203,7 +203,6 @@ class DDPPOTrainer(PPOTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        # obs_space = self.envs.observation_spaces[0]
         obs_space = self.obs_space
         if self._static_encoder:
             self._encoder = self.actor_critic.net.visual_encoder
