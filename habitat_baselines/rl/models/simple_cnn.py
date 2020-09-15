@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn as nn
 
-from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
+from habitat_baselines.utils.common import Flatten, ResizeCenterCropper
 
 
 class SimpleCNN(nn.Module):

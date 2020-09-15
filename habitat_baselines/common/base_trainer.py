@@ -12,7 +12,7 @@ import torch
 
 from habitat import Config, logger
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import poll_checkpoint_folder
+from habitat_baselines.utils.common import poll_checkpoint_folder
 
 
 class BaseTrainer:
