@@ -26,7 +26,6 @@ import math
 import numbers
 from typing import Dict, Iterable, List, Tuple, Union
 
-import attr
 import numpy as np
 import torch
 from gym.spaces import Box
@@ -62,7 +61,6 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 
 
 @baseline_registry.register_obs_transformer()
-@attr.s(auto_attribs=True)
 class ResizeShortestEdge(ObservationTransformer):
     r"""An nn module the resizes your the shortest edge of the input while maintaining aspect ratio.
     This module assumes that all images in the batch are of the same size.
@@ -77,8 +75,8 @@ class ResizeShortestEdge(ObservationTransformer):
         channels_last: bool = True,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
-        super(ObservationTransformer, self).__init__()
-        self.size: int = size
+        super(ResizeShortestEdge, self).__init__()
+        self._size: int = size
         self.channels_last: bool = channels_last
         self.trans_keys: Tuple[str] = trans_keys
 
@@ -86,7 +84,7 @@ class ResizeShortestEdge(ObservationTransformer):
         self,
         observation_space: SpaceDict,
     ):
-        size = self.size
+        size = self._size
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
@@ -130,7 +128,7 @@ class ResizeShortestEdge(ObservationTransformer):
         return observations
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: Config):
         return cls(config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE)
 
 
