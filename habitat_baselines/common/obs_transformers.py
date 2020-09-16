@@ -24,11 +24,10 @@ import abc
 import copy
 import math
 import numbers
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from gym.spaces import Box
 from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn
 
@@ -44,6 +43,11 @@ from habitat_baselines.common.utils import (
 
 
 class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
+    """This is the base ObservationTransformer class that all other observation
+    Transformers should extend. from_config must be implemented by the transformer.
+    transform_observation_space is only needed if the observation_space ie.
+    (resolution, range, or num of channels change)."""
+
     def transform_observation_space(
         self, observation_space: SpaceDict, **kwargs
     ):
@@ -64,9 +68,6 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 class ResizeShortestEdge(ObservationTransformer):
     r"""An nn module the resizes your the shortest edge of the input while maintaining aspect ratio.
     This module assumes that all images in the batch are of the same size.
-    Args:
-        size: The size you want to resize the shortest edge to
-        channels_last: indicates if channels is the last dimension
     """
 
     def __init__(
@@ -75,6 +76,10 @@ class ResizeShortestEdge(ObservationTransformer):
         channels_last: bool = True,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
+        """Args:
+        size: The size you want to resize the shortest edge to
+        channels_last: indicates if channels is the last dimension
+        """
         super(ResizeShortestEdge, self).__init__()
         self._size: int = size
         self.channels_last: bool = channels_last
@@ -134,17 +139,19 @@ class ResizeShortestEdge(ObservationTransformer):
 
 @baseline_registry.register_obs_transformer()
 class CenterCropper(ObservationTransformer):
+    """An observation transformer is a simple nn module that center crops your input."""
+
     def __init__(
         self,
         size: Union[int, Tuple[int]],
         channels_last: bool = True,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
-        r"""An nn module that center crops your input.
-        Args:
-            size: A sequence (h, w) or int of the size you wish to resize/center_crop.
-                    If int, assumes square crop
-            channels_list: indicates if channels is the last dimension
+        """Args:
+        size: A sequence (h, w) or int of the size you wish to resize/center_crop.
+                If int, assumes square crop
+        channels_list: indicates if channels is the last dimension
+        trans_keys: The list of sensors it will try to centercrop.
         """
         super().__init__()
         if isinstance(size, numbers.Number):
@@ -152,7 +159,7 @@ class CenterCropper(ObservationTransformer):
         assert len(size) == 2, "forced input size must be len of 2 (h, w)"
         self._size = size
         self.channels_last = channels_last
-        self.trans_keys = trans_keys
+        self.trans_keys = trans_keys  # TODO: Add to from_config constructor
 
     def transform_observation_space(
         self,
@@ -202,23 +209,35 @@ class CenterCropper(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
+        cc_config = config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER
         return cls(
             (
-                config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT,
-                config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.WIDTH,
+                cc_config.HEIGHT,
+                cc_config.WIDTH,
             )
         )
 
 
 class Cube2Equirec(nn.Module):
-    def __init__(self, equ_h, equ_w, cube_length):
+    """This is the backend Cube2Equirec nn.module that does the stiching.
+    Inspired from https://github.com/fuenwang/PanoramaUtility and
+    optimized for modern PyTorch."""
+
+    def __init__(
+        self, equ_h: int, equ_w: int, cube_length: int, fov: int = 90
+    ):
+        """Args:
+        equ_h: (int) the height of the generated equirect
+        equ_w: (int) the width of the generated equirect
+        cube_length: (int) the length of each side of the cubemap
+        fov: (int) the FOV of each camera making the cubemap
+        """
         super(Cube2Equirec, self).__init__()
-        self.batch_size = 1  # NOTE: not in use at all
         self.cube_h = cube_length
         self.cube_w = cube_length
         self.equ_h = equ_h
         self.equ_w = equ_w
-        self.fov = 90
+        self.fov = fov
         self.fov_rad = self.fov * np.pi / 180
 
         # Compute the parameters for projection
@@ -443,7 +462,7 @@ class Cube2Equirec(nn.Module):
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor):
-        # Move the params to the right device
+        # Move the params to the right device. NOOP after first call
         self.grid = self.grid.to(batch.device)
         self.orientation_mask = self.orientation_mask.to(batch.device)
         # Check whether batch size is 6x
@@ -460,7 +479,6 @@ class Cube2Equirec(nn.Module):
         output = torch.cat(processed, 0)
         return output
 
-    @torch.no_grad()
     def forward(self, batch: torch.Tensor):
         return self.to_equirec_tensor(batch)
 
@@ -483,6 +501,8 @@ class CubeMap2Equirec(ObservationTransformer):
         sensor_uuids: List[str],
         eq_shape: Tuple[int],
         cubemap_length: int,
+        channels_last: bool = False,
+        target_uuids: Optional[List[str]] = None,
     ):
         r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param eq_shape: The shape of the equirectangular output (height, width)
@@ -496,98 +516,85 @@ class CubeMap2Equirec(ObservationTransformer):
         # TODO verify attributes of the sensors in the config if possible. Think about API design
         assert (
             len(eq_shape) == 2
-        ), f"eq_shape must be a tuple of (height, width), given:  {eq_shape}"
+        ), f"eq_shape must be a tuple of (height, width), given: {eq_shape}"
         assert (
             cubemap_length > 0
         ), f"cubemap_length must be greater than 0: provided {cubemap_length}"
         self.sensor_uuids: List[str] = sensor_uuids
         self.eq_shape: Tuple[int] = eq_shape
         self.cubemap_length: int = cubemap_length
+        self.channels_last: bool = channels_last
         self.c2eq: nn.Module = Cube2Equirec(
             eq_shape[0], eq_shape[1], cubemap_length
         )
+        if target_uuids == None:
+            self.target_uuids: List[str] = self.sensor_uuids[::6]
+        else:
+            self.target_uuids: List[str] = target_uuids
+        # TODO support and test different FOVs than just 90
 
     def transform_observation_space(
         self,
         observation_space: SpaceDict,
     ):
+        r"""Transforms the target UUID's sensor obs_space so it matches the new shape (EQ_H, EQ_W)"""
+        # Transforms the observation space to of the target UUID
         observation_space = copy.deepcopy(observation_space)
-        for i, key in enumerate(self.sensor_uuids[::6]):
+        for i, key in enumerate(self.target_uuids):
             assert (
                 key in observation_space.spaces
             ), f"{key} not found in observation space: {observation_space.spaces}"
             c = self.cubemap_length
             logger.info(
-                f"Overwrite sensors: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+                f"Overwrite sensor: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
             )
             if (c, c) != self.eq_shape:
                 observation_space.spaces[key] = overwrite_gym_box_shape(
                     observation_space.spaces[key], self.eq_shape
                 )
-        self.observation_space = observation_space
         return observation_space
-
-    @torch.no_grad()
-    def _normalize_sensor(self, img: torch.Tensor, space: Box):
-        low = np.min(space.low)
-        high = np.max(space.high)
-        if low == 0.0 and high == 1.0:
-            return img
-        img_range = float(high - low)
-
-        if high >= np.iinfo(np.uint32).max:
-            logger.warn("WARNING: Unnormalized semantic input detected")
-            return img.float()
-        return (img - low) / img_range
-
-    @torch.no_grad()
-    def _unnormalize_sensor(self, img: torch.Tensor, space: Box):
-        low = np.min(space.low)
-        high = np.max(space.high)
-        if low == 0.0 and high == 1.0:
-            return img
-        if high >= np.iinfo(np.uint32).max:
-            return img
-        img_range = float(high - low)
-        return (img * img_range) + low
 
     @classmethod
     def from_config(cls, config):
+        cube2eq_config = config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ
+        if hasattr(cube2eq_config, "TARGET_UUIDS"):
+            # Optional Config Value to specify target UUID
+            target_uuids = cube2eq_config.TARGET_UUIDS
+        else:
+            target_uuids = None
         return cls(
-            config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS,
+            cube2eq_config.SENSOR_UUIDS,
             eq_shape=(
-                config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT,
-                config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH,
+                cube2eq_config.HEIGHT,
+                cube2eq_config.WIDTH,
             ),
-            cubemap_length=config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.CUBE_LENGTH,
+            cubemap_length=cube2eq_config.CUBE_LENGTH,
+            target_uuids=target_uuids,
         )
 
     @torch.no_grad()
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        for i in range(0, len(self.sensor_uuids), 6):
+        for i in range(0, len(self.target_uuids), 6):
+            # The UUID we are overwriting
+            target_sensor_uuid = self.target_uuids[i // 6]
+            assert target_sensor_uuid in self.sensor_uuids[i : i + 6]
             sensor_obs = [
                 observations[sensor] for sensor in self.sensor_uuids[i : i + 6]
             ]
-            sensor_dtype = sensor_obs[0].dtype
-            sensor_obs_space = self.observation_space.spaces[
-                self.sensor_uuids[i]
-            ]
+            sensor_dtype = observations[target_sensor_uuid].dtype
+            # Stacking along axis makes the flattening go in the right order.
             imgs = torch.stack(sensor_obs, axis=1)
             imgs = torch.flatten(imgs, end_dim=1)
-            imgs = imgs.permute((0, 3, 1, 2))  # NCHW
-            imgs = self._normalize_sensor(imgs, sensor_obs_space)
+            if not self.channels_last:
+                imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
+            imgs = imgs.float()
             equirect = self.c2eq(imgs)  # Here is where the stiching happens
-            imgs = None  # Free the GPU memory
-            equirect = self._unnormalize_sensor(equirect, sensor_obs_space).to(
-                dtype=sensor_dtype
-            )
-            equirect = equirect.permute((0, 2, 3, 1))  # NHWC
-            observations[self.sensor_uuids[i]] = equirect
-            # TODO: Maybe we should have the target UUID be front instead of back even if it's not the first in the list
-            # I could also define our own mapping and then have it go through the list out of order.
-
+            equirect = equirect.to(dtype=sensor_dtype)
+            if not self.channels_last:
+                equirect = equirect.permute((0, 2, 3, 1))  # NCHW => NHWC
+            observations[target_sensor_uuid] = equirect
         return observations
 
 
