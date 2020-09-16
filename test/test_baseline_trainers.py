@@ -5,7 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
+import math
 import random
+from copy import deepcopy
 from glob import glob
 
 import pytest
@@ -16,25 +18,39 @@ try:
 
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.config.default import get_config
-    from habitat_baselines.run import run_exp
+    from habitat_baselines.run import execute_exp, run_exp
 
     baseline_installed = True
 except ImportError:
     baseline_installed = False
 
 
+def _powerset(s):
+    return [
+        combo
+        for r in range(len(s) + 1)
+        for combo in itertools.combinations(s, r)
+    ]
+
+
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,mode,gpu2gpu",
+    "test_cfg_path,mode,gpu2gpu,observation_transforms",
     itertools.product(
         glob("habitat_baselines/config/test/*"),
         ["train", "eval"],
         [True, False],
+        _powerset(
+            [
+                "CenterCropper",
+                "ResizeShortestEdge",
+            ]
+        ),
     ),
 )
-def test_trainers(test_cfg_path, mode, gpu2gpu):
+def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
     if gpu2gpu:
         try:
             import habitat_sim
@@ -47,9 +63,75 @@ def test_trainers(test_cfg_path, mode, gpu2gpu):
     run_exp(
         test_cfg_path,
         mode,
-        ["TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU", str(gpu2gpu)],
+        [
+            "TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU",
+            str(gpu2gpu),
+            "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
+            str(tuple(observation_transforms)),
+        ],
     )
 
+    # Deinit processes group
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
+
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "test_cfg_path,mode",
+    itertools.product(
+        glob("habitat_baselines/config/test/*pointnav_test.yaml"),
+        ["train", "eval"],
+    ),
+)
+def test_equirect_stiching(test_cfg_path, mode: str):
+    meta_config = get_config(config_paths=test_cfg_path)
+    meta_config.defrost()
+    config = meta_config.TASK_CONFIG
+    CAMERA_NUM = 6
+    orient = [
+        [0, math.pi, 0],  # Back
+        [-math.pi / 2, 0, 0],  # Down
+        [0, 0, 0],  # Front
+        [0, math.pi / 2, 0],  # Right
+        [0, 3 / 2 * math.pi, 0],  # Left
+        [math.pi / 2, 0, 0],  # Up
+    ]
+    sensor_uuids = []
+
+    if "RGB_SENSOR" in config.SIMULATOR.AGENT_0.SENSORS:
+        config.SIMULATOR.RGB_SENSOR.ORIENTATION = orient[0]
+        for camera_id in range(1, CAMERA_NUM):
+            camera_template = f"RGB_{camera_id}"
+            camera_config = deepcopy(config.SIMULATOR.RGB_SENSOR)
+            camera_config.ORIENTATION = orient[camera_id]
+
+            camera_config.UUID = camera_template.lower()
+            sensor_uuids.append(camera_config.UUID)
+            setattr(config.SIMULATOR, camera_template, camera_config)
+            config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
+
+    if "DEPTH_SENSOR" in config.SIMULATOR.AGENT_0.SENSORS:
+        config.SIMULATOR.DEPTH_SENSOR.ORIENTATION = orient[0]
+        for camera_id in range(1, CAMERA_NUM):
+            camera_template = f"DEPTH_{camera_id}"
+            camera_config = deepcopy(config.SIMULATOR.DEPTH_SENSOR)
+            camera_config.ORIENTATION = orient[camera_id]
+            camera_config.UUID = camera_template.lower()
+            sensor_uuids.append(camera_config.UUID)
+
+            setattr(config.SIMULATOR, camera_template, camera_config)
+            config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
+
+    meta_config.TASK_CONFIG = config
+    meta_config.SENSORS = config.SIMULATOR.AGENT_0.SENSORS
+    meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
+        sensor_uuids
+    )
+    meta_config.freeze()
+    execute_exp(meta_config, mode)
     # Deinit processes group
     if torch.distributed.is_initialized():
         torch.distributed.destroy_process_group()

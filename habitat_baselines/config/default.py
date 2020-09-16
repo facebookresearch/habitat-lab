@@ -59,6 +59,21 @@ _C.RL.SLACK_REWARD = -0.01
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavBaselinePolicy"
 # -----------------------------------------------------------------------------
+# OBS_TRANSFORMS CONFIG
+# -----------------------------------------------------------------------------
+_C.RL.POLICY.OBS_TRANSFORMS = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = tuple()
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.WIDTH = 256
+_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 512
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.CUBE_LENGTH = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = list()
+# -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
 _C.RL.PPO = CN()

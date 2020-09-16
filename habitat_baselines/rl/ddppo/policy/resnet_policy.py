@@ -5,12 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Dict, Tuple
+
 import numpy as np
 import torch
 from gym import spaces
+from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 from torch.nn import functional as F
 
+from habitat.config import Config
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -22,7 +26,7 @@ from habitat.tasks.nav.nav import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
+from habitat_baselines.common.utils import Flatten
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
@@ -35,16 +39,15 @@ from habitat_baselines.rl.ppo import Net, Policy
 class PointNavResNetPolicy(Policy):
     def __init__(
         self,
-        observation_space,
+        observation_space: SpaceDict,
         action_space,
-        hidden_size=512,
-        num_recurrent_layers=2,
-        rnn_type="LSTM",
-        resnet_baseplanes=32,
-        backbone="resnet50",
-        normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa : B008
-        force_blind_policy=False,
+        hidden_size: int = 512,
+        num_recurrent_layers: int = 2,
+        rnn_type: str = "LSTM",
+        resnet_baseplanes: int = 32,
+        backbone: str = "resnet50",
+        normalize_visual_inputs: bool = False,
+        force_blind_policy: bool = False,
         **kwargs
     ):
         super().__init__(
@@ -57,22 +60,23 @@ class PointNavResNetPolicy(Policy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
-                obs_transform=obs_transform,
                 force_blind_policy=force_blind_policy,
             ),
             action_space.n,
         )
 
     @classmethod
-    def from_config(cls, config, envs):
+    def from_config(
+        cls, config: Config, observation_space: SpaceDict, action_space
+    ):
         return cls(
-            observation_space=envs.observation_spaces[0],
-            action_space=envs.action_spaces[0],
+            observation_space=observation_space,
+            action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
             rnn_type=config.RL.DDPPO.rnn_type,
             num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
             backbone=config.RL.DDPPO.backbone,
-            normalize_visual_inputs="rgb" in envs.observation_spaces[0].spaces,
+            normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
         )
 
@@ -80,21 +84,14 @@ class PointNavResNetPolicy(Policy):
 class ResNetEncoder(nn.Module):
     def __init__(
         self,
-        observation_space,
-        baseplanes=32,
-        ngroups=32,
-        spatial_size=128,
+        observation_space: SpaceDict,
+        baseplanes: int = 32,
+        ngroups: int = 32,
+        spatial_size: int = 128,
         make_backbone=None,
-        normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa: B008
+        normalize_visual_inputs: bool = False,
     ):
         super().__init__()
-
-        self.obs_transform = obs_transform
-        if self.obs_transform is not None:
-            observation_space = self.obs_transform.transform_observation_space(
-                observation_space
-            )
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -157,7 +154,7 @@ class ResNetEncoder(nn.Module):
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
 
-    def forward(self, observations):
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         if self.is_blind:
             return None
 
@@ -177,9 +174,6 @@ class ResNetEncoder(nn.Module):
 
             cnn_input.append(depth_observations)
 
-        if self.obs_transform:
-            cnn_input = [self.obs_transform(inp) for inp in cnn_input]
-
         x = torch.cat(cnn_input, dim=1)
         x = F.avg_pool2d(x, 2)
 
@@ -196,16 +190,15 @@ class PointNavResNetNet(Net):
 
     def __init__(
         self,
-        observation_space,
+        observation_space: SpaceDict,
         action_space,
-        hidden_size,
-        num_recurrent_layers,
-        rnn_type,
+        hidden_size: int,
+        num_recurrent_layers: int,
+        rnn_type: str,
         backbone,
         resnet_baseplanes,
-        normalize_visual_inputs,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),  # noqa: B008
-        force_blind_policy=False,
+        normalize_visual_inputs: bool,
+        force_blind_policy: bool = False,
     ):
         super().__init__()
 
@@ -288,7 +281,6 @@ class PointNavResNetNet(Net):
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
                 normalize_visual_inputs=normalize_visual_inputs,
-                obs_transform=obs_transform,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -309,7 +301,6 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
             normalize_visual_inputs=normalize_visual_inputs,
-            obs_transform=obs_transform,
         )
 
         if not self.visual_encoder.is_blind:
@@ -342,7 +333,13 @@ class PointNavResNetNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(
+        self,
+        observations: Dict[str, torch.Tensor],
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> Tuple[torch.Tensor]:
         x = []
         if not self.is_blind:
             if "visual_features" in observations:

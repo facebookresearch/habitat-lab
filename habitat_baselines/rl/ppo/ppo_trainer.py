@@ -20,6 +20,11 @@ from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
+from habitat_baselines.common.obs_transformers import (
+    apply_obs_transforms_batch,
+    apply_obs_transforms_obs_space,
+    get_active_obs_transforms,
+)
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import (
@@ -42,6 +47,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = None
         self.agent = None
         self.envs = None
+        self.obs_transforms = []
         if config is not None:
             logger.info(f"config: {config}")
 
@@ -60,7 +66,15 @@ class PPOTrainer(BaseRLTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
-        self.actor_critic = policy.from_config(self.config, self.envs)
+        observation_space = self.envs.observation_spaces[0]
+        self.obs_transforms = get_active_obs_transforms(self.config)
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
+        self.obs_space = observation_space
+        self.actor_critic = policy.from_config(
+            self.config, observation_space, self.envs.action_spaces[0]
+        )
         self.actor_critic.to(self.device)
 
         self.agent = PPO(
@@ -187,6 +201,8 @@ class PPOTrainer(BaseRLTrainer):
 
         t_update_stats = time.time()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=current_episode_reward.device
         )
@@ -289,7 +305,7 @@ class PPOTrainer(BaseRLTrainer):
         rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
-            self.envs.observation_spaces[0],
+            self.obs_space,
             self.envs.action_spaces[0],
             ppo_cfg.hidden_size,
         )
@@ -297,6 +313,7 @@ class PPOTrainer(BaseRLTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         for sensor in rollouts.observations:
             rollouts.observations[sensor][0].copy_(batch[sensor])
@@ -473,6 +490,7 @@ class PPOTrainer(BaseRLTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device=self.device
@@ -541,6 +559,7 @@ class PPOTrainer(BaseRLTrainer):
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
+            batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
@@ -594,7 +613,10 @@ class PPOTrainer(BaseRLTrainer):
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
-                    frame = observations_to_image(observations[i], infos[i])
+                    # TODO move normalization / channel changing out of the policy and undo it here
+                    frame = observations_to_image(
+                        {k: v[i] for k, v in batch.items()}, infos[i]
+                    )
                     rgb_frames[i].append(frame)
 
             (

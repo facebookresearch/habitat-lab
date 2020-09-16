@@ -101,5 +101,49 @@ class BaselineRegistry(Registry):
         r"""Get the RL policy with :p:`name`."""
         return cls._get_impl("policy", name)
 
+    @classmethod
+    def register_obs_transformer(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        r"""Register a Observation Transformer with :p:`name`.
+
+        :param name: Key with which the policy will be registered.
+            If :py:`None` will use the name of the class
+
+        .. code:: py
+
+            from habitat_baselines.common.obs_transformers import ObservationTransformer
+            from habitat_baselines.common.baseline_registry import (
+                baseline_registry
+            )
+
+            @baseline_registry.register_policy
+            class MyObsTransformer(ObservationTransformer):
+                pass
+
+
+            # or
+
+            @baseline_registry.register_policy(name="MyTransformer")
+            class MyObsTransformer(ObservationTransformer):
+                pass
+
+        """
+        from habitat_baselines.common.obs_transformers import (
+            ObservationTransformer,
+        )
+
+        return cls._register_impl(
+            "obs_transformer",
+            to_register,
+            name,
+            assert_type=ObservationTransformer,
+        )
+
+    @classmethod
+    def get_obs_transformer(cls, name: str):
+        r"""Get the Observation Transformer with :p:`name`."""
+        return cls._get_impl("obs_transformer", name)
+
 
 baseline_registry = BaselineRegistry()

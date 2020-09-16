@@ -1,8 +1,10 @@
+from typing import Dict
+
 import numpy as np
 import torch
 from torch import nn as nn
 
-from habitat_baselines.common.utils import Flatten, ResizeCenterCropper
+from habitat_baselines.common.utils import Flatten
 
 
 class SimpleCNN(nn.Module):
@@ -19,17 +21,8 @@ class SimpleCNN(nn.Module):
         self,
         observation_space,
         output_size,
-        obs_transform: nn.Module = ResizeCenterCropper(  # noqa: B008
-            size=(256, 256)
-        ),
     ):
         super().__init__()
-
-        self.obs_transform = obs_transform
-        if self.obs_transform is not None:
-            observation_space = obs_transform.transform_observation_space(
-                observation_space
-            )
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -141,7 +134,7 @@ class SimpleCNN(nn.Module):
     def is_blind(self):
         return self._n_input_rgb + self._n_input_depth == 0
 
-    def forward(self, observations):
+    def forward(self, observations: Dict[str, torch.Tensor]):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
@@ -155,9 +148,6 @@ class SimpleCNN(nn.Module):
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
-
-        if self.obs_transform:
-            cnn_input = [self.obs_transform(inp) for inp in cnn_input]
 
         cnn_input = torch.cat(cnn_input, dim=1)
 

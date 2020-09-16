@@ -22,6 +22,11 @@ from habitat import Config, logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
+from habitat_baselines.common.obs_transformers import (
+    apply_obs_transforms_batch,
+    apply_obs_transforms_obs_space,
+    get_active_obs_transforms,
+)
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.common.utils import batch_obs, linear_decay
@@ -70,7 +75,15 @@ class DDPPOTrainer(PPOTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
-        self.actor_critic = policy.from_config(self.config, self.envs)
+        self.obs_transforms = get_active_obs_transforms(self.config)
+        observation_space = self.envs.observation_spaces[0]
+        observation_space = apply_obs_transforms_obs_space(
+            observation_space, self.obs_transforms
+        )
+        self.actor_critic = policy.from_config(
+            self.config, observation_space, self.envs.action_spaces[0]
+        )
+        self.obs_space = observation_space
         self.actor_critic.to(self.device)
 
         if (
@@ -188,8 +201,9 @@ class DDPPOTrainer(PPOTrainer):
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        obs_space = self.envs.observation_spaces[0]
+        obs_space = self.obs_space
         if self._static_encoder:
             self._encoder = self.actor_critic.net.visual_encoder
             obs_space = SpaceDict(
