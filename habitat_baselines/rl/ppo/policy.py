@@ -7,8 +7,10 @@ import abc
 
 import torch
 from gym import spaces
+from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 
+from habitat.config import Config
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
@@ -79,7 +81,7 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def from_config(cls, config, envs):
+    def from_config(cls, config, observation_space, action_space):
         pass
 
 
@@ -97,20 +99,28 @@ class CriticHead(nn.Module):
 @baseline_registry.register_policy
 class PointNavBaselinePolicy(Policy):
     def __init__(
-        self, observation_space, action_space, hidden_size=512, **kwargs
+        self,
+        observation_space: SpaceDict,
+        action_space,
+        hidden_size: int = 512,
+        **kwargs
     ):
         super().__init__(
             PointNavBaselineNet(
-                observation_space=observation_space, hidden_size=hidden_size
+                observation_space=observation_space,
+                hidden_size=hidden_size,
+                **kwargs,
             ),
             action_space.n,
         )
 
     @classmethod
-    def from_config(cls, config, envs):
+    def from_config(
+        cls, config: Config, observation_space: SpaceDict, action_space
+    ):
         return cls(
-            observation_space=envs.observation_spaces[0],
-            action_space=envs.action_spaces[0],
+            observation_space=observation_space,
+            action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
         )
 
@@ -141,7 +151,11 @@ class PointNavBaselineNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size):
+    def __init__(
+        self,
+        observation_space: SpaceDict,
+        hidden_size: int,
+    ):
         super().__init__()
 
         if (

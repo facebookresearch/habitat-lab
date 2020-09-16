@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import os
 
 import pytest
@@ -23,7 +24,16 @@ CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )
-def test_ppo_agents():
+@pytest.mark.parametrize(
+    "input_type,resolution",
+    [
+        (i_type, resolution)
+        for i_type, resolution in itertools.product(
+            ["blind", "rgb", "depth", "rgbd"], [256, 384]
+        )
+    ],
+)
+def test_ppo_agents(input_type, resolution):
 
     agent_config = ppo_agents.get_default_config()
     agent_config.MODEL_PATH = ""
@@ -34,29 +44,27 @@ def test_ppo_agents():
 
     benchmark = habitat.Benchmark(config_paths=CFG_TEST)
 
-    for input_type in ["blind", "rgb", "depth", "rgbd"]:
-        for resolution in [256, 384]:
-            config_env.defrost()
-            config_env.SIMULATOR.AGENT_0.SENSORS = []
-            if input_type in ["rgb", "rgbd"]:
-                config_env.SIMULATOR.AGENT_0.SENSORS += ["RGB_SENSOR"]
-                agent_config.RESOLUTION = resolution
-                config_env.SIMULATOR.RGB_SENSOR.WIDTH = resolution
-                config_env.SIMULATOR.RGB_SENSOR.HEIGHT = resolution
-            if input_type in ["depth", "rgbd"]:
-                config_env.SIMULATOR.AGENT_0.SENSORS += ["DEPTH_SENSOR"]
-                agent_config.RESOLUTION = resolution
-                config_env.SIMULATOR.DEPTH_SENSOR.WIDTH = resolution
-                config_env.SIMULATOR.DEPTH_SENSOR.HEIGHT = resolution
+    config_env.defrost()
+    config_env.SIMULATOR.AGENT_0.SENSORS = []
+    if input_type in ["rgb", "rgbd"]:
+        config_env.SIMULATOR.AGENT_0.SENSORS += ["RGB_SENSOR"]
+        agent_config.RESOLUTION = resolution
+        config_env.SIMULATOR.RGB_SENSOR.WIDTH = resolution
+        config_env.SIMULATOR.RGB_SENSOR.HEIGHT = resolution
+    if input_type in ["depth", "rgbd"]:
+        config_env.SIMULATOR.AGENT_0.SENSORS += ["DEPTH_SENSOR"]
+        agent_config.RESOLUTION = resolution
+        config_env.SIMULATOR.DEPTH_SENSOR.WIDTH = resolution
+        config_env.SIMULATOR.DEPTH_SENSOR.HEIGHT = resolution
 
-            config_env.freeze()
+    config_env.freeze()
 
-            del benchmark._env
-            benchmark._env = habitat.Env(config=config_env)
-            agent_config.INPUT_TYPE = input_type
+    del benchmark._env
+    benchmark._env = habitat.Env(config=config_env)
+    agent_config.INPUT_TYPE = input_type
 
-            agent = ppo_agents.PPOAgent(agent_config)
-            habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
+    agent = ppo_agents.PPOAgent(agent_config)
+    habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
 
 
 @pytest.mark.skipif(

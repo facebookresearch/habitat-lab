@@ -4,19 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from gym.spaces import Box
 from torch import nn as nn
 
-from habitat import logger
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
@@ -57,54 +55,6 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
-class ResizeCenterCropper(nn.Module):
-    def __init__(self, size, channels_last: bool = False):
-        r"""An nn module the resizes and center crops your input.
-        Args:
-            size: A sequence (w, h) or int of the size you wish to
-                resize/center_crop. If int, assumes square crop
-            channels_list: indicates if channels is the last dimension
-        """
-        super().__init__()
-        if isinstance(size, numbers.Number):
-            size = (int(size), int(size))
-        assert len(size) == 2, "forced input size must be len of 2 (w, h)"
-        self._size = size
-        self.channels_last = channels_last
-
-    def transform_observation_space(
-        self, observation_space, trans_keys=("rgb", "depth", "semantic")
-    ):
-        size = self._size
-        observation_space = copy.deepcopy(observation_space)
-        if size:
-            for key in observation_space.spaces:
-                if (
-                    key in trans_keys
-                    and observation_space.spaces[key].shape != size
-                ):
-                    logger.info(
-                        "Overwriting CNN input size of %s: %s" % (key, size)
-                    )
-                    observation_space.spaces[key] = overwrite_gym_box_shape(
-                        observation_space.spaces[key], size
-                    )
-        self.observation_space = observation_space
-        return observation_space
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        if self._size is None:
-            return input
-
-        return center_crop(
-            image_resize_shortest_edge(
-                input, max(self._size), channels_last=self.channels_last
-            ),
-            self._size,
-            channels_last=self.channels_last,
-        )
-
-
 def linear_decay(epoch: int, total_num_updates: int) -> float:
     r"""Returns a multiplicative factor for linear value decay
 
@@ -127,8 +77,10 @@ def _to_tensor(v) -> torch.Tensor:
         return torch.tensor(v, dtype=torch.float)
 
 
+@torch.no_grad()
 def batch_obs(
-    observations: List[Dict], device: Optional[torch.device] = None
+    observations: List[Dict],
+    device: Optional[torch.device] = None,
 ) -> Dict[str, torch.Tensor]:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
@@ -139,7 +91,7 @@ def batch_obs(
             Will not move the tensors if None
 
     Returns:
-        transposed dict of lists of observations.
+        transposed dict of torch.Tensor of observations.
     """
     batch = defaultdict(list)
 
@@ -148,11 +100,7 @@ def batch_obs(
             batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
-        batch[sensor] = (
-            torch.stack(batch[sensor], dim=0)
-            .to(device=device)
-            .to(dtype=torch.float)
-        )
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
     return batch
 
@@ -283,17 +231,14 @@ def image_resize_shortest_edge(
         raise NotImplementedError()
     if no_batch_dim:
         img = img.unsqueeze(0)  # Adds a batch dimension
+    h, w = get_image_height_width(img, channels_last=channels_last)
     if channels_last:
-        h, w = img.shape[-3:-1]
         if len(img.shape) == 4:
             # NHWC -> NCHW
             img = img.permute(0, 3, 1, 2)
         else:
             # NDHWC -> NDCHW
             img = img.permute(0, 1, 4, 2, 3)
-    else:
-        # ..HW
-        h, w = img.shape[-2:]
 
     # Percentage resize
     scale = size / min(h, w)
@@ -314,28 +259,24 @@ def image_resize_shortest_edge(
     return img
 
 
-def center_crop(img, size, channels_last: bool = False):
+def center_crop(
+    img, size: Union[int, Tuple[int]], channels_last: bool = False
+):
     """Performs a center crop on an image.
 
     Args:
-        img: the array object that needs to be resized (either batched or
-            unbatched)
-        size: A sequence (w, h) or a python(int) that you want cropped
+        img: the array object that needs to be resized (either batched or unbatched)
+        size: A sequence (h, w) or a python(int) that you want cropped
         channels_last: If the channels are the last dimension.
     Returns:
         the resized array
     """
-    if channels_last:
-        # NHWC
-        h, w = img.shape[-3:-1]
-    else:
-        # NCHW
-        h, w = img.shape[-2:]
+    h, w = get_image_height_width(img, channels_last=channels_last)
 
     if isinstance(size, numbers.Number):
         size = (int(size), int(size))
     assert len(size) == 2, "size should be (h,w) you wish to resize to"
-    cropx, cropy = size
+    cropy, cropx = size
 
     startx = w // 2 - (cropx // 2)
     starty = h // 2 - (cropy // 2)
@@ -343,6 +284,20 @@ def center_crop(img, size, channels_last: bool = False):
         return img[..., starty : starty + cropy, startx : startx + cropx, :]
     else:
         return img[..., starty : starty + cropy, startx : startx + cropx]
+
+
+def get_image_height_width(
+    img: Union[np.ndarray, torch.Tensor], channels_last: bool = False
+):
+    if img.shape is None or len(img.shape) < 3 or len(img.shape) > 5:
+        raise NotImplementedError()
+    if channels_last:
+        # NHWC
+        h, w = img.shape[-3:-1]
+    else:
+        # NCHW
+        h, w = img.shape[-2:]
+    return h, w
 
 
 def overwrite_gym_box_shape(box: Box, shape) -> Box:
