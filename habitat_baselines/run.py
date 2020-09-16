@@ -41,6 +41,11 @@ def main():
 
 
 def execute_exp(config: Config, run_type: str) -> None:
+    r"""This function runs the specified config with the specified runtype
+    Args:
+    config: Habitat.config
+    runtype: str {train or eval}
+    """
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
     torch.manual_seed(config.TASK_CONFIG.SEED)
