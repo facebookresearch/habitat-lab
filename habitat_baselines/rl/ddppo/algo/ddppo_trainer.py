@@ -20,7 +20,6 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -29,7 +28,6 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import batch_obs, linear_decay
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
     REQUEUE,
@@ -44,6 +42,8 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (  # noqa: F401
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
+from habitat_baselines.utils.common import batch_obs, linear_decay
+from habitat_baselines.utils.env_utils import construct_envs
 
 
 @baseline_registry.register_trainer(name="ddppo")

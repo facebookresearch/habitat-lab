@@ -18,7 +18,6 @@ from habitat import Config, logger
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_utils import construct_envs
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -27,12 +26,13 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import (
+from habitat_baselines.rl.ppo import PPO
+from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
     linear_decay,
 )
-from habitat_baselines.rl.ppo import PPO
+from habitat_baselines.utils.env_utils import construct_envs
 
 
 @baseline_registry.register_trainer(name="ppo")

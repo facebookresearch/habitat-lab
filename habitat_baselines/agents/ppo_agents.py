@@ -15,8 +15,8 @@ from gym.spaces import Box, Dict, Discrete
 import habitat
 from habitat.config import Config
 from habitat.core.agent import Agent
-from habitat_baselines.common.utils import batch_obs
 from habitat_baselines.rl.ppo import PointNavBaselinePolicy
+from habitat_baselines.utils.common import batch_obs
 
 
 def get_default_config():

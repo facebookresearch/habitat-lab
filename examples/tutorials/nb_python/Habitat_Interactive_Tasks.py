@@ -17,7 +17,18 @@
 #       jupytext_version: 1.5.2
 #   kernelspec:
 #     display_name: Python 3
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.7.3
 # ---
 
 # %% [markdown]
@@ -1566,19 +1577,19 @@ from torch.optim.lr_scheduler import LambdaLR
 from habitat import Config, logger
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_utils import make_env_fn
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.common.utils import (
-    batch_obs,
-    generate_video,
-    linear_decay,
-)
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Net, Policy
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
+from habitat_baselines.utils.common import (
+    batch_obs,
+    generate_video,
+    linear_decay,
+)
+from habitat_baselines.utils.env_utils import make_env_fn
 
 
 def construct_envs(

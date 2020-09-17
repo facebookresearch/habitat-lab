@@ -34,7 +34,7 @@ from torch import nn
 from habitat.config import Config
 from habitat.core.logging import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.utils import (
+from habitat_baselines.utils.common import (
     center_crop,
     get_image_height_width,
     image_resize_shortest_edge,

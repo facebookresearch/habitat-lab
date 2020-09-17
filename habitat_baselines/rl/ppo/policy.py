@@ -17,9 +17,9 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.utils import CategoricalNet
 from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
+from habitat_baselines.utils.common import CategoricalNet
 
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):

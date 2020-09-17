@@ -7,7 +7,7 @@
 import cv2
 import torch
 
-from habitat_baselines.common.utils import (
+from habitat_baselines.utils.common import (
     tensor_to_bgr_images,
     tensor_to_depth_images,
 )
