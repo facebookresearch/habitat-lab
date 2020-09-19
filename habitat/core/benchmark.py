@@ -189,6 +189,8 @@ class Benchmark:
                     metrics['success'], metrics['spl'], metrics['softspl'],
                     metrics['xy_error']))
 
+            # One more agent reset, so last data can be saved.
+            agent.reset()
 
         except KeyboardInterrupt:
             print ("interrupt")
