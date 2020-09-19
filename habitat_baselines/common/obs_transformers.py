@@ -440,9 +440,7 @@ class Cube2Equirec(nn.Module):
         """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
         batch_size, ch, _H, _W = batch.shape
         if batch_size == 0 or batch_size % 6 != 0:
-            raise ValueError(
-                f"Batch size mismatch: {batch_size} is not a positive mulitple of 6"
-            )
+            raise ValueError(f"Batch size mismatch: {batch_size} is not 6x")
 
         sampled_image = torch.nn.functional.grid_sample(
             batch,  # NCHW
@@ -459,9 +457,9 @@ class Cube2Equirec(nn.Module):
             .view(-1, 6, 1, self.equ_h, self.equ_w)
             .expand(1, 6, ch, -1, -1)
         )  # batch_size//6, 6, ch, self.equ_h, self.equ_w
-        output = torch.sum(sampled_image_masked, dim=1)
-
-        return output  # batch_size//6, ch, self.equ_h, self.equ_w
+        return torch.sum(
+            sampled_image_masked, dim=1
+        )  # batch_size//6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor):
@@ -471,7 +469,7 @@ class Cube2Equirec(nn.Module):
         # Check whether batch size is 6x
         cubemap_sides = batch.size()[0]
         if cubemap_sides == 0 or cubemap_sides % 6 != 0:
-            raise ValueError("Batch size should be 6")
+            raise ValueError("Batch size should be 6x")
 
         return self._to_equirec(batch)
 
