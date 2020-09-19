@@ -266,6 +266,24 @@ class Cube2Equirec(nn.Module):
 
         # Project each face to 3D cube and convert to pixel coordinates
         self.grid, self.orientation_mask = self.get_grid2()
+        # Construct the mask and the masked grid to use for sampling the coordinates
+        mask = torch.empty((1, 6, self.equ_h, self.equ_w, 1))
+        masked_grid = torch.empty((1, 6, self.equ_h, self.equ_w, 2))
+        for ori in range(6):
+            grid_ori = self.grid[ori, :, :, :].unsqueeze(
+                0
+            )  # 1, self.equ_h, self.equ_w, 2
+            mask_ori = (self.orientation_mask == ori).unsqueeze(
+                0
+            )  # 1, self.equ_h, self.equ_w, 1
+
+            masked_grid_ori = grid_ori * mask_ori.float().expand(
+                -1, -1, -1, 2
+            )  # 1, self.equ_h, self.equ_w, 2
+            mask[:, ori] = mask_ori
+            masked_grid[:, ori] = masked_grid_ori
+        self.mask = mask
+        self.masked_grid = masked_grid
 
     def get_grid2(self):
         # Get the point of equirectangular on 3D ball
@@ -418,66 +436,44 @@ class Cube2Equirec(nn.Module):
             orientation_mask,
         )
 
-    # Convert cubic images to equirectangular
     def _to_equirec(self, batch: torch.Tensor):
+        """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
         batch_size, ch, _H, _W = batch.shape
-        if batch_size != 6:
-            raise ValueError("Batch size mismatch!!")
-
-        output = torch.zeros(
-            1, ch, self.equ_h, self.equ_w, device=batch.device
-        )
-
-        for ori in range(6):
-            grid = self.grid[ori, :, :, :].unsqueeze(
-                0
-            )  # 1, self.equ_h, self.equ_w, 2
-            mask = (self.orientation_mask == ori).unsqueeze(
-                0
-            )  # 1, self.equ_h, self.equ_w, 1
-
-            masked_grid = grid * mask.float().expand(
-                -1, -1, -1, 2
-            )  # 1, self.equ_h, self.equ_w, 2
-
-            source_image = batch[ori].unsqueeze(0)  # 1, ch, H, W
-
-            sampled_image = torch.nn.functional.grid_sample(
-                source_image,
-                masked_grid,
-                align_corners=False,
-                padding_mode="border",
-            )  # 1, ch, self.equ_h, self.equ_w
-
-            sampled_image_masked = sampled_image * (
-                mask.float()
-                .view(1, 1, self.equ_h, self.equ_w)
-                .expand(1, ch, -1, -1)
+        if batch_size == 0 or batch_size % 6 != 0:
+            raise ValueError(
+                f"Batch size mismatch: {batch_size} is not a positive mulitple of 6"
             )
-            output = (
-                output + sampled_image_masked
-            )  # 1, ch, self.equ_h, self.equ_w
 
-        return output
+        sampled_image = torch.nn.functional.grid_sample(
+            batch,  # NCHW
+            self.masked_grid.repeat(batch_size // 6, 1, 1, 1, 1).view(
+                batch_size, self.equ_h, self.equ_w, 2
+            ),
+            align_corners=False,
+            padding_mode="border",
+        ).view(
+            batch_size // 6, 6, -1, self.equ_h, self.equ_w
+        )  # batch_size//6, 6, ch, self.equ_h, self.equ_w
+        sampled_image_masked = sampled_image * (
+            self.mask.float()
+            .view(-1, 6, 1, self.equ_h, self.equ_w)
+            .expand(1, 6, ch, -1, -1)
+        )  # batch_size//6, 6, ch, self.equ_h, self.equ_w
+        output = torch.sum(sampled_image_masked, dim=1)
+
+        return output  # batch_size//6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor):
         # Move the params to the right device. NOOP after first call
-        self.grid = self.grid.to(batch.device)
-        self.orientation_mask = self.orientation_mask.to(batch.device)
+        self.mask = self.mask.to(batch.device)
+        self.masked_grid = self.masked_grid.to(batch.device)
         # Check whether batch size is 6x
-        batch_size = batch.size()[0]
-        if batch_size % 6 != 0:
-            raise ValueError("Batch size should be 6x")
+        cubemap_sides = batch.size()[0]
+        if cubemap_sides == 0 or cubemap_sides % 6 != 0:
+            raise ValueError("Batch size should be 6")
 
-        processed = []
-        for idx in range(int(batch_size / 6)):
-            target = batch[idx * 6 : (idx + 1) * 6, :, :, :]
-            target_processed = self._to_equirec(target)
-            processed.append(target_processed)
-
-        output = torch.cat(processed, 0)
-        return output
+        return self._to_equirec(batch)
 
     def forward(self, batch: torch.Tensor):
         return self.to_equirec_tensor(batch)
@@ -539,7 +535,6 @@ class CubeMap2Equirec(ObservationTransformer):
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (EQ_H, EQ_W)"""
         # Transforms the observation space to of the target UUID
-        observation_space = copy.deepcopy(observation_space)
         for i, key in enumerate(self.target_uuids):
             assert (
                 key in observation_space.spaces
@@ -576,21 +571,24 @@ class CubeMap2Equirec(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        for i in range(0, len(self.target_uuids), 6):
+        for i, target_sensor_uuid in enumerate(self.target_uuids):
             # The UUID we are overwriting
-            target_sensor_uuid = self.target_uuids[i // 6]
-            assert target_sensor_uuid in self.sensor_uuids[i : i + 6]
+            assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
             sensor_obs = [
-                observations[sensor] for sensor in self.sensor_uuids[i : i + 6]
+                observations[sensor]
+                for sensor in self.sensor_uuids[i * 6 : (i + 1) * 6]
             ]
-            sensor_dtype = observations[target_sensor_uuid].dtype
+            target_obs = observations[target_sensor_uuid]
+            sensor_dtype = target_obs.dtype
             # Stacking along axis makes the flattening go in the right order.
             imgs = torch.stack(sensor_obs, axis=1)
             imgs = torch.flatten(imgs, end_dim=1)
             if not self.channels_last:
                 imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
-            imgs = imgs.float()
+            imgs = imgs.float()  # NCHW
             equirect = self.c2eq(imgs)  # Here is where the stiching happens
+            # for debugging
+            # torchvision.utils.save_image(equirect, f'sample_eqr_{target_sensor_uuid}.jpg', normalize=True, range=(0, 255) if 'rgb' in target_sensor_uuid else (0, 1))
             equirect = equirect.to(dtype=sensor_dtype)
             if not self.channels_last:
                 equirect = equirect.permute((0, 2, 3, 1))  # NCHW => NHWC
