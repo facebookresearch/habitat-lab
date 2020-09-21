@@ -223,7 +223,11 @@ class Cube2Equirec(nn.Module):
     optimized for modern PyTorch."""
 
     def __init__(
-        self, equ_h: int, equ_w: int, cube_length=None, fov: int = 90
+        self,
+        equ_h: int,
+        equ_w: int,
+        cube_length: Optional[int] = None,
+        fov: int = 90,
     ):
         """Args:
         equ_h: (int) the height of the generated equirect
@@ -237,7 +241,7 @@ class Cube2Equirec(nn.Module):
         self.equ_w = equ_w
         self.grids = self.generate_grid(equ_h, equ_w)
 
-    def generate_grid(self, equ_h, equ_w):
+    def generate_grid(self, equ_h: int, equ_w: int) -> torch.Tensor:
         # Project on sphere
         theta_map, phi_map = self.get_theta_phi_map(equ_h, equ_w)
         xyz_on_sphere = self.angle2sphere(theta_map, phi_map)
@@ -271,47 +275,48 @@ class Cube2Equirec(nn.Module):
         grids = torch.cat(grids, dim=0)
         return grids
 
-    # Convert cubic images to equirectangular
-    def _to_equirec(self, batch: torch.Tensor):
+    def _to_equirec(self, batch: torch.Tensor) -> torch.Tensor:
+        """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
         batch_size, ch, _H, _W = batch.shape
-        if batch_size != 6:
-            raise ValueError("Batch size mismatch!!")
+        cubemap_sides = batch.size()[0]
+        if cubemap_sides == 0 or cubemap_sides % 6 != 0:
+            raise ValueError("Batch size should be 6x")
         output = torch.nn.functional.grid_sample(
-            batch, self.grids, align_corners=True, padding_mode="zeros"
+            batch,
+            self.grids.repeat(batch_size // 6, 1, 1, 1),
+            align_corners=True,
+            padding_mode="zeros",
         )
-        output = output.sum(dim=0, keepdim=True)
-        return output
+        output = output.view(
+            batch_size // 6, 6, -1, self.equ_h, self.equ_w
+        ).sum(dim=1)
+        return output  # batch_size // 6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
-    def to_equirec_tensor(self, batch: torch.Tensor):
+    def to_equirec_tensor(self, batch: torch.Tensor) -> torch.Tensor:
         # Move the params to the right device. NOOP after first call
         self.grids = self.grids.to(batch.device)
         # Check whether batch size is 6x
-        batch_size = batch.size()[0]
-        if batch_size % 6 != 0:
+        cubemap_sides = batch.size()[0]
+        if cubemap_sides == 0 or cubemap_sides % 6 != 0:
             raise ValueError("Batch size should be 6x")
 
-        processed = []
-        for idx in range(int(batch_size / 6)):
-            target = batch[idx * 6 : (idx + 1) * 6, :, :, :]
-            target_processed = self._to_equirec(target)
-            processed.append(target_processed)
+        return self._to_equirec(batch)
 
-        output = torch.cat(processed, 0)
-        return output
-
-    def forward(self, batch: torch.Tensor):
+    def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.to_equirec_tensor(batch)
 
     # Get theta and phi map
-    def get_theta_phi_map(self, equ_h: int, equ_w: int):
+    def get_theta_phi_map(self, equ_h: int, equ_w: int) -> torch.Tensor:
         phi, theta = torch.meshgrid(torch.arange(equ_h), torch.arange(equ_w))
         theta_map = -(theta + 0.5) * 2 * np.pi / equ_w + np.pi
         phi_map = -(phi + 0.5) * np.pi / equ_h + np.pi / 2
         return theta_map, phi_map
 
     # Project on unit sphere
-    def angle2sphere(self, theta_map: torch.Tensor, phi_map: torch.Tensor):
+    def angle2sphere(
+        self, theta_map: torch.Tensor, phi_map: torch.Tensor
+    ) -> torch.Tensor:
         sin_theta = torch.sin(theta_map)
         cos_theta = torch.cos(theta_map)
         sin_phi = torch.sin(phi_map)
@@ -377,7 +382,6 @@ class CubeMap2Equirec(ObservationTransformer):
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (EQ_H, EQ_W)"""
         # Transforms the observation space to of the target UUID
-        observation_space = copy.deepcopy(observation_space)
         for i, key in enumerate(self.target_uuids):
             assert (
                 key in observation_space.spaces
@@ -414,21 +418,24 @@ class CubeMap2Equirec(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        for i in range(0, len(self.target_uuids), 6):
+        for i, target_sensor_uuid in enumerate(self.target_uuids):
             # The UUID we are overwriting
-            target_sensor_uuid = self.target_uuids[i // 6]
-            assert target_sensor_uuid in self.sensor_uuids[i : i + 6]
+            assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
             sensor_obs = [
-                observations[sensor] for sensor in self.sensor_uuids[i : i + 6]
+                observations[sensor]
+                for sensor in self.sensor_uuids[i * 6 : (i + 1) * 6]
             ]
-            sensor_dtype = observations[target_sensor_uuid].dtype
+            target_obs = observations[target_sensor_uuid]
+            sensor_dtype = target_obs.dtype
             # Stacking along axis makes the flattening go in the right order.
             imgs = torch.stack(sensor_obs, axis=1)
             imgs = torch.flatten(imgs, end_dim=1)
             if not self.channels_last:
                 imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
-            imgs = imgs.float()
+            imgs = imgs.float()  # NCHW
             equirect = self.c2eq(imgs)  # Here is where the stiching happens
+            # for debugging
+            # torchvision.utils.save_image(equirect, f'sample_eqr_{target_sensor_uuid}.jpg', normalize=True, range=(0, 255) if 'rgb' in target_sensor_uuid else (0, 1))
             equirect = equirect.to(dtype=sensor_dtype)
             if not self.channels_last:
                 equirect = equirect.permute((0, 2, 3, 1))  # NCHW => NHWC

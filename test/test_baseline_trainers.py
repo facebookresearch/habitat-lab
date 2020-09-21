@@ -42,12 +42,13 @@ def _powerset(s):
         glob("habitat_baselines/config/test/*"),
         ["train", "eval"],
         [True, False],
-        _powerset(
+        [
+            [],
             [
                 "CenterCropper",
                 "ResizeShortestEdge",
-            ]
-        ),
+            ],
+        ],
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
@@ -81,10 +82,9 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
 )
 @pytest.mark.parametrize(
     "test_cfg_path,mode",
-    itertools.product(
-        glob("habitat_baselines/config/test/*pointnav_test.yaml"),
-        ["train", "eval"],
-    ),
+    [
+        ["habitat_baselines/config/test/ppo_pointnav_test.yaml", "train"],
+    ],
 )
 def test_equirect_stiching(test_cfg_path, mode: str):
     meta_config = get_config(config_paths=test_cfg_path)
