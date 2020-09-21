@@ -22,7 +22,6 @@ This module API is experimental and likely to change
 """
 import abc
 import copy
-import math
 import numbers
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
@@ -223,264 +222,109 @@ class Cube2Equirec(nn.Module):
     Inspired from https://github.com/fuenwang/PanoramaUtility and
     optimized for modern PyTorch."""
 
-    def __init__(
-        self, equ_h: int, equ_w: int, cube_length: int, fov: int = 90
-    ):
+    def __init__(self, equ_h: int, equ_w: int):
         """Args:
         equ_h: (int) the height of the generated equirect
         equ_w: (int) the width of the generated equirect
-        cube_length: (int) the length of each side of the cubemap
-        fov: (int) the FOV of each camera making the cubemap
         """
         super(Cube2Equirec, self).__init__()
-        self.cube_h = cube_length
-        self.cube_w = cube_length
         self.equ_h = equ_h
         self.equ_w = equ_w
-        self.fov = fov
-        self.fov_rad = self.fov * np.pi / 180
+        self.grids = self.generate_grid(equ_h, equ_w)
+        self._grids_cache = None
 
-        # Compute the parameters for projection
-        assert self.cube_w == self.cube_h
-        self.radius = int(0.5 * cube_length)
+    def generate_grid(self, equ_h: int, equ_w: int) -> torch.Tensor:
+        # Project on sphere
+        theta_map, phi_map = self.get_theta_phi_map(equ_h, equ_w)
+        xyz_on_sphere = self.angle2sphere(theta_map, phi_map)
 
-        # Map equirectangular pixel to longitude and latitude
-        # NOTE: Make end a full length since arange have a right open bound [a, b)
-        theta_start = math.pi - (math.pi / equ_w)
-        theta_end = -math.pi
-        theta_step = 2 * math.pi / equ_w
-        theta_range = torch.arange(theta_start, theta_end, -theta_step)
+        # Rotate so that each face will be in front of camera
+        rotations = [
+            np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
+            np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
+            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
+            np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
+            np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
+            np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
+        ]
+        # Generate grid
+        grids = []
+        for rot in rotations:
+            R = torch.from_numpy(rot.T).float()
+            rotate_on_sphere = torch.matmul(
+                xyz_on_sphere.view((-1, 3)), R
+            ).view(equ_h, equ_w, 3)
 
-        phi_start = 0.5 * math.pi - (0.5 * math.pi / equ_h)
-        phi_end = -0.5 * math.pi
-        phi_step = math.pi / equ_h
-        phi_range = torch.arange(phi_start, phi_end, -phi_step)
+            # Project points on z=1 plane
+            grid = rotate_on_sphere / torch.abs(rotate_on_sphere[..., 2:3])
+            mask = torch.abs(grid).max(-1)[0] <= 1  # -1 <= grid.xy <= 1
+            mask *= grid[..., 2] == 1
+            grid[
+                ~mask
+            ] = 2  # values bigger than one will be ignored by grid_sample
+            grid_xy = -grid[..., :2].unsqueeze(0)
+            grids.append(grid_xy)
+        grids = torch.cat(grids, dim=0)
+        return grids
 
-        # Stack to get the longitude latitude map
-        self.theta_map = theta_range.unsqueeze(0).repeat(equ_h, 1)
-        self.phi_map = phi_range.unsqueeze(-1).repeat(1, equ_w)
-        self.lonlat_map = torch.stack([self.theta_map, self.phi_map], dim=-1)
-
-        # Get mapping relation (h, w, face) (orientation map)
-        # [back, down, front, left, right, up] => [0, 1, 2, 3, 4, 5]
-
-        # Project each face to 3D cube and convert to pixel coordinates
-        self.grid, self.orientation_mask = self.get_grid2()
-
-    def get_grid2(self):
-        # Get the point of equirectangular on 3D ball
-        x_3d = (
-            self.radius * torch.cos(self.phi_map) * torch.sin(self.theta_map)
-        ).view(self.equ_h, self.equ_w, 1)
-        y_3d = (self.radius * torch.sin(self.phi_map)).view(
-            self.equ_h, self.equ_w, 1
-        )
-        z_3d = (
-            self.radius * torch.cos(self.phi_map) * torch.cos(self.theta_map)
-        ).view(self.equ_h, self.equ_w, 1)
-
-        self.grid_ball = torch.cat([x_3d, y_3d, z_3d], 2).view(
-            self.equ_h, self.equ_w, 3
-        )
-
-        # Compute the down grid
-        radius_ratio_down = torch.abs(y_3d / self.radius)
-        grid_down_raw = self.grid_ball / radius_ratio_down.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_down_w = (
-            -grid_down_raw[:, :, 0].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_down_h = (
-            -grid_down_raw[:, :, 2].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_down = torch.cat([grid_down_w, grid_down_h], 2).unsqueeze(0)
-        mask_down = (
-            ((grid_down_w <= 1) * (grid_down_w >= -1))
-            * ((grid_down_h <= 1) * (grid_down_h >= -1))
-            * (grid_down_raw[:, :, 1] == -self.radius).unsqueeze(2)
-        ).float()
-
-        # Compute the up grid
-        radius_ratio_up = torch.abs(y_3d / self.radius)
-        grid_up_raw = self.grid_ball / radius_ratio_up.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_up_w = (-grid_up_raw[:, :, 0].clone() / self.radius).unsqueeze(-1)
-        grid_up_h = (grid_up_raw[:, :, 2].clone() / self.radius).unsqueeze(-1)
-        grid_up = torch.cat([grid_up_w, grid_up_h], 2).unsqueeze(0)
-        mask_up = (
-            ((grid_up_w <= 1) * (grid_up_w >= -1))
-            * ((grid_up_h <= 1) * (grid_up_h >= -1))
-            * (grid_up_raw[:, :, 1] == self.radius).unsqueeze(2)
-        ).float()
-
-        # Compute the front grid
-        radius_ratio_front = torch.abs(z_3d / self.radius)
-        grid_front_raw = self.grid_ball / radius_ratio_front.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_front_w = (
-            -grid_front_raw[:, :, 0].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_front_h = (
-            -grid_front_raw[:, :, 1].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_front = torch.cat([grid_front_w, grid_front_h], 2).unsqueeze(0)
-        mask_front = (
-            ((grid_front_w <= 1) * (grid_front_w >= -1))
-            * ((grid_front_h <= 1) * (grid_front_h >= -1))
-            * (torch.round(grid_front_raw[:, :, 2]) == self.radius).unsqueeze(
-                2
-            )
-        ).float()
-
-        # Compute the back grid
-        radius_ratio_back = torch.abs(z_3d / self.radius)
-        grid_back_raw = self.grid_ball / radius_ratio_back.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_back_w = (grid_back_raw[:, :, 0].clone() / self.radius).unsqueeze(
-            -1
-        )
-        grid_back_h = (
-            -grid_back_raw[:, :, 1].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_back = torch.cat([grid_back_w, grid_back_h], 2).unsqueeze(0)
-        mask_back = (
-            ((grid_back_w <= 1) * (grid_back_w >= -1))
-            * ((grid_back_h <= 1) * (grid_back_h >= -1))
-            * (torch.round(grid_back_raw[:, :, 2]) == -self.radius).unsqueeze(
-                2
-            )
-        ).float()
-
-        # Compute the right grid
-        radius_ratio_right = torch.abs(x_3d / self.radius)
-        grid_right_raw = self.grid_ball / radius_ratio_right.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_right_w = (
-            -grid_right_raw[:, :, 2].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_right_h = (
-            -grid_right_raw[:, :, 1].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_right = torch.cat([grid_right_w, grid_right_h], 2).unsqueeze(0)
-        mask_right = (
-            ((grid_right_w <= 1) * (grid_right_w >= -1))
-            * ((grid_right_h <= 1) * (grid_right_h >= -1))
-            * (torch.round(grid_right_raw[:, :, 0]) == -self.radius).unsqueeze(
-                2
-            )
-        ).float()
-
-        # Compute the left grid
-        radius_ratio_left = torch.abs(x_3d / self.radius)
-        grid_left_raw = self.grid_ball / radius_ratio_left.view(
-            self.equ_h, self.equ_w, 1
-        ).expand(-1, -1, 3)
-        grid_left_w = (grid_left_raw[:, :, 2].clone() / self.radius).unsqueeze(
-            -1
-        )
-        grid_left_h = (
-            -grid_left_raw[:, :, 1].clone() / self.radius
-        ).unsqueeze(-1)
-        grid_left = torch.cat([grid_left_w, grid_left_h], 2).unsqueeze(0)
-        mask_left = (
-            ((grid_left_w <= 1) * (grid_left_w >= -1))
-            * ((grid_left_h <= 1) * (grid_left_h >= -1))
-            * (torch.round(grid_left_raw[:, :, 0]) == self.radius).unsqueeze(2)
-        ).float()
-
-        # Face map contains numbers correspond to that face
-        orientation_mask = (
-            mask_back * 0
-            + mask_down * 1
-            + mask_front * 2
-            + mask_left * 3
-            + mask_right * 4
-            + mask_up * 5
-        )
-
-        return (
-            torch.cat(
-                [
-                    grid_back,
-                    grid_down,
-                    grid_front,
-                    grid_left,
-                    grid_right,
-                    grid_up,
-                ],
-                0,
-            ),
-            orientation_mask,
-        )
-
-    # Convert cubic images to equirectangular
-    def _to_equirec(self, batch: torch.Tensor):
+    def _to_equirec(self, batch: torch.Tensor) -> torch.Tensor:
+        """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
         batch_size, ch, _H, _W = batch.shape
-        if batch_size != 6:
-            raise ValueError("Batch size mismatch!!")
-
-        output = torch.zeros(
-            1, ch, self.equ_h, self.equ_w, device=batch.device
+        if batch_size == 0 or batch_size % 6 != 0:
+            raise ValueError("Batch size should be 6x")
+        output = torch.nn.functional.grid_sample(
+            batch,
+            self._grids_cache,
+            align_corners=True,
+            padding_mode="zeros",
         )
-
-        for ori in range(6):
-            grid = self.grid[ori, :, :, :].unsqueeze(
-                0
-            )  # 1, self.equ_h, self.equ_w, 2
-            mask = (self.orientation_mask == ori).unsqueeze(
-                0
-            )  # 1, self.equ_h, self.equ_w, 1
-
-            masked_grid = grid * mask.float().expand(
-                -1, -1, -1, 2
-            )  # 1, self.equ_h, self.equ_w, 2
-
-            source_image = batch[ori].unsqueeze(0)  # 1, ch, H, W
-
-            sampled_image = torch.nn.functional.grid_sample(
-                source_image,
-                masked_grid,
-                align_corners=False,
-                padding_mode="border",
-            )  # 1, ch, self.equ_h, self.equ_w
-
-            sampled_image_masked = sampled_image * (
-                mask.float()
-                .view(1, 1, self.equ_h, self.equ_w)
-                .expand(1, ch, -1, -1)
-            )
-            output = (
-                output + sampled_image_masked
-            )  # 1, ch, self.equ_h, self.equ_w
-
-        return output
+        output = output.view(
+            batch_size // 6, 6, ch, self.equ_h, self.equ_w
+        ).sum(dim=1)
+        return output  # batch_size // 6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
-    def to_equirec_tensor(self, batch: torch.Tensor):
-        # Move the params to the right device. NOOP after first call
-        self.grid = self.grid.to(batch.device)
-        self.orientation_mask = self.orientation_mask.to(batch.device)
-        # Check whether batch size is 6x
+    def to_equirec_tensor(self, batch: torch.Tensor) -> torch.Tensor:
         batch_size = batch.size()[0]
-        if batch_size % 6 != 0:
+
+        # Check whether batch size is 6x
+        if batch_size == 0 or batch_size % 6 != 0:
             raise ValueError("Batch size should be 6x")
 
-        processed = []
-        for idx in range(int(batch_size / 6)):
-            target = batch[idx * 6 : (idx + 1) * 6, :, :, :]
-            target_processed = self._to_equirec(target)
-            processed.append(target_processed)
+        # to(device) is a NOOP after the first call
+        self.grids = self.grids.to(batch.device)
 
-        output = torch.cat(processed, 0)
-        return output
+        # Cache the repeated grids for subsequent batches
+        if (
+            self._grids_cache is None
+            or self._grids_cache.size()[0] != batch_size
+        ):
+            self._grids_cache = self.grids.repeat(batch_size // 6, 1, 1, 1)
+            assert self._grids_cache.size()[0] == batch_size
+        self._grids_cache = self._grids_cache.to(batch.device)
+        return self._to_equirec(batch)
 
-    def forward(self, batch: torch.Tensor):
+    def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.to_equirec_tensor(batch)
+
+    # Get theta and phi map
+    def get_theta_phi_map(self, equ_h: int, equ_w: int) -> torch.Tensor:
+        phi, theta = torch.meshgrid(torch.arange(equ_h), torch.arange(equ_w))
+        theta_map = -(theta + 0.5) * 2 * np.pi / equ_w + np.pi
+        phi_map = -(phi + 0.5) * np.pi / equ_h + np.pi / 2
+        return theta_map, phi_map
+
+    # Project on unit sphere
+    def angle2sphere(
+        self, theta_map: torch.Tensor, phi_map: torch.Tensor
+    ) -> torch.Tensor:
+        sin_theta = torch.sin(theta_map)
+        cos_theta = torch.cos(theta_map)
+        sin_phi = torch.sin(phi_map)
+        cos_phi = torch.cos(phi_map)
+        return torch.stack(
+            [cos_phi * sin_theta, sin_phi, cos_phi * cos_theta], dim=-1
+        )
 
 
 @baseline_registry.register_obs_transformer()
@@ -500,13 +344,13 @@ class CubeMap2Equirec(ObservationTransformer):
         self,
         sensor_uuids: List[str],
         eq_shape: Tuple[int],
-        cubemap_length: int,
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
     ):
         r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param eq_shape: The shape of the equirectangular output (height, width)
-        :param cubemap_length: int length of the each side of the cubemap
+        :param channels_last: Are the channels last in the input
+        :param target_uuids: Optional List of which of the sensor_uuids to overwrite
         """
         super(CubeMap2Equirec, self).__init__()
         num_sensors = len(sensor_uuids)
@@ -517,16 +361,10 @@ class CubeMap2Equirec(ObservationTransformer):
         assert (
             len(eq_shape) == 2
         ), f"eq_shape must be a tuple of (height, width), given: {eq_shape}"
-        assert (
-            cubemap_length > 0
-        ), f"cubemap_length must be greater than 0: provided {cubemap_length}"
         self.sensor_uuids: List[str] = sensor_uuids
         self.eq_shape: Tuple[int] = eq_shape
-        self.cubemap_length: int = cubemap_length
         self.channels_last: bool = channels_last
-        self.c2eq: nn.Module = Cube2Equirec(
-            eq_shape[0], eq_shape[1], cubemap_length
-        )
+        self.c2eq: nn.Module = Cube2Equirec(eq_shape[0], eq_shape[1])
         if target_uuids == None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
@@ -539,16 +377,20 @@ class CubeMap2Equirec(ObservationTransformer):
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (EQ_H, EQ_W)"""
         # Transforms the observation space to of the target UUID
-        observation_space = copy.deepcopy(observation_space)
         for i, key in enumerate(self.target_uuids):
             assert (
                 key in observation_space.spaces
             ), f"{key} not found in observation space: {observation_space.spaces}"
-            c = self.cubemap_length
-            logger.info(
-                f"Overwrite sensor: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+            h, w = get_image_height_width(
+                observation_space.spaces[key], channels_last=True
             )
-            if (c, c) != self.eq_shape:
+            assert (
+                h == w
+            ), f"cubemap height and width must be the same, but is {h} and {w}"
+            logger.info(
+                f"Overwrite sensor: {key} from size of ({h}, {w}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+            )
+            if (h, w) != self.eq_shape:
                 observation_space.spaces[key] = overwrite_gym_box_shape(
                     observation_space.spaces[key], self.eq_shape
                 )
@@ -568,7 +410,6 @@ class CubeMap2Equirec(ObservationTransformer):
                 cube2eq_config.HEIGHT,
                 cube2eq_config.WIDTH,
             ),
-            cubemap_length=cube2eq_config.CUBE_LENGTH,
             target_uuids=target_uuids,
         )
 
@@ -576,21 +417,24 @@ class CubeMap2Equirec(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        for i in range(0, len(self.target_uuids), 6):
+        for i, target_sensor_uuid in enumerate(self.target_uuids):
             # The UUID we are overwriting
-            target_sensor_uuid = self.target_uuids[i // 6]
-            assert target_sensor_uuid in self.sensor_uuids[i : i + 6]
+            assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
             sensor_obs = [
-                observations[sensor] for sensor in self.sensor_uuids[i : i + 6]
+                observations[sensor]
+                for sensor in self.sensor_uuids[i * 6 : (i + 1) * 6]
             ]
-            sensor_dtype = observations[target_sensor_uuid].dtype
+            target_obs = observations[target_sensor_uuid]
+            sensor_dtype = target_obs.dtype
             # Stacking along axis makes the flattening go in the right order.
             imgs = torch.stack(sensor_obs, axis=1)
             imgs = torch.flatten(imgs, end_dim=1)
             if not self.channels_last:
                 imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
-            imgs = imgs.float()
+            imgs = imgs.float()  # NCHW
             equirect = self.c2eq(imgs)  # Here is where the stiching happens
+            # for debugging
+            # torchvision.utils.save_image(equirect, f'sample_eqr_{target_sensor_uuid}.jpg', normalize=True, range=(0, 255) if 'rgb' in target_sensor_uuid else (0, 1))
             equirect = equirect.to(dtype=sensor_dtype)
             if not self.channels_last:
                 equirect = equirect.permute((0, 2, 3, 1))  # NCHW => NHWC
