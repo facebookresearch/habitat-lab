@@ -456,10 +456,10 @@ class Cube2Equirec(nn.Module):
             self.mask.float()
             .view(-1, 6, 1, self.equ_h, self.equ_w)
             .expand(1, 6, ch, -1, -1)
-        )  # batch_size//6, 6, ch, self.equ_h, self.equ_w
+        )  # batch_size // 6, 6, ch, self.equ_h, self.equ_w
         return torch.sum(
             sampled_image_masked, dim=1
-        )  # batch_size//6, ch, self.equ_h, self.equ_w
+        )  # batch_size // 6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor):
