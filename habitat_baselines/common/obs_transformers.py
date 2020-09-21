@@ -231,6 +231,7 @@ class Cube2Equirec(nn.Module):
         self.equ_h = equ_h
         self.equ_w = equ_w
         self.grids = self.generate_grid(equ_h, equ_w)
+        self._grids_cache = None
 
     def generate_grid(self, equ_h, equ_w) -> torch.Tensor:
         # Project on sphere
@@ -268,30 +269,40 @@ class Cube2Equirec(nn.Module):
 
     def _to_equirec(self, batch: torch.Tensor) -> torch.Tensor:
         """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
-        batch_size, ch, _H, _W = batch.shape
+        batch_size, ch, H, W = batch.shape
         cubemap_sides = batch.size()[0]
         if cubemap_sides == 0 or cubemap_sides % 6 != 0:
             raise ValueError("Batch size should be 6x")
         output = torch.nn.functional.grid_sample(
             batch,
-            self.grids.repeat(batch_size // 6, 1, 1, 1),
+            self._grids_cache,
             align_corners=True,
             padding_mode="zeros",
         )
         output = output.view(
-            batch_size // 6, 6, -1, self.equ_h, self.equ_w
+            batch_size // 6, 6, ch, self.equ_h, self.equ_w
         ).sum(dim=1)
         return output  # batch_size // 6, ch, self.equ_h, self.equ_w
 
     # Convert input cubic tensor to output equirectangular image
     def to_equirec_tensor(self, batch: torch.Tensor) -> torch.Tensor:
-        # Move the params to the right device. NOOP after first call
-        self.grids = self.grids.to(batch.device)
+        batch_size = batch.size()[0]
+
         # Check whether batch size is 6x
-        cubemap_sides = batch.size()[0]
-        if cubemap_sides == 0 or cubemap_sides % 6 != 0:
+        if batch_size == 0 or batch_size % 6 != 0:
             raise ValueError("Batch size should be 6x")
 
+        # to(device) is a NOOP after the first call
+        self.grids = self.grids.to(batch.device)
+
+        # Cache the repeated grids for subsequent batches
+        if (
+            self._grids_cache is None
+            or self._grids_cache.size()[0] != batch_size
+        ):
+            self._grids_cache = self.grids.repeat(batch_size // 6, 1, 1, 1)
+            assert self._grids_cache.size()[0] == batch_size
+        self._grids_cache = self._grids_cache.to(batch.device)
         return self._to_equirec(batch)
 
     def forward(self, batch: torch.Tensor):
