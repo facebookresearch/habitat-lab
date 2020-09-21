@@ -233,7 +233,7 @@ class Cube2Equirec(nn.Module):
         self.grids = self.generate_grid(equ_h, equ_w)
         self._grids_cache = None
 
-    def generate_grid(self, equ_h, equ_w) -> torch.Tensor:
+    def generate_grid(self, equ_h: int, equ_w: int) -> torch.Tensor:
         # Project on sphere
         theta_map, phi_map = self.get_theta_phi_map(equ_h, equ_w)
         xyz_on_sphere = self.angle2sphere(theta_map, phi_map)
@@ -304,7 +304,7 @@ class Cube2Equirec(nn.Module):
         self._grids_cache = self._grids_cache.to(batch.device)
         return self._to_equirec(batch)
 
-    def forward(self, batch: torch.Tensor):
+    def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.to_equirec_tensor(batch)
 
     # Get theta and phi map
