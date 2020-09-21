@@ -269,9 +269,8 @@ class Cube2Equirec(nn.Module):
 
     def _to_equirec(self, batch: torch.Tensor) -> torch.Tensor:
         """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
-        batch_size, ch, H, W = batch.shape
-        cubemap_sides = batch.size()[0]
-        if cubemap_sides == 0 or cubemap_sides % 6 != 0:
+        batch_size, ch, _H, _W = batch.shape
+        if batch_size == 0 or batch_size % 6 != 0:
             raise ValueError("Batch size should be 6x")
         output = torch.nn.functional.grid_sample(
             batch,
