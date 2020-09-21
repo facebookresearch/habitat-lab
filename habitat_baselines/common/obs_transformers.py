@@ -22,7 +22,6 @@ This module API is experimental and likely to change
 """
 import abc
 import copy
-import math
 import numbers
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
