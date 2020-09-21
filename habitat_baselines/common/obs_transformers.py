@@ -222,26 +222,17 @@ class Cube2Equirec(nn.Module):
     Inspired from https://github.com/fuenwang/PanoramaUtility and
     optimized for modern PyTorch."""
 
-    def __init__(
-        self,
-        equ_h: int,
-        equ_w: int,
-        cube_length: Optional[int] = None,
-        fov: int = 90,
-    ):
+    def __init__(self, equ_h: int, equ_w: int):
         """Args:
         equ_h: (int) the height of the generated equirect
         equ_w: (int) the width of the generated equirect
-        cube_length: (int) the length of each side of the cubemap (unused)
-        fov: (int) the FOV of each camera making the cubemap
         """
         super(Cube2Equirec, self).__init__()
-        assert fov == 90, "Only implemented for fov=90deg"
         self.equ_h = equ_h
         self.equ_w = equ_w
         self.grids = self.generate_grid(equ_h, equ_w)
 
-    def generate_grid(self, equ_h: int, equ_w: int) -> torch.Tensor:
+    def generate_grid(self, equ_h, equ_w) -> torch.Tensor:
         # Project on sphere
         theta_map, phi_map = self.get_theta_phi_map(equ_h, equ_w)
         xyz_on_sphere = self.angle2sphere(theta_map, phi_map)
@@ -303,7 +294,7 @@ class Cube2Equirec(nn.Module):
 
         return self._to_equirec(batch)
 
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
+    def forward(self, batch: torch.Tensor):
         return self.to_equirec_tensor(batch)
 
     # Get theta and phi map
@@ -343,13 +334,13 @@ class CubeMap2Equirec(ObservationTransformer):
         self,
         sensor_uuids: List[str],
         eq_shape: Tuple[int],
-        cubemap_length: int,
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
     ):
         r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param eq_shape: The shape of the equirectangular output (height, width)
-        :param cubemap_length: int length of the each side of the cubemap
+        :param channels_last: Are the channels last in the input
+        :param target_uuids: Optional List of which of the sensor_uuids to overwrite
         """
         super(CubeMap2Equirec, self).__init__()
         num_sensors = len(sensor_uuids)
@@ -360,16 +351,10 @@ class CubeMap2Equirec(ObservationTransformer):
         assert (
             len(eq_shape) == 2
         ), f"eq_shape must be a tuple of (height, width), given: {eq_shape}"
-        assert (
-            cubemap_length > 0
-        ), f"cubemap_length must be greater than 0: provided {cubemap_length}"
         self.sensor_uuids: List[str] = sensor_uuids
         self.eq_shape: Tuple[int] = eq_shape
-        self.cubemap_length: int = cubemap_length
         self.channels_last: bool = channels_last
-        self.c2eq: nn.Module = Cube2Equirec(
-            eq_shape[0], eq_shape[1], cubemap_length
-        )
+        self.c2eq: nn.Module = Cube2Equirec(eq_shape[0], eq_shape[1])
         if target_uuids == None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
@@ -386,11 +371,16 @@ class CubeMap2Equirec(ObservationTransformer):
             assert (
                 key in observation_space.spaces
             ), f"{key} not found in observation space: {observation_space.spaces}"
-            c = self.cubemap_length
-            logger.info(
-                f"Overwrite sensor: {key} from size of ({c}, {c}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+            h, w = get_image_height_width(
+                observation_space.spaces[key], channels_last=True
             )
-            if (c, c) != self.eq_shape:
+            assert (
+                h == w
+            ), f"cubemap height and width must be the same, but is {h} and {w}"
+            logger.info(
+                f"Overwrite sensor: {key} from size of ({h}, {w}) to equirect image of {self.eq_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+            )
+            if (h, w) != self.eq_shape:
                 observation_space.spaces[key] = overwrite_gym_box_shape(
                     observation_space.spaces[key], self.eq_shape
                 )
@@ -410,7 +400,6 @@ class CubeMap2Equirec(ObservationTransformer):
                 cube2eq_config.HEIGHT,
                 cube2eq_config.WIDTH,
             ),
-            cubemap_length=cube2eq_config.CUBE_LENGTH,
             target_uuids=target_uuids,
         )
 
