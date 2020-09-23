@@ -610,6 +610,136 @@ class Cube2Fisheye(nn.Module):
         return unprojected_unit, fov_mask
 
 
+@baseline_registry.register_obs_transformer()
+class CubeMap2Fisheye(ObservationTransformer):
+    r"""This is an experimental use of ObservationTransformer that converts a cubemap
+    output to a fisheye one through projection. This needs to be fed
+    a list of 6 cameras at various orientations but will be able to stitch a
+    fisheye image out of these inputs. The code below will generate a config that
+    has the 6 sensors in the proper orientations. This code also assumes a 90
+    FOV.
+
+    Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
+    The output will be writen the UUID of the first sensor.
+    """
+
+    def __init__(
+        self,
+        sensor_uuids: List[str],
+        fish_shape: Tuple[int],
+        fish_fov: float,
+        fish_params: Tuple[float],
+        channels_last: bool = False,
+        target_uuids: Optional[List[str]] = None,
+    ):
+        r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
+        :param fish_shape: The shape of the fisheye output (height, width)
+        :param fish_fov: The FoV of the fisheye output in degrees
+        :param fish_params: The camera parameters of fisheye output (f, xi, alpha)
+        :param channels_last: Are the channels last in the input
+        :param target_uuids: Optional List of which of the sensor_uuids to overwrite
+        """
+        super(CubeMap2Fisheye, self).__init__()
+        num_sensors = len(sensor_uuids)
+        assert (
+            num_sensors % 6 == 0 and num_sensors != 0
+        ), f"{len(sensor_uuids)}: length of sensors is not a multiple of 6"
+        # TODO verify attributes of the sensors in the config if possible. Think about API design
+        assert (
+            len(fish_shape) == 2
+        ), f"fish_shape must be a tuple of (height, width), given: {fish_shape}"
+        assert len(fish_params) == 3
+        self.sensor_uuids: List[str] = sensor_uuids
+        self.fish_shape: Tuple[int] = fish_shape
+        self.channels_last: bool = channels_last
+        # fisheye camera parameters
+        fx = fish_params[0] * min(fish_shape)
+        fy = fx
+        cx = fish_shape[1] / 2
+        cy = fish_shape[0] / 2
+        xi = fish_params[1]
+        alpha = fish_params[2]
+        self.c2fish: nn.Module = Cube2Fisheye(
+            fish_shape[0], fish_shape[1], fish_fov, cx, cy, fx, fy, xi, alpha
+        )
+
+        if target_uuids == None:
+            self.target_uuids: List[str] = self.sensor_uuids[::6]
+        else:
+            self.target_uuids: List[str] = target_uuids
+        # TODO support and test different FOVs than just 90
+
+    def transform_observation_space(
+        self,
+        observation_space: SpaceDict,
+    ):
+        r"""Transforms the target UUID's sensor obs_space so it matches the new shape (FISH_H, FISH_W)"""
+        # Transforms the observation space to of the target UUID
+        for i, key in enumerate(self.target_uuids):
+            assert (
+                key in observation_space.spaces
+            ), f"{key} not found in observation space: {observation_space.spaces}"
+            h, w = get_image_height_width(
+                observation_space.spaces[key], channels_last=True
+            )
+            assert (
+                h == w
+            ), f"cubemap height and width must be the same, but is {h} and {w}"
+            logger.info(
+                f"Overwrite sensor: {key} from size of ({h}, {w}) to fisheye image of {self.fish_shape} from sensors: {self.sensor_uuids[i*6:(i+1)*6]}"
+            )
+            if (h, w) != self.fish_shape:
+                observation_space.spaces[key] = overwrite_gym_box_shape(
+                    observation_space.spaces[key], self.fish_shape
+                )
+        return observation_space
+
+    @classmethod
+    def from_config(cls, config):
+        cube2fish_config = config.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH
+        if hasattr(cube2fish_config, "TARGET_UUIDS"):
+            # Optional Config Value to specify target UUID
+            target_uuids = cube2fish_config.TARGET_UUIDS
+        else:
+            target_uuids = None
+        return cls(
+            cube2fish_config.SENSOR_UUIDS,
+            fish_shape=(
+                cube2fish_config.HEIGHT,
+                cube2fish_config.WIDTH,
+            ),
+            fish_fov=cube2fish_config.FOV,
+            fish_params=cube2fish_config.PARAMS,
+            target_uuids=target_uuids,
+        )
+
+    @torch.no_grad()
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        for i, target_sensor_uuid in enumerate(self.target_uuids):
+            # The UUID we are overwriting
+            assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
+            sensor_obs = [
+                observations[sensor]
+                for sensor in self.sensor_uuids[i * 6 : (i + 1) * 6]
+            ]
+            target_obs = observations[target_sensor_uuid]
+            sensor_dtype = target_obs.dtype
+            # Stacking along axis makes the flattening go in the right order.
+            imgs = torch.stack(sensor_obs, axis=1)
+            imgs = torch.flatten(imgs, end_dim=1)
+            if not self.channels_last:
+                imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
+            imgs = imgs.float()  # NCHW
+            fisheye = self.c2fish(imgs)  # Here is where the stiching happens
+            fisheye = fisheye.to(dtype=sensor_dtype)
+            if not self.channels_last:
+                fisheye = fisheye.permute((0, 2, 3, 1))  # NCHW => NHWC
+            observations[target_sensor_uuid] = fisheye
+        return observations
+
+
 def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     active_obs_transforms = []
     if hasattr(config.RL.POLICY, "OBS_TRANSFORMS"):
