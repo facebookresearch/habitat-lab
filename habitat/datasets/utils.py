@@ -85,6 +85,15 @@ class VocabDict:
     def idx2word(self, n_w):
         return self.word_list[n_w]
 
+    def token_idx_2_string(self, tokens):
+        q_string = ""
+        for token in tokens:
+            if token != 0:
+                q_string += self.idx2word(token) + " "
+
+        q_string += "?"
+        return q_string
+
     def __len__(self):
         return len(self.word_list)
 

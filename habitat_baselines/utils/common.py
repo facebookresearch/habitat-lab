@@ -307,3 +307,17 @@ def overwrite_gym_box_shape(box: Box, shape) -> Box:
     low = box.low if np.isscalar(box.low) else np.min(box.low)
     high = box.high if np.isscalar(box.high) else np.max(box.high)
     return Box(low=low, high=high, shape=shape, dtype=box.dtype)
+
+
+def get_scene_episode_dict(episodes: List) -> Dict:
+    scene_ids = []
+    scene_episode_dict = {}
+
+    for episode in episodes:
+        if episode.scene_id not in scene_ids:
+            scene_ids.append(episode.scene_id)
+            scene_episode_dict[episode.scene_id] = [episode]
+        else:
+            scene_episode_dict[episode.scene_id].append(episode)
+
+    return scene_episode_dict
