@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Iterable, Tuple
 
 import torch
 import torch.nn as nn
@@ -6,12 +7,12 @@ import torch.nn.functional as F
 
 
 def build_mlp(
-    input_dim,
-    hidden_dims,
-    output_dim,
-    use_batchnorm=False,
-    dropout=0,
-    add_sigmoid=1,
+    input_dim: int,
+    hidden_dims: Iterable[int],
+    output_dim: int,
+    use_batchnorm: bool = False,
+    dropout: float = 0,
+    add_sigmoid: bool = True,
 ):
     layers = []
     D = input_dim
@@ -29,7 +30,7 @@ def build_mlp(
         D = dim
     layers.append(nn.Linear(D, output_dim))
 
-    if add_sigmoid == 1:
+    if add_sigmoid:
         layers.append(nn.Sigmoid())
 
     return nn.Sequential(*layers)
@@ -38,11 +39,11 @@ def build_mlp(
 class MultitaskCNN(nn.Module):
     def __init__(
         self,
-        num_classes=41,
-        only_encoder=False,
-        pretrained=True,
-        checkpoint_path="data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
-        freeze_encoder=False,
+        num_classes: int = 41,
+        only_encoder: bool = False,
+        pretrained: bool = True,
+        checkpoint_path: str = "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
+        freeze_encoder: bool = False,
     ):
         super(MultitaskCNN, self).__init__()
 
@@ -210,11 +211,11 @@ class MultitaskCNN(nn.Module):
 class QuestionLstmEncoder(nn.Module):
     def __init__(
         self,
-        token_to_idx,
-        wordvec_dim=64,
-        rnn_dim=64,
-        rnn_num_layers=2,
-        rnn_dropout=0,
+        token_to_idx: Dict,
+        wordvec_dim: int = 64,
+        rnn_dim: int = 64,
+        rnn_num_layers: int = 2,
+        rnn_dropout: int = 0,
     ):
         super(QuestionLstmEncoder, self).__init__()
 
@@ -257,18 +258,18 @@ class QuestionLstmEncoder(nn.Module):
 class VqaLstmCnnAttentionModel(nn.Module):
     def __init__(
         self,
-        q_vocab,
-        ans_vocab,
-        eqa_cnn_pretrain_ckpt_path,
-        freeze_encoder=False,
-        image_feat_dim=64,
-        question_wordvec_dim=64,
-        question_hidden_dim=64,
-        question_num_layers=2,
-        question_dropout=0.5,
-        fc_use_batchnorm=False,
-        fc_dropout=0.5,
-        fc_dims=(64,),
+        q_vocab: Dict,
+        ans_vocab: Dict,
+        eqa_cnn_pretrain_ckpt_path: str,
+        freeze_encoder: bool = False,
+        image_feat_dim: int = 64,
+        question_wordvec_dim: int = 64,
+        question_hidden_dim: int = 64,
+        question_num_layers: int = 2,
+        question_dropout: float = 0.5,
+        fc_use_batchnorm: bool = False,
+        fc_dropout: float = 0.5,
+        fc_dims: Iterable = (64,),
     ):
         super(VqaLstmCnnAttentionModel, self).__init__()
 
@@ -303,7 +304,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "output_dim": len(ans_vocab),
             "use_batchnorm": True,
             "dropout": fc_dropout,
-            "add_sigmoid": 0,
+            "add_sigmoid": False,
         }
         self.classifier = build_mlp(**classifier_kwargs)
 
@@ -311,7 +312,10 @@ class VqaLstmCnnAttentionModel(nn.Module):
             nn.Tanh(), nn.Dropout(p=0.5), nn.Linear(128, 1)
         )
 
-    def forward(self, images, questions):
+    def forward(
+        self, images: torch.Tensor, questions: torch.Tensor
+    ) -> Tuple[torch.tensor]:
+
         N, T, _, _, _ = images.size()
         # bs x 5 x 3 x 256 x 256
         img_feats = self.cnn(

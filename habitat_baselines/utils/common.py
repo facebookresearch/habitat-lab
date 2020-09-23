@@ -15,6 +15,7 @@ import torch
 from gym.spaces import Box
 from torch import nn as nn
 
+from habitat.core.dataset import Episode
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
@@ -309,7 +310,7 @@ def overwrite_gym_box_shape(box: Box, shape) -> Box:
     return Box(low=low, high=high, shape=shape, dtype=box.dtype)
 
 
-def get_scene_episode_dict(episodes: List) -> Dict:
+def get_scene_episode_dict(episodes: List[Episode]) -> Dict:
     scene_ids = []
     scene_episode_dict = {}
 

@@ -9,7 +9,7 @@
 """
 import re
 from collections import Counter
-from typing import List
+from typing import Iterable, List
 
 from habitat.core.logging import logger
 from habitat.core.simulator import ShortestPathPoint
@@ -85,7 +85,7 @@ class VocabDict:
     def idx2word(self, n_w):
         return self.word_list[n_w]
 
-    def token_idx_2_string(self, tokens):
+    def token_idx_2_string(self, tokens: Iterable[int]) -> str:
         q_string = ""
         for token in tokens:
             if token != 0:

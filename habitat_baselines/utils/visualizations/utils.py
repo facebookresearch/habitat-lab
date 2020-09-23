@@ -131,7 +131,7 @@ def save_vqa_image_results(
     question: str,
     prediction: str,
     ground_truth: str,
-    path,
+    path: str,
 ) -> None:
     r"""For saving VQA input images with input question and predicted answer.
     Being used to save model predictions during eval.

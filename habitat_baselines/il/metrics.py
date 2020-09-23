@@ -61,7 +61,7 @@ class Metric:
 
         self.stats.append(copy.deepcopy(current_stats))
 
-    def get_stat_string(self, mode=1) -> str:
+    def get_stat_string(self, mode: int = 1) -> str:
 
         stat_string = ""
 
@@ -78,7 +78,7 @@ class Metric:
 
         return stat_string
 
-    def get_stats(self, mode=1) -> List:
+    def get_stats(self, mode: int = 1) -> List[float]:
         stats = []
         for i in range(len(self.metric_names)):
             stats.append(self.metrics[i][mode])
