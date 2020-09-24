@@ -327,6 +327,7 @@ class Cube2Equirec(nn.Module):
         )
 
 
+# TODO Measure Inheritance of CubeMap2Equirec + CubeMap2FishEye into same abstract class
 @baseline_registry.register_obs_transformer()
 class CubeMap2Equirec(ObservationTransformer):
     r"""This is an experimental use of ObservationTransformer that converts a cubemap
