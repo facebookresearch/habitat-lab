@@ -81,21 +81,16 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,mode,camera",
+    "test_cfg_path,mode",
     [
         [
             "habitat_baselines/config/test/ppo_pointnav_test.yaml",
             "train",
-            "equirec",
-        ],
-        [
-            "habitat_baselines/config/test/ppo_pointnav_test.yaml",
-            "train",
-            "fisheye",
         ],
     ],
 )
-def test_equirect_stiching(test_cfg_path: str, mode: str, camera: str):
+@pytest.mark.parametrize("camera", ["equirect", "fisheye"])
+def test_cubemap_stiching(test_cfg_path: str, mode: str, camera: str):
     meta_config = get_config(config_paths=test_cfg_path)
     meta_config.defrost()
     config = meta_config.TASK_CONFIG
