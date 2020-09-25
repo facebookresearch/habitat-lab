@@ -83,10 +83,14 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
 @pytest.mark.parametrize(
     "test_cfg_path,mode",
     [
-        ["habitat_baselines/config/test/ppo_pointnav_test.yaml", "train"],
+        [
+            "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "train",
+        ],
     ],
 )
-def test_equirect_stiching(test_cfg_path, mode: str):
+@pytest.mark.parametrize("camera", ["equirect", "fisheye"])
+def test_cubemap_stiching(test_cfg_path: str, mode: str, camera: str):
     meta_config = get_config(config_paths=test_cfg_path)
     meta_config.defrost()
     config = meta_config.TASK_CONFIG
@@ -127,9 +131,14 @@ def test_equirect_stiching(test_cfg_path, mode: str):
 
     meta_config.TASK_CONFIG = config
     meta_config.SENSORS = config.SIMULATOR.AGENT_0.SENSORS
-    meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
-        sensor_uuids
-    )
+    if camera == "equirec":
+        meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
+            sensor_uuids
+        )
+    elif camera == "fisheye":
+        meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = tuple(
+            sensor_uuids
+        )
     meta_config.freeze()
     execute_exp(meta_config, mode)
     # Deinit processes group
