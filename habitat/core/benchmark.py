@@ -199,12 +199,14 @@ class Benchmark:
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         avg_metrics['num_episodes'] = count_episodes
+        avg_metrics['input_args'] = ' '.join([str(x) for x in sys.argv])
 
         try:
-            print (" ".join(sys.argv))
+            print (avg_metrics['input_args'])
             print (agent.params.name)
         except:
             pass
+
 
         import json
         timestamp_str = time.strftime('%m-%d-%H-%M-%S', time.localtime())
