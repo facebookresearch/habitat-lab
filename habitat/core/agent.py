@@ -19,7 +19,7 @@ class Agent:
     This abstract class standardizes agents to allow seamless benchmarking.
     """
 
-    def reset(self) -> None:
+    def reset(self, last_success=None) -> None:
         r"""Called before starting a new episode in environment.
         """
         raise NotImplementedError

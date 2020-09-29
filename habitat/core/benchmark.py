@@ -131,6 +131,7 @@ class Benchmark:
 
         agg_metrics: Dict = defaultdict(float)
         episode_metrics = dict(scene=[], num_steps=[], time=[], num_collisions=[], xy_error=[], spl=[], softspl=[], success=[])
+        last_success = None
 
         for _ in range(skip_first_n):
             self._env.reset()
@@ -138,7 +139,7 @@ class Benchmark:
         count_episodes = 0
         try:
             while count_episodes < num_episodes:
-                agent.reset()
+                agent.reset(last_success=last_success)
                 observations = self._env.reset()
                 # metrics = self._env.get_metrics()
                 action = None
@@ -181,6 +182,7 @@ class Benchmark:
                 episode_metrics['spl'].append(metrics['spl'])
                 episode_metrics['softspl'].append(metrics['softspl'])
                 episode_metrics['success'].append(metrics['success'])
+                last_success = metrics['success']
 
                 print ("%d/%d: Meann success: %f, spl: %f. err: %f This trial success: %f. SPL: %f  SOFT_SPL: %f. err %f"%(
                     count_episodes, num_episodes,
