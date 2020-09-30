@@ -346,10 +346,6 @@ class RLEnv(gym.Env):
     def current_episode(self) -> Type[Episode]:
         return self._env.current_episode
 
-    @episodes.setter
-    def episodes(self, episodes: List[Type[Episode]]) -> None:
-        self._env.episodes = episodes
-
     def reset(self) -> Observations:
         return self._env.reset()
 

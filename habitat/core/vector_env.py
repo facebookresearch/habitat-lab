@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import signal
+from collections.abc import Collection
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -36,9 +37,9 @@ try:
     # We have yet to find a reason to not use it and
     # you are required to use it when sending a torch.Tensor
     # between processes
-    from torch import multiprocessing as mp
+    from torch import multiprocessing as mp  # type:ignore
 except ImportError:
-    import multiprocessing as mp
+    import multiprocessing as mp  # type:ignore
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -155,7 +156,7 @@ class VectorEnv:
         self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
-        self._paused = []
+        self._paused: List[Tuple] = []
 
     @property
     def num_envs(self):
@@ -279,7 +280,7 @@ class VectorEnv:
                     parent_conn,
                 ),
             )
-            self._workers.append(ps)
+            self._workers.append(ps)  # type: ignore
             ps.daemon = True
             ps.start()
             worker_conn.close()
@@ -551,9 +552,10 @@ class ThreadedVectorEnv(VectorEnv):
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
+        queues: Tuple[Collection, Collection] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
+        parent_read_queues, parent_write_queues = queues
         self._workers = []
         for parent_read_queue, parent_write_queue, env_args in zip(
             parent_read_queues, parent_write_queues, env_fn_args
