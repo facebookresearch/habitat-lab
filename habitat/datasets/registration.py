@@ -17,7 +17,7 @@ def make_dataset(id_dataset, **kwargs):
     _dataset = registry.get_dataset(id_dataset)
     assert _dataset is not None, "Could not find dataset {}".format(id_dataset)
 
-    return _dataset(**kwargs)
+    return _dataset(**kwargs)  # type: ignore
 
 
 _try_register_objectnavdatasetv1()

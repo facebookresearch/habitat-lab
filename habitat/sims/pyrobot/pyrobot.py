@@ -81,7 +81,9 @@ class PyRobotRGBSensor(RGBSensor):
             dtype=np.uint8,
         )
 
-    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
+    def get_observation(  # type: ignore
+        self, robot_obs, *args: Any, **kwargs: Any
+    ):
         obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -116,7 +118,9 @@ class PyRobotDepthSensor(DepthSensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
+    def get_observation(  # type: ignore
+        self, robot_obs, *args: Any, **kwargs: Any
+    ):
         obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -144,7 +148,9 @@ class PyRobotBumpSensor(BumpSensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(low=False, high=True, shape=(1,), dtype=np.bool)
 
-    def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
+    def get_observation(  # type: ignore
+        self, robot_obs, *args: Any, **kwargs: Any
+    ):
         return np.array(robot_obs["bump"])
 
 

@@ -1,18 +1,15 @@
-#!/usr/bin/env python3
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import attr
 import numpy as np
 from gym import spaces
 
 from habitat.config import Config
-from habitat.core.dataset import Dataset
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Sensor, SensorTypes
@@ -22,6 +19,11 @@ from habitat.tasks.nav.nav import (
     NavigationGoal,
     NavigationTask,
 )
+
+if TYPE_CHECKING:
+    from habitat.datasets.object_nav.object_nav_dataset import (
+        ObjectNavDatasetV1,
+    )
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -109,7 +111,12 @@ class ObjectGoalSensor(Sensor):
     cls_uuid: str = "objectgoal"
 
     def __init__(
-        self, sim, config: Config, dataset: Dataset, *args: Any, **kwargs: Any
+        self,
+        sim,
+        config: Config,
+        dataset: ObjectNavDatasetV1,
+        *args: Any,
+        **kwargs: Any,
     ):
         self._sim = sim
         self._dataset = dataset
@@ -125,39 +132,42 @@ class ObjectGoalSensor(Sensor):
         sensor_shape = (1,)
         max_value = (self.config.GOAL_SPEC_MAX_VAL - 1,)
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
-            max_value = max(
-                self._dataset.category_to_task_category_id.values()
+            max_value = (
+                max(self._dataset.category_to_task_category_id.values()),
             )
 
         return spaces.Box(
             low=0, high=max_value, shape=sensor_shape, dtype=np.int64
         )
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         observations,
         *args: Any,
         episode: ObjectGoalNavEpisode,
         **kwargs: Any,
     ) -> Optional[int]:
+
+        if len(episode.goals) == 0:
+            logger.error(
+                f"No goal specified for episode {episode.episode_id}."
+            )
+            return None
+        if not isinstance(episode.goals[0], ObjectGoal):
+            logger.error(
+                f"First goal should be ObjectGoal, episode {episode.episode_id}."
+            )
+            return None
+        category_name = episode.object_category
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
-            if len(episode.goals) == 0:
-                logger.error(
-                    f"No goal specified for episode {episode.episode_id}."
-                )
-                return None
-            if not isinstance(episode.goals[0], ObjectGoal):
-                logger.error(
-                    f"First goal should be ObjectGoal, episode {episode.episode_id}."
-                )
-                return None
-            category_name = episode.object_category
             return np.array(
                 [self._dataset.category_to_task_category_id[category_name]],
                 dtype=np.int64,
             )
         elif self.config.GOAL_SPEC == "OBJECT_ID":
-            return np.array([episode.goals[0].object_name_id], dtype=np.int64)
+            obj_goal = episode.goals[0]
+            assert isinstance(obj_goal, ObjectGoal)  # for type checking
+            return np.array([obj_goal.object_name_id], dtype=np.int64)  # type: ignore[attr-defined]
         else:
             raise RuntimeError(
                 "Wrong GOAL_SPEC specified for ObjectGoalSensor."

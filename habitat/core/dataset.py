@@ -21,6 +21,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     TypeVar,
     Union,
 )
@@ -60,7 +61,7 @@ class Episode:
     start_rotation: List[float] = attr.ib(
         default=None, validator=not_none_validator
     )
-    info: Optional[Dict[str, str]] = None
+    info: Optional[Dict[str, Any]] = None
     _shortest_path_cache: Any = attr.ib(init=False, default=None)
 
     def __getstate__(self):
@@ -336,7 +337,7 @@ class EpisodeIterator(Iterator):
 
     def __init__(
         self,
-        episodes: List[T],
+        episodes: Sequence[T],
         cycle: bool = True,
         shuffle: bool = False,
         group_by_scene: bool = True,
@@ -377,7 +378,7 @@ class EpisodeIterator(Iterator):
                 episodes, num_episode_sample, replace=False
             )
 
-        self.episodes = episodes
+        self.episodes = list(episodes)
         self.cycle = cycle
         self.group_by_scene = group_by_scene
         self.shuffle = shuffle
@@ -462,7 +463,7 @@ class EpisodeIterator(Iterator):
         self._iterator = iter(episodes)
 
     def _group_scenes(
-        self, episodes: Union[List[Episode], ndarray]
+        self, episodes: Union[Sequence[Episode], List[Episode], ndarray]
     ) -> List[T]:
         r"""Internal method that groups episodes by scene
         Groups will be ordered by the order the first episode of a given

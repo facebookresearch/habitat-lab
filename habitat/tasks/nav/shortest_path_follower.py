@@ -73,6 +73,7 @@ class ShortestPathFollower:
     ) -> Optional[Union[int, np.array]]:
         """Returns the next action along the shortest path."""
         self._build_follower()
+        assert self._follower is not None
         try:
             next_action = self._follower.next_action_along(goal_pos)
         except habitat_sim.errors.GreedyFollowerError as e:

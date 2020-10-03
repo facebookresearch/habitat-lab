@@ -8,12 +8,16 @@
  taken from Pythia.
 """
 import re
+import typing
 from collections import Counter
-from typing import List
+from typing import List, Union
+
+from numpy import float64
 
 from habitat.core.logging import logger
 from habitat.core.simulator import ShortestPathPoint
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
@@ -22,7 +26,7 @@ SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
 def tokenize(
     sentence, regex=SENTENCE_SPLIT_REGEX, keep=("'s"), remove=(",", "?")
-):
+) -> List[str]:
     sentence = sentence.lower()
 
     for token in keep:
@@ -140,7 +144,7 @@ class VocabFromText(VocabDict):
         remove=(),
         only_unk_extra=False,
     ):
-        token_counter = Counter()
+        token_counter: typing.Counter[str] = Counter()
 
         for sentence in sentences:
             tokens = tokenize(sentence, regex=regex, keep=keep, remove=remove)
@@ -160,12 +164,12 @@ class VocabFromText(VocabDict):
 
 
 def get_action_shortest_path(
-    sim,
-    source_position,
-    source_rotation,
-    goal_position,
-    success_distance=0.05,
-    max_episode_steps=500,
+    sim: HabitatSim,
+    source_position: List[float],
+    source_rotation: List[Union[int, float64]],
+    goal_position: List[float],
+    success_distance: float = 0.05,
+    max_episode_steps: int = 500,
 ) -> List[ShortestPathPoint]:
     sim.reset()
     sim.set_agent_state(source_position, source_rotation)

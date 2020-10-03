@@ -14,10 +14,10 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, Optional
 
 from habitat.config.default import get_config
+from habitat.core.env import Env
 
 if TYPE_CHECKING:
     from habitat.core.agent import Agent
-    from habitat.core.env import Env
 
 
 class Benchmark:

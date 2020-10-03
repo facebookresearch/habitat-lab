@@ -4,7 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Type
+# TODO, lots of typing errors in here
+# type: ignore
+
+from typing import Any, List, Optional, Tuple, Type
 
 import attr
 import numpy as np
@@ -100,7 +103,7 @@ class NavigationEpisode(Episode):
         default=None, validator=not_none_validator
     )
     start_room: Optional[str] = None
-    shortest_paths: Optional[List[ShortestPathPoint]] = None
+    shortest_paths: Optional[List[List[ShortestPathPoint]]] = None
 
 
 @registry.register_sensor
@@ -192,7 +195,7 @@ class PointGoalSensor(Sensor):
 
     def get_observation(
         self, observations, episode: Episode, *args: Any, **kwargs: Any
-    ):
+    ):  # type: ignore[override]
         source_position = np.array(episode.start_position, dtype=np.float32)
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
@@ -504,7 +507,7 @@ class Success(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore[override]
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
@@ -553,7 +556,7 @@ class SPL(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "spl"
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore[override]
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
         )
@@ -670,12 +673,12 @@ class TopDownMap(Measure):
         self._grid_delta = config.MAP_PADDING
         self._step_count = None
         self._map_resolution = config.MAP_RESOLUTION
-        self._ind_x_min = None
-        self._ind_x_max = None
-        self._ind_y_min = None
-        self._ind_y_max = None
+        self._ind_x_min: Optional[int] = None
+        self._ind_x_max: Optional[int] = None
+        self._ind_y_min: Optional[int] = None
+        self._ind_y_max: Optional[int] = None
         self._previous_xy_location = None
-        self._top_down_map = None
+        self._top_down_map: Optional[TopDownMap] = None
         self._shortest_path_points = None
         self.line_thickness = int(
             np.round(self._map_resolution * 2 / MAP_THICKNESS_SCALAR)
@@ -786,7 +789,7 @@ class TopDownMap(Measure):
                     pass
 
     def _draw_shortest_path(
-        self, episode: Episode, agent_position: AgentState
+        self, episode: NavigationEpisode, agent_position: AgentState
     ):
         if self._config.DRAW_SHORTEST_PATH:
             self._shortest_path_points = (
@@ -911,10 +914,12 @@ class DistanceToGoal(Measure):
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
-        self._previous_position = None
+        self._previous_position: Optional[Tuple[float, float, float]] = None
         self._sim = sim
         self._config = config
-        self._episode_view_points = None
+        self._episode_view_points: Optional[
+            List[Tuple[float, float, float]]
+        ] = None
 
         super().__init__(**kwargs)
 
@@ -990,7 +995,7 @@ class TurnRightAction(SimulatorTaskAction):
 class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
-    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):  # type: ignore[override]
         task.is_stop_called = False
 
     def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):

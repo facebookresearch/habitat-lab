@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from collections.abs import Collection
+from collections.abc import Collection
 from typing import Dict, List, Union
 
 import gym

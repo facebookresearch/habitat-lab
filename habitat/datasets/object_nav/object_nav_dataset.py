@@ -6,7 +6,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Sequence
 
 from habitat.config import Config
 from habitat.core.registry import registry
@@ -29,9 +29,9 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Object Navigation dataset."""
     category_to_task_category_id: Dict[str, int]
     category_to_scene_annotation_category_id: Dict[str, int]
-    episodes: List[ObjectGoalNavEpisode]
+    episodes: Sequence[ObjectGoalNavEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
-    goals_by_category: Dict[str, List[ObjectGoal]]
+    goals_by_category: Dict[str, Sequence[ObjectGoal]]
 
     @staticmethod
     def dedup_goals(dataset: Dict[str, Any]) -> Dict[str, Any]:
@@ -62,23 +62,24 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
 
         for i in range(len(self.episodes)):
-            self.episodes[i].goals = self.goals_by_category[
-                self.episodes[i].goals_key
-            ]
+            self.episodes[i].goals = list(
+                self.goals_by_category[self.episodes[i].goals_key]
+            )
 
         return result
 
     def __init__(self, config: Optional[Config] = None) -> None:
         self.goals_by_category = {}
         super().__init__(config)
+        self.episodes = list(self.episodes)
 
     @staticmethod
     def __deserialize_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
         g = ObjectGoal(**serialized_goal)
 
         for vidx, view in enumerate(g.view_points):
-            view_location = ObjectViewLocation(**view)
-            view_location.agent_state = AgentState(**view_location.agent_state)
+            view_location = ObjectViewLocation(**view)  # type: ignore
+            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
             g.view_points[vidx] = view_location
 
         return g
@@ -148,4 +149,4 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
                         path[p_index] = ShortestPathPoint(**point)
 
-            self.episodes.append(episode)
+            self.episodes.append(episode)  # type: ignore [attr-defined]
