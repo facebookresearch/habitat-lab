@@ -114,7 +114,7 @@ class ObjectGoalSensor(Sensor):
         self,
         sim,
         config: Config,
-        dataset: ObjectNavDatasetV1,
+        dataset: "ObjectNavDatasetV1",
         *args: Any,
         **kwargs: Any,
     ):
