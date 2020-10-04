@@ -4,8 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-# type: ignore
-
 from typing import Any, Dict, List, Optional
 
 import attr
@@ -60,7 +58,7 @@ class QuestionSensor(Sensor):
     def _get_sensor_type(self, *args: Any, **kwargs: Any) -> SensorTypes:
         return SensorTypes.TOKEN_IDS
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         observations: Dict[str, Observations],
         episode: EQAEpisode,
@@ -86,7 +84,7 @@ class CorrectAnswer(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "correct_answer"
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
         self._metric = episode.question.answer_token
 
     def update_metric(self, *args: Any, **kwargs: Any):
@@ -106,10 +104,10 @@ class EpisodeInfo(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "episode_info"
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
         self._metric = vars(episode).copy()
 
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):  # type: ignore
         pass
 
 
@@ -124,7 +122,7 @@ class AnswerAccuracy(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "answer_accuracy"
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
         self._metric = 0
 
     def update_metric(
@@ -168,10 +166,10 @@ class EQATask(NavigationTask):
         metrics = env.get_metrics()
     """
 
-    def _check_episode_is_active(
+    def _check_episode_is_active(  # type: ignore
         self, *args, action, episode, action_args=None, **kwargs
     ) -> bool:
-        return self.is_valid and self.answer is None
+        return self.is_valid and self.answer is None  # type: ignore
 
 
 @registry.register_task_action
@@ -183,23 +181,23 @@ class AnswerAction(Action):
         self._sim = sim
         self._dataset = dataset
 
-    def reset(self, task: EQATask, *args: Any, **kwargs: Any) -> None:
-        task.answer = None
-        task.is_valid = True
+    def reset(self, task: EQATask, *args: Any, **kwargs: Any) -> None:  # type: ignore
+        task.answer = None  # type: ignore
+        task.is_valid = True  # type: ignore
         return
 
-    def step(
+    def step(  # type: ignore
         self, *args: Any, answer_id: int, task: EQATask, **kwargs: Any
     ) -> Dict[str, Observations]:
-        if task.answer is not None:
-            task.is_valid = False
-            task.invalid_reason = "Agent answered question twice."
+        if task.answer is not None:  # type: ignore
+            task.is_valid = False  # type: ignore
+            task.invalid_reason = "Agent answered question twice."  # type: ignore
 
-        task.answer = answer_id
-        return self._sim.get_observations_at()
+        task.answer = answer_id  # type: ignore
+        return self._sim.get_observations_at()  # type: ignore
 
     @property
-    def action_space(self) -> Space:
+    def action_space(self) -> spaces.Dict:
         """Answer expected to be single token."""
         return spaces.Dict(
             {

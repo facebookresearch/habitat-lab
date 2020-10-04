@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import attr
 from gym import Space
@@ -259,8 +259,8 @@ class Simulator:
 
     def geodesic_distance(
         self,
-        position_a: List[float],
-        position_b: Union[List[float], List[List[float]]],
+        position_a: Sequence[float],
+        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
         episode: Optional[Episode] = None,
     ) -> float:
         r"""Calculates geodesic distance between two points.

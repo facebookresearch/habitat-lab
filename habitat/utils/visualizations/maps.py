@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import imageio
 import numpy as np
@@ -375,7 +375,7 @@ def colorize_topdown_map(
 
 def draw_path(
     top_down_map: np.ndarray,
-    path_points: List[Tuple],
+    path_points: Sequence[Tuple],
     color: int = 10,
     thickness: int = 2,
 ) -> None:

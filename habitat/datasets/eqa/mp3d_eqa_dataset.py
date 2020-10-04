@@ -69,8 +69,8 @@ class Matterport3dDatasetV1(Dataset):
             deserialized
         )  # This is a messy hack... Why do we do this.
         self.answer_vocab = VocabDict(
-            word_list=self.answer_vocab["word_list"]
-        )  # type:ignore
+            word_list=self.answer_vocab["word_list"]  # type: ignore
+        )
         self.question_vocab = VocabDict(
             word_list=self.question_vocab["word_list"]  # type: ignore
         )
