@@ -18,6 +18,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.il.data.data import EQADataset
 from habitat_baselines.il.metrics import VqaMetric
 from habitat_baselines.il.models.models import VqaLstmCnnAttentionModel
+from habitat_baselines.utils.common import img_bytes_2_np_array
 from habitat_baselines.utils.visualizations.utils import save_vqa_image_results
 
 
@@ -43,8 +44,7 @@ class VQATrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving VQA eval results."""
         dir_name = self.config.RESULTS_DIR.format(split="val")
-        if not os.path.isdir(dir_name):
-            os.makedirs(dir_name)
+        os.makedirs(dir_name, exist_ok=True)
 
     def _save_vqa_results(
         self,
@@ -81,7 +81,7 @@ class VQATrainer(BaseILTrainer):
 
         q_string = q_vocab_dict.token_idx_2_string(question)
 
-        value, index = scores.max(0)
+        _, index = scores.max(0)
         pred_answer = list(ans_vocab_dict.word2idx_dict.keys())[index]
         gt_answer = list(ans_vocab_dict.word2idx_dict.keys())[gt_answer]
 
@@ -111,14 +111,23 @@ class VQATrainer(BaseILTrainer):
 
         # env = habitat.Env(config=config.TASK_CONFIG)
 
-        vqa_dataset = EQADataset(
-            config,
-            input_type="vqa",
-            num_frames=config.IL.VQA.num_frames,
+        vqa_dataset = (
+            EQADataset(
+                config,
+                input_type="vqa",
+                num_frames=config.IL.VQA.num_frames,
+            )
+            .to_tuple(
+                "episode_id",
+                "question",
+                "answer",
+                *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
+            )
+            .map(img_bytes_2_np_array)
         )
 
         train_loader = DataLoader(
-            vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=True
+            vqa_dataset, batch_size=config.IL.VQA.batch_size
         )
 
         logger.info("train_loader has {} samples".format(len(vqa_dataset)))
@@ -173,15 +182,14 @@ class VQATrainer(BaseILTrainer):
                 for batch in train_loader:
                     t += 1
 
-                    idx, questions, answers, frame_queue = batch
-
+                    _, questions, answers, frame_queue = batch
                     optim.zero_grad()
 
                     questions = questions.to(self.device)
                     answers = answers.to(self.device)
                     frame_queue = frame_queue.to(self.device)
 
-                    scores, att_probs = model(frame_queue, questions)
+                    scores, _ = model(frame_queue, questions)
                     loss = lossFn(scores, answers)
 
                     # update metrics
@@ -272,14 +280,23 @@ class VQATrainer(BaseILTrainer):
         config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
         config.freeze()
 
-        vqa_dataset = EQADataset(
-            config,
-            input_type="vqa",
-            num_frames=config.IL.VQA.num_frames,
+        vqa_dataset = (
+            EQADataset(
+                config,
+                input_type="vqa",
+                num_frames=config.IL.VQA.num_frames,
+            )
+            .to_tuple(
+                "episode_id",
+                "question",
+                "answer",
+                *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
+            )
+            .map(img_bytes_2_np_array)
         )
 
         eval_loader = DataLoader(
-            vqa_dataset, batch_size=config.IL.VQA.batch_size, shuffle=False
+            vqa_dataset, batch_size=config.IL.VQA.batch_size
         )
 
         logger.info("eval_loader has {} samples".format(len(vqa_dataset)))
@@ -293,7 +310,9 @@ class VQATrainer(BaseILTrainer):
         }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
-        state_dict = torch.load(checkpoint_path)
+        state_dict = torch.load(
+            checkpoint_path, map_location={"cuda:0": "cpu"}
+        )
         model.load_state_dict(state_dict)
 
         lossFn = torch.nn.CrossEntropyLoss()
@@ -323,11 +342,12 @@ class VQATrainer(BaseILTrainer):
             for batch in eval_loader:
                 t += 1
                 idx, questions, answers, frame_queue = batch
+
                 questions = questions.to(self.device)
                 answers = answers.to(self.device)
                 frame_queue = frame_queue.to(self.device)
 
-                scores, att_probs = model(frame_queue, questions)
+                scores, _ = model(frame_queue, questions)
 
                 loss = lossFn(scores, answers)
 

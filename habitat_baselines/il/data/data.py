@@ -1,20 +1,26 @@
 import os
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import cv2
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+import webdataset as wds
+import webdataset.filters as filters
 from tqdm import tqdm
 
 import habitat
 from habitat import logger
 from habitat.core.simulator import ShortestPathPoint
 from habitat.datasets.utils import VocabDict
-from habitat_baselines.utils.common import get_scene_episode_dict
+from habitat_baselines.utils.common import (
+    base_plus_ext,
+    create_tar_archive,
+    get_scene_episode_dict,
+    valid_sample,
+)
 
 
-class EQADataset(Dataset):
+class EQADataset(wds.Dataset):
     """Pytorch dataset for Embodied Q&A (both VQA and PACMAN)"""
 
     def __init__(
@@ -38,6 +44,9 @@ class EQADataset(Dataset):
 
         self.episodes = self.env._dataset.episodes
 
+        # sorting and making episode ids consecutive for simpler indexing
+        self.sort_episodes()
+
         self.q_vocab = self.env._dataset.question_vocab
         self.ans_vocab = self.env._dataset.answer_vocab
 
@@ -45,13 +54,19 @@ class EQADataset(Dataset):
 
         if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
             self.mode = "val"
-            self.sort_eval_episodes()
         else:
             self.mode = "train"
 
         self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
             split=self.mode
         )
+
+        group_by_keys = filters.Curried(self.group_by_keys_)
+        super().__init__(
+            urls=self.frame_dataset_path + ".tar",
+            initial_pipeline=[group_by_keys()],
+        )
+
         self.only_vqa_task = config.ONLY_VQA_TASK
 
         # [TODO] can be done in mp3d_eqa_dataset while loading dataset
@@ -97,11 +112,65 @@ class EQADataset(Dataset):
 
                     self.save_frame_queue(pos_queue, episode.episode_id)
 
-            logger.info(
-                "[ Saved all episodes' frames to disk. Frame dataset ready. ]"
+            logger.info("[ Saved all episodes' frames to disk. ]")
+
+            create_tar_archive(
+                self.frame_dataset_path + ".tar", self.frame_dataset_path
             )
 
+            logger.info("[ Frame dataset ready. ]")
+
         self.env.close()
+
+    def group_by_keys_(
+        self,
+        data,
+        keys: Callable[[str], Tuple[str]] = base_plus_ext,
+        lcase: bool = True,
+        suffixes=None,
+    ):
+        """Returns function over iterator that groups key, value pairs into samples-
+        a custom pipeline for grouping episode info & images in the webdataset.
+        keys: function that splits the key into key and extension (base_plus_ext)
+        lcase: convert suffixes to lower case (Default value = True)
+        """
+        current_sample = {}
+        for fname, value in data:
+            prefix, suffix = keys(fname)
+            if prefix is None:
+                continue
+            if lcase:
+                suffix = suffix.lower()
+            if not current_sample or prefix != current_sample["__key__"]:
+                if valid_sample(current_sample):
+                    yield current_sample
+
+                current_sample = dict(__key__=prefix)
+
+                episode_id = int(prefix[prefix.rfind("/") + 1 :])
+                current_sample["episode_id"] = self.episodes[
+                    episode_id
+                ].episode_id
+
+                question = self.episodes[episode_id].question.question_tokens
+                if len(question) < self.max_q_len:
+                    diff = self.max_q_len - len(question)
+                    for _ in range(diff):
+                        question.append(0)
+
+                current_sample["question"] = torch.LongTensor(question)
+                current_sample["answer"] = self.ans_vocab.word2idx(
+                    self.episodes[episode_id].question.answer_text
+                )
+            if suffix in current_sample:
+                raise ValueError(
+                    f"{fname}: duplicate file name in tar file {suffix} {current_sample.keys()}"
+                )
+            if suffixes is None or suffix in suffixes:
+                current_sample[suffix] = value
+
+        if valid_sample(current_sample):
+            yield current_sample
 
     def calc_max_length(self) -> None:
         r"""Calculates max length of questions and actions.
@@ -133,7 +202,8 @@ class EQADataset(Dataset):
         r"""Returns Q&A VocabDicts"""
         return self.q_vocab, self.ans_vocab
 
-    def sort_eval_episodes(self) -> None:
+    def sort_episodes(self) -> None:
+        # TODO: can be done in mp3d_eqa_dataset class too?
         self.episodes = sorted(self.episodes, key=lambda x: int(x.episode_id))
         for idx, ep in enumerate(self.episodes):
             ep.episode_id = idx
@@ -144,21 +214,18 @@ class EQADataset(Dataset):
         episode_id,
     ) -> None:
         r"""Writes episode's frame queue to disk."""
-        episode_frames_path = os.path.join(
-            self.frame_dataset_path, str(episode_id)
-        )
-        if not os.path.exists(episode_frames_path):
-            os.makedirs(episode_frames_path)
 
-        for idx, pos in enumerate(pos_queue):
+        for idx, pos in enumerate(pos_queue[::-1]):
             observation = self.env.sim.get_observations_at(
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            frame_path = os.path.join(
-                episode_frames_path, "{0:0=3d}".format(idx)
+            idx = "{0:0=3d}".format(idx)
+            episode_id = "{0:0=4d}".format(int(episode_id))
+            new_path = os.path.join(
+                self.frame_dataset_path, "{}.{}".format(episode_id, idx)
             )
-            cv2.imwrite(frame_path + ".jpg", img)
+            cv2.imwrite(new_path + ".jpg", img[..., ::-1])
 
     def get_frames(self, frames_path, num=0):
         r"""Fetches frames from disk."""
@@ -172,12 +239,11 @@ class EQADataset(Dataset):
         return np.array(frames, dtype=np.float32)
 
     def cache_exists(self) -> bool:
-        if os.path.exists(self.frame_dataset_path):
-            if len(os.listdir(self.frame_dataset_path)) == len(self.episodes):
-                return True
+        if os.path.exists(self.frame_dataset_path + ".tar"):
+            return True
         else:
-            os.makedirs(self.frame_dataset_path)
-        return False
+            os.makedirs(self.frame_dataset_path, exist_ok=True)
+            return False
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
@@ -187,37 +253,3 @@ class EQADataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.episodes)
-
-    def __getitem__(self, idx: int):
-        r"""Returns batch to trainer.
-
-        example->
-        actual question - "what color is the cabinet in the kitchen?"
-        actual answer - "brown"
-
-        batch ->
-        question: [4,5,6,7,8,9,7,10,0,0..],
-        answer: 2,
-        frame_queue: tensor containing episode frames
-
-        """
-
-        episode_id = self.episodes[idx].episode_id
-        question = self.episodes[idx].question.question_tokens
-        answer = self.ans_vocab.word2idx(
-            self.episodes[idx].question.answer_text
-        )
-
-        # padding question with zeros - to make all questions of same length
-        if len(question) < self.max_q_len:
-            diff = self.max_q_len - len(question)
-            for _ in range(diff):
-                question.append(0)
-
-        question = torch.LongTensor(question)
-        frames_path = os.path.join(self.frame_dataset_path, str(episode_id))
-
-        if self.input_type == "vqa":
-            frame_queue = self.get_frames(frames_path, num=self.num_frames)
-            batch = idx, question, answer, frame_queue
-            return batch
