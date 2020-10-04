@@ -12,11 +12,11 @@ from gym.spaces.box import Box
 from numpy import ndarray
 
 import habitat_sim
-from habitat.config.default import Config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    Config,
     DepthSensor,
     Observations,
     RGBSensor,
