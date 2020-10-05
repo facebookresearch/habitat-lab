@@ -7,6 +7,7 @@
 from typing import Tuple
 
 import torch
+from torch import Tensor
 from torch import distributed as distrib
 
 from habitat_baselines.common.rollout_storage import RolloutStorage
@@ -47,7 +48,7 @@ class DecentralizedDistributedMixin:
         self, rollouts: RolloutStorage
     ) -> torch.Tensor:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-        if not self.use_normalized_advantage:
+        if not self.use_normalized_advantage:  # type: ignore
             return advantages
 
         mean, var = distributed_mean_and_var(advantages)
@@ -77,19 +78,19 @@ class DecentralizedDistributedMixin:
                 else:
                     self.ddp = torch.nn.parallel.DistributedDataParallel(model)
 
-        self._ddp_hooks = Guard(self.actor_critic, self.device)
+        self._ddp_hooks = Guard(self.actor_critic, self.device)  # type: ignore
         self.get_advantages = self._get_advantages_distributed
 
         self.reducer = self._ddp_hooks.ddp.reducer
         self.find_unused_params = find_unused_params
 
-    def before_backward(self, loss):
-        super().before_backward(loss)
+    def before_backward(self, loss: Tensor) -> None:
+        super().before_backward(loss)  # type: ignore
 
         if self.find_unused_params:
-            self.reducer.prepare_for_backward([loss])
+            self.reducer.prepare_for_backward([loss])  # type: ignore
         else:
-            self.reducer.prepare_for_backward([])
+            self.reducer.prepare_for_backward([])  # type: ignore
 
 
 class DDPPO(DecentralizedDistributedMixin, PPO):

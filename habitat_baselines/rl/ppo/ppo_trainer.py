@@ -7,7 +7,7 @@
 import os
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -195,7 +195,9 @@ class PPOTrainer(BaseRLTrainer):
         t_step_env = time.time()
 
         outputs = self.envs.step([a[0].item() for a in actions])
-        observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+        observations, rewards_l, dones, infos = [
+            list(x) for x in zip(*outputs)
+        ]
 
         env_time += time.time() - t_step_env
 
@@ -204,7 +206,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
-            rewards, dtype=torch.float, device=current_episode_reward.device
+            rewards_l, dtype=torch.float, device=current_episode_reward.device
         )
         rewards = rewards.unsqueeze(1)
 
@@ -215,18 +217,18 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         current_episode_reward += rewards
-        running_episode_stats["reward"] += (1 - masks) * current_episode_reward
-        running_episode_stats["count"] += 1 - masks
-        for k, v in self._extract_scalars_from_infos(infos).items():
+        running_episode_stats["reward"] += (1 - masks) * current_episode_reward  # type: ignore
+        running_episode_stats["count"] += 1 - masks  # type: ignore
+        for k, v_k in self._extract_scalars_from_infos(infos).items():
             v = torch.tensor(
-                v, dtype=torch.float, device=current_episode_reward.device
+                v_k, dtype=torch.float, device=current_episode_reward.device
             ).unsqueeze(1)
             if k not in running_episode_stats:
                 running_episode_stats[k] = torch.zeros_like(
                     running_episode_stats["count"]
                 )
 
-            running_episode_stats[k] += (1 - masks) * v
+            running_episode_stats[k] += (1 - masks) * v  # type: ignore
 
         current_episode_reward *= masks
 
@@ -329,7 +331,7 @@ class PPOTrainer(BaseRLTrainer):
             count=torch.zeros(self.envs.num_envs, 1),
             reward=torch.zeros(self.envs.num_envs, 1),
         )
-        window_episode_stats = defaultdict(
+        window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
         )
 
@@ -341,7 +343,7 @@ class PPOTrainer(BaseRLTrainer):
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),
+            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
 
         with TensorboardWriter(
@@ -349,7 +351,7 @@ class PPOTrainer(BaseRLTrainer):
         ) as writer:
             for update in range(self.config.NUM_UPDATES):
                 if ppo_cfg.use_linear_lr_decay:
-                    lr_scheduler.step()
+                    lr_scheduler.step()  # type: ignore
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(
@@ -508,7 +510,9 @@ class PPOTrainer(BaseRLTrainer):
         not_done_masks = torch.zeros(
             self.config.NUM_PROCESSES, 1, device=self.device
         )
-        stats_episodes = {}  # dict of dicts that stores stats per episode
+        stats_episodes: Dict[
+            Any, Any
+        ] = {}  # dict of dicts that stores stats per episode
 
         rgb_frames = [
             [] for _ in range(self.config.NUM_PROCESSES)
@@ -551,11 +555,11 @@ class PPOTrainer(BaseRLTrainer):
                     deterministic=False,
                 )
 
-                prev_actions.copy_(actions)
+                prev_actions.copy_(actions)  # type: ignore
 
             outputs = self.envs.step([a[0].item() for a in actions])
 
-            observations, rewards, dones, infos = [
+            observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
@@ -568,7 +572,7 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             rewards = torch.tensor(
-                rewards, dtype=torch.float, device=self.device
+                rewards_l, dtype=torch.float, device=self.device
             ).unsqueeze(1)
             current_episode_reward += rewards
             next_episodes = self.envs.current_episodes()

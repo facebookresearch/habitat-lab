@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Type, Union
+from typing import List, Type, Union
 
 import habitat
 from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
@@ -72,7 +72,7 @@ def construct_envs(
 
         random.shuffle(scenes)
 
-    scene_splits = [[] for _ in range(num_processes)]
+    scene_splits: List[List[str]] = [[] for _ in range(num_processes)]
     for idx, scene in enumerate(scenes):
         scene_splits[idx % len(scene_splits)].append(scene)
 

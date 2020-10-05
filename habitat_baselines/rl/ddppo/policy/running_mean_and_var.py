@@ -5,13 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+from torch import Tensor
 from torch import distributed as distrib
 from torch import nn as nn
 from torch.nn import functional as F
 
 
 class RunningMeanAndVar(nn.Module):
-    def __init__(self, n_channels):
+    def __init__(self, n_channels: int) -> None:
         super().__init__()
         self.register_buffer("_mean", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_var", torch.zeros(1, n_channels, 1, 1))
@@ -19,10 +20,10 @@ class RunningMeanAndVar(nn.Module):
 
         self._distributed = distrib.is_initialized()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:  # type: ignore[override]
         if self.training:
-            new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)
-            new_count = torch.full_like(self._count, x.size(0))
+            new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)  # type: ignore
+            new_count = torch.full_like(self._count, x.size(0))  # type: ignore
 
             if self._distributed:
                 distrib.all_reduce(new_mean)
@@ -30,7 +31,7 @@ class RunningMeanAndVar(nn.Module):
 
             new_mean /= new_count
 
-            new_var = F.adaptive_avg_pool2d((x - new_mean).pow(2), 1).sum(
+            new_var = F.adaptive_avg_pool2d((x - new_mean).pow(2), 1).sum(  # type: ignore
                 0, keepdim=True
             )
 
@@ -41,23 +42,23 @@ class RunningMeanAndVar(nn.Module):
             # seen over training is simply absurd, so it doesn't matter
             new_var /= new_count
 
-            m_a = self._var * (self._count)
+            m_a = self._var * (self._count)  # type: ignore
             m_b = new_var * (new_count)
             M2 = (
                 m_a
                 + m_b
-                + (new_mean - self._mean).pow(2)
+                + (new_mean - self._mean).pow(2)  # type: ignore
                 * self._count
                 * new_count
                 / (self._count + new_count)
             )
 
-            self._var = M2 / (self._count + new_count)
-            self._mean = (self._count * self._mean + new_count * new_mean) / (
-                self._count + new_count
+            self._var = M2 / (self._count + new_count)  # type: ignore
+            self._mean = (self._count * self._mean + new_count * new_mean) / (  # type: ignore
+                self._count + new_count  # type: ignore
             )
 
-            self._count += new_count
+            self._count += new_count  # type: ignore
 
         stdev = torch.sqrt(
             torch.max(self._var, torch.full_like(self._var, 1e-2))

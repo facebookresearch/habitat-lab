@@ -8,11 +8,13 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from gym.spaces import Box
+from numpy import ndarray
+from torch import Size, Tensor
 from torch import nn as nn
 
 from habitat.utils.visualizations.utils import images_to_video
@@ -20,15 +22,17 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 
 class Flatten(nn.Module):
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:  # type: ignore
         return torch.flatten(x, start_dim=1)
 
 
-class CustomFixedCategorical(torch.distributions.Categorical):
-    def sample(self, sample_shape=torch.Size()):  # noqa: B008
+class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
+    def sample(
+        self, sample_shape: Size = torch.Size()  # noqa: B008
+    ) -> Tensor:
         return super().sample(sample_shape).unsqueeze(-1)
 
-    def log_probs(self, actions):
+    def log_probs(self, actions: Tensor) -> Tensor:
         return (
             super()
             .log_prob(actions.squeeze(-1))
@@ -42,7 +46,7 @@ class CustomFixedCategorical(torch.distributions.Categorical):
 
 
 class CategoricalNet(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(self, num_inputs: int, num_outputs: int) -> None:
         super().__init__()
 
         self.linear = nn.Linear(num_inputs, num_outputs)
@@ -50,7 +54,7 @@ class CategoricalNet(nn.Module):
         nn.init.orthogonal_(self.linear.weight, gain=0.01)
         nn.init.constant_(self.linear.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> CustomFixedCategorical:  # type: ignore
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
 
@@ -68,7 +72,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-def _to_tensor(v) -> torch.Tensor:
+def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:
     if torch.is_tensor(v):
         return v
     elif isinstance(v, np.ndarray):
@@ -93,16 +97,18 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    batch = defaultdict(list)
+    batch: DefaultDict[str, Union[torch.Tensor, List]] = defaultdict(list)
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(_to_tensor(obs[sensor]))
+            batch[sensor].append(_to_tensor(obs[sensor]))  # type: ignore
+
+    batch: Dict[str, torch.Tensor] = batch  # type: ignore
 
     for sensor in batch:
-        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)  # type: ignore
 
-    return batch
+    return batch  # type: ignore
 
 
 def poll_checkpoint_folder(
@@ -192,7 +198,9 @@ def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
     return images
 
 
-def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
+def tensor_to_bgr_images(
+    tensor: Union[torch.Tensor, Iterable[torch.Tensor]]
+) -> List[np.ndarray]:
     r"""Converts tensor of n image tensors to list of n BGR images.
     Args:
         tensor: tensor containing n image tensors
@@ -213,7 +221,7 @@ def tensor_to_bgr_images(tensor: torch.Tensor) -> List[np.ndarray]:
 
 
 def image_resize_shortest_edge(
-    img, size: int, channels_last: bool = False
+    img: Tensor, size: int, channels_last: bool = False
 ) -> torch.Tensor:
     """Resizes an img so that the shortest side is length of size while
         preserving aspect ratio.
@@ -260,8 +268,8 @@ def image_resize_shortest_edge(
 
 
 def center_crop(
-    img, size: Union[int, Tuple[int]], channels_last: bool = False
-):
+    img: Tensor, size: Union[int, Tuple[int, int]], channels_last: bool = False
+) -> Tensor:
     """Performs a center crop on an image.
 
     Args:
@@ -275,8 +283,8 @@ def center_crop(
 
     if isinstance(size, numbers.Number):
         size = (int(size), int(size))
-    assert len(size) == 2, "size should be (h,w) you wish to resize to"
-    cropy, cropx = size
+    assert len(size) == 2, "size should be (h,w) you wish to resize to"  # type: ignore
+    cropy, cropx = size  # type: ignore
 
     startx = w // 2 - (cropx // 2)
     starty = h // 2 - (cropy // 2)
@@ -288,7 +296,7 @@ def center_crop(
 
 def get_image_height_width(
     img: Union[np.ndarray, torch.Tensor], channels_last: bool = False
-):
+) -> Tuple[int, int]:
     if img.shape is None or len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
     if channels_last:
