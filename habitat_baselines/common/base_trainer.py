@@ -12,7 +12,7 @@ import torch
 
 from habitat import Config, logger
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.utils.common import poll_checkpoint_folder
+from habitat_baselines.utils.common import get_ckpt_idx, poll_checkpoint_folder
 
 
 class BaseTrainer:
@@ -57,7 +57,7 @@ class BaseTrainer:
         if config.TASK_CONFIG.DATASET.SPLIT == "train":
             config.TASK_CONFIG.defrost()
             config.TASK_CONFIG.DATASET.SPLIT = "val"
-
+        config.defrost()
         config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
         config.freeze()
 
@@ -92,7 +92,16 @@ class BaseTrainer:
         ) as writer:
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
-                self._eval_checkpoint(self.config.EVAL_CKPT_PATH_DIR, writer)
+                proposed_index = get_ckpt_idx(self.config.EVAL_CKPT_PATH_DIR)
+                if proposed_index is not None:
+                    ckpt_idx = proposed_index
+                else:
+                    ckpt_idx = 0
+                self._eval_checkpoint(
+                    self.config.EVAL_CKPT_PATH_DIR,
+                    writer,
+                    checkpoint_index=ckpt_idx,
+                )
             else:
                 # evaluate multiple checkpoints in order
                 prev_ckpt_ind = -1
