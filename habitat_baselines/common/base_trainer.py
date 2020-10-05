@@ -57,10 +57,9 @@ class BaseTrainer:
             logger.info("Saved config is outdated, using solely eval config")
             config = self.config.clone()
             config.merge_from_list(eval_cmd_opts)
-        if config.TASK_CONFIG.DATASET.SPLIT == "train":
-            config.TASK_CONFIG.defrost()
-            config.TASK_CONFIG.DATASET.SPLIT = "val"
         config.defrost()
+        if config.TASK_CONFIG.DATASET.SPLIT == "train":
+            config.TASK_CONFIG.DATASET.SPLIT = "val"
         config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
         config.freeze()
 
