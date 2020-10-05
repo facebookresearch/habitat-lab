@@ -12,7 +12,10 @@ import torch
 
 from habitat import Config, logger
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.utils.common import get_ckpt_idx, poll_checkpoint_folder
+from habitat_baselines.utils.common import (
+    get_checkpoint_id,
+    poll_checkpoint_folder,
+)
 
 
 class BaseTrainer:
@@ -92,7 +95,9 @@ class BaseTrainer:
         ) as writer:
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
-                proposed_index = get_ckpt_idx(self.config.EVAL_CKPT_PATH_DIR)
+                proposed_index = get_checkpoint_id(
+                    self.config.EVAL_CKPT_PATH_DIR
+                )
                 if proposed_index is not None:
                     ckpt_idx = proposed_index
                 else:

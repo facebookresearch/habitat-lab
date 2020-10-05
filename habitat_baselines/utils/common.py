@@ -105,8 +105,9 @@ def batch_obs(
     return batch
 
 
-def get_ckpt_idx(ckpt_path: str) -> Optional[int]:
-    r"""Attempts to extract the ckpt_id from the filename of a checkpoint.abs
+def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
+    r"""Attempts to extract the ckpt_id from the filename of a checkpoint.
+    Assumes structure of ckpt.ID.path .
 
     Args:
         ckpt_path: the path to the ckpt file
