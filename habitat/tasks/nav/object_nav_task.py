@@ -130,10 +130,10 @@ class ObjectGoalSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         sensor_shape = (1,)
-        max_value = (self.config.GOAL_SPEC_MAX_VAL - 1,)
+        max_value = self.config.GOAL_SPEC_MAX_VAL - 1
         if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
-            max_value = (
-                max(self._dataset.category_to_task_category_id.values()),
+            max_value = max(
+                self._dataset.category_to_task_category_id.values()
             )
 
         return spaces.Box(
