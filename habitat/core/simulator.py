@@ -228,8 +228,8 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    position: Optional[np.ndarray]
-    rotation: Optional[np.ndarray] = None
+    position: Optional["np.ndarray"]
+    rotation: Optional["np.ndarray"] = None
 
 
 @attr.s(auto_attribs=True)
@@ -372,14 +372,14 @@ class Simulator:
         raise NotImplementedError
 
     @property
-    def up_vector(self) -> np.ndarray:
+    def up_vector(self) -> "np.ndarray":
         r"""The vector representing the direction upward (perpendicular to the
         floor) from the global coordinate frame.
         """
         raise NotImplementedError
 
     @property
-    def forward_vector(self) -> np.ndarray:
+    def forward_vector(self) -> "np.ndarray":
         r"""The forward direction in the global coordinate frame i.e. the
         direction of forward movement for an agent with 0 degrees rotation in
         the ground plane.
