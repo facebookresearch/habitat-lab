@@ -6,7 +6,7 @@
 
 import json
 import os
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, cast
 
 from habitat.config import Config
 from habitat.core.registry import registry
@@ -62,8 +62,9 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
 
         for i in range(len(self.episodes)):
-            self.episodes[i].goals = list(
-                self.goals_by_category[self.episodes[i].goals_key]
+
+            self.episodes[i].goals = cast(
+                list, self.goals_by_category[self.episodes[i].goals_key]
             )
 
         return result
