@@ -356,11 +356,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
 
     @property
-    def up_vector(self):
+    def up_vector(self) -> np.ndarray:
         return np.array([0.0, 1.0, 0.0])
 
     @property
-    def forward_vector(self):
+    def forward_vector(self) -> np.ndarray:
         return -np.array([0.0, 0.0, 1.0])
 
     def get_straight_shortest_path_points(self, position_a, position_b):
