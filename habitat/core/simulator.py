@@ -245,6 +245,9 @@ class Simulator:
     """
     habitat_config: Config
 
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
     @property
     def sensor_suite(self) -> SensorSuite:
         raise NotImplementedError

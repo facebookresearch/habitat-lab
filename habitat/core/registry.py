@@ -35,8 +35,11 @@ from habitat.core.utils import Singleton
 if TYPE_CHECKING:
     from habitat.core.dataset import Dataset
     from habitat.core.embodied_task import Measure
-    from habitat.core.simulator import ActionSpaceConfiguration, Sensor
-    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+    from habitat.core.simulator import (
+        ActionSpaceConfiguration,
+        Sensor,
+        Simulator,
+    )
     from habitat.tasks.nav.nav import NavigationTask, SimulatorTaskAction
 
 
@@ -218,7 +221,7 @@ class Registry(metaclass=Singleton):
         return cls._get_impl("task_action", name)
 
     @classmethod
-    def get_simulator(cls, name: str) -> Type["HabitatSim"]:
+    def get_simulator(cls, name: str) -> Type["Simulator"]:
         return cls._get_impl("sim", name)
 
     @classmethod
