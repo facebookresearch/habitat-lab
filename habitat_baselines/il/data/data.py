@@ -15,6 +15,7 @@ from habitat.datasets.utils import VocabDict
 from habitat_baselines.utils.common import (
     base_plus_ext,
     create_tar_archive,
+    delete_folder,
     get_scene_episode_dict,
     valid_sample,
 )
@@ -61,6 +62,10 @@ class EQADataset(wds.Dataset):
             split=self.mode
         )
 
+        # [TODO] can be done in mp3d_eqa_dataset when loading
+        self.calc_max_length()
+        self.restructure_ans_vocab()
+
         group_by_keys = filters.Curried(self.group_by_keys_)
         super().__init__(
             urls=self.frame_dataset_path + ".tar",
@@ -68,10 +73,6 @@ class EQADataset(wds.Dataset):
         )
 
         self.only_vqa_task = config.ONLY_VQA_TASK
-
-        # [TODO] can be done in mp3d_eqa_dataset while loading dataset
-        self.calc_max_length()
-        self.restructure_ans_vocab()
 
         self.scene_episode_dict = get_scene_episode_dict(self.episodes)
 
@@ -95,7 +96,6 @@ class EQADataset(wds.Dataset):
                 list(self.scene_episode_dict.keys()),
                 desc="Going through all scenes from dataset",
             ):
-
                 self.load_scene(scene)
 
                 for episode in tqdm(
@@ -114,11 +114,17 @@ class EQADataset(wds.Dataset):
 
             logger.info("[ Saved all episodes' frames to disk. ]")
 
-            create_tar_archive(
-                self.frame_dataset_path + ".tar", self.frame_dataset_path
-            )
+            if (
+                create_tar_archive(
+                    self.frame_dataset_path + ".tar", self.frame_dataset_path
+                )
+                == 0
+            ):
+                logger.info("[ Tar archive created. ]")
+                logger.info("[ Deleting dataset folder. ]")
+                delete_folder(self.frame_dataset_path)
 
-            logger.info("[ Frame dataset ready. ]")
+            logger.info("[ Frame dataset is ready. ]")
 
         self.env.close()
 
@@ -177,26 +183,20 @@ class EQADataset(wds.Dataset):
         This will be used for padding questions and actions with 0s so that
         they have same string length.
         """
-        self.max_q_len = 0
-        self.max_action_len = 0
-
-        for episode in self.episodes:
-            if len(episode.question.question_tokens) > self.max_q_len:
-                self.max_q_len = len(episode.question.question_tokens)
-
-            if len(episode.shortest_paths[0]) > self.max_action_len:
-                self.max_action_len = len(episode.shortest_paths[0])
+        self.max_q_len = max(
+            len(episode.question.question_tokens) for episode in self.episodes
+        )
+        self.max_action_len = max(
+            len(episode.shortest_paths[0]) for episode in self.episodes
+        )
 
     def restructure_ans_vocab(self) -> None:
         r"""
         Restructures answer vocab so that each answer id corresponds to a
         numerical index starting from 0 for first answer.
         """
-
-        ctr = 0
-        for key in self.ans_vocab.word2idx_dict.keys():
-            self.ans_vocab.word2idx_dict[key] = ctr
-            ctr += 1
+        for idx, key in enumerate(sorted(self.ans_vocab.word2idx_dict.keys())):
+            self.ans_vocab.word2idx_dict[key] = idx
 
     def get_vocab_dicts(self) -> Tuple[VocabDict, VocabDict]:
         r"""Returns Q&A VocabDicts"""

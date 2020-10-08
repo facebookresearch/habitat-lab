@@ -8,6 +8,7 @@ import glob
 import numbers
 import os
 import re
+import shutil
 import subprocess
 from collections import defaultdict
 from io import BytesIO
@@ -374,8 +375,8 @@ def img_bytes_2_np_array(
     return (*x[0:3], np.array(images, dtype=np.float32))
 
 
-def create_tar_archive(archive_path: str, dataset_path: str) -> None:
-    """Creates tar archive of dataset.
+def create_tar_archive(archive_path: str, dataset_path: str) -> int:
+    """Creates tar archive of dataset and returns status code.
     Used in VQA trainer's webdataset.
     """
     logger.info("[ Creating tar archive .. ]")
@@ -387,5 +388,9 @@ def create_tar_archive(archive_path: str, dataset_path: str) -> None:
         archive_path,
         dataset_path,
     ]
+    process = subprocess.run(cmd)
+    return process.returncode
 
-    subprocess.run(cmd)
+
+def delete_folder(path: str) -> None:
+    shutil.rmtree(path)

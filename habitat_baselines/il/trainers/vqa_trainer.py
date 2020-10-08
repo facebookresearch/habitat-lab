@@ -49,7 +49,7 @@ class VQATrainer(BaseILTrainer):
     def _save_vqa_results(
         self,
         ckpt_idx: int,
-        idx: torch.Tensor,
+        episode_ids: torch.Tensor,
         questions: torch.Tensor,
         images: torch.Tensor,
         pred_scores: torch.Tensor,
@@ -61,7 +61,7 @@ class VQATrainer(BaseILTrainer):
         r"""For saving VQA results.
         Args:
             ckpt_idx: idx of checkpoint being evaluated
-            idx: index of batch
+            episode_ids: episode ids of batch
             questions: input questions to model
             images: images' tensor containing input frames
             pred_scores: model prediction scores
@@ -73,7 +73,7 @@ class VQATrainer(BaseILTrainer):
         Returns:
             None
         """
-        idx = idx[0].item()
+        episode_id = episode_ids[0].item()
         question = questions[0]
         images = images[0]
         gt_answer = gt_answers[0]
@@ -82,8 +82,8 @@ class VQATrainer(BaseILTrainer):
         q_string = q_vocab_dict.token_idx_2_string(question)
 
         _, index = scores.max(0)
-        pred_answer = list(ans_vocab_dict.word2idx_dict.keys())[index]
-        gt_answer = list(ans_vocab_dict.word2idx_dict.keys())[gt_answer]
+        pred_answer = sorted(ans_vocab_dict.word2idx_dict.keys())[index]
+        gt_answer = sorted(ans_vocab_dict.word2idx_dict.keys())[gt_answer]
 
         logger.info("Question: {}".format(q_string))
         logger.info("Predicted answer: {}".format(pred_answer))
@@ -94,7 +94,7 @@ class VQATrainer(BaseILTrainer):
         )
 
         result_path = os.path.join(
-            result_path, "ckpt_{}_{}_image.jpg".format(ckpt_idx, idx)
+            result_path, "ckpt_{}_{}_image.jpg".format(ckpt_idx, episode_id)
         )
 
         save_vqa_image_results(
@@ -117,6 +117,7 @@ class VQATrainer(BaseILTrainer):
                 input_type="vqa",
                 num_frames=config.IL.VQA.num_frames,
             )
+            .shuffle(1000)
             .to_tuple(
                 "episode_id",
                 "question",
@@ -286,6 +287,7 @@ class VQATrainer(BaseILTrainer):
                 input_type="vqa",
                 num_frames=config.IL.VQA.num_frames,
             )
+            .shuffle(1000)
             .to_tuple(
                 "episode_id",
                 "question",
@@ -341,8 +343,7 @@ class VQATrainer(BaseILTrainer):
         with torch.no_grad():
             for batch in eval_loader:
                 t += 1
-                idx, questions, answers, frame_queue = batch
-
+                episode_ids, questions, answers, frame_queue = batch
                 questions = questions.to(self.device)
                 answers = answers.to(self.device)
                 frame_queue = frame_queue.to(self.device)
@@ -377,7 +378,7 @@ class VQATrainer(BaseILTrainer):
 
                         self._save_vqa_results(
                             checkpoint_index,
-                            idx,
+                            episode_ids,
                             questions,
                             frame_queue,
                             scores,
