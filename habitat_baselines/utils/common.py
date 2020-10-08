@@ -105,6 +105,23 @@ def batch_obs(
     return batch
 
 
+def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
+    r"""Attempts to extract the ckpt_id from the filename of a checkpoint.
+    Assumes structure of ckpt.ID.path .
+
+    Args:
+        ckpt_path: the path to the ckpt file
+
+    Returns:
+        returns an int if it is able to extract the ckpt_path else None
+    """
+    ckpt_path = os.path.basename(ckpt_path)
+    nums: List[int] = [int(s) for s in ckpt_path.split(".") if s.isdigit()]
+    if len(nums) > 0:
+        return nums[-1]
+    return None
+
+
 def poll_checkpoint_folder(
     checkpoint_folder: str, previous_ckpt_ind: int
 ) -> Optional[str]:
