@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import os
 import time
 
@@ -182,7 +183,6 @@ class VQATrainer(BaseILTrainer):
                 start_time = time.time()
                 for batch in train_loader:
                     t += 1
-
                     _, questions, answers, frame_queue = batch
                     optim.zero_grad()
 
@@ -227,10 +227,16 @@ class VQATrainer(BaseILTrainer):
 
                         metrics.dump_log()
 
-                avg_loss /= len(train_loader)
-                avg_accuracy /= len(train_loader)
-                avg_mean_rank /= len(train_loader)
-                avg_mean_reciprocal_rank /= len(train_loader)
+                # Dataloader length for IterableDataset doesn't take into
+                # account batch size for Pytorch v < 1.6.0
+                num_batches = math.ceil(
+                    len(vqa_dataset) / config.IL.VQA.batch_size
+                )
+
+                avg_loss /= num_batches
+                avg_accuracy /= num_batches
+                avg_mean_rank /= num_batches
+                avg_mean_reciprocal_rank /= num_batches
 
                 end_time = time.time()
                 time_taken = "{:.1f}".format((end_time - start_time) / 60)
@@ -387,10 +393,12 @@ class VQATrainer(BaseILTrainer):
                             ans_vocab_dict,
                         )
 
-        avg_loss /= len(eval_loader)
-        avg_accuracy /= len(eval_loader)
-        avg_mean_rank /= len(eval_loader)
-        avg_mean_reciprocal_rank /= len(eval_loader)
+        num_batches = math.ceil(len(vqa_dataset) / config.IL.VQA.batch_size)
+
+        avg_loss /= num_batches
+        avg_accuracy /= num_batches
+        avg_mean_rank /= num_batches
+        avg_mean_reciprocal_rank /= num_batches
 
         writer.add_scalar("avg val loss", avg_loss, checkpoint_index)
         writer.add_scalar("avg val accuracy", avg_accuracy, checkpoint_index)
