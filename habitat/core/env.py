@@ -6,7 +6,17 @@
 
 import random
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import gym
 import numba
@@ -77,7 +87,11 @@ class Env:
             self._dataset = make_dataset(
                 id_dataset=config.DATASET.TYPE, config=config.DATASET
             )
-        self._episodes = self._dataset.episodes if self._dataset else []
+        self._episodes = (
+            self._dataset.episodes
+            if self._dataset
+            else cast(List[Type[Episode]], [])
+        )
         self._current_episode = None
         iter_option_dict = {
             k.lower(): v

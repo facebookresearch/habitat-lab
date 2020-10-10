@@ -8,7 +8,16 @@ import glob
 import numbers
 import os
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import numpy as np
 import torch
@@ -22,7 +31,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 
 class Flatten(nn.Module):
-    def forward(self, x: Tensor) -> Tensor:  # type: ignore
+    def forward(self, x: Tensor) -> Tensor:
         return torch.flatten(x, start_dim=1)
 
 
@@ -54,7 +63,7 @@ class CategoricalNet(nn.Module):
         nn.init.orthogonal_(self.linear.weight, gain=0.01)
         nn.init.constant_(self.linear.bias, 0)
 
-    def forward(self, x: Tensor) -> CustomFixedCategorical:  # type: ignore
+    def forward(self, x: Tensor) -> CustomFixedCategorical:
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
 
@@ -97,18 +106,18 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    batch: DefaultDict[str, Union[torch.Tensor, List]] = defaultdict(list)
+    batch: DefaultDict[str, List] = defaultdict(list)
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(_to_tensor(obs[sensor]))  # type: ignore
+            batch[sensor].append(_to_tensor(obs[sensor]))
 
-    batch: Dict[str, torch.Tensor] = batch  # type: ignore
+    batch_t: Dict[str, torch.Tensor] = {}
 
     for sensor in batch:
-        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)  # type: ignore
+        batch_t[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
-    return batch  # type: ignore
+    return batch_t
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
@@ -299,9 +308,11 @@ def center_crop(
     h, w = get_image_height_width(img, channels_last=channels_last)
 
     if isinstance(size, numbers.Number):
-        size = (int(size), int(size))
-    assert len(size) == 2, "size should be (h,w) you wish to resize to"  # type: ignore
-    cropy, cropx = size  # type: ignore
+        size_tuple: Tuple[int, int] = (int(size), int(size))
+    else:
+        size_tuple = cast(Tuple[int, int], size)
+    assert len(size_tuple) == 2, "size should be (h,w) you wish to resize to"
+    cropy, cropx = size_tuple
 
     startx = w // 2 - (cropx // 2)
     starty = h // 2 - (cropy // 2)

@@ -134,7 +134,7 @@ class SimpleCNN(nn.Module):
     def is_blind(self):
         return self._n_input_rgb + self._n_input_depth == 0
 
-    def forward(self, observations: Dict[str, torch.Tensor]):  # type: ignore
+    def forward(self, observations: Dict[str, torch.Tensor]):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]

@@ -333,7 +333,7 @@ class PointNavResNetNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def forward(  # type: ignore
+    def forward(
         self,
         observations: Dict[str, torch.Tensor],
         rnn_hidden_states,

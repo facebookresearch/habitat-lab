@@ -193,7 +193,7 @@ class PointGoalSensor(Sensor):
             else:
                 return direction_vector_agent
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self,
         observations,
         episode: NavigationEpisode,
@@ -267,7 +267,7 @@ class ImageGoalSensor(Sensor):
         )
         return goal_observation[self._rgb_sensor_uuid]
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self,
         *args: Any,
         observations,
@@ -313,7 +313,7 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
@@ -360,7 +360,7 @@ class HeadingSensor(Sensor):
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
         return np.array([phi], dtype=np.float32)
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
@@ -379,7 +379,7 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
@@ -428,7 +428,7 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
     ):
         agent_state = self._sim.get_agent_state()
@@ -480,7 +480,7 @@ class ProximitySensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, observations, *args: Any, episode, **kwargs: Any
     ):
         current_position = self._sim.get_agent_state().position
@@ -515,13 +515,13 @@ class Success(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore[override]
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
-    def update_metric(  # type: ignore
+    def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
@@ -564,7 +564,7 @@ class SPL(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "spl"
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore[override]
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
         )
@@ -581,7 +581,7 @@ class SPL(Measure):
     def _euclidean_distance(self, position_a, position_b):
         return np.linalg.norm(position_b - position_a, ord=2)
 
-    def update_metric(  # type: ignore
+    def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
@@ -612,7 +612,7 @@ class SoftSPL(SPL):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "softspl"
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
@@ -624,7 +624,7 @@ class SoftSPL(SPL):
         ].get_metric()
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
-    def update_metric(self, episode, task, *args: Any, **kwargs: Any):  # type: ignore
+    def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
@@ -659,10 +659,10 @@ class Collisions(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "collisions"
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._metric = None
 
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):  # type: ignore
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         if self._metric is None:
             self._metric = {"count": 0, "is_collision": False}
         self._metric["is_collision"] = False
@@ -802,16 +802,16 @@ class TopDownMap(Measure):
         self, episode: NavigationEpisode, agent_position: AgentState
     ):
         if self._config.DRAW_SHORTEST_PATH:
-            self._shortest_path_points = (
+            _shortest_path_points = (
                 self._sim.get_straight_shortest_path_points(
                     agent_position, episode.goals[0].position
                 )
             )
             self._shortest_path_points = [
                 maps.to_grid(
-                    p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim  # type: ignore
+                    p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim
                 )
-                for p in self._shortest_path_points
+                for p in _shortest_path_points
             ]
             maps.draw_path(
                 self._top_down_map,
@@ -820,7 +820,7 @@ class TopDownMap(Measure):
                 self.line_thickness,
             )
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
         self._metric = None
         self._top_down_map = self.get_original_map()
@@ -847,7 +847,7 @@ class TopDownMap(Measure):
                 episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
             )
 
-    def update_metric(self, episode, action, *args: Any, **kwargs: Any):  # type: ignore
+    def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
         house_map, map_agent_x, map_agent_y = self.update_map(
             self._sim.get_agent_state().position
@@ -936,7 +936,7 @@ class DistanceToGoal(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def reset_metric(self, episode, *args: Any, **kwargs: Any):  # type: ignore
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._metric = None
         if self._config.DISTANCE_TO == "VIEW_POINTS":
@@ -947,7 +947,9 @@ class DistanceToGoal(Measure):
             ]
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
 
-    def update_metric(self, episode: NavigationEpisode, *args: Any, **kwargs: Any):  # type: ignore
+    def update_metric(
+        self, episode: NavigationEpisode, *args: Any, **kwargs: Any
+    ):
         current_position = self._sim.get_agent_state().position
 
         if self._previous_position is None or not np.allclose(
@@ -1005,10 +1007,10 @@ class TurnRightAction(SimulatorTaskAction):
 class StopAction(SimulatorTaskAction):
     name: str = "STOP"
 
-    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):  # type: ignore[override]
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False  # type: ignore
 
-    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):  # type: ignore
+    def step(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -1018,7 +1020,7 @@ class StopAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class LookUpAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):  # type: ignore
+    def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -1027,7 +1029,7 @@ class LookUpAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class LookDownAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):  # type: ignore
+    def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -1044,7 +1046,7 @@ class TeleportAction(SimulatorTaskAction):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "TELEPORT"
 
-    def step(  # type: ignore
+    def step(
         self,
         *args: Any,
         position: List[float],

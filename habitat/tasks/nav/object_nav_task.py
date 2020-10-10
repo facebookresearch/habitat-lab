@@ -86,6 +86,7 @@ class ObjectGoal(NavigationGoal):
 
     object_id: str = attr.ib(default=None, validator=not_none_validator)
     object_name: Optional[str] = None
+    object_name_id: Optional[int] = None
     object_category: Optional[str] = None
     room_id: Optional[str] = None
     room_name: Optional[str] = None
@@ -140,7 +141,7 @@ class ObjectGoalSensor(Sensor):
             low=0, high=max_value, shape=sensor_shape, dtype=np.int64
         )
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self,
         observations,
         *args: Any,
@@ -167,7 +168,7 @@ class ObjectGoalSensor(Sensor):
         elif self.config.GOAL_SPEC == "OBJECT_ID":
             obj_goal = episode.goals[0]
             assert isinstance(obj_goal, ObjectGoal)  # for type checking
-            return np.array([obj_goal.object_name_id], dtype=np.int64)  # type: ignore[attr-defined]
+            return np.array([obj_goal.object_name_id], dtype=np.int64)
         else:
             raise RuntimeError(
                 "Wrong GOAL_SPEC specified for ObjectGoalSensor."

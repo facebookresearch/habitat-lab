@@ -4,7 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
 import numpy as np
 from gym import spaces
@@ -72,7 +81,7 @@ class HabitatSimRGBSensor(RGBSensor):
             dtype=np.uint8,
         )
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
     ) -> Union[ndarray, "Tensor"]:
         obs = sim_obs.get(self.uuid, None)
@@ -109,7 +118,7 @@ class HabitatSimDepthSensor(DepthSensor):
             dtype=np.float32,
         )
 
-    def get_observation(  # type: ignore
+    def get_observation(
         self, sim_obs: Dict[str, Union[ndarray, "Tensor"]]
     ) -> Union[ndarray, "Tensor"]:
         obs = sim_obs.get(self.uuid, None)
@@ -150,7 +159,7 @@ class HabitatSimSemanticSensor(SemanticSensor):
             dtype=np.uint32,
         )
 
-    def get_observation(self, sim_obs):  # type:ignore[override]
+    def get_observation(self, sim_obs):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
         return obs
@@ -161,6 +170,11 @@ def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
     )
+
+
+HabitatSimVizSensors = Union[
+    HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
+]
 
 
 @registry.register_simulator(name="Sim-v0")
@@ -224,7 +238,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
-            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
+            # We know that the Sensor has to be one of these Sensors
+            sensor = cast(HabitatSimVizSensors, sensor)
+            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
             sim_sensor_cfg.gpu2gpu_transfer = (
                 self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             )
@@ -267,7 +283,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: int) -> Observations:  # type: ignore [override]
+    def step(self, action: int) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)

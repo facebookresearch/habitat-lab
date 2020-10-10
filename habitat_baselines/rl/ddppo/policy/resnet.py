@@ -58,7 +58,7 @@ class BasicBlock(nn.Module):
         self.downsample = downsample
         self.relu = nn.ReLU(True)
 
-    def forward(self, x):  # type: ignore
+    def forward(self, x):
         residual = x
 
         out = self.convs(x)
@@ -100,7 +100,7 @@ class SE(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, x):  # type: ignore
+    def forward(self, x):
         b, c, _, _ = x.size()
         x = self.squeeze(x)
         x = x.view(b, c)
@@ -148,7 +148,7 @@ class Bottleneck(nn.Module):
 
         return self.relu(out + identity)
 
-    def forward(self, x: Tensor) -> Tensor:  # type: ignore
+    def forward(self, x: Tensor) -> Tensor:
         return self._impl(x)
 
 
@@ -269,7 +269,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x: Tensor) -> Tensor:  # type: ignore
+    def forward(self, x: Tensor) -> Tensor:
         x = self.conv1(x)
         x = self.maxpool(x)  # type: ignore
 

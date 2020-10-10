@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import signal
-from collections.abc import Collection
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -14,12 +13,14 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterator,
     List,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
+    cast,
 )
 
 import gym
@@ -280,7 +281,7 @@ class VectorEnv:
                     parent_conn,
                 ),
             )
-            self._workers.append(ps)  # type: ignore
+            self._workers.append(cast(mp.Process, ps))
             ps.daemon = True
             ps.start()
             worker_conn.close()
@@ -552,7 +553,7 @@ class ThreadedVectorEnv(VectorEnv):
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        queues: Tuple[Collection, Collection] = zip(
+        queues: Iterator[Tuple[Any, ...]] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
         parent_read_queues, parent_write_queues = queues

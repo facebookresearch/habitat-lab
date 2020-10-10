@@ -17,10 +17,12 @@ class RunningMeanAndVar(nn.Module):
         self.register_buffer("_mean", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_var", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_count", torch.zeros(()))
-
+        self._mean: torch.Tensor = self._mean
+        self._var: torch.Tensor = self._var
+        self._count: torch.Tensor = self._count
         self._distributed = distrib.is_initialized()
 
-    def forward(self, x: Tensor) -> Tensor:  # type: ignore[override]
+    def forward(self, x: Tensor) -> Tensor:
         if self.training:
             new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)  # type: ignore
             new_count = torch.full_like(self._count, x.size(0))  # type: ignore
@@ -42,7 +44,7 @@ class RunningMeanAndVar(nn.Module):
             # seen over training is simply absurd, so it doesn't matter
             new_var /= new_count
 
-            m_a = self._var * (self._count)  # type: ignore
+            m_a = self._var * (self._count)
             m_b = new_var * (new_count)
             M2 = (
                 m_a
@@ -53,12 +55,12 @@ class RunningMeanAndVar(nn.Module):
                 / (self._count + new_count)
             )
 
-            self._var = M2 / (self._count + new_count)  # type: ignore
-            self._mean = (self._count * self._mean + new_count * new_mean) / (  # type: ignore
-                self._count + new_count  # type: ignore
+            self._var = M2 / (self._count + new_count)
+            self._mean = (self._count * self._mean + new_count * new_mean) / (
+                self._count + new_count
             )
 
-            self._count += new_count  # type: ignore
+            self._count += new_count
 
         stdev = torch.sqrt(
             torch.max(self._var, torch.full_like(self._var, 1e-2))

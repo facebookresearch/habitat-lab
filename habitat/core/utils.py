@@ -59,7 +59,7 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
     return out_image
 
 
-def not_none_validator(  # type: ignore
+def not_none_validator(
     self: Any, attribute: Any, value: Optional[Any]
 ) -> None:
     if value is None:

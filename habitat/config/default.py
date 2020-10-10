@@ -8,7 +8,6 @@ from typing import List, Optional, Union
 
 import yacs.config
 
-# from habitat.config import Config as CN # type: ignore
 
 # Default Habitat config node
 class Config(yacs.config.CfgNode):
