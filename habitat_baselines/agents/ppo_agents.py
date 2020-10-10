@@ -100,7 +100,7 @@ class PPOAgent(Agent):
                 "Model checkpoint wasn't loaded, evaluating " "a random model."
             )
 
-            self.test_recurrent_hidden_states: Optional[torch.Tensor] = None
+        self.test_recurrent_hidden_states: Optional[torch.Tensor] = None
         self.not_done_masks: Optional[torch.Tensor] = None
         self.prev_actions: Optional[torch.Tensor] = None
 
