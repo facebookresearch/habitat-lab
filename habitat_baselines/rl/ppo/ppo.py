@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -12,10 +12,7 @@ from torch import nn as nn
 from torch import optim as optim
 
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-    PointNavResNetPolicy,
-)
-from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
+from habitat_baselines.rl.ppo.policy import Policy
 
 EPS_PPO = 1e-5
 
