@@ -23,7 +23,7 @@ EPS_PPO = 1e-5
 class PPO(nn.Module):
     def __init__(
         self,
-        actor_critic: Union[PointNavResNetPolicy, PointNavBaselinePolicy],
+        actor_critic: Policy,
         clip_param: float,
         ppo_epoch: int,
         num_mini_batch: int,
