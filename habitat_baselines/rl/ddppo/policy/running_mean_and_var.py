@@ -25,7 +25,7 @@ class RunningMeanAndVar(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         if self.training:
             new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)  # type: ignore
-            new_count = torch.full_like(self._count, x.size(0))  # type: ignore
+            new_count = torch.full_like(self._count, x.size(0))
 
             if self._distributed:
                 distrib.all_reduce(new_mean)
@@ -49,7 +49,7 @@ class RunningMeanAndVar(nn.Module):
             M2 = (
                 m_a
                 + m_b
-                + (new_mean - self._mean).pow(2)  # type: ignore
+                + (new_mean - self._mean).pow(2)
                 * self._count
                 * new_count
                 / (self._count + new_count)
