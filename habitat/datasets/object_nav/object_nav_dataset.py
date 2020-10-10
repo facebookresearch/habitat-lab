@@ -6,7 +6,7 @@
 
 import json
 import os
-from typing import Any, Dict, Optional, Sequence, cast
+from typing import Any, Dict, List, Optional, Sequence
 
 from habitat.config import Config
 from habitat.core.registry import registry
@@ -29,7 +29,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Object Navigation dataset."""
     category_to_task_category_id: Dict[str, int]
     category_to_scene_annotation_category_id: Dict[str, int]
-    episodes: Sequence[ObjectGoalNavEpisode] = []  # type: ignore
+    episodes: List[ObjectGoalNavEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
     goals_by_category: Dict[str, Sequence[ObjectGoal]]
 
@@ -62,10 +62,10 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
 
         for i in range(len(self.episodes)):
-
-            self.episodes[i].goals = cast(
-                list, self.goals_by_category[self.episodes[i].goals_key]
-            )
+            goals = self.goals_by_category[self.episodes[i].goals_key]
+            if not isinstance(goals, list):
+                goals = list(goals)
+            self.episodes[i].goals = goals
 
         return result
 

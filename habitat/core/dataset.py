@@ -378,7 +378,10 @@ class EpisodeIterator(Iterator):
                 episodes, num_episode_sample, replace=False
             )
 
-        self.episodes = list(episodes)
+        if not isinstance(episodes, list):
+            episodes = list(episodes)
+
+        self.episodes = episodes
         self.cycle = cycle
         self.group_by_scene = group_by_scene
         self.shuffle = shuffle
