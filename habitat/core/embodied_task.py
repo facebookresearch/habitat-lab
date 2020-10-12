@@ -10,8 +10,6 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Optional, Type, Union
 
-import numpy as np
-
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.registry import registry
@@ -292,8 +290,6 @@ class EmbodiedTask:
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_name = action["action"]
-        if isinstance(action_name, (int, np.integer)):
-            action_name = self.get_action_name(action_name)
         assert (
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
