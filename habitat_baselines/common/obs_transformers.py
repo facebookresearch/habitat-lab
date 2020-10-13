@@ -602,11 +602,12 @@ class Cube2Fisheye(nn.Module):
         unprojected_unit[..., 1] *= -1
 
         # Calculate fov
-        z_axis = torch.tensor([0, 0, 1], dtype=torch.float32)
-        unprojected_fov_cos = torch.matmul(unprojected_unit, z_axis)
+        unprojected_fov_cos = unprojected_unit[
+            ..., 2
+        ]  # unprojected_unit @ z_axis
         fov_mask = unprojected_fov_cos >= fov_cos
         if alpha > 0.5:
-            fov_mask *= r2 <= (1 - (2 * alpha - 1))
+            fov_mask *= r2 <= (1 / (2 * alpha - 1))
 
         return unprojected_unit, fov_mask
 
