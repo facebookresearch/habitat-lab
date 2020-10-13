@@ -10,16 +10,19 @@
 import re
 import typing
 from collections import Counter
-from typing import List, Union
+from typing import TYPE_CHECKING, List, Union
 
 from numpy import float64
 
 from habitat.core.logging import logger
 from habitat.core.simulator import ShortestPathPoint
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
+
+if TYPE_CHECKING:
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+
 
 SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
@@ -164,7 +167,7 @@ class VocabFromText(VocabDict):
 
 
 def get_action_shortest_path(
-    sim: HabitatSim,
+    sim: "HabitatSim",
     source_position: List[float],
     source_rotation: List[Union[int, float64]],
     goal_position: List[float],

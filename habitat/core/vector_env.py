@@ -25,7 +25,7 @@ from typing import (
 
 import gym
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 import habitat
 from habitat.config import Config
@@ -80,9 +80,9 @@ class VectorEnv:
     All the environments are synchronized on step and reset methods.
     """
 
-    observation_spaces: List[SpaceDict]
+    observation_spaces: List[spaces.Dict]
     number_of_episodes: List[Optional[int]]
-    action_spaces: List[SpaceDict]
+    action_spaces: List[spaces.Dict]
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_envs: int
