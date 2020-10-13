@@ -5,7 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Sized
+from collections.abc import Collection
+from typing import Dict, List, Union
 
 import gym
 from gym import Space
@@ -44,7 +45,7 @@ class ActionSpace(gym.spaces.Dict):
         })
     """
 
-    def __init__(self, spaces):
+    def __init__(self, spaces: Union[List, Dict]):
         if isinstance(spaces, dict):
             self.spaces = OrderedDict(sorted(spaces.items()))
         if isinstance(spaces, list):
@@ -52,7 +53,7 @@ class ActionSpace(gym.spaces.Dict):
         self.actions_select = gym.spaces.Discrete(len(self.spaces))
 
     @property
-    def n(self):
+    def n(self) -> int:
         return len(self.spaces)
 
     def sample(self):
@@ -90,7 +91,12 @@ class ListSpace(Space):
             dataset.question_vocab.get_size()))
     """
 
-    def __init__(self, space, min_seq_length=0, max_seq_length=1 << 15):
+    def __init__(
+        self,
+        space: Space,
+        min_seq_length: int = 0,
+        max_seq_length: int = 1 << 15,
+    ):
         self.min_seq_length = min_seq_length
         self.max_seq_length = max_seq_length
         self.space = space
@@ -103,7 +109,7 @@ class ListSpace(Space):
         return [self.space.sample() for _ in range(seq_length)]
 
     def contains(self, x):
-        if not isinstance(x, Sized):
+        if not isinstance(x, Collection):
             return False
 
         if not (self.min_seq_length <= len(x) <= self.max_seq_length):

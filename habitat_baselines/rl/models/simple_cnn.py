@@ -122,7 +122,7 @@ class SimpleCNN(nn.Module):
         return tuple(out_dimension)
 
     def layer_init(self):
-        for layer in self.cnn:
+        for layer in self.cnn:  # type: ignore
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(
                     layer.weight, nn.init.calculate_gain("relu")
@@ -149,6 +149,6 @@ class SimpleCNN(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
 
-        cnn_input = torch.cat(cnn_input, dim=1)
+        cnn_inputs = torch.cat(cnn_input, dim=1)
 
-        return self.cnn(cnn_input)
+        return self.cnn(cnn_inputs)

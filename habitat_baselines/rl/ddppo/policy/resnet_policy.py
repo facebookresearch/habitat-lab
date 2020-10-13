@@ -106,7 +106,7 @@ class ResNetEncoder(nn.Module):
             self._n_input_depth = 0
 
         if normalize_visual_inputs:
-            self.running_mean_and_var = RunningMeanAndVar(
+            self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_depth + self._n_input_rgb
             )
         else:
@@ -154,7 +154,7 @@ class ResNetEncoder(nn.Module):
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
 
-    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
         if self.is_blind:
             return None
 
@@ -339,7 +339,7 @@ class PointNavResNetNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
             if "visual_features" in observations:
@@ -415,7 +415,9 @@ class PointNavResNetNet(Net):
         )
         x.append(prev_actions)
 
-        x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        out = torch.cat(x, dim=1)
+        out, rnn_hidden_states = self.state_encoder(
+            out, rnn_hidden_states, masks
+        )
 
-        return x, rnn_hidden_states
+        return out, rnn_hidden_states

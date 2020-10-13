@@ -5,23 +5,26 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+from torch import Tensor
 from torch import distributed as distrib
 from torch import nn as nn
 from torch.nn import functional as F
 
 
 class RunningMeanAndVar(nn.Module):
-    def __init__(self, n_channels):
+    def __init__(self, n_channels: int) -> None:
         super().__init__()
         self.register_buffer("_mean", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_var", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_count", torch.zeros(()))
-
+        self._mean: torch.Tensor = self._mean
+        self._var: torch.Tensor = self._var
+        self._count: torch.Tensor = self._count
         self._distributed = distrib.is_initialized()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         if self.training:
-            new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)
+            new_mean = F.adaptive_avg_pool2d(x, 1).sum(0, keepdim=True)  # type: ignore
             new_count = torch.full_like(self._count, x.size(0))
 
             if self._distributed:
@@ -30,7 +33,7 @@ class RunningMeanAndVar(nn.Module):
 
             new_mean /= new_count
 
-            new_var = F.adaptive_avg_pool2d((x - new_mean).pow(2), 1).sum(
+            new_var = F.adaptive_avg_pool2d((x - new_mean).pow(2), 1).sum(  # type: ignore
                 0, keepdim=True
             )
 

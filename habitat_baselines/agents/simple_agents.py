@@ -7,27 +7,30 @@
 
 import argparse
 from math import pi
+from typing import Dict, Union
 
 import numpy as np
+from numpy import bool_, int64, ndarray
 
 import habitat
 from habitat.config.default import get_config
+from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 class RandomAgent(habitat.Agent):
-    def __init__(self, success_distance, goal_sensor_uuid):
+    def __init__(self, success_distance: float, goal_sensor_uuid: str) -> None:
         self.dist_threshold_to_stop = success_distance
         self.goal_sensor_uuid = goal_sensor_uuid
 
-    def reset(self):
+    def reset(self) -> None:
         pass
 
-    def is_goal_reached(self, observations):
+    def is_goal_reached(self, observations: Observations) -> bool_:
         dist = observations[self.goal_sensor_uuid][0]
         return dist <= self.dist_threshold_to_stop
 
-    def act(self, observations):
+    def act(self, observations: Observations) -> Dict[str, int64]:
         if self.is_goal_reached(observations):
             action = HabitatSimActions.STOP
         else:
@@ -42,7 +45,7 @@ class RandomAgent(habitat.Agent):
 
 
 class ForwardOnlyAgent(RandomAgent):
-    def act(self, observations):
+    def act(self, observations: Observations) -> Dict[str, int]:
         if self.is_goal_reached(observations):
             action = HabitatSimActions.STOP
         else:
@@ -51,11 +54,11 @@ class ForwardOnlyAgent(RandomAgent):
 
 
 class RandomForwardAgent(RandomAgent):
-    def __init__(self, success_distance, goal_sensor_uuid):
+    def __init__(self, success_distance: float, goal_sensor_uuid: str) -> None:
         super().__init__(success_distance, goal_sensor_uuid)
         self.FORWARD_PROBABILITY = 0.8
 
-    def act(self, observations):
+    def act(self, observations: Observations) -> Dict[str, Union[int, int64]]:
         if self.is_goal_reached(observations):
             action = HabitatSimActions.STOP
         else:
@@ -70,20 +73,20 @@ class RandomForwardAgent(RandomAgent):
 
 
 class GoalFollower(RandomAgent):
-    def __init__(self, success_distance, goal_sensor_uuid):
+    def __init__(self, success_distance: float, goal_sensor_uuid: str) -> None:
         super().__init__(success_distance, goal_sensor_uuid)
         self.pos_th = self.dist_threshold_to_stop
         self.angle_th = float(np.deg2rad(15))
         self.random_prob = 0
 
-    def normalize_angle(self, angle):
+    def normalize_angle(self, angle: ndarray) -> ndarray:
         if angle < -pi:
             angle = 2.0 * pi + angle
         if angle > pi:
             angle = -2.0 * pi + angle
         return angle
 
-    def turn_towards_goal(self, angle_to_goal):
+    def turn_towards_goal(self, angle_to_goal: ndarray) -> int:
         if angle_to_goal > pi or (
             (angle_to_goal < 0) and (angle_to_goal > -pi)
         ):
@@ -92,7 +95,7 @@ class GoalFollower(RandomAgent):
             action = HabitatSimActions.TURN_LEFT
         return action
 
-    def act(self, observations):
+    def act(self, observations: Observations) -> Dict[str, int]:
         if self.is_goal_reached(observations):
             action = HabitatSimActions.STOP
         else:

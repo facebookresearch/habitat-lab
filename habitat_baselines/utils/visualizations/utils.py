@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import cv2
 import torch
 
@@ -25,8 +26,8 @@ def save_rgb_results(
         path: to save images
     """
     path = path.format(split="val", type="rgb")
-    gt_bgr, pred_bgr = tensor_to_bgr_images([gt_rgb, pred_rgb])
-    cv2.imwrite(path + "_gt.jpg", gt_bgr)
+    gt_bgr_o, pred_bgr = tensor_to_bgr_images([gt_rgb, pred_rgb])
+    cv2.imwrite(path + "_gt.jpg", gt_bgr_o)
     cv2.imwrite(path + "_pred.jpg", pred_bgr)
 
 

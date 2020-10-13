@@ -3,10 +3,19 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import abc
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import attr
 from gym import Space
@@ -15,12 +24,19 @@ from gym.spaces.dict_space import Dict as SpaceDict
 from habitat.config import Config
 from habitat.core.dataset import Episode
 
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
+
+VisualObservation = Union["torch.Tensor", "np.ndarray"]
+
 
 @attr.s(auto_attribs=True)
-class ActionSpaceConfiguration:
+class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
     config: Config
 
-    def get(self):
+    @abc.abstractmethod
+    def get(self) -> Any:
         raise NotImplementedError
 
 
@@ -43,7 +59,7 @@ class SensorTypes(Enum):
     TOKEN_IDS = 13
 
 
-class Sensor:
+class Sensor(metaclass=abc.ABCMeta):
     r"""Represents a sensor that provides data from the environment to agent.
 
     :data uuid: universally unique id.
@@ -80,6 +96,7 @@ class Sensor:
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
+    @abc.abstractmethod
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
         r"""
         Returns:
@@ -88,7 +105,7 @@ class Sensor:
         raise NotImplementedError
 
 
-class Observations(dict):
+class Observations(Dict[str, Any]):
     r"""Dictionary containing sensor observations"""
 
     def __init__(
@@ -107,7 +124,7 @@ class Observations(dict):
         super().__init__(data)
 
 
-class RGBSensor(Sensor):
+class RGBSensor(Sensor, metaclass=abc.ABCMeta):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -120,11 +137,11 @@ class RGBSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
-    def get_observation(self, *args: Any, **kwargs: Any) -> Any:
+    def get_observation(self, *args: Any, **kwargs: Any) -> VisualObservation:
         raise NotImplementedError
 
 
-class DepthSensor(Sensor):
+class DepthSensor(Sensor, metaclass=abc.ABCMeta):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -137,7 +154,7 @@ class DepthSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
-    def get_observation(self, *args: Any, **kwargs: Any):
+    def get_observation(self, *args: Any, **kwargs: Any) -> VisualObservation:
         raise NotImplementedError
 
 
@@ -154,7 +171,7 @@ class SemanticSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
-    def get_observation(self, *args: Any, **kwargs: Any):
+    def get_observation(self, *args: Any, **kwargs: Any) -> VisualObservation:
         raise NotImplementedError
 
 
@@ -171,7 +188,7 @@ class BumpSensor(Sensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
         raise NotImplementedError
 
-    def get_observation(self, *args: Any, **kwargs: Any):
+    def get_observation(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
 
 
@@ -190,7 +207,7 @@ class SensorSuite:
             each sensor must be unique.
         """
         self.sensors = OrderedDict()
-        spaces: OrderedDict[str, Space] = OrderedDict()
+        spaces: "OrderedDict[str, Space]" = OrderedDict()
         for sensor in sensors:
             assert (
                 sensor.uuid not in self.sensors
@@ -211,8 +228,8 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    position: List[float]
-    rotation: Optional[List[float]] = None
+    position: Optional["np.ndarray"]
+    rotation: Optional["np.ndarray"] = None
 
 
 @attr.s(auto_attribs=True)
@@ -227,6 +244,9 @@ class Simulator:
     must derive from this class and implement the abstarct methods.
     """
     habitat_config: Config
+
+    def __init__(self, *args, **kwargs) -> None:
+        pass
 
     @property
     def sensor_suite(self) -> SensorSuite:
@@ -259,8 +279,8 @@ class Simulator:
 
     def geodesic_distance(
         self,
-        position_a: List[float],
-        position_b: Union[List[float], List[List[float]]],
+        position_a: Sequence[float],
+        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
         episode: Optional[Episode] = None,
     ) -> float:
         r"""Calculates geodesic distance between two points.
@@ -277,7 +297,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def get_agent_state(self, agent_id: int = 0):
+    def get_agent_state(self, agent_id: int = 0) -> AgentState:
         r"""..
 
         :param agent_id: id of agent.
@@ -352,14 +372,14 @@ class Simulator:
         raise NotImplementedError
 
     @property
-    def up_vector(self):
+    def up_vector(self) -> "np.ndarray":
         r"""The vector representing the direction upward (perpendicular to the
         floor) from the global coordinate frame.
         """
         raise NotImplementedError
 
     @property
-    def forward_vector(self):
+    def forward_vector(self) -> "np.ndarray":
         r"""The forward direction in the global coordinate frame i.e. the
         direction of forward movement for an agent with 0 degrees rotation in
         the ground plane.
@@ -380,7 +400,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def __enter__(self):
+    def __enter__(self) -> "Simulator":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

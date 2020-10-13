@@ -6,11 +6,14 @@
 
 import os
 import time
-from typing import ClassVar, Dict, List
+from typing import Any, ClassVar, DefaultDict, Dict, List, Tuple, Union
 
 import torch
+from numpy import ndarray
+from torch import Tensor
 
 from habitat import Config, logger
+from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.utils.common import (
     get_checkpoint_id,
@@ -143,12 +146,12 @@ class BaseRLTrainer(BaseTrainer):
     r"""Base trainer class for RL trainers. Future RL-specific
     methods should be hosted here.
     """
-    device: torch.device
+    device: torch.device  # type: ignore
     config: Config
     video_option: List[str]
     _flush_secs: int
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config) -> None:
         super().__init__()
         assert config is not None, "needs config file to initialize trainer"
         self.config = config
@@ -192,15 +195,23 @@ class BaseRLTrainer(BaseTrainer):
 
     @staticmethod
     def _pause_envs(
-        envs_to_pause,
-        envs,
-        test_recurrent_hidden_states,
-        not_done_masks,
-        current_episode_reward,
-        prev_actions,
-        batch,
-        rgb_frames,
-    ):
+        envs_to_pause: List[int],
+        envs: VectorEnv,
+        test_recurrent_hidden_states: Tensor,
+        not_done_masks: Tensor,
+        current_episode_reward: Tensor,
+        prev_actions: Tensor,
+        batch: DefaultDict[str, Tensor],
+        rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
+    ) -> Tuple[
+        VectorEnv,
+        Tensor,
+        Tensor,
+        Tensor,
+        Tensor,
+        DefaultDict[str, Tensor],
+        List[List[Any]],
+    ]:
         # pausing self.envs with no new episode
         if len(envs_to_pause) > 0:
             state_index = list(range(envs.num_envs))
