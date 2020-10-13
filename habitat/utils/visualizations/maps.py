@@ -5,15 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 
 import imageio
 import numpy as np
 import scipy.ndimage
 
 from habitat.core.utils import try_cv2_import
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.utils.visualizations import utils
+
+if TYPE_CHECKING:
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+
 
 cv2 = try_cv2_import()
 
@@ -185,7 +188,7 @@ def to_grid(
     realworld_x: float,
     realworld_y: float,
     grid_resolution: Tuple[int, int],
-    sim: Optional[HabitatSim] = None,
+    sim: Optional["HabitatSim"] = None,
     pathfinder=None,
 ) -> Tuple[int, int]:
     r"""Return gridworld index of realworld coordinates assuming top-left corner
@@ -216,7 +219,7 @@ def from_grid(
     grid_x: int,
     grid_y: int,
     grid_resolution: Tuple[int, int],
-    sim: Optional[HabitatSim] = None,
+    sim: Optional["HabitatSim"] = None,
     pathfinder=None,
 ) -> Tuple[float, float]:
     r"""Inverse of _to_grid function. Return real world coordinate from
@@ -267,7 +270,7 @@ def _outline_border(top_down_map):
 
 
 def calculate_meters_per_pixel(
-    map_resolution: int, sim: Optional[HabitatSim] = None, pathfinder=None
+    map_resolution: int, sim: Optional["HabitatSim"] = None, pathfinder=None
 ):
     r"""Calculate the meters_per_pixel for a given map resolution"""
     if sim is None and pathfinder is None:
@@ -322,7 +325,7 @@ def get_topdown_map(
 
 
 def get_topdown_map_from_sim(
-    sim: HabitatSim,
+    sim: "HabitatSim",
     map_resolution: int = 1024,
     draw_border: bool = True,
     meters_per_pixel: Optional[float] = None,
