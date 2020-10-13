@@ -606,7 +606,7 @@ class Cube2Fisheye(nn.Module):
         unprojected_fov_cos = torch.matmul(unprojected_unit, z_axis)
         fov_mask = unprojected_fov_cos >= fov_cos
         if alpha > 0.5:
-            fov_mask *= r2 <= (1 - (2 * alpha - 1))
+            fov_mask *= r2 <= (1 / (2 * alpha - 1))
 
         return unprojected_unit, fov_mask
 
