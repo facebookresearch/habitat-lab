@@ -10,7 +10,6 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 from torch.nn import functional as F
 
@@ -39,7 +38,7 @@ from habitat_baselines.utils.common import Flatten
 class PointNavResNetPolicy(Policy):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
         num_recurrent_layers: int = 2,
@@ -67,7 +66,7 @@ class PointNavResNetPolicy(Policy):
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: SpaceDict, action_space
+        cls, config: Config, observation_space: spaces.Dict, action_space
     ):
         return cls(
             observation_space=observation_space,
@@ -84,7 +83,7 @@ class PointNavResNetPolicy(Policy):
 class ResNetEncoder(nn.Module):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         baseplanes: int = 32,
         ngroups: int = 32,
         spatial_size: int = 128,
@@ -190,7 +189,7 @@ class PointNavResNetNet(Net):
 
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int,
         num_recurrent_layers: int,

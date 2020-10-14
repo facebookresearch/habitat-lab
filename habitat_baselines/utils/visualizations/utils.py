@@ -12,7 +12,11 @@ from habitat_baselines.utils.common import (
     tensor_to_bgr_images,
     tensor_to_depth_images,
 )
-from habitat_sim.utils.common import d3_40_colors_rgb
+
+try:
+    from habitat_sim.utils.common import d3_40_colors_rgb
+except ImportError:
+    d3_40_colors_rgb = None
 
 
 def save_rgb_results(

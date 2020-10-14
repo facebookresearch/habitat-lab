@@ -14,7 +14,6 @@ from typing import DefaultDict, Optional
 import numpy as np
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import distributed as distrib
 from torch import nn as nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -207,7 +206,7 @@ class DDPPOTrainer(PPOTrainer):
         obs_space = self.obs_space
         if self._static_encoder:
             self._encoder = self.actor_critic.net.visual_encoder
-            obs_space = SpaceDict(
+            obs_space = spaces.Dict(
                 {
                     "visual_features": spaces.Box(
                         low=np.finfo(np.float32).min,

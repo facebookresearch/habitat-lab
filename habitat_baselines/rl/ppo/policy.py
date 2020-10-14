@@ -7,7 +7,6 @@ import abc
 
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 
 from habitat.config import Config
@@ -100,7 +99,7 @@ class CriticHead(nn.Module):
 class PointNavBaselinePolicy(Policy):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
         **kwargs
@@ -116,7 +115,7 @@ class PointNavBaselinePolicy(Policy):
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: SpaceDict, action_space
+        cls, config: Config, observation_space: spaces.Dict, action_space
     ):
         return cls(
             observation_space=observation_space,
@@ -153,7 +152,7 @@ class PointNavBaselineNet(Net):
 
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         hidden_size: int,
     ):
         super().__init__()

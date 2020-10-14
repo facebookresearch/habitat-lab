@@ -27,7 +27,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 from torch import nn
 
 from habitat.config import Config
@@ -48,7 +48,7 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
     (resolution, range, or num of channels change)."""
 
     def transform_observation_space(
-        self, observation_space: SpaceDict, **kwargs
+        self, observation_space: spaces.Dict, **kwargs
     ):
         return observation_space
 
@@ -86,7 +86,7 @@ class ResizeShortestEdge(ObservationTransformer):
 
     def transform_observation_space(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
@@ -162,7 +162,7 @@ class CenterCropper(ObservationTransformer):
 
     def transform_observation_space(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
     ):
         size = self._size
         observation_space = copy.deepcopy(observation_space)
@@ -366,7 +366,7 @@ class CubeMap2Equirec(ObservationTransformer):
         self.eq_shape: Tuple[int] = eq_shape
         self.channels_last: bool = channels_last
         self.c2eq: nn.Module = Cube2Equirec(eq_shape[0], eq_shape[1])
-        if target_uuids == None:
+        if target_uuids is None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
@@ -374,7 +374,7 @@ class CubeMap2Equirec(ObservationTransformer):
 
     def transform_observation_space(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (EQ_H, EQ_W)"""
         # Transforms the observation space to of the target UUID
@@ -665,7 +665,7 @@ class CubeMap2Fisheye(ObservationTransformer):
             fish_shape[0], fish_shape[1], fish_fov, cx, cy, fx, fy, xi, alpha
         )
 
-        if target_uuids == None:
+        if target_uuids is None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
@@ -673,7 +673,7 @@ class CubeMap2Fisheye(ObservationTransformer):
 
     def transform_observation_space(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (FISH_H, FISH_W)"""
         # Transforms the observation space to of the target UUID
@@ -767,8 +767,8 @@ def apply_obs_transforms_batch(
 
 
 def apply_obs_transforms_obs_space(
-    obs_space: SpaceDict, obs_transforms: Iterable[ObservationTransformer]
-) -> SpaceDict:
+    obs_space: spaces.Dict, obs_transforms: Iterable[ObservationTransformer]
+) -> spaces.Dict:
     for obs_transform in obs_transforms:
         obs_space = obs_transform.transform_observation_space(obs_space)
     return obs_space

@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import Any, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type
 
 import attr
 import numpy as np
@@ -31,7 +31,6 @@ from habitat.core.simulator import (
 )
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -39,6 +38,8 @@ from habitat.utils.geometry_utils import (
 )
 from habitat.utils.visualizations import fog_of_war, maps
 
+if TYPE_CHECKING:
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 cv2 = try_cv2_import()
 
 
@@ -676,7 +677,7 @@ class TopDownMap(Measure):
     r"""Top Down Map measure"""
 
     def __init__(
-        self, sim: HabitatSim, config: Config, *args: Any, **kwargs: Any
+        self, sim: "HabitatSim", config: Config, *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config

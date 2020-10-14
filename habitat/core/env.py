@@ -21,7 +21,7 @@ from typing import (
 import gym
 import numba
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
@@ -46,8 +46,8 @@ class Env:
     connects all the three components together.
     """
 
-    observation_space: SpaceDict
-    action_space: SpaceDict
+    observation_space: spaces.Dict
+    action_space: spaces.Dict
     _config: Config
     _dataset: Optional[Dataset]
     number_of_episodes: Optional[int]
@@ -124,7 +124,7 @@ class Env:
             sim=self._sim,
             dataset=self._dataset,
         )
-        self.observation_space = SpaceDict(
+        self.observation_space = spaces.Dict(
             {
                 **self._sim.sensor_suite.observation_spaces.spaces,
                 **self._task.sensor_suite.observation_spaces.spaces,
