@@ -366,7 +366,7 @@ class CubeMap2Equirec(ObservationTransformer):
         self.eq_shape: Tuple[int] = eq_shape
         self.channels_last: bool = channels_last
         self.c2eq: nn.Module = Cube2Equirec(eq_shape[0], eq_shape[1])
-        if target_uuids == None:
+        if target_uuids is None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
@@ -665,7 +665,7 @@ class CubeMap2Fisheye(ObservationTransformer):
             fish_shape[0], fish_shape[1], fish_fov, cx, cy, fx, fy, xi, alpha
         )
 
-        if target_uuids == None:
+        if target_uuids is None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
