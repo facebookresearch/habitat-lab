@@ -15,6 +15,7 @@ import tqdm
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, logger
+from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -33,7 +34,6 @@ from habitat_baselines.utils.common import (
     linear_decay,
 )
 from habitat_baselines.utils.env_utils import construct_envs
-from habitat_sim.utils import profiling_utils
 
 
 @baseline_registry.register_trainer(name="ppo")
@@ -91,7 +91,7 @@ class PPOTrainer(BaseRLTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
         )
 
-    @profiling_utils.RangeContext("save_checkpoint")
+    @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
         self, file_name: str, extra_state: Optional[Dict] = None
     ) -> None:
@@ -167,7 +167,7 @@ class PPOTrainer(BaseRLTrainer):
 
         return results
 
-    @profiling_utils.RangeContext("_collect_rollout_step")
+    @profiling_wrapper.RangeContext("_collect_rollout_step")
     def _collect_rollout_step(
         self, rollouts, current_episode_reward, running_episode_stats
     ):
@@ -181,7 +181,7 @@ class PPOTrainer(BaseRLTrainer):
                 k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
 
-            profiling_utils.range_push("compute actions")
+            profiling_wrapper.range_push("compute actions")
             (
                 values,
                 actions,
@@ -199,7 +199,7 @@ class PPOTrainer(BaseRLTrainer):
         t_step_env = time.time()
 
         step_data = [a[0].item() for a in actions]
-        profiling_utils.range_pop()  # compute actions
+        profiling_wrapper.range_pop()  # compute actions
 
         outputs = self.envs.step(step_data)
         observations, rewards_l, dones, infos = [
@@ -257,7 +257,7 @@ class PPOTrainer(BaseRLTrainer):
 
         return pth_time, env_time, self.envs.num_envs
 
-    @profiling_utils.RangeContext("_update_agent")
+    @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self, ppo_cfg, rollouts):
         t_update_model = time.time()
         with torch.no_grad():
@@ -286,19 +286,18 @@ class PPOTrainer(BaseRLTrainer):
             dist_entropy,
         )
 
-    @profiling_utils.RangeContext("train")
+    @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training PPO.
 
         Returns:
             None
         """
-        # Reference code. profiling_utils.configure is not available yet but it
-        # will merge to Habitat-sim soon.
-        # profiling_utils.configure(
-        #     capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
-        #     num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
-        # )
+
+        profiling_wrapper.configure(
+            capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
+            num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
+        )
 
         self.envs = construct_envs(
             self.config, get_env_class(self.config.ENV_NAME)
@@ -365,8 +364,8 @@ class PPOTrainer(BaseRLTrainer):
             self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
         ) as writer:
             for update in range(self.config.NUM_UPDATES):
-                # profiling_utils.on_start_step()
-                profiling_utils.range_push("train update")
+                profiling_wrapper.on_start_step()
+                profiling_wrapper.range_push("train update")
 
                 if ppo_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
@@ -376,7 +375,7 @@ class PPOTrainer(BaseRLTrainer):
                         update, self.config.NUM_UPDATES
                     )
 
-                profiling_utils.range_push("rollouts loop")
+                profiling_wrapper.range_push("rollouts loop")
                 for _step in range(ppo_cfg.num_steps):
                     (
                         delta_pth_time,
@@ -388,7 +387,7 @@ class PPOTrainer(BaseRLTrainer):
                     pth_time += delta_pth_time
                     env_time += delta_env_time
                     count_steps += delta_steps
-                profiling_utils.range_pop()  # rollouts loop
+                profiling_wrapper.range_pop()  # rollouts loop
 
                 (
                     delta_pth_time,
@@ -465,7 +464,7 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     count_checkpoints += 1
 
-                profiling_utils.range_pop()  # train update
+                profiling_wrapper.range_pop()  # train update
 
             self.envs.close()
 
