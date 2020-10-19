@@ -30,6 +30,7 @@ from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks import make_task
+from habitat.utils import profiling_wrapper
 
 
 class Env:
@@ -364,6 +365,7 @@ class RLEnv(gym.Env):
     def current_episode(self) -> Type[Episode]:
         return self._env.current_episode
 
+    @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(self) -> Observations:
         return self._env.reset()
 
@@ -403,6 +405,7 @@ class RLEnv(gym.Env):
         """
         raise NotImplementedError
 
+    @profiling_wrapper.RangeContext("RLEnv.step")
     def step(self, *args, **kwargs) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment.
 

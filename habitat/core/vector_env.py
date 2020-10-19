@@ -32,6 +32,7 @@ from habitat.config import Config
 from habitat.core.env import Env, Observations, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
+from habitat.utils import profiling_wrapper
 
 try:
     # Use torch.multiprocessing if we can.
@@ -165,6 +166,7 @@ class VectorEnv:
         return self._num_envs - len(self._paused)
 
     @staticmethod
+    @profiling_wrapper.RangeContext("_worker_env")
     def _worker_env(
         connection_read_fn: Callable,
         connection_write_fn: Callable,
@@ -198,7 +200,12 @@ class VectorEnv:
                         observations, reward, done, info = env.step(**data)
                         if auto_reset_done and done:
                             observations = env.reset()
-                        connection_write_fn((observations, reward, done, info))
+                        with profiling_wrapper.RangeContext(
+                            "worker write after step"
+                        ):
+                            connection_write_fn(
+                                (observations, reward, done, info)
+                            )
                     elif isinstance(env, habitat.Env):
                         # habitat.Env
                         observations = env.step(**data)
@@ -246,7 +253,8 @@ class VectorEnv:
                 else:
                     raise NotImplementedError
 
-                command, data = connection_read_fn()
+                with profiling_wrapper.RangeContext("worker wait for command"):
+                    command, data = connection_read_fn()
 
             if child_pipe is not None:
                 child_pipe.close()
@@ -384,6 +392,7 @@ class VectorEnv:
         for write_fn, args in zip(self._connection_write_fns, data):
             write_fn((STEP_COMMAND, args))
 
+    @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Observations]:
         r"""Wait until all the asynchronized environments have synchronized."""
         observations = []

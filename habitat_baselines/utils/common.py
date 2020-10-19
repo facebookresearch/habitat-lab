@@ -26,6 +26,7 @@ from numpy import ndarray
 from torch import Size, Tensor
 from torch import nn as nn
 
+from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
@@ -91,6 +92,7 @@ def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:
 
 
 @torch.no_grad()
+@profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
     observations: List[Dict],
     device: Optional[torch.device] = None,
