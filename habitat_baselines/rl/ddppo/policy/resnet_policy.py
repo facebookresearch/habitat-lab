@@ -10,7 +10,6 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 from torch.nn import functional as F
 
@@ -39,7 +38,7 @@ from habitat_baselines.utils.common import Flatten
 class PointNavResNetPolicy(Policy):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
         num_recurrent_layers: int = 2,
@@ -67,7 +66,7 @@ class PointNavResNetPolicy(Policy):
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: SpaceDict, action_space
+        cls, config: Config, observation_space: spaces.Dict, action_space
     ):
         return cls(
             observation_space=observation_space,
@@ -84,7 +83,7 @@ class PointNavResNetPolicy(Policy):
 class ResNetEncoder(nn.Module):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         baseplanes: int = 32,
         ngroups: int = 32,
         spatial_size: int = 128,
@@ -106,7 +105,7 @@ class ResNetEncoder(nn.Module):
             self._n_input_depth = 0
 
         if normalize_visual_inputs:
-            self.running_mean_and_var = RunningMeanAndVar(
+            self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_depth + self._n_input_rgb
             )
         else:
@@ -154,7 +153,7 @@ class ResNetEncoder(nn.Module):
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
 
-    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
         if self.is_blind:
             return None
 
@@ -190,7 +189,7 @@ class PointNavResNetNet(Net):
 
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int,
         num_recurrent_layers: int,
@@ -339,7 +338,7 @@ class PointNavResNetNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
             if "visual_features" in observations:
@@ -415,7 +414,9 @@ class PointNavResNetNet(Net):
         )
         x.append(prev_actions)
 
-        x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        out = torch.cat(x, dim=1)
+        out, rnn_hidden_states = self.state_encoder(
+            out, rnn_hidden_states, masks
+        )
 
-        return x, rnn_hidden_states
+        return out, rnn_hidden_states

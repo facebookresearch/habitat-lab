@@ -163,13 +163,13 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     Returns:
         generated image of a single frame.
     """
-    egocentric_view = []
+    egocentric_view_l: List[np.ndarray] = []
     if "rgb" in observation:
         rgb = observation["rgb"]
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
 
-        egocentric_view.append(rgb)
+        egocentric_view_l.append(rgb)
 
     # draw depth map if observation has depth info
     if "depth" in observation:
@@ -179,7 +179,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
         depth_map = depth_map.astype(np.uint8)
         depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-        egocentric_view.append(depth_map)
+        egocentric_view_l.append(depth_map)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:
@@ -187,12 +187,12 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
 
-        egocentric_view.append(rgb)
+        egocentric_view_l.append(rgb)
 
     assert (
-        len(egocentric_view) > 0
+        len(egocentric_view_l) > 0
     ), "Expected at least one visual sensor enabled."
-    egocentric_view = np.concatenate(egocentric_view, axis=1)
+    egocentric_view = np.concatenate(egocentric_view_l, axis=1)
 
     # draw collision
     if "collisions" in info and info["collisions"]["is_collision"]:

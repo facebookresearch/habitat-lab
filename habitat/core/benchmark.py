@@ -11,18 +11,20 @@ and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 
 import os
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from habitat.config.default import get_config
-from habitat.core.agent import Agent
 from habitat.core.env import Env
+
+if TYPE_CHECKING:
+    from habitat.core.agent import Agent
 
 
 class Benchmark:
     r"""Benchmark for evaluating agents in environments."""
 
     def __init__(
-        self, config_paths: Optional[str] = None, eval_remote=False
+        self, config_paths: Optional[str] = None, eval_remote: bool = False
     ) -> None:
         r"""..
 
@@ -38,7 +40,7 @@ class Benchmark:
             self._env = Env(config=config_env)
 
     def remote_evaluate(
-        self, agent: Agent, num_episodes: Optional[int] = None
+        self, agent: "Agent", num_episodes: Optional[int] = None
     ):
         # The modules imported below are specific to habitat-challenge remote evaluation.
         # These modules are not part of the habitat-lab repository.
@@ -113,7 +115,9 @@ class Benchmark:
 
         return avg_metrics
 
-    def local_evaluate(self, agent: Agent, num_episodes: Optional[int] = None):
+    def local_evaluate(
+        self, agent: "Agent", num_episodes: Optional[int] = None
+    ) -> Dict[str, float]:
         if num_episodes is None:
             num_episodes = len(self._env.episodes)
         else:
@@ -147,7 +151,7 @@ class Benchmark:
         return avg_metrics
 
     def evaluate(
-        self, agent: Agent, num_episodes: Optional[int] = None
+        self, agent: "Agent", num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
         r"""..
 

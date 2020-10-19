@@ -13,17 +13,19 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterator,
     List,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
+    cast,
 )
 
 import gym
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 import habitat
 from habitat.config import Config
@@ -36,9 +38,9 @@ try:
     # We have yet to find a reason to not use it and
     # you are required to use it when sending a torch.Tensor
     # between processes
-    from torch import multiprocessing as mp
+    from torch import multiprocessing as mp  # type:ignore
 except ImportError:
-    import multiprocessing as mp
+    import multiprocessing as mp  # type:ignore
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -78,9 +80,9 @@ class VectorEnv:
     All the environments are synchronized on step and reset methods.
     """
 
-    observation_spaces: List[SpaceDict]
+    observation_spaces: List[spaces.Dict]
     number_of_episodes: List[Optional[int]]
-    action_spaces: List[SpaceDict]
+    action_spaces: List[spaces.Dict]
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_envs: int
@@ -155,7 +157,7 @@ class VectorEnv:
         self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
-        self._paused = []
+        self._paused: List[Tuple] = []
 
     @property
     def num_envs(self):
@@ -279,7 +281,7 @@ class VectorEnv:
                     parent_conn,
                 ),
             )
-            self._workers.append(ps)
+            self._workers.append(cast(mp.Process, ps))
             ps.daemon = True
             ps.start()
             worker_conn.close()
@@ -551,9 +553,10 @@ class ThreadedVectorEnv(VectorEnv):
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
+        queues: Iterator[Tuple[Any, ...]] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
+        parent_read_queues, parent_write_queues = queues
         self._workers = []
         for parent_read_queue, parent_write_queue, env_args in zip(
             parent_read_queues, parent_write_queues, env_fn_args

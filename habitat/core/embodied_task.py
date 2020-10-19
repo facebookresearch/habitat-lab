@@ -288,7 +288,7 @@ class EmbodiedTask:
 
         return observations
 
-    def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+    def step(self, action: Dict[str, Any], episode: Type[Episode]):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_name = action["action"]

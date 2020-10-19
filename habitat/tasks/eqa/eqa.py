@@ -166,6 +166,10 @@ class EQATask(NavigationTask):
         metrics = env.get_metrics()
     """
 
+    is_valid: bool = False
+    answer: Optional[int] = None
+    invalid_reason: Optional[str] = None
+
     def _check_episode_is_active(
         self, *args, action, episode, action_args=None, **kwargs
     ) -> bool:
@@ -197,7 +201,7 @@ class AnswerAction(Action):
         return self._sim.get_observations_at()
 
     @property
-    def action_space(self) -> Space:
+    def action_space(self) -> spaces.Dict:
         """Answer expected to be single token."""
         return spaces.Dict(
             {

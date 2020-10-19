@@ -28,16 +28,32 @@ Various decorators for registry different kind of classes with unique keys
 """
 
 import collections
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Optional, Type
 
 from habitat.core.utils import Singleton
 
+if TYPE_CHECKING:
+    from habitat.core.dataset import Dataset
+    from habitat.core.embodied_task import Measure
+    from habitat.core.simulator import (
+        ActionSpaceConfiguration,
+        Sensor,
+        Simulator,
+    )
+    from habitat.tasks.nav.nav import NavigationTask, SimulatorTaskAction
+
 
 class Registry(metaclass=Singleton):
-    mapping = collections.defaultdict(dict)
+    mapping: DefaultDict[str, Any] = collections.defaultdict(dict)
 
     @classmethod
-    def _register_impl(cls, _type, to_register, name, assert_type=None):
+    def _register_impl(
+        cls,
+        _type: str,
+        to_register: Optional[Any],
+        name: str,
+        assert_type: Optional[Type] = None,
+    ) -> Callable:
         def wrap(to_register):
             if assert_type is not None:
                 assert issubclass(
@@ -87,7 +103,7 @@ class Registry(metaclass=Singleton):
 
     @classmethod
     def register_simulator(
-        cls, to_register=None, *, name: Optional[str] = None
+        cls, to_register: None = None, *, name: Optional[str] = None
     ):
         r"""Register a simulator to registry with key :p:`name`
 
@@ -193,35 +209,37 @@ class Registry(metaclass=Singleton):
         )
 
     @classmethod
-    def _get_impl(cls, _type, name):
+    def _get_impl(cls, _type: str, name: str) -> Type:
         return cls.mapping[_type].get(name, None)
 
     @classmethod
-    def get_task(cls, name):
+    def get_task(cls, name: str) -> Type["NavigationTask"]:
         return cls._get_impl("task", name)
 
     @classmethod
-    def get_task_action(cls, name):
+    def get_task_action(cls, name: str) -> Type["SimulatorTaskAction"]:
         return cls._get_impl("task_action", name)
 
     @classmethod
-    def get_simulator(cls, name):
+    def get_simulator(cls, name: str) -> Type["Simulator"]:
         return cls._get_impl("sim", name)
 
     @classmethod
-    def get_sensor(cls, name):
+    def get_sensor(cls, name: str) -> Type["Sensor"]:
         return cls._get_impl("sensor", name)
 
     @classmethod
-    def get_measure(cls, name):
+    def get_measure(cls, name: str) -> Type["Measure"]:
         return cls._get_impl("measure", name)
 
     @classmethod
-    def get_dataset(cls, name):
+    def get_dataset(cls, name: str) -> Type["Dataset"]:
         return cls._get_impl("dataset", name)
 
     @classmethod
-    def get_action_space_configuration(cls, name):
+    def get_action_space_configuration(
+        cls, name: str
+    ) -> Type["ActionSpaceConfiguration"]:
         return cls._get_impl("action_space_config", name)
 
 

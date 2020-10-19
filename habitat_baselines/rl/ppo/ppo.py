@@ -4,9 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Optional, Tuple
+
 import torch
+from torch import Tensor
 from torch import nn as nn
 from torch import optim as optim
+
+from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.rl.ppo.policy import Policy
 
 EPS_PPO = 1e-5
 
@@ -14,18 +20,18 @@ EPS_PPO = 1e-5
 class PPO(nn.Module):
     def __init__(
         self,
-        actor_critic,
-        clip_param,
-        ppo_epoch,
-        num_mini_batch,
-        value_loss_coef,
-        entropy_coef,
-        lr=None,
-        eps=None,
-        max_grad_norm=None,
-        use_clipped_value_loss=True,
-        use_normalized_advantage=True,
-    ):
+        actor_critic: Policy,
+        clip_param: float,
+        ppo_epoch: int,
+        num_mini_batch: int,
+        value_loss_coef: float,
+        entropy_coef: float,
+        lr: Optional[float] = None,
+        eps: Optional[float] = None,
+        max_grad_norm: Optional[float] = None,
+        use_clipped_value_loss: bool = True,
+        use_normalized_advantage: bool = True,
+    ) -> None:
 
         super().__init__()
 
@@ -52,19 +58,19 @@ class PPO(nn.Module):
     def forward(self, *x):
         raise NotImplementedError
 
-    def get_advantages(self, rollouts):
+    def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
         if not self.use_normalized_advantage:
             return advantages
 
         return (advantages - advantages.mean()) / (advantages.std() + EPS_PPO)
 
-    def update(self, rollouts):
+    def update(self, rollouts: RolloutStorage) -> Tuple[float, float, float]:
         advantages = self.get_advantages(rollouts)
 
-        value_loss_epoch = 0
-        action_loss_epoch = 0
-        dist_entropy_epoch = 0
+        value_loss_epoch = 0.0
+        action_loss_epoch = 0.0
+        dist_entropy_epoch = 0.0
 
         for _e in range(self.ppo_epoch):
             data_generator = rollouts.recurrent_generator(
@@ -152,16 +158,16 @@ class PPO(nn.Module):
 
         return value_loss_epoch, action_loss_epoch, dist_entropy_epoch
 
-    def before_backward(self, loss):
+    def before_backward(self, loss: Tensor) -> None:
         pass
 
-    def after_backward(self, loss):
+    def after_backward(self, loss: Tensor) -> None:
         pass
 
-    def before_step(self):
+    def before_step(self) -> None:
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(), self.max_grad_norm
         )
 
-    def after_step(self):
+    def after_step(self) -> None:
         pass

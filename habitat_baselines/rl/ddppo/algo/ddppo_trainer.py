@@ -9,11 +9,11 @@ import os
 import random
 import time
 from collections import defaultdict, deque
+from typing import DefaultDict, Optional
 
 import numpy as np
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import distributed as distrib
 from torch import nn as nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -56,7 +56,7 @@ class DDPPOTrainer(PPOTrainer):
     # max rollout length
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
 
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[Config] = None) -> None:
         interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
             config = interrupted_state["config"]
@@ -206,7 +206,7 @@ class DDPPOTrainer(PPOTrainer):
         obs_space = self.obs_space
         if self._static_encoder:
             self._encoder = self.actor_critic.net.visual_encoder
-            obs_space = SpaceDict(
+            obs_space = spaces.Dict(
                 {
                     "visual_features": spaces.Box(
                         low=np.finfo(np.float32).min,
@@ -246,21 +246,21 @@ class DDPPOTrainer(PPOTrainer):
             count=torch.zeros(self.envs.num_envs, 1, device=self.device),
             reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
         )
-        window_episode_stats = defaultdict(
+        window_episode_stats: DefaultDict[str, deque] = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
         )
 
         t_start = time.time()
         env_time = 0
         pth_time = 0
-        count_steps = 0
+        count_steps: float = 0
         count_checkpoints = 0
         start_update = 0
         prev_time = 0
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),
+            lr_lambda=lambda x: linear_decay(x, self.config.NUM_UPDATES),  # type: ignore
         )
 
         interrupted_state = load_interrupted_state()
@@ -288,7 +288,7 @@ class DDPPOTrainer(PPOTrainer):
         ) as writer:
             for update in range(start_update, self.config.NUM_UPDATES):
                 if ppo_cfg.use_linear_lr_decay:
-                    lr_scheduler.step()
+                    lr_scheduler.step()  # type: ignore
 
                 if ppo_cfg.use_linear_clip_decay:
                     self.agent.clip_param = ppo_cfg.clip_param * linear_decay(

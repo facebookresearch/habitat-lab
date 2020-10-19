@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import cv2
 import numpy as np
 import torch
@@ -12,7 +13,11 @@ from habitat_baselines.utils.common import (
     tensor_to_bgr_images,
     tensor_to_depth_images,
 )
-from habitat_sim.utils.common import d3_40_colors_rgb
+
+try:
+    from habitat_sim.utils.common import d3_40_colors_rgb
+except ImportError:
+    d3_40_colors_rgb = None
 
 
 def save_rgb_results(
@@ -26,8 +31,8 @@ def save_rgb_results(
         path: to save images
     """
     path = path.format(split="val", type="rgb")
-    gt_bgr, pred_bgr = tensor_to_bgr_images([gt_rgb, pred_rgb])
-    cv2.imwrite(path + "_gt.jpg", gt_bgr)
+    gt_bgr_o, pred_bgr = tensor_to_bgr_images([gt_rgb, pred_rgb])
+    cv2.imwrite(path + "_gt.jpg", gt_bgr_o)
     cv2.imwrite(path + "_pred.jpg", pred_bgr)
 
 

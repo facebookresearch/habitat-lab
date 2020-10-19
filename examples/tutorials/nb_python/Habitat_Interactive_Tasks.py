@@ -1068,7 +1068,7 @@ class GrippedObjectSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
 
-        return spaces.Discrete(self._sim.get_existing_object_ids())
+        return spaces.Discrete(len(self._sim.get_existing_object_ids()))
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.MEASUREMENT

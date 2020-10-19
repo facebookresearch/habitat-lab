@@ -4,10 +4,21 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
 import numpy as np
 from gym import spaces
+from gym.spaces.box import Box
+from numpy import ndarray
 
 import habitat_sim
 from habitat.core.dataset import Episode
@@ -19,11 +30,15 @@ from habitat.core.simulator import (
     Observations,
     RGBSensor,
     SemanticSensor,
+    Sensor,
     SensorSuite,
     ShortestPathPoint,
     Simulator,
 )
 from habitat.core.spaces import Space
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 RGBSENSOR_DIMENSION = 3
 
@@ -50,22 +65,15 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
             setattr(config_to, attr.lower(), if_config_to_lower(value))
 
 
-def check_sim_obs(obs, sensor):
-    assert obs is not None, (
-        "Observation corresponding to {} not present in "
-        "simulator's observations".format(sensor.uuid)
-    )
-
-
 @registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor):
     sim_sensor_type: habitat_sim.SensorType
 
-    def __init__(self, config):
+    def __init__(self, config: Config) -> None:
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
         super().__init__(config=config)
 
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
         return spaces.Box(
             low=0,
             high=255,
@@ -73,12 +81,14 @@ class HabitatSimRGBSensor(RGBSensor):
             dtype=np.uint8,
         )
 
-    def get_observation(self, sim_obs):
+    def get_observation(
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> Union[ndarray, "Tensor"]:
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
 
         # remove alpha channel
-        obs = obs[:, :, :RGBSENSOR_DIMENSION]
+        obs = obs[:, :, :RGBSENSOR_DIMENSION]  # type: ignore[index]
         return obs
 
 
@@ -88,7 +98,7 @@ class HabitatSimDepthSensor(DepthSensor):
     min_depth_value: float
     max_depth_value: float
 
-    def __init__(self, config):
+    def __init__(self, config: Config) -> None:
         self.sim_sensor_type = habitat_sim.SensorType.DEPTH
 
         if config.NORMALIZE_DEPTH:
@@ -100,7 +110,7 @@ class HabitatSimDepthSensor(DepthSensor):
 
         super().__init__(config=config)
 
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
         return spaces.Box(
             low=self.min_depth_value,
             high=self.max_depth_value,
@@ -108,10 +118,11 @@ class HabitatSimDepthSensor(DepthSensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, sim_obs):
+    def get_observation(
+        self, sim_obs: Dict[str, Union[ndarray, "Tensor"]]
+    ) -> Union[ndarray, "Tensor"]:
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
-
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
 
@@ -119,9 +130,9 @@ class HabitatSimDepthSensor(DepthSensor):
                 obs, axis=2
             )  # make depth observation a 3D array
         else:
-            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)  # type: ignore[attr-defined]
 
-            obs = obs.unsqueeze(-1)
+            obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
 
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
@@ -152,6 +163,18 @@ class HabitatSimSemanticSensor(SemanticSensor):
         obs = sim_obs.get(self.uuid, None)
         check_sim_obs(obs, self)
         return obs
+
+
+def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
+    assert obs is not None, (
+        "Observation corresponding to {} not present in "
+        "simulator's observations".format(sensor.uuid)
+    )
+
+
+HabitatSimVizSensors = Union[
+    HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
+]
 
 
 @registry.register_simulator(name="Sim-v0")
@@ -185,7 +208,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
-        self._prev_sim_obs = None
+        self._prev_sim_obs: Optional[Observations] = None
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -215,7 +238,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
-            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type  # type: ignore
+            # We know that the Sensor has to be one of these Sensors
+            sensor = cast(HabitatSimVizSensors, sensor)
+            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
             sim_sensor_cfg.gpu2gpu_transfer = (
                 self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             )
@@ -250,7 +275,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         return is_updated
 
-    def reset(self):
+    def reset(self) -> Observations:
         sim_obs = super().reset()
         if self._update_agents_state():
             sim_obs = self.get_sensor_observations()
@@ -258,7 +283,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action):
+    def step(self, action: int) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
@@ -298,8 +323,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._update_agents_state()
 
     def geodesic_distance(
-        self, position_a, position_b, episode: Optional[Episode] = None
-    ):
+        self,
+        position_a: Union[Sequence[float], ndarray],
+        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
+        episode: Optional[Episode] = None,
+    ) -> float:
         if episode is None or episode._shortest_path_cache is None:
             path = habitat_sim.MultiGoalShortestPath()
             if isinstance(position_b[0], List) or isinstance(
@@ -323,7 +351,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return path.geodesic_distance
 
     def action_space_shortest_path(
-        self, source: AgentState, targets: List[AgentState], agent_id: int = 0
+        self,
+        source: AgentState,
+        targets: Sequence[AgentState],
+        agent_id: int = 0,
     ) -> List[ShortestPathPoint]:
         r"""
         Returns:
@@ -341,11 +372,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
 
     @property
-    def up_vector(self):
+    def up_vector(self) -> np.ndarray:
         return np.array([0.0, 1.0, 0.0])
 
     @property
-    def forward_vector(self):
+    def forward_vector(self) -> np.ndarray:
         return -np.array([0.0, 0.0, 1.0])
 
     def get_straight_shortest_path_points(self, position_a, position_b):
@@ -355,10 +386,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self.pathfinder.find_path(path)
         return path.points
 
-    def sample_navigable_point(self):
+    def sample_navigable_point(self) -> List[float]:
         return self.pathfinder.get_random_navigable_point().tolist()
 
-    def is_navigable(self, point: List[float]):
+    def is_navigable(self, point: List[float]) -> bool:
         return self.pathfinder.is_navigable(point)
 
     def semantic_annotations(self):
@@ -474,12 +505,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         else:
             return None
 
-    def distance_to_closest_obstacle(self, position, max_search_radius=2.0):
+    def distance_to_closest_obstacle(
+        self, position: ndarray, max_search_radius: float = 2.0
+    ) -> float:
         return self.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
 
-    def island_radius(self, position):
+    def island_radius(self, position: Sequence[float]) -> float:
         return self.pathfinder.island_radius(position)
 
     @property

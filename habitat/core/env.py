@@ -6,12 +6,22 @@
 
 import random
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import gym
 import numba
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
@@ -36,8 +46,8 @@ class Env:
     connects all the three components together.
     """
 
-    observation_space: SpaceDict
-    action_space: SpaceDict
+    observation_space: spaces.Dict
+    action_space: spaces.Dict
     _config: Config
     _dataset: Optional[Dataset]
     number_of_episodes: Optional[int]
@@ -77,7 +87,11 @@ class Env:
             self._dataset = make_dataset(
                 id_dataset=config.DATASET.TYPE, config=config.DATASET
             )
-        self._episodes = self._dataset.episodes if self._dataset else []
+        self._episodes = (
+            self._dataset.episodes
+            if self._dataset
+            else cast(List[Type[Episode]], [])
+        )
         self._current_episode = None
         iter_option_dict = {
             k.lower(): v
@@ -110,7 +124,7 @@ class Env:
             sim=self._sim,
             dataset=self._dataset,
         )
-        self.observation_space = SpaceDict(
+        self.observation_space = spaces.Dict(
             {
                 **self._sim.sensor_suite.observation_spaces.spaces,
                 **self._task.sensor_suite.observation_spaces.spaces,
@@ -342,13 +356,13 @@ class RLEnv(gym.Env):
     def episodes(self) -> List[Type[Episode]]:
         return self._env.episodes
 
-    @property
-    def current_episode(self) -> Type[Episode]:
-        return self._env.current_episode
-
     @episodes.setter
     def episodes(self, episodes: List[Type[Episode]]) -> None:
         self._env.episodes = episodes
+
+    @property
+    def current_episode(self) -> Type[Episode]:
+        return self._env.current_episode
 
     def reset(self) -> Observations:
         return self._env.reset()

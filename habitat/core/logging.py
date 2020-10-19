@@ -21,9 +21,9 @@ class HabitatLogger(logging.Logger):
     ):
         super().__init__(name, level)
         if filename is not None:
-            handler = logging.FileHandler(filename, filemode)
+            handler = logging.FileHandler(filename, filemode)  # type:ignore
         else:
-            handler = logging.StreamHandler(stream)
+            handler = logging.StreamHandler(stream)  # type:ignore
         self._formatter = logging.Formatter(format, dateformat, style)
         handler.setFormatter(self._formatter)
         super().addHandler(handler)

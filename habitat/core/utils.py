@@ -7,7 +7,7 @@
 import cmath
 import json
 import math
-from typing import List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import quaternion  # noqa: F401
@@ -17,13 +17,13 @@ from habitat.utils.geometry_utils import quaternion_to_list
 # Internals from inner json library needed for patching functionality in
 # DatasetFloatJSONEncoder.
 try:
-    from _json import encode_basestring_ascii
+    from _json import encode_basestring_ascii  # type: ignore
 except ImportError:
-    encode_basestring_ascii = None
+    encode_basestring_ascii = None  # type: ignore
 try:
-    from _json import encode_basestring
+    from _json import encode_basestring  # type: ignore
 except ImportError:
-    encode_basestring = None
+    encode_basestring = None  # type: ignore
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
@@ -59,7 +59,9 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
     return out_image
 
 
-def not_none_validator(self, attribute, value):
+def not_none_validator(
+    self: Any, attribute: Any, value: Optional[Any]
+) -> None:
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
 
@@ -87,7 +89,7 @@ def try_cv2_import():
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: Dict["Singleton", "Singleton"] = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -134,10 +136,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
     # precision.
     def iterencode(self, o, _one_shot=False):
 
-        if self.check_circular:
-            markers = {}
-        else:
-            markers = None
+        markers: Optional[Dict] = {} if self.check_circular else None
         if self.ensure_ascii:
             _encoder = encode_basestring_ascii
         else:
@@ -167,7 +166,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
 
             return text
 
-        _iterencode = json.encoder._make_iterencode(
+        _iterencode = json.encoder._make_iterencode(  # type: ignore
             markers,
             self.default,
             _encoder,

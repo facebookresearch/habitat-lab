@@ -7,7 +7,6 @@ import abc
 
 import torch
 from gym import spaces
-from gym.spaces.dict_space import Dict as SpaceDict
 from torch import nn as nn
 
 from habitat.config import Config
@@ -100,13 +99,13 @@ class CriticHead(nn.Module):
 class PointNavBaselinePolicy(Policy):
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
         **kwargs
     ):
         super().__init__(
-            PointNavBaselineNet(
+            PointNavBaselineNet(  # type: ignore
                 observation_space=observation_space,
                 hidden_size=hidden_size,
                 **kwargs,
@@ -116,7 +115,7 @@ class PointNavBaselinePolicy(Policy):
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: SpaceDict, action_space
+        cls, config: Config, observation_space: spaces.Dict, action_space
     ):
         return cls(
             observation_space=observation_space,
@@ -153,7 +152,7 @@ class PointNavBaselineNet(Net):
 
     def __init__(
         self,
-        observation_space: SpaceDict,
+        observation_space: spaces.Dict,
         hidden_size: int,
     ):
         super().__init__()
@@ -219,7 +218,9 @@ class PointNavBaselineNet(Net):
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed] + x
 
-        x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        x_out = torch.cat(x, dim=1)
+        x_out, rnn_hidden_states = self.state_encoder(
+            x_out, rnn_hidden_states, masks
+        )
 
-        return x, rnn_hidden_states
+        return x_out, rnn_hidden_states
