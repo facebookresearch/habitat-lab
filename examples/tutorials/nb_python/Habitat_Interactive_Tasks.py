@@ -311,7 +311,7 @@ settings = {
     "depth": True,  # Depth sensor
     "seed": 1,
     "enable_physics": True,
-    "physics_config_file": "data/default.phys_scene_config.json",
+    "physics_config_file": "data/default.physics_config.json",
     "silent": False,
     "compute_shortest_path": False,
     "compute_action_shortest_path": False,
@@ -386,6 +386,9 @@ def set_object_in_front_of_agent(sim, obj_id, z_offset=-1.5):
 def init_objects(sim):
     # Manager of Object Attributes Templates
     obj_attr_mgr = sim.get_object_template_manager()
+    obj_attr_mgr.load_configs(
+        str(os.path.join(data_path, "test_assets/objects"))
+    )
 
     # Add a chair into the scene.
     obj_path = "test_assets/objects/chair"
@@ -727,6 +730,9 @@ def raycast(sim, sensor_name, crosshair_pos=(128, 128), max_distance=2.0):
 with habitat_sim.Simulator(cfg) as sim:
     init_agent(sim)
     obj_attr_mgr = sim.get_object_template_manager()
+    obj_attr_mgr.load_configs(
+        str(os.path.join(data_path, "test_assets/objects"))
+    )
     obj_path = "test_assets/objects/chair"
     chair_template_id = obj_attr_mgr.load_object_configs(
         str(os.path.join(data_path, obj_path))
@@ -892,7 +898,9 @@ class RearrangementSim(HabitatSim):
     def _initialize_objects(self):
         objects = self.habitat_config.objects[0]
         obj_attr_mgr = self.get_object_template_manager()
-
+        obj_attr_mgr.load_configs(
+            str(os.path.join(data_path, "test_assets/objects"))
+        )
         # first remove all existing objects
         existing_object_ids = self.get_existing_object_ids()
 
