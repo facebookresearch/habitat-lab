@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # range is generally a better workflow, but it requires integrating
     # profiling_utils.configure into your train program (beware,
     # profiling_utils.configure is not yet merged into Habitat-sim).
-    do_capture_step_range = False
+    do_capture_step_range = True
 
     if do_capture_step_range:
         # "Step" here refers to however you defined a train step in your train
@@ -42,10 +42,12 @@ if __name__ == "__main__":
         # terms of the time spent in various parts of your program. Early train
         # steps may suffer from poor agent behavior, too-short episodes, etc. If
         # necessary, capture and inspect a very long-duration profile to
-        # determine when your training "settles". DDPPO PointNav empirical test
-        # from Aug 2020: settled around 150-190, after which it was stable out
-        # to ~1400 steps.
-        capture_start_step = 190
+        # determine when your training FPS "settles".
+        # DDPPO PointNav empirical test from Aug 2020, 8 nodes:
+        #   FPS settled at ~190 steps
+        # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
+        #   FPS settled at ~1200 steps
+        capture_start_step = 1200
 
         # If you're focusing on optimizing the train loop body (work that
         # happens consistently every update), you don't need a large number
@@ -83,11 +85,17 @@ if __name__ == "__main__":
         # duration will cause your slurm job to terminate before profiles are
         # saved. A much-too-large duration may result in a longer wait time
         # before slurm starts your job.
-        # DDPPO PointNav empirical test from Aug 2020:
+        # DDPPO PointNav empirical test from Aug 2020, 8 nodes:
         #   startup time is 2 minutes and 100 steps takes 12 minutes
+        # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
+        #   startup time is 2 minutes and 100 steps takes 5.9 minutes
+        buffered_start_minutes = 10
+        buffered_minutes_per_100_steps = 8
         if do_capture_step_range:
-            slurm_job_termination_minutes = 10 + int(
-                (capture_start_step + num_steps_to_capture) * 15 / 100
+            slurm_job_termination_minutes = buffered_start_minutes + int(
+                (capture_start_step + num_steps_to_capture)
+                * buffered_minutes_per_100_steps
+                / 100
             )
         else:
             slurm_job_termination_minutes = (
@@ -174,7 +182,7 @@ export NSYS_NVTX_PROFILER_REGISTER_ONLY=0
         else:
             slurm_task_str = (
                 """#!/bin/sh
-if [ ${SLURM_NODEID} == "0" ] && [ ${SLURM_LOCALID} == "0" ]
+if [ "${SLURM_NODEID}" = "0" ] && [ "${SLURM_LOCALID}" = "0" ]
 then
 """
                 + task_capture_str
@@ -183,7 +191,8 @@ else
 """
                 + program_str
                 + """
-fi"""
+fi
+"""
             )
 
         slurm_submit_str = (
@@ -192,19 +201,19 @@ fi"""
 #SBATCH --output=/checkpoint/%u/jobs/job.%j.out
 #SBATCH --error=/checkpoint/%u/jobs/job.%j.err
 #SBATCH --gpus-per-task 1
-#SBATCH --nodes 8
+#SBATCH --nodes 2
 #SBATCH --cpus-per-task 10
 #SBATCH --ntasks-per-node 8
 #SBATCH --mem-per-cpu=5GB
-#SBATCH --partition=learnfair
+#SBATCH --partition=dev
 #SBATCH --time="""
             + str(slurm_job_termination_minutes)
             + """:00
-#SBATCH --signal=USR1@300
 #SBATCH --open-mode=append
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
-export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+export MASTER_ADDR
 set -x
 srun bash capture_profile_slurm_task.sh
 """
