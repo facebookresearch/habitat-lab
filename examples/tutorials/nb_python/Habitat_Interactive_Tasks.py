@@ -311,7 +311,7 @@ settings = {
     "depth": True,  # Depth sensor
     "seed": 1,
     "enable_physics": True,
-    "physics_config_file": "data/default.phys_scene_config.json",
+    "physics_config_file": "data/default.physics_config.json",
     "silent": False,
     "compute_shortest_path": False,
     "compute_action_shortest_path": False,
