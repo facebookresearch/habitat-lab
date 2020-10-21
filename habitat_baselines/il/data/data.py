@@ -39,94 +39,93 @@ class EQADataset(wds.Dataset):
             max_controller_actions (int):
         """
         self.config = config.TASK_CONFIG
-        self.env = habitat.Env(config=self.config)
         self.input_type = input_type
         self.num_frames = num_frames
 
-        self.episodes = self.env._dataset.episodes
+        with habitat.Env(config=self.config) as self.env:
+            self.episodes = self.env._dataset.episodes
 
-        # sorting and making episode ids consecutive for simpler indexing
-        self.sort_episodes()
+            # sorting and making episode ids consecutive for simpler indexing
+            self.sort_episodes()
 
-        self.q_vocab = self.env._dataset.question_vocab
-        self.ans_vocab = self.env._dataset.answer_vocab
+            self.q_vocab = self.env._dataset.question_vocab
+            self.ans_vocab = self.env._dataset.answer_vocab
 
-        self.eval_save_results = config.EVAL_SAVE_RESULTS
+            self.eval_save_results = config.EVAL_SAVE_RESULTS
 
-        if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
-            self.mode = "val"
-        else:
-            self.mode = "train"
+            if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
+                self.mode = "val"
+            else:
+                self.mode = "train"
 
-        self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
-            split=self.mode
-        )
-
-        # [TODO] can be done in mp3d_eqa_dataset when loading
-        self.calc_max_length()
-        self.restructure_ans_vocab()
-
-        group_by_keys = filters.Curried(self.group_by_keys_)
-        super().__init__(
-            urls=self.frame_dataset_path + ".tar",
-            initial_pipeline=[group_by_keys()],
-        )
-
-        self.only_vqa_task = config.ONLY_VQA_TASK
-
-        self.scene_episode_dict = get_scene_episode_dict(self.episodes)
-
-        if not self.cache_exists():
-            """
-            for each scene > load scene in memory > save frames for each
-            episode corresponding to each scene
-            """
-            logger.info(
-                "[ Dataset cache not present / is incomplete. ]\
-                \n[ Saving episode frames to disk. ]"
+            self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
+                split=self.mode
             )
 
-            logger.info(
-                "Number of {} episodes: {}".format(
-                    self.mode, len(self.episodes)
+            # [TODO] can be done in mp3d_eqa_dataset when loading
+            self.calc_max_length()
+            self.restructure_ans_vocab()
+
+            group_by_keys = filters.Curried(self.group_by_keys_)
+            super().__init__(
+                urls=self.frame_dataset_path + ".tar",
+                initial_pipeline=[group_by_keys()],
+            )
+
+            self.only_vqa_task = config.ONLY_VQA_TASK
+
+            self.scene_episode_dict = get_scene_episode_dict(self.episodes)
+
+            if not self.cache_exists():
+                """
+                for each scene > load scene in memory > save frames for each
+                episode corresponding to each scene
+                """
+                logger.info(
+                    "[ Dataset cache not present / is incomplete. ]\
+                    \n[ Saving episode frames to disk. ]"
                 )
-            )
 
-            for scene in tqdm(
-                list(self.scene_episode_dict.keys()),
-                desc="Going through all scenes from dataset",
-            ):
-                self.load_scene(scene)
+                logger.info(
+                    "Number of {} episodes: {}".format(
+                        self.mode, len(self.episodes)
+                    )
+                )
 
-                for episode in tqdm(
-                    self.scene_episode_dict[scene],
-                    desc="Saving episode frames for each scene",
+                for scene in tqdm(
+                    list(self.scene_episode_dict.keys()),
+                    desc="Going through all scenes from dataset",
                 ):
+                    self.load_scene(scene)
 
-                    if self.only_vqa_task:
-                        pos_queue = episode.shortest_paths[0][
-                            -self.num_frames :  # noqa: E203
-                        ]
-                    else:
-                        pos_queue = episode.shortest_paths[0]
+                    for episode in tqdm(
+                        self.scene_episode_dict[scene],
+                        desc="Saving episode frames for each scene",
+                    ):
 
-                    self.save_frame_queue(pos_queue, episode.episode_id)
+                        if self.only_vqa_task:
+                            pos_queue = episode.shortest_paths[0][
+                                -self.num_frames :  # noqa: E203
+                            ]
+                        else:
+                            pos_queue = episode.shortest_paths[0]
 
-            logger.info("[ Saved all episodes' frames to disk. ]")
+                        self.save_frame_queue(pos_queue, episode.episode_id)
 
-            if (
-                create_tar_archive(
-                    self.frame_dataset_path + ".tar", self.frame_dataset_path
-                )
-                == 0
-            ):
-                logger.info("[ Tar archive created. ]")
-                logger.info("[ Deleting dataset folder. ]")
-                delete_folder(self.frame_dataset_path)
+                logger.info("[ Saved all episodes' frames to disk. ]")
 
-            logger.info("[ Frame dataset is ready. ]")
+                if (
+                    create_tar_archive(
+                        self.frame_dataset_path + ".tar",
+                        self.frame_dataset_path,
+                    )
+                    == 0
+                ):
+                    logger.info("[ Tar archive created. ]")
+                    logger.info("[ Deleting dataset folder. ]")
+                    delete_folder(self.frame_dataset_path)
 
-        self.env.close()
+                logger.info("[ Frame dataset is ready. ]")
 
     def group_by_keys_(
         self,
