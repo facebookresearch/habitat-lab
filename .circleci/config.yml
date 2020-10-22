@@ -165,7 +165,7 @@ jobs:
             ccache --max-size=10.0G
       - run:
           name: Build, install habitat-sim and run benchmark
-          no_output_timeout: 20m
+          no_output_timeout: 30m
           command: |
               if [ ! -d ./habitat-sim ]
               then
@@ -176,7 +176,7 @@ jobs:
               . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              python setup.py install --headless --with-cuda --bullet
+              python -u setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
           when: always
