@@ -9,7 +9,7 @@ import numbers
 import os
 import re
 import shutil
-import subprocess
+import tarfile
 from collections import defaultdict
 from io import BytesIO
 from typing import (
@@ -414,21 +414,15 @@ def img_bytes_2_np_array(
     return (*x[0:3], np.array(images, dtype=np.float32))
 
 
-def create_tar_archive(archive_path: str, dataset_path: str) -> int:
+def create_tar_archive(archive_path: str, dataset_path: str) -> None:
     """Creates tar archive of dataset and returns status code.
     Used in VQA trainer's webdataset.
     """
-    logger.info("[ Creating tar archive .. ]")
-    cmd = [
-        "tar",
-        "--sort",
-        "name",
-        "-cf",
-        archive_path,
-        dataset_path,
-    ]
-    process = subprocess.run(cmd)
-    return process.returncode
+    logger.info("[ Creating tar archive. This will take a few minutes. ]")
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        for file in sorted(os.listdir(dataset_path)):
+            tar.add(os.path.join(dataset_path, file))
 
 
 def delete_folder(path: str) -> None:

@@ -114,16 +114,16 @@ class EQADataset(wds.Dataset):
 
                 logger.info("[ Saved all episodes' frames to disk. ]")
 
-                if (
-                    create_tar_archive(
-                        self.frame_dataset_path + ".tar",
-                        self.frame_dataset_path,
-                    )
-                    == 0
-                ):
-                    logger.info("[ Tar archive created. ]")
-                    logger.info("[ Deleting dataset folder. ]")
-                    delete_folder(self.frame_dataset_path)
+                create_tar_archive(
+                    self.frame_dataset_path + ".tar",
+                    self.frame_dataset_path,
+                )
+
+                logger.info("[ Tar archive created. ]")
+                logger.info(
+                    "[ Deleting dataset folder. This will take a few minutes. ]"
+                )
+                delete_folder(self.frame_dataset_path)
 
                 logger.info("[ Frame dataset is ready. ]")
 
