@@ -379,19 +379,21 @@ class VQATrainer(BaseILTrainer):
                     logger.info(metrics.get_stat_string(mode=0))
                     metrics.dump_log()
 
-                if config.EVAL_SAVE_RESULTS:
-                    if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
+                if (
+                    config.EVAL_SAVE_RESULTS
+                    and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
+                ):
 
-                        self._save_vqa_results(
-                            checkpoint_index,
-                            episode_ids,
-                            questions,
-                            frame_queue,
-                            scores,
-                            answers,
-                            q_vocab_dict,
-                            ans_vocab_dict,
-                        )
+                    self._save_vqa_results(
+                        checkpoint_index,
+                        episode_ids,
+                        questions,
+                        frame_queue,
+                        scores,
+                        answers,
+                        q_vocab_dict,
+                        ans_vocab_dict,
+                    )
 
         num_batches = math.ceil(len(vqa_dataset) / config.IL.VQA.batch_size)
 
