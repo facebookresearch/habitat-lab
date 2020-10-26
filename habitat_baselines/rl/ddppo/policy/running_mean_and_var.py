@@ -31,7 +31,7 @@ class RunningMeanAndVar(nn.Module):
                 distrib.all_reduce(new_mean)
                 distrib.all_reduce(new_count)
 
-            new_mean /= new_count
+            new_mean = new_mean / new_count
 
             new_var = F.adaptive_avg_pool2d((x - new_mean).pow(2), 1).sum(  # type: ignore
                 0, keepdim=True
@@ -42,7 +42,7 @@ class RunningMeanAndVar(nn.Module):
 
             # No - 1 on all the variance as the number of pixels
             # seen over training is simply absurd, so it doesn't matter
-            new_var /= new_count
+            new_var = new_var / new_count
 
             m_a = self._var * (self._count)
             m_b = new_var * (new_count)

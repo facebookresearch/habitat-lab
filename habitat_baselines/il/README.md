@@ -65,4 +65,47 @@ After downloading the pre-trained model, it's path needs to be added to the conf
 
 ---
 
+## Visual Question Answering (VQA) model-
+
+### Information:
+The VQA model is responsible for predicting an answer based on the input question and a series of RGB images. The network first encodes images from the scene using the pre-trained EQA-CNN encoder mentioned above.
+
+(more information about network can be found in the [paper](https://embodiedqa.org/paper.pdf)).
+
+### Configuration:
+
+Configuration for training the VQA (answering) model can be found in `habitat_baselines/config/eqa/il_vqa.yaml`.
+
+The VQA trainer picks the EQA CNN pre-trained encoder checkpoint by default from `data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt`. If you want to use a different checkpoint for the EQA CNN encoder, the corresponding path can be changed in the aforementioned config file's `EQA_CNN_PRETRAIN_CKPT_PATH` parameter.
+
+### Train:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_vqa.yaml --run-type train
+```
+
+Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
+
+### Pre-trained model
+
+Pre-trained VQA model can be downloaded from [here](https://www.dropbox.com/s/5e4srcc5odl4rbo/pretrained_vqa.ckpt?dl=0).
+
+After downloading the pre-trained model, add it's path to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation.
+
+### Eval:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_vqa.yaml --run-type eval
+```
+
+Results from evaluation are stored in `data/eqa/vqa/results/val`.
+
+### Example results:
+
+![](https://user-images.githubusercontent.com/24846546/75141155-464bde00-56e8-11ea-9f2e-ca346440e1d2.jpg)
+![](https://user-images.githubusercontent.com/24846546/75141287-8e6b0080-56e8-11ea-8045-b4c4521954b2.jpg)
+
+----
+
+
 [ Code and information about other trainers to be added soon. ]
