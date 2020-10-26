@@ -47,8 +47,8 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
-        for type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.RESULTS_DIR.format(split="val", type=type)
+        for s_type in ["rgb", "seg", "depth"]:
+            dir_name = self.config.RESULTS_DIR.format(split="val", type=s_type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
@@ -257,25 +257,27 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                         "[ Iter: {}; loss: {:.3f} ]".format(t, loss.item()),
                     )
 
-                if config.EVAL_SAVE_RESULTS:
-                    if t % config.EVAL_SAVE_RESULTS_INTERVAL == 0:
+                if (
+                    config.EVAL_SAVE_RESULTS
+                    and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
+                ):
 
-                        result_id = "ckpt_{}_{}".format(
-                            checkpoint_index, idx[0].item()
-                        )
-                        result_path = os.path.join(
-                            self.config.RESULTS_DIR, result_id
-                        )
+                    result_id = "ckpt_{}_{}".format(
+                        checkpoint_index, idx[0].item()
+                    )
+                    result_path = os.path.join(
+                        self.config.RESULTS_DIR, result_id
+                    )
 
-                        self._save_results(
-                            gt_rgb,
-                            pred_rgb,
-                            gt_seg,
-                            pred_seg,
-                            gt_depth,
-                            pred_depth,
-                            result_path,
-                        )
+                    self._save_results(
+                        gt_rgb,
+                        pred_rgb,
+                        gt_seg,
+                        pred_seg,
+                        gt_depth,
+                        pred_depth,
+                        result_path,
+                    )
 
         avg_loss /= len(eval_loader)
         avg_l1 /= len(eval_loader)

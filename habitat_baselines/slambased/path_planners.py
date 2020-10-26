@@ -323,7 +323,7 @@ class DifferentiableStarPlanner(nn.Module):
         if return_path:
             out_path, cost = self.reconstruct_path()
             return out_path, cost
-        return
+        return None
 
     def calculate_local_path_costs(self, non_obstacle_cost_map=None):
         coords = self.coords

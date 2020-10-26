@@ -330,9 +330,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
             path = habitat_sim.MultiGoalShortestPath()
-            if isinstance(position_b[0], List) or isinstance(
-                position_b[0], np.ndarray
-            ):
+            if isinstance(position_b[0], (Sequence, np.ndarray)):
                 path.requested_ends = np.array(position_b, dtype=np.float32)
             else:
                 path.requested_ends = np.array(

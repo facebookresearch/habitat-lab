@@ -193,9 +193,7 @@ class VectorEnv:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     # different step methods for habitat.RLEnv and habitat.Env
-                    if isinstance(env, habitat.RLEnv) or isinstance(
-                        env, gym.Env
-                    ):
+                    if isinstance(env, (habitat.RLEnv, gym.Env)):
                         # habitat.RLEnv
                         observations, reward, done, info = env.step(**data)
                         if auto_reset_done and done:
