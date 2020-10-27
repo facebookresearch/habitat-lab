@@ -124,7 +124,7 @@ We also provide a docker setup for habitat. This works on machines with an NVIDI
 
 1. Activate the habitat conda environment: `source activate habitat`
 
-1. Benchmark a forward only agent on the test scenes data: `cd habitat-lab; python examples/benchmark.py`. This should print out an output like:
+1. Benchmark a forward only agent on the test scenes data: `cd habitat-api; python examples/benchmark.py`. This should print out an output like:
 ```bash
 2019-02-25 02:39:48,680 initializing sim Sim-v0
 2019-02-25 02:39:49,655 initializing task Nav-v0
