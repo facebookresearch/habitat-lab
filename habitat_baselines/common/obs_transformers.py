@@ -523,61 +523,49 @@ class FisheyeCamera(CameraProjection):
         return unproj_pts, fov_mask
 
 
-class Cube2Equirec(nn.Module):
-    """This is the backend Cube2Equirec nn.module that does the stiching.
-    Inspired from https://github.com/fuenwang/PanoramaUtility and
-    optimized for modern PyTorch."""
+class ProjectionConverter(nn.Module):
+    r"""This is the implementation to convert {cubemap, equirec, fisheye} images
+    into {perspective, equirec, fisheye} images.
+    """
 
-    def __init__(self, equ_h: int, equ_w: int):
+    def __init__(
+        self,
+        input_projections: List[CameraProjection],
+        output_projection: CameraProjection,
+    ):
         """Args:
-        equ_h: (int) the height of the generated equirect
-        equ_w: (int) the width of the generated equirect
+        input_projections: (list of CameraProjection) input images of projection models
+        output_projection: (CameraProjection) generated image of projection model
         """
-        super(Cube2Equirec, self).__init__()
-        self.equ_h = equ_h
-        self.equ_w = equ_w
-        self.grids = self.generate_grid(equ_h, equ_w)
+        super(ProjectionConverter, self).__init__()
+        self.input_models = input_projections
+        self.output_model = output_projection
+        self.grids = self.generate_grid()
         self._grids_cache = None
 
-    def generate_grid(self, equ_h: int, equ_w: int) -> torch.Tensor:
-        # Project on sphere
-        theta_map, phi_map = self.get_theta_phi_map(equ_h, equ_w)
-        xyz_on_sphere = self.angle2sphere(theta_map, phi_map)
-
-        # Rotate so that each face will be in front of camera
-        rotations = [
-            np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
-            np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
-            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
-            np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
-            np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
-            np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
-        ]
+    def generate_grid(self) -> torch.Tensor:
+        # Obtain points on unit sphere
+        world_pts, not_assigned_mask = self.output_model.unprojection()
         # Generate grid
         grids = []
-        for rot in rotations:
-            R = torch.from_numpy(rot.T).float()
-            rotate_on_sphere = torch.matmul(
-                xyz_on_sphere.view((-1, 3)), R
-            ).view(equ_h, equ_w, 3)
-
-            # Project points on z=1 plane
-            grid = rotate_on_sphere / torch.abs(rotate_on_sphere[..., 2:3])
-            mask = torch.abs(grid).max(-1)[0] <= 1  # -1 <= grid.xy <= 1
-            mask *= grid[..., 2] == 1
-            grid[
-                ~mask
-            ] = 2  # values bigger than one will be ignored by grid_sample
-            grid_xy = -grid[..., :2].unsqueeze(0)
-            grids.append(grid_xy)
-        grids = torch.cat(grids, dim=0)
+        for input_model in self.input_models:
+            grid, input_mask = input_model.projection(world_pts)
+            # Make sure each point is only assigned to single input
+            input_mask *= not_assigned_mask
+            # Values bigger than one will be ignored by grid_sample
+            grid[~input_mask] = 2
+            # Update not_assigned_mask
+            not_assigned_mask *= ~input_mask
+            grids.append(grid)
+        grids = torch.stack(grids, dim=0)
         return grids
 
-    def _to_equirec(self, batch: torch.Tensor) -> torch.Tensor:
-        """Takes a batch of cubemaps stacked in proper order and converts thems to equirects, reduces batch size by 6"""
+    def _convert(self, batch: torch.Tensor) -> torch.Tensor:
+        """Takes a batch of images stacked in proper order and converts thems, reduces batch size by input_len"""
         batch_size, ch, _H, _W = batch.shape
-        if batch_size == 0 or batch_size % 6 != 0:
-            raise ValueError("Batch size should be 6x")
+        input_len = len(self.input_models)
+        if batch_size == 0 or batch_size % input_len != 0:
+            raise ValueError(f"Batch size should be {input_len}x")
         output = torch.nn.functional.grid_sample(
             batch,
             self._grids_cache,
@@ -585,17 +573,21 @@ class Cube2Equirec(nn.Module):
             padding_mode="zeros",
         )
         output = output.view(
-            batch_size // 6, 6, ch, self.equ_h, self.equ_w
+            batch_size // input_len,
+            input_len,
+            ch,
+            self.output_model.img_h,
+            self.output_model.img_w,
         ).sum(dim=1)
-        return output  # batch_size // 6, ch, self.equ_h, self.equ_w
+        return output  # batch_size // input_len, ch, output_model.img_h, output_model.img_w
 
-    # Convert input cubic tensor to output equirectangular image
-    def to_equirec_tensor(self, batch: torch.Tensor) -> torch.Tensor:
+    def to_converted_tensor(self, batch: torch.Tensor) -> torch.Tensor:
         batch_size = batch.size()[0]
+        input_len = len(self.input_models)
 
-        # Check whether batch size is 6x
-        if batch_size == 0 or batch_size % 6 != 0:
-            raise ValueError("Batch size should be 6x")
+        # Check whether batch size is len(self.input_models) x
+        if batch_size == 0 or batch_size % input_len != 0:
+            raise ValueError(f"Batch size should be {input_len}x")
 
         # to(device) is a NOOP after the first call
         self.grids = self.grids.to(batch.device)
@@ -605,31 +597,46 @@ class Cube2Equirec(nn.Module):
             self._grids_cache is None
             or self._grids_cache.size()[0] != batch_size
         ):
-            self._grids_cache = self.grids.repeat(batch_size // 6, 1, 1, 1)
+            self._grids_cache = self.grids.repeat(
+                batch_size // input_len, 1, 1, 1
+            )
             assert self._grids_cache.size()[0] == batch_size
         self._grids_cache = self._grids_cache.to(batch.device)
-        return self._to_equirec(batch)
+        return self._convert(batch)
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        return self.to_equirec_tensor(batch)
+        return self.to_converted_tensor(batch)
 
-    # Get theta and phi map
-    def get_theta_phi_map(self, equ_h: int, equ_w: int) -> torch.Tensor:
-        phi, theta = torch.meshgrid(torch.arange(equ_h), torch.arange(equ_w))
-        theta_map = -(theta + 0.5) * 2 * np.pi / equ_w + np.pi
-        phi_map = -(phi + 0.5) * np.pi / equ_h + np.pi / 2
-        return theta_map, phi_map
 
-    # Project on unit sphere
-    def angle2sphere(
-        self, theta_map: torch.Tensor, phi_map: torch.Tensor
-    ) -> torch.Tensor:
-        sin_theta = torch.sin(theta_map)
-        cos_theta = torch.cos(theta_map)
-        sin_phi = torch.sin(phi_map)
-        cos_phi = torch.cos(phi_map)
-        return torch.stack(
-            [cos_phi * sin_theta, sin_phi, cos_phi * cos_theta], dim=-1
+class Cube2Equirec(ProjectionConverter):
+    """This is the backend Cube2Equirec nn.module that does the stiching.
+    Inspired from https://github.com/fuenwang/PanoramaUtility and
+    optimized for modern PyTorch."""
+
+    def __init__(self, equ_h: int, equ_w: int):
+        """Args:
+        equ_h: (int) the height of the generated equirect
+        equ_w: (int) the width of the generated equirect
+        """
+
+        # Cubemap input
+        rotations = [
+            np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
+            np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
+            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
+            np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
+            np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
+            np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
+        ]
+        input_projections = []
+        for rot in rotations:
+            cam = PerspectiveCamera(256, 256, R=torch.from_numpy(rot))
+            input_projections.append(cam)
+
+        # Equirectangular output
+        output_projection = EquirecCamera(equ_h, equ_w)
+        super(Cube2Equirec, self).__init__(
+            input_projections, output_projection
         )
 
 
@@ -749,7 +756,7 @@ class CubeMap2Equirec(ObservationTransformer):
         return observations
 
 
-class Cube2Fisheye(nn.Module):
+class Cube2Fisheye(ProjectionConverter):
     r"""This is the implementation to generate fisheye images from cubemap images.
     The camera model is based on the Double Sphere Camera Model (Usenko et. al.;3DV 2018).
     Paper: https://arxiv.org/abs/1807.08957
@@ -774,29 +781,8 @@ class Cube2Fisheye(nn.Module):
         cx, cy: (float) the optical center of the generated fisheye
         fx, fy, xi, alpha: (float) the fisheye camera model parameters
         """
-        super(Cube2Fisheye, self).__init__()
-        self.fish_h = fish_h
-        self.fish_w = fish_w
-        self.fish_fov = fish_fov
-        self.fish_param = [cx, cy, fx, fy, xi, alpha]
-        self.grids = self.generate_grid(
-            fish_h, fish_w, fish_fov, self.fish_param
-        )
-        self._grids_cache = None
 
-    def generate_grid(
-        self,
-        fish_h: int,
-        fish_w: int,
-        fish_fov: float,
-        fish_param: List[float],
-    ) -> torch.Tensor:
-        # Project on sphere
-        xyz_on_sphere, fov_mask = self.get_points_on_sphere(
-            fish_h, fish_w, fish_fov, fish_param
-        )
-
-        # Rotate so that each face will be in front of camera
+        # Cubemap input
         rotations = [
             np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
             np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
@@ -805,117 +791,18 @@ class Cube2Fisheye(nn.Module):
             np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
             np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
         ]
-        # Generate grid
-        grids = []
-        not_assigned_mask = torch.full(
-            (fish_h, fish_w), True, dtype=torch.bool
-        )
-        _h, _w, _ = xyz_on_sphere.shape
+        input_projections = []
         for rot in rotations:
-            R = torch.from_numpy(rot.T).float()
-            rotate_on_sphere = torch.matmul(
-                xyz_on_sphere.view((-1, 3)), R
-            ).view(_h, _w, 3)
+            cam = PerspectiveCamera(256, 256, R=torch.from_numpy(rot))
+            input_projections.append(cam)
 
-            # Project points on z=1 plane
-            grid = rotate_on_sphere / torch.abs(rotate_on_sphere[..., 2:3])
-            mask = torch.abs(grid).max(-1)[0] <= 1  # -1 <= grid.xy <= 1
-            mask *= grid[..., 2] == 1
-            # Take care of FoV
-            mask *= fov_mask
-            # Make sure each point is only assigned to single face
-            mask *= not_assigned_mask
-            # Values bigger than one will be ignored by grid_sample
-            grid[~mask] = 2
-            # Update not_assigned_mask
-            not_assigned_mask *= ~mask
-            grid_xy = -grid[..., :2].unsqueeze(0)
-            grids.append(grid_xy)
-        grids = torch.cat(grids, dim=0)
-        return grids
-
-    def _to_fisheye(self, batch: torch.Tensor) -> torch.Tensor:
-        """Takes a batch of cubemaps stacked in proper order and converts thems to fisheye, reduces batch size by 6"""
-        batch_size, ch, _H, _W = batch.shape
-        if batch_size == 0 or batch_size % 6 != 0:
-            raise ValueError("Batch size should be 6x")
-        output = torch.nn.functional.grid_sample(
-            batch,
-            self._grids_cache,
-            align_corners=True,
-            padding_mode="zeros",
+        # Fisheye output
+        output_projection = FisheyeCamera(
+            fish_h, fish_w, fish_fov, cx, cy, fx, fy, xi, alpha
         )
-        output = output.view(
-            batch_size // 6, 6, ch, self.fish_h, self.fish_w
-        ).sum(dim=1)
-        return output  # batch_size // 6, ch, self.fish_h, self.fish_w
-
-    # Convert input cubic tensor to output fisheye image
-    def to_fisheye_tensor(self, batch: torch.Tensor) -> torch.Tensor:
-        batch_size = batch.size()[0]
-
-        # Check whether batch size is 6x
-        if batch_size == 0 or batch_size % 6 != 0:
-            raise ValueError("Batch size should be 6x")
-
-        # to(device) is a NOOP after the first call
-        self.grids = self.grids.to(batch.device)
-
-        # Cache the repeated grids for subsequent batches
-        if (
-            self._grids_cache is None
-            or self._grids_cache.size()[0] != batch_size
-        ):
-            self._grids_cache = self.grids.repeat(batch_size // 6, 1, 1, 1)
-            assert self._grids_cache.size()[0] == batch_size
-        self._grids_cache = self._grids_cache.to(batch.device)
-        return self._to_fisheye(batch)
-
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        return self.to_fisheye_tensor(batch)
-
-    def get_points_on_sphere(
-        self,
-        fish_h: int,
-        fish_w: int,
-        fish_fov: float,
-        fish_param: List[float],
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Unpack parameters
-        cx, cy, fx, fy, xi, alpha = fish_param
-        fov_rad = fish_fov / 180 * np.pi
-        fov_cos = np.cos(fov_rad / 2)
-
-        # Calculate unprojection
-        v, u = torch.meshgrid([torch.arange(fish_h), torch.arange(fish_w)])
-        mx = (u - cx) / fx
-        my = (v - cy) / fy
-        r2 = mx * mx + my * my
-        mz = (1 - alpha * alpha * r2) / (
-            alpha * torch.sqrt(1 - (2 * alpha - 1) * r2) + 1 - alpha
+        super(Cube2Fisheye, self).__init__(
+            input_projections, output_projection
         )
-        mz2 = mz * mz
-
-        k1 = mz * xi + torch.sqrt(mz2 + (1 - xi * xi) * r2)
-        k2 = mz2 + r2
-        k = k1 / k2
-
-        # Unprojected unit vectors
-        unprojected_unit = k.unsqueeze(-1) * torch.stack([mx, my, mz], dim=-1)
-        unprojected_unit[..., 2] -= xi
-        # Coordinate transformation between camera and habitat
-        unprojected_unit[..., 0] *= -1
-        unprojected_unit[..., 1] *= -1
-
-        # Calculate fov
-        unprojected_fov_cos = unprojected_unit[
-            ..., 2
-        ]  # unprojected_unit @ z_axis
-        fov_mask = unprojected_fov_cos >= fov_cos
-        if alpha > 0.5:
-            fov_mask *= r2 <= (1 / (2 * alpha - 1))
-
-        return unprojected_unit, fov_mask
 
 
 @baseline_registry.register_obs_transformer()
