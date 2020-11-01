@@ -23,6 +23,7 @@ This module API is experimental and likely to change
 import abc
 import copy
 import numbers
+from enum import Enum
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
@@ -217,6 +218,11 @@ class CenterCropper(ObservationTransformer):
         )
 
 
+class _DepthFrom(Enum):
+    Z_VAL = 0
+    OPTI_CENTER = 1
+
+
 class CameraProjection(metaclass=abc.ABCMeta):
     """This is the base CameraProjection class that converts
     projection model of images into different one. This can be used for
@@ -226,15 +232,21 @@ class CameraProjection(metaclass=abc.ABCMeta):
     must be implemented."""
 
     def __init__(
-        self, img_h: int, img_w: int, R: Optional[torch.Tensor] = None
+        self,
+        img_h: int,
+        img_w: int,
+        R: Optional[torch.Tensor] = None,
+        depth_from: _DepthFrom = _DepthFrom.OPTI_CENTER,
     ):
         """Args:
         img_h: (int) the height of camera image
         img_w: (int) the width of camera image
         R: (torch.Tensor) 3x3 rotation matrix of camera
+        depth_from: (_DepthFrom) the depth from z value or optical center
         """
         self.img_h = img_h
         self.img_w = img_w
+        self.depth_from = depth_from
 
         # Camera rotation: points in world coord = R @ points in camera coord
         if R is not None:
@@ -249,7 +261,9 @@ class CameraProjection(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def unprojection(
+        self, with_rotation: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         pass
 
     @property
@@ -297,7 +311,9 @@ class PerspectiveCamera(CameraProjection):
         f: (float) the focal length of camera
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(PerspectiveCamera, self).__init__(img_h, img_w, R)
+        super(PerspectiveCamera, self).__init__(
+            img_h, img_w, R, _DepthFrom.Z_VAL
+        )
         if f is None:
             self.f = max(img_h, img_w) / 2
         else:
@@ -326,7 +342,9 @@ class PerspectiveCamera(CameraProjection):
         valid_mask *= img_pts[..., 2] > 0
         return proj_pts, valid_mask
 
-    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def unprojection(
+        self, with_rotation: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         v, u = torch.meshgrid(
             torch.arange(self.img_h), torch.arange(self.img_w)
         )
@@ -340,7 +358,8 @@ class PerspectiveCamera(CameraProjection):
         valid_mask = torch.full(unproj_pts.shape[:2], True, dtype=torch.bool)
 
         # Rotate unproj_pts points according to camera rotation
-        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+        if with_rotation:
+            unproj_pts = self.camcoord2worldcoord(unproj_pts)
 
         return unproj_pts, valid_mask
 
@@ -379,13 +398,16 @@ class EquirecCamera(CameraProjection):
         valid_mask = torch.full(proj_pts.shape[:2], True, dtype=torch.bool)
         return proj_pts, valid_mask
 
-    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def unprojection(
+        self, with_rotation: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         theta_map, phi_map = self.get_theta_phi_map(self.img_h, self.img_w)
         unproj_pts = self.angle2sphere(theta_map, phi_map)
         # All points in image are valid
         valid_mask = torch.full(unproj_pts.shape[:2], True, dtype=torch.bool)
         # Rotate unproj_pts points according to camera rotation
-        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+        if with_rotation:
+            unproj_pts = self.camcoord2worldcoord(unproj_pts)
         return unproj_pts, valid_mask
 
     # Get theta and phi map
@@ -487,7 +509,9 @@ class FisheyeCamera(CameraProjection):
 
         return proj_pts, valid_mask
 
-    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def unprojection(
+        self, with_rotation: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # Unpack parameters
         cx, cy, fx, fy, xi, alpha = self.fish_param
 
@@ -518,7 +542,8 @@ class FisheyeCamera(CameraProjection):
             fov_mask *= r2 <= (1 / (2 * alpha - 1))
 
         # Rotate unproj_pts points according to camera rotation
-        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+        if with_rotation:
+            unproj_pts = self.camcoord2worldcoord(unproj_pts)
 
         return unproj_pts, fov_mask
 
@@ -540,6 +565,17 @@ class ProjectionConverter(nn.Module):
         super(ProjectionConverter, self).__init__()
         self.input_models = input_projections
         self.output_model = output_projection
+
+        # Check if depth conversion is required
+        # If depth is in z value in input, conversion is required
+        self.input_zfactors = self.calculate_zfactor(self.input_models)
+        # If depth is in z value in output, inverse conversion is required
+        output_invzfactors = self.calculate_zfactor([self.output_model])
+        if output_invzfactors is not None:
+            self.output_zfactors = 1 / output_invzfactors
+        else:
+            self.output_zfactors = None
+
         self.grids = self.generate_grid()
         self._grids_cache = None
 
@@ -582,7 +618,7 @@ class ProjectionConverter(nn.Module):
         return output  # batch_size // input_len, ch, output_model.img_h, output_model.img_w
 
     def to_converted_tensor(self, batch: torch.Tensor) -> torch.Tensor:
-        batch_size = batch.size()[0]
+        batch_size, ch = batch.size()[:2]
         input_len = len(self.input_models)
 
         # Check whether batch size is len(self.input_models) x
@@ -591,6 +627,13 @@ class ProjectionConverter(nn.Module):
 
         # to(device) is a NOOP after the first call
         self.grids = self.grids.to(batch.device)
+
+        # Depth conversion
+        if ch == 1 and self.input_zfactors is not None:
+            self.input_zfactors = self.input_zfactors.to(batch.device)
+            batch = batch * self.input_zfactors.repeat(
+                batch_size // input_len, 1, 1, 1
+            )
 
         # Cache the repeated grids for subsequent batches
         if (
@@ -602,7 +645,35 @@ class ProjectionConverter(nn.Module):
             )
             assert self._grids_cache.size()[0] == batch_size
         self._grids_cache = self._grids_cache.to(batch.device)
-        return self._convert(batch)
+
+        out = self._convert(batch)
+        # Depth conversion
+        if ch == 1 and self.output_zfactors is not None:
+            output_b = batch_size // input_len
+            self.output_zfactors = self.output_zfactors.to(batch.device)
+            out = out * self.output_zfactors.repeat(output_b, 1, 1, 1)
+        return out
+
+    def calculate_zfactor(self, projections: List[CameraProjection]):
+        # z factor to convert depth in z value to depth from optical center
+        z_factors = []
+        for cam in projections:
+            if cam.depth_from == _DepthFrom.Z_VAL:
+                pts_on_sphere, _ = cam.unprojection(with_rotation=False)
+                zval_to_optcenter = 1 / pts_on_sphere[..., 2]
+                z_factors.append(zval_to_optcenter.unsqueeze(0))
+            else:
+                all_one = torch.full(
+                    (1, cam.img_h, cam.img_w), 1.0, dtype=torch.float
+                )
+                z_factors.append(all_one)
+        z_factors = torch.stack(z_factors)
+
+        if (z_factors == 1.0).all():
+            # All input cameras have depth from optical center
+            return None
+        else:
+            return z_factors
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.to_converted_tensor(batch)
