@@ -217,6 +217,312 @@ class CenterCropper(ObservationTransformer):
         )
 
 
+class CameraProjection(metaclass=abc.ABCMeta):
+    """This is the base CameraProjection class that converts
+    projection model of images into different one. This can be used for
+    conversion between cubemap, equirec, fisheye images, etc.
+    projection that project 3D points onto the image plane and
+    unprojection that project image points onto unit sphere
+    must be implemented."""
+
+    def __init__(
+        self, img_h: int, img_w: int, R: Optional[torch.Tensor] = None
+    ):
+        """Args:
+        img_h: (int) the height of camera image
+        img_w: (int) the width of camera image
+        R: (torch.Tensor) 3x3 rotation matrix of camera
+        """
+        self.img_h = img_h
+        self.img_w = img_w
+
+        # Camera rotation: points in world coord = R @ points in camera coord
+        if R is not None:
+            self.R = R.float()
+        else:
+            self.R = None
+
+    @abc.abstractmethod
+    def projection(
+        self, world_pts: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        pass
+
+    @abc.abstractmethod
+    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        pass
+
+    @property
+    def rotation(self):
+        # Camera rotation: points in world coord = R @ points in camera coord
+        if self.R is None:
+            return torch.eye(3, dtype=torch.float32)
+        else:
+            return self.R
+
+    def camcoord2worldcoord(self, pts: torch.Tensor):
+        if self.R is None:
+            return pts
+        else:
+            # Rotate points according to camera rotation
+            _h, _w, _ = pts.shape
+            # points in world coord = R @ points in camera coord
+            rotated_pts = torch.matmul(pts.view((-1, 3)), self.R.T)
+            return rotated_pts.view(_h, _w, 3)
+
+    def worldcoord2camcoord(self, pts: torch.Tensor):
+        if self.R is None:
+            return pts
+        else:
+            # Rotate points according to camera rotation
+            _h, _w, _ = pts.shape
+            # points in camera coord = R.T @ points in world coord
+            rotated_pts = torch.matmul(pts.view((-1, 3)), self.R)
+            return rotated_pts.view(_h, _w, 3)
+
+
+class PerspectiveCamera(CameraProjection):
+    """This is the perspective camera class."""
+
+    def __init__(
+        self,
+        img_h: int,
+        img_w: int,
+        f: Optional[float] = None,
+        R: Optional[torch.Tensor] = None,
+    ):
+        """Args:
+        img_h: (int) the height of camera image
+        img_w: (int) the width of camera image
+        f: (float) the focal length of camera
+        R: (torch.Tensor) 3x3 rotation matrix of camera
+        """
+        super(PerspectiveCamera, self).__init__(img_h, img_w, R)
+        if f is None:
+            self.f = max(img_h, img_w) / 2
+        else:
+            self.f = f
+
+    def projection(
+        self, world_pts: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Rotate world points according to camera rotation
+        world_pts = self.worldcoord2camcoord(world_pts)
+
+        # Project points onto image plane
+        img_pts = self.f * world_pts / torch.abs(world_pts[..., 2:3])
+        cx = self.img_w / 2
+        cy = self.img_h / 2
+        u = img_pts[..., 0] + cx
+        v = img_pts[..., 1] + cy
+
+        # For grid_sample, -1 <= proj_pts <= 1
+        mapx = 2 * u / self.img_w - 1.0
+        mapy = 2 * v / self.img_h - 1.0
+        proj_pts = torch.stack([mapx, mapy], dim=-1)
+
+        # Valid mask
+        valid_mask = torch.abs(proj_pts).max(-1)[0] <= 1  # -1 <= grid.xy <= 1
+        valid_mask *= img_pts[..., 2] > 0
+        return proj_pts, valid_mask
+
+    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        v, u = torch.meshgrid(
+            torch.arange(self.img_h), torch.arange(self.img_w)
+        )
+        x = (u + 0.5) - self.img_w / 2
+        y = (v + 0.5) - self.img_h / 2
+        z = torch.full_like(x, self.f, dtype=torch.float)
+        unproj_pts = torch.stack([x, y, z], dim=-1)
+        # Project on unit shpere
+        unproj_pts /= torch.norm(unproj_pts, dim=-1, keepdim=True)
+        # All points in image are valid
+        valid_mask = torch.full(unproj_pts.shape[:2], True, dtype=torch.bool)
+
+        # Rotate unproj_pts points according to camera rotation
+        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+
+        return unproj_pts, valid_mask
+
+
+class EquirecCamera(CameraProjection):
+    """This is the equirectanglar camera class."""
+
+    def __init__(
+        self, img_h: int, img_w: int, R: Optional[torch.Tensor] = None
+    ):
+        """Args:
+        img_h: (int) the height of equirectanglar camera image
+        img_w: (int) the width of equirectanglar camera image
+        R: (torch.Tensor) 3x3 rotation matrix of camera
+        """
+        super(EquirecCamera, self).__init__(img_h, img_w, R)
+
+    def projection(
+        self, world_pts: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Rotate world points according to camera rotation
+        world_pts = self.worldcoord2camcoord(world_pts)
+
+        x, y, z = world_pts[..., 0], world_pts[..., 1], world_pts[..., 2]
+        # x,y,z to theta, phi
+        theta = torch.atan2(x, z)
+        c = torch.sqrt(x * x + z * z)
+        phi = torch.atan2(y, c)
+
+        # For grid_sample, -1 <= proj_pts <= 1
+        mapx = theta / np.pi
+        mapy = phi / (np.pi / 2)
+        proj_pts = torch.stack([mapx, mapy], dim=-1)
+
+        # All points in image are valid
+        valid_mask = torch.full(proj_pts.shape[:2], True, dtype=torch.bool)
+        return proj_pts, valid_mask
+
+    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        theta_map, phi_map = self.get_theta_phi_map(self.img_h, self.img_w)
+        unproj_pts = self.angle2sphere(theta_map, phi_map)
+        # All points in image are valid
+        valid_mask = torch.full(unproj_pts.shape[:2], True, dtype=torch.bool)
+        # Rotate unproj_pts points according to camera rotation
+        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+        return unproj_pts, valid_mask
+
+    # Get theta and phi map
+    def get_theta_phi_map(self, img_h: int, img_w: int) -> torch.Tensor:
+        phi, theta = torch.meshgrid(torch.arange(img_h), torch.arange(img_w))
+        theta_map = (theta + 0.5) * 2 * np.pi / img_w - np.pi
+        phi_map = (phi + 0.5) * np.pi / img_h - np.pi / 2
+        return theta_map, phi_map
+
+    # Project on unit sphere
+    def angle2sphere(
+        self, theta_map: torch.Tensor, phi_map: torch.Tensor
+    ) -> torch.Tensor:
+        sin_theta = torch.sin(theta_map)
+        cos_theta = torch.cos(theta_map)
+        sin_phi = torch.sin(phi_map)
+        cos_phi = torch.cos(phi_map)
+        return torch.stack(
+            [cos_phi * sin_theta, sin_phi, cos_phi * cos_theta], dim=-1
+        )
+
+
+class FisheyeCamera(CameraProjection):
+    r"""This is the fisheye camera class.
+    The camera model is based on the Double Sphere Camera Model (Usenko et. al.;3DV 2018).
+    Paper: https://arxiv.org/abs/1807.08957
+    Implementation: https://github.com/matsuren/dscamera
+    """
+
+    def __init__(
+        self,
+        img_h: int,
+        img_w: int,
+        fish_fov: float,
+        cx: float,
+        cy: float,
+        fx: float,
+        fy: float,
+        xi: float,
+        alpha: float,
+        R: Optional[torch.Tensor] = None,
+    ):
+        """Args:
+        img_h: (int) the height of fisheye camera image
+        img_w: (int) the width of fisheye camera image
+        fish_fov: (float) the fov of fisheye camera in degrees
+        cx, cy: (float) the optical center of the fisheye camera
+        fx, fy, xi, alpha: (float) the fisheye camera model parameters
+        R: (torch.Tensor) 3x3 rotation matrix of camera
+        """
+        super(FisheyeCamera, self).__init__(img_h, img_w, R)
+
+        self.fish_fov = fish_fov
+        fov_rad = self.fish_fov / 180 * np.pi
+        self.fov_cos = np.cos(fov_rad / 2)
+        self.fish_param = [cx, cy, fx, fy, xi, alpha]
+
+    def projection(
+        self, world_pts: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Rotate world points according to camera rotation
+        world_pts = self.worldcoord2camcoord(world_pts)
+
+        # Unpack parameters
+        cx, cy, fx, fy, xi, alpha = self.fish_param
+        # Unpack 3D world points
+        x, y, z = world_pts[..., 0], world_pts[..., 1], world_pts[..., 2]
+
+        # Calculate fov
+        world_pts_fov_cos = z  # point3D @ z_axis
+        fov_mask = world_pts_fov_cos >= self.fov_cos
+
+        # Calculate projection
+        x2 = x * x
+        y2 = y * y
+        z2 = z * z
+        d1 = torch.sqrt(x2 + y2 + z2)
+        zxi = xi * d1 + z
+        d2 = torch.sqrt(x2 + y2 + zxi * zxi)
+
+        div = alpha * d2 + (1 - alpha) * zxi
+        u = fx * x / div + cx
+        v = fy * y / div + cy
+
+        # Projected points on image plane
+        # For grid_sample, -1 <= proj_pts <= 1
+        mapx = 2 * u / self.img_w - 1.0
+        mapy = 2 * v / self.img_h - 1.0
+        proj_pts = torch.stack([mapx, mapy], dim=-1)
+
+        # Check valid area
+        if alpha <= 0.5:
+            w1 = alpha / (1 - alpha)
+        else:
+            w1 = (1 - alpha) / alpha
+        w2 = w1 + xi / np.sqrt(2 * w1 * xi + xi * xi + 1)
+        valid_mask = z > -w2 * d1
+        valid_mask *= fov_mask
+
+        return proj_pts, valid_mask
+
+    def unprojection(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Unpack parameters
+        cx, cy, fx, fy, xi, alpha = self.fish_param
+
+        # Calculate unprojection
+        v, u = torch.meshgrid(
+            [torch.arange(self.img_h), torch.arange(self.img_w)]
+        )
+        mx = (u - cx) / fx
+        my = (v - cy) / fy
+        r2 = mx * mx + my * my
+        mz = (1 - alpha * alpha * r2) / (
+            alpha * torch.sqrt(1 - (2 * alpha - 1) * r2) + 1 - alpha
+        )
+        mz2 = mz * mz
+
+        k1 = mz * xi + torch.sqrt(mz2 + (1 - xi * xi) * r2)
+        k2 = mz2 + r2
+        k = k1 / k2
+
+        # Unprojected unit vectors
+        unproj_pts = k.unsqueeze(-1) * torch.stack([mx, my, mz], dim=-1)
+        unproj_pts[..., 2] -= xi
+
+        # Calculate fov
+        unproj_fov_cos = unproj_pts[..., 2]  # unproj_pts @ z_axis
+        fov_mask = unproj_fov_cos >= self.fov_cos
+        if alpha > 0.5:
+            fov_mask *= r2 <= (1 / (2 * alpha - 1))
+
+        # Rotate unproj_pts points according to camera rotation
+        unproj_pts = self.camcoord2worldcoord(unproj_pts)
+
+        return unproj_pts, fov_mask
+
+
 class Cube2Equirec(nn.Module):
     """This is the backend Cube2Equirec nn.module that does the stiching.
     Inspired from https://github.com/fuenwang/PanoramaUtility and
