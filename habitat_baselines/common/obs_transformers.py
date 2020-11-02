@@ -258,23 +258,42 @@ class CameraProjection(metaclass=abc.ABCMeta):
     def projection(
         self, world_pts: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        pass
+        """Project points in world coord onto image planes.
+        Args:
+            world_pts: 3D points in world coord
+        Returns:
+            proj_pts: Projected points for grid_sample, -1 <= proj_pts <= 1
+            valid_mask: True if the point is valid (inside FoV)
+        """
 
     @abc.abstractmethod
     def unprojection(
         self, with_rotation: bool = True
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        pass
+        """Unproject 2D image points onto unit sphere.
+        Args:
+            with_rotation: If True, unprojected points is in world coord.
+                           If False, unprojected points is in camera coord.
+        Returns:
+            unproj_pts: Unprojected 3D points on unit sphere
+            valid_mask: True if the point is valid (inside FoV)
+        """
 
     @property
     def rotation(self):
-        # Camera rotation: points in world coord = R @ points in camera coord
+        """Camera rotation: points in world coord = R @ points in camera coord"""
         if self.R is None:
             return torch.eye(3, dtype=torch.float32)
         else:
             return self.R
 
     def camcoord2worldcoord(self, pts: torch.Tensor):
+        """Convert points in camera coords into points in world coords.
+        Args:
+            pts: 3D points in camera coords
+        Returns:
+            rotated_pts: 3D points in world coords
+        """
         if self.R is None:
             return pts
         else:
@@ -285,6 +304,12 @@ class CameraProjection(metaclass=abc.ABCMeta):
             return rotated_pts.view(_h, _w, 3)
 
     def worldcoord2camcoord(self, pts: torch.Tensor):
+        """Convert points in world coords into points in camera coords.
+        Args:
+            pts: 3D points in world coords
+        Returns:
+            rotated_pts: 3D points in camera coords
+        """
         if self.R is None:
             return pts
         else:
@@ -410,17 +435,19 @@ class EquirecCamera(CameraProjection):
             unproj_pts = self.camcoord2worldcoord(unproj_pts)
         return unproj_pts, valid_mask
 
-    # Get theta and phi map
     def get_theta_phi_map(self, img_h: int, img_w: int) -> torch.Tensor:
+        """Get theta and phi map for equirectangular image.
+        PI < theta_map < PI,  PI/2 < phi_map < PI/2
+        """
         phi, theta = torch.meshgrid(torch.arange(img_h), torch.arange(img_w))
         theta_map = (theta + 0.5) * 2 * np.pi / img_w - np.pi
         phi_map = (phi + 0.5) * np.pi / img_h - np.pi / 2
         return theta_map, phi_map
 
-    # Project on unit sphere
     def angle2sphere(
         self, theta_map: torch.Tensor, phi_map: torch.Tensor
     ) -> torch.Tensor:
+        """Project points on unit sphere based on theta and phi map."""
         sin_theta = torch.sin(theta_map)
         cos_theta = torch.cos(theta_map)
         sin_phi = torch.sin(phi_map)
@@ -460,8 +487,8 @@ class FisheyeCamera(CameraProjection):
         """
         super(FisheyeCamera, self).__init__(img_h, img_w, R)
 
-        self.fish_fov = fish_fov
-        fov_rad = self.fish_fov / 180 * np.pi
+        self.fish_fov = fish_fov  # FoV in degrees
+        fov_rad = self.fish_fov / 180 * np.pi  # FoV in radians
         self.fov_cos = np.cos(fov_rad / 2)
         self.fish_param = [cx, cy, fx, fy, xi, alpha]
 
@@ -618,6 +645,7 @@ class ProjectionConverter(nn.Module):
         return output  # batch_size // input_len, ch, output_model.img_h, output_model.img_w
 
     def to_converted_tensor(self, batch: torch.Tensor) -> torch.Tensor:
+        # batch tensor order should be NCHW
         batch_size, ch = batch.size()[:2]
         input_len = len(self.input_models)
 
