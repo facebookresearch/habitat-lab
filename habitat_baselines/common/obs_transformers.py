@@ -679,6 +679,38 @@ class ProjectionConverter(nn.Module):
         return self.to_converted_tensor(batch)
 
 
+class _RotationMat(object):
+    BACK = torch.tensor([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    DOWN = torch.tensor([[1, 0, 0], [0, 0, 1], [0, -1, 0]])
+    FRONT = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    LEFT = torch.tensor([[0, 0, -1], [0, 1, 0], [1, 0, 0]])
+    RIGHT = torch.tensor([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
+    UP = torch.tensor([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+
+    @classmethod
+    def for_cubemap(cls) -> List[torch.Tensor]:
+        """Get rotation matrix for cubemap. The orders are
+        'BACK', 'DOWN', 'FRONT', 'LEFT', 'RIGHT', 'UP'
+        """
+        face_orders = ["BACK", "DOWN", "FRONT", "LEFT", "RIGHT", "UP"]
+        return [getattr(cls, face) for face in face_orders]
+
+
+def get_cubemap_projections(
+    img_h: int = 256, img_w: int = 256
+) -> List[CameraProjection]:
+    """Get cubemap camera projections that consist of six PerspectiveCameras.
+    The orders are 'BACK', 'DOWN', 'FRONT', 'LEFT', 'RIGHT', 'UP'.
+    img_h: (int) the height of camera image
+    img_w: (int) the width of camera image
+    """
+    projections = []
+    for rot in _RotationMat.for_cubemap():
+        cam = PerspectiveCamera(img_h, img_w, R=rot)
+        projections.append(cam)
+    return projections
+
+
 class Cube2Equirec(ProjectionConverter):
     """This is the backend Cube2Equirec nn.module that does the stiching.
     Inspired from https://github.com/fuenwang/PanoramaUtility and
@@ -691,18 +723,7 @@ class Cube2Equirec(ProjectionConverter):
         """
 
         # Cubemap input
-        rotations = [
-            np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
-            np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
-            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
-            np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
-            np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
-            np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
-        ]
-        input_projections = []
-        for rot in rotations:
-            cam = PerspectiveCamera(256, 256, R=torch.from_numpy(rot))
-            input_projections.append(cam)
+        input_projections = get_cubemap_projections()
 
         # Equirectangular output
         output_projection = EquirecCamera(equ_h, equ_w)
@@ -854,18 +875,7 @@ class Cube2Fisheye(ProjectionConverter):
         """
 
         # Cubemap input
-        rotations = [
-            np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
-            np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
-            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
-            np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
-            np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
-            np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
-        ]
-        input_projections = []
-        for rot in rotations:
-            cam = PerspectiveCamera(256, 256, R=torch.from_numpy(rot))
-            input_projections.append(cam)
+        input_projections = get_cubemap_projections()
 
         # Fisheye output
         output_projection = FisheyeCamera(
