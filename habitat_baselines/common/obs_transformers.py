@@ -287,6 +287,15 @@ class CameraProjection(metaclass=abc.ABCMeta):
         else:
             return self.R
 
+    @property
+    def shape(self):
+        """Camera image shape: (img_h, img_w)"""
+        return (self.img_h, self.img_w)
+
+    def size(self):
+        """Camera image shape: (img_h, img_w)"""
+        return self.shape
+
     def camcoord2worldcoord(self, pts: torch.Tensor):
         """Convert points in camera coords into points in world coords.
         Args:
@@ -582,33 +591,56 @@ class ProjectionConverter(nn.Module):
 
     def __init__(
         self,
-        input_projections: List[CameraProjection],
-        output_projection: CameraProjection,
+        input_projections: Union[List[CameraProjection], CameraProjection],
+        output_projections: Union[List[CameraProjection], CameraProjection],
     ):
         """Args:
-        input_projections: (list of CameraProjection) input images of projection models
-        output_projection: (CameraProjection) generated image of projection model
+        input_projections: input images of projection models
+        output_projections: generated image of projection models
         """
         super(ProjectionConverter, self).__init__()
+        # Convert to list
+        if not isinstance(input_projections, list):
+            input_projections = [input_projections]
+        if not isinstance(output_projections, list):
+            output_projections = [output_projections]
+
         self.input_models = input_projections
-        self.output_model = output_projection
+        self.output_models = output_projections
+        self.input_len = len(self.input_models)
+        self.output_len = len(self.output_models)
+
+        # Check image size
+        input_size = self.input_models[0].size()
+        for it in self.input_models:
+            assert (
+                input_size == it.size()
+            ), "All input models must have the same image size"
+
+        output_size = self.output_models[0].size()
+        for it in self.output_models:
+            assert (
+                output_size == it.size()
+            ), "All output models must have the same image size"
 
         # Check if depth conversion is required
         # If depth is in z value in input, conversion is required
-        self.input_zfactors = self.calculate_zfactor(self.input_models)
+        self.input_zfactor = self.calculate_zfactor(self.input_models)
         # If depth is in z value in output, inverse conversion is required
-        output_invzfactors = self.calculate_zfactor([self.output_model])
-        if output_invzfactors is not None:
-            self.output_zfactors = 1 / output_invzfactors
-        else:
-            self.output_zfactors = None
+        self.output_zfactor = self.calculate_zfactor(
+            self.output_models, inverse=True
+        )
 
+        # grids shape: (output_len, input_len, output_img_h, output_img_w, 2)
         self.grids = self.generate_grid()
+        # _grids_cache shape: (batch_size*output_len*input_len, output_img_h, output_img_w, 2)
         self._grids_cache = None
 
-    def generate_grid(self) -> torch.Tensor:
+    def _generate_grid_one_output(
+        self, output_model: CameraProjection
+    ) -> torch.Tensor:
         # Obtain points on unit sphere
-        world_pts, not_assigned_mask = self.output_model.unprojection()
+        world_pts, not_assigned_mask = output_model.unprojection()
         # Generate grid
         grids = []
         for input_model in self.input_models:
@@ -623,12 +655,20 @@ class ProjectionConverter(nn.Module):
         grids = torch.stack(grids, dim=0)
         return grids
 
+    def generate_grid(self) -> torch.Tensor:
+        multi_output_grids = []
+        for output_model in self.output_models:
+            grids = self._generate_grid_one_output(output_model)
+            multi_output_grids.append(grids)
+        multi_output_grids = torch.stack(multi_output_grids, dim=0)
+        return multi_output_grids  # output_len, input_len, output_img_h, output_img_w, 2
+
     def _convert(self, batch: torch.Tensor) -> torch.Tensor:
         """Takes a batch of images stacked in proper order and converts thems, reduces batch size by input_len"""
         batch_size, ch, _H, _W = batch.shape
-        input_len = len(self.input_models)
-        if batch_size == 0 or batch_size % input_len != 0:
-            raise ValueError(f"Batch size should be {input_len}x")
+        out_h, out_w = self.output_models[0].size()
+        if batch_size == 0 or batch_size % self.input_len != 0:
+            raise ValueError(f"Batch size should be {self.input_len}x")
         output = torch.nn.functional.grid_sample(
             batch,
             self._grids_cache,
@@ -636,54 +676,79 @@ class ProjectionConverter(nn.Module):
             padding_mode="zeros",
         )
         output = output.view(
-            batch_size // input_len,
-            input_len,
+            self.input_len,
+            batch_size // self.input_len,
             ch,
-            self.output_model.img_h,
-            self.output_model.img_w,
-        ).sum(dim=1)
-        return output  # batch_size // input_len, ch, output_model.img_h, output_model.img_w
+            out_h,
+            out_w,
+        ).sum(dim=0)
+        return output  # output_len * batch_size, ch, output_model.img_h, output_model.img_w
 
     def to_converted_tensor(self, batch: torch.Tensor) -> torch.Tensor:
         # batch tensor order should be NCHW
-        batch_size, ch = batch.size()[:2]
-        input_len = len(self.input_models)
+        batch_size, ch, in_h, in_w = batch.size()
+
+        out_h, out_w = self.output_models[0].size()
 
         # Check whether batch size is len(self.input_models) x
-        if batch_size == 0 or batch_size % input_len != 0:
-            raise ValueError(f"Batch size should be {input_len}x")
+        if batch_size == 0 or batch_size % self.input_len != 0:
+            raise ValueError(f"Batch size should be {self.input_len}x")
+
+        # How many sets of input.
+        num_input_set = batch_size // self.input_len
 
         # to(device) is a NOOP after the first call
         self.grids = self.grids.to(batch.device)
 
         # Depth conversion
-        if ch == 1 and self.input_zfactors is not None:
-            self.input_zfactors = self.input_zfactors.to(batch.device)
-            batch = batch * self.input_zfactors.repeat(
-                batch_size // input_len, 1, 1, 1
-            )
+        if ch == 1 and self.input_zfactor is not None:
+            self.input_zfactor = self.input_zfactor.to(batch.device)
+            batch = batch * self.input_zfactor.repeat(num_input_set, 1, 1, 1)
+
+        # Adjust batch for multiple outputs
+        # batch must be [1st batch * output_len, 2nd batch * output_len, ...]
+        # not that [1st batch, 2nd batch, ...] * output_len
+        multi_out_batch = (
+            batch.view(num_input_set, self.input_len, ch, in_h, in_w)
+            .repeat(1, self.output_len, 1, 1, 1)
+            .view(self.output_len * batch_size, ch, in_h, in_w)
+        )
 
         # Cache the repeated grids for subsequent batches
         if (
             self._grids_cache is None
-            or self._grids_cache.size()[0] != batch_size
+            or self._grids_cache.size()[0] != multi_out_batch.size()[0]
         ):
+            # batch size is more than one
             self._grids_cache = self.grids.repeat(
-                batch_size // input_len, 1, 1, 1
-            )
-            assert self._grids_cache.size()[0] == batch_size
+                num_input_set, 1, 1, 1, 1
+            ).view(batch_size * self.output_len, out_h, out_w, 2)
         self._grids_cache = self._grids_cache.to(batch.device)
 
-        out = self._convert(batch)
+        out = self._convert(multi_out_batch)
         # Depth conversion
-        if ch == 1 and self.output_zfactors is not None:
-            output_b = batch_size // input_len
-            self.output_zfactors = self.output_zfactors.to(batch.device)
-            out = out * self.output_zfactors.repeat(output_b, 1, 1, 1)
+        if ch == 1 and self.output_zfactor is not None:
+            output_b = out.size()[0] // self.output_len
+            self.output_zfactor = self.output_zfactor.to(batch.device)
+            out = out * self.output_zfactor.repeat(output_b, 1, 1, 1)
         return out
 
-    def calculate_zfactor(self, projections: List[CameraProjection]):
-        # z factor to convert depth in z value to depth from optical center
+    def calculate_zfactor(
+        self, projections: List[CameraProjection], inverse: bool = False
+    ) -> Optional[torch.Tensor]:
+        """Calculate z factor based on camera projection models. z_factor is
+        used for converting depth in z value to depth from optical center
+        (for input_models) or conversion of depth from optical center to depth
+        in z value (inverse = True, for output_models). Whether the conversion
+        is required or not is decided based on depth_from property of
+        CameraProjection class.
+        Args:
+            projections: input or output projection models
+            inverse: True to convert depth from optical center to z value
+                     False to convert z value to depth from optical center
+        Returns:
+            z_factors: z factor. Return None if conversion is not required.
+        """
         z_factors = []
         for cam in projections:
             if cam.depth_from == _DepthFrom.Z_VAL:
@@ -701,7 +766,12 @@ class ProjectionConverter(nn.Module):
             # All input cameras have depth from optical center
             return None
         else:
-            return z_factors
+            if not inverse:
+                # for input_models
+                return z_factors
+            else:
+                # for output_models
+                return 1 / z_factors
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.to_converted_tensor(batch)
