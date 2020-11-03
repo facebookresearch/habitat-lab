@@ -226,7 +226,7 @@ class _DepthFrom(Enum):
 class CameraProjection(metaclass=abc.ABCMeta):
     """This is the base CameraProjection class that converts
     projection model of images into different one. This can be used for
-    conversion between cubemap, equirec, fisheye images, etc.
+    conversion between cubemap, equirect, fisheye images, etc.
     projection that project 3D points onto the image plane and
     unprojection that project image points onto unit sphere
     must be implemented."""
@@ -320,8 +320,8 @@ class CameraProjection(metaclass=abc.ABCMeta):
             return rotated_pts.view(_h, _w, 3)
 
 
-class PerspectiveCamera(CameraProjection):
-    """This is the perspective camera class."""
+class PerspectiveProjection(CameraProjection):
+    """This is the perspective camera projection class."""
 
     def __init__(
         self,
@@ -336,7 +336,7 @@ class PerspectiveCamera(CameraProjection):
         f: (float) the focal length of camera
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(PerspectiveCamera, self).__init__(
+        super(PerspectiveProjection, self).__init__(
             img_h, img_w, R, _DepthFrom.Z_VAL
         )
         if f is None:
@@ -389,8 +389,8 @@ class PerspectiveCamera(CameraProjection):
         return unproj_pts, valid_mask
 
 
-class EquirecCamera(CameraProjection):
-    """This is the equirectanglar camera class."""
+class EquirectProjection(CameraProjection):
+    """This is the equirectanglar camera projection class."""
 
     def __init__(
         self, img_h: int, img_w: int, R: Optional[torch.Tensor] = None
@@ -400,7 +400,7 @@ class EquirecCamera(CameraProjection):
         img_w: (int) the width of equirectanglar camera image
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(EquirecCamera, self).__init__(img_h, img_w, R)
+        super(EquirectProjection, self).__init__(img_h, img_w, R)
 
     def projection(
         self, world_pts: torch.Tensor
@@ -457,8 +457,8 @@ class EquirecCamera(CameraProjection):
         )
 
 
-class FisheyeCamera(CameraProjection):
-    r"""This is the fisheye camera class.
+class FisheyeProjection(CameraProjection):
+    r"""This is the fisheye camera projection class.
     The camera model is based on the Double Sphere Camera Model (Usenko et. al.;3DV 2018).
     Paper: https://arxiv.org/abs/1807.08957
     Implementation: https://github.com/matsuren/dscamera
@@ -485,7 +485,7 @@ class FisheyeCamera(CameraProjection):
         fx, fy, xi, alpha: (float) the fisheye camera model parameters
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(FisheyeCamera, self).__init__(img_h, img_w, R)
+        super(FisheyeProjection, self).__init__(img_h, img_w, R)
 
         self.fish_fov = fish_fov  # FoV in degrees
         fov_rad = self.fish_fov / 180 * np.pi  # FoV in radians
@@ -576,8 +576,8 @@ class FisheyeCamera(CameraProjection):
 
 
 class ProjectionConverter(nn.Module):
-    r"""This is the implementation to convert {cubemap, equirec, fisheye} images
-    into {perspective, equirec, fisheye} images.
+    r"""This is the implementation to convert {cubemap, equirect, fisheye} images
+    into {perspective, equirect, fisheye} images.
     """
 
     def __init__(
@@ -734,13 +734,13 @@ def get_cubemap_projections(
     """
     projections = []
     for rot in _RotationMat.for_cubemap():
-        cam = PerspectiveCamera(img_h, img_w, R=rot)
+        cam = PerspectiveProjection(img_h, img_w, R=rot)
         projections.append(cam)
     return projections
 
 
-class Cube2Equirec(ProjectionConverter):
-    """This is the backend Cube2Equirec nn.module that does the stiching.
+class Cube2Equirect(ProjectionConverter):
+    """This is the backend Cube2Equirect nn.module that does the stiching.
     Inspired from https://github.com/fuenwang/PanoramaUtility and
     optimized for modern PyTorch."""
 
@@ -754,15 +754,15 @@ class Cube2Equirec(ProjectionConverter):
         input_projections = get_cubemap_projections()
 
         # Equirectangular output
-        output_projection = EquirecCamera(equ_h, equ_w)
-        super(Cube2Equirec, self).__init__(
+        output_projection = EquirectProjection(equ_h, equ_w)
+        super(Cube2Equirect, self).__init__(
             input_projections, output_projection
         )
 
 
-# TODO Measure Inheritance of CubeMap2Equirec + CubeMap2FishEye into same abstract class
+# TODO Measure Inheritance of CubeMap2Equirect + CubeMap2FishEye into same abstract class
 @baseline_registry.register_obs_transformer()
-class CubeMap2Equirec(ObservationTransformer):
+class CubeMap2Equirect(ObservationTransformer):
     r"""This is an experimental use of ObservationTransformer that converts a cubemap
     output to an equirectangular one through projection. This needs to be fed
     a list of 6 cameras at various orientations but will be able to stitch a
@@ -786,7 +786,7 @@ class CubeMap2Equirec(ObservationTransformer):
         :param channels_last: Are the channels last in the input
         :param target_uuids: Optional List of which of the sensor_uuids to overwrite
         """
-        super(CubeMap2Equirec, self).__init__()
+        super(CubeMap2Equirect, self).__init__()
         num_sensors = len(sensor_uuids)
         assert (
             num_sensors % 6 == 0 and num_sensors != 0
@@ -798,7 +798,7 @@ class CubeMap2Equirec(ObservationTransformer):
         self.sensor_uuids: List[str] = sensor_uuids
         self.eq_shape: Tuple[int] = eq_shape
         self.channels_last: bool = channels_last
-        self.c2eq: nn.Module = Cube2Equirec(eq_shape[0], eq_shape[1])
+        self.c2eq: nn.Module = Cube2Equirect(eq_shape[0], eq_shape[1])
         if target_uuids is None:
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
@@ -906,7 +906,7 @@ class Cube2Fisheye(ProjectionConverter):
         input_projections = get_cubemap_projections()
 
         # Fisheye output
-        output_projection = FisheyeCamera(
+        output_projection = FisheyeProjection(
             fish_h, fish_w, fish_fov, cx, cy, fx, fy, xi, alpha
         )
         super(Cube2Fisheye, self).__init__(
