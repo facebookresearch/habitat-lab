@@ -700,11 +700,6 @@ class ProjectionConverter(nn.Module):
         # to(device) is a NOOP after the first call
         self.grids = self.grids.to(batch.device)
 
-        # Depth conversion
-        if ch == 1 and self.input_zfactor is not None:
-            self.input_zfactor = self.input_zfactor.to(batch.device)
-            batch = batch * self.input_zfactor.repeat(num_input_set, 1, 1, 1)
-
         # Adjust batch for multiple outputs
         # batch must be [1st batch * output_len, 2nd batch * output_len, ...]
         # not that [1st batch, 2nd batch, ...] * output_len
@@ -725,13 +720,7 @@ class ProjectionConverter(nn.Module):
             ).view(batch_size * self.output_len, out_h, out_w, 2)
         self._grids_cache = self._grids_cache.to(batch.device)
 
-        out = self._convert(multi_out_batch)
-        # Depth conversion
-        if ch == 1 and self.output_zfactor is not None:
-            output_b = out.size()[0] // self.output_len
-            self.output_zfactor = self.output_zfactor.to(batch.device)
-            out = out * self.output_zfactor.repeat(output_b, 1, 1, 1)
-        return out
+        return self._convert(multi_out_batch)
 
     def calculate_zfactor(
         self, projections: List[CameraProjection], inverse: bool = False
@@ -773,8 +762,26 @@ class ProjectionConverter(nn.Module):
                 # for output_models
                 return 1 / z_factors
 
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        return self.to_converted_tensor(batch)
+    def forward(
+        self, batch: torch.Tensor, is_depth: bool = False
+    ) -> torch.Tensor:
+
+        # Depth conversion for input tensors
+        if is_depth and self.input_zfactor is not None:
+            input_b = batch.size()[0] // self.input_len
+            self.input_zfactor = self.input_zfactor.to(batch.device)
+            batch = batch * self.input_zfactor.repeat(input_b, 1, 1, 1)
+
+        # Common operator to convert projection models
+        out = self.to_converted_tensor(batch)
+
+        # Depth conversion for output tensors
+        if is_depth and self.output_zfactor is not None:
+            output_b = out.size()[0] // self.output_len
+            self.output_zfactor = self.output_zfactor.to(batch.device)
+            out = out * self.output_zfactor.repeat(output_b, 1, 1, 1)
+
+        return out
 
 
 class _RotationMat(object):
