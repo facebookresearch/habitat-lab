@@ -857,11 +857,13 @@ class CubeMap2Equirect(ObservationTransformer):
         eq_shape: Tuple[int],
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
+        depth_key: str = "depth",
     ):
         r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param eq_shape: The shape of the equirectangular output (height, width)
         :param channels_last: Are the channels last in the input
         :param target_uuids: Optional List of which of the sensor_uuids to overwrite
+        :param depth_key: If sensor_uuids has depth_key, they are processed as depth
         """
         super(CubeMap2Equirect, self).__init__()
         num_sensors = len(sensor_uuids)
@@ -880,6 +882,7 @@ class CubeMap2Equirect(ObservationTransformer):
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
+        self.depth_key = depth_key
         # TODO support and test different FOVs than just 90
 
     def transform_observation_space(
@@ -929,6 +932,12 @@ class CubeMap2Equirect(ObservationTransformer):
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         for i, target_sensor_uuid in enumerate(self.target_uuids):
+            # If the sensor is depth
+            is_depth = any(
+                self.depth_key in s
+                for s in self.sensor_uuids[i * 6 : (i + 1) * 6]
+            )
+
             # The UUID we are overwriting
             assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
             sensor_obs = [
@@ -943,7 +952,10 @@ class CubeMap2Equirect(ObservationTransformer):
             if not self.channels_last:
                 imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
             imgs = imgs.float()  # NCHW
-            equirect = self.c2eq(imgs)  # Here is where the stiching happens
+            # if
+            equirect = self.c2eq(
+                imgs, is_depth=is_depth
+            )  # Here is where the stiching happens
             # for debugging
             # torchvision.utils.save_image(equirect, f'sample_eqr_{target_sensor_uuid}.jpg', normalize=True, range=(0, 255) if 'rgb' in target_sensor_uuid else (0, 1))
             equirect = equirect.to(dtype=sensor_dtype)
@@ -1012,6 +1024,7 @@ class CubeMap2Fisheye(ObservationTransformer):
         fish_params: Tuple[float],
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
+        depth_key: str = "depth",
     ):
         r""":param sensor: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param fish_shape: The shape of the fisheye output (height, width)
@@ -1019,6 +1032,7 @@ class CubeMap2Fisheye(ObservationTransformer):
         :param fish_params: The camera parameters of fisheye output (f, xi, alpha)
         :param channels_last: Are the channels last in the input
         :param target_uuids: Optional List of which of the sensor_uuids to overwrite
+        :param depth_key: If sensor_uuids has depth_key, they are processed as depth
         """
         super(CubeMap2Fisheye, self).__init__()
         num_sensors = len(sensor_uuids)
@@ -1048,6 +1062,7 @@ class CubeMap2Fisheye(ObservationTransformer):
             self.target_uuids: List[str] = self.sensor_uuids[::6]
         else:
             self.target_uuids: List[str] = target_uuids
+        self.depth_key = depth_key
         # TODO support and test different FOVs than just 90
 
     def transform_observation_space(
@@ -1099,6 +1114,11 @@ class CubeMap2Fisheye(ObservationTransformer):
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         for i, target_sensor_uuid in enumerate(self.target_uuids):
+            # If the sensor is depth
+            is_depth = any(
+                self.depth_key in s
+                for s in self.sensor_uuids[i * 6 : (i + 1) * 6]
+            )
             # The UUID we are overwriting
             assert target_sensor_uuid in self.sensor_uuids[i * 6 : (i + 1) * 6]
             sensor_obs = [
@@ -1113,7 +1133,9 @@ class CubeMap2Fisheye(ObservationTransformer):
             if not self.channels_last:
                 imgs = imgs.permute((0, 3, 1, 2))  # NHWC => NCHW
             imgs = imgs.float()  # NCHW
-            fisheye = self.c2fish(imgs)  # Here is where the stiching happens
+            fisheye = self.c2fish(
+                imgs, is_depth=is_depth
+            )  # Here is where the stiching happens
             fisheye = fisheye.to(dtype=sensor_dtype)
             if not self.channels_last:
                 fisheye = fisheye.permute((0, 2, 3, 1))  # NCHW => NHWC
