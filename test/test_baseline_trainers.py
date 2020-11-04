@@ -16,9 +16,12 @@ try:
     import torch
     import torch.distributed
 
+    import habitat
     from habitat_baselines.common.base_trainer import BaseRLTrainer
+    from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
     from habitat_baselines.run import execute_exp, run_exp
+    from habitat_baselines.utils.common import batch_obs
 
     baseline_installed = True
 except ImportError:
@@ -89,7 +92,7 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
         ],
     ],
 )
-@pytest.mark.parametrize("camera", ["equirect", "fisheye"])
+@pytest.mark.parametrize("camera", ["equirect", "fisheye", "cubemap"])
 @pytest.mark.parametrize("sensor_type", ["RGB", "DEPTH"])
 def test_cubemap_stiching(
     test_cfg_path: str, mode: str, camera: str, sensor_type: str
@@ -111,8 +114,7 @@ def test_cubemap_stiching(
     if f"{sensor_type}_SENSOR" not in config.SIMULATOR.AGENT_0.SENSORS:
         config.SIMULATOR.AGENT_0.SENSORS.append(f"{sensor_type}_SENSOR")
     sensor = getattr(config.SIMULATOR, f"{sensor_type}_SENSOR")
-    sensor.ORIENTATION = orient[0]
-    for camera_id in range(1, CAMERA_NUM):
+    for camera_id in range(CAMERA_NUM):
         camera_template = f"{sensor_type}_{camera_id}"
         camera_config = deepcopy(sensor)
         camera_config.ORIENTATION = orient[camera_id]
@@ -132,10 +134,56 @@ def test_cubemap_stiching(
             sensor_uuids
         )
     meta_config.freeze()
-    execute_exp(meta_config, mode)
-    # Deinit processes group
-    if torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group()
+    if camera in ["equirect", "fisheye"]:
+        execute_exp(meta_config, mode)
+        # Deinit processes group
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
+
+    elif camera == "cubemap":
+        # 1) Generate an equirect image from cubemap images.
+        # 2) Generate cubemap images from the equirect image.
+        # 3) Compare the input and output cubemap
+        env = habitat.Env(config=config)
+        observations = env.reset()
+        batch = batch_obs([observations])
+        orig_batch = deepcopy(batch)
+
+        #  ProjectionTransformer
+        obs_trans_to_eq = baseline_registry.get_obs_transformer(
+            "CubeMap2Equirect"
+        )
+        cube2equirect = obs_trans_to_eq(sensor_uuids, (256, 512))
+        obs_trans_to_cube = baseline_registry.get_obs_transformer(
+            "Equirect2CubeMap"
+        )
+        equirect2cube = obs_trans_to_cube(
+            cube2equirect.target_uuids, (256, 256)
+        )
+
+        # Cubemap to Equirect to Cubemap
+        batch_eq = cube2equirect(batch)
+        batch_cube = equirect2cube(batch_eq)
+
+        # Extract input and output cubemap
+        output_cube = batch_cube[cube2equirect.target_uuids[0]]
+        input_cube = torch.cat([orig_batch[key] for key in sensor_uuids])
+
+        # Apply blur to absorb difference (blur, etc.) caused by conversion
+        if sensor_type == "RGB":
+            output_cube = output_cube.float() / 255
+            input_cube = input_cube.float() / 255
+        output_cube = output_cube.permute((0, 3, 1, 2))  # NHWC => NCHW
+        input_cube = input_cube.permute((0, 3, 1, 2))  # NHWC => NCHW
+        apply_blur = torch.nn.AvgPool2d(5, 3, 2)
+        output_cube = apply_blur(output_cube)
+        input_cube = apply_blur(input_cube)
+
+        # Calculate the difference
+        diff = torch.abs(output_cube - input_cube)
+        assert diff.mean().item() < 0.01
+    else:
+        raise ValueError(f"Unknown camera name: {camera}")
 
 
 @pytest.mark.skipif(
