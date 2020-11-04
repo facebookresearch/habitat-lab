@@ -1112,6 +1112,78 @@ class CubeMap2Fisheye(ProjectionTransformer):
         )
 
 
+class Equirect2Cube(ProjectionConverter):
+    """This is the backend Equirect2CubeMap that converts equirectangular image
+    to cubemap images."""
+
+    def __init__(self, img_h: int, img_w: int):
+        """Args:
+        img_h: (int) the height of the generated cubemap
+        img_w: (int) the width of the generated cubemap
+        """
+
+        # Equirectangular input
+        input_projections = EquirectProjection(256, 512)
+
+        #  Cubemap output
+        output_projection = get_cubemap_projections(img_h, img_w)
+        super(Equirect2Cube, self).__init__(
+            input_projections, output_projection
+        )
+
+
+@baseline_registry.register_obs_transformer()
+class Equirect2CubeMap(ProjectionTransformer):
+    r"""This is an experimental use of ObservationTransformer that converts
+    an equirectangular image to cubemap images.
+    Cubemap order is Back, Down, Front, Left, Right, Up.
+    The output will be writen the UUID of the first sensor.
+    """
+
+    def __init__(
+        self,
+        sensor_uuids: List[str],
+        img_shape: Tuple[int, int],
+        channels_last: bool = False,
+        target_uuids: Optional[List[str]] = None,
+        depth_key: str = "depth",
+    ):
+        r""":param sensor_uuids: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
+        :param img_shape: The shape of the equirectangular output (height, width)
+        :param channels_last: Are the channels last in the input
+        :param target_uuids: Optional List of which of the sensor_uuids to overwrite
+        :param depth_key: If sensor_uuids has depth_key substring, they are processed as depth
+        """
+
+        converter = Equirect2Cube(img_shape[0], img_shape[1])
+        super(Equirect2CubeMap, self).__init__(
+            converter,
+            sensor_uuids,
+            img_shape,
+            channels_last,
+            target_uuids,
+            depth_key,
+        )
+
+    @classmethod
+    def from_config(cls, config):
+        eq2cube_config = config.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE
+
+        if hasattr(eq2cube_config, "TARGET_UUIDS"):
+            # Optional Config Value to specify target UUID
+            target_uuids = eq2cube_config.TARGET_UUIDS
+        else:
+            target_uuids = None
+        return cls(
+            eq2cube_config.SENSOR_UUIDS,
+            img_shape=(
+                eq2cube_config.HEIGHT,
+                eq2cube_config.WIDTH,
+            ),
+            target_uuids=target_uuids,
+        )
+
+
 def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     active_obs_transforms = []
     if hasattr(config.RL.POLICY, "OBS_TRANSFORMS"):
