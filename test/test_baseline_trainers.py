@@ -90,7 +90,10 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
     ],
 )
 @pytest.mark.parametrize("camera", ["equirect", "fisheye"])
-def test_cubemap_stiching(test_cfg_path: str, mode: str, camera: str):
+@pytest.mark.parametrize("sensor_type", ["RGB", "DEPTH"])
+def test_cubemap_stiching(
+    test_cfg_path: str, mode: str, camera: str, sensor_type: str
+):
     meta_config = get_config(config_paths=test_cfg_path)
     meta_config.defrost()
     config = meta_config.TASK_CONFIG
@@ -105,33 +108,22 @@ def test_cubemap_stiching(test_cfg_path: str, mode: str, camera: str):
     ]
     sensor_uuids = []
 
-    if "RGB_SENSOR" in config.SIMULATOR.AGENT_0.SENSORS:
-        config.SIMULATOR.RGB_SENSOR.ORIENTATION = orient[0]
-        for camera_id in range(1, CAMERA_NUM):
-            camera_template = f"RGB_{camera_id}"
-            camera_config = deepcopy(config.SIMULATOR.RGB_SENSOR)
-            camera_config.ORIENTATION = orient[camera_id]
-
-            camera_config.UUID = camera_template.lower()
-            sensor_uuids.append(camera_config.UUID)
-            setattr(config.SIMULATOR, camera_template, camera_config)
-            config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
-
-    if "DEPTH_SENSOR" in config.SIMULATOR.AGENT_0.SENSORS:
-        config.SIMULATOR.DEPTH_SENSOR.ORIENTATION = orient[0]
-        for camera_id in range(1, CAMERA_NUM):
-            camera_template = f"DEPTH_{camera_id}"
-            camera_config = deepcopy(config.SIMULATOR.DEPTH_SENSOR)
-            camera_config.ORIENTATION = orient[camera_id]
-            camera_config.UUID = camera_template.lower()
-            sensor_uuids.append(camera_config.UUID)
-
-            setattr(config.SIMULATOR, camera_template, camera_config)
-            config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
+    if f"{sensor_type}_SENSOR" not in config.SIMULATOR.AGENT_0.SENSORS:
+        config.SIMULATOR.AGENT_0.SENSORS.append(f"{sensor_type}_SENSOR")
+    sensor = getattr(config.SIMULATOR, f"{sensor_type}_SENSOR")
+    sensor.ORIENTATION = orient[0]
+    for camera_id in range(1, CAMERA_NUM):
+        camera_template = f"{sensor_type}_{camera_id}"
+        camera_config = deepcopy(sensor)
+        camera_config.ORIENTATION = orient[camera_id]
+        camera_config.UUID = camera_template.lower()
+        sensor_uuids.append(camera_config.UUID)
+        setattr(config.SIMULATOR, camera_template, camera_config)
+        config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
 
     meta_config.TASK_CONFIG = config
     meta_config.SENSORS = config.SIMULATOR.AGENT_0.SENSORS
-    if camera == "equirec":
+    if camera == "equirect":
         meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
             sensor_uuids
         )
