@@ -784,33 +784,38 @@ class ProjectionConverter(nn.Module):
         return out
 
 
-class _RotationMat(object):
-    BACK = torch.tensor([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
-    DOWN = torch.tensor([[1, 0, 0], [0, 0, 1], [0, -1, 0]])
-    FRONT = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    LEFT = torch.tensor([[0, 0, -1], [0, 1, 0], [1, 0, 0]])
-    RIGHT = torch.tensor([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
-    UP = torch.tensor([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
-
-    @classmethod
-    def for_cubemap(cls) -> List[torch.Tensor]:
-        """Get rotation matrix for cubemap. The orders are
-        'BACK', 'DOWN', 'FRONT', 'LEFT', 'RIGHT', 'UP'
-        """
-        face_orders = ["BACK", "DOWN", "FRONT", "LEFT", "RIGHT", "UP"]
-        return [getattr(cls, face) for face in face_orders]
-
-
 def get_cubemap_projections(
     img_h: int = 256, img_w: int = 256
 ) -> List[CameraProjection]:
     """Get cubemap camera projections that consist of six PerspectiveCameras.
     The orders are 'BACK', 'DOWN', 'FRONT', 'LEFT', 'RIGHT', 'UP'.
-    img_h: (int) the height of camera image
-    img_w: (int) the width of camera image
+    Args:
+        img_h: (int) the height of camera image
+        img_w: (int) the width of camera image
+
+    The rotation matrices are equivalent to
+    .. code-block:: python
+        from scipy.spatial.transform import Rotation
+        rotations = [
+            Rotation.from_euler("y", 180, degrees=True),  # Back
+            Rotation.from_euler("x", -90, degrees=True),  # Down
+            Rotation.from_euler("x", 0, degrees=True),  # Front
+            Rotation.from_euler("y", -90, degrees=True),  # Left
+            Rotation.from_euler("y", 90, degrees=True),  # Right
+            Rotation.from_euler("x", 90, degrees=True)  # Up
+        ]
     """
+    rotations = [
+        torch.tensor([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # Back
+        torch.tensor([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),  # Down
+        torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Front
+        torch.tensor([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),  # Left
+        torch.tensor([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),  # Right
+        torch.tensor([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),  # Up
+    ]
+
     projections = []
-    for rot in _RotationMat.for_cubemap():
+    for rot in rotations:
         cam = PerspectiveProjection(img_h, img_w, R=rot)
         projections.append(cam)
     return projections
