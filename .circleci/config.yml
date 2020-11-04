@@ -169,7 +169,7 @@ jobs:
           command: |
               if [ ! -d ./habitat-sim ]
               then
-                git clone --single-branch --branch Remove_SceneConfiguration https://github.com/jturner65/habitat-sim.git --recursive
+                git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
               while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
