@@ -325,14 +325,20 @@ def get_topdown_map(
         # Recompute range in case padding added any more values.
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
-        range_x = (
-            max(range_x[0] - border_padding, 0),
-            min(range_x[-1] + border_padding + 1, top_down_map.shape[0]),
-        )
-        range_y = (
-            max(range_y[0] - border_padding, 0),
-            min(range_y[-1] + border_padding + 1, top_down_map.shape[1]),
-        )
+        if len(range_x) == 0:
+            range_x = (0, top_down_map.shape[0])
+        else:
+            range_x = (
+                max(range_x[0] - border_padding, 0),
+                min(range_x[-1] + border_padding + 1, top_down_map.shape[0]),
+            )
+        if len(range_y) == 0:
+            range_y = (0, top_down_map.shape[1])
+        else:
+            range_y = (
+                max(range_y[0] - border_padding, 0),
+                min(range_y[-1] + border_padding + 1, top_down_map.shape[1]),
+            )
 
         _outline_border(
             top_down_map[range_x[0] : range_x[1], range_y[0] : range_y[1]]

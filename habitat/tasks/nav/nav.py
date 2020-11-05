@@ -712,10 +712,18 @@ class TopDownMap(Measure):
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
 
-        self._ind_x_min = range_x[0]
-        self._ind_x_max = range_x[-1]
-        self._ind_y_min = range_y[0]
-        self._ind_y_max = range_y[-1]
+        if len(range_x) == 0:
+            self._ind_x_min = 0
+            self._ind_x_max = top_down_map.shape[0]
+        else:
+            self._ind_x_min = range_x[0]
+            self._ind_x_max = range_x[-1]
+        if len(range_y) == 0:
+            self._ind_y_min = 0
+            self._ind_y_max = top_down_map.shape[1]
+        else:
+            self._ind_y_min = range_y[0]
+            self._ind_y_max = range_y[-1]
 
         if self._config.FOG_OF_WAR.DRAW:
             self._fog_of_war_mask = np.zeros_like(top_down_map)
