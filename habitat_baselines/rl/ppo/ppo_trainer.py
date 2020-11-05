@@ -201,7 +201,7 @@ class PPOTrainer(BaseRLTrainer):
         # sent in to env.step(), that will create CUDA contexts
         # in the subprocesses.
         # For backwards compatibility, we also call .item() to convert to
-        # and int
+        # an int
         step_data = [a.item() for a in actions.to(device="cpu")]
         profiling_wrapper.range_pop()  # compute actions
 
@@ -586,7 +586,7 @@ class PPOTrainer(BaseRLTrainer):
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
-            # and int
+            # an int
             step_data = [a.item() for a in actions.to(device="cpu")]
 
             outputs = self.envs.step(step_data)
