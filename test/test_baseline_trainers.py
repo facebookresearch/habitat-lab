@@ -16,7 +16,7 @@ try:
     import torch
     import torch.distributed
 
-    import habitat
+    from habitat.core.vector_env import VectorEnv
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
@@ -144,9 +144,17 @@ def test_cubemap_stiching(
         # 1) Generate an equirect image from cubemap images.
         # 2) Generate cubemap images from the equirect image.
         # 3) Compare the input and output cubemap
-        env = habitat.Env(config=config)
-        observations = env.reset()
-        batch = batch_obs([observations])
+        env_fn_args = []
+        for split in ["train", "val"]:
+            tmp_config = config.clone()
+            tmp_config.defrost()
+            tmp_config.DATASET["SPLIT"] = split
+            tmp_config.freeze()
+            env_fn_args.append((tmp_config, None))
+
+        with VectorEnv(env_fn_args=env_fn_args) as envs:
+            observations = envs.reset()
+        batch = batch_obs(observations)
         orig_batch = deepcopy(batch)
 
         #  ProjectionTransformer
@@ -167,7 +175,9 @@ def test_cubemap_stiching(
 
         # Extract input and output cubemap
         output_cube = batch_cube[cube2equirect.target_uuids[0]]
-        input_cube = torch.cat([orig_batch[key] for key in sensor_uuids])
+        input_cube = [orig_batch[key] for key in sensor_uuids]
+        input_cube = torch.stack(input_cube, axis=1)
+        input_cube = torch.flatten(input_cube, end_dim=1)
 
         # Apply blur to absorb difference (blur, etc.) caused by conversion
         if sensor_type == "RGB":

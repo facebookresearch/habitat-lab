@@ -659,12 +659,13 @@ class ProjectionConverter(nn.Module):
         multi_output_grids = []
         for output_model in self.output_models:
             grids = self._generate_grid_one_output(output_model)
-            multi_output_grids.append(grids)
-        multi_output_grids = torch.stack(multi_output_grids, dim=0)
-        return multi_output_grids  # output_len, input_len, output_img_h, output_img_w, 2
+            multi_output_grids.append(grids.unsqueeze(1))
+        multi_output_grids = torch.cat(multi_output_grids, dim=1)
+        return multi_output_grids  # input_len, output_len, output_img_h, output_img_w, 2
 
     def _convert(self, batch: torch.Tensor) -> torch.Tensor:
-        """Takes a batch of images stacked in proper order and converts thems, reduces batch size by input_len"""
+        """Takes a batch of images stacked in proper order and converts thems,
+        reduces batch size by input_len."""
         batch_size, ch, _H, _W = batch.shape
         out_h, out_w = self.output_models[0].size()
         if batch_size == 0 or batch_size % self.input_len != 0:
@@ -676,15 +677,19 @@ class ProjectionConverter(nn.Module):
             padding_mode="zeros",
         )
         output = output.view(
-            self.input_len,
             batch_size // self.input_len,
+            self.input_len,
             ch,
             out_h,
             out_w,
-        ).sum(dim=0)
+        ).sum(dim=1)
         return output  # output_len * batch_size, ch, output_model.img_h, output_model.img_w
 
     def to_converted_tensor(self, batch: torch.Tensor) -> torch.Tensor:
+        """Convert tensors based on projection models. If there are two
+        batches from two envs (R_1st, G_1st, B_1st) and (R_2nd, G_2nd, B_2nd),
+        the input order is [R_1st, G_1st, B_1st, R_2nd, G_2nd, B_2nd]
+        """
         # batch tensor order should be NCHW
         batch_size, ch, in_h, in_w = batch.size()
 
