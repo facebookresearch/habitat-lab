@@ -1128,12 +1128,12 @@ class Equirect2Cube(ProjectionConverter):
         """
 
         # Equirectangular input
-        input_projections = EquirectProjection(256, 512)
+        input_projection = EquirectProjection(256, 512)
 
         #  Cubemap output
         output_projections = get_cubemap_projections(img_h, img_w)
         super(Equirect2Cube, self).__init__(
-            input_projections, output_projections
+            input_projection, output_projections
         )
 
 
