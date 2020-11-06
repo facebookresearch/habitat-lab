@@ -1131,9 +1131,9 @@ class Equirect2Cube(ProjectionConverter):
         input_projections = EquirectProjection(256, 512)
 
         #  Cubemap output
-        output_projection = get_cubemap_projections(img_h, img_w)
+        output_projections = get_cubemap_projections(img_h, img_w)
         super(Equirect2Cube, self).__init__(
-            input_projections, output_projection
+            input_projections, output_projections
         )
 
 
