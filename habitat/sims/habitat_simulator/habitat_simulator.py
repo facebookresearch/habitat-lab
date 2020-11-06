@@ -214,6 +214,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
+        # Check if Habitat-Sim is post Scene Config Update
+        if not hasattr(sim_config, "scene_id"):
+            raise RuntimeError(
+                "Incompatible version of Habitat-Sim detected, please upgrade habitat_sim"
+            )
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
