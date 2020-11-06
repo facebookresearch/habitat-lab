@@ -130,7 +130,6 @@ jobs:
                 ~/miniconda.sh -b -p $HOME/miniconda
                 rm ~/miniconda.sh
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                conda config --set pip_interop_enabled True
                 conda create -y -n habitat python=3.6
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
