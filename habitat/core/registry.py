@@ -51,7 +51,7 @@ class Registry(metaclass=Singleton):
         cls,
         _type: str,
         to_register: Optional[Any],
-        name: str,
+        name: Optional[str],
         assert_type: Optional[Type] = None,
     ) -> Callable:
         def wrap(to_register):
