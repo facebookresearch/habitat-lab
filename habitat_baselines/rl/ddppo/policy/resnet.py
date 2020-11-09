@@ -190,7 +190,7 @@ class ResNeXtBottleneck(Bottleneck):
     resneXt = True
 
 
-Block = Type[Union[Bottleneck, BasicBlock]]
+Block = Union[Type[Bottleneck], Type[BasicBlock]]
 
 
 class ResNet(nn.Module):

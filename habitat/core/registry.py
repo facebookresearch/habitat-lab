@@ -30,16 +30,12 @@ Various decorators for registry different kind of classes with unique keys
 import collections
 from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Optional, Type
 
+from habitat.core.dataset import Dataset
+from habitat.core.simulator import ActionSpaceConfiguration, Sensor, Simulator
 from habitat.core.utils import Singleton
 
 if TYPE_CHECKING:
-    from habitat.core.dataset import Dataset
     from habitat.core.embodied_task import Measure
-    from habitat.core.simulator import (
-        ActionSpaceConfiguration,
-        Sensor,
-        Simulator,
-    )
     from habitat.tasks.nav.nav import NavigationTask, SimulatorTaskAction
 
 
