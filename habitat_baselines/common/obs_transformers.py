@@ -143,7 +143,7 @@ class CenterCropper(ObservationTransformer):
 
     def __init__(
         self,
-        size: Union[int, Tuple[int]],
+        size: Union[int, Tuple[int, int]],
         channels_last: bool = True,
         trans_keys: Tuple[str] = ("rgb", "depth", "semantic"),
     ):
