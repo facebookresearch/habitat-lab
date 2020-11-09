@@ -6,7 +6,7 @@
 
 import os
 import time
-from typing import Any, ClassVar, DefaultDict, Dict, List, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Tuple, Union
 
 import torch
 from numpy import ndarray
@@ -202,7 +202,7 @@ class BaseRLTrainer(BaseTrainer):
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
         prev_actions: Tensor,
-        batch: DefaultDict[str, Tensor],
+        batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
@@ -210,7 +210,7 @@ class BaseRLTrainer(BaseTrainer):
         Tensor,
         Tensor,
         Tensor,
-        DefaultDict[str, Tensor],
+        Dict[str, Tensor],
         List[List[Any]],
     ]:
         # pausing self.envs with no new episode
