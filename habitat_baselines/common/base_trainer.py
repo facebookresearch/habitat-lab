@@ -14,6 +14,7 @@ from torch import Tensor
 
 from habitat import Config, logger
 from habitat.core.env import Env, RLEnv
+from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.utils.common import (
     get_checkpoint_id,
@@ -196,7 +197,7 @@ class BaseRLTrainer(BaseTrainer):
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
-        envs: Union[RLEnv, Env],
+        envs: Union[VectorEnv, RLEnv, Env],
         test_recurrent_hidden_states: Tensor,
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
@@ -204,7 +205,7 @@ class BaseRLTrainer(BaseTrainer):
         batch: DefaultDict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
-        Union[RLEnv, Env],
+        Union[VectorEnv, RLEnv, Env],
         Tensor,
         Tensor,
         Tensor,
