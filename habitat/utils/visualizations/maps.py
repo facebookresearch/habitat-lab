@@ -418,7 +418,7 @@ def colorize_draw_agent_and_fit_to_height(
         image=top_down_map,
         agent_center_coord=map_agent_pos,
         agent_rotation=topdown_map_info["agent_angle"],
-        agent_radius_px=min(top_down_map.shape[0:2]) / 32,
+        agent_radius_px=min(top_down_map.shape[0:2]) // 32,
     )
 
     if top_down_map.shape[0] > top_down_map.shape[1]:
