@@ -444,7 +444,9 @@ class EquirectProjection(CameraProjection):
             unproj_pts = self.camcoord2worldcoord(unproj_pts)
         return unproj_pts, valid_mask
 
-    def get_theta_phi_map(self, img_h: int, img_w: int) -> torch.Tensor:
+    def get_theta_phi_map(
+        self, img_h: int, img_w: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get theta and phi map for equirectangular image.
         PI < theta_map < PI,  PI/2 < phi_map < PI/2
         """
