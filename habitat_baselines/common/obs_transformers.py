@@ -857,7 +857,7 @@ class ProjectionTransformer(ObservationTransformer):
         self,
         converter: ProjectionConverter,
         sensor_uuids: List[str],
-        image_shape: Tuple[int],
+        image_shape: Tuple[int, int],
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
         depth_key: str = "depth",
@@ -879,7 +879,7 @@ class ProjectionTransformer(ObservationTransformer):
             len(image_shape) == 2
         ), f"image_shape must be a tuple of (height, width), given: {image_shape}"
         self.sensor_uuids: List[str] = sensor_uuids
-        self.img_shape: Tuple[int] = image_shape
+        self.img_shape: Tuple[int, int] = image_shape
         self.channels_last: bool = channels_last
         self.converter = converter
         if target_uuids is None:
@@ -964,7 +964,7 @@ class CubeMap2Equirect(ProjectionTransformer):
     def __init__(
         self,
         sensor_uuids: List[str],
-        eq_shape: Tuple[int],
+        eq_shape: Tuple[int, int],
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
         depth_key: str = "depth",
@@ -1058,7 +1058,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
     def __init__(
         self,
         sensor_uuids: List[str],
-        fish_shape: Tuple[int],
+        fish_shape: Tuple[int, int],
         fish_fov: float,
         fish_params: Tuple[float],
         channels_last: bool = False,
