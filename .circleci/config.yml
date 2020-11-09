@@ -244,6 +244,7 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               python setup.py develop --all
+              export PYTHONPATH=.:$PYTHONPATH
               #python setup.py test
               pytest --typeguard-packages="habitat_sim,habitat,habitat_baselines"
 
