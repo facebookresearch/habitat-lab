@@ -14,7 +14,6 @@ import numpy as np
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.registry import registry
 from habitat.core.simulator import Observations, SensorSuite, Simulator
 from habitat.core.spaces import ActionSpace, EmptySpace, Space
 
@@ -227,6 +226,8 @@ class EmbodiedTask:
     def __init__(
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
+        from habitat.core.registry import registry
+
         self._config = config
         self._sim = sim
         self._dataset = dataset

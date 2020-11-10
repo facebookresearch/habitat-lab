@@ -28,15 +28,16 @@ Various decorators for registry different kind of classes with unique keys
 """
 
 import collections
-from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Optional, Type
+from typing import Any, Callable, DefaultDict, Optional, Type
 
 from habitat.core.dataset import Dataset
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    Measure,
+    SimulatorTaskAction,
+)
 from habitat.core.simulator import ActionSpaceConfiguration, Sensor, Simulator
 from habitat.core.utils import Singleton
-
-if TYPE_CHECKING:
-    from habitat.core.embodied_task import Measure
-    from habitat.tasks.nav.nav import NavigationTask, SimulatorTaskAction
 
 
 class Registry(metaclass=Singleton):
@@ -209,7 +210,7 @@ class Registry(metaclass=Singleton):
         return cls.mapping[_type].get(name, None)
 
     @classmethod
-    def get_task(cls, name: str) -> Type["NavigationTask"]:
+    def get_task(cls, name: str) -> Type[EmbodiedTask]:
         return cls._get_impl("task", name)
 
     @classmethod
