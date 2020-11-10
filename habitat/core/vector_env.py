@@ -207,6 +207,12 @@ class VectorEnv:
                             connection_write_fn(
                                 (observations, reward, done, info)
                             )
+                    elif isinstance(env, habitat.Env):  # type: ignore
+                        # habitat.Env
+                        observations = env.step(**data)
+                        if auto_reset_done and env.episode_over:
+                            observations = env.reset()
+                        connection_write_fn(observations)
                     else:
                         raise NotImplementedError
 
@@ -261,7 +267,9 @@ class VectorEnv:
     def _spawn_workers(
         self,
         env_fn_args: Sequence[Tuple],
-        make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
+        make_env_fn: Callable[
+            ..., Union[Env, habitat.Env, RLEnv]
+        ] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
