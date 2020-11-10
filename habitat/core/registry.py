@@ -31,11 +31,7 @@ import collections
 from typing import Any, Callable, DefaultDict, Optional, Type
 
 from habitat.core.dataset import Dataset
-from habitat.core.embodied_task import (
-    EmbodiedTask,
-    Measure,
-    SimulatorTaskAction,
-)
+from habitat.core.embodied_task import Action, EmbodiedTask, Measure
 from habitat.core.simulator import ActionSpaceConfiguration, Sensor, Simulator
 from habitat.core.utils import Singleton
 
@@ -214,7 +210,7 @@ class Registry(metaclass=Singleton):
         return cls._get_impl("task", name)
 
     @classmethod
-    def get_task_action(cls, name: str) -> Type["SimulatorTaskAction"]:
+    def get_task_action(cls, name: str) -> Type["Action"]:
         return cls._get_impl("task_action", name)
 
     @classmethod

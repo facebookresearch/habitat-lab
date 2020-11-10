@@ -6,26 +6,15 @@
 import abc
 from collections import OrderedDict
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import attr
+import numpy as np
+import torch
 from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Episode
-
-if TYPE_CHECKING:
-    import numpy as np
-    import torch
 
 VisualObservation = Union["torch.Tensor", "np.ndarray"]
 
