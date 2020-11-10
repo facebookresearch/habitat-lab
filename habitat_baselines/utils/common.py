@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
-import numbers
 import os
 import re
 import shutil
@@ -13,6 +12,7 @@ import tarfile
 from collections import defaultdict
 from io import BytesIO
 from typing import (
+    Any,
     DefaultDict,
     Dict,
     Iterable,
@@ -20,7 +20,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import numpy as np
@@ -316,10 +315,10 @@ def center_crop(
     """
     h, w = get_image_height_width(img, channels_last=channels_last)
 
-    if isinstance(size, numbers.Number):
+    if isinstance(size, int):
         size_tuple: Tuple[int, int] = (int(size), int(size))
     else:
-        size_tuple = cast(Tuple[int, int], size)
+        size_tuple = size
     assert len(size_tuple) == 2, "size should be (h,w) you wish to resize to"
     cropy, cropx = size_tuple
 
@@ -380,7 +379,7 @@ def base_plus_ext(path: str) -> Union[Tuple[str, str], Tuple[None, None]]:
     return match.group(1), match.group(2)
 
 
-def valid_sample(sample: dict) -> bool:
+def valid_sample(sample: Optional[Any]) -> bool:
     """Check whether a webdataset sample is valid.
     sample: sample to be checked
     """
