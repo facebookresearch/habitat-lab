@@ -79,7 +79,7 @@ def is_compatible_episode(
 
 
 def _create_episode(
-    episode_id: int,
+    episode_id: Union[int, str],
     scene_id: str,
     start_position: List[float],
     start_rotation: List[Union[int, float64]],

@@ -177,7 +177,7 @@ def generate_video(
     video_option: List[str],
     video_dir: Optional[str],
     images: List[np.ndarray],
-    episode_id: int,
+    episode_id: Union[int, str],
     checkpoint_idx: int,
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
