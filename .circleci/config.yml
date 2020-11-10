@@ -245,8 +245,7 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              #python setup.py test
-              pytest --typeguard-packages="habitat_sim,habitat,habitat_baselines"
+              python setup.py test
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
