@@ -81,3 +81,4 @@ repos:
     rev: v0.7.1.1
     hooks:
     -   id: shellcheck
+        exclude: ^habitat_baselines/slambased/
