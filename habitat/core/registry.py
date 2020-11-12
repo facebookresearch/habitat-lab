@@ -88,7 +88,6 @@ class Registry(metaclass=Singleton):
                 pass
 
         """
-        from habitat.core.embodied_task import EmbodiedTask
 
         return cls._register_impl(
             "task", to_register, name, assert_type=EmbodiedTask
@@ -120,7 +119,6 @@ class Registry(metaclass=Singleton):
                 pass
 
         """
-        from habitat.core.simulator import Simulator
 
         return cls._register_impl(
             "sim", to_register, name, assert_type=Simulator
@@ -133,7 +131,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the sensor will be registered.
             If :py:`None` will use the name of the class
         """
-        from habitat.core.simulator import Sensor
 
         return cls._register_impl(
             "sensor", to_register, name, assert_type=Sensor
@@ -146,7 +143,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the measure will be registered.
             If :py:`None` will use the name of the class
         """
-        from habitat.core.embodied_task import Measure
 
         return cls._register_impl(
             "measure", to_register, name, assert_type=Measure
@@ -164,7 +160,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the task action will be registered. If
             :py:`None` will use the name of the task action's method.
         """
-        from habitat.core.embodied_task import Action
 
         return cls._register_impl(
             "task_action", to_register, name, assert_type=Action
@@ -177,7 +172,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the dataset will be registered.
             If :py:`None` will use the name of the class
         """
-        from habitat.core.dataset import Dataset
 
         return cls._register_impl(
             "dataset", to_register, name, assert_type=Dataset
@@ -192,7 +186,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the action space will be registered.
             If :py:`None` will use the name of the class
         """
-        from habitat.core.simulator import ActionSpaceConfiguration
 
         return cls._register_impl(
             "action_space_config",
@@ -210,29 +203,29 @@ class Registry(metaclass=Singleton):
         return cls._get_impl("task", name)
 
     @classmethod
-    def get_task_action(cls, name: str) -> Type["Action"]:
+    def get_task_action(cls, name: str) -> Type[Action]:
         return cls._get_impl("task_action", name)
 
     @classmethod
-    def get_simulator(cls, name: str) -> Type["Simulator"]:
+    def get_simulator(cls, name: str) -> Type[Simulator]:
         return cls._get_impl("sim", name)
 
     @classmethod
-    def get_sensor(cls, name: str) -> Type["Sensor"]:
+    def get_sensor(cls, name: str) -> Type[Sensor]:
         return cls._get_impl("sensor", name)
 
     @classmethod
-    def get_measure(cls, name: str) -> Type["Measure"]:
+    def get_measure(cls, name: str) -> Type[Measure]:
         return cls._get_impl("measure", name)
 
     @classmethod
-    def get_dataset(cls, name: str) -> Type["Dataset"]:
+    def get_dataset(cls, name: str) -> Type[Dataset]:
         return cls._get_impl("dataset", name)
 
     @classmethod
     def get_action_space_configuration(
         cls, name: str
-    ) -> Type["ActionSpaceConfiguration"]:
+    ) -> Type[ActionSpaceConfiguration]:
         return cls._get_impl("action_space_config", name)
 
 
