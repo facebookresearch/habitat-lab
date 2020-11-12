@@ -7,7 +7,11 @@
 import glob
 import numbers
 import os
+import re
+import shutil
+import tarfile
 from collections import defaultdict
+from io import BytesIO
 from typing import (
     DefaultDict,
     Dict,
@@ -23,9 +27,12 @@ import numpy as np
 import torch
 from gym.spaces import Box
 from numpy import ndarray
+from PIL import Image
 from torch import Size, Tensor
 from torch import nn as nn
 
+from habitat import logger
+from habitat.core.dataset import Episode
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -345,3 +352,78 @@ def overwrite_gym_box_shape(box: Box, shape) -> Box:
     low = box.low if np.isscalar(box.low) else np.min(box.low)
     high = box.high if np.isscalar(box.high) else np.max(box.high)
     return Box(low=low, high=high, shape=shape, dtype=box.dtype)
+
+
+def get_scene_episode_dict(episodes: List[Episode]) -> Dict:
+    scene_ids = []
+    scene_episode_dict = {}
+
+    for episode in episodes:
+        if episode.scene_id not in scene_ids:
+            scene_ids.append(episode.scene_id)
+            scene_episode_dict[episode.scene_id] = [episode]
+        else:
+            scene_episode_dict[episode.scene_id].append(episode)
+
+    return scene_episode_dict
+
+
+def base_plus_ext(path: str) -> Union[Tuple[str, str], Tuple[None, None]]:
+    """Helper method that splits off all extension.
+    Returns base, allext.
+    path: path with extensions
+    returns: path with all extensions removed
+    """
+    match = re.match(r"^((?:.*/|)[^.]+)[.]([^/]*)$", path)
+    if not match:
+        return None, None
+    return match.group(1), match.group(2)
+
+
+def valid_sample(sample: dict) -> bool:
+    """Check whether a webdataset sample is valid.
+    sample: sample to be checked
+    """
+    return (
+        sample is not None
+        and isinstance(sample, dict)
+        and len(list(sample.keys())) > 0
+        and not sample.get("__bad__", False)
+    )
+
+
+def img_bytes_2_np_array(
+    x: Tuple[int, torch.Tensor, bytes]
+) -> Tuple[int, torch.Tensor, bytes, np.ndarray]:
+    """Mapper function to convert image bytes in webdataset sample to numpy
+    arrays.
+    Args:
+        x: webdataset sample containing ep_id, question, answer and imgs
+    Returns:
+        Same sample with bytes turned into np arrays.
+    """
+    images = []
+    img_bytes: bytes
+    for img_bytes in x[3:]:
+        bytes_obj = BytesIO()
+        bytes_obj.write(img_bytes)
+        image = np.array(Image.open(bytes_obj))
+        img = image.transpose(2, 0, 1)
+        img = img / 255.0
+        images.append(img)
+    return (*x[0:3], np.array(images, dtype=np.float32))
+
+
+def create_tar_archive(archive_path: str, dataset_path: str) -> None:
+    """Creates tar archive of dataset and returns status code.
+    Used in VQA trainer's webdataset.
+    """
+    logger.info("[ Creating tar archive. This will take a few minutes. ]")
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        for file in sorted(os.listdir(dataset_path)):
+            tar.add(os.path.join(dataset_path, file))
+
+
+def delete_folder(path: str) -> None:
+    shutil.rmtree(path)

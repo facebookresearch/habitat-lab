@@ -319,8 +319,8 @@ def test_rl_env(gpu2gpu):
         assert done is True, "done should be true after STOP action"
 
 
-def _make_dummy_env_func(config, dataset, id):
-    return DummyRLEnv(config=config, dataset=dataset, env_ind=id)
+def _make_dummy_env_func(config, dataset, env_id):
+    return DummyRLEnv(config=config, dataset=dataset, env_ind=env_id)
 
 
 def test_vec_env_call_func():

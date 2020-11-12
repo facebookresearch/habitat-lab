@@ -253,7 +253,7 @@ def make_cfg(settings):
     sim_cfg = habitat_sim.SimulatorConfiguration()
     sim_cfg.gpu_device_id = 0
     sim_cfg.default_agent_id = settings["default_agent_id"]
-    sim_cfg.scene.id = settings["scene"]
+    sim_cfg.scene_id = settings["scene"]
     sim_cfg.enable_physics = settings["enable_physics"]
     sim_cfg.physics_config_file = settings["physics_config_file"]
 
@@ -356,8 +356,8 @@ with habitat_sim.Simulator(cfg) as sim:
 
 
 def remove_all_objects(sim):
-    for id in sim.get_existing_object_ids():
-        sim.remove_object(id)
+    for obj_id in sim.get_existing_object_ids():
+        sim.remove_object(obj_id)
 
 
 def set_object_in_front_of_agent(sim, obj_id, z_offset=-1.5):
@@ -473,9 +473,9 @@ def init_episode_dict(episode_id, scene_id, agent_pos, agent_rot):
     return episode_dict
 
 
-def add_object_details(sim, episode_dict, id, object_template, object_id):
+def add_object_details(sim, episode_dict, obj_id, object_template, object_id):
     object_template = {
-        "object_id": id,
+        "object_id": obj_id,
         "object_template": object_template,
         "position": np.array(sim.get_translation(object_id)).tolist(),
         "rotation": get_rotation(sim, object_id),

@@ -268,7 +268,7 @@ class Env:
         ), "Episode over, call reset before calling step"
 
         # Support simpler interface as well
-        if isinstance(action, str) or isinstance(action, (int, np.integer)):
+        if isinstance(action, (str, int, np.integer)):
             action = {"action": action}
 
         observations = self.task.step(

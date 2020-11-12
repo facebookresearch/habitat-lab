@@ -167,14 +167,14 @@ class Dataset(Generic[T]):
 
     def to_json(self) -> str:
         class DatasetJSONEncoder(json.JSONEncoder):
-            def default(self, object):
-                if isinstance(object, np.ndarray):
-                    return object.tolist()
+            def default(self, obj):
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
 
                 return (
-                    object.__getstate__()
-                    if hasattr(object, "__getstate__")
-                    else object.__dict__
+                    obj.__getstate__()
+                    if hasattr(obj, "__getstate__")
+                    else obj.__dict__
                 )
 
         result = DatasetJSONEncoder().encode(self)

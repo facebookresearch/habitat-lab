@@ -34,7 +34,7 @@ def distributed_mean_and_var(
     world_size = distrib.get_world_size()
     mean = values.mean()
     distrib.all_reduce(mean)
-    mean /= world_size
+    mean = mean / world_size
 
     sq_diff = (values - mean).pow(2).mean()
     distrib.all_reduce(sq_diff)

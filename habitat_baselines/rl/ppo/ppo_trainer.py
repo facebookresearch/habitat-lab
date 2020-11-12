@@ -197,8 +197,12 @@ class PPOTrainer(BaseRLTrainer):
         pth_time += time.time() - t_sample_action
 
         t_step_env = time.time()
-
-        step_data = [a[0].item() for a in actions]
+        # NB: Move actions to CPU.  If CUDA tensors are
+        # sent in to env.step(), that will create CUDA contexts
+        # in the subprocesses.
+        # For backwards compatibility, we also call .item() to convert to
+        # an int
+        step_data = [a.item() for a in actions.to(device="cpu")]
         profiling_wrapper.range_pop()  # compute actions
 
         outputs = self.envs.step(step_data)
@@ -578,7 +582,14 @@ class PPOTrainer(BaseRLTrainer):
 
                 prev_actions.copy_(actions)  # type: ignore
 
-            outputs = self.envs.step([a[0].item() for a in actions])
+            # NB: Move actions to CPU.  If CUDA tensors are
+            # sent in to env.step(), that will create CUDA contexts
+            # in the subprocesses.
+            # For backwards compatibility, we also call .item() to convert to
+            # an int
+            step_data = [a.item() for a in actions.to(device="cpu")]
+
+            outputs = self.envs.step(step_data)
 
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)

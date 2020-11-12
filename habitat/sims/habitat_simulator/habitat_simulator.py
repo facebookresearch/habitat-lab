@@ -203,7 +203,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        self._current_scene = self.sim_config.sim_cfg.scene.id
+        self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
@@ -214,11 +214,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
+        # Check if Habitat-Sim is post Scene Config Update
+        if not hasattr(sim_config, "scene_id"):
+            raise RuntimeError(
+                "Incompatible version of Habitat-Sim detected, please upgrade habitat_sim"
+            )
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
         )
-        sim_config.scene.id = self.habitat_config.SCENE
+        sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -330,9 +335,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
             path = habitat_sim.MultiGoalShortestPath()
-            if isinstance(position_b[0], List) or isinstance(
-                position_b[0], np.ndarray
-            ):
+            if isinstance(position_b[0], (Sequence, np.ndarray)):
                 path.requested_ends = np.array(position_b, dtype=np.float32)
             else:
                 path.requested_ends = np.array(

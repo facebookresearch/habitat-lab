@@ -44,9 +44,10 @@ class BaseILTrainer(BaseTrainer):
 
     def _make_log_dir(self) -> None:
         r"""Makes directory for writing log files."""
-        if self.config.LOG_METRICS:
-            if not os.path.isdir(self.config.OUTPUT_LOG_DIR):
-                os.makedirs(self.config.OUTPUT_LOG_DIR)
+        if self.config.LOG_METRICS and not os.path.isdir(
+            self.config.OUTPUT_LOG_DIR
+        ):
+            os.makedirs(self.config.OUTPUT_LOG_DIR)
 
     def _make_ckpt_dir(self) -> None:
         r"""Makes directory for saving model checkpoints."""

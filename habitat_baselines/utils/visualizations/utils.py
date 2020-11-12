@@ -6,6 +6,7 @@
 
 
 import cv2
+import numpy as np
 import torch
 
 from habitat_baselines.utils.common import (
@@ -76,3 +77,94 @@ def save_depth_results(
 
     cv2.imwrite(path + "_gt.jpg", gt_depth)
     cv2.imwrite(path + "_pred.jpg", pred_depth)
+
+
+def put_vqa_text_on_image(
+    image: np.ndarray,
+    question: str,
+    prediction: str,
+    ground_truth: str,
+) -> np.ndarray:
+    r"""For writing VQA question, prediction and ground truth answer
+        on image.
+    Args:
+        image: image on which text has to be written
+        question: input question to model
+        prediction: model's answer prediction
+        ground_truth: ground truth answer
+    Returns:
+        image with text
+    """
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    color = (0, 0, 0)
+    scale = 0.4
+    thickness = 1
+
+    cv2.putText(
+        image,
+        "Question: " + question,
+        (10, 15),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+    cv2.putText(
+        image,
+        "Prediction: " + prediction,
+        (10, 30),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+    cv2.putText(
+        image,
+        "Ground truth: " + ground_truth,
+        (10, 45),
+        font,
+        scale,
+        color,
+        thickness,
+    )
+
+    return image
+
+
+def save_vqa_image_results(
+    images_tensor: torch.Tensor,
+    question: str,
+    prediction: str,
+    ground_truth: str,
+    path: str,
+) -> None:
+    r"""For saving VQA input images with input question and predicted answer.
+    Being used to save model predictions during eval.
+    Args:
+        images_tensor: images' tensor containing input frames
+        question: input question to model
+        prediction: model's answer prediction
+        ground_truth: ground truth answer
+        path: to save images
+    Returns:
+        None
+    """
+
+    images = tensor_to_bgr_images(images_tensor)
+
+    collage_image = cv2.hconcat(images)
+    collage_image = cv2.copyMakeBorder(
+        collage_image,
+        55,
+        0,
+        0,
+        0,
+        cv2.BORDER_CONSTANT,
+        value=(255, 255, 255),
+    )
+
+    image = put_vqa_text_on_image(
+        collage_image, question, prediction, ground_truth
+    )
+
+    cv2.imwrite(path, image)
