@@ -12,11 +12,12 @@ from glob import glob
 
 import pytest
 
+from habitat.core.vector_env import VectorEnv
+
 try:
     import torch
     import torch.distributed
 
-    from habitat.core.vector_env import VectorEnv
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
@@ -222,7 +223,7 @@ def test_eval_config():
 
 
 def __do_pause_test(num_envs, envs_to_pause):
-    class PausableShim:
+    class PausableShim(VectorEnv):
         def __init__(self, num_envs):
             self._running = list(range(num_envs))
 

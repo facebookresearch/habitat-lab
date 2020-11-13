@@ -12,7 +12,7 @@ from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
 
 
 def make_env_fn(
-    config: Config, env_class: Type[Union[Env, RLEnv]]
+    config: Config, env_class: Union[Type[Env], Type[RLEnv]]
 ) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
@@ -35,7 +35,7 @@ def make_env_fn(
 
 def construct_envs(
     config: Config,
-    env_class: Type[Union[Env, RLEnv]],
+    env_class: Union[Type[Env], Type[RLEnv]],
     workers_ignore_signals: bool = False,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.

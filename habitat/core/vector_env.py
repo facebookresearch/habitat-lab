@@ -30,7 +30,7 @@ from gym import spaces
 
 import habitat
 from habitat.config import Config
-from habitat.core.env import Env, Observations, RLEnv
+from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.utils import profiling_wrapper
@@ -207,7 +207,7 @@ class VectorEnv:
                             connection_write_fn(
                                 (observations, reward, done, info)
                             )
-                    elif isinstance(env, habitat.Env):
+                    elif isinstance(env, habitat.Env):  # type: ignore
                         # habitat.Env
                         observations = env.step(**data)
                         if auto_reset_done and env.episode_over:
@@ -398,7 +398,7 @@ class VectorEnv:
             write_fn((STEP_COMMAND, action))
 
     @profiling_wrapper.RangeContext("wait_step")
-    def wait_step(self) -> List[Observations]:
+    def wait_step(self) -> List[Any]:
         r"""Wait until all the asynchronized environments have synchronized."""
         observations = []
         for read_fn in self._connection_read_fns:

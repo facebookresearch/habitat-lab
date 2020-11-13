@@ -6,13 +6,14 @@
 
 import os
 import time
-from typing import Any, ClassVar, DefaultDict, Dict, List, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Tuple, Union
 
 import torch
 from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
+from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.utils.common import (
@@ -196,20 +197,20 @@ class BaseRLTrainer(BaseTrainer):
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
-        envs: VectorEnv,
+        envs: Union[VectorEnv, RLEnv, Env],
         test_recurrent_hidden_states: Tensor,
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
         prev_actions: Tensor,
-        batch: DefaultDict[str, Tensor],
+        batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
-        VectorEnv,
+        Union[VectorEnv, RLEnv, Env],
         Tensor,
         Tensor,
         Tensor,
         Tensor,
-        DefaultDict[str, Tensor],
+        Dict[str, Tensor],
         List[List[Any]],
     ]:
         # pausing self.envs with no new episode

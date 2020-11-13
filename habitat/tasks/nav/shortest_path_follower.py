@@ -46,7 +46,7 @@ class ShortestPathFollower:
         self._return_one_hot = return_one_hot
         self._sim = sim
         self._goal_radius = goal_radius
-        self._follower = None
+        self._follower: Optional[habitat_sim.GreedyGeodesicFollower] = None
         self._current_scene = None
         self._stop_on_error = stop_on_error
 
