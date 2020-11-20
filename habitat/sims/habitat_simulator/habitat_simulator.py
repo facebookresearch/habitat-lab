@@ -57,8 +57,6 @@ def overwrite_config(
         config_to: Habitat-Sim config structure.
         ignore_keys: Optional set of keys to ignore in config_to
     """
-    if ignore_keys is None:
-        ignore_keys = set()
 
     def if_config_to_lower(config):
         if isinstance(config, Config):
@@ -68,7 +66,7 @@ def overwrite_config(
 
     for attr, value in config_from.items():
         low_attr = attr.lower()
-        if low_attr not in ignore_keys:
+        if ignore_keys is None or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
                 setattr(config_to, low_attr, if_config_to_lower(value))
             else:
