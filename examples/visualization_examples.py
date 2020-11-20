@@ -98,10 +98,31 @@ def example_get_topdown_map():
         )
 
 
+def example_get_ortho_map():
+    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config.defrost()
+    config.SIMULATOR.RGB_SENSOR.ORIENTION = [-np.pi / 3, 0, 0]
+    config.SIMULATOR.RGB_SENSOR.SENSOR_SUBTYPE = "ORTHOGRAPHIC"
+    config.SIMULATOR.RGB_SENSOR.ZOOM = 0.1
+    config.freeze()
+    print(config)
+    dataset = habitat.make_dataset(
+        id_dataset=config.DATASET.TYPE, config=config.DATASET
+    )
+    from PIL import Image
+
+    with habitat.Env(config=config, dataset=dataset) as env:
+        obs = env.reset()
+        Image.fromarray(obs["rgb"]).show()
+        print(obs)
+        imageio.imsave(os.path.join(IMAGE_DIR, "ortho.png"), obs["rgb"])
+
+
 def main():
     example_pointnav_draw_target_birdseye_view()
     example_get_topdown_map()
     example_pointnav_draw_target_birdseye_view_agent_on_border()
+    example_get_ortho_map()
 
 
 if __name__ == "__main__":

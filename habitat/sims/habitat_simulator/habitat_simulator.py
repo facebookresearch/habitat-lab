@@ -3,7 +3,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -11,6 +10,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Union,
     cast,
 )
@@ -43,7 +43,9 @@ if TYPE_CHECKING:
 RGBSENSOR_DIMENSION = 3
 
 
-def overwrite_config(config_from: Config, config_to: Any) -> None:
+def overwrite_config(
+    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
+) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
@@ -52,7 +54,10 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
     Args:
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
+        ignore_keys: Optional set of keys to ignore in config_to
     """
+    if ignore_keys is None:
+        ignore_keys = set()
 
     def if_config_to_lower(config):
         if isinstance(config, Config):
@@ -61,7 +66,9 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
             return config
 
     for attr, value in config_from.items():
-        if hasattr(config_to, attr.lower()):
+        if attr.lower() not in ignore_keys and hasattr(
+            config_to, attr.lower()
+        ):
             setattr(config_to, attr.lower(), if_config_to_lower(value))
 
 
@@ -232,16 +239,18 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg.sensor_subtype = getattr(
+                habitat_sim.SensorSubType,
+                sensor.config.SENSOR_SUBTYPE.upper(),
+            )
             overwrite_config(
-                config_from=sensor.config, config_to=sim_sensor_cfg
+                config_from=sensor.config,
+                config_to=sim_sensor_cfg,
+                ignore_keys={"sensor_subtype"},
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
-            )
-            sim_sensor_cfg.sensor_subtype = getattr(
-                habitat_sim.SensorSubType,
-                sensor.config.SENSOR_SUB_TYPE.upper(),
             )
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
 
