@@ -101,11 +101,9 @@ def example_get_topdown_map():
 def example_get_ortho_map():
     config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
     config.defrost()
-    config.SIMULATOR.RGB_SENSOR.ORIENTION = [-np.pi / 3, 0, 0]
+    config.SIMULATOR.RGB_SENSOR.ORIENTATION = [-np.pi / 3, -np.pi / 3, 0]
     config.SIMULATOR.RGB_SENSOR.SENSOR_SUBTYPE = "ORTHOGRAPHIC"
-    config.SIMULATOR.RGB_SENSOR.ZOOM = 0.1
     config.freeze()
-    print(config)
     dataset = habitat.make_dataset(
         id_dataset=config.DATASET.TYPE, config=config.DATASET
     )

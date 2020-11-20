@@ -22,6 +22,7 @@ from numpy import ndarray
 
 import habitat_sim
 from habitat.core.dataset import Episode
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -66,10 +67,13 @@ def overwrite_config(
             return config
 
     for attr, value in config_from.items():
-        if attr.lower() not in ignore_keys and hasattr(
-            config_to, attr.lower()
-        ):
-            setattr(config_to, attr.lower(), if_config_to_lower(value))
+        low_attr = attr.lower()
+        if low_attr not in ignore_keys and hasattr(config_to, low_attr):
+            setattr(config_to, low_attr, if_config_to_lower(value))
+        else:
+            logger.warn(
+                f"{low_attr} is not found on target {config_to} but is found on {config_from}. Did you make a typo in the YAML config?"
+            )
 
 
 @registry.register_sensor
