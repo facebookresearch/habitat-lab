@@ -107,12 +107,9 @@ def example_get_ortho_map():
     dataset = habitat.make_dataset(
         id_dataset=config.DATASET.TYPE, config=config.DATASET
     )
-    from PIL import Image
 
     with habitat.Env(config=config, dataset=dataset) as env:
         obs = env.reset()
-        Image.fromarray(obs["rgb"]).show()
-        print(obs)
         imageio.imsave(os.path.join(IMAGE_DIR, "ortho.png"), obs["rgb"])
 
 
