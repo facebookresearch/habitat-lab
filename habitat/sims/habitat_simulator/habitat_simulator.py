@@ -239,6 +239,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
+            sim_sensor_cfg.sensor_subtype = getattr(
+                habitat_sim.SensorSubType,
+                sensor.config.SENSOR_SUB_TYPE.upper(),
+            )
             sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
 
             # TODO(maksymets): Add configure method to Sensor API to avoid

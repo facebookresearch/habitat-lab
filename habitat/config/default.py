@@ -226,6 +226,8 @@ SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+SIMULATOR_SENSOR.SENSOR_SUB_TYPE = "PINHOLE"
+
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
