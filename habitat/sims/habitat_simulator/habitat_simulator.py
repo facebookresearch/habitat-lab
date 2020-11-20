@@ -68,12 +68,13 @@ def overwrite_config(
 
     for attr, value in config_from.items():
         low_attr = attr.lower()
-        if low_attr not in ignore_keys and hasattr(config_to, low_attr):
-            setattr(config_to, low_attr, if_config_to_lower(value))
-        else:
-            logger.warn(
-                f"{low_attr} is not found on target {config_to} but is found on {config_from}. Did you make a typo in the YAML config?"
-            )
+        if low_attr not in ignore_keys:
+            if hasattr(config_to, low_attr):
+                setattr(config_to, low_attr, if_config_to_lower(value))
+            else:
+                logger.warn(
+                    f"{low_attr} is not found on target {config_to} but is found on {config_from}. Did you make a typo in the YAML config?"
+                )
 
 
 @registry.register_sensor
