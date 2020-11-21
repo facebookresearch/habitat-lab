@@ -64,14 +64,15 @@ def overwrite_config(
         else:
             return config
 
+    has_ignores = ignore_keys is None
     for attr, value in config_from.items():
         low_attr = attr.lower()
-        if ignore_keys is None or low_attr not in ignore_keys:
+        if has_ignores or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
                 setattr(config_to, low_attr, if_config_to_lower(value))
             else:
                 logger.warn(
-                    f"{low_attr} is not found on target {config_to} but is found on {config_from}. Did you make a typo in the YAML config?"
+                    f"{low_attr} is not found on target {config_to} but is found on config_from. Did you make a typo in the YAML config?: {config_from}"
                 )
 
 
@@ -219,6 +220,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             len(self.sim_config.agents[0].action_space)
         )
         self._prev_sim_obs: Optional[Observations] = None
+        agent_body_mesh_config = self._get_agent_config().BODY_MESH_CONFIG
+        if agent_body_mesh_config != "":
+            agent_body_mesh = self.get_object_template_manager().load_configs(
+                agent_body_mesh_config
+            )[0]
+            self.add_object(agent_body_mesh, self.agents[0].scene_node)
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -236,7 +243,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_agent_config(), config_to=agent_config
+            config_from=self._get_agent_config(),
+            config_to=agent_config,
+            ignore_keys={"body_mesh_config"},
         )
 
         sensor_specifications = []
@@ -249,7 +258,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
-                ignore_keys={"sensor_subtype"},
+                ignore_keys={"sensor_subtype", "height", "width", "hfov"},
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(

@@ -103,6 +103,7 @@ def example_get_ortho_map():
     config.defrost()
     config.SIMULATOR.RGB_SENSOR.ORIENTATION = [-np.pi / 3, -np.pi / 3, 0]
     config.SIMULATOR.RGB_SENSOR.SENSOR_SUBTYPE = "ORTHOGRAPHIC"
+    config.SIMULATOR.AGENT_0.BODY_MESH_CONFIG = "data/objects/locobot_merged"
     config.freeze()
     dataset = habitat.make_dataset(
         id_dataset=config.DATASET.TYPE, config=config.DATASET
