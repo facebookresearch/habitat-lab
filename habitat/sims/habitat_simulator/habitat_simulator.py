@@ -220,12 +220,19 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             len(self.sim_config.agents[0].action_space)
         )
         self._prev_sim_obs: Optional[Observations] = None
-        agent_body_mesh_config = self._get_agent_config().BODY_MESH_CONFIG
-        if agent_body_mesh_config != "":
-            agent_body_mesh = self.get_object_template_manager().load_configs(
-                agent_body_mesh_config
-            )[0]
-            self.add_object(agent_body_mesh, self.agents[0].scene_node)
+        for agent_id, _ in enumerate(self.habitat_config.AGENTS):
+            agent_body_mesh_config = self._get_agent_config(
+                agent_id=agent_id
+            ).BODY_MESH_CONFIG
+            if agent_body_mesh_config != "":
+                agent_body_mesh = (
+                    self.get_object_template_manager().load_configs(
+                        agent_body_mesh_config
+                    )[0]
+                )
+                self.add_object(
+                    agent_body_mesh, self.agents[agent_id].scene_node
+                )
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
