@@ -8,7 +8,7 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 
@@ -276,7 +276,7 @@ class EmbodiedTask:
             )
         return entities
 
-    def reset(self, episode: Type[Episode]):
+    def reset(self, episode: Episode):
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
@@ -289,7 +289,7 @@ class EmbodiedTask:
 
         return observations
 
-    def step(self, action: Dict[str, Any], episode: Type[Episode]):
+    def step(self, action: Dict[str, Any], episode: Episode):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_name = action["action"]
@@ -331,7 +331,7 @@ class EmbodiedTask:
         )
 
     def overwrite_sim_config(
-        self, sim_config: Config, episode: Type[Episode]
+        self, sim_config: Config, episode: Episode
     ) -> Config:
         r"""Update config merging information from :p:`sim_config` and
         :p:`episode`.
@@ -345,7 +345,7 @@ class EmbodiedTask:
         self,
         *args: Any,
         action: Union[int, Dict[str, Any]],
-        episode: Type[Episode],
+        episode: Episode,
         **kwargs: Any,
     ) -> bool:
         raise NotImplementedError

@@ -4,21 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Union,
-    cast,
-)
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
+from torch import Tensor
 
 import habitat_sim
 from habitat.core.dataset import Episode
@@ -36,9 +28,6 @@ from habitat.core.simulator import (
     Simulator,
 )
 from habitat.core.spaces import Space
-
-if TYPE_CHECKING:
-    from torch import Tensor
 
 RGBSENSOR_DIMENSION = 3
 
@@ -288,7 +277,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: int) -> Observations:
+    def step(self, action: Union[str, int]) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
