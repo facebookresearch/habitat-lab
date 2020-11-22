@@ -220,19 +220,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             len(self.sim_config.agents[0].action_space)
         )
         self._prev_sim_obs: Optional[Observations] = None
-        for agent_id, _ in enumerate(self.habitat_config.AGENTS):
-            agent_body_mesh_config = self._get_agent_config(
-                agent_id=agent_id
-            ).BODY_MESH_CONFIG
-            if agent_body_mesh_config != "":
-                agent_body_mesh = (
-                    self.get_object_template_manager().load_configs(
-                        agent_body_mesh_config
-                    )[0]
-                )
-                self.add_object(
-                    agent_body_mesh, self.agents[agent_id].scene_node
-                )
+        self._load_agent_body_meshes()
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -312,6 +300,21 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         return is_updated
 
+    def _load_agent_body_meshes(self) -> None:
+        for agent_id, _ in enumerate(self.habitat_config.AGENTS):
+            agent_body_mesh_config = self._get_agent_config(
+                agent_id=agent_id
+            ).BODY_MESH_CONFIG
+            if agent_body_mesh_config != "":
+                agent_body_mesh = (
+                    self.get_object_template_manager().load_configs(
+                        agent_body_mesh_config
+                    )[0]
+                )
+                self.add_object(
+                    agent_body_mesh, self.agents[agent_id].scene_node
+                )
+
     def reset(self) -> Observations:
         sim_obs = super().reset()
         if self._update_agents_state():
@@ -356,13 +359,18 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             self._current_scene = habitat_config.SCENE
             self.close()
             super().reconfigure(self.sim_config)
-
+            self._load_agent_body_meshes()
         self._update_agents_state()
 
     def geodesic_distance(
         self,
         position_a: Union[Sequence[float], ndarray],
-        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
+        position_b: Union[
+            Sequence[float],
+            Sequence[Sequence[float]],
+            ndarray,
+            Sequence[ndarray],
+        ],
         episode: Optional[Episode] = None,
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
@@ -414,7 +422,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def forward_vector(self) -> np.ndarray:
         return -np.array([0.0, 0.0, 1.0])
 
-    def get_straight_shortest_path_points(self, position_a, position_b):
+    def get_straight_shortest_path_points(
+        self,
+        position_a: Union[ndarray, Sequence[float]],
+        position_b: Union[ndarray, Sequence[float]],
+    ):
         path = habitat_sim.ShortestPath()
         path.requested_start = position_a
         path.requested_end = position_b
@@ -551,7 +563,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return self.pathfinder.island_radius(position)
 
     @property
-    def previous_step_collided(self):
+    def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
 
         Returns:
