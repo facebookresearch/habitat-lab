@@ -323,7 +323,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: int) -> Observations:
+    def step(self, action: Any) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
