@@ -172,7 +172,7 @@ jobs:
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
-              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
+              while [ ! -f ~/cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
