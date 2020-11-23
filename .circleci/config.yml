@@ -225,7 +225,6 @@ jobs:
       - run:
           name: Run sim benchmark
           command: |
-              cd habitat-sim
               while [ ! -f ~/cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
