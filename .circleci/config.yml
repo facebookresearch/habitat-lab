@@ -133,7 +133,7 @@ jobs:
                 conda create -y -n habitat python=3.6
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
-                pip install typeguard pytest-sugar
+                pip install pytest-sugar
               fi
       - run:
           name: Install pytorch
@@ -245,8 +245,7 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              pytest --typeguard-packages=habitat,habitat_baselines .
-              #python setup.py test
+              python setup.py test
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
