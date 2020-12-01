@@ -371,11 +371,11 @@ class VectorEnv:
         return results
 
     def async_step_at(
-        self, index_env: int, data: Union[int, str, Dict[str, Any]]
+        self, index_env: int, action: Union[int, str, Dict[str, Any]]
     ) -> None:
         # Backward compatibility
-        if isinstance(data, (int, np.integer, str)):
-            action = {"action": {"action": data}}
+        if isinstance(action, (int, np.integer, str)):
+            action = {"action": {"action": action}}
 
         self._warn_cuda_tensors(action)
         self._connection_write_fns[index_env]((STEP_COMMAND, action))
