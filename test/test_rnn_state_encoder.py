@@ -42,8 +42,11 @@ def test_rnn_state_encoder():
                 )
 
                 outputs, out_hiddens = rnn_state_encoder(
-                    inputs.flatten(0, 1), hidden_states, masks.flatten(0, 1)
+                    inputs.flatten(0, 1),
+                    hidden_states.permute(1, 0, 2),
+                    masks.flatten(0, 1),
                 )
+                out_hiddens = out_hiddens.permute(1, 0, 2)
 
                 reference_ouputs = []
                 reference_hiddens = hidden_states.clone()
