@@ -166,12 +166,18 @@ class BaseRLTrainer(BaseTrainer):
 
         if config.NUM_UPDATES != -1 and config.TOTAL_NUM_STEPS != -1:
             raise RuntimeError(
-                "NUM_UPDATES and TOTAL_NUM_STEPS are both specified.  One must be -1"
+                "NUM_UPDATES and TOTAL_NUM_STEPS are both specified.  One must be -1.\n"
+                " NUM_UPDATES: {} TOTAL_NUM_STEPS: {}".format(
+                    config.NUM_UPDATES, config.TOTAL_NUM_STEPS
+                )
             )
 
         if config.NUM_UPDATES == -1 and config.TOTAL_NUM_STEPS == -1:
             raise RuntimeError(
-                "One of NUM_UPDATES and TOTAL_NUM_STEPS must be specified."
+                "One of NUM_UPDATES and TOTAL_NUM_STEPS must be specified.\n"
+                " NUM_UPDATES: {} TOTAL_NUM_STEPS: {}".format(
+                    config.NUM_UPDATES, config.TOTAL_NUM_STEPS
+                )
             )
 
     def percent_done(self) -> float:
@@ -261,7 +267,7 @@ class BaseRLTrainer(BaseTrainer):
 
             # indexing along the batch dimensions
             test_recurrent_hidden_states = test_recurrent_hidden_states[
-                :, state_index
+                state_index
             ]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]

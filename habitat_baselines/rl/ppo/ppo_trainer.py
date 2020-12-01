@@ -82,9 +82,7 @@ class PPOTrainer(BaseRLTrainer):
 
         # Distirbuted if the world size would be
         # greater than 1
-        self._is_distributed = (
-            get_distrib_size()[2] > 1 or self.config.RL.DDPPO.force_distributed
-        )
+        self._is_distributed = get_distrib_size()[2] > 1
 
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
@@ -170,6 +168,9 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def _init_train(self):
+        if self.config.RL.DDPPO.force_distributed:
+            self._is_distributed = True
+
         if is_slurm_job():
             add_signal_handlers()
 

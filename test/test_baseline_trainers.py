@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
 import itertools
 import math
 import random
@@ -42,17 +43,33 @@ def _powerset(s):
 )
 @pytest.mark.parametrize(
     "test_cfg_path,mode,gpu2gpu,observation_transforms",
-    itertools.product(
-        glob("habitat_baselines/config/test/*"),
-        ["train", "eval"],
-        [True, False],
-        [
-            [],
+    list(
+        itertools.product(
+            glob("habitat_baselines/config/test/*"),
+            ["train", "eval"],
+            [False],
             [
-                "CenterCropper",
-                "ResizeShortestEdge",
+                [],
+                [
+                    "CenterCropper",
+                    "ResizeShortestEdge",
+                ],
             ],
-        ],
+        )
+    )
+    + list(
+        itertools.product(
+            ["habitat_baselines/config/test/ppo_pointnav_test.yaml"],
+            ["train", "eval"],
+            [True],
+            [
+                [],
+                [
+                    "CenterCropper",
+                    "ResizeShortestEdge",
+                ],
+            ],
+        )
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
@@ -75,6 +92,9 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
             str(tuple(observation_transforms)),
         ],
     )
+
+    # Needed to destroy the trainer
+    gc.collect()
 
     # Deinit processes group
     if torch.distributed.is_initialized():
@@ -236,7 +256,7 @@ def __do_pause_test(num_envs, envs_to_pause):
 
     envs = PausableShim(num_envs)
     test_recurrent_hidden_states = (
-        torch.arange(num_envs).view(1, num_envs, 1).expand(4, num_envs, 512)
+        torch.arange(num_envs).view(num_envs, 1, 1).expand(num_envs, 4, 512)
     )
     not_done_masks = torch.arange(num_envs).view(num_envs, 1)
     current_episode_reward = torch.arange(num_envs).view(num_envs, 1)
@@ -272,8 +292,8 @@ def __do_pause_test(num_envs, envs_to_pause):
 
     assert envs._running == expected
 
-    assert list(test_recurrent_hidden_states.size()) == [4, len(expected), 512]
-    assert test_recurrent_hidden_states[0, :, 0].numpy().tolist() == expected
+    assert list(test_recurrent_hidden_states.size()) == [len(expected), 4, 512]
+    assert test_recurrent_hidden_states[:, 0, 0].numpy().tolist() == expected
 
     assert not_done_masks[:, 0].numpy().tolist() == expected
     assert current_episode_reward[:, 0].numpy().tolist() == expected
