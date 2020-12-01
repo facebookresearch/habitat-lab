@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import warnings
 from typing import List, Optional, Union
 
 import numpy as np
@@ -31,6 +32,7 @@ _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_SIMULATORS = 16
+_C.NUM_PROCESSES = -1
 _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
@@ -197,6 +199,15 @@ def get_config(
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)
+
+    if config.NUM_PROCESSES != -1:
+        warnings.warn(
+            "NUM_PROCESSES is depricated and will be removed in a future version."
+            "  Use NUM_SIMULATORS instead."
+            "  Overwriting NUM_SIMULATORS with NUM_PROCESSES for backwards compatibility."
+        )
+
+        config.NUM_SIMULATORS = config.NUM_PROCESSES
 
     config.freeze()
     return config
