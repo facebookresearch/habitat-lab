@@ -74,7 +74,7 @@ class PPOTrainer(BaseRLTrainer):
         self.agent = None
         self.envs = None
         self.obs_transforms = []
-        if config is not None:
+        if config is not None and config.VERBOSE:
             logger.info(f"config: {config}")
 
         self._static_encoder = False
@@ -177,6 +177,13 @@ class PPOTrainer(BaseRLTrainer):
             local_rank, tcp_store = init_distrib_slurm(
                 self.config.RL.DDPPO.distrib_backend
             )
+            if rank0_only():
+                logger.info(
+                    "Initialized DD-PPO with {} workers".format(
+                        torch.distributed.get_world_size()
+                    )
+                )
+
             self.config.defrost()
             self.config.TORCH_GPU_ID = local_rank
             self.config.SIMULATOR_GPU_ID = local_rank
@@ -624,7 +631,7 @@ class PPOTrainer(BaseRLTrainer):
         return (
             rollout_step
             >= self.config.RL.PPO.num_steps * self.SHORT_ROLLOUT_THRESHOLD
-        ) and int(self.num_rollouts_done_store.get("num_done")) > (
+        ) and int(self.num_rollouts_done_store.get("num_done")) >= (
             self.config.RL.DDPPO.sync_frac * torch.distributed.get_world_size()
         )
 
@@ -734,7 +741,7 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         if (buffer_index + 1) == self._nbuffers:
-                            profiling_wrapper.range_pop()
+                            profiling_wrapper.range_pop()  # _collect_rollout_step
 
                         if not is_last_step:
                             if (buffer_index + 1) == self._nbuffers:

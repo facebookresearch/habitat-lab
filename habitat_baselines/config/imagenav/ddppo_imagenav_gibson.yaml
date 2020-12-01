@@ -1,3 +1,4 @@
+VERBOSE: False
 BASE_TASK_CONFIG_PATH: "configs/tasks/imagenav_gibson.yaml"
 TRAINER_NAME: "ddppo"
 ENV_NAME: "NavRLEnv"
@@ -44,6 +45,11 @@ RL:
     use_normalized_advantage: False
 
     hidden_size: 512
+
+    # Use double buffered sampling, typically helps
+    # when environment time is similar or large than
+    # policy inference time during rollout generation
+    use_double_buffered_sampler: False
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
