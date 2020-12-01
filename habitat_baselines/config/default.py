@@ -39,6 +39,7 @@ _C.TOTAL_NUM_STEPS = -1.0
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.FORCE_BLIND_POLICY = False
+_C.VERBOSE = True
 # -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
@@ -104,7 +105,7 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = True
 _C.RL.PPO.hidden_size = 512
-_C.RL.PPO.use_double_buffered_sampler = True
+_C.RL.PPO.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------

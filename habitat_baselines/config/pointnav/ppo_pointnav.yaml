@@ -1,6 +1,8 @@
 # Note:  Hyperparameters have been changed slightly from
 # the paper to allow for things to easily run on 1 GPU
 
+VERBOSE: False
+
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
@@ -45,3 +47,8 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+
+    # Use double buffered sampling, typically helps
+    # when environment time is similar or large than
+    # policy inference time during rollout generation
+    use_double_buffered_sampler: False
