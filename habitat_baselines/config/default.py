@@ -30,13 +30,14 @@ _C.TENSORBOARD_DIR = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
-_C.NUM_PROCESSES = 16
+_C.NUM_SIMULATORS = 16
 _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
+_C.NUM_CHECKPOINTS = 10
+_C.TOTAL_NUM_STEPS = -1.0
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
-_C.CHECKPOINT_INTERVAL = 50
 _C.FORCE_BLIND_POLICY = False
 # -----------------------------------------------------------------------------
 # EVAL CONFIG
@@ -103,6 +104,7 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = True
 _C.RL.PPO.hidden_size = 512
+_C.RL.PPO.use_double_buffered_sampler = True
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
@@ -121,6 +123,8 @@ _C.RL.DDPPO.pretrained_encoder = False
 _C.RL.DDPPO.train_encoder = True
 # Whether or not to reset the critic linear layer
 _C.RL.DDPPO.reset_critic = True
+# Forces distributed mode for testing
+_C.RL.DDPPO.force_distributed = False
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE
 # -----------------------------------------------------------------------------

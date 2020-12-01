@@ -15,7 +15,7 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
-NUM_PROCESSES: 4
+NUM_SIMULATORS: 4
 # Note:  To train the an RGB only model,
 # you may need to use 8 processes with 4 mini batches,
 # If so, the number of updates should be cut in half
@@ -23,7 +23,7 @@ SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: 270000
 LOG_INTERVAL: 25
-CHECKPOINT_INTERVAL: 2000
+NUM_CHECKPOINTS: 100
 
 RL:
   PPO:
