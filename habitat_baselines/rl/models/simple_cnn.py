@@ -4,8 +4,6 @@ import numpy as np
 import torch
 from torch import nn as nn
 
-from habitat_baselines.utils.common import Flatten
-
 
 class SimpleCNN(nn.Module):
     r"""A Simple 3-Conv CNN followed by a fully connected layer
@@ -85,7 +83,7 @@ class SimpleCNN(nn.Module):
                     stride=self._cnn_layers_stride[2],
                 ),
                 #  nn.ReLU(True),
-                Flatten(),
+                nn.Flatten(),
                 nn.Linear(32 * cnn_dims[0] * cnn_dims[1], output_size),
                 nn.ReLU(True),
             )

@@ -4,6 +4,4 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_baselines.rl.ddppo.algo.ddppo_trainer import (  # noqa: F401 isort:skip
-    DDPPOTrainer,
-)
+from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO

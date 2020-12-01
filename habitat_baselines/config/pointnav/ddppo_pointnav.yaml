@@ -8,12 +8,13 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_PROCESSES: 4
+NUM_SIMULATORS: 4
 SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 10000
+NUM_UPDATES: -1
+TOTAL_NUM_STEPS: 2.5e9
 LOG_INTERVAL: 10
-CHECKPOINT_INTERVAL: 250
+NUM_CHECKPOINTS: 100
 
 RL:
   SUCCESS_REWARD: 2.5
@@ -46,7 +47,7 @@ RL:
   DDPPO:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
-    distrib_backend: GLOO
+    distrib_backend: NCCL
     # Visual encoder backbone
     pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
     # Initialize with pretrained weights

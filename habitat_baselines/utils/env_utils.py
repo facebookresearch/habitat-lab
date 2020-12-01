@@ -42,7 +42,7 @@ def construct_envs(
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
 
-    :param config: configs that contain num_processes as well as information
+    :param config: configs that contain num_simulators as well as information
     :param necessary to create individual environments.
     :param env_class: class type of the envs to be created.
     :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
@@ -50,35 +50,35 @@ def construct_envs(
     :return: VectorEnv object created according to specification.
     """
 
-    num_processes = config.NUM_PROCESSES
+    num_simulators = config.NUM_SIMULATORS
     configs = []
-    env_classes = [env_class for _ in range(num_processes)]
+    env_classes = [env_class for _ in range(num_simulators)]
     dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
     scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
-    if num_processes > 1:
+    if num_simulators > 1:
         if len(scenes) == 0:
             raise RuntimeError(
                 "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
             )
 
-        if len(scenes) < num_processes:
+        if len(scenes) < num_simulators:
             raise RuntimeError(
-                "reduce the number of processes as there "
+                "reduce the number of simulators as there "
                 "aren't enough number of scenes"
             )
 
         random.shuffle(scenes)
 
-    scene_splits: List[List[str]] = [[] for _ in range(num_processes)]
+    scene_splits: List[List[str]] = [[] for _ in range(num_simulators)]
     for idx, scene in enumerate(scenes):
         scene_splits[idx % len(scene_splits)].append(scene)
 
     assert sum(map(len, scene_splits)) == len(scenes)
 
-    for i in range(num_processes):
+    for i in range(num_simulators):
         proc_config = config.clone()
         proc_config.defrost()
 

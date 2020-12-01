@@ -24,6 +24,7 @@ from typing import (
     cast,
 )
 
+import attr
 import gym
 import numpy as np
 from gym import spaces
@@ -75,6 +76,30 @@ def _make_env_fn(
     return habitat_env
 
 
+@attr.s(auto_attribs=True, slots=True)
+class ReadWrapper:
+    read_fn: Callable[[], Any]
+    _is_waiting: bool = False
+
+    def __call__(self) -> Any:
+        assert self._is_waiting
+        res = self.read_fn()
+        self._is_waiting = False
+
+        return res
+
+
+@attr.s(auto_attribs=True, slots=True)
+class WriteWrapper:
+    write_fn: Callable[[Any], None]
+    _read_wrapper: ReadWrapper
+
+    def __call__(self, data: Any) -> None:
+        assert not self._read_wrapper._is_waiting
+        self.write_fn(data)
+        self._read_wrapper._is_waiting = True
+
+
 class VectorEnv:
     r"""Vectorized environment which creates multiple processes where each
     process runs its own environment. Main class for parallelization of
@@ -88,12 +113,11 @@ class VectorEnv:
     number_of_episodes: List[Optional[int]]
     action_spaces: List[spaces.Dict]
     _workers: List[Union[mp.Process, Thread]]
-    _is_waiting: bool
     _num_envs: int
     _auto_reset_done: bool
     _mp_ctx: BaseContext
-    _connection_read_fns: List[Callable[[], Any]]
-    _connection_write_fns: List[Callable[[Any], None]]
+    _connection_read_fns: List[ReadWrapper]
+    _connection_write_fns: List[WriteWrapper]
 
     def __init__(
         self,
@@ -120,7 +144,6 @@ class VectorEnv:
         :param workers_ignore_signals: Whether or not workers will ignore SIGINT and SIGTERM
             and instead will only exit when :ref:`close` is called
         """
-        self._is_waiting = False
         self._is_closed = True
 
         assert (
@@ -269,7 +292,7 @@ class VectorEnv:
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
         workers_ignore_signals: bool = False,
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+    ) -> Tuple[List[ReadWrapper], List[WriteWrapper]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
         )
@@ -294,49 +317,45 @@ class VectorEnv:
             ps.daemon = True
             ps.start()
             worker_conn.close()
-        return (
-            [p.recv for p in parent_connections],
-            [p.send for p in parent_connections],
-        )
+
+        read_fns = [ReadWrapper(p.recv) for p in parent_connections]
+        write_fns = [
+            WriteWrapper(p.send, read_fn)
+            for p, read_fn in zip(parent_connections, read_fns)
+        ]
+
+        return read_fns, write_fns
 
     def current_episodes(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((EPISODE_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def count_episodes(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((COUNT_EPISODES_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def episode_over(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((EPISODE_OVER, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def get_metrics(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((GET_METRICS, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def reset(self):
@@ -344,13 +363,11 @@ class VectorEnv:
 
         :return: list of outputs from the reset method of envs.
         """
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((RESET_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def reset_at(self, index_env: int):
@@ -359,25 +376,33 @@ class VectorEnv:
         :param index_env: index of the environment to be reset
         :return: list containing the output of reset method of indexed env.
         """
-        self._is_waiting = True
         self._connection_write_fns[index_env]((RESET_COMMAND, None))
         results = [self._connection_read_fns[index_env]()]
-        self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action: Dict[str, Any]):
+    def async_step_at(
+        self, index_env: int, data: Union[int, str, Dict[str, Any]]
+    ) -> None:
+        # Backward compatibility
+        if isinstance(data, (int, np.integer, str)):
+            action = {"action": {"action": data}}
+
+        self._warn_cuda_tensors(action)
+        self._connection_write_fns[index_env]((STEP_COMMAND, action))
+
+    @profiling_wrapper.RangeContext("wait_step_at")
+    def wait_step_at(self, index_env: int) -> Any:
+        return self._connection_read_fns[index_env]()
+
+    def step_at(self, index_env: int, action: Union[int, str, Dict[str, Any]]):
         r"""Step in the index_env environment in the vector.
 
         :param index_env: index of the environment to be stepped into
         :param action: action to be taken
         :return: list containing the output of step method of indexed env.
         """
-        self._is_waiting = True
-        self._warn_cuda_tensors(action)
-        self._connection_write_fns[index_env]((STEP_COMMAND, action))
-        results = [self._connection_read_fns[index_env]()]
-        self._is_waiting = False
-        return results
+        self.async_step_at(index_env, action)
+        return self.wait_step_at(index_env)
 
     def async_step(self, data: List[Union[int, str, Dict[str, Any]]]) -> None:
         r"""Asynchronously step in the environments.
@@ -386,25 +411,16 @@ class VectorEnv:
             pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
-        # Backward compatibility
-        if isinstance(data[0], (int, np.integer, str)):
-            actions = [{"action": {"action": action}} for action in data]
-        else:
-            actions = cast(List[Dict[str, Any]], data)
 
-        self._is_waiting = True
-        for write_fn, action in zip(self._connection_write_fns, actions):
-            self._warn_cuda_tensors(action)
-            write_fn((STEP_COMMAND, action))
+        for index_env, act in enumerate(data):
+            self.async_step_at(index_env, act)
 
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Any]:
         r"""Wait until all the asynchronized environments have synchronized."""
-        observations = []
-        for read_fn in self._connection_read_fns:
-            observations.append(read_fn())
-        self._is_waiting = False
-        return observations
+        return [
+            self.wait_step_at(index_env) for index_env in range(self.num_envs)
+        ]
 
     def step(self, data: List[Union[int, str, Dict[str, Any]]]) -> List[Any]:
         r"""Perform actions in the vectorized environments.
@@ -421,8 +437,8 @@ class VectorEnv:
         if self._is_closed:
             return
 
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
+        for read_fn in self._connection_read_fns:
+            if read_fn._is_waiting:
                 read_fn()
 
         for write_fn in self._connection_write_fns:
@@ -449,9 +465,8 @@ class VectorEnv:
         only some are active (for example during the last episodes of running
         eval episodes).
         """
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
-                read_fn()
+        if self._connection_read_fns[index]._is_waiting:
+            self._connection_read_fns[index]()
         read_fn = self._connection_read_fns.pop(index)
         write_fn = self._connection_write_fns.pop(index)
         worker = self._workers.pop(index)
@@ -479,12 +494,10 @@ class VectorEnv:
         :param function_args: optional function args.
         :return: result of calling the function.
         """
-        self._is_waiting = True
         self._connection_write_fns[index](
             (CALL_COMMAND, (function_name, function_args))
         )
         result = self._connection_read_fns[index]()
-        self._is_waiting = False
         return result
 
     def call(
@@ -501,7 +514,6 @@ class VectorEnv:
             :py:`len(function_names)`.
         :return: result of calling the function.
         """
-        self._is_waiting = True
         if function_args_list is None:
             function_args_list = [None] * len(function_names)
         assert len(function_names) == len(function_args_list)
@@ -513,7 +525,6 @@ class VectorEnv:
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def render(
@@ -584,7 +595,7 @@ class ThreadedVectorEnv(VectorEnv):
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+    ) -> Tuple[List[ReadWrapper], List[WriteWrapper]]:
         queues: Iterator[Tuple[Any, ...]] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
@@ -606,7 +617,10 @@ class ThreadedVectorEnv(VectorEnv):
             self._workers.append(thread)
             thread.daemon = True
             thread.start()
-        return (
-            [q.get for q in parent_read_queues],
-            [q.put for q in parent_write_queues],
-        )
+
+        read_fns = [ReadWrapper(q.get) for q in parent_read_queues]
+        write_fns = [
+            WriteWrapper(q.put, read_wrapper)
+            for q, read_wrapper in zip(parent_write_queues, read_fns)
+        ]
+        return read_fns, write_fns
