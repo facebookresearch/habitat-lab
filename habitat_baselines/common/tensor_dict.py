@@ -24,6 +24,20 @@ def _to_tensor(v: TensorLike) -> torch.Tensor:
 
 
 class TensorDict(dict):
+    r"""A dictionary of tensors that can be indexed like a tensor or like a dictionary.  Also
+        supports access via dot notation.
+
+    .. code:: py
+        t = TensorDict(a=torch.randn(2, 2), b=TensorDict(c=torch.randn(3, 3)))
+
+        print(t)
+
+        print(t[0, 0])
+
+        print(t["a"])
+        print(t.b.c)
+
+    """
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
