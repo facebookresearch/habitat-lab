@@ -138,8 +138,8 @@ def _build_pack_info_from_dones(
     # that this episode is the last contiguous block of experience,
     # This is needed for getting the correct hidden states after
     # the RNN forward pass
-    last_episode_in_batch_mask = torch.floor_divide(
-        episode_starts + (lengths - 1) * N, N
+    last_episode_in_batch_mask = (
+        (episode_starts + (lengths - 1) * N) // N
     ) == (T - 1)
 
     return (
