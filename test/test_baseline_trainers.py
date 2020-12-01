@@ -7,6 +7,7 @@
 import gc
 import itertools
 import math
+import os
 import random
 from copy import deepcopy
 from glob import glob
@@ -73,6 +74,9 @@ def _powerset(s):
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
+    # For testing, -1 works as port in PyTorch
+    os.environ["MASTER_PORT"] = str(-1)
+
     if gpu2gpu:
         try:
             import habitat_sim
