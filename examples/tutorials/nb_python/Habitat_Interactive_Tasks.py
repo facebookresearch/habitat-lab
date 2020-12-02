@@ -1772,7 +1772,6 @@ class RearrangementTrainer(PPOTrainer):
             raise RuntimeError("This trainer does not support distributed")
         self._init_train()
 
-        t_start = time.time()
         count_checkpoints = 0
 
         lr_scheduler = LambdaLR(
@@ -1846,7 +1845,7 @@ class RearrangementTrainer(PPOTrainer):
                     logger.info(
                         "update: {}\tfps: {:.3f}\t".format(
                             self.num_updates_done,
-                            self.num_steps_done / (time.time() - t_start),
+                            self.num_steps_done / (time.time() - self.t_start),
                         )
                     )
 
@@ -1913,7 +1912,7 @@ class RearrangementTrainer(PPOTrainer):
                 config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.long
             )
             not_done_masks = torch.zeros(
-                config.NUM_SIMULATORS, 1, device=self.device
+                config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.bool
             )
 
             rgb_frames = [
@@ -1952,9 +1951,9 @@ class RearrangementTrainer(PPOTrainer):
                 batch = batch_obs(observations, device=self.device)
 
                 not_done_masks = torch.tensor(
-                    [[0.0] if done else [1.0] for done in dones],
-                    dtype=torch.float,
-                    device=self.device,
+                    [[not done] for done in dones],
+                    dtype=torch.bool,
+                    device="cpu",
                 )
 
                 rewards = torch.tensor(
@@ -1964,7 +1963,7 @@ class RearrangementTrainer(PPOTrainer):
                 current_episode_reward += rewards
 
                 # episode ended
-                if not_done_masks[0].item() == 0:
+                if not not_done_masks[0].item():
                     generate_video(
                         video_option=self.config.VIDEO_OPTION,
                         video_dir=self.config.VIDEO_DIR,
@@ -1992,6 +1991,8 @@ class RearrangementTrainer(PPOTrainer):
                 elif len(self.config.VIDEO_OPTION) > 0:
                     frame = observations_to_image(observations[0], infos[0])
                     rgb_frames[0].append(frame)
+
+                not_done_masks = not_done_masks.to(device=self.device)
 
 
 # %%

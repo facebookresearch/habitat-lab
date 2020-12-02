@@ -116,9 +116,9 @@ def batch_obs(
     batch_t: TensorDict = TensorDict()
 
     for sensor in batch:
-        batch_t[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+        batch_t[sensor] = torch.stack(batch[sensor], dim=0)
 
-    return batch_t
+    return batch_t.map(lambda v: v.to(device))
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
