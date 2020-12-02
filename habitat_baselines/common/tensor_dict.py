@@ -3,6 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import copy
 from typing import Callable, Dict, Optional, Tuple, Union, overload
 
 import numpy as np
@@ -163,3 +164,6 @@ class TensorDict(dict):
         self, func: Callable[[torch.Tensor], torch.Tensor]
     ) -> "TensorDict":
         return self.map_func(func, self, self)
+
+    def __deepcopy__(self, _memo=None) -> "TensorDict":
+        return TensorDict.from_tree(copy.deepcopy(self.to_tree()))

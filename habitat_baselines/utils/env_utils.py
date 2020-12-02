@@ -67,7 +67,10 @@ def construct_envs(
         if len(scenes) < num_simulators:
             raise RuntimeError(
                 "reduce the number of simulators as there "
-                "aren't enough number of scenes"
+                "aren't enough number of scenes.\n"
+                "num_simulators: {}\tnum_scenes: {}".format(
+                    num_simulators, len(scenes)
+                )
             )
 
         random.shuffle(scenes)

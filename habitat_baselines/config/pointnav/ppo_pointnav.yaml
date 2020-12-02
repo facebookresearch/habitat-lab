@@ -23,7 +23,7 @@ NUM_SIMULATORS: 4
 # If so, the number of updates should be cut in half
 SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 270000
+TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25
 NUM_CHECKPOINTS: 100
 

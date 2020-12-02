@@ -1898,8 +1898,8 @@ class RearrangementTrainer(PPOTrainer):
             )
             ppo_cfg = self.config.RL.PPO
             test_recurrent_hidden_states = torch.zeros(
-                self.actor_critic.net.num_recurrent_layers,
                 config.NUM_SIMULATORS,
+                self.actor_critic.net.num_recurrent_layers,
                 ppo_cfg.hidden_size,
                 device=self.device,
             )
@@ -2021,6 +2021,7 @@ baseline_config.VIDEO_DIR = "data/videos"
 baseline_config.NUM_SIMULATORS = 2
 baseline_config.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 baseline_config.CHECKPOINT_FOLDER = "data/checkpoints"
+baseline_config.TOTAL_NUM_STEPS = -1.0
 
 if vut.is_notebook():
     baseline_config.NUM_UPDATES = 400  # @param {type:"number"}
