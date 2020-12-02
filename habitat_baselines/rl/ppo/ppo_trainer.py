@@ -167,6 +167,12 @@ class PPOTrainer(BaseRLTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
         )
 
+    def _init_envs(self, config=None):
+        if config is None:
+            config = self.config
+
+        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+
     def _init_train(self):
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
@@ -207,9 +213,7 @@ class PPOTrainer(BaseRLTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
 
-        self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
-        )
+        self._init_envs()
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -832,7 +836,7 @@ class PPOTrainer(BaseRLTrainer):
             config.freeze()
 
         logger.info(f"env config: {config}")
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+        self._init_envs(config)
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -978,6 +982,7 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     rgb_frames[i].append(frame)
 
+            not_done_masks = not_done_masks.to(device=self.device)
             (
                 self.envs,
                 test_recurrent_hidden_states,

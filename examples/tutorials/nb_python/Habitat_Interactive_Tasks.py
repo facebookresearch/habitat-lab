@@ -1756,6 +1756,12 @@ class RearrangementTrainer(PPOTrainer):
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
         )
 
+    def _init_envs(self, config=None):
+        if config is None:
+            config = self.config
+
+        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+
     def train(self) -> None:
         r"""Main method for training PPO.
 
