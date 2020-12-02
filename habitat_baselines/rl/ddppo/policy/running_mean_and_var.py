@@ -35,7 +35,7 @@ class RunningMeanAndVar(nn.Module):
                 new_mean /= distrib.get_world_size()
 
             new_var = (
-                (x_channels_first - new_mean).pow(2).mean(-1, keepdim=True)
+                (x_channels_first - new_mean).pow(2).mean(dim=-1, keepdim=True)
             )
 
             if distrib.is_initialized():
@@ -63,7 +63,7 @@ class RunningMeanAndVar(nn.Module):
 
             self._count += new_count
 
-        stdev = torch.sqrt(
+        inv_stdev = torch.rsqrt(
             torch.max(self._var, torch.full_like(self._var, 1e-2))
         )
-        return (x - self._mean) / stdev
+        return torch.addcmul(-self._mean * inv_stdev, x, inv_stdev)

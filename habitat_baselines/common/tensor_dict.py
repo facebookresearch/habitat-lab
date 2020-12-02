@@ -13,6 +13,7 @@ TensorLike = Union[
     torch.Tensor, np.ndarray, int, float, np.float32, np.float64
 ]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]
+TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
 
 def _to_tensor(v: TensorLike) -> torch.Tensor:
@@ -69,11 +70,11 @@ class TensorDict(dict):
         ...
 
     @overload
-    def __getitem__(self, index: Union[int, slice, Tuple]) -> "TensorDict":
+    def __getitem__(self, index: TensorIndexType) -> "TensorDict":
         ...
 
     def __getitem__(
-        self, index: Union[str, int, slice, Tuple]
+        self, index: Union[str, TensorIndexType]
     ) -> Union["TensorDict", torch.Tensor]:
         if isinstance(index, str):
             return super().__getitem__(index)
@@ -92,7 +93,7 @@ class TensorDict(dict):
     @overload
     def set(
         self,
-        index: Union[int, slice, Tuple],
+        index: TensorIndexType,
         value: Union["TensorDict", DictTree],
         strict: bool = True,
     ):
@@ -100,7 +101,7 @@ class TensorDict(dict):
 
     def set(
         self,
-        index: Union[str, int, slice, Tuple],
+        index: Union[str, TensorIndexType],
         value: Union[TensorLike, "TensorDict"],
         strict: bool = True,
     ):
@@ -132,7 +133,7 @@ class TensorDict(dict):
 
     def __setitem__(
         self,
-        index: Union[str, int, slice, Tuple],
+        index: Union[str, TensorIndexType],
         value: Union[torch.Tensor, "TensorDict"],
     ):
         self.set(index, value)

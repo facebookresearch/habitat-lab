@@ -79,10 +79,22 @@ class PPOTrainer(BaseRLTrainer):
 
         self._static_encoder = False
         self._encoder = None
+        self._obs_space = None
 
         # Distirbuted if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
+
+    @property
+    def obs_space(self):
+        if self._obs_space is None and self.envs is not None:
+            self._obs_space = self.envs.observation_spaces[0]
+
+        return self._obs_space
+
+    @obs_space.setter
+    def obs_space(self, new_obs_space):
+        self._obs_space = new_obs_space
 
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
@@ -109,15 +121,15 @@ class PPOTrainer(BaseRLTrainer):
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
-        observation_space = self.envs.observation_spaces[0]
+        observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
-        self.obs_space = observation_space
         self.actor_critic = policy.from_config(
             self.config, observation_space, self.envs.action_spaces[0]
         )
+        self.obs_space = observation_space
         self.actor_critic.to(self.device)
 
         if (
@@ -250,6 +262,7 @@ class PPOTrainer(BaseRLTrainer):
                 }
             )
 
+        self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
@@ -282,6 +295,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.env_time = 0.0
         self.pth_time = 0.0
+        self.t_start = time.time()
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -650,7 +664,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_train()
 
-        self.t_start = time.time()
         count_checkpoints = 0
         prev_time = 0
 
@@ -680,7 +693,6 @@ class PPOTrainer(BaseRLTrainer):
             ]
 
         ppo_cfg = self.config.RL.PPO
-        self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
         with (
             TensorboardWriter(
