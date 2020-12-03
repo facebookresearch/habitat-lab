@@ -49,8 +49,8 @@ class DecentralizedDistributedMixin:
         self, rollouts: RolloutStorage
     ) -> torch.Tensor:
         advantages = (
-            rollouts.buffers.returns[: rollouts.step]
-            - rollouts.buffers.value_preds[: rollouts.step]
+            rollouts.buffers["returns"][: rollouts.step]
+            - rollouts.buffers["value_preds"][: rollouts.step]
         )
         if not self.use_normalized_advantage:  # type: ignore
             return advantages

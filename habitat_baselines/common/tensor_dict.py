@@ -4,14 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import copy
+import numbers
 from typing import Callable, Dict, Optional, Tuple, Union, overload
 
 import numpy as np
 import torch
 
-TensorLike = Union[
-    torch.Tensor, np.ndarray, int, float, np.float32, np.float64
-]
+TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]
 TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
@@ -22,10 +21,10 @@ def _to_tensor(v: TensorLike) -> torch.Tensor:
     elif isinstance(v, np.ndarray):
         return torch.from_numpy(v)
     else:
-        return torch.tensor(v, dtype=torch.float)
+        return torch.tensor(v)
 
 
-class TensorDict(dict):
+class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     r"""A dictionary of tensors that can be indexed like a tensor or like a dictionary.  Also
         supports access via dot notation.
 
@@ -37,12 +36,8 @@ class TensorDict(dict):
         print(t[0, 0])
 
         print(t["a"])
-        print(t.b.c)
 
     """
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
 
     @classmethod
     def from_tree(cls, tree: DictTree) -> "TensorDict":
@@ -87,7 +82,7 @@ class TensorDict(dict):
         index: str,
         value: Union[TensorLike, "TensorDict", DictTree],
         strict: bool = True,
-    ):
+    ) -> None:
         ...
 
     @overload
@@ -96,7 +91,7 @@ class TensorDict(dict):
         index: TensorIndexType,
         value: Union["TensorDict", DictTree],
         strict: bool = True,
-    ):
+    ) -> None:
         ...
 
     def set(
@@ -104,7 +99,7 @@ class TensorDict(dict):
         index: Union[str, TensorIndexType],
         value: Union[TensorLike, "TensorDict"],
         strict: bool = True,
-    ):
+    ) -> None:
         if isinstance(index, str):
             super().__setitem__(index, value)
         else:
