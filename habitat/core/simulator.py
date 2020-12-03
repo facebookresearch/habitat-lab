@@ -16,7 +16,7 @@ from gym import Space, spaces
 from habitat.config import Config
 from habitat.core.dataset import Episode
 
-VisualObservation = Union["torch.Tensor", "np.ndarray"]
+VisualObservation = Union[torch.Tensor, np.ndarray]
 
 
 @attr.s(auto_attribs=True)

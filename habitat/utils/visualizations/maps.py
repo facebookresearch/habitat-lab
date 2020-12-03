@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import imageio
 import numpy as np
@@ -14,9 +14,10 @@ import scipy.ndimage
 from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import utils
 
-if TYPE_CHECKING:
+try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-
+except ImportError:
+    pass
 
 cv2 = try_cv2_import()
 
