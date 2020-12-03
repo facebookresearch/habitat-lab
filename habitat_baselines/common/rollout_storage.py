@@ -29,7 +29,7 @@ class RolloutStorage:
         self.buffers["observations"] = TensorDict()
 
         for sensor in observation_space.spaces:
-            self.buffers.observations[sensor] = torch.from_numpy(
+            self.buffers["observations"][sensor] = torch.from_numpy(
                 np.zeros(
                     (
                         numsteps + 1,
@@ -147,28 +147,30 @@ class RolloutStorage:
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
-            self.buffers.value_preds[self.step] = next_value
+            self.buffers["value_preds"][self.step] = next_value
             gae = 0
             for step in reversed(range(self.step)):
                 delta = (
-                    self.buffers.rewards[step]
+                    self.buffers["rewards"][step]
                     + gamma
-                    * self.buffers.value_preds[step + 1]
-                    * self.buffers.masks[step + 1]
-                    - self.buffers.value_preds[step]
+                    * self.buffers["value_preds"][step + 1]
+                    * self.buffers["masks"][step + 1]
+                    - self.buffers["value_preds"][step]
                 )
-                gae = delta + gamma * tau * gae * self.buffers.masks[step + 1]
-                self.buffers.returns[step] = (
-                    gae + self.buffers.value_preds[step]
+                gae = (
+                    delta + gamma * tau * gae * self.buffers["masks"][step + 1]
+                )
+                self.buffers["returns"][step] = (
+                    gae + self.buffers["value_preds"][step]
                 )
         else:
-            self.returns[self.step] = next_value
+            self.buffers["returns"][self.step] = next_value
             for step in reversed(range(self.step)):
-                self.returns[step] = (
+                self.buffers["returns"][step] = (
                     gamma
-                    * self.buffers.returns[step + 1]
-                    * self.buffers.masks[step + 1]
-                    + self.buffers.rewards[step]
+                    * self.buffers["returns"][step + 1]
+                    * self.buffers["masks"][step + 1]
+                    + self.buffers["rewards"][step]
                 )
 
     def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
@@ -186,7 +188,9 @@ class RolloutStorage:
             )
         for inds in torch.randperm(num_simulators).chunk(num_mini_batch):
             batch = self.buffers[0 : self.step, inds]
-            batch.advantages = advantages[0 : self.step, inds]
-            batch.recurrent_hidden_states = batch.recurrent_hidden_states[0:1]
+            batch["advantages"] = advantages[0 : self.step, inds]
+            batch["recurrent_hidden_states"] = batch[
+                "recurrent_hidden_states"
+            ][0:1]
 
             yield batch.map(lambda v: v.flatten(0, 1))

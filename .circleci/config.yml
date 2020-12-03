@@ -245,7 +245,7 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test
+              python setup.py test --addopts "--cov-report=xml --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:

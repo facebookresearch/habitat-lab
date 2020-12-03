@@ -165,6 +165,9 @@ _C.PROFILING.CAPTURE_START_STEP = -1
 _C.PROFILING.NUM_STEPS_TO_CAPTURE = -1
 
 
+_C.register_renamed_key
+
+
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
