@@ -4,13 +4,24 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Sequence, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
-from torch import Tensor
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 import habitat_sim
 from habitat.core.dataset import Episode
