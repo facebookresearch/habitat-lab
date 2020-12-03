@@ -37,6 +37,7 @@ from habitat.core.simulator import (
     SensorSuite,
     ShortestPathPoint,
     Simulator,
+    VisualObservation,
 )
 from habitat.core.spaces import Space
 
@@ -83,8 +84,8 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation(
         self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
 
         # remove alpha channel
@@ -119,9 +120,9 @@ class HabitatSimDepthSensor(DepthSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
@@ -159,8 +160,10 @@ class HabitatSimSemanticSensor(SemanticSensor):
             dtype=np.uint32,
         )
 
-    def get_observation(self, sim_obs):
-        obs = sim_obs.get(self.uuid, None)
+    def get_observation(
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         return obs
 
