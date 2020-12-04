@@ -15,15 +15,6 @@ DictTree = Dict[str, Union[TensorLike, "DictTree"]]
 TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
 
-def _to_tensor(v: TensorLike) -> torch.Tensor:
-    if torch.is_tensor(v):
-        return v
-    elif isinstance(v, np.ndarray):
-        return torch.from_numpy(v)
-    else:
-        return torch.tensor(v)
-
-
 class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     r"""A dictionary of tensors that can be indexed like a tensor or like a dictionary.  Also
         supports access via dot notation.
@@ -46,7 +37,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
             if isinstance(v, dict):
                 res[k] = cls.from_tree(v)
             else:
-                res[k] = _to_tensor(v)
+                res[k] = torch.as_tensor(v)
 
         return res
 
@@ -124,7 +115,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
                 if isinstance(v, (TensorDict, dict)):
                     self[k].set(index, v, strict=strict)
                 else:
-                    self[k][index].copy_(_to_tensor(v))
+                    self[k][index].copy_(torch.as_tensor(v))
 
     def __setitem__(
         self,

@@ -34,11 +34,7 @@ from habitat.core.dataset import Episode
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
-from habitat_baselines.common.tensor_dict import (
-    DictTree,
-    TensorDict,
-    _to_tensor,
-)
+from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 cv2 = try_cv2_import()
@@ -111,7 +107,7 @@ def batch_obs(
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(_to_tensor(obs[sensor]))
+            batch[sensor].append(torch.as_tensor(obs[sensor]))
 
     batch_t: TensorDict = TensorDict()
 
@@ -258,7 +254,7 @@ def image_resize_shortest_edge(
     Returns:
         The resized array as a torch tensor.
     """
-    img = _to_tensor(img)
+    img = torch.as_tensor(img)
     no_batch_dim = len(img.shape) == 3
     if len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
