@@ -15,7 +15,7 @@ import torch
 class Metric:
     def __init__(self, info=None, metric_names=None, log_json=None):
         self.info = info
-        self.metric_names = metric_names
+        self.metric_names = metric_names if metric_names else []
 
         self.metrics = [[None, None, None] for _ in self.metric_names]
 
@@ -112,3 +112,8 @@ class VqaMetric(Metric):
             if ranks[i] == 1:
                 accuracy[i] = 1
         return accuracy, ranks
+
+
+class NavMetric(Metric):
+    def __init__(self, info=None, metric_names=None, log_json=None):
+        Metric.__init__(self, info, metric_names, log_json)
