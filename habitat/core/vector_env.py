@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import signal
+import warnings
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -29,7 +30,7 @@ from gym import spaces
 
 import habitat
 from habitat.config import Config
-from habitat.core.env import Env, Observations, RLEnv
+from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.utils import profiling_wrapper
@@ -39,8 +40,10 @@ try:
     # We have yet to find a reason to not use it and
     # you are required to use it when sending a torch.Tensor
     # between processes
+    import torch
     from torch import multiprocessing as mp  # type:ignore
 except ImportError:
+    torch = None
     import multiprocessing as mp  # type:ignore
 
 STEP_COMMAND = "step"
@@ -204,7 +207,7 @@ class VectorEnv:
                             connection_write_fn(
                                 (observations, reward, done, info)
                             )
-                    elif isinstance(env, habitat.Env):
+                    elif isinstance(env, habitat.Env):  # type: ignore
                         # habitat.Env
                         observations = env.step(**data)
                         if auto_reset_done and env.episode_over:
@@ -370,6 +373,7 @@ class VectorEnv:
         :return: list containing the output of step method of indexed env.
         """
         self._is_waiting = True
+        self._warn_cuda_tensors(action)
         self._connection_write_fns[index_env]((STEP_COMMAND, action))
         results = [self._connection_read_fns[index_env]()]
         self._is_waiting = False
@@ -384,14 +388,17 @@ class VectorEnv:
         """
         # Backward compatibility
         if isinstance(data[0], (int, np.integer, str)):
-            data = [{"action": {"action": action}} for action in data]
+            actions = [{"action": {"action": action}} for action in data]
+        else:
+            actions = cast(List[Dict[str, Any]], data)
 
         self._is_waiting = True
-        for write_fn, args in zip(self._connection_write_fns, data):
-            write_fn((STEP_COMMAND, args))
+        for write_fn, action in zip(self._connection_write_fns, actions):
+            self._warn_cuda_tensors(action)
+            write_fn((STEP_COMMAND, action))
 
     @profiling_wrapper.RangeContext("wait_step")
-    def wait_step(self) -> List[Observations]:
+    def wait_step(self) -> List[Any]:
         r"""Wait until all the asynchronized environments have synchronized."""
         observations = []
         for read_fn in self._connection_read_fns:
@@ -533,6 +540,24 @@ class VectorEnv:
     @property
     def _valid_start_methods(self) -> Set[str]:
         return {"forkserver", "spawn", "fork"}
+
+    def _warn_cuda_tensors(
+        self, action: Dict[str, Any], prefix: Optional[str] = None
+    ):
+        if torch is None:
+            return
+
+        for k, v in action.items():
+            if isinstance(v, dict):
+                subk = f"{prefix}.{k}" if prefix is not None else k
+                self._warn_cuda_tensors(v, prefix=subk)
+            elif torch.is_tensor(v) and v.device.type == "cuda":
+                subk = f"{prefix}.{k}" if prefix is not None else k
+                warnings.warn(
+                    "Action with key {} is a CUDA tensor."
+                    "  This will result in a CUDA context in the subproccess worker."
+                    "  Using CPU tensors instead is recommended.".format(subk)
+                )
 
     def __del__(self):
         self.close()

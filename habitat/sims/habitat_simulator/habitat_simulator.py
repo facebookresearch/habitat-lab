@@ -20,6 +20,9 @@ from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
 
+if TYPE_CHECKING:
+    from torch import Tensor
+
 import habitat_sim
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -34,11 +37,9 @@ from habitat.core.simulator import (
     SensorSuite,
     ShortestPathPoint,
     Simulator,
+    VisualObservation,
 )
 from habitat.core.spaces import Space
-
-if TYPE_CHECKING:
-    from torch import Tensor
 
 RGBSENSOR_DIMENSION = 3
 
@@ -83,8 +84,8 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation(
         self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
 
         # remove alpha channel
@@ -119,9 +120,9 @@ class HabitatSimDepthSensor(DepthSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
@@ -159,8 +160,10 @@ class HabitatSimSemanticSensor(SemanticSensor):
             dtype=np.uint32,
         )
 
-    def get_observation(self, sim_obs):
-        obs = sim_obs.get(self.uuid, None)
+    def get_observation(
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         return obs
 
@@ -203,7 +206,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        self._current_scene = self.sim_config.sim_cfg.scene.id
+        self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
@@ -214,11 +217,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
+        # Check if Habitat-Sim is post Scene Config Update
+        if not hasattr(sim_config, "scene_id"):
+            raise RuntimeError(
+                "Incompatible version of Habitat-Sim detected, please upgrade habitat_sim"
+            )
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
         )
-        sim_config.scene.id = self.habitat_config.SCENE
+        sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
@@ -283,7 +291,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: int) -> Observations:
+    def step(self, action: Union[str, int]) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)

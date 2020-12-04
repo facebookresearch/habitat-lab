@@ -79,3 +79,9 @@ repos:
             - 'isort==5.4.2'
         always_run: false
         language: python
+
+-   repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.7.1.1
+    hooks:
+    -   id: shellcheck
+        exclude: ^habitat_baselines/slambased/

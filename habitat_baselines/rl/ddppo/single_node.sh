@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
