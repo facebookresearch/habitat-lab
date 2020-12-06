@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Generator, List, Tuple
 
 import numpy as np
 import torch
@@ -7,8 +7,9 @@ import webdataset as wds
 import webdataset.filters as filters
 from tqdm import tqdm
 
-# import habitat
+import habitat
 from habitat import logger
+from habitat.config import Config
 from habitat.core.simulator import ShortestPathPoint
 from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
@@ -29,10 +30,10 @@ class NavDataset(wds.Dataset):
 
     def __init__(
         self,
-        config,
-        env,
-        device,
-        max_controller_actions=5,
+        config: Config,
+        env: habitat.Env,
+        device: torch.device,
+        max_controller_actions: int = 5,
     ):
         """
         Args:
@@ -142,7 +143,9 @@ class NavDataset(wds.Dataset):
 
             logger.info("[ Frame dataset is ready. ]")
 
-    def flat_to_hierarchical_actions(self, actions, controller_action_lim):
+    def flat_to_hierarchical_actions(
+        self, actions: List, controller_action_lim: int
+    ):
         assert len(actions) != 0
 
         controller_action_ctr = 0
@@ -177,9 +180,12 @@ class NavDataset(wds.Dataset):
         return planner_actions, controller_actions, pq_idx, cq_idx, ph_idx
 
     def get_hierarchical_features_till_spawn(
-        self, idx, actions, backtrack_steps=0, max_controller_actions=5
+        self,
+        idx: int,
+        actions: np.ndarray,
+        backtrack_steps: int = 0,
+        max_controller_actions: int = 5,
     ):
-
         action_length = len(actions)
 
         pa, ca, pq_idx, cq_idx, ph_idx = self.flat_to_hierarchical_actions(
@@ -290,7 +296,7 @@ class NavDataset(wds.Dataset):
 
     def group_by_keys_(
         self,
-        data,
+        data: Generator,
         keys: Callable[[str], Tuple[str]] = base_plus_ext,
         lcase: bool = True,
         suffixes=None,
@@ -361,7 +367,7 @@ class NavDataset(wds.Dataset):
         r"""Returns Q&A VocabDicts"""
         return self.q_vocab, self.ans_vocab
 
-    def sort_episodes(self, consecutive_ids=True) -> None:
+    def sort_episodes(self, consecutive_ids: bool = True) -> None:
         # TODO: can be done in mp3d_eqa_dataset class too?
         self.episodes = sorted(self.episodes, key=lambda x: int(x.episode_id))
         if consecutive_ids:
@@ -371,7 +377,7 @@ class NavDataset(wds.Dataset):
     def save_frame_queue(
         self,
         pos_queue: List[ShortestPathPoint],
-        episode_id,
+        episode_id: str,
     ) -> None:
         r"""Writes episode's frame queue to disk."""
         for idx, pos in enumerate(pos_queue[::-1]):
@@ -393,7 +399,7 @@ class NavDataset(wds.Dataset):
             os.makedirs(self.frame_dataset_path, exist_ok=True)
             return False
 
-    def load_scene(self, scene) -> None:
+    def load_scene(self, scene: str) -> None:
         self.config.defrost()
         self.config.SIMULATOR.SCENE = scene
         self.config.freeze()
