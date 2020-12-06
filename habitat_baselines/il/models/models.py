@@ -637,7 +637,7 @@ class NavRnn(nn.Module):
         question_feats: Tensor,
         actions_in: Tensor,
         action_lengths: Tensor,
-        hidden: Tensor,
+        hidden: bool = False,
     ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor, Tensor]]:
 
         T = False
