@@ -1,10 +1,13 @@
 import math
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Tuple, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+from habitat import logger
 
 
 def build_mlp(
@@ -33,7 +36,6 @@ def build_mlp(
 
     if add_sigmoid:
         layers.append(nn.Sigmoid())
-
     return nn.Sequential(*layers)
 
 
@@ -45,7 +47,7 @@ class MultitaskCNN(nn.Module):
         pretrained: bool = True,
         checkpoint_path: str = "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
         freeze_encoder: bool = False,
-    ):
+    ) -> None:
         super(MultitaskCNN, self).__init__()
 
         self.num_classes = num_classes
@@ -101,7 +103,9 @@ class MultitaskCNN(nn.Module):
 
         if self.only_encoder:
             if pretrained:
-                print("Loading CNN weights from %s" % checkpoint_path)
+                logger.info(
+                    "Loading CNN weights from {}".format(checkpoint_path)
+                )
                 checkpoint = torch.load(
                     checkpoint_path, map_location={"cuda:0": "cpu"}
                 )
@@ -123,7 +127,7 @@ class MultitaskCNN(nn.Module):
                     m.weight.data.fill_(1)
                     m.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         conv1 = self.conv_block1(x)
         conv2 = self.conv_block2(conv1)
         conv3 = self.conv_block3(conv2)
@@ -215,8 +219,8 @@ class QuestionLstmEncoder(nn.Module):
         wordvec_dim: int = 64,
         rnn_dim: int = 64,
         rnn_num_layers: int = 2,
-        rnn_dropout: int = 0,
-    ):
+        rnn_dropout: float = 0,
+    ) -> None:
         super(QuestionLstmEncoder, self).__init__()
 
         self.token_to_idx = token_to_idx
@@ -235,11 +239,11 @@ class QuestionLstmEncoder(nn.Module):
 
         self.init_weights()
 
-    def init_weights(self):
+    def init_weights(self) -> None:
         initrange = 0.1
         self.embed.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         N, T = x.size()
         idx = torch.LongTensor(N).fill_(T - 1)
 
@@ -270,7 +274,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         fc_use_batchnorm: bool = False,
         fc_dropout: float = 0.5,
         fc_dims: Iterable = (64,),
-    ):
+    ) -> None:
         super(VqaLstmCnnAttentionModel, self).__init__()
 
         cnn_kwargs = {
@@ -313,8 +317,8 @@ class VqaLstmCnnAttentionModel(nn.Module):
         )
 
     def forward(
-        self, images: torch.Tensor, questions: torch.Tensor
-    ) -> Tuple[torch.tensor]:
+        self, images: Tensor, questions: Tensor
+    ) -> Tuple[Tensor, Tensor]:
 
         N, T, _, _, _ = images.size()
         # bs x 5 x 3 x 256 x 256
@@ -351,34 +355,33 @@ class VqaLstmCnnAttentionModel(nn.Module):
 
 
 class MaskedNLLCriterion(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super(MaskedNLLCriterion, self).__init__()
 
-    def forward(self, inp, target, mask):
+    def forward(self, inp: Tensor, target: Tensor, mask: Tensor) -> Tensor:
         logprob_select = torch.gather(inp, 1, target.long())
         out = torch.masked_select(logprob_select, mask)
         loss = -torch.sum(out) / mask.float().sum()
-
         return loss
 
 
 class NavPlannerControllerModel(nn.Module):
     def __init__(
         self,
-        q_vocab,
-        num_output=4,
-        question_wordvec_dim=64,
-        question_hidden_dim=64,
-        question_num_layers=2,
-        question_dropout=0.5,
-        planner_rnn_image_feat_dim=128,
-        planner_rnn_action_embed_dim=32,
-        planner_rnn_type="GRU",
-        planner_rnn_hidden_dim=1024,
-        planner_rnn_num_layers=1,
-        planner_rnn_dropout=0,
-        controller_fc_dims=(256,),
-    ):
+        q_vocab: Dict,
+        num_output: int = 4,
+        question_wordvec_dim: int = 64,
+        question_hidden_dim: int = 64,
+        question_num_layers: int = 2,
+        question_dropout: float = 0.5,
+        planner_rnn_image_feat_dim: int = 128,
+        planner_rnn_action_embed_dim: int = 32,
+        planner_rnn_type: str = "GRU",
+        planner_rnn_hidden_dim: int = 1024,
+        planner_rnn_num_layers: int = 1,
+        planner_rnn_dropout: float = 0,
+        controller_fc_dims: Iterable = (256,),
+    ) -> None:
         super(NavPlannerControllerModel, self).__init__()
 
         self.cnn_fc_layer = nn.Sequential(
@@ -428,16 +431,15 @@ class NavPlannerControllerModel(nn.Module):
 
     def forward(
         self,
-        questions,
-        planner_img_feats,
-        planner_actions_in,
-        planner_action_lengths,
-        planner_hidden_index,
-        controller_img_feats,
-        controller_actions_in,
-        controller_action_lengths,
-        planner_hidden=False,
-    ):
+        questions: Tensor,
+        planner_img_feats: Tensor,
+        planner_actions_in: Tensor,
+        planner_action_lengths: Tensor,
+        planner_hidden_index: Tensor,
+        controller_img_feats: Tensor,
+        controller_actions_in: Tensor,
+        controller_action_lengths: Tensor,
+    ) -> Tuple[Tensor, Tensor, Tensor]:
 
         N_p, T_p, _ = planner_img_feats.size()
 
@@ -499,10 +501,15 @@ class NavPlannerControllerModel(nn.Module):
             1,
         )
         controller_scores = self.controller(controller_in)
-
         return planner_scores, controller_scores, planner_hidden
 
-    def planner_step(self, questions, img_feats, actions_in, planner_hidden):
+    def planner_step(
+        self,
+        questions: Tensor,
+        img_feats: Tensor,
+        actions_in: Tensor,
+        planner_hidden: Tensor,
+    ) -> Tuple[Tensor]:
         img_feats = self.cnn_fc_layer(img_feats)
         ques_feats = self.q_rnn(questions)
         ques_feats = self.ques_tr(ques_feats)
@@ -512,7 +519,9 @@ class NavPlannerControllerModel(nn.Module):
 
         return planner_scores, planner_hidden
 
-    def controller_step(self, img_feats, actions_in, hidden_in):
+    def controller_step(
+        self, img_feats: Tensor, actions_in: Tensor, hidden_in: Tensor
+    ) -> Tensor:
 
         img_feats = self.cnn_fc_layer(img_feats)
         actions_embed = self.planner_nav_rnn.action_embed(actions_in)
@@ -530,20 +539,20 @@ class NavPlannerControllerModel(nn.Module):
 class NavRnn(nn.Module):
     def __init__(
         self,
-        image_input=False,
-        image_feat_dim=128,
-        question_input=False,
-        question_embed_dim=128,
-        action_input=False,
-        action_embed_dim=32,
-        num_actions=4,
-        mode="sl",
-        rnn_type="LSTM",
-        rnn_hidden_dim=128,
-        rnn_num_layers=2,
-        rnn_dropout=0,
-        return_states=False,
-    ):
+        image_input: bool = False,
+        image_feat_dim: int = 128,
+        question_input: bool = False,
+        question_embed_dim: int = 128,
+        action_input: bool = False,
+        action_embed_dim: int = 32,
+        num_actions: int = 4,
+        mode: str = "sl",
+        rnn_type: str = "LSTM",
+        rnn_hidden_dim: int = 128,
+        rnn_num_layers: int = 2,
+        rnn_dropout: float = 0,
+        return_states: bool = False,
+    ) -> None:
         super(NavRnn, self).__init__()
 
         self.image_input = image_input
@@ -566,24 +575,27 @@ class NavRnn(nn.Module):
         rnn_input_dim = 0
         if self.image_input is True:
             rnn_input_dim += image_feat_dim
-            print(
-                "Adding input to %s: image, rnn dim: %d"
-                % (self.rnn_type, rnn_input_dim)
+            logger.info(
+                "Adding input to {}: image, rnn dim: {}".format(
+                    self.rnn_type, rnn_input_dim
+                )
             )
 
         if self.question_input is True:
             rnn_input_dim += question_embed_dim
-            print(
-                "Adding input to %s: question, rnn dim: %d"
-                % (self.rnn_type, rnn_input_dim)
+            logger.info(
+                "Adding input to {}: question, rnn dim: {}".format(
+                    self.rnn_type, rnn_input_dim
+                )
             )
 
         if self.action_input is True:
             self.action_embed = nn.Embedding(num_actions, action_embed_dim)
             rnn_input_dim += action_embed_dim
-            print(
-                "Adding input to %s: action, rnn dim: %d"
-                % (self.rnn_type, rnn_input_dim)
+            logger.info(
+                "Adding input to {}: action, rnn dim: {}".format(
+                    self.rnn_type, rnn_input_dim
+                )
             )
 
         self.rnn = getattr(nn, self.rnn_type)(
@@ -593,13 +605,15 @@ class NavRnn(nn.Module):
             dropout=rnn_dropout,
             batch_first=True,
         )
-        print(
-            "Building %s with hidden dim: %d" % (self.rnn_type, rnn_hidden_dim)
+        logger.info(
+            "Building {} with hidden dim: {}".format(
+                self.rnn_type, rnn_hidden_dim
+            )
         )
 
         self.decoder = nn.Linear(self.rnn_hidden_dim, self.num_actions)
 
-    def init_hidden(self, bsz: int):
+    def init_hidden(self, bsz: int) -> Union[Tensor, None]:
         weight = next(self.parameters()).data
         if self.rnn_type == "LSTM":
             return (
@@ -619,12 +633,12 @@ class NavRnn(nn.Module):
 
     def forward(
         self,
-        img_feats,
-        question_feats,
-        actions_in,
-        action_lengths,
-        hidden=False,
-    ):
+        img_feats: Tensor,
+        question_feats: Tensor,
+        actions_in: Tensor,
+        action_lengths: Tensor,
+        hidden: Tensor,
+    ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor, Tensor]]:
 
         T = False
         if self.image_input is True:
@@ -661,12 +675,18 @@ class NavRnn(nn.Module):
             )
         )
 
-        if self.return_states is True:
+        if self.return_states:
             return rnn_output, output, hidden
         else:
             return output, hidden
 
-    def step_forward(self, img_feats, question_feats, actions_in, hidden):
+    def step_forward(
+        self,
+        img_feats: Tensor,
+        question_feats: Tensor,
+        actions_in: Tensor,
+        hidden: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
 
         T = False
         if self.image_input is True:
@@ -694,7 +714,6 @@ class NavRnn(nn.Module):
                 )
 
         output, hidden = self.rnn(input_feats, hidden)
-
         output = self.decoder(
             output.contiguous().view(
                 output.size(0) * output.size(1), output.size(2)
