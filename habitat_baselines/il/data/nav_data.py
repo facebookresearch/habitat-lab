@@ -1,7 +1,6 @@
 import os
 from typing import Callable, Dict, List, Tuple
 
-import cv2
 import numpy as np
 import torch
 import webdataset as wds
@@ -11,6 +10,7 @@ from tqdm import tqdm
 # import habitat
 from habitat import logger
 from habitat.core.simulator import ShortestPathPoint
+from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
 from habitat_baselines.il.models.models import MultitaskCNN
 from habitat_baselines.utils.common import (
@@ -20,6 +20,8 @@ from habitat_baselines.utils.common import (
     get_scene_episode_dict,
     valid_sample,
 )
+
+cv2 = try_cv2_import()
 
 
 class NavDataset(wds.Dataset):

@@ -9,7 +9,6 @@ import os
 import time
 from typing import Dict, List
 
-import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -17,6 +16,7 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
+from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -27,6 +27,8 @@ from habitat_baselines.il.models.models import (
     MaskedNLLCriterion,
     NavPlannerControllerModel,
 )
+
+cv2 = try_cv2_import()
 
 
 @baseline_registry.register_trainer(name="pacman")
@@ -388,24 +390,13 @@ class PACMANTrainer(BaseILTrainer):
             metrics = NavMetric(
                 info={"split": "val"},
                 metric_names=[
-                    "d_0_10",
-                    "d_0_30",
-                    "d_0_50",
-                    "d_T_10",
-                    "d_T_30",
-                    "d_T_50",
-                    "d_D_10",
-                    "d_D_30",
-                    "d_D_50",
-                    "d_min_10",
-                    "d_min_30",
-                    "d_min_50",
-                    "stop_10",
-                    "stop_30",
-                    "stop_50",
-                    "ep_len_10",
-                    "ep_len_30",
-                    "ep_len_50",
+                    "{}_{}".format(y, x)
+                    for x in [10, 30, 50]
+                    for y in [
+                        *["d_{}".format(x) for x in [0, "T", "D", "min"]],
+                        "stop",
+                        "ep_len",
+                    ]
                 ],
                 log_json=os.path.join(config.OUTPUT_LOG_DIR, "eval.json"),
             )
