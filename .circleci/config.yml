@@ -114,7 +114,7 @@ jobs:
               sudo dpkg -i cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
               sudo apt-get update || true
               sudo apt-get --yes --force-yes install cuda
-              touch ./cuda_installed
+              touch ~/cuda_installed
               nvidia-smi
       - restore_cache:
           keys:
@@ -172,7 +172,7 @@ jobs:
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
-              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
+              while [ ! -f ~/cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
@@ -195,20 +195,37 @@ jobs:
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
               fi
-      - run:
-          name: Download coda scene
-          command: |
-            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
-            then
-              cd habitat-sim
-              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
-              unzip coda.zip -d data/scene_datasets
-              rm coda.zip
-            fi
+              if [ ! -d ./habitat-sim/data/objects/cheezit.glb ]
+              then
+                cd habitat-sim
+                wget http://dl.fbaipublicfiles.com/habitat/objects_v0.2.zip
+                unzip -uo objects_v0.2.zip -d data/objects/
+                rm objects_v0.2.zip
+                wget http://dl.fbaipublicfiles.com/habitat/locobot_merged_v0.2.zip
+                unzip -uo locobot_merged_v0.2.zip -d data/objects/
+                rm locobot_merged_v0.2.zip
+                cd ..
+              fi
+              if [ ! -d ./habitat-sim/data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb ]
+              then
+                cd habitat-sim
+                wget http://dl.fbaipublicfiles.com/habitat/mp3d_example.zip
+                unzip mp3d_example.zip -d data/scene_datasets/mp3d/
+                rm mp3d_example.zip
+                cd ..
+              fi
+              if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
+              then
+                cd habitat-sim
+                wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
+                unzip coda.zip -d data/scene_datasets
+                rm coda.zip
+                cd ..
+              fi
       - run:
           name: Run sim benchmark
           command: |
-              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
+              while [ ! -f ~/cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
