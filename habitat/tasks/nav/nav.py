@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple
 
 import attr
 import numpy as np
@@ -38,17 +38,17 @@ from habitat.utils.geometry_utils import (
 )
 from habitat.utils.visualizations import fog_of_war, maps
 
-if TYPE_CHECKING:
+try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+except ImportError:
+    pass
 cv2 = try_cv2_import()
 
 
 MAP_THICKNESS_SCALAR: int = 128
 
 
-def merge_sim_episode_config(
-    sim_config: Config, episode: Type[Episode]
-) -> Any:
+def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
     sim_config.defrost()
     sim_config.SCENE = episode.scene_id
     sim_config.freeze()
@@ -1093,9 +1093,7 @@ class NavigationTask(EmbodiedTask):
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
 
-    def overwrite_sim_config(
-        self, sim_config: Any, episode: Type[Episode]
-    ) -> Any:
+    def overwrite_sim_config(self, sim_config: Any, episode: Episode) -> Any:
         return merge_sim_episode_config(sim_config, episode)
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
