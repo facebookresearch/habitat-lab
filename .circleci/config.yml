@@ -166,7 +166,7 @@ jobs:
             ccache --max-size=10.0G
       - run:
           name: Build, install habitat-sim and run benchmark
-          no_output_timeout: 30m
+          no_output_timeout: 40m
           command: |
               if [ ! -d ./habitat-sim ]
               then
