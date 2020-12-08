@@ -209,6 +209,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self.sim_config = self.create_sim_config(self.__sensor_suites)
         self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
+        # TODO Make action space MultiAgent compatible
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
@@ -248,7 +249,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 overwrite_config(
                     config_from=sensor.config,
                     config_to=sim_sensor_cfg,
-                    ignore_keys={"sensor_subtype", "height", "width", "hfov"},
+                    ignore_keys={
+                        "sensor_subtype",
+                        "height",
+                        "hfov",
+                        "max_depth",
+                        "min_depth",
+                        "normalize_depth",
+                        "type",
+                        "width",
+                    },
                 )
                 sim_sensor_cfg.uuid = sensor.uuid
                 sim_sensor_cfg.resolution = list(
@@ -299,7 +309,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     @property
     def action_space(self) -> Space:
-        self.habitat_config.DEFAULT_AGENT_ID
         return self._action_space
 
     @property
