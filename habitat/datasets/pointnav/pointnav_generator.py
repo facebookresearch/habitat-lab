@@ -9,16 +9,7 @@ considered  as a target or source location. Used to filter isolated points
 that aren't part of a floor.
 """
 
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Dict, Generator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from numpy import float64
@@ -31,8 +22,10 @@ try:
     from habitat_sim.errors import GreedyFollowerError
 except ImportError:
     GreedyFollower = BaseException
-if TYPE_CHECKING:
+try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+except ImportError:
+    habitat_sim = BaseException
 ISLAND_RADIUS_LIMIT = 1.5
 
 
