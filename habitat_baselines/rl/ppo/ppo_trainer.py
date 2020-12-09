@@ -38,7 +38,7 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     add_signal_handlers,
     get_distrib_size,
     init_distrib_slurm,
-    is_slurm_job,
+    is_slurm_batch_job,
     load_interrupted_state,
     rank0_only,
     requeue_job,
@@ -74,8 +74,6 @@ class PPOTrainer(BaseRLTrainer):
         self.agent = None
         self.envs = None
         self.obs_transforms = []
-        if config is not None and config.VERBOSE:
-            logger.info(f"config: {config}")
 
         self._static_encoder = False
         self._encoder = None
@@ -183,13 +181,17 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
+        self.envs = construct_envs(
+            config,
+            get_env_class(config.ENV_NAME),
+            workers_ignore_signals=is_slurm_batch_job(),
+        )
 
     def _init_train(self):
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
 
-        if is_slurm_job():
+        if is_slurm_batch_job():
             add_signal_handlers()
 
         if self._is_distributed:
@@ -219,6 +221,9 @@ class PPOTrainer(BaseRLTrainer):
                 "rollout_tracker", tcp_store
             )
             self.num_rollouts_done_store.set("num_done", "0")
+
+        if rank0_only() and self.config.VERBOSE:
+            logger.info(f"config: {self.config}")
 
         profiling_wrapper.configure(
             capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
@@ -847,7 +852,9 @@ class PPOTrainer(BaseRLTrainer):
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
             config.freeze()
 
-        logger.info(f"env config: {config}")
+        if config.VERBOSE:
+            logger.info(f"env config: {config}")
+
         self._init_envs(config)
         self._setup_actor_critic_agent(ppo_cfg)
 

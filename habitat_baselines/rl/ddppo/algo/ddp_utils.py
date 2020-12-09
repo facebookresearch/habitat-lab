@@ -35,6 +35,16 @@ def is_slurm_job() -> bool:
     return SLURM_JOBID is not None
 
 
+def is_slurm_batch_job() -> bool:
+    return is_slurm_job() and os.environ.get("SLURM_JOB_NAME", "bash") not in (
+        "bash",
+        "zsh",
+        "fish",
+        "tcsh",
+        "sh",
+    )
+
+
 @overload
 def rank0_only() -> bool:
     ...
