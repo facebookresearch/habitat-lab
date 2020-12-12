@@ -169,6 +169,10 @@ class PACMANTrainer(BaseILTrainer):
                 while epoch <= config.IL.NAV.max_epochs:
                     start_time = time.time()
                     for t, batch in enumerate(train_loader):
+                        batch = (
+                            item.to(self.device, non_blocking=True)
+                            for item in batch
+                        )
                         (
                             idx,
                             questions,
@@ -185,31 +189,6 @@ class PACMANTrainer(BaseILTrainer):
                             controller_action_lengths,
                             controller_masks,
                         ) = batch
-
-                        questions = questions.to(self.device)
-
-                        planner_img_feats = planner_img_feats.to(self.device)
-                        planner_actions_in = planner_actions_in.to(self.device)
-                        planner_actions_out = planner_actions_out.to(
-                            self.device
-                        )
-                        planner_action_lengths = planner_action_lengths.to(
-                            self.device
-                        )
-                        planner_masks = planner_masks.to(self.device)
-
-                        controller_img_feats = controller_img_feats.to(
-                            self.device
-                        )
-                        controller_actions_in = controller_actions_in.to(
-                            self.device
-                        )
-                        planner_hidden_idx = planner_hidden_idx.to(self.device)
-                        controller_outs = controller_outs.to(self.device)
-                        controller_action_lengths = (
-                            controller_action_lengths.to(self.device)
-                        )
-                        controller_masks = controller_masks.to(self.device)
 
                         (
                             planner_action_lengths,
@@ -311,8 +290,8 @@ class PACMANTrainer(BaseILTrainer):
                         len(nav_dataset) / config.IL.NAV.batch_size
                     )
 
-                    avg_p_loss /= len(num_batches)
-                    avg_c_loss /= len(num_batches)
+                    avg_p_loss /= num_batches
+                    avg_c_loss /= num_batches
 
                     end_time = time.time()
                     time_taken = "{:.1f}".format((end_time - start_time) / 60)

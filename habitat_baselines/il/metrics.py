@@ -99,7 +99,7 @@ class Metric:
 
 class VqaMetric(Metric):
     def __init__(self, info=None, metric_names=None, log_json=None):
-        Metric.__init__(self, info, metric_names, log_json)
+        super().__init__(info, metric_names, log_json)
 
     def compute_ranks(
         self, scores: torch.Tensor, labels: torch.Tensor
@@ -116,4 +116,4 @@ class VqaMetric(Metric):
 
 class NavMetric(Metric):
     def __init__(self, info=None, metric_names=None, log_json=None):
-        Metric.__init__(self, info, metric_names, log_json)
+        super().__init__(info, metric_names, log_json)

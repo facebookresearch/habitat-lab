@@ -273,7 +273,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         question_dropout: float = 0.5,
         fc_use_batchnorm: bool = False,
         fc_dropout: float = 0.5,
-        fc_dims: Iterable = (64,),
+        fc_dims: Iterable[int] = (64,),
     ) -> None:
         super(VqaLstmCnnAttentionModel, self).__init__()
 
@@ -380,7 +380,7 @@ class NavPlannerControllerModel(nn.Module):
         planner_rnn_hidden_dim: int = 1024,
         planner_rnn_num_layers: int = 1,
         planner_rnn_dropout: float = 0,
-        controller_fc_dims: Iterable = (256,),
+        controller_fc_dims: Iterable[int] = (256,),
     ) -> None:
         super(NavPlannerControllerModel, self).__init__()
 
