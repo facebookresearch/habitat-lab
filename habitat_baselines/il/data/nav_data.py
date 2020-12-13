@@ -79,17 +79,16 @@ class NavDataset(wds.Dataset):
 
         self.scene_episode_dict = get_scene_episode_dict(self.episodes)
         self.preprocess_actions()
-
         if self.mode == "val":
-            self.temp_scene_id = self.episodes[0].scene_id
+            ctr = 0
             # ids in a way that episodes with same scenes are grouped together
-            for s, scene in tqdm(
-                enumerate(self.scene_episode_dict.keys()),
+            for scene in tqdm(
+                self.scene_episode_dict.keys(),
                 desc="going through all scenes from dataset",
             ):
-                for e, episode in enumerate(self.scene_episode_dict[scene]):
-                    ctr = e + (s * len(self.scene_episode_dict[scene]))
+                for episode in self.scene_episode_dict[scene]:
                     episode.episode_id = ctr
+                    ctr += 1
 
         self.sort_episodes(consecutive_ids=False)
 
@@ -380,7 +379,7 @@ class NavDataset(wds.Dataset):
         episode_id: str,
     ) -> None:
         r"""Writes episode's frame queue to disk."""
-        for idx, pos in enumerate(pos_queue[::-1]):
+        for idx, pos in enumerate(pos_queue):
             observation = self.env.sim.get_observations_at(
                 pos.position, pos.rotation
             )
@@ -432,10 +431,8 @@ class NavDataset(wds.Dataset):
             actions = self.episodes[idx].actions
             action_length = self.episodes[idx].action_length
             scene = self.episodes[idx].scene_id
-
-            if scene != self.temp_scene_id:
+            if scene != self.config.SIMULATOR.SCENE:
                 logger.info("[ Loading scene - {}]".format(scene))
-                self.temp_scene_id = scene
                 self.config.defrost()
                 self.config.SIMULATOR.SCENE = scene
                 self.config.freeze()
