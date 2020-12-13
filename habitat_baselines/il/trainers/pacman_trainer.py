@@ -234,26 +234,20 @@ class PACMANTrainer(BaseILTrainer):
                             planner_logprob,
                             planner_actions_out[
                                 :, : planner_action_lengths.max()
-                            ]
-                            .contiguous()
-                            .view(-1, 1),
-                            planner_masks[:, : planner_action_lengths.max()]
-                            .contiguous()
-                            .view(-1, 1),
+                            ].reshape(-1, 1),
+                            planner_masks[
+                                :, : planner_action_lengths.max()
+                            ].reshape(-1, 1),
                         )
 
                         controller_loss = controller_loss_fn(
                             controller_logprob,
                             controller_outs[
                                 :, : controller_action_lengths.max()
-                            ]
-                            .contiguous()
-                            .view(-1, 1),
+                            ].reshape(-1, 1),
                             controller_masks[
                                 :, : controller_action_lengths.max()
-                            ]
-                            .contiguous()
-                            .view(-1, 1),
+                            ].reshape(-1, 1),
                         )
 
                         # zero grad
@@ -552,13 +546,13 @@ class PACMANTrainer(BaseILTrainer):
                             break
 
                         if action == 0:
-                            my_action = 1
+                            my_action = 1  # forward
                         elif action == 1:
-                            my_action = 2
+                            my_action = 2  # left
                         elif action == 2:
-                            my_action = 3
+                            my_action = 3  # right
                         elif action == 3:
-                            my_action = 0
+                            my_action = 0  # stop
 
                         observations = env.sim.step(my_action)
                         img = observations["rgb"]

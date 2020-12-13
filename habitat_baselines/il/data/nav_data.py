@@ -217,8 +217,10 @@ class NavDataset(wds.Dataset):
 
         pq_idx_pruned = [v for v in pq_idx if v <= target_pos_idx]
         pa_pruned = pa[: len(pq_idx_pruned) + 1]
-
-        raw_img_feats = self.cnn(self.frame_queue).data.cpu().numpy().copy()
+        with torch.no_grad():
+            raw_img_feats = (
+                self.cnn(self.frame_queue).data.cpu().numpy().copy()
+            )
 
         controller_img_feat = torch.from_numpy(
             raw_img_feats[target_pos_idx].copy()
@@ -450,7 +452,10 @@ class NavDataset(wds.Dataset):
         planner_action_length = self.episodes[idx].planner_action_length
         controller_action_length = self.episodes[idx].controller_action_length
 
-        raw_img_feats = self.cnn(self.frame_queue).data.cpu().numpy().copy()
+        with torch.no_grad():
+            raw_img_feats = (
+                self.cnn(self.frame_queue).data.cpu().numpy().copy()
+            )
         img_feats = np.zeros(
             (self.max_action_len, raw_img_feats.shape[1]), dtype=np.float32
         )
