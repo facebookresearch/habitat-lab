@@ -226,6 +226,7 @@ SIMULATOR_SENSOR = CN()
 SIMULATOR_SENSOR.HEIGHT = 480
 SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.HFOV = 90.0  # horizontal field of view in degrees
+# SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # -----------------------------------------------------------------------------
