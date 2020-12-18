@@ -68,10 +68,10 @@ class Metric:
         for k, v in self.info.items():
             stat_string += "[{}:{}]".format(k, v)
 
-        stat_string += "[iters:{}]".format(self.num_iters)
+        stat_string += "[iters:{}]\n".format(self.num_iters)
         for i in range(len(self.metric_names)):
             if self.metrics[i][mode] is not None:
-                stat_string += "[{}:{:.5f}]".format(
+                stat_string += "[{}:{:.3f}]".format(
                     self.metric_names[i],
                     self.metrics[i][mode],
                 )

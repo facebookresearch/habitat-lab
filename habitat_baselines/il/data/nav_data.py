@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Dict, Generator, List, Tuple
+from typing import Callable, Dict, Generator, List, Tuple, Union
 
 import numpy as np
 import torch
@@ -39,8 +39,7 @@ class NavDataset(wds.Dataset):
         Args:
             config: Config
             env: habitat Env
-            input_type (string): Type of model being trained ("vqa", "pacman")
-            num_frames (int): number of frames used as input to VQA model
+            device: torch.device
             max_controller_actions (int)
         """
         self.config = config.TASK_CONFIG
@@ -178,6 +177,19 @@ class NavDataset(wds.Dataset):
 
         return planner_actions, controller_actions, pq_idx, cq_idx, ph_idx
 
+    def get_img_features(
+        self, img: Union[np.ndarray, torch.Tensor], preprocess: bool = False
+    ) -> torch.Tensor:
+        if preprocess:
+            img = (
+                (torch.from_numpy(img.transpose(2, 0, 1)).float() / 255.0)
+                .view(1, 3, 256, 256)
+                .to(self.device)
+            )
+
+        with torch.no_grad():
+            return self.cnn(img)
+
     def get_hierarchical_features_till_spawn(
         self,
         idx: int,
@@ -217,10 +229,9 @@ class NavDataset(wds.Dataset):
 
         pq_idx_pruned = [v for v in pq_idx if v <= target_pos_idx]
         pa_pruned = pa[: len(pq_idx_pruned) + 1]
-        with torch.no_grad():
-            raw_img_feats = (
-                self.cnn(self.frame_queue).data.cpu().numpy().copy()
-            )
+        raw_img_feats = (
+            self.get_img_features(self.frame_queue).cpu().numpy().copy()
+        )
 
         controller_img_feat = torch.from_numpy(
             raw_img_feats[target_pos_idx].copy()
@@ -452,10 +463,9 @@ class NavDataset(wds.Dataset):
         planner_action_length = self.episodes[idx].planner_action_length
         controller_action_length = self.episodes[idx].controller_action_length
 
-        with torch.no_grad():
-            raw_img_feats = (
-                self.cnn(self.frame_queue).data.cpu().numpy().copy()
-            )
+        raw_img_feats = (
+            self.get_img_features(self.frame_queue).cpu().numpy().copy()
+        )
         img_feats = np.zeros(
             (self.max_action_len, raw_img_feats.shape[1]), dtype=np.float32
         )
