@@ -629,7 +629,7 @@ class PACMANTrainer(BaseILTrainer):
                 if t % config.LOG_INTERVAL == 0:
                     logger.info(
                         "Valid cases: {}; Invalid cases: {}".format(
-                            (t + 1) * 4 - len(invalids), len(invalids)
+                            (t + 1) * 8 - len(invalids), len(invalids)
                         )
                     )
                     logger.info(
