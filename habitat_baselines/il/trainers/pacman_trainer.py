@@ -7,6 +7,7 @@
 import math
 import os
 import time
+from datetime import datetime
 from typing import Dict, List
 
 import numpy as np
@@ -18,7 +19,6 @@ import habitat
 from habitat import logger
 from habitat.core.simulator import AgentState
 from habitat.core.utils import try_cv2_import
-from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -28,6 +28,7 @@ from habitat_baselines.il.models.models import (
     MaskedNLLCriterion,
     NavPlannerControllerModel,
 )
+from habitat_baselines.utils.common import generate_video
 
 cv2 = try_cv2_import()
 
@@ -55,29 +56,34 @@ class PACMANTrainer(BaseILTrainer):
     def _save_nav_results(
         self,
         ckpt_path: int,
-        t: int,
+        ep_id: int,
         questions: torch.Tensor,
         imgs: List[np.ndarray],
         q_vocab_dict: Dict,
         results_dir: str,
+        writer: TensorboardWriter,
+        video_option: list,
     ) -> None:
 
         r"""For saving NAV-PACMAN eval results.
         Args:
             ckpt_path: path of checkpoint being evaluated
-            t: index
+            ep_id: episode id (batch index)
             questions: input question to model
             imgs: images' tensor containing input frames
             q_vocab_dict: question vocab dictionary
             results_dir: dir to save results
+            writer: tensorboard writer
+            video_option: ["disk", "tb"]
         Returns:
             None
         """
 
         question = questions[0]
 
-        ckpt_epoch = ckpt_path[ckpt_path.rfind("/") + 1 :]
+        ckpt_epoch = ckpt_path[ckpt_path.rfind("/") + 1 : -5]
         results_dir = os.path.join(results_dir, ckpt_epoch)
+        ckpt_no = ckpt_epoch[6:]
 
         q_string = q_vocab_dict.token_idx_2_string(question)
         frames_with_text = []
@@ -109,8 +115,16 @@ class PACMANTrainer(BaseILTrainer):
             )
 
             frames_with_text.append(frame)
-
-        images_to_video(frames_with_text, results_dir, "ep_" + str(t), fps=8)
+        generate_video(
+            video_option,
+            results_dir,
+            frames_with_text,
+            ep_id,
+            ckpt_no,
+            {},
+            writer,
+            fps=5,
+        )
 
     def train(self) -> None:
         r"""Main method for training Navigation model of EQA.
@@ -167,7 +181,11 @@ class PACMANTrainer(BaseILTrainer):
             model.train().to(self.device)
 
             with TensorboardWriter(
-                config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                "train_{}/{}".format(
+                    config.TENSORBOARD_DIR,
+                    datetime.today().strftime("%Y-%m-%d-%H:%M"),
+                ),
+                flush_secs=self.flush_secs,
             ) as writer:
                 while epoch <= config.IL.NAV.max_epochs:
                     start_time = time.time()
@@ -362,6 +380,7 @@ class PACMANTrainer(BaseILTrainer):
             model.eval().to(self.device)
 
             results_dir = config.RESULTS_DIR.format(split="val")
+            video_option = self.config.VIDEO_OPTION
 
             metrics = NavMetric(
                 info={"split": "val"},
@@ -660,4 +679,6 @@ class PACMANTrainer(BaseILTrainer):
                         imgs,
                         q_vocab_dict,
                         results_dir,
+                        writer,
+                        video_option,
                     )
