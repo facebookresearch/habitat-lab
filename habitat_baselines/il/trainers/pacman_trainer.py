@@ -17,7 +17,6 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
-from habitat.core.simulator import AgentState
 from habitat.core.utils import try_cv2_import
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -408,53 +407,42 @@ class PACMANTrainer(BaseILTrainer):
                         controller_step = False
                         planner_hidden = model.planner_nav_rnn.init_hidden(1)
 
-                        if i != "rand_init":
-                            # get hierarchical action history
-                            (
-                                planner_actions_in,
-                                planner_img_feats,
-                                controller_step,
-                                controller_action_in,
-                                controller_img_feats,
-                                init_pos,
-                                controller_action_counter,
-                            ) = nav_dataset.get_hierarchical_features_till_spawn(
-                                idx.item(),
-                                actions[0, : action_length[0]].numpy(),
-                                i,
-                                config.IL.NAV.max_controller_actions,
+                        # get hierarchical action history
+                        (
+                            planner_actions_in,
+                            planner_img_feats,
+                            controller_step,
+                            controller_action_in,
+                            controller_img_feats,
+                            init_pos,
+                            controller_action_counter,
+                        ) = nav_dataset.get_hierarchical_features_till_spawn(
+                            idx.item(),
+                            actions[0, : action_length.item()].numpy(),
+                            i if i != "rand_init" else action_length.item(),
+                            config.IL.NAV.max_controller_actions,
+                        )
+                        if j == "pred":
+                            planner_actions_in = planner_actions_in.to(
+                                self.device
                             )
-                            if j == "pred":
-                                planner_actions_in = planner_actions_in.to(
-                                    self.device
-                                )
-                                planner_img_feats = planner_img_feats.to(
-                                    self.device
-                                )
+                            planner_img_feats = planner_img_feats.to(
+                                self.device
+                            )
 
-                                for step in range(planner_actions_in.size(0)):
+                            for step in range(planner_actions_in.size(0)):
 
-                                    (
-                                        planner_scores,
-                                        planner_hidden,
-                                    ) = model.planner_step(
-                                        question,
-                                        planner_img_feats[step][
-                                            (None,) * 2
-                                        ],  # unsqueezing twice
-                                        planner_actions_in[step].view(1, 1),
-                                        planner_hidden,
-                                    )
-                        else:
-                            random_pos = env.sim.sample_navigable_point()
-                            random_heading = np.random.uniform(-np.pi, np.pi)
-                            random_rotation = [
-                                0,
-                                np.sin(random_heading / 2),
-                                0,
-                                np.cos(random_heading / 2),
-                            ]
-                            init_pos = AgentState(random_pos, random_rotation)
+                                (
+                                    planner_scores,
+                                    planner_hidden,
+                                ) = model.planner_step(
+                                    question,
+                                    planner_img_feats[step][
+                                        (None,) * 2
+                                    ],  # unsqueezing twice
+                                    planner_actions_in[step].view(1, 1),
+                                    planner_hidden,
+                                )
 
                         env.sim.set_agent_state(
                             init_pos.position, init_pos.rotation
@@ -492,11 +480,7 @@ class PACMANTrainer(BaseILTrainer):
                             planner_step = True
                             action = int(controller_action_in)
 
-                            observations = env.sim.get_observations_at(
-                                init_pos.position, init_pos.rotation
-                            )
-                            img = observations["rgb"]
-
+                        img = None
                         for episode_length in range(
                             config.IL.NAV.max_episode_length
                         ):
@@ -512,16 +496,9 @@ class PACMANTrainer(BaseILTrainer):
                                         ).view(1, 1, 4608)
                                     )
                                 else:
-                                    if i == "rand_init":
-                                        img_feat = eval_loader.dataset.get_img_features(
-                                            img, preprocess=True
-                                        ).view(
-                                            1, 1, 4608
-                                        )
-                                    else:
-                                        img_feat = controller_img_feats.to(
-                                            self.device
-                                        ).view(1, 1, 4608)
+                                    img_feat = controller_img_feats.to(
+                                        self.device
+                                    ).view(1, 1, 4608)
 
                                 if not first_step or first_step_is_controller:
                                     # query controller to continue or not
@@ -581,11 +558,14 @@ class PACMANTrainer(BaseILTrainer):
                                     )
                                     planner_actions.append(action)
 
-                                episode_done = (
-                                    action == 3
-                                    or episode_length
-                                    >= config.IL.NAV.max_episode_length
-                                )
+                            else:
+                                action = 0
+
+                            episode_done = (
+                                action == 3
+                                or episode_length
+                                >= config.IL.NAV.max_episode_length
+                            )
 
                             agent_pos = env.sim.get_agent_state().position
 
@@ -597,17 +577,14 @@ class PACMANTrainer(BaseILTrainer):
                             if episode_done:
                                 break
 
-                            if j == "fwd-only":
-                                my_action = 1
-                            else:
-                                if action == 0:
-                                    my_action = 1  # forward
-                                elif action == 1:
-                                    my_action = 2  # left
-                                elif action == 2:
-                                    my_action = 3  # right
-                                elif action == 3:
-                                    my_action = 0  # stop
+                            if action == 0:
+                                my_action = 1  # forward
+                            elif action == 1:
+                                my_action = 2  # left
+                            elif action == 2:
+                                my_action = 3  # right
+                            elif action == 3:
+                                my_action = 0  # stop
 
                             observations = env.sim.step(my_action)
                             img = observations["rgb"]
@@ -634,10 +611,9 @@ class PACMANTrainer(BaseILTrainer):
                             else:
                                 metrics_slug["stop_{}".format(i)] = 0
 
-                            if i != "rand_init":
-                                metrics_slug[
-                                    "d_0_{}".format(i)
-                                ] = dists_to_target[0]
+                            metrics_slug["d_0_{}".format(i)] = dists_to_target[
+                                0
+                            ]
 
                 # collate and update metrics
                 metrics_list = []
