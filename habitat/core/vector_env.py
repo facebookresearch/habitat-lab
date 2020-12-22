@@ -53,6 +53,13 @@ CLOSE_COMMAND = "close"
 CALL_COMMAND = "call"
 COUNT_EPISODES_COMMAND = "count_episodes"
 
+EPISODE_OVER_NAME = "episode_over"
+GET_METRICS_NAME = "get_metrics"
+CURRENT_EPISODE_NAME = "current_episode"
+NUMBER_OF_EPISODE_NAME = "number_of_episodes"
+ACTION_SPACE_NAME = "action_space"
+OBSERVATION_SPACE_NAME = "observation_space"
+
 
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
@@ -141,17 +148,17 @@ class VectorEnv:
         self._is_closed = False
 
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("observation_space", None)))
+            write_fn((CALL_COMMAND, (OBSERVATION_SPACE_NAME, None)))
         self.observation_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("action_space", None)))
+            write_fn((CALL_COMMAND, (ACTION_SPACE_NAME, None)))
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("number_of_episodes", None)))
+            write_fn((CALL_COMMAND, (NUMBER_OF_EPISODE_NAME, None)))
         self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
@@ -285,7 +292,7 @@ class VectorEnv:
     def current_episodes(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("current_episode", None)))
+            write_fn((CALL_COMMAND, (CURRENT_EPISODE_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -305,7 +312,7 @@ class VectorEnv:
     def episode_over(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("episode_over", None)))
+            write_fn((CALL_COMMAND, (EPISODE_OVER_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -315,7 +322,7 @@ class VectorEnv:
     def get_metrics(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, ("get_metrics", None)))
+            write_fn((CALL_COMMAND, (GET_METRICS_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
