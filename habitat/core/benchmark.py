@@ -17,6 +17,7 @@ from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat.core.env import Env
 
+import numpy as np
 import time
 import sys
 
@@ -141,6 +142,13 @@ class Benchmark:
             while count_episodes < num_episodes:
                 agent.reset(last_success=last_success)
                 observations = self._env.reset()
+
+                # Skip infeasible episodes. This is easy to detect using spl
+                # because start-to-path is recomputed and if it is infinite
+                # spl will become nan.
+                while not np.isfinite(self._env.get_metrics()['spl']):
+                    observations = self._env.reset()
+
                 # metrics = self._env.get_metrics()
                 action = None
                 num_steps = 0
