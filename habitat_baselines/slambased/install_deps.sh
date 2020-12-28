@@ -56,7 +56,7 @@ cd "${MAINDIR}" || exit
 cd ORB_SLAM2-PythonBindings/src || exit
 ln -s "${MAINDIR}"/eigen3_installed/include/eigen3/Eigen Eigen
 cd "${MAINDIR}"/ORB_SLAM2-PythonBindings || exit
-#mkdir build
+mkdir build
 cd build || exit
 CONDA_DIR="$(dirname $(dirname $(which conda)))"
 CONDA_DIR=\"${CONDA_DIR}/envs/HandcraftedAgents/lib/python3.6/site-packages/\"
