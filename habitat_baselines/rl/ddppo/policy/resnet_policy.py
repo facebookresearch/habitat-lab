@@ -106,8 +106,10 @@ class ResNetEncoder(nn.Module):
             self._n_input_depth = 0
 
         if normalize_visual_inputs:
+            # The bias of initial_count helps early training stability but
+            # doesn't effect the final mean and var by any measurable amount
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
-                self._n_input_depth + self._n_input_rgb
+                self._n_input_depth + self._n_input_rgb, initial_count=1e4
             )
         else:
             self.running_mean_and_var = nn.Sequential()
