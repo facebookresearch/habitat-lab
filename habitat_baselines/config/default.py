@@ -53,6 +53,7 @@ _C.EVAL.USE_CKPT_CONFIG = True
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
+_C.RL.fp16_mode = "off"
 _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
 _C.RL.SUCCESS_REWARD = 10.0

@@ -10,6 +10,7 @@ import re
 import shutil
 import tarfile
 from collections import defaultdict
+from distutils.version import StrictVersion
 from io import BytesIO
 from typing import (
     Any,
@@ -38,6 +39,14 @@ from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 cv2 = try_cv2_import()
+
+
+def is_fp16_supported() -> bool:
+    return StrictVersion(torch.__version__) >= StrictVersion("1.6.0")
+
+
+def is_fp16_autocast_supported() -> bool:
+    return StrictVersion(torch.__version__) >= StrictVersion("1.7.0")
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -70,7 +79,7 @@ class CategoricalNet(nn.Module):
 
     def forward(self, x: Tensor) -> CustomFixedCategorical:
         x = self.linear(x)
-        return CustomFixedCategorical(logits=x)
+        return CustomFixedCategorical(logits=x.float())
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:

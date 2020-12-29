@@ -164,7 +164,8 @@ class ResNetEncoder(nn.Module):
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
-                rgb_observations.float() / 255.0
+                rgb_observations.to(dtype=next(self.parameters()).dtype)
+                / 255.0
             )  # normalize RGB
             cnn_input.append(rgb_observations)
 

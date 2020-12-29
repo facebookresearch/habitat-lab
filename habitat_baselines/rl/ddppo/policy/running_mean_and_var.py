@@ -42,8 +42,8 @@ class RunningMeanAndVar(nn.Module):
                 distrib.all_reduce(new_var)
                 new_var /= distrib.get_world_size()
 
-            new_mean = new_mean.view(1, -1, 1, 1)
-            new_var = new_var.view(1, -1, 1, 1)
+            new_mean = new_mean.view(1, -1, 1, 1).float()
+            new_var = new_var.view(1, -1, 1, 1).float()
 
             m_a = self._var * (self._count)
             m_b = new_var * (new_count)
@@ -63,7 +63,9 @@ class RunningMeanAndVar(nn.Module):
 
             self._count += new_count
 
-        inv_stdev = torch.rsqrt(
-            torch.max(self._var, torch.full_like(self._var, 1e-2))
+        inv_stdev = torch.rsqrt(torch.clamp(self._var, min=1e-2)).to(
+            dtype=x.dtype
         )
-        return torch.addcmul(-self._mean * inv_stdev, x, inv_stdev)
+        return torch.addcmul(
+            -self._mean.to(dtype=x.dtype) * inv_stdev, x, inv_stdev
+        )

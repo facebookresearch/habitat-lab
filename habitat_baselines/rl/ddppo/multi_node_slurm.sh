@@ -20,4 +20,5 @@ export MASTER_ADDR
 set -x
 srun python -u -m habitat_baselines.run \
     --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
-    --run-type train
+    --run-type train \
+    RL.fp16_mode mixed

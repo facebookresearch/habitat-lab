@@ -30,8 +30,8 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
     REQUEUE,
@@ -44,9 +44,15 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
+from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
-from habitat_baselines.utils.common import batch_obs, generate_video
+from habitat_baselines.utils.common import (
+    batch_obs,
+    generate_video,
+    is_fp16_autocast_supported,
+    is_fp16_supported,
+)
 from habitat_baselines.utils.env_utils import construct_envs
 
 
@@ -82,6 +88,29 @@ class PPOTrainer(BaseRLTrainer):
         # Distirbuted if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
+
+        if self.config.RL.fp16_mode not in ("off", "autocast", "mixed"):
+            raise RuntimeError(
+                f"Unknown fp16 mode '{self.config.RL.fp16_mode}'"
+            )
+
+        if self.config.RL.fp16_mode != "off" and not torch.cuda.is_available():
+            logger.warn(
+                "FP16 requires CUDA but CUDA is not available, setting to off"
+            )
+
+        self._fp16_mixed = self.config.RL.fp16_mode == "mixed"
+        self._fp16_autocast = self.config.RL.fp16_mode == "autocast"
+
+        if self._fp16_mixed and not is_fp16_supported():
+            raise RuntimeError(
+                "FP16 requires PyTorch >= 1.6.0, please update your PyTorch"
+            )
+
+        if self._fp16_autocast and not is_fp16_autocast_supported():
+            raise RuntimeError(
+                "FP16 autocast requires PyTorch >= 1.7.0, please update your PyTorch"
+            )
 
     @property
     def obs_space(self):
@@ -164,6 +193,11 @@ class PPOTrainer(BaseRLTrainer):
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
+        if self._fp16_mixed:
+            for name, module in self.actor_critic.named_modules():
+                if "running_mean_and_var" not in name:
+                    module.to(dtype=torch.float16)
+
         self.agent = (DDPPO if self._is_distributed else PPO)(
             actor_critic=self.actor_critic,
             clip_param=ppo_cfg.clip_param,
@@ -175,6 +209,8 @@ class PPOTrainer(BaseRLTrainer):
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
             use_normalized_advantage=ppo_cfg.use_normalized_advantage,
+            fp16_autocast=self._fp16_autocast,
+            fp16_mixed=self._fp16_mixed,
         )
 
     def _init_envs(self, config=None):
@@ -246,11 +282,12 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             self.agent.init_distributed(find_unused_params=True)
 
-        logger.info(
-            "agent number of parameters: {}".format(
-                sum(param.numel() for param in self.agent.parameters())
+        if rank0_only():
+            logger.info(
+                "agent number of parameters: {}".format(
+                    sum(param.numel() for param in self.agent.parameters())
+                )
             )
-        )
 
         obs_space = self.obs_space
         if self._static_encoder:
@@ -278,13 +315,22 @@ class PPOTrainer(BaseRLTrainer):
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
         )
         self.rollouts.to(self.device)
+        if self._fp16_mixed:
+            self.rollouts.to_fp16()
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         if self._static_encoder:
-            with torch.no_grad():
+            if self._fp16_mixed:
+                batch = TensorDict.map_func(
+                    lambda v: v.to(dtype=torch.float16)
+                    if v.dtype == torch.float16
+                    else v,
+                    batch,
+                ).to_tree()
+            with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                 batch["visual_features"] = self._encoder(batch)
 
         self.rollouts.buffers["observations"][0] = batch
@@ -315,8 +361,17 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
+
+        def _cast(t: torch.Tensor):
+            if t.dtype == torch.float16:
+                return t.to(dtype=torch.float32)
+            else:
+                return t
+
         checkpoint = {
-            "state_dict": self.agent.state_dict(),
+            "state_dict": {
+                k: _cast(v) for k, v in self.agent.state_dict().items()
+            },
             "config": self.config,
         }
         if extra_state is not None:
@@ -389,7 +444,7 @@ class PPOTrainer(BaseRLTrainer):
         t_sample_action = time.time()
 
         # sample actions
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
             step_batch = self.rollouts.buffers[
                 self.rollouts.steps[buffer_index], env_slice
             ]
@@ -491,7 +546,14 @@ class PPOTrainer(BaseRLTrainer):
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
 
         if self._static_encoder:
-            with torch.no_grad():
+            if self._fp16_mixed:
+                batch = TensorDict.map_func(
+                    lambda v: v.to(dtype=torch.float16)
+                    if v.dtype == torch.float16
+                    else v,
+                    batch,
+                ).to_tree()
+            with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                 batch["visual_features"] = self._encoder(batch)
 
         self.rollouts.insert(
@@ -516,7 +578,7 @@ class PPOTrainer(BaseRLTrainer):
     def _update_agent(self):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
             step_batch = self.rollouts.buffers[self.rollouts.step]
 
             next_value = self.actor_critic.get_value(
@@ -680,9 +742,7 @@ class PPOTrainer(BaseRLTrainer):
         interrupted_state = load_interrupted_state()
         if interrupted_state is not None:
             self.agent.load_state_dict(interrupted_state["state_dict"])
-            self.agent.optimizer.load_state_dict(
-                interrupted_state["optim_state"]
-            )
+            self.agent.load_optim_state_dict(interrupted_state["optim_state"])
             lr_scheduler.load_state_dict(interrupted_state["lr_sched_state"])
 
             requeue_stats = interrupted_state["requeue_stats"]
@@ -733,7 +793,7 @@ class PPOTrainer(BaseRLTrainer):
                         save_interrupted_state(
                             dict(
                                 state_dict=self.agent.state_dict(),
-                                optim_state=self.agent.optimizer.state_dict(),
+                                optim_state=self.agent.optim_state_dict(),
                                 lr_sched_state=lr_scheduler.state_dict(),
                                 config=self.config,
                                 requeue_stats=requeue_stats,
@@ -912,7 +972,7 @@ class PPOTrainer(BaseRLTrainer):
         ):
             current_episodes = self.envs.current_episodes()
 
-            with torch.no_grad():
+            with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                 (
                     _,
                     actions,

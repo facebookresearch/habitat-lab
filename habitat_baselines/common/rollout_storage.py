@@ -90,6 +90,16 @@ class RolloutStorage:
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
 
+    def to_fp16(self):
+        self.buffers["recurrent_hidden_states"] = self.buffers[
+            "recurrent_hidden_states"
+        ].to(dtype=torch.float16)
+        self.buffers["observations"].map_in_place(
+            lambda v: v.to(dtype=torch.float16)
+            if v.dtype == torch.float32
+            else v
+        )
+
     def insert(
         self,
         observations=None,
