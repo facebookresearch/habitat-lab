@@ -1,4 +1,5 @@
-# Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
+# Note:  Hyperparameters have been changed slightly from
+# the paper to allow for things to easily run on 1 GPU
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
@@ -13,7 +14,8 @@ VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_PROCESSES: 6
+# This was 6 for mp3d and 8 for gibson in the paper
+NUM_PROCESSES: 4
 # Note:  To train the an RGB only model,
 # you may need to use 8 processes with 4 mini batches,
 # If so, the number of updates should be cut in half
@@ -24,10 +26,16 @@ LOG_INTERVAL: 25
 CHECKPOINT_INTERVAL: 2000
 
 RL:
+  SUCCESS_REWARD: 10.0
+
+  POLICY:
+    name: "PointNavBaselinePolicy"
+
   PPO:
     # ppo params
-    clip_param: 0.2
+    clip_param: 0.1
     ppo_epoch: 4
+    # This was 4 in the paper
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
@@ -42,3 +50,5 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+
+    use_normalized_advantage: True

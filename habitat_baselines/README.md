@@ -16,10 +16,10 @@ This will also install additional requirements for each sub-module in `habitat_b
 
 **paper**: [https://arxiv.org/abs/1707.06347](https://arxiv.org/abs/1707.06347)
 
-**code**: majority of the PPO implementation is taken from
+**code**: The PPO implementation is based on
 [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr).
 
-**dependencies**: pytorch 1.0, for installing refer to [pytorch.org](https://pytorch.org/)
+**dependencies**: A recent version of pytorch, for installing refer to [pytorch.org](https://pytorch.org/)
 
 For training on sample data please follow steps in the repository README. You should download the sample [test scene data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip), extract it under the main repo (`habitat-lab/`, extraction will create a data folder at `habitat-lab/data`) and run the below training command.
 
@@ -33,8 +33,8 @@ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointna
 python -u habitat_baselines/run.py --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type eval
 ```
 
-We also provide trained RGB, RGBD, Blind PPO models.
-To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v1.zip) and unzip and specify model path [here](agents/ppo_agents.py#L132).
+We also provide trained RGB, RGBD, and Depth PPO  models for MatterPort3D and Gibson.
+To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) and unzip and specify model path [here](agents/ppo_agents.py#L149).
 
 The `habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparamters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#task-datasets) instead of the test scenes.
 Change the field `task_config` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `configs/tasks/pointnav_mp3d.yaml` for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#task-datasets).
