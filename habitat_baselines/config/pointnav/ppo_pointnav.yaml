@@ -12,16 +12,15 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+EVAL_CKPT_PATH_DIR: "data/checkpoints"
 NUM_PROCESSES: 6
-# Note:  To train the an RGB only model,
-# you may need to use 8 processes with 4 mini batches,
-# If so, the number of updates should be cut in half
 SENSORS: ["DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 270000
+CHECKPOINT_FOLDER: "data/checkpoints"
+# 75 million frames
+NUM_UPDATES: 97656
 LOG_INTERVAL: 25
-CHECKPOINT_INTERVAL: 2000
+# 100 checkpoints
+CHECKPOINT_INTERVAL: 976
 
 RL:
   PPO:

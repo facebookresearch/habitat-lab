@@ -1,6 +1,3 @@
-# Note:  Hyperparameters have been changed slightly from
-# the paper to allow for things to easily run on 1 GPU
-
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
@@ -15,7 +12,7 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
-NUM_PROCESSES: 4
+NUM_PROCESSES: 6
 # Note:  To train the an RGB only model,
 # you may need to use 8 processes with 4 mini batches,
 # If so, the number of updates should be cut in half
@@ -35,8 +32,7 @@ RL:
     # ppo params
     clip_param: 0.1
     ppo_epoch: 4
-    # This was 4 in the paper
-    num_mini_batch: 2
+    num_mini_batch: 4
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
