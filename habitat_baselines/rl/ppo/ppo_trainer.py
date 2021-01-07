@@ -109,7 +109,7 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._fp16_autocast and not is_fp16_autocast_supported():
             raise RuntimeError(
-                "FP16 autocast requires PyTorch >= 1.7.0, please update your PyTorch"
+                "FP16 autocast requires PyTorch >= 1.7.1, please update your PyTorch"
             )
 
     @property
@@ -326,7 +326,7 @@ class PPOTrainer(BaseRLTrainer):
             if self._fp16_mixed:
                 batch = TensorDict.map_func(
                     lambda v: v.to(dtype=torch.float16)
-                    if v.dtype == torch.float16
+                    if v.dtype == torch.float32
                     else v,
                     batch,
                 ).to_tree()
@@ -549,7 +549,7 @@ class PPOTrainer(BaseRLTrainer):
             if self._fp16_mixed:
                 batch = TensorDict.map_func(
                     lambda v: v.to(dtype=torch.float16)
-                    if v.dtype == torch.float16
+                    if v.dtype == torch.float32
                     else v,
                     batch,
                 ).to_tree()

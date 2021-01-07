@@ -46,7 +46,7 @@ def is_fp16_supported() -> bool:
 
 
 def is_fp16_autocast_supported() -> bool:
-    return StrictVersion(torch.__version__) >= StrictVersion("1.7.0")
+    return StrictVersion(torch.__version__) >= StrictVersion("1.7.1")
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore

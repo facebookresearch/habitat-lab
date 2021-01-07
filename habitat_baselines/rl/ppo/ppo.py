@@ -122,6 +122,7 @@ class PPO(nn.Module):
             else None
         )
         self._fp16_autocast = fp16_autocast
+        self._fp16_mixed = fp16_mixed
 
         self._consecutive_steps_with_scale_reduce = 0
         self._prev_grad_scale = (
@@ -158,6 +159,7 @@ class PPO(nn.Module):
             rollouts.buffers["returns"][:-1]
             - rollouts.buffers["value_preds"][:-1]
         )
+        print(advantages.mean())
         if not self.use_normalized_advantage:
             return advantages
 
@@ -177,6 +179,7 @@ class PPO(nn.Module):
             )
 
             for batch in data_generator:
+                self.optimizer.zero_grad()
                 with torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                     (
                         values,
@@ -191,43 +194,45 @@ class PPO(nn.Module):
                         batch["actions"],
                     )
 
-                values = values.float()
-                action_log_probs = action_log_probs.float()
-                dist_entropy = dist_entropy.float()
+                    if self._fp16_mixed:
+                        values = values.float()
+                        action_log_probs = action_log_probs.float()
+                        dist_entropy = dist_entropy.float()
 
-                ratio = torch.exp(action_log_probs - batch["action_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
+                    ratio = torch.exp(
+                        action_log_probs - batch["action_log_probs"]
                     )
-                    * batch["advantages"]
-                )
-                action_loss = -(torch.min(surr1, surr2).mean())
-
-                if self.use_clipped_value_loss:
-                    value_pred_clipped = batch["value_preds"] + (
-                        values - batch["value_preds"]
-                    ).clamp(-self.clip_param, self.clip_param)
-                    value_losses = (values - batch["returns"]).pow(2)
-                    value_losses_clipped = (
-                        value_pred_clipped - batch["returns"]
-                    ).pow(2)
-                    value_loss = 0.5 * torch.max(
-                        value_losses, value_losses_clipped
+                    surr1 = ratio * batch["advantages"]
+                    surr2 = (
+                        torch.clamp(
+                            ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
+                        )
+                        * batch["advantages"]
                     )
-                else:
-                    value_loss = 0.5 * (batch["returns"] - values).pow(2)
+                    action_loss = -(torch.min(surr1, surr2).mean())
 
-                value_loss = value_loss.mean()
-                dist_entropy = dist_entropy.mean()
+                    if self.use_clipped_value_loss:
+                        value_pred_clipped = batch["value_preds"] + (
+                            values - batch["value_preds"]
+                        ).clamp(-self.clip_param, self.clip_param)
+                        value_losses = (values - batch["returns"]).pow(2)
+                        value_losses_clipped = (
+                            value_pred_clipped - batch["returns"]
+                        ).pow(2)
+                        value_loss = 0.5 * torch.max(
+                            value_losses, value_losses_clipped
+                        )
+                    else:
+                        value_loss = 0.5 * (batch["returns"] - values).pow(2)
 
-                self.optimizer.zero_grad()
-                total_loss = (
-                    value_loss * self.value_loss_coef
-                    + action_loss
-                    - dist_entropy * self.entropy_coef
-                )
+                    value_loss = value_loss.mean()
+                    dist_entropy = dist_entropy.mean()
+
+                    total_loss = (
+                        value_loss * self.value_loss_coef
+                        + action_loss
+                        - dist_entropy * self.entropy_coef
+                    )
 
                 self.before_backward(total_loss)
                 if self.grad_scaler is not None:

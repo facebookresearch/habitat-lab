@@ -122,7 +122,10 @@ class RolloutStorage:
         )
 
         current_step = dict(
-            actions=actions, action_log_probs=action_log_probs, rewards=rewards
+            actions=actions,
+            action_log_probs=action_log_probs,
+            value_preds=value_preds,
+            rewards=rewards,
         )
 
         next_step = {k: v for k, v in next_step.items() if v is not None}

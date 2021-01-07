@@ -5,12 +5,12 @@ ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb"
+TENSORBOARD_DIR: "tb/debug"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_SIMULATORS: 8
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
+NUM_SIMULATORS: 32
+SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 2.5e9
@@ -48,7 +48,7 @@ RL:
     # Use double buffered sampling, typically helps
     # when environment time is similar or large than
     # policy inference time during rollout generation
-    use_double_buffered_sampler: False
+    use_double_buffered_sampler: True
 
   DDPPO:
     sync_frac: 0.6
@@ -66,6 +66,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2

@@ -38,7 +38,7 @@ class RunningMeanAndVar(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         if self.training:
-            n = x.size(0)
+            n = x.size(1)
             x_channels_first = (
                 x.transpose(1, 0).contiguous().view(x.size(1), -1)
             )
