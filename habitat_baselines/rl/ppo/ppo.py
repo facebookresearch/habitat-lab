@@ -108,10 +108,11 @@ class PPO(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.optimizer = optim.Adam(
+        self.optimizer = optim.AdamW(
             list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
             lr=lr,
             eps=eps,
+            weight_decay=1e-4 if fp16_autocast or fp16_mixed else 0.0,
         )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
@@ -131,7 +132,7 @@ class PPO(nn.Module):
             else None
         )
 
-        self.fp16_optim_manager = (
+        self.fp16_optim_params = (
             FP16OptimParamManager(self.optimizer) if fp16_mixed else None
         )
 
@@ -148,8 +149,8 @@ class PPO(nn.Module):
         if self.grad_scaler is not None:
             self.grad_scaler.load_state_dict(state_dict["grad_scaler"])
 
-        if self.fp16_optim_manager is not None:
-            self.fp16_optim_manager.set_fp32_params_from_optim()
+        if self.fp16_optim_params is not None:
+            self.fp16_optim_params.set_fp32_params_from_optim()
 
     def forward(self, *x):
         raise NotImplementedError
@@ -159,7 +160,6 @@ class PPO(nn.Module):
             rollouts.buffers["returns"][:-1]
             - rollouts.buffers["value_preds"][:-1]
         )
-        print(advantages.mean())
         if not self.use_normalized_advantage:
             return advantages
 
@@ -179,7 +179,6 @@ class PPO(nn.Module):
             )
 
             for batch in data_generator:
-                self.optimizer.zero_grad()
                 with torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                     (
                         values,
@@ -265,8 +264,8 @@ class PPO(nn.Module):
         pass
 
     def after_backward(self, loss: Tensor) -> None:
-        if self.fp16_optim_manager is not None:
-            self.fp16_optim_manager.sync_grads()
+        if self.fp16_optim_params is not None:
+            self.fp16_optim_params.sync_grads()
         if self.grad_scaler is not None:
             self.grad_scaler.unscale_(self.optimizer)
 
@@ -276,9 +275,11 @@ class PPO(nn.Module):
         )
 
     def after_step(self) -> None:
-        if self.fp16_optim_manager is not None:
-            self.fp16_optim_manager.sync_params()
-            self.fp16_optim_manager.clear_grads()
+        if self.fp16_optim_params is not None:
+            self.fp16_optim_params.sync_params()
+            self.fp16_optim_params.clear_grads()
+        else:
+            self.optimizer.zero_grad()
 
         if self.grad_scaler is not None:
             self.grad_scaler.update()

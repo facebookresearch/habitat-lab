@@ -9,8 +9,8 @@ TENSORBOARD_DIR: "tb/debug"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_SIMULATORS: 32
-SENSORS: ["DEPTH_SENSOR"]
+NUM_SIMULATORS: 8
+SENSORS: ["RGB_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 2.5e9
@@ -48,7 +48,7 @@ RL:
     # Use double buffered sampling, typically helps
     # when environment time is similar or large than
     # policy inference time during rollout generation
-    use_double_buffered_sampler: True
+    use_double_buffered_sampler: False
 
   DDPPO:
     sync_frac: 0.6

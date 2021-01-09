@@ -761,7 +761,9 @@ class PPOTrainer(BaseRLTrainer):
 
         with (
             TensorboardWriter(
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                self.config.TENSORBOARD_DIR,
+                flush_secs=self.flush_secs,
+                purge_step=self.num_steps_done,
             )
             if rank0_only()
             else contextlib.suppress()
