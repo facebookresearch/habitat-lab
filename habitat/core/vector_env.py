@@ -50,14 +50,15 @@ STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
 RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
-OBSERVATION_SPACE_COMMAND = "observation_space"
-ACTION_SPACE_COMMAND = "action_space"
-NUMBER_OF_EPISODES_COMMAND = "number_of_episodes"
 CALL_COMMAND = "call"
-EPISODE_COMMAND = "current_episode"
 COUNT_EPISODES_COMMAND = "count_episodes"
-EPISODE_OVER = "episode_over"
-GET_METRICS = "get_metrics"
+
+EPISODE_OVER_NAME = "episode_over"
+GET_METRICS_NAME = "get_metrics"
+CURRENT_EPISODE_NAME = "current_episode"
+NUMBER_OF_EPISODE_NAME = "number_of_episodes"
+ACTION_SPACE_NAME = "action_space"
+OBSERVATION_SPACE_NAME = "observation_space"
 
 
 def _make_env_fn(
@@ -147,17 +148,17 @@ class VectorEnv:
         self._is_closed = False
 
         for write_fn in self._connection_write_fns:
-            write_fn((OBSERVATION_SPACE_COMMAND, None))
+            write_fn((CALL_COMMAND, (OBSERVATION_SPACE_NAME, None)))
         self.observation_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((ACTION_SPACE_COMMAND, None))
+            write_fn((CALL_COMMAND, (ACTION_SPACE_NAME, None)))
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((NUMBER_OF_EPISODES_COMMAND, None))
+            write_fn((CALL_COMMAND, (NUMBER_OF_EPISODE_NAME, None)))
         self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
@@ -223,36 +224,25 @@ class VectorEnv:
                 elif command == RENDER_COMMAND:
                     connection_write_fn(env.render(*data[0], **data[1]))
 
-                elif command in {
-                    OBSERVATION_SPACE_COMMAND,
-                    ACTION_SPACE_COMMAND,
-                    NUMBER_OF_EPISODES_COMMAND,
-                }:
-                    connection_write_fn(getattr(env, command))
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
-                    if function_args is None or len(function_args) == 0:
-                        result = getattr(env, function_name)()
-                    else:
-                        result = getattr(env, function_name)(**function_args)
-                    connection_write_fn(result)
+                    if function_args is None:
+                        function_args = {}
 
-                # TODO: update CALL_COMMAND for getting attribute like this
-                elif command == EPISODE_COMMAND:
-                    connection_write_fn(env.current_episode)
+                    result_or_fn = getattr(env, function_name)
+
+                    if len(function_args) > 0 or callable(result_or_fn):
+                        result = result_or_fn(**function_args)
+                    else:
+                        result = result_or_fn
+
+                    connection_write_fn(result)
 
                 elif command == COUNT_EPISODES_COMMAND:
                     connection_write_fn(len(env.episodes))
 
-                elif command == EPISODE_OVER:
-                    connection_write_fn(env.episode_over)
-
-                elif command == GET_METRICS:
-                    result = env.get_metrics()
-                    connection_write_fn(result)
-
                 else:
-                    raise NotImplementedError
+                    raise NotImplementedError(f"Unknown command {command}")
 
                 with profiling_wrapper.RangeContext("worker wait for command"):
                     command, data = connection_read_fn()
@@ -302,7 +292,7 @@ class VectorEnv:
     def current_episodes(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((EPISODE_COMMAND, None))
+            write_fn((CALL_COMMAND, (CURRENT_EPISODE_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -322,7 +312,7 @@ class VectorEnv:
     def episode_over(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((EPISODE_OVER, None))
+            write_fn((CALL_COMMAND, (EPISODE_OVER_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -332,7 +322,7 @@ class VectorEnv:
     def get_metrics(self):
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((GET_METRICS, None))
+            write_fn((CALL_COMMAND, (GET_METRICS_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -471,11 +461,11 @@ class VectorEnv:
         function_name: str,
         function_args: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        r"""Calls a function (which is passed by name) on the selected env and
-        returns the result.
+        r"""Calls a function or retrieves a property/member variable (which is passed by name)
+        on the selected env and returns the result.
 
         :param index: which env to call the function on.
-        :param function_name: the name of the function to call on the env.
+        :param function_name: the name of the function to call or property to retrieve on the env.
         :param function_args: optional function args.
         :return: result of calling the function.
         """

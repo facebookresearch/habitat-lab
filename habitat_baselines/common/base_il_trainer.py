@@ -55,7 +55,9 @@ class BaseILTrainer(BaseTrainer):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
     def _make_results_dir(self) -> None:
-        raise NotImplementedError
+        r"""Makes directory for saving eval results."""
+        dir_name = self.config.RESULTS_DIR.format(split="val")
+        os.makedirs(dir_name, exist_ok=True)
 
     def train(self) -> None:
         raise NotImplementedError

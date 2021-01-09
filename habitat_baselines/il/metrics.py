@@ -15,7 +15,7 @@ import torch
 class Metric:
     def __init__(self, info=None, metric_names=None, log_json=None):
         self.info = info
-        self.metric_names = metric_names
+        self.metric_names = sorted(metric_names) if metric_names else []
 
         self.metrics = [[None, None, None] for _ in self.metric_names]
 
@@ -68,10 +68,10 @@ class Metric:
         for k, v in self.info.items():
             stat_string += "[{}:{}]".format(k, v)
 
-        stat_string += "[iters:{}]".format(self.num_iters)
+        stat_string += "[iters:{}]\n".format(self.num_iters)
         for i in range(len(self.metric_names)):
             if self.metrics[i][mode] is not None:
-                stat_string += "[{}:{:.5f}]".format(
+                stat_string += "[{}:{:.3f}]".format(
                     self.metric_names[i],
                     self.metrics[i][mode],
                 )
@@ -99,7 +99,7 @@ class Metric:
 
 class VqaMetric(Metric):
     def __init__(self, info=None, metric_names=None, log_json=None):
-        Metric.__init__(self, info, metric_names, log_json)
+        super().__init__(info, metric_names, log_json)
 
     def compute_ranks(
         self, scores: torch.Tensor, labels: torch.Tensor
@@ -112,3 +112,8 @@ class VqaMetric(Metric):
             if ranks[i] == 1:
                 accuracy[i] = 1
         return accuracy, ranks
+
+
+class NavMetric(Metric):
+    def __init__(self, info=None, metric_names=None, log_json=None):
+        super().__init__(info, metric_names, log_json)
