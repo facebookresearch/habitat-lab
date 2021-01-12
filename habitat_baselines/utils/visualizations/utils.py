@@ -5,10 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import cv2
 import numpy as np
 import torch
 
+from habitat.core.utils import try_cv2_import
 from habitat_baselines.utils.common import (
     tensor_to_bgr_images,
     tensor_to_depth_images,
@@ -18,6 +18,8 @@ try:
     from habitat_sim.utils.common import d3_40_colors_rgb
 except ImportError:
     d3_40_colors_rgb = None
+
+cv2 = try_cv2_import()
 
 
 def save_rgb_results(

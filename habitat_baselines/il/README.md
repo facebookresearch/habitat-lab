@@ -107,5 +107,35 @@ Results from evaluation are stored in `data/eqa/vqa/results/val`.
 
 ----
 
+## NAV model (PACMAN)
 
-[ Code and information about other trainers to be added soon. ]
+### Information:
+The NAV model (known as *PACMAN*) predicts the actions required to navigate the environment to the required destination based on question and RGB scene input.
+
+(more information about network can be found in the [paper](https://embodiedqa.org/paper.pdf)).
+
+### Configuration:
+
+Configuration for training the NAV-PACMAN model can be found in `habitat_baselines/config/eqa/il_pacman_nav.yaml`.
+The trainer also picks the EQA CNN pre-trained encoder checkpoint by default from `data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt`.
+
+### Train:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_pacman_nav.yaml --run-type train
+```
+
+Training checkpoints are by default stored in `data/eqa/nav/checkpoints`.
+
+
+### Eval:
+
+```
+ python -u habitat_baselines/run.py --exp-config habitat_baselines/config/eqa/il_pacman_nav.yaml --run-type eval
+```
+
+Results from evaluation are stored in `data/eqa/nav/results/val`.
+
+### Example results:
+
+![](https://user-images.githubusercontent.com/24846546/78616220-2d942380-7863-11ea-9092-34a760352555.gif) ![](https://user-images.githubusercontent.com/24846546/78616221-2ec55080-7863-11ea-987b-2fdc2a802f24.gif) ![](https://user-images.githubusercontent.com/24846546/78616897-2cfc8c80-7865-11ea-8a4c-0afdfefea49c.gif)

@@ -353,14 +353,35 @@ class PointNavResNetNet(Net):
             goal_observations = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ]
-            goal_observations = torch.stack(
-                [
-                    goal_observations[:, 0],
-                    torch.cos(-goal_observations[:, 1]),
-                    torch.sin(-goal_observations[:, 1]),
-                ],
-                -1,
-            )
+            if goal_observations.shape[1] == 2:
+                # Polar Dimensionality 2
+                # 2D polar transform
+                goal_observations = torch.stack(
+                    [
+                        goal_observations[:, 0],
+                        torch.cos(-goal_observations[:, 1]),
+                        torch.sin(-goal_observations[:, 1]),
+                    ],
+                    -1,
+                )
+            else:
+                assert (
+                    goal_observations.shape[1] == 3
+                ), "Unsupported dimensionality"
+                vertical_angle_sin = torch.sin(goal_observations[:, 2])
+                # Polar Dimensionality 3
+                # 3D Polar transformation
+                goal_observations = torch.stack(
+                    [
+                        goal_observations[:, 0],
+                        torch.cos(-goal_observations[:, 1])
+                        * vertical_angle_sin,
+                        torch.sin(-goal_observations[:, 1])
+                        * vertical_angle_sin,
+                        torch.cos(goal_observations[:, 2]),
+                    ],
+                    -1,
+                )
 
             x.append(self.tgt_embeding(goal_observations))
 
