@@ -41,10 +41,10 @@ class PointNavResNetPolicy(Policy):
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
-        num_recurrent_layers: int = 2,
-        rnn_type: str = "LSTM",
+        num_recurrent_layers: int = 1,
+        rnn_type: str = "GRU",
         resnet_baseplanes: int = 32,
-        backbone: str = "resnet50",
+        backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         **kwargs

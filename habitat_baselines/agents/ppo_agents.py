@@ -19,14 +19,14 @@ import habitat
 from habitat.config import Config
 from habitat.core.agent import Agent
 from habitat.core.simulator import Observations
-from habitat_baselines.rl.ppo import PointNavBaselinePolicy
+from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
 def get_default_config() -> Config:
     c = Config()
-    c.INPUT_TYPE = "blind"
-    c.MODEL_PATH = "data/checkpoints/blind.pth"
+    c.INPUT_TYPE = "rgb"
+    c.MODEL_PATH = "data/checkpoints/gibson-rgb-best.pth"
     c.RESOLUTION = 256
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
@@ -77,10 +77,11 @@ class PPOAgent(Agent):
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True  # type: ignore
 
-        self.actor_critic = PointNavBaselinePolicy(
+        self.actor_critic = PointNavResNetPolicy(
             observation_space=observation_spaces,
             action_space=action_spaces,
             hidden_size=self.hidden_size,
+            normalize_visual_inputs="rgb" in spaces,
         )
         self.actor_critic.to(self.device)
 
@@ -142,10 +143,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input-type",
-        default="blind",
+        default="rgb",
         choices=["blind", "rgb", "depth", "rgbd"],
     )
-    parser.add_argument("--model-path", default="", type=str)
+    parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument(
         "--task-config", type=str, default="configs/tasks/pointnav.yaml"
     )
@@ -153,7 +154,8 @@ def main():
 
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
-    agent_config.MODEL_PATH = args.model_path
+    if args.model_path is not None:
+        agent_config.MODEL_PATH = args.model_path
 
     agent = PPOAgent(agent_config)
     benchmark = habitat.Benchmark(config_paths=args.task_config)

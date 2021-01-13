@@ -1,4 +1,6 @@
-# Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
+# Note this config here only for reproducibility's sake.
+# ppo_pointnav.yaml contains the known best practices
+# and should be used as the starting point instead.
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
@@ -12,22 +14,26 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/checkpoints"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+# This was 6 for mp3d and 8 for gibson in the paper
 NUM_PROCESSES: 6
 SENSORS: ["DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/checkpoints"
-# 75 million frames
-NUM_UPDATES: 97656
+CHECKPOINT_FOLDER: "data/new_checkpoints"
+NUM_UPDATES: 270000
 LOG_INTERVAL: 25
-# 100 checkpoints
-CHECKPOINT_INTERVAL: 976
+CHECKPOINT_INTERVAL: 2000
 
 RL:
+  SUCCESS_REWARD: 10.0
+
+  POLICY:
+    name: "PointNavBaselinePolicy"
+
   PPO:
     # ppo params
-    clip_param: 0.2
+    clip_param: 0.1
     ppo_epoch: 4
-    num_mini_batch: 2
+    num_mini_batch: 4
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
@@ -41,3 +47,5 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+
+    use_normalized_advantage: True
