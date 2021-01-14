@@ -210,7 +210,8 @@ class PPOTrainer(BaseRLTrainer):
             self.config.SIMULATOR_GPU_ID = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
             self.config.TASK_CONFIG.SEED += (
-                torch.distributed.get_world_size() * self.config.NUM_SIMULATORS
+                torch.distributed.get_world_size()
+                * self.config.NUM_ENVIRONMENTS
             )
             self.config.freeze()
 
@@ -427,7 +428,7 @@ class PPOTrainer(BaseRLTrainer):
         self.env_time += time.time() - t_step_env
 
         self.rollouts.insert(
-            recurrent_hidden_states=recurrent_hidden_states,
+            next_recurrent_hidden_states=recurrent_hidden_states,
             actions=actions,
             action_log_probs=actions_log_probs,
             value_preds=values,
@@ -495,9 +496,9 @@ class PPOTrainer(BaseRLTrainer):
                 batch["visual_features"] = self._encoder(batch)
 
         self.rollouts.insert(
-            batch,
+            next_observations=batch,
             rewards=rewards,
-            masks=not_done_masks,
+            next_masks=not_done_masks,
             buffer_index=buffer_index,
         )
 
@@ -870,23 +871,29 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.NUM_SIMULATORS,
+            self.config.NUM_ENVIRONMENTS,
             self.actor_critic.net.num_recurrent_layers,
             ppo_cfg.hidden_size,
             device=self.device,
         )
         prev_actions = torch.zeros(
-            self.config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.long
+            self.config.NUM_ENVIRONMENTS,
+            1,
+            device=self.device,
+            dtype=torch.long,
         )
         not_done_masks = torch.zeros(
-            self.config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.bool
+            self.config.NUM_ENVIRONMENTS,
+            1,
+            device=self.device,
+            dtype=torch.bool,
         )
         stats_episodes: Dict[
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
 
         rgb_frames = [
-            [] for _ in range(self.config.NUM_SIMULATORS)
+            [] for _ in range(self.config.NUM_ENVIRONMENTS)
         ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)

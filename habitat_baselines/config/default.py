@@ -31,8 +31,8 @@ _C.TENSORBOARD_DIR = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
-_C.NUM_SIMULATORS = 16
-_C.NUM_PROCESSES = -1
+_C.NUM_ENVIRONMENTS = 16
+_C.NUM_PROCESSES = -1  # depricated
 _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
@@ -55,13 +55,13 @@ _C.EVAL.USE_CKPT_CONFIG = True
 _C.RL = CN()
 _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
-_C.RL.SUCCESS_REWARD = 10.0
+_C.RL.SUCCESS_REWARD = 2.5
 _C.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
 # POLICY CONFIG
 # -----------------------------------------------------------------------------
 _C.RL.POLICY = CN()
-_C.RL.POLICY.name = "PointNavBaselinePolicy"
+_C.RL.POLICY.name = "PointNavResNetPolicy"
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------
@@ -92,10 +92,10 @@ _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = list()
 _C.RL.PPO = CN()
 _C.RL.PPO.clip_param = 0.2
 _C.RL.PPO.ppo_epoch = 4
-_C.RL.PPO.num_mini_batch = 16
+_C.RL.PPO.num_mini_batch = 2
 _C.RL.PPO.value_loss_coef = 0.5
 _C.RL.PPO.entropy_coef = 0.01
-_C.RL.PPO.lr = 7e-4
+_C.RL.PPO.lr = 2.5e-4
 _C.RL.PPO.eps = 1e-5
 _C.RL.PPO.max_grad_norm = 0.5
 _C.RL.PPO.num_steps = 5
@@ -105,8 +105,12 @@ _C.RL.PPO.use_linear_clip_decay = False
 _C.RL.PPO.gamma = 0.99
 _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
-_C.RL.PPO.use_normalized_advantage = True
+_C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
+# Use double buffered sampling, typically helps
+# when environment time is similar or large than
+# policy inference time during rollout generation
+# Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
@@ -114,9 +118,9 @@ _C.RL.PPO.use_double_buffered_sampler = False
 _C.RL.DDPPO = CN()
 _C.RL.DDPPO.sync_frac = 0.6
 _C.RL.DDPPO.distrib_backend = "GLOO"
-_C.RL.DDPPO.rnn_type = "LSTM"
-_C.RL.DDPPO.num_recurrent_layers = 2
-_C.RL.DDPPO.backbone = "resnet50"
+_C.RL.DDPPO.rnn_type = "GRU"
+_C.RL.DDPPO.num_recurrent_layers = 1
+_C.RL.DDPPO.backbone = "resnet18"
 _C.RL.DDPPO.pretrained_weights = "data/ddppo-models/gibson-2plus-resnet50.pth"
 # Loads pretrained weights
 _C.RL.DDPPO.pretrained = False
@@ -206,11 +210,11 @@ def get_config(
     if config.NUM_PROCESSES != -1:
         warnings.warn(
             "NUM_PROCESSES is depricated and will be removed in a future version."
-            "  Use NUM_SIMULATORS instead."
-            "  Overwriting NUM_SIMULATORS with NUM_PROCESSES for backwards compatibility."
+            "  Use NUM_ENVIRONMENTS instead."
+            "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
         )
 
-        config.NUM_SIMULATORS = config.NUM_PROCESSES
+        config.NUM_ENVIRONMENTS = config.NUM_PROCESSES
 
     config.freeze()
     return config

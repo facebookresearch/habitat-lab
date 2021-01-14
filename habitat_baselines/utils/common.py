@@ -31,10 +31,13 @@ from torch import nn as nn
 
 from habitat import logger
 from habitat.core.dataset import Episode
+from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+
+cv2 = try_cv2_import()
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -227,8 +230,6 @@ def tensor_to_bgr_images(
     Returns:
         list of images
     """
-    import cv2
-
     images = []
 
     for img_tensor in tensor:

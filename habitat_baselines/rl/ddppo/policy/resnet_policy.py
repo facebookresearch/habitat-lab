@@ -42,10 +42,10 @@ class PointNavResNetPolicy(Policy):
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
-        num_recurrent_layers: int = 2,
-        rnn_type: str = "LSTM",
+        num_recurrent_layers: int = 1,
+        rnn_type: str = "GRU",
         resnet_baseplanes: int = 32,
-        backbone: str = "resnet50",
+        backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         **kwargs
@@ -356,14 +356,35 @@ class PointNavResNetNet(Net):
             goal_observations = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ]
-            goal_observations = torch.stack(
-                [
-                    goal_observations[:, 0],
-                    torch.cos(-goal_observations[:, 1]),
-                    torch.sin(-goal_observations[:, 1]),
-                ],
-                -1,
-            )
+            if goal_observations.shape[1] == 2:
+                # Polar Dimensionality 2
+                # 2D polar transform
+                goal_observations = torch.stack(
+                    [
+                        goal_observations[:, 0],
+                        torch.cos(-goal_observations[:, 1]),
+                        torch.sin(-goal_observations[:, 1]),
+                    ],
+                    -1,
+                )
+            else:
+                assert (
+                    goal_observations.shape[1] == 3
+                ), "Unsupported dimensionality"
+                vertical_angle_sin = torch.sin(goal_observations[:, 2])
+                # Polar Dimensionality 3
+                # 3D Polar transformation
+                goal_observations = torch.stack(
+                    [
+                        goal_observations[:, 0],
+                        torch.cos(-goal_observations[:, 1])
+                        * vertical_angle_sin,
+                        torch.sin(-goal_observations[:, 1])
+                        * vertical_angle_sin,
+                        torch.cos(goal_observations[:, 2]),
+                    ],
+                    -1,
+                )
 
             x.append(self.tgt_embeding(goal_observations))
 

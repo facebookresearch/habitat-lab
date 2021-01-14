@@ -17,9 +17,9 @@ conda install ffmpeg -c conda-forge -y
 cd "${MAINDIR}" || exit
 mkdir eigen3
 cd eigen3 || exit
-wget http://bitbucket.org/eigen/eigen/get/3.3.5.tar.gz
-tar -xzf 3.3.5.tar.gz
-cd eigen-eigen-b3f3d4950030 || exit
+wget https://gitlab.com/libeigen/eigen/-/archive/3.3.5/eigen-3.3.5.tar.gz
+tar -xzf eigen-3.3.5.tar.gz
+cd eigen-3.3.5 || exit
 mkdir build
 cd build || exit
 cmake .. -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/eigen3_installed/
@@ -58,8 +58,9 @@ ln -s "${MAINDIR}"/eigen3_installed/include/eigen3/Eigen Eigen
 cd "${MAINDIR}"/ORB_SLAM2-PythonBindings || exit
 mkdir build
 cd build || exit
-CONDA_DIR="$(dirname $(dirname \"$(which conda)\"))"
-sed -i "s,lib/python3.5/dist-packages,${CONDA_DIR}/envs/HandcraftedAgents/lib/python3.6/site-packages/,g" ../CMakeLists.txt
+CONDA_DIR="$(dirname $(dirname $(which conda)))"
+CONDA_DIR=\"${CONDA_DIR}/envs/HandcraftedAgents/lib/python3.6/site-packages/\"
+sed -i "s,lib/python3.5/dist-packages,${CONDA_DIR},g" ../CMakeLists.txt
 cmake .. -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython3.6m.so -DPYTHON_EXECUTABLE:FILEPATH=$(which python) -DCMAKE_LIBRARY_PATH="${MAINDIR}"/ORBSLAM2_installed/lib -DCMAKE_INCLUDE_PATH="${MAINDIR}"/ORBSLAM2_installed/include;"${MAINDIR}"/eigen3_installed/include/eigen3 -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/pyorbslam2_installed
 make
 make install

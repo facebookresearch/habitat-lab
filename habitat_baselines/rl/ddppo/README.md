@@ -27,7 +27,7 @@ All weights available as a zip [here](https://dl.fbaipublicfiles.com/habitat/dat
 | ResNet50 + LSTM512 | Gibson 4+ | 0.922 | 0.917 | [gibson-4plus-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-resnet50.pth) |
 | ResNet50 + LSTM512 | Gibson 4+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.956 | 0.941 | [gibson-4plus-mp3d-train-val-test-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-mp3d-train-val-test-resnet50.pth) |
 | ResNet50 + LSTM512 | Gibson 2+ | 0.956 | 0.944 | [gibson-2plus-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-resnet50.pth)|
-| SE-ResNeXt50 + LSTM512 | Gibson 2+ | 0.959 | 0.943 | [gibson-2plus-se-resneXt101.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-se-resneXt101.pth)|
+| SE-ResNeXt50 + LSTM512 | Gibson 2+ | 0.959 | 0.943 | [gibson-2plus-se-resneXt50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-se-resneXt50.pth)|
 | SE-ResNeXt101 + LSTM1024 | Gibson 2+ | 0.969 | 0.948 | [gibson-2plus-se-resneXt101-lstm1024.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-se-resneXt101-lstm1024.pth)|
 
 ### RGB models

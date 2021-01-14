@@ -153,6 +153,8 @@ def generate_pointnav_episode(
                 far_dist=furthest_dist_limit,
                 geodesic_to_euclid_ratio=geodesic_to_euclid_min_ratio,
             )
+            if is_compatible:
+                break
         if is_compatible:
             angle = np.random.uniform(0, 2 * np.pi)
             source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]

@@ -1613,7 +1613,7 @@ def construct_envs(
     :return: VectorEnv object created according to specification.
     """
 
-    num_processes = config.NUM_SIMULATORS
+    num_processes = config.NUM_ENVIRONMENTS
     configs = []
     env_classes = [env_class for _ in range(num_processes)]
     dataset = habitat.datasets.make_dataset(config.TASK_CONFIG.DATASET.TYPE)
@@ -1890,7 +1890,7 @@ class RearrangementTrainer(PPOTrainer):
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
-            config.NUM_SIMULATORS = 1
+            config.NUM_ENVIRONMENTS = 1
             config.freeze()
 
         logger.info(f"env config: {config}")
@@ -1903,20 +1903,26 @@ class RearrangementTrainer(PPOTrainer):
             )
             ppo_cfg = self.config.RL.PPO
             test_recurrent_hidden_states = torch.zeros(
-                config.NUM_SIMULATORS,
+                config.NUM_ENVIRONMENTS,
                 self.actor_critic.net.num_recurrent_layers,
                 ppo_cfg.hidden_size,
                 device=self.device,
             )
             prev_actions = torch.zeros(
-                config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.long
+                config.NUM_ENVIRONMENTS,
+                1,
+                device=self.device,
+                dtype=torch.long,
             )
             not_done_masks = torch.zeros(
-                config.NUM_SIMULATORS, 1, device=self.device, dtype=torch.bool
+                config.NUM_ENVIRONMENTS,
+                1,
+                device=self.device,
+                dtype=torch.bool,
             )
 
             rgb_frames = [
-                [] for _ in range(self.config.NUM_SIMULATORS)
+                [] for _ in range(self.config.NUM_ENVIRONMENTS)
             ]  # type: List[List[np.ndarray]]
 
             if len(config.VIDEO_OPTION) > 0:
@@ -2025,7 +2031,7 @@ baseline_config.TORCH_GPU_ID = 0
 baseline_config.VIDEO_OPTION = ["disk"]
 baseline_config.TENSORBOARD_DIR = "data/tb"
 baseline_config.VIDEO_DIR = "data/videos"
-baseline_config.NUM_SIMULATORS = 2
+baseline_config.NUM_ENVIRONMENTS = 2
 baseline_config.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 baseline_config.CHECKPOINT_FOLDER = "data/checkpoints"
 baseline_config.TOTAL_NUM_STEPS = -1.0

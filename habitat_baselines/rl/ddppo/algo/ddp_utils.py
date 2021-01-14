@@ -36,7 +36,12 @@ def is_slurm_job() -> bool:
 
 
 def is_slurm_batch_job() -> bool:
-    return is_slurm_job() and os.environ.get("SLURM_JOB_NAME", "bash") not in (
+    r"""Heuristic to determine if a slurm job is a batch job or not. Batch jobs
+    will have a job name that is not a shell unless the user specifically set the job
+    name to that of a shell. Interactive jobs have a shell name as their job name.
+    """
+    return is_slurm_job() and os.environ.get("SLURM_JOB_NAME", None) not in (
+        None,
         "bash",
         "zsh",
         "fish",
@@ -56,6 +61,31 @@ def rank0_only(fn: Callable) -> Callable:
 
 
 def rank0_only(fn: Optional[Callable] = None) -> Union[Callable, bool]:
+    r"""Helper function to only execute code if a process is world rank 0
+
+    Can be used both as a function in an if statement,
+
+    .. code:: py
+
+        if rank0_only():
+            ...
+
+    or as a decorator,
+
+    .. code:: py
+
+        @rank0_only
+        def fn_for_r0_only(...):
+            ...
+
+    :param fn: Function to wrap and only execute if the process is rank 0.
+        If a process is rank 0, the function will be run and it's return value
+        will be returned.  If a process is not rank 0, then the function will not
+        be ran and :py:`None` will be returned.
+
+    :return: The wrapped function if :p:`fn` is not :py:`None`, otherwise
+        whether or not this process is rank 0
+    """
     if fn is None:
         return (
             not torch.distributed.is_initialized()

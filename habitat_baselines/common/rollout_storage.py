@@ -92,23 +92,23 @@ class RolloutStorage:
 
     def insert(
         self,
-        observations=None,
-        recurrent_hidden_states=None,
+        next_observations=None,
+        next_recurrent_hidden_states=None,
         actions=None,
         action_log_probs=None,
         value_preds=None,
         rewards=None,
-        masks=None,
+        next_masks=None,
         buffer_index: int = 0,
     ):
         if not self.is_double_buffered:
             assert buffer_index == 0
 
         next_step = dict(
-            observations=observations,
-            recurrent_hidden_states=recurrent_hidden_states,
+            observations=next_observations,
+            recurrent_hidden_states=next_recurrent_hidden_states,
             prev_actions=actions,
-            masks=masks,
+            masks=next_masks,
         )
 
         current_step = dict(
@@ -177,19 +177,23 @@ class RolloutStorage:
                 )
 
     def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
-        num_simulators = advantages.size(1)
-        assert num_simulators >= num_mini_batch, (
-            "Trainer requires the number of simulators ({}) "
+        num_environments = advantages.size(1)
+        assert num_environments >= num_mini_batch, (
+            "Trainer requires the number of environments ({}) "
             "to be greater than or equal to the number of "
-            "trainer mini batches ({}).".format(num_simulators, num_mini_batch)
+            "trainer mini batches ({}).".format(
+                num_environments, num_mini_batch
+            )
         )
-        if num_simulators % num_mini_batch != 0:
+        if num_environments % num_mini_batch != 0:
             warnings.warn(
-                "Number of simulators ({}) is not a multiple of the number of mini batches ({})".format(
-                    num_simulators, num_mini_batch
+                "Number of environments ({}) is not a multiple of the"
+                " number of mini batches ({}).  This results in mini batches"
+                " of different sizes, which can harm training performance.".format(
+                    num_environments, num_mini_batch
                 )
             )
-        for inds in torch.randperm(num_simulators).chunk(num_mini_batch):
+        for inds in torch.randperm(num_environments).chunk(num_mini_batch):
             batch = self.buffers[0 : self.step, inds]
             batch["advantages"] = advantages[0 : self.step, inds]
             batch["recurrent_hidden_states"] = batch[

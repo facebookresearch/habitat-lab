@@ -3,6 +3,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+
+
 import copy
 import numbers
 from typing import Callable, Dict, Optional, Tuple, Union, overload
@@ -16,8 +18,7 @@ TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
 
 class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
-    r"""A dictionary of tensors that can be indexed like a tensor or like a dictionary.  Also
-        supports access via dot notation.
+    r"""A dictionary of tensors that can be indexed like a tensor or like a dictionary.
 
     .. code:: py
         t = TensorDict(a=torch.randn(2, 2), b=TensorDict(c=torch.randn(3, 3)))
@@ -153,4 +154,4 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
         return self.map_func(func, self, self)
 
     def __deepcopy__(self, _memo=None) -> "TensorDict":
-        return TensorDict.from_tree(copy.deepcopy(self.to_tree()))
+        return TensorDict.from_tree(copy.deepcopy(self.to_tree(), memo=_memo))
