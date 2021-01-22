@@ -238,6 +238,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
+            # Ignore key as it gets propogated to sensor below
             ignore_keys={"gpu_gpu"},
         )
         sim_config.scene_id = self.habitat_config.SCENE
@@ -245,8 +246,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         overwrite_config(
             config_from=self._get_agent_config(),
             config_to=agent_config,
+            # These keys are only used by Hab-Lab
             ignore_keys={
                 "is_set_start_state",
+                # This is the Sensor Config. Unpacked below
                 "sensors",
                 "start_position",
                 "start_rotation",
@@ -262,6 +265,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
+                # These keys are only used by Hab-Lab
+                # or translated into the sensor config manually
                 ignore_keys={
                     "height",
                     "hfov",
