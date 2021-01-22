@@ -70,7 +70,6 @@ def overwrite_config(
             if hasattr(config_to, low_attr):
                 setattr(config_to, low_attr, if_config_to_lower(value))
             else:
-                # TODO consider new type of Error for this?
                 raise NameError(
                     f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
                     It's also not in the list of keys to ignore: {ignore_keys}
