@@ -71,11 +71,11 @@ def overwrite_config(
                 setattr(config_to, low_attr, if_config_to_lower(value))
             else:
                 # TODO consider new type of Error for this?
-                raise RuntimeError(
+                raise NameError(
                     f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
                     It's also not in the list of keys to ignore: {ignore_keys}
-                    Did you make a typo in the YAML config?
-                    If not the version of habitat_sim may not be supported: {config_from}
+                    Did you make a typo in the config?
+                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}: {config_from}
                     """
                 )
 
