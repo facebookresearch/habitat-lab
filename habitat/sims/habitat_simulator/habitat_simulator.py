@@ -74,7 +74,7 @@ def overwrite_config(
                     f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
                     It's also not in the list of keys to ignore: {ignore_keys}
                     Did you make a typo in the config?
-                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}: {config_from}
+                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}
                     """
                 )
 
