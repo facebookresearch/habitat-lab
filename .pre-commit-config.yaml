@@ -22,6 +22,14 @@ repos:
     -   id: mixed-line-ending
         args: ['--fix=lf']
 
+-   repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.0.0
+    hooks:
+    -   id: pretty-format-ini
+        args: [--autofix]
+    -   id: pretty-format-toml
+        args: [--autofix]
+
 -   repo: https://github.com/timothycrosley/isort
     rev: 5.6.4
     hooks:
@@ -75,6 +83,7 @@ repos:
         pass_filenames: true
         additional_dependencies:
             - 'jupytext==1.5.2'
+            - 'nbformat<=5.0.8'
             - 'black==20.8b1'
             - 'isort==5.4.2'
         always_run: false
