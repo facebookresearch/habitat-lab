@@ -96,7 +96,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
             super().__setitem__(index, value)
         else:
             if strict and (self.keys() != value.keys()):
-                raise RuntimeError(
+                raise KeyError(
                     "Keys don't match: Dest={} Source={}".format(
                         self.keys(), value.keys()
                     )
@@ -105,9 +105,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
             for k in self.keys():
                 if k not in value:
                     if strict:
-                        raise RuntimeError(
-                            f"Key {k} not in new value dictionary"
-                        )
+                        raise KeyError(f"Key {k} not in new value dictionary")
                     else:
                         continue
 

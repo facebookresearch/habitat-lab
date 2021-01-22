@@ -23,6 +23,11 @@ class RunningMeanAndVar(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         if self.training:
             n = x.size(0)
+            # We will need to do reductions (mean) over the channel dimension,
+            # so moving channels to the first dimension and then flattening
+            # will make those faster.  Further, it makes things more numerically stable
+            # for fp16 since it is done in a single reduction call instead of
+            # multiple
             x_channels_first = (
                 x.transpose(1, 0).contiguous().view(x.size(1), -1)
             )
@@ -66,4 +71,7 @@ class RunningMeanAndVar(nn.Module):
         inv_stdev = torch.rsqrt(
             torch.max(self._var, torch.full_like(self._var, 1e-2))
         )
+        # This is the same as
+        # (x - self._mean) * inv_stdev but is faster since it can
+        # make use of addcmul and is more numerically stable in fp16
         return torch.addcmul(-self._mean * inv_stdev, x, inv_stdev)

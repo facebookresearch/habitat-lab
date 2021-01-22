@@ -162,8 +162,8 @@ def build_rnn_inputs(
 
     Use the returned select_inds and build_rnn_out_from_seq to invert this.
 
-    :param x: A (T*N, -1) tensor of the data to build the PackedSequence out of
-    :param not_dones: A (T*N) tensor where not_dones[i] == False indicates an episode is done
+    :param x: A (T * N, -1) tensor of the data to build the PackedSequence out of
+    :param not_dones: A (T * N) tensor where not_dones[i] == False indicates an episode is done
     :param rnn_states: A (-1, N, -1) tensor of the rnn_hidden_states
 
     :return: tuple(x_seq, rnn_states, select_inds, rnn_state_batch_inds, last_episode_in_batch_mask)
@@ -231,6 +231,16 @@ def build_rnn_out_from_seq(
     last_episode_in_batch_mask,
     N: int,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    r"""Construct the output of the rnn from a packed sequence returned by
+        forward propping an RNN on the packed sequence returned by :ref:`build_rnn_inputs`.
+
+    :param x_seq: The packed sequence output from the rnn
+    :param hidden_statess: The hidden states output from the rnn
+    :param select_inds: Returned from :ref:`build_rnn_inputs`
+    :param rnn_state_batch_inds: Returned from :ref:`build_rnn_inputs`
+    :param last_episode_in_batch_mask: Returned from :ref:`build_rnn_inputs`
+    :param N: The number of simulator instances in the batch of experience.
+    """
     x = x_seq.data.index_select(0, _invert_permutation(select_inds))
 
     last_hidden_states = torch.masked_select(
@@ -249,6 +259,13 @@ def build_rnn_out_from_seq(
 
 
 class RNNStateEncoder(nn.Module):
+    r"""RNN encoder for use with RL and possibly IL.
+
+    The main functionality this provides over just using PyTorch's RNN interface directly
+    is that it takes an addition masks input that resets the hidden state between two adjacent
+    timesteps to handle episodes ending in the middle of a rollout.
+    """
+
     def layer_init(self):
         for name, param in self.rnn.named_parameters():
             if "weight" in name:
@@ -382,8 +399,19 @@ class GRUStateEncoder(RNNStateEncoder):
 
 
 def build_rnn_state_encoder(
-    input_size, hidden_size, rnn_type="GRU", num_layers=1
+    input_size: int,
+    hidden_size: int,
+    rnn_type: str = "GRU",
+    num_layers: int = 1,
 ):
+    r"""Factory for :ref:`RNNStateEncoder`.  Returns one with either a GRU or LSTM based on
+        the specified RNN type.
+
+    :param input_size: The input size of the RNN
+    :param hidden_size: The hidden dimension of the RNN
+    :param rnn_types: The type of the RNN cell.  Can either be GRU or LSTM
+    :param num_layers: The number of RNN layers.
+    """
     rnn_type = rnn_type.lower()
     if rnn_type == "gru":
         return GRUStateEncoder(input_size, hidden_size, num_layers)
