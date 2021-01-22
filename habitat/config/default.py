@@ -226,6 +226,7 @@ SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+SIMULATOR_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -260,6 +261,7 @@ _C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
 _C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
+_C.SIMULATOR.AGENT_0.BODY_MESH_CONFIG = ""
 _C.SIMULATOR.AGENTS = ["AGENT_0"]
 # -----------------------------------------------------------------------------
 # SIMULATOR HABITAT_SIM_V0

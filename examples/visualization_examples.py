@@ -98,10 +98,27 @@ def example_get_topdown_map():
         )
 
 
+def example_get_ortho_map():
+    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config.defrost()
+    config.SIMULATOR.RGB_SENSOR.ORIENTATION = [-np.pi / 3, -np.pi / 3, 0]
+    config.SIMULATOR.RGB_SENSOR.SENSOR_SUBTYPE = "ORTHOGRAPHIC"
+    config.SIMULATOR.AGENT_0.BODY_MESH_CONFIG = "data/objects/locobot_merged"
+    config.freeze()
+    dataset = habitat.make_dataset(
+        id_dataset=config.DATASET.TYPE, config=config.DATASET
+    )
+
+    with habitat.Env(config=config, dataset=dataset) as env:
+        obs = env.reset()
+        imageio.imsave(os.path.join(IMAGE_DIR, "ortho.png"), obs["rgb"])
+
+
 def main():
     example_pointnav_draw_target_birdseye_view()
     example_get_topdown_map()
     example_pointnav_draw_target_birdseye_view_agent_on_border()
+    example_get_ortho_map()
 
 
 if __name__ == "__main__":

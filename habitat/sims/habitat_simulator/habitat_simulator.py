@@ -3,7 +3,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -11,6 +10,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Union,
     cast,
 )
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 import habitat_sim
 from habitat.core.dataset import Episode
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -44,7 +45,9 @@ from habitat.core.spaces import Space
 RGBSENSOR_DIMENSION = 3
 
 
-def overwrite_config(config_from: Config, config_to: Any) -> None:
+def overwrite_config(
+    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
+) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
@@ -53,6 +56,7 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
     Args:
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
+        ignore_keys: Optional set of keys to ignore in config_to
     """
 
     def if_config_to_lower(config):
@@ -61,9 +65,16 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
         else:
             return config
 
+    has_ignores = ignore_keys is None
     for attr, value in config_from.items():
-        if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), if_config_to_lower(value))
+        low_attr = attr.lower()
+        if has_ignores or low_attr not in ignore_keys:
+            if hasattr(config_to, low_attr):
+                setattr(config_to, low_attr, if_config_to_lower(value))
+            else:
+                logger.warn(
+                    f"{low_attr} is not found on target {config_to} but is found on config_from. Did you make a typo in the YAML config?: {config_from}"
+                )
 
 
 @registry.register_sensor
@@ -192,29 +203,21 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def __init__(self, config: Config) -> None:
         self.habitat_config = config
-        agent_config = self._get_agent_config()
-
-        sim_sensors = []
-        for sensor_name in agent_config.SENSORS:
-            sensor_cfg = getattr(self.habitat_config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
-
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.TYPE
-            )
-            sim_sensors.append(sensor_type(sensor_cfg))
-
-        self._sensor_suite = SensorSuite(sim_sensors)
-        self.sim_config = self.create_sim_config(self._sensor_suite)
+        self.__sensor_suites: Dict[
+            int, SensorSuite
+        ] = self._regen_sensor_suites()
+        self.sim_config = self.create_sim_config(self.__sensor_suites)
         self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
+        # TODO Make action space MultiAgent compatible
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
         self._prev_sim_obs: Optional[Observations] = None
+        self._load_agent_body_meshes()
 
     def create_sim_config(
-        self, _sensor_suite: SensorSuite
+        self, _sensor_suite: Dict[int, SensorSuite]
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
         # Check if Habitat-Sim is post Scene Config Update
@@ -222,44 +225,83 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             raise RuntimeError(
                 "Incompatible version of Habitat-Sim detected, please upgrade habitat_sim"
             )
+
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
         )
         sim_config.scene_id = self.habitat_config.SCENE
-        agent_config = habitat_sim.AgentConfiguration()
-        overwrite_config(
-            config_from=self._get_agent_config(), config_to=agent_config
-        )
-
-        sensor_specifications = []
-        for sensor in _sensor_suite.sensors.values():
-            sim_sensor_cfg = habitat_sim.SensorSpec()
+        agent_configs = []
+        for agent_id, sensor_suite in self.__sensor_suites.items():
+            agent_config = habitat_sim.AgentConfiguration()
             overwrite_config(
-                config_from=sensor.config, config_to=sim_sensor_cfg
+                config_from=self._get_agent_config(agent_id),
+                config_to=agent_config,
+                ignore_keys={"body_mesh_config"},
             )
-            sim_sensor_cfg.uuid = sensor.uuid
-            sim_sensor_cfg.resolution = list(
-                sensor.observation_space.shape[:2]
+            sensor_specifications = []
+            for sensor in sensor_suite.sensors.values():
+                sim_sensor_cfg = habitat_sim.SensorSpec()
+                sim_sensor_cfg.sensor_subtype = getattr(
+                    habitat_sim.SensorSubType,
+                    sensor.config.SENSOR_SUBTYPE.upper(),
+                )
+                overwrite_config(
+                    config_from=sensor.config,
+                    config_to=sim_sensor_cfg,
+                    ignore_keys={
+                        "sensor_subtype",
+                        "height",
+                        "hfov",
+                        "max_depth",
+                        "min_depth",
+                        "normalize_depth",
+                        "type",
+                        "width",
+                    },
+                )
+                sim_sensor_cfg.uuid = sensor.uuid
+                sim_sensor_cfg.resolution = list(
+                    sensor.observation_space.shape[:2]
+                )
+                sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
+
+                # TODO(maksymets): Add configure method to Sensor API to avoid
+                # accessing child attributes through parent interface
+                # We know that the Sensor has to be one of these Sensors
+                sensor = cast(HabitatSimVizSensors, sensor)
+                sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
+                sim_sensor_cfg.gpu2gpu_transfer = (
+                    self.habitat_config.HABITAT_SIM_V0.GPU_GPU
+                )
+                sensor_specifications.append(sim_sensor_cfg)
+
+            agent_config.sensor_specifications = sensor_specifications
+            agent_config.action_space = (
+                registry.get_action_space_configuration(
+                    self.habitat_config.ACTION_SPACE_CONFIG
+                )(self.habitat_config).get()
             )
-            sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
+            agent_configs.append(agent_config)
 
-            # TODO(maksymets): Add configure method to Sensor API to avoid
-            # accessing child attributes through parent interface
-            # We know that the Sensor has to be one of these Sensors
-            sensor = cast(HabitatSimVizSensors, sensor)
-            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-            sim_sensor_cfg.gpu2gpu_transfer = (
-                self.habitat_config.HABITAT_SIM_V0.GPU_GPU
-            )
-            sensor_specifications.append(sim_sensor_cfg)
+        return habitat_sim.Configuration(sim_config, agent_configs)
 
-        agent_config.sensor_specifications = sensor_specifications
-        agent_config.action_space = registry.get_action_space_configuration(
-            self.habitat_config.ACTION_SPACE_CONFIG
-        )(self.habitat_config).get()
+    def _regen_sensor_suites(self) -> Dict[int, SensorSuite]:
+        __sensor_suites: Dict[int, SensorSuite] = dict()
+        for agent_id, _agent_name in enumerate(self.habitat_config.AGENTS):
+            sim_sensors = []
+            agent_config = self._get_agent_config(agent_id=agent_id)
+            for sensor_name in agent_config.SENSORS:
+                sensor_cfg = getattr(self.habitat_config, sensor_name)
+                sensor_type = registry.get_sensor(sensor_cfg.TYPE)
 
-        return habitat_sim.Configuration(sim_config, [agent_config])
+                assert (
+                    sensor_type is not None
+                ), "invalid sensor type {}".format(sensor_cfg.TYPE)
+                sim_sensors.append(sensor_type(sensor_cfg))
+
+            __sensor_suites[agent_id] = SensorSuite(sim_sensors)
+        return __sensor_suites
 
     @property
     def sensor_suite(self) -> SensorSuite:
@@ -268,6 +310,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     @property
     def action_space(self) -> Space:
         return self._action_space
+
+    @property
+    def _sensor_suite(self) -> SensorSuite:
+        return self.__sensor_suites[self.habitat_config.DEFAULT_AGENT_ID]
+
+    @_sensor_suite.setter
+    def _sensor_suite(self, s: SensorSuite) -> None:
+        self._sensor_suites[self.habitat_config.DEFAULT_AGENT_ID] = s
 
     def _update_agents_state(self) -> bool:
         is_updated = False
@@ -282,6 +332,21 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 is_updated = True
 
         return is_updated
+
+    def _load_agent_body_meshes(self) -> None:
+        for agent_id, _ in enumerate(self.habitat_config.AGENTS):
+            agent_body_mesh_config = self._get_agent_config(
+                agent_id=agent_id
+            ).BODY_MESH_CONFIG
+            if agent_body_mesh_config != "":
+                agent_body_mesh = (
+                    self.get_object_template_manager().load_configs(
+                        agent_body_mesh_config
+                    )[0]
+                )
+                self.add_object(
+                    agent_body_mesh, self.agents[agent_id].scene_node
+                )
 
     def reset(self) -> Observations:
         sim_obs = super().reset()
@@ -322,18 +387,24 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = habitat_config.SCENE == self._current_scene
         self.habitat_config = habitat_config
-        self.sim_config = self.create_sim_config(self._sensor_suite)
+        self.__sensor_suites = self._regen_sensor_suites()
+        self.sim_config = self.create_sim_config(self.__sensor_suites)
         if not is_same_scene:
             self._current_scene = habitat_config.SCENE
             self.close()
             super().reconfigure(self.sim_config)
-
+            self._load_agent_body_meshes()
         self._update_agents_state()
 
     def geodesic_distance(
         self,
         position_a: Union[Sequence[float], ndarray],
-        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
+        position_b: Union[
+            Sequence[float],
+            Sequence[Sequence[float]],
+            ndarray,
+            Sequence[ndarray],
+        ],
         episode: Optional[Episode] = None,
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
@@ -385,7 +456,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def forward_vector(self) -> np.ndarray:
         return -np.array([0.0, 0.0, 1.0])
 
-    def get_straight_shortest_path_points(self, position_a, position_b):
+    def get_straight_shortest_path_points(
+        self,
+        position_a: Union[ndarray, Sequence[float]],
+        position_b: Union[ndarray, Sequence[float]],
+    ):
         path = habitat_sim.ShortestPath()
         path.requested_start = position_a
         path.requested_end = position_b
@@ -522,7 +597,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return self.pathfinder.island_radius(position)
 
     @property
-    def previous_step_collided(self):
+    def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
 
         Returns:
