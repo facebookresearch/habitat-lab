@@ -37,6 +37,8 @@ _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
 _C.NUM_CHECKPOINTS = 10
+# Number of model updates between checkpoints
+_C.CHECKPOINT_INTERVAL = -1
 _C.TOTAL_NUM_STEPS = -1.0
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"

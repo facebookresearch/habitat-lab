@@ -392,7 +392,8 @@ class PPOTrainer(BaseRLTrainer):
         # sample actions
         with torch.no_grad():
             step_batch = self.rollouts.buffers[
-                self.rollouts.steps[buffer_index], env_slice
+                self.rollouts.current_rollout_step_idxs[buffer_index],
+                env_slice,
             ]
 
             profiling_wrapper.range_push("compute actions")
@@ -518,7 +519,9 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()
         with torch.no_grad():
-            step_batch = self.rollouts.buffers[self.rollouts.step]
+            step_batch = self.rollouts.buffers[
+                self.rollouts.current_rollout_step_idx
+            ]
 
             next_value = self.actor_critic.get_value(
                 step_batch["observations"],
@@ -691,6 +694,9 @@ class PPOTrainer(BaseRLTrainer):
             self.pth_time = requeue_stats["pth_time"]
             self.num_steps_done = requeue_stats["num_steps_done"]
             self.num_updates_done = requeue_stats["num_updates_done"]
+            self._last_checkpoint_percent = requeue_stats[
+                "_last_checkpoint_percent"
+            ]
             count_checkpoints = requeue_stats["count_checkpoints"]
             prev_time = requeue_stats["prev_time"]
 
@@ -728,8 +734,8 @@ class PPOTrainer(BaseRLTrainer):
                             count_checkpoints=count_checkpoints,
                             num_steps_done=self.num_steps_done,
                             num_updates_done=self.num_updates_done,
-                            prev_time=(time.time() - self.t_start) + prev_time,
                             _last_checkpoint_percent=self._last_checkpoint_percent,
+                            prev_time=(time.time() - self.t_start) + prev_time,
                         )
                         save_interrupted_state(
                             dict(

@@ -80,12 +80,15 @@ class RolloutStorage:
         assert (self._num_envs % self._nbuffers) == 0
 
         self.numsteps = numsteps
-        self.steps = [0 for _ in range(self._nbuffers)]
+        self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
 
     @property
-    def step(self):
-        assert all(s == self.steps[0] for s in self.steps)
-        return self.steps[0]
+    def current_rollout_step_idx(self) -> int:
+        assert all(
+            s == self.current_rollout_step_idx[0]
+            for s in self.current_rollout_step_idx
+        )
+        return self.current_rollout_step_idx[0]
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
@@ -128,31 +131,35 @@ class RolloutStorage:
 
         if len(next_step) > 0:
             self.buffers.set(
-                (self.steps[buffer_index] + 1, env_slice),
+                (self.current_rollout_step_idxs[buffer_index] + 1, env_slice),
                 next_step,
                 strict=False,
             )
 
         if len(current_step) > 0:
             self.buffers.set(
-                (self.steps[buffer_index], env_slice),
+                (self.current_rollout_step_idxs[buffer_index], env_slice),
                 current_step,
                 strict=False,
             )
 
     def advance_rollout(self, buffer_index: int = 0):
-        self.steps[buffer_index] += 1
+        self.current_rollout_step_idxs[buffer_index] += 1
 
     def after_update(self):
-        self.buffers[0] = self.buffers[self.step]
+        self.buffers[0] = self.buffers[self.current_rollout_step_idx]
 
-        self.steps = [0 for _ in self.steps]
+        self.current_rollout_step_idxs = [
+            0 for _ in self.current_rollout_step_idxs
+        ]
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
-            self.buffers["value_preds"][self.step] = next_value
+            self.buffers["value_preds"][
+                self.current_rollout_step_idx
+            ] = next_value
             gae = 0
-            for step in reversed(range(self.step)):
+            for step in reversed(range(self.current_rollout_step_idx)):
                 delta = (
                     self.buffers["rewards"][step]
                     + gamma
@@ -167,8 +174,8 @@ class RolloutStorage:
                     gae + self.buffers["value_preds"][step]
                 )
         else:
-            self.buffers["returns"][self.step] = next_value
-            for step in reversed(range(self.step)):
+            self.buffers["returns"][self.current_rollout_step_idx] = next_value
+            for step in reversed(range(self.current_rollout_step_idx)):
                 self.buffers["returns"][step] = (
                     gamma
                     * self.buffers["returns"][step + 1]
@@ -194,8 +201,10 @@ class RolloutStorage:
                 )
             )
         for inds in torch.randperm(num_environments).chunk(num_mini_batch):
-            batch = self.buffers[0 : self.step, inds]
-            batch["advantages"] = advantages[0 : self.step, inds]
+            batch = self.buffers[0 : self.current_rollout_step_idx, inds]
+            batch["advantages"] = advantages[
+                0 : self.current_rollout_step_idx, inds
+            ]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]
