@@ -25,7 +25,6 @@ from typing import (
 import numpy as np
 import torch
 from gym.spaces import Box
-from numpy import ndarray
 from PIL import Image
 from torch import Size, Tensor
 from torch import nn as nn
@@ -35,14 +34,10 @@ from habitat.core.dataset import Episode
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
+from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 cv2 = try_cv2_import()
-
-
-class Flatten(nn.Module):
-    def forward(self, x: Tensor) -> Tensor:
-        return torch.flatten(x, start_dim=1)
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -91,21 +86,12 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-def _to_tensor(v: Union[Tensor, ndarray]) -> torch.Tensor:
-    if torch.is_tensor(v):
-        return v
-    elif isinstance(v, np.ndarray):
-        return torch.from_numpy(v)
-    else:
-        return torch.tensor(v, dtype=torch.float)
-
-
 @torch.no_grad()
 @profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
-    observations: List[Dict],
+    observations: List[DictTree],
     device: Optional[torch.device] = None,
-) -> Dict[str, torch.Tensor]:
+) -> TensorDict:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
 
@@ -121,14 +107,14 @@ def batch_obs(
 
     for obs in observations:
         for sensor in obs:
-            batch[sensor].append(_to_tensor(obs[sensor]))
+            batch[sensor].append(torch.as_tensor(obs[sensor]))
 
-    batch_t: Dict[str, torch.Tensor] = {}
+    batch_t: TensorDict = TensorDict()
 
     for sensor in batch:
-        batch_t[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+        batch_t[sensor] = torch.stack(batch[sensor], dim=0)
 
-    return batch_t
+    return batch_t.map(lambda v: v.to(device))
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
@@ -268,7 +254,7 @@ def image_resize_shortest_edge(
     Returns:
         The resized array as a torch tensor.
     """
-    img = _to_tensor(img)
+    img = torch.as_tensor(img)
     no_batch_dim = len(img.shape) == 3
     if len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()

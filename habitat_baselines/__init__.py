@@ -11,7 +11,6 @@ from habitat_baselines.il.trainers.eqa_cnn_pretrain_trainer import (
 )
 from habitat_baselines.il.trainers.pacman_trainer import PACMANTrainer
 from habitat_baselines.il.trainers.vqa_trainer import VQATrainer
-from habitat_baselines.rl.ddppo import DDPPOTrainer  # noqa: F401
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer, RolloutStorage
 
 __all__ = [

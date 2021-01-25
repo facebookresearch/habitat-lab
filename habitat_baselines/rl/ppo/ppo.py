@@ -60,7 +60,10 @@ class PPO(nn.Module):
         raise NotImplementedError
 
     def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
-        advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
+        advantages = (
+            rollouts.buffers["returns"][:-1]
+            - rollouts.buffers["value_preds"][:-1]
+        )
         if not self.use_normalized_advantage:
             return advantages
 
@@ -79,59 +82,46 @@ class PPO(nn.Module):
                 advantages, self.num_mini_batch
             )
 
-            for sample in data_generator:
-                (
-                    obs_batch,
-                    recurrent_hidden_states_batch,
-                    actions_batch,
-                    prev_actions_batch,
-                    value_preds_batch,
-                    return_batch,
-                    masks_batch,
-                    old_action_log_probs_batch,
-                    adv_targ,
-                ) = sample
-
-                # Reshape to do in a single forward pass for all steps
+            for batch in data_generator:
                 (
                     values,
                     action_log_probs,
                     dist_entropy,
                     _,
                 ) = self.actor_critic.evaluate_actions(
-                    obs_batch,
-                    recurrent_hidden_states_batch,
-                    prev_actions_batch,
-                    masks_batch,
-                    actions_batch,
+                    batch["observations"],
+                    batch["recurrent_hidden_states"],
+                    batch["prev_actions"],
+                    batch["masks"],
+                    batch["actions"],
                 )
 
-                ratio = torch.exp(
-                    action_log_probs - old_action_log_probs_batch
-                )
-                surr1 = ratio * adv_targ
+                ratio = torch.exp(action_log_probs - batch["action_log_probs"])
+                surr1 = ratio * batch["advantages"]
                 surr2 = (
                     torch.clamp(
                         ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
                     )
-                    * adv_targ
+                    * batch["advantages"]
                 )
-                action_loss = -torch.min(surr1, surr2).mean()
+                action_loss = -(torch.min(surr1, surr2).mean())
 
                 if self.use_clipped_value_loss:
-                    value_pred_clipped = value_preds_batch + (
-                        values - value_preds_batch
+                    value_pred_clipped = batch["value_preds"] + (
+                        values - batch["value_preds"]
                     ).clamp(-self.clip_param, self.clip_param)
-                    value_losses = (values - return_batch).pow(2)
+                    value_losses = (values - batch["returns"]).pow(2)
                     value_losses_clipped = (
-                        value_pred_clipped - return_batch
+                        value_pred_clipped - batch["returns"]
                     ).pow(2)
-                    value_loss = (
-                        0.5
-                        * torch.max(value_losses, value_losses_clipped).mean()
+                    value_loss = 0.5 * torch.max(
+                        value_losses, value_losses_clipped
                     )
                 else:
-                    value_loss = 0.5 * (return_batch - values).pow(2).mean()
+                    value_loss = 0.5 * (batch["returns"] - values).pow(2)
+
+                value_loss = value_loss.mean()
+                dist_entropy = dist_entropy.mean()
 
                 self.optimizer.zero_grad()
                 total_loss = (

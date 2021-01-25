@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import warnings
 from typing import List, Optional, Union
 
 import numpy as np
@@ -30,14 +31,19 @@ _C.TENSORBOARD_DIR = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
-_C.NUM_PROCESSES = 16
+_C.NUM_ENVIRONMENTS = 16
+_C.NUM_PROCESSES = -1  # depricated
 _C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
+_C.NUM_CHECKPOINTS = 10
+# Number of model updates between checkpoints
+_C.CHECKPOINT_INTERVAL = -1
+_C.TOTAL_NUM_STEPS = -1.0
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
-_C.CHECKPOINT_INTERVAL = 50
 _C.FORCE_BLIND_POLICY = False
+_C.VERBOSE = True
 # -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
@@ -103,6 +109,11 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
+# Use double buffered sampling, typically helps
+# when environment time is similar or large than
+# policy inference time during rollout generation
+# Not that this does not change the memory requirements
+_C.RL.PPO.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
@@ -121,6 +132,8 @@ _C.RL.DDPPO.pretrained_encoder = False
 _C.RL.DDPPO.train_encoder = True
 # Whether or not to reset the critic linear layer
 _C.RL.DDPPO.reset_critic = True
+# Forces distributed mode for testing
+_C.RL.DDPPO.force_distributed = False
 # -----------------------------------------------------------------------------
 # ORBSLAM2 BASELINE
 # -----------------------------------------------------------------------------
@@ -158,6 +171,9 @@ _C.PROFILING.CAPTURE_START_STEP = -1
 _C.PROFILING.NUM_STEPS_TO_CAPTURE = -1
 
 
+_C.register_renamed_key
+
+
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
@@ -192,6 +208,15 @@ def get_config(
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)
+
+    if config.NUM_PROCESSES != -1:
+        warnings.warn(
+            "NUM_PROCESSES is depricated and will be removed in a future version."
+            "  Use NUM_ENVIRONMENTS instead."
+            "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
+        )
+
+        config.NUM_ENVIRONMENTS = config.NUM_PROCESSES
 
     config.freeze()
     return config

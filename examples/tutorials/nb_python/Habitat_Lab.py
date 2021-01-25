@@ -178,11 +178,11 @@ if __name__ == "__main__":
 # set random seeds
 if __name__ == "__main__":
     seed = "42"  # @param {type:"string"}
-    num_updates = "20"  # @param {type:"string"}
+    steps_in_thousands = "10"  # @param {type:"string"}
 
     config.defrost()
     config.TASK_CONFIG.SEED = int(seed)
-    config.NUM_UPDATES = int(num_updates)
+    config.TOTAL_NUM_STEPS = int(steps_in_thousands)
     config.LOG_INTERVAL = 1
     config.freeze()
 

@@ -107,12 +107,14 @@ class PPOAgent(Agent):
 
     def reset(self) -> None:
         self.test_recurrent_hidden_states = torch.zeros(
-            self.actor_critic.net.num_recurrent_layers,
             1,
+            self.actor_critic.net.num_recurrent_layers,
             self.hidden_size,
             device=self.device,
         )
-        self.not_done_masks = torch.zeros(1, 1, device=self.device)
+        self.not_done_masks = torch.zeros(
+            1, 1, device=self.device, dtype=torch.bool
+        )
         self.prev_actions = torch.zeros(
             1, 1, dtype=torch.long, device=self.device
         )
@@ -133,7 +135,7 @@ class PPOAgent(Agent):
                 deterministic=False,
             )
             #  Make masks not done till reset (end of episode) will be called
-            self.not_done_masks = torch.ones(1, 1, device=self.device)
+            self.not_done_masks.fill_(True)
             self.prev_actions.copy_(actions)  # type: ignore
 
         return {"action": actions[0][0].item()}

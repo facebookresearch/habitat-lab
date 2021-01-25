@@ -32,13 +32,14 @@ def distributed_mean_and_var(
     assert distrib.is_initialized(), "Distributed must be initialized"
 
     world_size = distrib.get_world_size()
+
     mean = values.mean()
     distrib.all_reduce(mean)
     mean = mean / world_size
 
-    sq_diff = (values - mean).pow(2).mean()
-    distrib.all_reduce(sq_diff)
-    var = sq_diff / world_size
+    var = (values - mean).pow(2).mean()
+    distrib.all_reduce(var)
+    var = var / world_size
 
     return mean, var
 
@@ -47,7 +48,12 @@ class DecentralizedDistributedMixin:
     def _get_advantages_distributed(
         self, rollouts: RolloutStorage
     ) -> torch.Tensor:
-        advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
+        advantages = (
+            rollouts.buffers["returns"][: rollouts.current_rollout_step_idx]
+            - rollouts.buffers["value_preds"][
+                : rollouts.current_rollout_step_idx
+            ]
+        )
         if not self.use_normalized_advantage:  # type: ignore
             return advantages
 

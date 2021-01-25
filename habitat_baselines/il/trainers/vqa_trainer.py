@@ -258,10 +258,9 @@ class VQATrainer(BaseILTrainer):
 
                 print("-----------------------------------------")
 
-                if epoch % config.CHECKPOINT_INTERVAL == 0:
-                    self.save_checkpoint(
-                        model.state_dict(), "epoch_{}.ckpt".format(epoch)
-                    )
+                self.save_checkpoint(
+                    model.state_dict(), "epoch_{}.ckpt".format(epoch)
+                )
 
                 epoch += 1
 

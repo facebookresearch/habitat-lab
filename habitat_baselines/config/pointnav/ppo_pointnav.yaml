@@ -1,5 +1,7 @@
 # Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
 
+VERBOSE: False
+
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
@@ -12,15 +14,13 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/checkpoints"
-NUM_PROCESSES: 6
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+NUM_ENVIRONMENTS: 6
 SENSORS: ["DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/checkpoints"
-# 75 million frames
-NUM_UPDATES: 97656
+CHECKPOINT_FOLDER: "data/new_checkpoints"
+TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25
-# 100 checkpoints
-CHECKPOINT_INTERVAL: 976
+NUM_CHECKPOINTS: 100
 
 RL:
   PPO:
@@ -41,3 +41,8 @@ RL:
     use_linear_clip_decay: True
     use_linear_lr_decay: True
     reward_window_size: 50
+
+    # Use double buffered sampling, typically helps
+    # when environment time is similar or large than
+    # policy inference time during rollout generation
+    use_double_buffered_sampler: False

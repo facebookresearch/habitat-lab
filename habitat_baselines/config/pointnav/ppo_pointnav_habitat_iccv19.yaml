@@ -2,6 +2,8 @@
 # ppo_pointnav.yaml contains the known best practices
 # and should be used as the starting point instead.
 
+VERBOSE: False
+
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
 TRAINER_NAME: "ppo"
 ENV_NAME: "NavRLEnv"
@@ -16,12 +18,12 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
-NUM_PROCESSES: 6
+NUM_ENVIRONMENTS: 6
 SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: 270000
+TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25
-CHECKPOINT_INTERVAL: 2000
+NUM_CHECKPOINTS: 100
 
 RL:
   SUCCESS_REWARD: 10.0

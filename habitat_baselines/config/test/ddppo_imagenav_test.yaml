@@ -8,11 +8,12 @@ TENSORBOARD_DIR: ""
 VIDEO_DIR: ""
 SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
 EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/imagenav/ckpt.0.pth"
-NUM_PROCESSES: 1
+NUM_ENVIRONMENTS: 1
 CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/imagenav/"
 NUM_UPDATES: 2
 LOG_INTERVAL: 100
-CHECKPOINT_INTERVAL: 1
+NUM_CHECKPOINTS: 2
+TEST_EPISODE_COUNT: 2
 
 
 RL:
@@ -59,6 +60,8 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2
+
+    force_distributed: True
