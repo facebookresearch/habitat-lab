@@ -85,10 +85,10 @@ class RolloutStorage:
     @property
     def current_rollout_step_idx(self) -> int:
         assert all(
-            s == self.current_rollout_step_idx[0]
-            for s in self.current_rollout_step_idx
+            s == self.current_rollout_step_idxs[0]
+            for s in self.current_rollout_step_idxs
         )
-        return self.current_rollout_step_idx[0]
+        return self.current_rollout_step_idxs[0]
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
