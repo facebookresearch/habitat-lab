@@ -705,7 +705,7 @@ def raycast(sim, sensor_name, crosshair_pos=(128, 128), max_distance=2.0):
     """
     render_camera = sim._sensors[
         sensor_name
-    ]._sensor_object.get_render_camera()
+    ]._sensor_object.render_camera
     center_ray = render_camera.unproject(mn.Vector2i(crosshair_pos))
 
     raycast_results = sim.cast_ray(center_ray, max_distance=max_distance)
