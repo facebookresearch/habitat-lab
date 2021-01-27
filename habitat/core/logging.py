@@ -15,7 +15,7 @@ class HabitatLogger(logging.Logger):
         filename=None,
         filemode="a",
         stream=None,
-        format=None,
+        format_str=None,
         dateformat=None,
         style="%",
     ):
@@ -24,7 +24,7 @@ class HabitatLogger(logging.Logger):
             handler = logging.FileHandler(filename, filemode)  # type:ignore
         else:
             handler = logging.StreamHandler(stream)  # type:ignore
-        self._formatter = logging.Formatter(format, dateformat, style)
+        self._formatter = logging.Formatter(format_str, dateformat, style)
         handler.setFormatter(self._formatter)
         super().addHandler(handler)
 
@@ -35,5 +35,5 @@ class HabitatLogger(logging.Logger):
 
 
 logger = HabitatLogger(
-    name="habitat", level=logging.INFO, format="%(asctime)-15s %(message)s"
+    name="habitat", level=logging.INFO, format_str="%(asctime)-15s %(message)s"
 )

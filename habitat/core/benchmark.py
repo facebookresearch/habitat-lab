@@ -11,13 +11,11 @@ and is implemented through metrics defined for ``habitat.EmbodiedTask``.
 
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import Dict, Optional
 
 from habitat.config.default import get_config
+from habitat.core.agent import Agent
 from habitat.core.env import Env
-
-if TYPE_CHECKING:
-    from habitat.core.agent import Agent
 
 
 class Benchmark:

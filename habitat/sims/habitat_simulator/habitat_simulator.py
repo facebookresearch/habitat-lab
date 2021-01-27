@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Union,
     cast,
 )
@@ -19,6 +20,9 @@ import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 import habitat_sim
 from habitat.core.dataset import Episode
@@ -34,24 +38,24 @@ from habitat.core.simulator import (
     SensorSuite,
     ShortestPathPoint,
     Simulator,
+    VisualObservation,
 )
 from habitat.core.spaces import Space
-
-if TYPE_CHECKING:
-    from torch import Tensor
 
 RGBSENSOR_DIMENSION = 3
 
 
-def overwrite_config(config_from: Config, config_to: Any) -> None:
+def overwrite_config(
+    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
+) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
     code.
-
     Args:
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
+        ignore_keys: Optional set of keys to ignore in config_to
     """
 
     def if_config_to_lower(config):
@@ -61,8 +65,18 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
             return config
 
     for attr, value in config_from.items():
-        if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), if_config_to_lower(value))
+        low_attr = attr.lower()
+        if ignore_keys is None or low_attr not in ignore_keys:
+            if hasattr(config_to, low_attr):
+                setattr(config_to, low_attr, if_config_to_lower(value))
+            else:
+                raise NameError(
+                    f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
+                    It's also not in the list of keys to ignore: {ignore_keys}
+                    Did you make a typo in the config?
+                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}
+                    """
+                )
 
 
 @registry.register_sensor
@@ -83,8 +97,8 @@ class HabitatSimRGBSensor(RGBSensor):
 
     def get_observation(
         self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
 
         # remove alpha channel
@@ -119,9 +133,9 @@ class HabitatSimDepthSensor(DepthSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, "Tensor"]]
-    ) -> Union[ndarray, "Tensor"]:
-        obs = sim_obs.get(self.uuid, None)
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
@@ -159,8 +173,10 @@ class HabitatSimSemanticSensor(SemanticSensor):
             dtype=np.uint32,
         )
 
-    def get_observation(self, sim_obs):
-        obs = sim_obs.get(self.uuid, None)
+    def get_observation(
+        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         return obs
 
@@ -203,7 +219,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        self._current_scene = self.sim_config.sim_cfg.scene.id
+        self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
@@ -214,21 +230,52 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
         sim_config = habitat_sim.SimulatorConfiguration()
+        # Check if Habitat-Sim is post Scene Config Update
+        if not hasattr(sim_config, "scene_id"):
+            raise RuntimeError(
+                "Incompatible version of Habitat-Sim detected, please upgrade habitat_sim"
+            )
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
+            # Ignore key as it gets propogated to sensor below
+            ignore_keys={"gpu_gpu"},
         )
-        sim_config.scene.id = self.habitat_config.SCENE
+        sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_agent_config(), config_to=agent_config
+            config_from=self._get_agent_config(),
+            config_to=agent_config,
+            # These keys are only used by Hab-Lab
+            ignore_keys={
+                "is_set_start_state",
+                # This is the Sensor Config. Unpacked below
+                "sensors",
+                "start_position",
+                "start_rotation",
+            },
         )
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            # TODO Handle configs for custom VisualSensors that might need
+            # their own ignore_keys. Maybe with special key / checking
+            # SensorType
             overwrite_config(
-                config_from=sensor.config, config_to=sim_sensor_cfg
+                config_from=sensor.config,
+                config_to=sim_sensor_cfg,
+                # These keys are only used by Hab-Lab
+                # or translated into the sensor config manually
+                ignore_keys={
+                    "height",
+                    "hfov",
+                    "max_depth",
+                    "min_depth",
+                    "normalize_depth",
+                    "type",
+                    "width",
+                },
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
@@ -283,7 +330,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: int) -> Observations:
+    def step(self, action: Union[str, int]) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
@@ -330,9 +377,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
             path = habitat_sim.MultiGoalShortestPath()
-            if isinstance(position_b[0], List) or isinstance(
-                position_b[0], np.ndarray
-            ):
+            if isinstance(position_b[0], (Sequence, np.ndarray)):
                 path.requested_ends = np.array(position_b, dtype=np.float32)
             else:
                 path.requested_ends = np.array(

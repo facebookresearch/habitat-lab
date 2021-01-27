@@ -10,7 +10,7 @@
 import re
 import typing
 from collections import Counter
-from typing import TYPE_CHECKING, List, Union
+from typing import Iterable, List, Union
 
 from numpy import float64
 
@@ -20,9 +20,10 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
-if TYPE_CHECKING:
+try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-
+except ImportError:
+    pass
 
 SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
@@ -91,6 +92,15 @@ class VocabDict:
 
     def idx2word(self, n_w):
         return self.word_list[n_w]
+
+    def token_idx_2_string(self, tokens: Iterable[int]) -> str:
+        q_string = ""
+        for token in tokens:
+            if token != 0:
+                q_string += self.idx2word(token) + " "
+
+        q_string += "?"
+        return q_string
 
     def __len__(self):
         return len(self.word_list)

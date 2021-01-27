@@ -119,17 +119,17 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
     version 2.0.9.
     """
 
-    def default(self, object):
+    def default(self, obj):
         # JSON doesn't support numpy ndarray and quaternion
-        if isinstance(object, np.ndarray):
-            return object.tolist()
-        if isinstance(object, np.quaternion):
-            return quaternion_to_list(object)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.quaternion):
+            return quaternion_to_list(obj)
 
         return (
-            object.__getstate__()
-            if hasattr(object, "__getstate__")
-            else object.__dict__
+            obj.__getstate__()
+            if hasattr(obj, "__getstate__")
+            else obj.__dict__
         )
 
     # Overriding method to inject own `_repr` function for floats with needed

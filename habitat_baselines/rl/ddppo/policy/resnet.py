@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Optional, Type, Union
+from typing import List, Optional, Type, Union, cast
 
 from torch import Tensor
 from torch import nn as nn
@@ -190,7 +190,7 @@ class ResNeXtBottleneck(Bottleneck):
     resneXt = True
 
 
-Block = Type[Union[Bottleneck, BasicBlock]]
+Block = Union[Type[Bottleneck], Type[BasicBlock]]
 
 
 class ResNet(nn.Module):
@@ -269,10 +269,10 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x) -> Tensor:
         x = self.conv1(x)
-        x = self.maxpool(x)  # type: ignore
-
+        x = self.maxpool(x)
+        x = cast(Tensor, x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)

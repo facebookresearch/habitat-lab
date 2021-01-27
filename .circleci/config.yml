@@ -15,7 +15,7 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black flake8 "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
@@ -133,6 +133,7 @@ jobs:
                 conda create -y -n habitat python=3.6
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
+                pip install pytest-sugar
               fi
       - run:
           name: Install pytorch
@@ -238,12 +239,14 @@ jobs:
             - ~/miniconda
       - run:
           name: Run api tests
-          no_output_timeout: 20m
+          no_output_timeout: 30m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               python setup.py develop --all
-              python setup.py test
+              export PYTHONPATH=.:$PYTHONPATH
+              python setup.py test --addopts "--cov-report=xml --cov=./"
+
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
           name: Build api documentation
