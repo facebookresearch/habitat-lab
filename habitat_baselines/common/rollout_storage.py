@@ -80,7 +80,6 @@ class RolloutStorage:
         assert (self._num_envs % self._nbuffers) == 0
 
         self.numsteps = numsteps
-
         self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
 
     @property

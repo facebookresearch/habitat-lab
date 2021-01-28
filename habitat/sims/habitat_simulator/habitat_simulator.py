@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Union,
     cast,
 )
@@ -44,15 +45,17 @@ from habitat.core.spaces import Space
 RGBSENSOR_DIMENSION = 3
 
 
-def overwrite_config(config_from: Config, config_to: Any) -> None:
+def overwrite_config(
+    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
+) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
     code.
-
     Args:
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
+        ignore_keys: Optional set of keys to ignore in config_to
     """
 
     def if_config_to_lower(config):
@@ -62,8 +65,18 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
             return config
 
     for attr, value in config_from.items():
-        if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), if_config_to_lower(value))
+        low_attr = attr.lower()
+        if ignore_keys is None or low_attr not in ignore_keys:
+            if hasattr(config_to, low_attr):
+                setattr(config_to, low_attr, if_config_to_lower(value))
+            else:
+                raise NameError(
+                    f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
+                    It's also not in the list of keys to ignore: {ignore_keys}
+                    Did you make a typo in the config?
+                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}
+                    """
+                )
 
 
 @registry.register_sensor
@@ -225,18 +238,44 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         overwrite_config(
             config_from=self.habitat_config.HABITAT_SIM_V0,
             config_to=sim_config,
+            # Ignore key as it gets propogated to sensor below
+            ignore_keys={"gpu_gpu"},
         )
         sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_agent_config(), config_to=agent_config
+            config_from=self._get_agent_config(),
+            config_to=agent_config,
+            # These keys are only used by Hab-Lab
+            ignore_keys={
+                "is_set_start_state",
+                # This is the Sensor Config. Unpacked below
+                "sensors",
+                "start_position",
+                "start_rotation",
+            },
         )
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            # TODO Handle configs for custom VisualSensors that might need
+            # their own ignore_keys. Maybe with special key / checking
+            # SensorType
             overwrite_config(
-                config_from=sensor.config, config_to=sim_sensor_cfg
+                config_from=sensor.config,
+                config_to=sim_sensor_cfg,
+                # These keys are only used by Hab-Lab
+                # or translated into the sensor config manually
+                ignore_keys={
+                    "height",
+                    "hfov",
+                    "max_depth",
+                    "min_depth",
+                    "normalize_depth",
+                    "type",
+                    "width",
+                },
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
