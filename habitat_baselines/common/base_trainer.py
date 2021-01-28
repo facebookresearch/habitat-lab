@@ -180,6 +180,23 @@ class BaseRLTrainer(BaseTrainer):
                 )
             )
 
+        if config.NUM_CHECKPOINTS != -1 and config.CHECKPOINT_INTERVAL != -1:
+            raise RuntimeError(
+                "NUM_CHECKPOINTS and CHECKPOINT_INTERVAL are both specified."
+                "  One must be -1.\n"
+                " NUM_CHECKPOINTS: {} CHECKPOINT_INTERVAL: {}".format(
+                    config.NUM_CHECKPOINTS, config.CHECKPOINT_INTERVAL
+                )
+            )
+
+        if config.NUM_CHECKPOINTS == -1 and config.CHECKPOINT_INTERVAL == -1:
+            raise RuntimeError(
+                "One of NUM_CHECKPOINTS and CHECKPOINT_INTERVAL must be specified"
+                " NUM_CHECKPOINTS: {} CHECKPOINT_INTERVAL: {}".format(
+                    config.NUM_CHECKPOINTS, config.CHECKPOINT_INTERVAL
+                )
+            )
+
     def percent_done(self) -> float:
         if self.config.NUM_UPDATES != -1:
             return self.num_updates_done / self.config.NUM_UPDATES
@@ -190,16 +207,19 @@ class BaseRLTrainer(BaseTrainer):
         return self.percent_done() >= 1.0
 
     def should_checkpoint(self) -> bool:
-        checkpoint_every = 1 / self.config.NUM_CHECKPOINTS
-
         needs_checkpoint = False
-
-        if (
-            self._last_checkpoint_percent + checkpoint_every
-            < self.percent_done()
-        ):
-            needs_checkpoint = True
-            self._last_checkpoint_percent = self.percent_done()
+        if self.config.NUM_CHECKPOINTS != -1:
+            checkpoint_every = 1 / self.config.NUM_CHECKPOINTS
+            if (
+                self._last_checkpoint_percent + checkpoint_every
+                < self.percent_done()
+            ):
+                needs_checkpoint = True
+                self._last_checkpoint_percent = self.percent_done()
+        else:
+            needs_checkpoint = (
+                self.num_steps_done % self.config.CHECKPOINT_INTERVAL
+            ) == 0
 
         return needs_checkpoint
 

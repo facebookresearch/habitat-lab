@@ -92,7 +92,8 @@ class Metric:
 
         dict_to_save = {"metric_names": self.metric_names, "stats": self.stats}
 
-        json.dump(dict_to_save, open(self.log_json, "w"))
+        with open(self.log_json, "w") as f:
+            json.dump(dict_to_save, f)
 
         return True
 

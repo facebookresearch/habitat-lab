@@ -12,7 +12,7 @@ VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 2
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_SIMULATORS: 1
+NUM_ENVIRONMENTS: 1
 SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1

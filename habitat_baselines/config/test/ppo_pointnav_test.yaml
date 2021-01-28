@@ -7,7 +7,7 @@ VIDEO_OPTION: ["DISK"]
 VIDEO_DIR: "data/test_checkpoints/ppo/pointnav/video"
 TENSORBOARD_DIR: ""
 EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ppo/pointnav/ckpt.0.pth"
-NUM_SIMULATORS: 1
+NUM_ENVIRONMENTS: 1
 CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/pointnav/"
 NUM_UPDATES: 2
 LOG_INTERVAL: 100

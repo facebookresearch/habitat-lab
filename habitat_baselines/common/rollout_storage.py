@@ -80,12 +80,16 @@ class RolloutStorage:
         assert (self._num_envs % self._nbuffers) == 0
 
         self.numsteps = numsteps
-        self.steps = [0 for _ in range(self._nbuffers)]
+
+        self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
 
     @property
-    def step(self):
-        assert all(s == self.steps[0] for s in self.steps)
-        return self.steps[0]
+    def current_rollout_step_idx(self) -> int:
+        assert all(
+            s == self.current_rollout_step_idxs[0]
+            for s in self.current_rollout_step_idxs
+        )
+        return self.current_rollout_step_idxs[0]
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
@@ -102,23 +106,23 @@ class RolloutStorage:
 
     def insert(
         self,
-        observations=None,
-        recurrent_hidden_states=None,
+        next_observations=None,
+        next_recurrent_hidden_states=None,
         actions=None,
         action_log_probs=None,
         value_preds=None,
         rewards=None,
-        masks=None,
+        next_masks=None,
         buffer_index: int = 0,
     ):
         if not self.is_double_buffered:
             assert buffer_index == 0
 
         next_step = dict(
-            observations=observations,
-            recurrent_hidden_states=recurrent_hidden_states,
+            observations=next_observations,
+            recurrent_hidden_states=next_recurrent_hidden_states,
             prev_actions=actions,
-            masks=masks,
+            masks=next_masks,
         )
 
         current_step = dict(
@@ -138,31 +142,35 @@ class RolloutStorage:
 
         if len(next_step) > 0:
             self.buffers.set(
-                (self.steps[buffer_index] + 1, env_slice),
+                (self.current_rollout_step_idxs[buffer_index] + 1, env_slice),
                 next_step,
                 strict=False,
             )
 
         if len(current_step) > 0:
             self.buffers.set(
-                (self.steps[buffer_index], env_slice),
+                (self.current_rollout_step_idxs[buffer_index], env_slice),
                 current_step,
                 strict=False,
             )
 
     def advance_rollout(self, buffer_index: int = 0):
-        self.steps[buffer_index] += 1
+        self.current_rollout_step_idxs[buffer_index] += 1
 
     def after_update(self):
-        self.buffers[0] = self.buffers[self.step]
+        self.buffers[0] = self.buffers[self.current_rollout_step_idx]
 
-        self.steps = [0 for _ in self.steps]
+        self.current_rollout_step_idxs = [
+            0 for _ in self.current_rollout_step_idxs
+        ]
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
-            self.buffers["value_preds"][self.step] = next_value
+            self.buffers["value_preds"][
+                self.current_rollout_step_idx
+            ] = next_value
             gae = 0
-            for step in reversed(range(self.step)):
+            for step in reversed(range(self.current_rollout_step_idx)):
                 delta = (
                     self.buffers["rewards"][step]
                     + gamma
@@ -177,8 +185,8 @@ class RolloutStorage:
                     gae + self.buffers["value_preds"][step]
                 )
         else:
-            self.buffers["returns"][self.step] = next_value
-            for step in reversed(range(self.step)):
+            self.buffers["returns"][self.current_rollout_step_idx] = next_value
+            for step in reversed(range(self.current_rollout_step_idx)):
                 self.buffers["returns"][step] = (
                     gamma
                     * self.buffers["returns"][step + 1]
@@ -187,21 +195,27 @@ class RolloutStorage:
                 )
 
     def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
-        num_simulators = advantages.size(1)
-        assert num_simulators >= num_mini_batch, (
-            "Trainer requires the number of simulators ({}) "
+        num_environments = advantages.size(1)
+        assert num_environments >= num_mini_batch, (
+            "Trainer requires the number of environments ({}) "
             "to be greater than or equal to the number of "
-            "trainer mini batches ({}).".format(num_simulators, num_mini_batch)
+            "trainer mini batches ({}).".format(
+                num_environments, num_mini_batch
+            )
         )
-        if num_simulators % num_mini_batch != 0:
+        if num_environments % num_mini_batch != 0:
             warnings.warn(
-                "Number of simulators ({}) is not a multiple of the number of mini batches ({})".format(
-                    num_simulators, num_mini_batch
+                "Number of environments ({}) is not a multiple of the"
+                " number of mini batches ({}).  This results in mini batches"
+                " of different sizes, which can harm training performance.".format(
+                    num_environments, num_mini_batch
                 )
             )
-        for inds in torch.randperm(num_simulators).chunk(num_mini_batch):
-            batch = self.buffers[0 : self.step, inds]
-            batch["advantages"] = advantages[0 : self.step, inds]
+        for inds in torch.randperm(num_environments).chunk(num_mini_batch):
+            batch = self.buffers[0 : self.current_rollout_step_idx, inds]
+            batch["advantages"] = advantages[
+                0 : self.current_rollout_step_idx, inds
+            ]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]

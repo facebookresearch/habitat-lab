@@ -78,27 +78,43 @@ def _make_env_fn(
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ReadWrapper:
+class _ReadWrapper:
+    r"""Convenience wrapper to track if a connection to a worker process
+    should have something to read.
+    """
     read_fn: Callable[[], Any]
-    _is_waiting: bool = False
+    rank: int
+    is_waiting: bool = False
 
     def __call__(self) -> Any:
-        assert self._is_waiting
+        if not self.is_waiting:
+            raise RuntimeError(
+                f"Tried to read from process {self.rank}"
+                " but there is nothing waiting to be read"
+            )
         res = self.read_fn()
-        self._is_waiting = False
+        self.is_waiting = False
 
         return res
 
 
 @attr.s(auto_attribs=True, slots=True)
-class WriteWrapper:
+class _WriteWrapper:
+    r"""Convenience wrapper to track if a connection to a worker process
+    can be written to safely.  In other words, checks to make sure the
+    result returned from the last write was read.
+    """
     write_fn: Callable[[Any], None]
-    _read_wrapper: ReadWrapper
+    read_wrapper: _ReadWrapper
 
     def __call__(self, data: Any) -> None:
-        assert not self._read_wrapper._is_waiting
+        if self.read_wrapper.is_waiting:
+            raise RuntimeError(
+                f"Tried to write to process {self.read_wrapper.rank}"
+                " but the last write has not been read"
+            )
         self.write_fn(data)
-        self._read_wrapper._is_waiting = True
+        self.read_wrapper.is_waiting = True
 
 
 class VectorEnv:
@@ -117,8 +133,8 @@ class VectorEnv:
     _num_envs: int
     _auto_reset_done: bool
     _mp_ctx: BaseContext
-    _connection_read_fns: List[ReadWrapper]
-    _connection_write_fns: List[WriteWrapper]
+    _connection_read_fns: List[_ReadWrapper]
+    _connection_write_fns: List[_WriteWrapper]
 
     def __init__(
         self,
@@ -282,7 +298,7 @@ class VectorEnv:
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
         workers_ignore_signals: bool = False,
-    ) -> Tuple[List[ReadWrapper], List[WriteWrapper]]:
+    ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
         )
@@ -308,9 +324,12 @@ class VectorEnv:
             ps.start()
             worker_conn.close()
 
-        read_fns = [ReadWrapper(p.recv) for p in parent_connections]
+        read_fns = [
+            _ReadWrapper(p.recv, rank)
+            for rank, p in enumerate(parent_connections)
+        ]
         write_fns = [
-            WriteWrapper(p.send, read_fn)
+            _WriteWrapper(p.send, read_fn)
             for p, read_fn in zip(parent_connections, read_fns)
         ]
 
@@ -428,7 +447,7 @@ class VectorEnv:
             return
 
         for read_fn in self._connection_read_fns:
-            if read_fn._is_waiting:
+            if read_fn.is_waiting:
                 read_fn()
 
         for write_fn in self._connection_write_fns:
@@ -455,7 +474,7 @@ class VectorEnv:
         only some are active (for example during the last episodes of running
         eval episodes).
         """
-        if self._connection_read_fns[index]._is_waiting:
+        if self._connection_read_fns[index].is_waiting:
             self._connection_read_fns[index]()
         read_fn = self._connection_read_fns.pop(index)
         write_fn = self._connection_write_fns.pop(index)
@@ -585,7 +604,7 @@ class ThreadedVectorEnv(VectorEnv):
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
-    ) -> Tuple[List[ReadWrapper], List[WriteWrapper]]:
+    ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         queues: Iterator[Tuple[Any, ...]] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
@@ -608,9 +627,12 @@ class ThreadedVectorEnv(VectorEnv):
             thread.daemon = True
             thread.start()
 
-        read_fns = [ReadWrapper(q.get) for q in parent_read_queues]
+        read_fns = [
+            _ReadWrapper(q.get, rank)
+            for rank, q in enumerate(parent_read_queues)
+        ]
         write_fns = [
-            WriteWrapper(q.put, read_wrapper)
+            _WriteWrapper(q.put, read_wrapper)
             for q, read_wrapper in zip(parent_write_queues, read_fns)
         ]
         return read_fns, write_fns
