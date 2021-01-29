@@ -49,6 +49,20 @@ def is_fp16_autocast_supported() -> bool:
     return StrictVersion(torch.__version__) >= StrictVersion("1.7.1")
 
 
+def cast_to_half_if_float(t: torch.Tensor) -> torch.Tensor:
+    if t.dtype == torch.float32:
+        return t.to(dtype=torch.float16)
+    else:
+        return t
+
+
+def cast_to_float_if_half(t: torch.Tensor) -> torch.Tensor:
+    if t.dtype == torch.float16:
+        return t.to(dtype=torch.float32)
+    else:
+        return t
+
+
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008

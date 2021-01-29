@@ -17,6 +17,7 @@ from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ddppo.algo.ddp_utils import rank0_only
 from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.utils.common import cast_to_float_if_half
 
 EPS_PPO = 1e-5
 
@@ -32,11 +33,7 @@ class FP16OptimParamManager:
             new_fp32_params = []
             self._fp16_params.append(pg["params"])
             for param in pg["params"]:
-                fp32_param = (
-                    param.data.to(dtype=torch.float32)
-                    if param.dtype == torch.float16
-                    else param
-                )
+                fp32_param = cast_to_float_if_half(param)
 
                 new_fp32_params.append(fp32_param)
 
@@ -51,11 +48,7 @@ class FP16OptimParamManager:
     def sync_grads(self):
         def _sync_grad_fn(fp32_p, fp16_p):
             if fp16_p.grad is not None:
-                fp32_p.grad = (
-                    fp16_p.grad.data.to(dtype=torch.float32)
-                    if fp16_p.grad.dtype == torch.float16
-                    else fp16_p.grad.data
-                )
+                fp32_p.grad = cast_to_float_if_half(fp16_p.grad)
 
         self._apply_fn(_sync_grad_fn)
 
@@ -108,11 +101,10 @@ class PPO(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.optimizer = optim.AdamW(
+        self.optimizer = optim.Adam(
             list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
             lr=lr,
             eps=eps,
-            weight_decay=1e-4 if fp16_autocast or fp16_mixed else 0.0,
         )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
@@ -271,7 +263,12 @@ class PPO(nn.Module):
 
     def before_step(self) -> None:
         nn.utils.clip_grad_norm_(
-            self.actor_critic.parameters(), self.max_grad_norm
+            (
+                param
+                for pg in self.optimizer.param_groups
+                for param in pg["params"]
+            ),
+            self.max_grad_norm,
         )
 
     def after_step(self) -> None:

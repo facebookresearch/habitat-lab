@@ -32,7 +32,6 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     EXIT,
     REQUEUE,
@@ -45,10 +44,13 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     requeue_job,
     save_interrupted_state,
 )
+from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     batch_obs,
+    cast_to_float_if_half,
+    cast_to_half_if_float,
     generate_video,
     is_fp16_autocast_supported,
     is_fp16_supported,
@@ -94,13 +96,16 @@ class PPOTrainer(BaseRLTrainer):
                 f"Unknown fp16 mode '{self.config.RL.fp16_mode}'"
             )
 
+        self._fp16_mixed = self.config.RL.fp16_mode == "mixed"
+        self._fp16_autocast = self.config.RL.fp16_mode == "autocast"
+
         if self.config.RL.fp16_mode != "off" and not torch.cuda.is_available():
             logger.warn(
                 "FP16 requires CUDA but CUDA is not available, setting to off"
             )
 
-        self._fp16_mixed = self.config.RL.fp16_mode == "mixed"
-        self._fp16_autocast = self.config.RL.fp16_mode == "autocast"
+            self._fp16_mixed = False
+            self._fp16_autocast = False
 
         if self._fp16_mixed and not is_fp16_supported():
             raise RuntimeError(
@@ -289,6 +294,15 @@ class PPOTrainer(BaseRLTrainer):
                     sum(param.numel() for param in self.agent.parameters())
                 )
             )
+            logger.info(
+                "agent number of trainable parameters: {}".format(
+                    sum(
+                        param.numel()
+                        for param in self.agent.parameters()
+                        if param.requires_grad
+                    )
+                )
+            )
 
         obs_space = self.obs_space
         if self._static_encoder:
@@ -326,10 +340,7 @@ class PPOTrainer(BaseRLTrainer):
         if self._static_encoder:
             if self._fp16_mixed:
                 batch = TensorDict.map_func(
-                    lambda v: v.to(dtype=torch.float16)
-                    if v.dtype == torch.float32
-                    else v,
-                    batch,
+                    cast_to_half_if_float, batch
                 ).to_tree()
             with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
                 batch["visual_features"] = self._encoder(batch)
@@ -363,15 +374,10 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
 
-        def _cast(t: torch.Tensor):
-            if t.dtype == torch.float16:
-                return t.to(dtype=torch.float32)
-            else:
-                return t
-
         checkpoint = {
             "state_dict": {
-                k: _cast(v) for k, v in self.agent.state_dict().items()
+                k: cast_to_float_if_half(v)
+                for k, v in self.agent.state_dict().items()
             },
             "config": self.config,
         }
@@ -550,9 +556,7 @@ class PPOTrainer(BaseRLTrainer):
         if self._static_encoder:
             if self._fp16_mixed:
                 batch = TensorDict.map_func(
-                    lambda v: v.to(dtype=torch.float16)
-                    if v.dtype == torch.float32
-                    else v,
+                    cast_to_half_if_float,
                     batch,
                 ).to_tree()
             with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
@@ -943,6 +947,7 @@ class PPOTrainer(BaseRLTrainer):
             self.actor_critic.net.num_recurrent_layers,
             ppo_cfg.hidden_size,
             device=self.device,
+            dtype=torch.float16 if self._fp16_mixed else torch.float32,
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -988,6 +993,10 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad(), torch.cuda.amp.autocast() if self._fp16_autocast else contextlib.suppress():
+                if self._fp16_mixed:
+                    batch = TensorDict.map_func(
+                        cast_to_half_if_float, batch
+                    ).to_tree()
                 (
                     _,
                     actions,
