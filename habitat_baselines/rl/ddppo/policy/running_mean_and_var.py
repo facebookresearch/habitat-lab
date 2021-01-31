@@ -48,7 +48,7 @@ class RunningMeanAndVar(nn.Module):
                 x.transpose(1, 0).contiguous().view(x.size(1), -1)
             )
             new_mean = x_channels_first.mean(-1, keepdim=True)
-            new_count = torch.full_like(self._count, n).float()
+            new_count = torch.full_like(self._count, n, dtype=torch.float32)
 
             if distrib.is_initialized():
                 distrib.all_reduce(new_count)

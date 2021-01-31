@@ -140,13 +140,13 @@ jobs:
           no_output_timeout: 20m
           background: true
           command: |
-              if [ ! -f ~/miniconda/pytorch_installed ]
-              then
-                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                . activate habitat;
-                conda install -c  conda-forge opencv -y
-                conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
-              fi
+              # if [ ! -f ~/miniconda/pytorch_installed ]
+              # then
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat;
+              conda install -c  conda-forge opencv -y
+              conda install -y pytorch torchvision cudatoolkit=10.1 -c pytorch
+              # fi
               touch ~/miniconda/pytorch_installed
       - restore_cache:
           keys:
