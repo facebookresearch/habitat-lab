@@ -108,6 +108,19 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )
+@pytest.mark.parametrize("run_mode", ["train", "eval"])
+@pytest.mark.parametrize("fp16_mode", ["autocast", "mixed"])
+def test_trainers_fp16(run_mode, fp16_mode):
+    run_exp(
+        "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        run_mode,
+        ["RL.fp16_mode", fp16_mode],
+    )
+
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 @pytest.mark.parametrize(
     "test_cfg_path,mode",
     [
