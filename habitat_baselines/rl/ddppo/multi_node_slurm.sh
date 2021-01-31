@@ -18,7 +18,7 @@ MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
 set -x
-srun --ntasks=1 python -u -m habitat_baselines.run \
+srun python -u -m habitat_baselines.run \
     --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
-    --run-type eval \
-    RL.fp16_mode mixed RL.DDPPO.train_encoder True
+    --run-type train \
+    RL.fp16_mode off

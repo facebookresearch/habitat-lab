@@ -5,7 +5,7 @@ ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb/debug"
+TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
@@ -66,6 +66,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet18
+    backbone: resnet50
     rnn_type: LSTM
     num_recurrent_layers: 2
