@@ -51,12 +51,14 @@ class RunningMeanAndVar(nn.Module):
             new_count = torch.full_like(self._count, n, dtype=torch.float32)
 
             if distrib.is_initialized():
-                distrib.all_reduce(new_count)
-                new_mean /= distrib.get_world_size()
-
                 new_mean = new_mean.float()
-                distrib.all_reduce(new_mean)
-                new_mean /= distrib.get_world_size()
+                msg = torch.cat([new_mean.view(-1), new_count.view(-1)])
+                distrib.all_reduce(msg)
+
+                new_count.copy_(msg[-1])
+                new_mean.copy_(msg[0:-1].view_as(new_mean)).div_(
+                    distrib.get_world_size()
+                )
 
             new_var = (
                 (x_channels_first - new_mean.type_as(x))
