@@ -146,7 +146,7 @@ jobs:
               . activate habitat;
               conda install -c  conda-forge opencv -y
               conda install -y pytorch torchvision cudatoolkit=10.1 -c pytorch
-              conda upgrade -y pytorch torchvision cudatoolkit=10.1 -c pytorch
+              conda upgrade -y pytorch torchvision -c pytorch
               # fi
               touch ~/miniconda/pytorch_installed
       - restore_cache:
