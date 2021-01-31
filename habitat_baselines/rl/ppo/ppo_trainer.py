@@ -110,11 +110,13 @@ class PPOTrainer(BaseRLTrainer):
         if self._fp16_mixed and not is_fp16_supported():
             raise RuntimeError(
                 "FP16 requires PyTorch >= 1.6.0, please update your PyTorch"
+                "\n Your version: {}".format(torch.__version__)
             )
 
         if self._fp16_autocast and not is_fp16_autocast_supported():
             raise RuntimeError(
                 "FP16 autocast requires PyTorch >= 1.7.1, please update your PyTorch"
+                "\n Your version: {}".format(torch.__version__)
             )
 
     @property
