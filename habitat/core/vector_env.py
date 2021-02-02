@@ -174,8 +174,11 @@ class VectorEnv:
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         self._mp_ctx = mp.get_context(multiprocessing_start_method)
-        # Patches the MP_CTX for faster serialization
-        self._mp_ctx.reducer = pickle5_multiprocessing.Pickle5Reducer()
+        # This patches multiprocessing to use pickle5 which has nocopy pickling support
+        # Only tested with numpy
+        self._mp_ctx.reducer.ForkingPickler = (  # type: ignore
+            pickle5_multiprocessing.ForkingPickler5
+        )
         self._workers = []
         (
             self._connection_read_fns,

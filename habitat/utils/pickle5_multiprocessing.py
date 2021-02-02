@@ -51,6 +51,10 @@ class Pickle5Reducer(AbstractReducer):
     register = ForkingPickler5.register
     dump = dump
 
+    def __init__(self, *args):
+        super().__init__(*args)
+
 
 mpc._ForkingPickler = ForkingPickler5  # type: ignore
-multiprocessing.context._default_context.reducer = Pickle5Reducer  # type: ignore
+multiprocessing.context._default_context.reducer.ForkingPickler = ForkingPickler5  # type: ignore
+multiprocessing.context._default_context.reducer.dump = dump  # type: ignore
