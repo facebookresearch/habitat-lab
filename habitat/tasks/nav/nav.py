@@ -731,26 +731,34 @@ class TopDownMap(Measure):
     def _draw_goals_view_points(self, episode):
         if self._config.DRAW_VIEW_POINTS:
             for goal in episode.goals:
-                try:
-                    if goal.view_points is not None:
-                        for view_point in goal.view_points:
-                            self._draw_point(
-                                view_point.agent_state.position,
-                                maps.MAP_VIEW_POINT_INDICATOR,
-                            )
-                except AttributeError:
-                    pass
+                if goal.position[1] > \
+                    self._sim.get_agent(0).state.position[1] and \
+                    goal.position[1] < \
+                    self._sim.get_agent(0).state.position[1] + 2:
+                    try:
+                        if goal.view_points is not None:
+                            for view_point in goal.view_points:
+                                self._draw_point(
+                                    view_point.agent_state.position,
+                                    maps.MAP_VIEW_POINT_INDICATOR,
+                                )
+                    except AttributeError:
+                        pass
 
     def _draw_goals_positions(self, episode):
         if self._config.DRAW_GOAL_POSITIONS:
 
             for goal in episode.goals:
-                try:
-                    self._draw_point(
-                        goal.position, maps.MAP_TARGET_POINT_INDICATOR
-                    )
-                except AttributeError:
-                    pass
+                if goal.position[1] > \
+                    self._sim.get_agent(0).state.position[1] and \
+                    goal.position[1] < \
+                    self._sim.get_agent(0).state.position[1] + 2:
+                    try:
+                        self._draw_point(
+                            goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                        )
+                    except AttributeError:
+                        pass
 
     def _draw_goals_aabb(self, episode):
         if self._config.DRAW_GOAL_AABBS:
@@ -778,6 +786,8 @@ class TopDownMap(Measure):
                             (x_len, -z_len),
                             (-x_len, -z_len),
                         ]
+                        if center[1] > self._sim.get_agent(0).state.position[1]
+                           and center[1] < self._sim.get_agent(0).state.position[1] + 2
                     ]
 
                     map_corners = [
