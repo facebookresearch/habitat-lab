@@ -34,7 +34,7 @@ from habitat.config import Config
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
-from habitat.utils import profiling_wrapper
+from habitat.utils import pickle5_multiprocessing, profiling_wrapper
 
 try:
     # Use torch.multiprocessing if we can.
@@ -174,6 +174,8 @@ class VectorEnv:
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        # Patches the MP_CTX for faster serialization
+        self._mp_ctx.reducer = pickle5_multiprocessing.Pickle5Reducer()
         self._workers = []
         (
             self._connection_read_fns,
