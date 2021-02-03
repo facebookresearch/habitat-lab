@@ -9,25 +9,28 @@ if sys.version_info[:2] < (3, 8):
         import pickle5 as pickle
     except ImportError:
         import pickle  # type: ignore[no-redef]
+
+    class ForkingPickler5(pickle.Pickler):
+        wrapped = _ForkingPickler
+        loads = staticmethod(pickle.loads)
+
+        @classmethod
+        def dumps(cls, obj, protocol: int = -1):
+            buf = io.BytesIO()
+            cls(buf, protocol).dump(obj)
+            return buf.getbuffer()
+
+        def __init__(self, file, protocol: int = -1, **kwargs):
+            super().__init__(file, protocol, **kwargs)
+            self.dispatch_table = self.wrapped(
+                file, protocol, **kwargs
+            ).dispatch_table
+
+
 else:
     import pickle
 
-
-class ForkingPickler5(pickle.Pickler):
-    wrapped = _ForkingPickler
-    loads = staticmethod(pickle.loads)
-
-    @classmethod
-    def dumps(cls, obj, protocol: int = -1):
-        buf = io.BytesIO()
-        cls(buf, protocol).dump(obj)
-        return buf.getbuffer()
-
-    def __init__(self, file, protocol: int = -1, **kwargs):
-        super().__init__(file, protocol, **kwargs)
-        self.dispatch_table = self.wrapped(
-            file, protocol, **kwargs
-        ).dispatch_table
+    ForkingPickler5 = _ForkingPickler
 
 
 class ConnectionWrapper(object):
