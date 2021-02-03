@@ -2,7 +2,6 @@ import io
 import sys
 from multiprocessing.connection import Connection
 from multiprocessing.reduction import ForkingPickler as _ForkingPickler
-from typing import Dict
 
 if sys.version_info[:2] < (3, 8):
     # pickle 5 backport
@@ -15,27 +14,20 @@ else:
 
 
 class ForkingPickler5(pickle.Pickler):
-    _extra_reducers: Dict = dict()
     wrapped = _ForkingPickler
     loads = staticmethod(pickle.loads)
 
     @classmethod
-    def register(cls, type, reduce):  # noqa: A002
-        """Register a reduce function for a type."""
-        cls._extra_reducers[type] = reduce
-
-    @classmethod
-    def dumps(cls, obj, protocol=-1):
+    def dumps(cls, obj, protocol: int = -1):
         buf = io.BytesIO()
         cls(buf, protocol).dump(obj)
         return buf.getbuffer()
 
-    def __init__(self, file, protocol=-1, **kwargs):
+    def __init__(self, file, protocol: int = -1, **kwargs):
         super().__init__(file, protocol, **kwargs)
         self.dispatch_table = self.wrapped(
             file, protocol, **kwargs
         ).dispatch_table
-        self.dispatch_table.update(self._extra_reducers)
 
 
 class ConnectionWrapper(object):
@@ -46,8 +38,10 @@ class ConnectionWrapper(object):
         self.conn: Connection = conn
 
     def send(self, obj):
+        self._check_closed()
+        self._check_writable()
         buf = io.BytesIO()
-        ForkingPickler5(buf, pickle.HIGHEST_PROTOCOL).dump(obj)
+        ForkingPickler5(buf, -1).dump(obj)
         self.send_bytes(buf.getvalue())
 
     def recv(self):
