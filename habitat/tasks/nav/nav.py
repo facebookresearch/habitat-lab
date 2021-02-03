@@ -44,6 +44,7 @@ except ImportError:
     pass
 cv2 = try_cv2_import()
 
+
 MAP_THICKNESS_SCALAR: int = 128
 
 
@@ -519,8 +520,7 @@ class Success(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
-        self.update_metric(episode=episode, task=task, *args,
-                           **kwargs)  # type: ignore
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
@@ -597,8 +597,8 @@ class SPL(Measure):
         self._metric = ep_success * (
             self._start_end_episode_distance
             / max(
-            self._start_end_episode_distance, self._agent_episode_distance
-        )
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
         )
 
 
@@ -623,8 +623,7 @@ class SoftSPL(SPL):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(episode=episode, task=task, *args,
-                           **kwargs)  # type: ignore
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
@@ -645,8 +644,8 @@ class SoftSPL(SPL):
         self._metric = ep_soft_success * (
             self._start_end_episode_distance
             / max(
-            self._start_end_episode_distance, self._agent_episode_distance
-        )
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
         )
 
 
@@ -725,8 +724,8 @@ class TopDownMap(Measure):
             sim=self._sim,
         )
         self._top_down_map[
-        t_x - self.point_padding: t_x + self.point_padding + 1,
-        t_y - self.point_padding: t_y + self.point_padding + 1,
+            t_x - self.point_padding : t_x + self.point_padding + 1,
+            t_y - self.point_padding : t_y + self.point_padding + 1,
         ] = point_type
 
     def _draw_goals_view_points(self, episode):
@@ -833,6 +832,7 @@ class TopDownMap(Measure):
             same_floor = True
         return same_floor
 
+
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
         self._metric = None
@@ -922,7 +922,7 @@ class TopDownMap(Measure):
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                             / maps.calculate_meters_per_pixel(
+                / maps.calculate_meters_per_pixel(
                     self._map_resolution, sim=self._sim
                 ),
             )
