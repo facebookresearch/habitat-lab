@@ -9,12 +9,21 @@ import sys
 from multiprocessing.connection import Connection
 from multiprocessing.reduction import ForkingPickler as _ForkingPickler
 
+from habitat.core.logging import logger
+
 if sys.version_info[:2] < (3, 8):
     # pickle 5 backport
     try:
         import pickle5 as pickle
     except ImportError:
         import pickle  # type: ignore[no-redef]
+
+        logger.warn(
+            f"""Warning pickle v5 protocol not supported.
+        Falling back to pickle version {pickle.HIGHEST_PROTOCOL}.
+        pip install pickle5 or upgrade to Python 3.8 or greater
+        for faster performance"""
+        )
 
     class ForkingPickler5(pickle.Pickler):
         wrapped = _ForkingPickler
