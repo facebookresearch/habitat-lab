@@ -14,6 +14,7 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from habitat.config import Config
+from habitat.tasks.nav.multi_object_nav_task import MultiObjectGoalSensor
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -221,6 +222,20 @@ class PointNavResNetNet(Net):
             self.tgt_embeding = nn.Linear(n_input_goal, 32)
             rnn_input_size += 32
 
+        if MultiObjectGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_object_categories = (
+                int(
+                    observation_space.spaces[
+                        MultiObjectGoalSensor.cls_uuid
+                    ].high[0]
+                )
+                + 1
+            )
+            self.current_obj_categories_embedding = nn.Embedding(
+                self._n_object_categories, 32
+            )
+            rnn_input_size += 32
+
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
             self._n_object_categories = (
                 int(
@@ -406,6 +421,14 @@ class PointNavResNetNet(Net):
                 -1,
             )
             x.append(self.heading_embedding(sensor_observations))
+
+        if MultiObjectGoalSensor.cls_uuid in observations:
+            object_goal = observations[MultiObjectGoalSensor.cls_uuid].long()
+            x.append(
+                self.current_obj_categories_embedding(object_goal).squeeze(
+                    dim=1
+                )
+            )
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()

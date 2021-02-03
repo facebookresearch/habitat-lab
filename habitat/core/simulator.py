@@ -393,3 +393,42 @@ class Simulator:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def get_existing_object_ids(self) -> List[int]:
+        r"""Returns the list of ids of all objects currently instanced in the scene
+
+        :return: list of instanced objects ids
+        """
+        raise NotImplementedError
+
+    def remove_object(self, object_id: int) -> None:
+        r"""Deletes an instanced object
+
+        :param object_id: object ID of the currently instanced object
+        """
+        raise NotImplementedError
+
+    def get_object_template_manager(self) -> Any:
+        r"""Returns the dataset's ObjectAttributesManager instance
+
+        :return: Object Attributes Manager
+        """
+        raise NotImplementedError
+
+    def add_object(self, object_index) -> int:
+        r"""Instances an object into the scene via template referenced by library id
+
+        :param object_index: index of object to be inserted as referenced by library id
+        :return: id of inserted object
+        """
+        raise NotImplementedError
+
+    def set_translation(
+        self, translation: "np.ndarray", object_id: int
+    ) -> None:
+        r"""Sets translation of an instanced object
+
+        :param translation: position where the object is to be translated
+        :param  object_id: id of the object that is to be translated
+        """
+        raise NotImplementedError
