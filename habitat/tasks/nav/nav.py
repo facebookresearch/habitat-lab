@@ -44,7 +44,6 @@ except ImportError:
     pass
 cv2 = try_cv2_import()
 
-
 MAP_THICKNESS_SCALAR: int = 128
 
 
@@ -520,7 +519,8 @@ class Success(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid, [DistanceToGoal.cls_uuid]
         )
-        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+        self.update_metric(episode=episode, task=task, *args,
+                           **kwargs)  # type: ignore
 
     def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
@@ -597,8 +597,8 @@ class SPL(Measure):
         self._metric = ep_success * (
             self._start_end_episode_distance
             / max(
-                self._start_end_episode_distance, self._agent_episode_distance
-            )
+            self._start_end_episode_distance, self._agent_episode_distance
+        )
         )
 
 
@@ -623,7 +623,8 @@ class SoftSPL(SPL):
         self._start_end_episode_distance = task.measurements.measures[
             DistanceToGoal.cls_uuid
         ].get_metric()
-        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+        self.update_metric(episode=episode, task=task, *args,
+                           **kwargs)  # type: ignore
 
     def update_metric(self, episode, task, *args: Any, **kwargs: Any):
         current_position = self._sim.get_agent_state().position
@@ -644,8 +645,8 @@ class SoftSPL(SPL):
         self._metric = ep_soft_success * (
             self._start_end_episode_distance
             / max(
-                self._start_end_episode_distance, self._agent_episode_distance
-            )
+            self._start_end_episode_distance, self._agent_episode_distance
+        )
         )
 
 
@@ -724,17 +725,14 @@ class TopDownMap(Measure):
             sim=self._sim,
         )
         self._top_down_map[
-            t_x - self.point_padding : t_x + self.point_padding + 1,
-            t_y - self.point_padding : t_y + self.point_padding + 1,
+        t_x - self.point_padding: t_x + self.point_padding + 1,
+        t_y - self.point_padding: t_y + self.point_padding + 1,
         ] = point_type
 
     def _draw_goals_view_points(self, episode):
         if self._config.DRAW_VIEW_POINTS:
             for goal in episode.goals:
-                if goal.position[1] > \
-                    self._sim.get_agent(0).state.position[1] and \
-                    goal.position[1] < \
-                    self._sim.get_agent(0).state.position[1] + 2:
+                if self._is_on_same_floor(goal.position[1]):
                     try:
                         if goal.view_points is not None:
                             for view_point in goal.view_points:
@@ -749,10 +747,7 @@ class TopDownMap(Measure):
         if self._config.DRAW_GOAL_POSITIONS:
 
             for goal in episode.goals:
-                if goal.position[1] > \
-                    self._sim.get_agent(0).state.position[1] and \
-                    goal.position[1] < \
-                    self._sim.get_agent(0).state.position[1] + 2:
+                if self._is_on_same_floor(goal.position[1]):
                     try:
                         self._draw_point(
                             goal.position, maps.MAP_TARGET_POINT_INDICATOR
@@ -786,8 +781,7 @@ class TopDownMap(Measure):
                             (x_len, -z_len),
                             (-x_len, -z_len),
                         ]
-                        if center[1] > self._sim.get_agent(0).state.position[1]
-                           and center[1] < self._sim.get_agent(0).state.position[1] + 2
+                        if self._is_on_same_floor(center[1])
                     ]
 
                     map_corners = [
@@ -830,6 +824,14 @@ class TopDownMap(Measure):
                 maps.MAP_SHORTEST_PATH_COLOR,
                 self.line_thickness,
             )
+
+    def _is_on_same_floor(self, pt, ref_floor_pt=None, ceiling_height=2.0):
+        same_floor = False
+        if ref_floor_pt is None:
+            ref_floor_pt = self._sim.get_agent(0).state.position[1]
+        if ref_floor_pt < pt < ref_floor_pt + ceiling_height:
+            same_floor = True
+        return same_floor
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
@@ -920,7 +922,7 @@ class TopDownMap(Measure):
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                / maps.calculate_meters_per_pixel(
+                             / maps.calculate_meters_per_pixel(
                     self._map_resolution, sim=self._sim
                 ),
             )
