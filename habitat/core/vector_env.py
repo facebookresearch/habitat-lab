@@ -34,7 +34,8 @@ from habitat.config import Config
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
-from habitat.utils import pickle5_multiprocessing, profiling_wrapper
+from habitat.utils import profiling_wrapper
+from habitat.utils.pickle5_multiprocessing import ConnectionWrapper
 
 try:
     # Use torch.multiprocessing if we can.
@@ -46,6 +47,7 @@ try:
 except ImportError:
     torch = None
     import multiprocessing as mp  # type:ignore
+
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -174,11 +176,6 @@ class VectorEnv:
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         self._mp_ctx = mp.get_context(multiprocessing_start_method)
-        # This patches multiprocessing to use pickle5 which has nocopy pickling support
-        # Only tested with numpy
-        self._mp_ctx.reducer.ForkingPickler = (  # type: ignore
-            pickle5_multiprocessing.ForkingPickler5
-        )
         self._workers = []
         (
             self._connection_read_fns,
@@ -305,7 +302,10 @@ class VectorEnv:
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         parent_connections, worker_connections = zip(
-            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+            *[
+                [ConnectionWrapper(c) for c in self._mp_ctx.Pipe(duplex=True)]
+                for _ in range(self._num_envs)
+            ]
         )
         self._workers = []
         for worker_conn, parent_conn, env_args in zip(
