@@ -832,7 +832,6 @@ class TopDownMap(Measure):
             same_floor = True
         return same_floor
 
-
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
         self._metric = None
