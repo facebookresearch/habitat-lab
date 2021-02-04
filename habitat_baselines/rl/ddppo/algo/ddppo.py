@@ -102,13 +102,12 @@ class DecentralizedDistributedMixin:
                         find_unused_parameters=find_unused_params,
                     )
 
-        self._guard = Guard(_EvalActionsWrapper(self.actor_critic), self.device)  # type: ignore
-        self._ddp_evaluate_actions = self._guard.ddp
+        self._evaluate_actions = Guard(_EvalActionsWrapper(self.actor_critic), self.device)  # type: ignore
 
     def evaluate_actions(
         self, observations, rnn_hidden_states, prev_actions, masks, action
     ):
-        return self._ddp_evaluate_actions(
+        return self._evaluate_actions.ddp(
             observations, rnn_hidden_states, prev_actions, masks, action
         )
 
