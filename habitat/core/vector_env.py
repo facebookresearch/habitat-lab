@@ -286,11 +286,11 @@ class VectorEnv:
                 with profiling_wrapper.RangeContext("worker wait for command"):
                     command, data = connection_read_fn()
 
-            if child_pipe is not None:
-                child_pipe.close()
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")
         finally:
+            if child_pipe is not None:
+                child_pipe.close()
             env.close()
 
     def _spawn_workers(
