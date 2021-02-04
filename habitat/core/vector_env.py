@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import contextlib
 import signal
 import warnings
 from multiprocessing.connection import Connection
@@ -229,70 +228,70 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        with env_fn(*env_fn_args) as env, contextlib.closing(
-            child_pipe
-        ) if child_pipe is not None else contextlib.suppress():
-            if parent_pipe is not None:
-                parent_pipe.close()
-            try:
-                command, data = connection_read_fn()
-                while command != CLOSE_COMMAND:
-                    if command == STEP_COMMAND:
-                        # different step methods for habitat.RLEnv and habitat.Env
-                        if isinstance(env, (habitat.RLEnv, gym.Env)):
-                            # habitat.RLEnv
-                            observations, reward, done, info = env.step(**data)
-                            if auto_reset_done and done:
-                                observations = env.reset()
-                            with profiling_wrapper.RangeContext(
-                                "worker write after step"
-                            ):
-                                connection_write_fn(
-                                    (observations, reward, done, info)
-                                )
-                        elif isinstance(env, habitat.Env):  # type: ignore
-                            # habitat.Env
-                            observations = env.step(**data)
-                            if auto_reset_done and env.episode_over:
-                                observations = env.reset()
-                            connection_write_fn(observations)
-                        else:
-                            raise NotImplementedError
-
-                    elif command == RESET_COMMAND:
-                        observations = env.reset()
+        env = env_fn(*env_fn_args)
+        if parent_pipe is not None:
+            parent_pipe.close()
+        try:
+            command, data = connection_read_fn()
+            while command != CLOSE_COMMAND:
+                if command == STEP_COMMAND:
+                    # different step methods for habitat.RLEnv and habitat.Env
+                    if isinstance(env, (habitat.RLEnv, gym.Env)):
+                        # habitat.RLEnv
+                        observations, reward, done, info = env.step(**data)
+                        if auto_reset_done and done:
+                            observations = env.reset()
+                        with profiling_wrapper.RangeContext(
+                            "worker write after step"
+                        ):
+                            connection_write_fn(
+                                (observations, reward, done, info)
+                            )
+                    elif isinstance(env, habitat.Env):  # type: ignore
+                        # habitat.Env
+                        observations = env.step(**data)
+                        if auto_reset_done and env.episode_over:
+                            observations = env.reset()
                         connection_write_fn(observations)
-
-                    elif command == RENDER_COMMAND:
-                        connection_write_fn(env.render(*data[0], **data[1]))
-
-                    elif command == CALL_COMMAND:
-                        function_name, function_args = data
-                        if function_args is None:
-                            function_args = {}
-
-                        result_or_fn = getattr(env, function_name)
-
-                        if len(function_args) > 0 or callable(result_or_fn):
-                            result = result_or_fn(**function_args)
-                        else:
-                            result = result_or_fn
-
-                        connection_write_fn(result)
-
-                    elif command == COUNT_EPISODES_COMMAND:
-                        connection_write_fn(len(env.episodes))
-
                     else:
-                        raise NotImplementedError(f"Unknown command {command}")
+                        raise NotImplementedError
 
-                    with profiling_wrapper.RangeContext(
-                        "worker wait for command"
-                    ):
-                        command, data = connection_read_fn()
+                elif command == RESET_COMMAND:
+                    observations = env.reset()
+                    connection_write_fn(observations)
 
-            except KeyboardInterrupt:
-                logger.info("Worker KeyboardInterrupt")
+                elif command == RENDER_COMMAND:
+                    connection_write_fn(env.render(*data[0], **data[1]))
+
+                elif command == CALL_COMMAND:
+                    function_name, function_args = data
+                    if function_args is None:
+                        function_args = {}
+
+                    result_or_fn = getattr(env, function_name)
+
+                    if len(function_args) > 0 or callable(result_or_fn):
+                        result = result_or_fn(**function_args)
+                    else:
+                        result = result_or_fn
+
+                    connection_write_fn(result)
+
+                elif command == COUNT_EPISODES_COMMAND:
+                    connection_write_fn(len(env.episodes))
+
+                else:
+                    raise NotImplementedError(f"Unknown command {command}")
+
+                with profiling_wrapper.RangeContext("worker wait for command"):
+                    command, data = connection_read_fn()
+
+        except KeyboardInterrupt:
+            logger.info("Worker KeyboardInterrupt")
+        finally:
+            if child_pipe is not None:
+                child_pipe.close()
+            env.close()
 
     def _spawn_workers(
         self,

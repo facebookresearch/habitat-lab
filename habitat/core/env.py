@@ -309,6 +309,9 @@ class Env:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def __del__(self):
+        self.close()
+
 
 class RLEnv(gym.Env):
     r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
