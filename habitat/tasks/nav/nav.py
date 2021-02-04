@@ -827,12 +827,12 @@ class TopDownMap(Measure):
     def _is_on_same_floor(
         self, height, ref_floor_height=None, ceiling_height=2.0
     ):
-        same_floor = False
         if ref_floor_height is None:
             ref_floor_height = self._sim.get_agent(0).state.position[1]
         if ref_floor_height < height < ref_floor_height + ceiling_height:
-            same_floor = True
-        return same_floor
+            return True
+        else:
+            return False
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
