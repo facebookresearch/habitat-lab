@@ -22,53 +22,6 @@ from habitat_baselines.utils.common import cast_to_float_if_half
 EPS_PPO = 1e-5
 
 
-class FP16OptimParamManager:
-    def __init__(self, optimizer: optim.Optimizer):
-        self.optimizer = optimizer
-
-        self._fp16_params = []
-        self._fp32_params = []
-
-        for pg in optimizer.param_groups:
-            new_fp32_params = []
-            self._fp16_params.append(pg["params"])
-            for param in pg["params"]:
-                fp32_param = cast_to_float_if_half(param)
-
-                new_fp32_params.append(fp32_param)
-
-            pg["params"] = new_fp32_params
-            self._fp32_params.append(new_fp32_params)
-
-    def _apply_fn(self, function):
-        for fp32_pg, fp16_pg in zip(self._fp32_params, self._fp16_params):
-            for fp32_p, fp16_p in zip(fp32_pg, fp16_pg):
-                function(fp32_p, fp16_p)
-
-    def sync_grads(self):
-        def _sync_grad_fn(fp32_p, fp16_p):
-            if fp16_p.grad is not None:
-                fp32_p.grad = cast_to_float_if_half(fp16_p.grad)
-
-        self._apply_fn(_sync_grad_fn)
-
-    def sync_params(self):
-        self._apply_fn(lambda fp32_p, fp16_p: fp16_p.data.copy_(fp32_p.data))
-
-    def set_fp32_params_from_optim(self):
-        self._fp32_params = [
-            pg["params"] for pg in self.optimizer.param_groups
-        ]
-        self.sync_params()
-
-    def clear_grads(self):
-        def _set_none(fp32_p, fp16_p):
-            fp32_p.grad = None
-            fp16_p.grad = None
-
-        self._apply_fn(_set_none)
-
-
 class PPO(nn.Module):
     def __init__(
         self,
@@ -140,6 +93,7 @@ class PPO(nn.Module):
         self.optimizer.load_state_dict(state_dict["optimizer"])
         if self.grad_scaler is not None:
             self.grad_scaler.load_state_dict(state_dict["grad_scaler"])
+            self._prev_grad_scale = self.grad_scaler.get_scale()
 
         if self.fp16_optim_params is not None:
             self.fp16_optim_params.set_fp32_params_from_optim()
@@ -309,3 +263,76 @@ class PPO(nn.Module):
                     "  This typically indicates that fp16 training is unstable."
                     "  Consider switching from mixed to autocast or autocast to off"
                 )
+
+
+class FP16OptimParamManager:
+    r"""Manages a second set of parameters in fp32 for the optimizer when the model
+    is in fp16.  This works by taking an optimizer that currently has the model's fp16
+    parameters and replacing them with fp32 versions.  It then has three calls: sync_grads()
+    copies the gradients of the fp16 weights onto the fp32 copies (this should ideally be done
+    before unscaling for maintaining the most amount of precisions), sync_params() copies the fp32
+    params onto the fp16 params.  clear_grads() clears the gradients of both the fp16 and fp32 params.
+
+    General usage:
+
+    .. code:: py
+
+        grad_scaler.scale(loss).backward()
+
+        fp16_optim_params.sync_grads()
+
+        grad_scaler.unscale_(optimizer)
+        grad_scaler.step(optimizer)
+
+        fp16_optim_params.sync_params()
+        fp16_optim_params.clear_grads()
+
+
+    Note that after loading the optimizer's state dict with load_state_dict(),
+    set_fp32_params_from_optim() must be called!
+    """
+
+    def __init__(self, optimizer: optim.Optimizer):
+        self.optimizer = optimizer
+
+        self._fp16_params = []
+        self._fp32_params = []
+
+        for pg in optimizer.param_groups:
+            new_fp32_params = []
+            self._fp16_params.append(pg["params"])
+            for param in pg["params"]:
+                fp32_param = cast_to_float_if_half(param)
+
+                new_fp32_params.append(fp32_param)
+
+            pg["params"] = new_fp32_params
+            self._fp32_params.append(new_fp32_params)
+
+    def _apply_fn(self, function):
+        for fp32_pg, fp16_pg in zip(self._fp32_params, self._fp16_params):
+            for fp32_p, fp16_p in zip(fp32_pg, fp16_pg):
+                function(fp32_p, fp16_p)
+
+    def sync_grads(self):
+        def _sync_grad_fn(fp32_p, fp16_p):
+            if fp16_p.grad is not None:
+                fp32_p.grad = cast_to_float_if_half(fp16_p.grad)
+
+        self._apply_fn(_sync_grad_fn)
+
+    def sync_params(self):
+        self._apply_fn(lambda fp32_p, fp16_p: fp16_p.data.copy_(fp32_p.data))
+
+    def set_fp32_params_from_optim(self):
+        self._fp32_params = [
+            pg["params"] for pg in self.optimizer.param_groups
+        ]
+        self.sync_params()
+
+    def clear_grads(self):
+        def _set_none(fp32_p, fp16_p):
+            fp32_p.grad = None
+            fp16_p.grad = None
+
+        self._apply_fn(_set_none)

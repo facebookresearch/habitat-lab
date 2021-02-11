@@ -55,6 +55,7 @@ _C.EVAL.USE_CKPT_CONFIG = True
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
+# fp16_mode can be one of off, autocast, mixed
 _C.RL.fp16_mode = "off"
 _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
