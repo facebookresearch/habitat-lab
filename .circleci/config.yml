@@ -148,9 +148,9 @@ jobs:
                 conda install -y pytorch=1.7.1 torchvision cudatoolkit=10.1 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed
-      - restore_cache:
-          keys:
-            - habitat-sim-{{ checksum "./hsim_sha" }}
+      # - restore_cache:
+          # keys:
+            # - habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
             - ccache-{{ arch }}-master
