@@ -15,6 +15,14 @@ The two recommended backends are GLOO and NCCL.  Use NCCL if your system has it,
 See [pytorch's distributed docs](https://pytorch.org/docs/stable/distributed.html#backends-that-come-with-pytorch)
 and [pytorch's distributed tutorial](https://pytorch.org/tutorials/intermediate/dist_tuto.html) for more information.
 
+### Verifying gradient reduction
+
+Due to the different nature of RL than supervised learning, the way DD-PPO interfaces with PyTorch's DistributedDataParallel is slightly off the beaten path and while it is reasonably robust new versions of pytorch have broken it in the past.  Our CI does not test against every version of pytorch, so if there ever concern that gradient may not be working, run the unit test locally:
+
+```
+pytest test/test_ddppo_reduce.py
+```
+
 ## Pretrained Models (PointGoal Navigation with GPS+Compass)
 
 
