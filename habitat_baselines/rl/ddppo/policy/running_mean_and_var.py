@@ -17,16 +17,17 @@ def _welford_update(mean, var, count, new_mean, new_var, new_count):
     """
     m_a = var * (count - 1)
     m_b = new_var * new_count
+    updated_count = count + new_count
     M2 = (
         m_a
         + m_b
-        + (new_mean - mean).pow(2) * count * new_count / (count + new_count)
+        + (new_mean - mean).pow(2) * count * new_count / updated_count
     )
 
-    var = M2 / (count + new_count - 1)
-    mean = (count * mean + new_count * new_mean) / (count + new_count)
+    var = M2 / (updated_count - 1)
+    mean = (count * mean + new_count * new_mean) / updated_count
 
-    return mean, var, count + new_count
+    return mean, var, updated_count
 
 
 class RunningMeanAndVar(nn.Module):
