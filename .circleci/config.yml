@@ -132,13 +132,12 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.6
                 . activate habitat
-                conda install -q -y -c conda-forge ninja ccache pytest pytest-mock pytest-cov
+                conda install -q -y -c conda-forge numpy ninja ccache pytest pytest-mock pytest-cov
                 pip install pytest-sugar
               fi
       - run:
           name: Install pytorch
           no_output_timeout: 20m
-          background: False
           command: |
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
@@ -148,9 +147,9 @@ jobs:
                 conda install -y pytorch=1.7.1 torchvision cudatoolkit=10.1 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed
-      # - restore_cache:
-          # keys:
-            # - habitat-sim-{{ checksum "./hsim_sha" }}
+      - restore_cache:
+          keys:
+            - habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
             - ccache-{{ arch }}-master
