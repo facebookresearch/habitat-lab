@@ -44,6 +44,10 @@ _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.FORCE_BLIND_POLICY = False
 _C.VERBOSE = True
+# PyTorch keeps making more CPU things multi-threaded and that
+# always ends up reducing our perf when training is being done on the GPU,
+# so force it to be single threaded.
+_C.FORCE_TORCH_SINGLE_THREADED = True
 # -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
