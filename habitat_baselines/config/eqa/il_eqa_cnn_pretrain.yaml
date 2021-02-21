@@ -18,6 +18,9 @@ LOG_METRICS: True
 LOG_INTERVAL: 50
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 50
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
 
 IL:
   EQACNNPretrain:

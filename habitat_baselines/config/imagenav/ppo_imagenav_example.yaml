@@ -15,6 +15,9 @@ NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1e6
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 10
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
   PPO:
