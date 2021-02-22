@@ -258,7 +258,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
-            sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg = habitat_sim.CameraSensorSpec()
             # TODO Handle configs for custom VisualSensors that might need
             # their own ignore_keys. Maybe with special key / checking
             # SensorType
@@ -281,7 +281,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_sensor_cfg.resolution = list(
                 sensor.observation_space.shape[:2]
             )
-            sim_sensor_cfg.parameters["hfov"] = str(sensor.config.HFOV)
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
