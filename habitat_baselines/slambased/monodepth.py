@@ -637,7 +637,7 @@ class MonoDepthEstimator:
         )
         self.model = torch.nn.DataParallel(self.model).cuda()
         cpt = torch.load(checkpoint)
-        if "state_dict" in cpt.keys():
+        if "state_dict" in cpt:
             cpt = cpt["state_dict"]
         self.model.load_state_dict(cpt)
         self.model.eval()
