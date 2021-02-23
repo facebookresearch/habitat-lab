@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.utils.common import cast_to_half_if_float
 
 
 class RolloutStorage:
@@ -92,6 +93,12 @@ class RolloutStorage:
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
+
+    def to_fp16(self):
+        self.buffers["recurrent_hidden_states"] = self.buffers[
+            "recurrent_hidden_states"
+        ].to(dtype=torch.float16)
+        self.buffers["observations"].map_in_place(cast_to_half_if_float)
 
     def insert(
         self,

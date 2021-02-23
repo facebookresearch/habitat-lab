@@ -19,7 +19,7 @@ from torch import nn
 
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.config.default import get_config
-from habitat_baselines.rl.ddppo.algo import DDPPO
+from habitat_baselines.rl.ddppo.algo.ddppo import DDPPO
 from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 
 

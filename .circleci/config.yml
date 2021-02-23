@@ -132,20 +132,19 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.6
                 . activate habitat
-                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
+                conda install -q -y -c conda-forge numpy ninja ccache pytest pytest-mock pytest-cov
                 pip install pytest-sugar
               fi
       - run:
           name: Install pytorch
           no_output_timeout: 20m
-          background: true
           command: |
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
                 conda install -c  conda-forge opencv -y
-                conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
+                conda install -y pytorch=1.7.1 torchvision cudatoolkit=10.1 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed
       - restore_cache:
@@ -245,6 +244,7 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
+              export MKL_THREADING_LAYER=GNU
               python setup.py test --addopts "--cov-report=xml --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
