@@ -35,6 +35,7 @@ from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.utils import profiling_wrapper
+from habitat.utils.pickle5_multiprocessing import ConnectionWrapper
 
 try:
     # Use torch.multiprocessing if we can.
@@ -46,6 +47,7 @@ try:
 except ImportError:
     torch = None
     import multiprocessing as mp  # type:ignore
+
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -286,11 +288,11 @@ class VectorEnv:
                 with profiling_wrapper.RangeContext("worker wait for command"):
                     command, data = connection_read_fn()
 
-            if child_pipe is not None:
-                child_pipe.close()
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")
         finally:
+            if child_pipe is not None:
+                child_pipe.close()
             env.close()
 
     def _spawn_workers(
@@ -300,7 +302,10 @@ class VectorEnv:
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         parent_connections, worker_connections = zip(
-            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+            *[
+                [ConnectionWrapper(c) for c in self._mp_ctx.Pipe(duplex=True)]
+                for _ in range(self._num_envs)
+            ]
         )
         self._workers = []
         for worker_conn, parent_conn, env_args in zip(
