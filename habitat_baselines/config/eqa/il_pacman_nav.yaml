@@ -23,6 +23,9 @@ LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 1
 EVAL_SAVE_RESULTS: True
 EVAL_SAVE_RESULTS_INTERVAL: 10
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
 
 IL:
   NAV:

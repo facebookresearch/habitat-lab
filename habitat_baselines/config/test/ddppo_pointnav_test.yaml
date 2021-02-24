@@ -12,6 +12,9 @@ NUM_UPDATES: 2
 NUM_CHECKPOINTS: 2
 LOG_INTERVAL: 100
 TEST_EPISODE_COUNT: 2
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
   SUCCESS_REWARD: 2.5
