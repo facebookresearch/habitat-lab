@@ -46,7 +46,11 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
 )
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
-from habitat_baselines.utils.common import batch_obs, generate_video
+from habitat_baselines.utils.common import (
+    ObservationBatchingCache,
+    batch_obs,
+    generate_video,
+)
 from habitat_baselines.utils.env_utils import construct_envs
 
 
@@ -60,6 +64,7 @@ class PPOTrainer(BaseRLTrainer):
 
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
     _is_distributed: bool
+    _obs_batching_cache: ObservationBatchingCache
     envs: VectorEnv
     agent: PPO
     actor_critic: Policy
@@ -82,6 +87,7 @@ class PPOTrainer(BaseRLTrainer):
         # Distirbuted if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
+        self._obs_batching_cache = ObservationBatchingCache()
 
     @property
     def obs_space(self):
@@ -281,7 +287,9 @@ class PPOTrainer(BaseRLTrainer):
         self.rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(observations, device=self.device)
+        batch = batch_obs(
+            observations, device=self.device, cache=self._obs_batching_cache
+        )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         if self._static_encoder:
@@ -456,7 +464,9 @@ class PPOTrainer(BaseRLTrainer):
         self.env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(observations, device=self.device)
+        batch = batch_obs(
+            observations, device=self.device, cache=self._obs_batching_cache
+        )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
@@ -869,7 +879,9 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
-        batch = batch_obs(observations, device=self.device)
+        batch = batch_obs(
+            observations, device=self.device, cache=self._obs_batching_cache
+        )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         current_episode_reward = torch.zeros(
@@ -953,7 +965,11 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(observations, device=self.device)
+            batch = batch_obs(
+                observations,
+                device=self.device,
+                cache=self._obs_batching_cache,
+            )
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
             not_done_masks = torch.tensor(
