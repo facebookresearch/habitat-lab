@@ -282,50 +282,49 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 raise ValueError(
                     f"""{getattr(sensor, "sim_sensor_type", [])} is an illegal sensorType that is not implemented yet"""
                 )
-            else:
-                # Check if type CameraSensorSpec
-                if (
-                    getattr(sensor, "sim_sensor_subtype", [])
-                    not in CameraSensorSubTypeSet
-                ):
-                    raise ValueError(
-                        f"""{getattr(sensor, "sim_sensor_subtype", [])} is an illegal sensorSubType for a VisualSensor"""
-                    )
-                else:
-                    sim_sensor_cfg = habitat_sim.CameraSensorSpec()
-                    # TODO Handle configs for custom VisualSensors that might need
-                    # their own ignore_keys. Maybe with special key / checking
-                    # SensorType
-                    overwrite_config(
-                        config_from=sensor.config,
-                        config_to=sim_sensor_cfg,
-                        # These keys are only used by Hab-Lab
-                        # or translated into the sensor config manually
-                        ignore_keys={
-                            "height",
-                            "hfov",
-                            "max_depth",
-                            "min_depth",
-                            "normalize_depth",
-                            "type",
-                            "width",
-                        },
-                    )
-                    sim_sensor_cfg.uuid = sensor.uuid
-                    sim_sensor_cfg.resolution = list(
-                        sensor.observation_space.shape[:2]
-                    )
+            # Check if type CameraSensorSpec
+            if (
+                getattr(sensor, "sim_sensor_subtype", [])
+                not in CameraSensorSubTypeSet
+            ):
+                raise ValueError(
+                    f"""{getattr(sensor, "sim_sensor_subtype", [])} is an illegal sensorSubType for a VisualSensor"""
+                )
 
-                    # TODO(maksymets): Add configure method to Sensor API to avoid
-                    # accessing child attributes through parent interface
-                    # We know that the Sensor has to be one of these Sensors
-                    sensor = cast(HabitatSimVizSensors, sensor)
-                    sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-                    sim_sensor_cfg.sensor_subtype = sensor.sim_sensor_subtype
-                    sim_sensor_cfg.gpu2gpu_transfer = (
-                        self.habitat_config.HABITAT_SIM_V0.GPU_GPU
-                    )
-                    sensor_specifications.append(sim_sensor_cfg)
+            sim_sensor_cfg = habitat_sim.CameraSensorSpec()
+            # TODO Handle configs for custom VisualSensors that might need
+            # their own ignore_keys. Maybe with special key / checking
+            # SensorType
+            overwrite_config(
+                config_from=sensor.config,
+                config_to=sim_sensor_cfg,
+                # These keys are only used by Hab-Lab
+                # or translated into the sensor config manually
+                ignore_keys={
+                    "height",
+                    "hfov",
+                    "max_depth",
+                    "min_depth",
+                    "normalize_depth",
+                    "type",
+                    "width",
+                },
+            )
+            sim_sensor_cfg.uuid = sensor.uuid
+            sim_sensor_cfg.resolution = list(
+                sensor.observation_space.shape[:2]
+            )
+
+            # TODO(maksymets): Add configure method to Sensor API to avoid
+            # accessing child attributes through parent interface
+            # We know that the Sensor has to be one of these Sensors
+            sensor = cast(HabitatSimVizSensors, sensor)
+            sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
+            sim_sensor_cfg.sensor_subtype = sensor.sim_sensor_subtype
+            sim_sensor_cfg.gpu2gpu_transfer = (
+                self.habitat_config.HABITAT_SIM_V0.GPU_GPU
+            )
+            sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
         agent_config.action_space = registry.get_action_space_configuration(
