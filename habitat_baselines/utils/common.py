@@ -22,6 +22,7 @@ from typing import (
     Union,
 )
 
+import attr
 import numpy as np
 import torch
 from gym.spaces import Box
@@ -86,11 +87,57 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
+@attr.s(auto_attribs=True, slots=True)
+class ObservationBatchingCache:
+    r"""Helper for batching observations that maintains a cpu-side tensor
+    that is the right size and is pinned to cuda memory
+    """
+    _pool: Dict[Any, torch.Tensor] = attr.Factory(dict)
+
+    def get(
+        self,
+        num_obs: int,
+        sensor_name: str,
+        sensor: torch.Tensor,
+        device: Optional[torch.device] = None,
+    ) -> torch.Tensor:
+        r"""Returns a tensor of the right size to batch num_obs observations together
+
+        If sensor is a cpu-side tensor and device is a cuda device the batched tensor will
+        be pinned to cuda memory.  If sensor is a cuda tensor, the batched tensor will also be
+        a cuda tensor
+        """
+        key = (
+            num_obs,
+            sensor_name,
+            tuple(sensor.size()),
+            sensor.type(),
+            sensor.device.type,
+            sensor.device.index,
+        )
+        if key in self._pool:
+            return self._pool[key]
+
+        cache = torch.empty(
+            num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
+        )
+        if (
+            device is not None
+            and device.type == "cuda"
+            and cache.device.type == "cpu"
+        ):
+            cache = cache.pin_memory()
+
+        self._pool[key] = cache
+        return cache
+
+
 @torch.no_grad()
 @profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
     observations: List[DictTree],
     device: Optional[torch.device] = None,
+    cache: Optional[ObservationBatchingCache] = None,
 ) -> TensorDict:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
@@ -99,22 +146,36 @@ def batch_obs(
         observations:  list of dicts of observations.
         device: The torch.device to put the resulting tensors on.
             Will not move the tensors if None
+        cache: An ObservationBatchingCache.  This enables faster
+            stacking of observations and cpu-gpu transfer as it
+            maintains a correctly sized tensor for the batched
+            observations that is pinned to cuda memory.
 
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    batch: DefaultDict[str, List] = defaultdict(list)
-
-    for obs in observations:
-        for sensor in obs:
-            batch[sensor].append(torch.as_tensor(obs[sensor]))
-
     batch_t: TensorDict = TensorDict()
+    if cache is None:
+        batch: DefaultDict[str, List] = defaultdict(list)
 
-    for sensor in batch:
-        batch_t[sensor] = torch.stack(batch[sensor], dim=0)
+    for i, obs in enumerate(observations):
+        for sensor_name, sensor in obs.items():
+            sensor = torch.as_tensor(sensor)
+            if cache is None:
+                batch[sensor_name].append(sensor)
+            else:
+                if sensor_name not in batch_t:
+                    batch_t[sensor_name] = cache.get(
+                        len(observations), sensor_name, sensor, device
+                    )
 
-    return batch_t.map(lambda v: v.to(device))
+                batch_t[sensor_name][i].copy_(sensor)
+
+    if cache is None:
+        for sensor in batch:
+            batch_t[sensor] = torch.stack(batch[sensor], dim=0)
+
+    return batch_t.map(lambda v: v.to(device, non_blocking=True))
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:

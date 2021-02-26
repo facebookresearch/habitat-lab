@@ -106,7 +106,7 @@ while not env.episode_over:
 
 ```
 
-See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures) for an example of how to extend habitat-lab from _outside_ the source code
+See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code
 
 ## Documentation
 

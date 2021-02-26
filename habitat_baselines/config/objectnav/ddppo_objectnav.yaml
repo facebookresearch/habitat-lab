@@ -15,6 +15,9 @@ SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
 NUM_UPDATES: 270000
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 100
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
 
 EVAL:
   SPLIT: "val"
