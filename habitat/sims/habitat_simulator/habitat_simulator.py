@@ -291,6 +291,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     f"""{getattr(sensor, "sim_sensor_subtype", [])} is an illegal sensorSubType for a VisualSensor"""
                 )
 
+            # TODO: Implement checks for other types of SensorSpecs
+
             sim_sensor_cfg = habitat_sim.CameraSensorSpec()
             # TODO Handle configs for custom VisualSensors that might need
             # their own ignore_keys. Maybe with special key / checking
