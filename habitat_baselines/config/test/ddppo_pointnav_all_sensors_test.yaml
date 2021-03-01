@@ -5,9 +5,9 @@ SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
-EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
+EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/pointnav-all/ckpt.0.pth"
 NUM_ENVIRONMENTS: 1
-CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/pointnav/"
+CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/pointnav-all/"
 NUM_UPDATES: 2
 NUM_CHECKPOINTS: 2
 LOG_INTERVAL: 100
