@@ -4,6 +4,13 @@ about: Submit a bug report to help us improve Habitat
 
 ---
 
+## Habitat-Lab and Habitat-Sim versions
+Habitat-Lab: vX or master?
+Habitat-Sim: vX or master?
+
+Have you tried the latest release versions of [Habitat-Lab](https://github.com/facebookresearch/habitat-lab/releases) and [Habitat-Sim](https://github.com/facebookresearch/habitat-sim/releases)? If not, why not?
+
+
 ## 🐛 Bug
 
 <!-- A clear and concise description of what the bug is. -->
