@@ -73,7 +73,8 @@ ACTIONS.LOOK_DOWN = CN()
 ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
 ACTIONS.TELEPORT = CN()
 ACTIONS.TELEPORT.TYPE = "TeleportAction"
-
+ACTIONS.GRAB_RELEASE = CN()
+ACTIONS.GRAB_RELEASE.TYPE = "GrabOrReleaseAction"
 _C.TASK.ACTIONS = ACTIONS
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
@@ -204,6 +205,35 @@ _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 _C.TASK.ANSWER_ACCURACY = CN()
 _C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
+# # REARRANGEMENT TASK GRIPPED OBJECT SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GRIPPED_OBJECT_SENSOR = CN()
+_C.TASK.GRIPPED_OBJECT_SENSOR.TYPE = "GrippedObjectSensor"
+# -----------------------------------------------------------------------------
+# # REARRANGEMENT TASK ALL OBJECT POSITIONS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ALL_OBJECT_POSITIONS = CN()
+_C.TASK.ALL_OBJECT_POSITIONS.TYPE = "AllObjectPositions"
+_C.TASK.ALL_OBJECT_POSITIONS.GOAL_FORMAT = "POLAR"
+_C.TASK.ALL_OBJECT_POSITIONS.DIMENSIONALITY = 2
+# -----------------------------------------------------------------------------
+# # REARRANGEMENT TASK ALL OBJECT GOALS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ALL_OBJECT_GOALS = CN()
+_C.TASK.ALL_OBJECT_GOALS.TYPE = "AllObjectGoals"
+_C.TASK.ALL_OBJECT_GOALS.GOAL_FORMAT = "POLAR"
+_C.TASK.ALL_OBJECT_GOALS.DIMENSIONALITY = 2
+# -----------------------------------------------------------------------------
+# # OBJECT_DISTANCE_TO_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECT_TO_GOAL_DISTANCE = CN()
+_C.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
+# -----------------------------------------------------------------------------
+# # OBJECT_DISTANCE_FROM_AGENT MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.AGENT_TO_OBJECT_DISTANCE = CN()
+_C.TASK.AGENT_TO_OBJECT_DISTANCE.TYPE = "AgentToObjectDistance"
+# -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
@@ -217,6 +247,12 @@ _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
+_C.SIMULATOR.INITIAL_LOOK_DOWN_ANGLE = (
+    0  # angle to look down at the start of the episode
+)
+_C.SIMULATOR.CROSSHAIR_POS = [128, 160]
+_C.SIMULATOR.GRAB_DISTANCE = 2.0
+_C.SIMULATOR.VISUAL_SENSOR = "rgb"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
