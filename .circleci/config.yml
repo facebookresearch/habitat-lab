@@ -99,6 +99,7 @@ jobs:
                   pkg-config \
                   wget \
                   zip \
+                  libhdf5-dev \
                   unzip || true
               sudo apt install --allow-change-held-packages \
                   texlive-base \
