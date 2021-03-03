@@ -99,6 +99,7 @@ jobs:
                   pkg-config \
                   wget \
                   zip \
+                  libhdf5-dev \
                   unzip || true
               sudo apt install --allow-change-held-packages \
                   texlive-base \
@@ -243,7 +244,6 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              pip install h5py!=3.2.0
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
               python setup.py test --addopts "--cov-report=xml --cov=./"
