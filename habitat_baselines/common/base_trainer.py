@@ -16,6 +16,11 @@ from habitat import Config, logger
 from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_baselines.rl.ddppo.algo.ddp_utils import (
+    SAVE_STATE,
+    is_slurm_batch_job,
+    rank0_only,
+)
 from habitat_baselines.utils.common import (
     get_checkpoint_id,
     poll_checkpoint_folder,
@@ -222,6 +227,22 @@ class BaseRLTrainer(BaseTrainer):
             ) == 0
 
         return needs_checkpoint
+
+    def _should_save_resume_state(self) -> bool:
+        if rank0_only():
+            return (
+                SAVE_STATE.is_set()
+                or (
+                    not self.config.RL.save_state_batch_only
+                    or is_slurm_batch_job()
+                )
+                and (
+                    (self.num_steps_done + 1)
+                    % self.config.RL.preemption.save_resume_state_interval
+                )
+            )
+        else:
+            return False
 
     @property
     def flush_secs(self):

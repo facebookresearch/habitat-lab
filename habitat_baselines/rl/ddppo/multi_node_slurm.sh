@@ -8,7 +8,8 @@
 #SBATCH --ntasks-per-node 1
 #SBATCH --mem=60GB
 #SBATCH --time=12:00
-#SBATCH --signal=USR1@600
+#SBATCH --signal=USR1@90
+#SBATCH --requeue
 #SBATCH --partition=dev
 
 export GLOG_minloglevel=2
