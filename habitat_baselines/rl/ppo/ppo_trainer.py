@@ -32,7 +32,7 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo import DDPPO
-from habitat_baselines.rl.ddppo.algo.ddp_utils import (
+from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
     add_signal_handlers,
     get_distrib_size,
@@ -42,6 +42,9 @@ from habitat_baselines.rl.ddppo.algo.ddp_utils import (
     rank0_only,
     requeue_job,
     save_resume_state,
+)
+from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+    PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
@@ -711,6 +714,11 @@ class PPOTrainer(BaseRLTrainer):
                 "_last_checkpoint_percent"
             ]
 
+            self.running_episode_stats = requeue_stats["running_episode_stats"]
+            self.window_episode_stats.update(
+                requeue_stats["window_episode_stats"]
+            )
+
         ppo_cfg = self.config.RL.PPO
 
         with (
@@ -729,7 +737,7 @@ class PPOTrainer(BaseRLTrainer):
                         1 - self.percent_done()
                     )
 
-                if self._should_save_resume_state():
+                if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
                         env_time=self.env_time,
                         pth_time=self.pth_time,
@@ -738,6 +746,8 @@ class PPOTrainer(BaseRLTrainer):
                         num_updates_done=self.num_updates_done,
                         _last_checkpoint_percent=self._last_checkpoint_percent,
                         prev_time=(time.time() - self.t_start) + prev_time,
+                        running_episode_stats=self.running_episode_stats,
+                        window_episode_stats=dict(self.window_episode_stats),
                     )
 
                     save_resume_state(

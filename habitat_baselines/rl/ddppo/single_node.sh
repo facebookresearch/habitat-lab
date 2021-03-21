@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export GLOG_minloglevel=2
-export MAGNUM_LOG=quiet
+# export GLOG_minloglevel=2
+# export MAGNUM_LOG=quiet
 
 set -x
 python -u -m torch.distributed.launch \
