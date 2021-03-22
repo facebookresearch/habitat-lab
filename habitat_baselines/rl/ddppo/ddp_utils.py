@@ -4,7 +4,7 @@ import signal
 import subprocess
 import threading
 from os import path as osp
-from typing import Any, Callable, Optional, Tuple, Union, cast, overload
+from typing import Any, Callable, Optional, Tuple, Union, overload
 
 import ifcfg
 import torch
@@ -162,7 +162,7 @@ def save_resume_state(state: Any, filename_or_config: Union[Config, str]):
     if isinstance(filename_or_config, Config):
         filename = resume_state_filename(filename_or_config)
     else:
-        filename = cast(str, filename_or_config)
+        filename = filename_or_config
 
     torch.save(state, filename)
 
@@ -177,7 +177,7 @@ def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
     if isinstance(filename_or_config, Config):
         filename = resume_state_filename(filename_or_config)
     else:
-        filename = cast(str, filename_or_config)
+        filename = filename_or_config
 
     if not osp.exists(filename):
         return None
