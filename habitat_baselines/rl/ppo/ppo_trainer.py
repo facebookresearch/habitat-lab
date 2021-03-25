@@ -216,8 +216,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config.SIMULATOR_GPU_ID = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
             self.config.TASK_CONFIG.SEED += (
-                torch.distributed.get_world_size()
-                * self.config.NUM_ENVIRONMENTS
+                torch.distributed.get_rank() * self.config.NUM_ENVIRONMENTS
             )
             self.config.freeze()
 
