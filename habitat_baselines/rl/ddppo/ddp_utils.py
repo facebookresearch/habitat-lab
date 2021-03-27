@@ -1,6 +1,5 @@
 import functools
 import os
-import shlex
 import signal
 import subprocess
 import threading
@@ -11,12 +10,14 @@ import ifcfg
 import torch
 from torch import distributed as distrib
 
-from habitat import logger
+from habitat import Config, logger
 
 EXIT = threading.Event()
 EXIT.clear()
 REQUEUE = threading.Event()
 REQUEUE.clear()
+SAVE_STATE = threading.Event()
+SAVE_STATE.clear()
 
 
 # Default port to initialized the TCP store on
@@ -26,9 +27,7 @@ DEFAULT_PORT_RANGE = 127
 DEFAULT_MASTER_ADDR = "127.0.0.1"
 
 SLURM_JOBID = os.environ.get("SLURM_JOB_ID", None)
-INTERRUPTED_STATE_FILE = osp.join(
-    os.environ["HOME"], ".interrupted_states", f"{SLURM_JOBID}.pth"
-)
+RESUME_STATE_BASE_NAME = ".habitat-resume-state"
 
 
 def is_slurm_job() -> bool:
@@ -47,7 +46,17 @@ def is_slurm_batch_job() -> bool:
         "fish",
         "tcsh",
         "sh",
+        "interactive",
     )
+
+
+def resume_state_filename(config: Config) -> str:
+    fname = RESUME_STATE_BASE_NAME
+
+    if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
+        fname += "-{}".format(SLURM_JOBID)
+
+    return osp.join(config.CHECKPOINT_FOLDER, fname + ".pth")
 
 
 @overload
@@ -101,20 +110,31 @@ def rank0_only(fn: Optional[Callable] = None) -> Union[Callable, bool]:
     return _wrapper
 
 
+def _ignore_handler(signum, frame):
+    pass
+
+
 def _clean_exit_handler(signum, frame):
     EXIT.set()
     print("Exiting cleanly", flush=True)
 
 
-def _requeue_handler(signal, frame):
-    print("Got signal to requeue", flush=True)
+def _clean_exit_and_save_handler(signum, frame):
     EXIT.set()
+    SAVE_STATE.set()
+    print("Exiting cleanly and saving state", flush=True)
+
+
+def _requeue_handler(signal, frame):
     REQUEUE.set()
+    SAVE_STATE.set()
+    EXIT.set()
+    print("Got signal to requeue", flush=True)
 
 
 def add_signal_handlers() -> None:
+    signal.signal(signal.SIGCONT, _ignore_handler)
     signal.signal(signal.SIGINT, _clean_exit_handler)
-    signal.signal(signal.SIGTERM, _clean_exit_handler)
 
     # SIGUSR2 can be sent to all processes to have them cleanup
     # and exit nicely.  This is nice to use with SLURM as scancel <job_id>
@@ -125,57 +145,52 @@ def add_signal_handlers() -> None:
     # the job ample time to cleanup and exit.
     signal.signal(signal.SIGUSR2, _clean_exit_handler)
 
+    # SLURM always sends SIGTERM so we can use this to save and exit
+    signal.signal(signal.SIGTERM, _clean_exit_and_save_handler)
+
     signal.signal(signal.SIGUSR1, _requeue_handler)
 
 
 @rank0_only
-def save_interrupted_state(state: Any, filename: str = None):
-    r"""Saves the interrupted job state to the specified filename.
+def save_resume_state(state: Any, filename_or_config: Union[Config, str]):
+    r"""Saves the resume job state to the specified filename.
         This is useful when working with preemptable job partitions.
 
-    This method will do nothing if SLURM is not currently being used and the filename is the default
-
     :param state: The state to save
-    :param filename: The filename.  Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
+    :param filename_or_config: The filename of the saved state or the config to construct it.
     """
-    if SLURM_JOBID is None and filename is None:
-        logger.warn("SLURM_JOBID is none, not saving interrupted state")
-        return
-
-    if filename is None:
-        filename = INTERRUPTED_STATE_FILE
-        if not osp.exists(osp.dirname(INTERRUPTED_STATE_FILE)):
-            raise RuntimeError(
-                "Please create a .interrupted_states directory in your home directory for job preemption"
-                "(This is intentionally not created automatically as it can get quite large)"
-            )
+    if isinstance(filename_or_config, Config):
+        filename = resume_state_filename(filename_or_config)
+    else:
+        filename = filename_or_config
 
     torch.save(state, filename)
 
 
-def load_interrupted_state(filename: str = None) -> Optional[Any]:
-    r"""Loads the saved interrupted state
+def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
+    r"""Loads the saved resume state
 
-    :param filename: The filename of the saved state.
-        Defaults to "${HOME}/.interrupted_states/${SLURM_JOBID}.pth"
+    :param filename_or_config: The filename of the saved state or the config to construct it.
 
     :return: The saved state if the file exists, else none
     """
-    if SLURM_JOBID is None and filename is None:
-        return None
-
-    if filename is None:
-        filename = INTERRUPTED_STATE_FILE
+    if isinstance(filename_or_config, Config):
+        filename = resume_state_filename(filename_or_config)
+    else:
+        filename = filename_or_config
 
     if not osp.exists(filename):
         return None
+
+    if rank0_only():
+        logger.info(f"Loading resume state: {filename}")
 
     return torch.load(filename, map_location="cpu")
 
 
 def requeue_job():
     r"""Requeues the job by calling ``scontrol requeue ${SLURM_JOBID}``"""
-    if SLURM_JOBID is None:
+    if not is_slurm_batch_job():
         return
 
     if not REQUEUE.is_set():
@@ -186,7 +201,7 @@ def requeue_job():
 
     if rank0_only():
         logger.info(f"Requeueing job {SLURM_JOBID}")
-        subprocess.check_call(shlex.split(f"scontrol requeue {SLURM_JOBID}"))
+        subprocess.check_call(["scontrol", "requeue", str(SLURM_JOBID)])
 
 
 def get_ifname() -> str:

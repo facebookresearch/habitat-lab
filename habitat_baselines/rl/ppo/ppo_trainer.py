@@ -32,17 +32,19 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo import DDPPO
-from habitat_baselines.rl.ddppo.algo.ddp_utils import (
+from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
-    REQUEUE,
     add_signal_handlers,
     get_distrib_size,
     init_distrib_slurm,
     is_slurm_batch_job,
-    load_interrupted_state,
+    load_resume_state,
     rank0_only,
     requeue_job,
-    save_interrupted_state,
+    save_resume_state,
+)
+from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+    PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
@@ -70,9 +72,9 @@ class PPOTrainer(BaseRLTrainer):
     actor_critic: Policy
 
     def __init__(self, config=None):
-        interrupted_state = load_interrupted_state()
-        if interrupted_state is not None:
-            config = interrupted_state["config"]
+        resume_state = load_resume_state(config)
+        if resume_state is not None:
+            config = resume_state["config"]
 
         super().__init__(config)
         self.actor_critic = None
@@ -690,15 +692,13 @@ class PPOTrainer(BaseRLTrainer):
             lr_lambda=lambda x: 1 - self.percent_done(),
         )
 
-        interrupted_state = load_interrupted_state()
-        if interrupted_state is not None:
-            self.agent.load_state_dict(interrupted_state["state_dict"])
-            self.agent.optimizer.load_state_dict(
-                interrupted_state["optim_state"]
-            )
-            lr_scheduler.load_state_dict(interrupted_state["lr_sched_state"])
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.agent.load_state_dict(resume_state["state_dict"])
+            self.agent.optimizer.load_state_dict(resume_state["optim_state"])
+            lr_scheduler.load_state_dict(resume_state["lr_sched_state"])
 
-            requeue_stats = interrupted_state["requeue_stats"]
+            requeue_stats = resume_state["requeue_stats"]
             self.env_time = requeue_stats["env_time"]
             self.pth_time = requeue_stats["pth_time"]
             self.num_steps_done = requeue_stats["num_steps_done"]
@@ -712,6 +712,11 @@ class PPOTrainer(BaseRLTrainer):
             self._last_checkpoint_percent = requeue_stats[
                 "_last_checkpoint_percent"
             ]
+
+            self.running_episode_stats = requeue_stats["running_episode_stats"]
+            self.window_episode_stats.update(
+                requeue_stats["window_episode_stats"]
+            )
 
         ppo_cfg = self.config.RL.PPO
 
@@ -731,32 +736,37 @@ class PPOTrainer(BaseRLTrainer):
                         1 - self.percent_done()
                     )
 
+                if rank0_only() and self._should_save_resume_state():
+                    requeue_stats = dict(
+                        env_time=self.env_time,
+                        pth_time=self.pth_time,
+                        count_checkpoints=count_checkpoints,
+                        num_steps_done=self.num_steps_done,
+                        num_updates_done=self.num_updates_done,
+                        _last_checkpoint_percent=self._last_checkpoint_percent,
+                        prev_time=(time.time() - self.t_start) + prev_time,
+                        running_episode_stats=self.running_episode_stats,
+                        window_episode_stats=dict(self.window_episode_stats),
+                    )
+
+                    save_resume_state(
+                        dict(
+                            state_dict=self.agent.state_dict(),
+                            optim_state=self.agent.optimizer.state_dict(),
+                            lr_sched_state=lr_scheduler.state_dict(),
+                            config=self.config,
+                            requeue_stats=requeue_stats,
+                        ),
+                        self.config,
+                    )
+
                 if EXIT.is_set():
                     profiling_wrapper.range_pop()  # train update
 
                     self.envs.close()
 
-                    if REQUEUE.is_set() and rank0_only():
-                        requeue_stats = dict(
-                            env_time=self.env_time,
-                            pth_time=self.pth_time,
-                            count_checkpoints=count_checkpoints,
-                            num_steps_done=self.num_steps_done,
-                            num_updates_done=self.num_updates_done,
-                            _last_checkpoint_percent=self._last_checkpoint_percent,
-                            prev_time=(time.time() - self.t_start) + prev_time,
-                        )
-                        save_interrupted_state(
-                            dict(
-                                state_dict=self.agent.state_dict(),
-                                optim_state=self.agent.optimizer.state_dict(),
-                                lr_sched_state=lr_scheduler.state_dict(),
-                                config=self.config,
-                                requeue_stats=requeue_stats,
-                            )
-                        )
-
                     requeue_job()
+
                     return
 
                 self.agent.eval()
