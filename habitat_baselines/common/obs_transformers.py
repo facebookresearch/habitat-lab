@@ -1033,7 +1033,7 @@ class Cube2Fisheye(ProjectionConverter):
         """
 
         # Cubemap input
-        input_projections = get_cubemap_projections()
+        input_projections = get_cubemap_projections(fish_h, fish_w)
 
         # Fisheye output
         output_projection = FisheyeProjection(
