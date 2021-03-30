@@ -333,6 +333,15 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+# -----------------------------------------------------------------------------
+# Continual Learning -- TASKS
+# -----------------------------------------------------------------------------
+_C.TASKS = []
+# Continual Learning -- Task change policy (how and when to cycle through tasks)
+_C.CHANGE_TASK_BEHAVIOUR = CN()
+_C.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
+_C.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = 10
+_C.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
 
 # -----------------------------------------------------------------------------
 
@@ -366,4 +375,32 @@ def get_config(
         config.merge_from_list(opts)
 
     config.freeze()
+    return config
+
+
+def get_crl_config(
+    config_paths: Optional[Union[List[str], str]] = None,
+    opts: Optional[list] = None,
+) -> CN:
+    config = get_config(config_paths, opts)
+    if len(config.TASKS):
+        # list of tasks to list of config nodes, levaraging `TASK` default values
+        tasks = []
+        config.defrost()
+        for i, task in enumerate(config.TASKS):
+            # get default values
+            t = _C.TASK.clone()
+            task = CN(init_dict=task)
+
+            # copy first task configuration to TASK so that it can be instantiated with habitat logic
+            if i == 0:
+                config.TASK.merge_from_other_cfg(task)
+
+            # each task can now have a different dataset, if unspecified the global one is used
+            t.DATASET = config.DATASET.clone()
+            t.merge_from_other_cfg(task)
+            tasks.append(t)
+        config.TASKS = tasks
+        config.freeze()
+
     return config
