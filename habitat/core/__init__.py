@@ -5,10 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 import enum
 
+
 class CHANGE_TASK_BEHAVIOUR(enum.IntEnum):
     FIXED = 0
     RANDOM = 1
-    
+
+
 class CHANGE_TASK_CYCLE_BEHAVIOUR(enum.IntEnum):
     ORDER = 0
     RANDOM = 1

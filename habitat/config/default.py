@@ -378,7 +378,7 @@ def get_config(
     return config
 
 
-def get_crl_config(
+def get_multi_task_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
 ) -> CN:

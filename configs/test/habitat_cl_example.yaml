@@ -11,7 +11,7 @@ SIMULATOR:
   DEPTH_SENSOR:
     WIDTH: 256
     HEIGHT: 256
-# TASK:  
+# TASK:
 #   TYPE: Nav-v0
 #   SUCCESS_DISTANCE: 0.2
 
@@ -34,7 +34,7 @@ TASKS:
       GOAL_FORMAT: "POLAR"
       DIMENSIONALITY: 2
     GOAL_SENSOR_UUID: pointgoal_with_gps_compass
-  
+
     MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
     SUCCESS:
       SUCCESS_DISTANCE: 0.2
@@ -58,7 +58,7 @@ TASKS:
   - TYPE: Nav-v0
     SUCCESS_DISTANCE: 1.53
 CHANGE_TASK_BEHAVIOUR:
-  TYPE: FIXED # or RANDOM 
+  TYPE: FIXED # or RANDOM
   CHANGE_TASK_PROB: 0.1 # for RANDOM, how likely it is to change task at defined horizon
   # AFTER_N_EPISODES: 1   # After how many episodes we want to change task
   AFTER_N_CUM_STEPS: 10 # After how many cumulative steps we want to change task

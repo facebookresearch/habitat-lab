@@ -14,6 +14,7 @@ import numpy as np
 from gym import spaces
 
 from habitat.config import Config
+from habitat.core import CHANGE_TASK_BEHAVIOUR, CHANGE_TASK_CYCLE_BEHAVIOUR
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
@@ -21,7 +22,6 @@ from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks import make_task
 from habitat.utils import profiling_wrapper
-from habitat.core import CHANGE_TASK_BEHAVIOUR, CHANGE_TASK_CYCLE_BEHAVIOUR
 
 
 class Env:
@@ -426,14 +426,14 @@ class RLEnv(gym.Env):
         self.close()
 
 
-class CLEnv(Env):
+class MultiTaskEnv(Env):
     r"""Environment base class extension designed to handle a stream-line of tasks.
 
     The major :ref:`task` component is hereby intended as current task with which
     the agent is currently interacting.
-    All tasks handled by the CLEnv are available through the :ref:`tasks` object
-    property. 
-    
+    All tasks handled by the MultiTaskEnv are available through the :ref:`tasks` object
+    property.
+
     The environment abstracts away the serving of multiple tasks under
     the scheduling preferences expressed in the configuration.
     """
@@ -443,7 +443,7 @@ class CLEnv(Env):
     def __init__(
         self, config: Config, dataset: Optional[Dataset] = None
     ) -> None:
-        """ Constructor. Mimics the :ref:`Env` constructor.
+        """Constructor. Mimics the :ref:`Env` constructor.
 
         Args:
             :param config: config for the environment. Should contain id for
@@ -458,19 +458,18 @@ class CLEnv(Env):
         # instatiate other tasks
         self._tasks = [self._task]
         self._curr_task_idx = 0
-        if len(config.TASKS) > 1:
-            for task in config.TASKS[1:]:
-                self._tasks.append(
-                    make_task(
-                        task.TYPE,
-                        config=task,
-                        sim=self._sim,
-                        # each task gets its dataset
-                        dataset=make_dataset(  # TODO: lazy make_dataset support
-                            id_dataset=task.DATASET.TYPE, config=task.DATASET
-                        ),
-                    )
+        for task in config.TASKS[1:]:
+            self._tasks.append(
+                make_task(
+                    task.TYPE,
+                    config=task,
+                    sim=self._sim,
+                    # each task gets its dataset
+                    dataset=make_dataset(  # TODO: lazy make_dataset support
+                        id_dataset=task.DATASET.TYPE, config=task.DATASET
+                    ),
                 )
+            )
         # episode counter
         self._eps_counter = -1
         self._cumulative_steps_counter = 0
@@ -487,7 +486,7 @@ class CLEnv(Env):
         return self._tasks
 
     def _check_change_task(self, is_reset=False):
-        """ Check whether the change task condition is satified.
+        """Check whether the change task condition is satified.
         Args:
             is_reset (bool, optional): Whether we're checking task change condition during a ``reset()``. In that case, we check condition on number of episodes. Defaults to False.
         """
@@ -556,7 +555,7 @@ class CLEnv(Env):
         return change_
 
     def _change_task(self, is_reset=False):
-        """ Change current task according to specified loop behaviour.
+        """Change current task according to specified loop behaviour.
 
         Args:
             is_reset (bool, optional): [description]. Defaults to False.
@@ -587,9 +586,10 @@ class CLEnv(Env):
             for k, v in self._config.ENVIRONMENT.ITERATOR_OPTIONS.items()
         }
         iter_option_dict["seed"] = self._config.SEED
-        self._episode_iterator = self._task._dataset.get_episode_iterator(
-            **iter_option_dict
+        self._episode_iterator: EpisodeIterator = (
+            self._task._dataset.get_episode_iterator(**iter_option_dict)
         )
+
         self.action_space = self._task.action_space
         print("task changed")
         self._task_label = self._task._config.get(
@@ -649,7 +649,7 @@ class CLEnv(Env):
 
 class CRLEnv(RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset]) -> None:
-        self._env = CLEnv(config, dataset)
+        self._env = MultiTaskEnv(config, dataset)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
         self.number_of_episodes = self._env.number_of_episodes
