@@ -598,11 +598,6 @@ class CLEnv(Env):
         # handle mid-episode change of task
         if not is_reset:
             # keep current position and sim state only if scene does not change
-            print(
-                "Scene ids",
-                self.current_episode.scene_id,
-                self._episode_iterator.episodes[0].scene_id,
-            )
             # if same exact task is passed, you'll get same episode back
             if (
                 self.current_episode.scene_id

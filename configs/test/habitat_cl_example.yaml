@@ -41,7 +41,7 @@ TASKS:
     DATASET:  # you can specify your own dataset per task
       TYPE: PointNav-v1
       SPLIT: test
-      DATA_PATH: /data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
+      DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
   - TYPE: Nav-v0
     SUCCESS_DISTANCE: 0.2
 
@@ -68,3 +68,4 @@ DATASET:
   TYPE: PointNav-v1
   SPLIT: val
   DATA_PATH: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
+  # DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
