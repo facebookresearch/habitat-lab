@@ -23,6 +23,7 @@ from habitat.tasks import make_task
 from habitat.utils import profiling_wrapper
 from habitat.core import CHANGE_TASK_BEHAVIOUR, CHANGE_TASK_CYCLE_BEHAVIOUR
 
+
 class Env:
     r"""Fundamental environment class for :ref:`habitat`.
 
@@ -426,13 +427,32 @@ class RLEnv(gym.Env):
 
 
 class CLEnv(Env):
+    r"""Environment base class extension designed to handle a stream-line of tasks.
+
+    The major :ref:`task` component is hereby intended as current task with which
+    the agent is currently interacting.
+    All tasks handled by the CLEnv are available through the :ref:`tasks` object
+    property. 
+    
+    The environment abstracts away the serving of multiple tasks under
+    the scheduling preferences expressed in the configuration.
+    """
     _tasks: List[EmbodiedTask]
     DEFAULT_EPS_CHANGE = 10
-    
 
-    def __init__(self,
-                 config: Config,
-                 dataset: Optional[Dataset] = None) -> None:
+    def __init__(
+        self, config: Config, dataset: Optional[Dataset] = None
+    ) -> None:
+        """ Constructor. Mimics the :ref:`Env` constructor.
+
+        Args:
+            :param config: config for the environment. Should contain id for
+            simulator and ``task_name`` for each task, which are passed into ``make_sim`` and
+            ``make_task``.
+            :param dataset: reference to dataset used for first task instance level
+            information. Can be defined as :py:`None` in which case
+            dataset will be built using ``make_dataset`` and ``config``.
+        """
         # we let superclass instantiate first task as to not break/change habitat code
         super().__init__(config, dataset=dataset)
         # instatiate other tasks
@@ -442,50 +462,73 @@ class CLEnv(Env):
             for task in config.TASKS[1:]:
                 self._tasks.append(
                     make_task(
-                        task.TYPE,  
+                        task.TYPE,
                         config=task,
                         sim=self._sim,
                         # each task gets its dataset
                         dataset=make_dataset(  # TODO: lazy make_dataset support
-                            id_dataset=task.DATASET.TYPE,
-                            config=task.DATASET),
-                    ))
+                            id_dataset=task.DATASET.TYPE, config=task.DATASET
+                        ),
+                    )
+                )
+        # episode counter
         self._eps_counter = -1
         self._cumulative_steps_counter = 0
         # when and how to change task is defined here
         self._change_task_behavior = config.CHANGE_TASK_BEHAVIOUR.TYPE
         self._task_cycling_behavior = config.CHANGE_TASK_BEHAVIOUR.LOOP
-        # custom task label if needed
-        # print("Task label loading from", self._task._config)
-        self._task_label = self._task._config.get("TASK_LABEL",
-                                                  self._curr_task_idx)
+        # custom task label can be specified
+        self._task_label = self._task._config.get(
+            "TASK_LABEL", self._curr_task_idx
+        )
+
+    @property
+    def tasks(self) -> List[EmbodiedTask]:
+        return self._tasks
 
     def _check_change_task(self, is_reset=False):
+        """ Check whether the change task condition is satified.
+        Args:
+            is_reset (bool, optional): Whether we're checking task change condition during a ``reset()``. In that case, we check condition on number of episodes. Defaults to False.
+        """
         cum_steps_change = self._config.CHANGE_TASK_BEHAVIOUR.get(
-            "AFTER_N_CUM_STEPS", None)
+            "AFTER_N_CUM_STEPS", None
+        )
         change_ = False
-        # print(cum_steps_change,
-        #   self._config.CHANGE_TASK_BEHAVIOUR.get("AFTER_N_EPISODES", None),
-        #   self._cumulative_steps_counter, self._eps_counter)
         # check condition on number of episodes only after reset is called
         if is_reset:
             eps_change = self._config.CHANGE_TASK_BEHAVIOUR.get(
-                "AFTER_N_EPISODES", None)
+                "AFTER_N_EPISODES", None
+            )
             if self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.FIXED.name:
                 if eps_change and self._eps_counter >= eps_change:
                     change_ = True
                 # by default change task every X episodes
-                elif eps_change is None and cum_steps_change is None and self._eps_counter >= eps_change:
+                elif (
+                    eps_change is None
+                    and cum_steps_change is None
+                    and self._eps_counter >= eps_change
+                ):
                     change_ = True
-            elif self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.RANDOM.name:
+            elif (
+                self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.RANDOM.name
+            ):
                 # change task with some prob if we exceed min number of episodes
                 prob = self._config.CHANGE_TASK_BEHAVIOUR.get(
-                    "CHANGE_TASK_PROB", .5)
-                if eps_change and self._eps_counter >= eps_change and np.random.choice(
-                    [1, 0], 1, p=[prob, 1 - prob]).item():
+                    "CHANGE_TASK_PROB", 0.5
+                )
+                if (
+                    eps_change
+                    and self._eps_counter >= eps_change
+                    and np.random.choice([1, 0], 1, p=[prob, 1 - prob]).item()
+                ):
                     change_ = True
-                elif eps_change is None and cum_steps_change is None and self._eps_counter >= eps_change and np.random.choice(
-                    [1, 0], 1, p=[prob, 1 - prob]).item():
+                elif (
+                    eps_change is None
+                    and cum_steps_change is None
+                    and self._eps_counter >= eps_change
+                    and np.random.choice([1, 0], 1, p=[prob, 1 - prob]).item()
+                ):
                     change_ = True
 
             if change_:
@@ -495,12 +538,17 @@ class CLEnv(Env):
             if self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.FIXED.name:
                 if self._cumulative_steps_counter >= cum_steps_change:
                     change_ = True
-            elif self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.RANDOM.name:
+            elif (
+                self._change_task_behavior == CHANGE_TASK_BEHAVIOUR.RANDOM.name
+            ):
                 # change task with some prob if we exceed min number of steps
                 prob = self._config.CHANGE_TASK_BEHAVIOUR.get(
-                    "CHANGE_TASK_PROB", .5)
-                if self._cumulative_steps_counter >= cum_steps_change and np.random.choice(
-                    [1, 0], 1, p=[prob, 1 - prob]).item():
+                    "CHANGE_TASK_PROB", 0.5
+                )
+                if (
+                    self._cumulative_steps_counter >= cum_steps_change
+                    and np.random.choice([1, 0], 1, p=[prob, 1 - prob]).item()
+                ):
                     change_ = True
 
             if change_:
@@ -508,14 +556,29 @@ class CLEnv(Env):
         return change_
 
     def _change_task(self, is_reset=False):
-        # change current task according to specified loop behaviour
-        if self._task_cycling_behavior == CHANGE_TASK_CYCLE_BEHAVIOUR.ORDER.name:
+        """ Change current task according to specified loop behaviour.
+
+        Args:
+            is_reset (bool, optional): [description]. Defaults to False.
+        """
+        if (
+            self._task_cycling_behavior
+            == CHANGE_TASK_CYCLE_BEHAVIOUR.ORDER.name
+        ):
             self._curr_task_idx = (self._curr_task_idx + 1) % len(self._tasks)
-        elif self._task_cycling_behavior == CHANGE_TASK_CYCLE_BEHAVIOUR.RANDOM.name:
+        elif (
+            self._task_cycling_behavior
+            == CHANGE_TASK_CYCLE_BEHAVIOUR.RANDOM.name
+        ):
             # sample from other tasks with equal probability
-            self._curr_task_idx = np.random.choice([
-                i for i in range(len(self._tasks)) if i != self._curr_task_idx
-            ], 1).item()
+            self._curr_task_idx = np.random.choice(
+                [
+                    i
+                    for i in range(len(self._tasks))
+                    if i != self._curr_task_idx
+                ],
+                1,
+            ).item()
 
         self._task = self._tasks[self._curr_task_idx]
         # update episode iterator with task dataset
@@ -525,23 +588,32 @@ class CLEnv(Env):
         }
         iter_option_dict["seed"] = self._config.SEED
         self._episode_iterator = self._task._dataset.get_episode_iterator(
-            **iter_option_dict)
+            **iter_option_dict
+        )
         self.action_space = self._task.action_space
-        print('task changed')
-        self._task_label = self._task._config.get("TASK_LABEL",
-                                                  self._curr_task_idx)
+        print("task changed")
+        self._task_label = self._task._config.get(
+            "TASK_LABEL", self._curr_task_idx
+        )
         # handle mid-episode change of task
         if not is_reset:
             # keep current position and sim state only if scene does not change
-            print("Scene ids", self.current_episode.scene_id,
-                  self._episode_iterator.episodes[0].scene_id)
+            print(
+                "Scene ids",
+                self.current_episode.scene_id,
+                self._episode_iterator.episodes[0].scene_id,
+            )
             # if same exact task is passed, you'll get same episode back
-            if self.current_episode.scene_id == self._episode_iterator.episodes[
-                    0].scene_id:
+            if (
+                self.current_episode.scene_id
+                == self._episode_iterator.episodes[0].scene_id
+            ):
                 self._episode_iterator.episodes[
-                    0].start_position = self.current_episode.start_position
+                    0
+                ].start_position = self.current_episode.start_position
                 self._episode_iterator.episodes[
-                    0].start_rotation = self.current_episode.start_rotation
+                    0
+                ].start_rotation = self.current_episode.start_rotation
                 # self._episode_iterator._iterator = iter(self._episode_iterator.episodes)
                 # self.reconfigure(self._config)
 
@@ -550,14 +622,15 @@ class CLEnv(Env):
                 self._current_episode = next(self._episode_iterator)
                 # reset prev position
                 self._task.measurements.reset_measures(
-                    episode=self.current_episode, task=self.task)
+                    episode=self.current_episode, task=self.task
+                )
             else:
                 # scene is different, can't keep old position, end episode
                 self._episode_over = True
 
-    def step(self, action: Union[int, str, Dict[str, Any]],
-             **kwargs) -> Observations:
-        # print(self._task, action)
+    def step(
+        self, action: Union[int, str, Dict[str, Any]], **kwargs
+    ) -> Observations:
         obs = super().step(action, **kwargs)
         # check task change behaviour here
         self._cumulative_steps_counter += 1
@@ -565,7 +638,7 @@ class CLEnv(Env):
             # task needs to be changed
             self._change_task()
 
-        obs['task_label'] = self._task_label
+        obs["task_label"] = self._task_label
         return obs
 
     def reset(self) -> Observations:
@@ -575,7 +648,7 @@ class CLEnv(Env):
             self._change_task(is_reset=True)
         # now reset can be called on new task
         obs = super().reset()
-        obs['task_label'] = self._curr_task_idx
+        obs["task_label"] = self._curr_task_idx
         return obs
 
 
