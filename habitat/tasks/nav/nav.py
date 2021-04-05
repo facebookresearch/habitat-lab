@@ -161,6 +161,9 @@ class PointGoalSensor(Sensor):
     def _compute_pointgoal(
         self, source_position, source_rotation, goal_position
     ):
+
+        print ("pointgoal from ", source_position, "to", goal_position)
+
         direction_vector = goal_position - source_position
         direction_vector_agent = quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
@@ -707,7 +710,6 @@ class TopDownMap(Measure):
             self._num_samples,
             self._config.DRAW_BORDER,
         )
-        # import ipdb; ipdb.set_trace()
 
         range_x = np.where(np.any(top_down_map, axis=1))[0]
         range_y = np.where(np.any(top_down_map, axis=0))[0]
@@ -724,6 +726,12 @@ class TopDownMap(Measure):
         else:
             self._ind_y_min = range_y[0]
             self._ind_y_max = range_y[-1]
+
+        # # DEBUG map sensor
+        # print (top_down_map.shape)
+        # print (self._ind_x_min, self._ind_x_max)
+        # print(self._ind_y_min, self._ind_y_max)
+        # import ipdb; ipdb.set_trace()
 
         if self._config.FOG_OF_WAR.DRAW:
             self._fog_of_war_mask = np.zeros_like(top_down_map)
