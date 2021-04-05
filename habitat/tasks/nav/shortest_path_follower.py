@@ -46,13 +46,13 @@ class ShortestPathFollower:
         self._return_one_hot = return_one_hot
         self._sim = sim
         self._goal_radius = goal_radius
-        self._follower = None
+        self._follower: Optional[habitat_sim.GreedyGeodesicFollower] = None
         self._current_scene = None
         self._stop_on_error = stop_on_error
 
     def _build_follower(self):
-        if self._current_scene != self._sim.config.SCENE:
-            self._follower = self._sim._sim.make_greedy_follower(
+        if self._current_scene != self._sim.habitat_config.SCENE:
+            self._follower = self._sim.make_greedy_follower(
                 0,
                 self._goal_radius,
                 stop_key=HabitatSimActions.STOP,
@@ -60,7 +60,7 @@ class ShortestPathFollower:
                 left_key=HabitatSimActions.TURN_LEFT,
                 right_key=HabitatSimActions.TURN_RIGHT,
             )
-            self._current_scene = self._sim.config.SCENE
+            self._current_scene = self._sim.habitat_config.SCENE
 
     def _get_return_value(self, action) -> Union[int, np.array]:
         if self._return_one_hot:
@@ -71,9 +71,9 @@ class ShortestPathFollower:
     def get_next_action(
         self, goal_pos: np.array
     ) -> Optional[Union[int, np.array]]:
-        """Returns the next action along the shortest path.
-        """
+        """Returns the next action along the shortest path."""
         self._build_follower()
+        assert self._follower is not None
         try:
             next_action = self._follower.next_action_along(goal_pos)
         except habitat_sim.errors.GreedyFollowerError as e:

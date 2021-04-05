@@ -7,7 +7,6 @@
 import json
 import time
 
-import numpy as np
 import pytest
 
 import habitat
@@ -16,9 +15,7 @@ from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
-from habitat.tasks.eqa.eqa import AnswerAction
 from habitat.tasks.nav.nav import MoveForwardAction
-from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_object_nav_test.yaml"
 EPISODES_LIMIT = 6
@@ -59,7 +56,7 @@ def test_mp3d_object_nav_dataset():
     dataset.goals_by_category = {
         k: v
         for k, v in dataset.goals_by_category.items()
-        if k in {ep.goals_key for ep in dataset.episodes}
+        if k in (ep.goals_key for ep in dataset.episodes)
     }
     check_json_serializaiton(dataset)
 
@@ -124,7 +121,7 @@ def test_object_nav_task():
         id_dataset=config.DATASET.TYPE, config=config.DATASET
     )
     with habitat.Env(config=config, dataset=dataset) as env:
-        for i in range(10):
+        for _ in range(10):
             env.reset()
             while not env.episode_over:
                 action = env.action_space.sample()

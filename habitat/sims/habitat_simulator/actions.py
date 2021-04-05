@@ -11,7 +11,7 @@ import attr
 
 import habitat_sim
 from habitat.core.registry import registry
-from habitat.core.simulator import ActionSpaceConfiguration, Config
+from habitat.core.simulator import ActionSpaceConfiguration
 from habitat.core.utils import Singleton
 
 
@@ -33,7 +33,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
     be removed nor can their mapping be altered. This also ensures that all
     actions are always contigously mapped in :py:`[0, len(HabitatSimActions) - 1]`
 
-    This accesible as the global singleton `HabitatSimActions`
+    This accesible as the global singleton :ref:`HabitatSimActions`
     """
 
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)

@@ -12,16 +12,19 @@ import numpy as np
 import pytest
 
 import habitat
-import habitat.datasets.pointnav.pointnav_generator as pointnav_generator
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.datasets.pointnav import pointnav_generator as pointnav_generator
 from habitat.datasets.pointnav.pointnav_dataset import (
     DEFAULT_SCENE_PATH_PREFIX,
     PointNavDatasetV1,
 )
-from habitat.utils.geometry_utils import quaternion_xyzw_to_wxyz
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_from_coeff,
+)
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_MULTI_TEST = "configs/datasets/pointnav/gibson.yaml"
@@ -159,8 +162,11 @@ def test_dataset_splitting(split):
 
 def check_shortest_path(env, episode):
     def check_state(agent_state, position, rotation):
-        assert np.allclose(
-            agent_state.rotation, quaternion_xyzw_to_wxyz(rotation)
+        assert (
+            angle_between_quaternions(
+                agent_state.rotation, quaternion_from_coeff(rotation)
+            )
+            < 1e-5
         ), "Agent's rotation diverges from the shortest path."
 
         assert np.allclose(
@@ -177,7 +183,7 @@ def check_shortest_path(env, episode):
     start_state = env.sim.get_agent_state()
     check_state(start_state, episode.start_position, episode.start_rotation)
 
-    for step_id, point in enumerate(episode.shortest_paths[0]):
+    for point in episode.shortest_paths[0]:
         cur_state = env.sim.get_agent_state()
         check_state(cur_state, point.position, point.rotation)
         env.step(point.action)
@@ -200,7 +206,7 @@ def test_pointnav_episode_generator():
             shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
         )
         episodes = []
-        for i in range(NUM_EPISODES):
+        for _ in range(NUM_EPISODES):
             episode = next(generator)
             episodes.append(episode)
 

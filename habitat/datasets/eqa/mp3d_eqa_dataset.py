@@ -13,7 +13,7 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
-from habitat.datasets.utils import VocabDict, VocabFromText
+from habitat.datasets.utils import VocabDict
 from habitat.tasks.eqa.eqa import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav import ShortestPathPoint
 from habitat.tasks.nav.object_nav_task import ObjectGoal
@@ -65,10 +65,14 @@ class Matterport3dDatasetV1(Dataset):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
-        self.__dict__.update(deserialized)
-        self.answer_vocab = VocabDict(word_list=self.answer_vocab["word_list"])
+        self.__dict__.update(
+            deserialized
+        )  # This is a messy hack... Why do we do this.
+        self.answer_vocab = VocabDict(
+            word_list=self.answer_vocab["word_list"]  # type: ignore
+        )
         self.question_vocab = VocabDict(
-            word_list=self.question_vocab["word_list"]
+            word_list=self.question_vocab["word_list"]  # type: ignore
         )
 
         for ep_index, episode in enumerate(deserialized["episodes"]):

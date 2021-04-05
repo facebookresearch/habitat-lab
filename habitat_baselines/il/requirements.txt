@@ -1,0 +1,2 @@
+lmdb>=0.98
+webdataset==0.1.40

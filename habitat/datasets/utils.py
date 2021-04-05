@@ -3,10 +3,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""
+ Tokenize and vocabulary utils originally authored by @apsdehal and are
+ taken from Pythia.
+"""
 import re
+import typing
 from collections import Counter
-from typing import List
+from typing import Iterable, List, Union
+
+from numpy import float64
 
 from habitat.core.logging import logger
 from habitat.core.simulator import ShortestPathPoint
@@ -14,17 +20,17 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.geometry_utils import quaternion_to_list
 
-SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
+try:
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+except ImportError:
+    pass
 
-"""
- Tokenize and vocabulary utils originally authored by @apsdehal and are
- taken from Pythia.
-"""
+SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
 
 
 def tokenize(
-    sentence, regex=SENTENCE_SPLIT_REGEX, keep=["'s"], remove=[",", "?"]
-):
+    sentence, regex=SENTENCE_SPLIT_REGEX, keep=("'s"), remove=(",", "?")
+) -> List[str]:
     sentence = sentence.lower()
 
     for token in keep:
@@ -87,6 +93,15 @@ class VocabDict:
     def idx2word(self, n_w):
         return self.word_list[n_w]
 
+    def token_idx_2_string(self, tokens: Iterable[int]) -> str:
+        q_string = ""
+        for token in tokens:
+            if token != 0:
+                q_string += self.idx2word(token) + " "
+
+        q_string += "?"
+        return q_string
+
     def __len__(self):
         return len(self.word_list)
 
@@ -115,8 +130,8 @@ class VocabDict:
         self,
         sentence,
         regex=SENTENCE_SPLIT_REGEX,
-        keep=["'s"],
-        remove=[",", "?"],
+        keep=("'s"),
+        remove=(",", "?"),
     ) -> List[int]:
         inds = [
             self.word2idx(w)
@@ -138,11 +153,11 @@ class VocabFromText(VocabDict):
         sentences,
         min_count=1,
         regex=SENTENCE_SPLIT_REGEX,
-        keep=[],
-        remove=[],
+        keep=(),
+        remove=(),
         only_unk_extra=False,
     ):
-        token_counter = Counter()
+        token_counter: typing.Counter[str] = Counter()
 
         for sentence in sentences:
             tokens = tokenize(sentence, regex=regex, keep=keep, remove=remove)
@@ -158,17 +173,16 @@ class VocabFromText(VocabDict):
         if only_unk_extra:
             extras = [self.UNK_TOKEN]
 
-        self.word_list = extras + token_list
-        self._build()
+        super(VocabFromText, self).__init__(word_list=extras + token_list)
 
 
 def get_action_shortest_path(
-    sim,
-    source_position,
-    source_rotation,
-    goal_position,
-    success_distance=0.05,
-    max_episode_steps=500,
+    sim: "HabitatSim",
+    source_position: List[float],
+    source_rotation: List[Union[int, float64]],
+    goal_position: List[float],
+    success_distance: float = 0.05,
+    max_episode_steps: int = 500,
 ) -> List[ShortestPathPoint]:
     sim.reset()
     sim.set_agent_state(source_position, source_rotation)

@@ -4,24 +4,26 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import cmath
 import json
-from typing import List
+import math
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import quaternion
+import quaternion  # noqa: F401
 
 from habitat.utils.geometry_utils import quaternion_to_list
 
 # Internals from inner json library needed for patching functionality in
 # DatasetFloatJSONEncoder.
 try:
-    from _json import encode_basestring_ascii
+    from _json import encode_basestring_ascii  # type: ignore
 except ImportError:
-    encode_basestring_ascii = None
+    encode_basestring_ascii = None  # type: ignore
 try:
-    from _json import encode_basestring
+    from _json import encode_basestring  # type: ignore
 except ImportError:
-    encode_basestring = None
+    encode_basestring = None  # type: ignore
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
@@ -57,7 +59,9 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
     return out_image
 
 
-def not_none_validator(self, attribute, value):
+def not_none_validator(
+    self: Any, attribute: Any, value: Optional[Any]
+) -> None:
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
 
@@ -69,8 +73,8 @@ def try_cv2_import():
     needs to export environment variable ROS_PATH which will look something like:
     /opt/ros/kinetic/lib/python2.7/dist-packages
     """
-    import sys
     import os
+    import sys
 
     ros_path = os.environ.get("ROS_PATH")
     if ros_path is not None and ros_path in sys.path:
@@ -85,7 +89,7 @@ def try_cv2_import():
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: Dict["Singleton", "Singleton"] = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -111,31 +115,28 @@ def center_crop(obs, new_shape):
 
 class DatasetFloatJSONEncoder(json.JSONEncoder):
     r"""JSON Encoder that sets a float precision for a space saving purpose and
-        encodes ndarray and quaternion. The encoder is compatible with JSON
-        version 2.0.9.
+    encodes ndarray and quaternion. The encoder is compatible with JSON
+    version 2.0.9.
     """
 
-    def default(self, object):
+    def default(self, obj):
         # JSON doesn't support numpy ndarray and quaternion
-        if isinstance(object, np.ndarray):
-            return object.tolist()
-        if isinstance(object, np.quaternion):
-            return quaternion_to_list(object)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.quaternion):
+            return quaternion_to_list(obj)
 
         return (
-            object.__getstate__()
-            if hasattr(object, "__getstate__")
-            else object.__dict__
+            obj.__getstate__()
+            if hasattr(obj, "__getstate__")
+            else obj.__dict__
         )
 
     # Overriding method to inject own `_repr` function for floats with needed
     # precision.
     def iterencode(self, o, _one_shot=False):
 
-        if self.check_circular:
-            markers = {}
-        else:
-            markers = None
+        markers: Optional[Dict] = {} if self.check_circular else None
         if self.ensure_ascii:
             _encoder = encode_basestring_ascii
         else:
@@ -145,10 +146,10 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
             o,
             allow_nan=self.allow_nan,
             _repr=lambda x: format(x, ".5f"),
-            _inf=float("inf"),
-            _neginf=-float("inf"),
+            _inf=math.inf,
+            _neginf=-math.inf,
         ):
-            if o != o:
+            if cmath.isnan(o):
                 text = "NaN"
             elif o == _inf:
                 text = "Infinity"
@@ -165,7 +166,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
 
             return text
 
-        _iterencode = json.encoder._make_iterencode(
+        _iterencode = json.encoder._make_iterencode(  # type: ignore
             markers,
             self.default,
             _encoder,

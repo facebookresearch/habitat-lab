@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import signal
+import warnings
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -12,60 +14,109 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterator,
     List,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
+    cast,
 )
 
+import attr
 import gym
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 import habitat
 from habitat.config import Config
-from habitat.core.env import Env, Observations, RLEnv
+from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
+from habitat.utils import profiling_wrapper
+from habitat.utils.pickle5_multiprocessing import ConnectionWrapper
 
 try:
     # Use torch.multiprocessing if we can.
     # We have yet to find a reason to not use it and
     # you are required to use it when sending a torch.Tensor
     # between processes
-    import torch.multiprocessing as mp
+    import torch
+    from torch import multiprocessing as mp  # type:ignore
 except ImportError:
-    import multiprocessing as mp
+    torch = None
+    import multiprocessing as mp  # type:ignore
+
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
 RENDER_COMMAND = "render"
 CLOSE_COMMAND = "close"
-OBSERVATION_SPACE_COMMAND = "observation_space"
-ACTION_SPACE_COMMAND = "action_space"
-NUMBER_OF_EPISODES_COMMAND = "number_of_episodes"
 CALL_COMMAND = "call"
-EPISODE_COMMAND = "current_episode"
 COUNT_EPISODES_COMMAND = "count_episodes"
-EPISODE_OVER = "episode_over"
-GET_METRICS = "get_metrics"
+
+EPISODE_OVER_NAME = "episode_over"
+GET_METRICS_NAME = "get_metrics"
+CURRENT_EPISODE_NAME = "current_episode"
+NUMBER_OF_EPISODE_NAME = "number_of_episodes"
+ACTION_SPACE_NAME = "action_space"
+OBSERVATION_SPACE_NAME = "observation_space"
 
 
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
-    """Constructor for default habitat `env.Env`.
+    """Constructor for default habitat :ref:`env.Env`.
 
     :param config: configuration for environment.
     :param dataset: dataset for environment.
     :param rank: rank for setting seed of environment
-    :return: `env.Env` / `env.RLEnv` object
+    :return: :ref:`env.Env` / :ref:`env.RLEnv` object
     """
     habitat_env = Env(config=config, dataset=dataset)
     habitat_env.seed(config.SEED + rank)
     return habitat_env
+
+
+@attr.s(auto_attribs=True, slots=True)
+class _ReadWrapper:
+    r"""Convenience wrapper to track if a connection to a worker process
+    should have something to read.
+    """
+    read_fn: Callable[[], Any]
+    rank: int
+    is_waiting: bool = False
+
+    def __call__(self) -> Any:
+        if not self.is_waiting:
+            raise RuntimeError(
+                f"Tried to read from process {self.rank}"
+                " but there is nothing waiting to be read"
+            )
+        res = self.read_fn()
+        self.is_waiting = False
+
+        return res
+
+
+@attr.s(auto_attribs=True, slots=True)
+class _WriteWrapper:
+    r"""Convenience wrapper to track if a connection to a worker process
+    can be written to safely.  In other words, checks to make sure the
+    result returned from the last write was read.
+    """
+    write_fn: Callable[[Any], None]
+    read_wrapper: _ReadWrapper
+
+    def __call__(self, data: Any) -> None:
+        if self.read_wrapper.is_waiting:
+            raise RuntimeError(
+                f"Tried to write to process {self.read_wrapper.rank}"
+                " but the last write has not been read"
+            )
+        self.write_fn(data)
+        self.read_wrapper.is_waiting = True
 
 
 class VectorEnv:
@@ -77,16 +128,15 @@ class VectorEnv:
     All the environments are synchronized on step and reset methods.
     """
 
-    observation_spaces: List[SpaceDict]
+    observation_spaces: List[spaces.Dict]
     number_of_episodes: List[Optional[int]]
-    action_spaces: List[SpaceDict]
+    action_spaces: List[spaces.Dict]
     _workers: List[Union[mp.Process, Thread]]
-    _is_waiting: bool
     _num_envs: int
     _auto_reset_done: bool
     _mp_ctx: BaseContext
-    _connection_read_fns: List[Callable[[], Any]]
-    _connection_write_fns: List[Callable[[Any], None]]
+    _connection_read_fns: List[_ReadWrapper]
+    _connection_write_fns: List[_WriteWrapper]
 
     def __init__(
         self,
@@ -94,13 +144,14 @@ class VectorEnv:
         env_fn_args: Sequence[Tuple] = None,
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
+        workers_ignore_signals: bool = False,
     ) -> None:
         """..
 
         :param make_env_fn: function which creates a single environment. An
-            environment can be of type `env.Env` or `env.RLEnv`
+            environment can be of type :ref:`env.Env` or :ref:`env.RLEnv`
         :param env_fn_args: tuple of tuple of args to pass to the
-            `_make_env_fn`.
+            :ref:`_make_env_fn`.
         :param auto_reset_done: automatically reset the environment when
             done. This functionality is provided for seamless training
             of vectorized environments.
@@ -109,8 +160,9 @@ class VectorEnv:
             :py:`{'spawn', 'forkserver', 'fork'}`; :py:`'forkserver'` is the
             recommended method as it works well with CUDA. If :py:`'fork'` is
             used, the subproccess  must be started before any other GPU useage.
+        :param workers_ignore_signals: Whether or not workers will ignore SIGINT and SIGTERM
+            and instead will only exit when :ref:`close` is called
         """
-        self._is_waiting = False
         self._is_closed = True
 
         assert (
@@ -129,46 +181,55 @@ class VectorEnv:
             self._connection_read_fns,
             self._connection_write_fns,
         ) = self._spawn_workers(  # noqa
-            env_fn_args, make_env_fn
+            env_fn_args,
+            make_env_fn,
+            workers_ignore_signals=workers_ignore_signals,
         )
 
         self._is_closed = False
 
         for write_fn in self._connection_write_fns:
-            write_fn((OBSERVATION_SPACE_COMMAND, None))
+            write_fn((CALL_COMMAND, (OBSERVATION_SPACE_NAME, None)))
         self.observation_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((ACTION_SPACE_COMMAND, None))
+            write_fn((CALL_COMMAND, (ACTION_SPACE_NAME, None)))
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
         for write_fn in self._connection_write_fns:
-            write_fn((NUMBER_OF_EPISODES_COMMAND, None))
+            write_fn((CALL_COMMAND, (NUMBER_OF_EPISODE_NAME, None)))
         self.number_of_episodes = [
             read_fn() for read_fn in self._connection_read_fns
         ]
-        self._paused = []
+        self._paused: List[Tuple] = []
 
     @property
     def num_envs(self):
-        r"""number of individual environments.
-        """
+        r"""number of individual environments."""
         return self._num_envs - len(self._paused)
 
     @staticmethod
+    @profiling_wrapper.RangeContext("_worker_env")
     def _worker_env(
         connection_read_fn: Callable,
         connection_write_fn: Callable,
         env_fn: Callable,
         env_fn_args: Tuple[Any],
         auto_reset_done: bool,
+        mask_signals: bool = False,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
-        r"""process worker for creating and interacting with the environment.
-        """
+        r"""process worker for creating and interacting with the environment."""
+        if mask_signals:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+            signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+            signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+
         env = env_fn(*env_fn_args)
         if parent_pipe is not None:
             parent_pipe.close()
@@ -177,15 +238,18 @@ class VectorEnv:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     # different step methods for habitat.RLEnv and habitat.Env
-                    if isinstance(env, habitat.RLEnv) or isinstance(
-                        env, gym.Env
-                    ):
+                    if isinstance(env, (habitat.RLEnv, gym.Env)):
                         # habitat.RLEnv
                         observations, reward, done, info = env.step(**data)
                         if auto_reset_done and done:
                             observations = env.reset()
-                        connection_write_fn((observations, reward, done, info))
-                    elif isinstance(env, habitat.Env):
+                        with profiling_wrapper.RangeContext(
+                            "worker write after step"
+                        ):
+                            connection_write_fn(
+                                (observations, reward, done, info)
+                            )
+                    elif isinstance(env, habitat.Env):  # type: ignore
                         # habitat.Env
                         observations = env.step(**data)
                         if auto_reset_done and env.episode_over:
@@ -201,53 +265,47 @@ class VectorEnv:
                 elif command == RENDER_COMMAND:
                     connection_write_fn(env.render(*data[0], **data[1]))
 
-                elif command in {
-                    OBSERVATION_SPACE_COMMAND,
-                    ACTION_SPACE_COMMAND,
-                    NUMBER_OF_EPISODES_COMMAND,
-                }:
-                    connection_write_fn(getattr(env, command))
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
-                    if function_args is None or len(function_args) == 0:
-                        result = getattr(env, function_name)()
-                    else:
-                        result = getattr(env, function_name)(**function_args)
-                    connection_write_fn(result)
+                    if function_args is None:
+                        function_args = {}
 
-                # TODO: update CALL_COMMAND for getting attribute like this
-                elif command == EPISODE_COMMAND:
-                    connection_write_fn(env.current_episode)
+                    result_or_fn = getattr(env, function_name)
+
+                    if len(function_args) > 0 or callable(result_or_fn):
+                        result = result_or_fn(**function_args)
+                    else:
+                        result = result_or_fn
+
+                    connection_write_fn(result)
 
                 elif command == COUNT_EPISODES_COMMAND:
                     connection_write_fn(len(env.episodes))
 
-                elif command == EPISODE_OVER:
-                    connection_write_fn(env.episode_over)
-
-                elif command == GET_METRICS:
-                    result = env.get_metrics()
-                    connection_write_fn(result)
-
                 else:
-                    raise NotImplementedError
+                    raise NotImplementedError(f"Unknown command {command}")
 
-                command, data = connection_read_fn()
+                with profiling_wrapper.RangeContext("worker wait for command"):
+                    command, data = connection_read_fn()
 
-            if child_pipe is not None:
-                child_pipe.close()
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")
         finally:
+            if child_pipe is not None:
+                child_pipe.close()
             env.close()
 
     def _spawn_workers(
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+        workers_ignore_signals: bool = False,
+    ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         parent_connections, worker_connections = zip(
-            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
+            *[
+                [ConnectionWrapper(c) for c in self._mp_ctx.Pipe(duplex=True)]
+                for _ in range(self._num_envs)
+            ]
         )
         self._workers = []
         for worker_conn, parent_conn, env_args in zip(
@@ -261,57 +319,57 @@ class VectorEnv:
                     make_env_fn,
                     env_args,
                     self._auto_reset_done,
+                    workers_ignore_signals,
                     worker_conn,
                     parent_conn,
                 ),
             )
-            self._workers.append(ps)
+            self._workers.append(cast(mp.Process, ps))
             ps.daemon = True
             ps.start()
             worker_conn.close()
-        return (
-            [p.recv for p in parent_connections],
-            [p.send for p in parent_connections],
-        )
+
+        read_fns = [
+            _ReadWrapper(p.recv, rank)
+            for rank, p in enumerate(parent_connections)
+        ]
+        write_fns = [
+            _WriteWrapper(p.send, read_fn)
+            for p, read_fn in zip(parent_connections, read_fns)
+        ]
+
+        return read_fns, write_fns
 
     def current_episodes(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((EPISODE_COMMAND, None))
+            write_fn((CALL_COMMAND, (CURRENT_EPISODE_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def count_episodes(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((COUNT_EPISODES_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def episode_over(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((EPISODE_OVER, None))
+            write_fn((CALL_COMMAND, (EPISODE_OVER_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def get_metrics(self):
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((GET_METRICS, None))
+            write_fn((CALL_COMMAND, (GET_METRICS_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def reset(self):
@@ -319,13 +377,11 @@ class VectorEnv:
 
         :return: list of outputs from the reset method of envs.
         """
-        self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((RESET_COMMAND, None))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def reset_at(self, index_env: int):
@@ -334,54 +390,57 @@ class VectorEnv:
         :param index_env: index of the environment to be reset
         :return: list containing the output of reset method of indexed env.
         """
-        self._is_waiting = True
         self._connection_write_fns[index_env]((RESET_COMMAND, None))
         results = [self._connection_read_fns[index_env]()]
-        self._is_waiting = False
         return results
 
-    def step_at(self, index_env: int, action: Dict[str, Any]):
+    def async_step_at(
+        self, index_env: int, action: Union[int, str, Dict[str, Any]]
+    ) -> None:
+        # Backward compatibility
+        if isinstance(action, (int, np.integer, str)):
+            action = {"action": {"action": action}}
+
+        self._warn_cuda_tensors(action)
+        self._connection_write_fns[index_env]((STEP_COMMAND, action))
+
+    @profiling_wrapper.RangeContext("wait_step_at")
+    def wait_step_at(self, index_env: int) -> Any:
+        return self._connection_read_fns[index_env]()
+
+    def step_at(self, index_env: int, action: Union[int, str, Dict[str, Any]]):
         r"""Step in the index_env environment in the vector.
 
         :param index_env: index of the environment to be stepped into
         :param action: action to be taken
         :return: list containing the output of step method of indexed env.
         """
-        self._is_waiting = True
-        self._connection_write_fns[index_env]((STEP_COMMAND, action))
-        results = [self._connection_read_fns[index_env]()]
-        self._is_waiting = False
-        return results
+        self.async_step_at(index_env, action)
+        return self.wait_step_at(index_env)
 
     def async_step(self, data: List[Union[int, str, Dict[str, Any]]]) -> None:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         """
-        # Backward compatibility
-        if isinstance(data[0], (int, np.integer, str)):
-            data = [{"action": {"action": action}} for action in data]
 
-        self._is_waiting = True
-        for write_fn, args in zip(self._connection_write_fns, data):
-            write_fn((STEP_COMMAND, args))
+        for index_env, act in enumerate(data):
+            self.async_step_at(index_env, act)
 
-    def wait_step(self) -> List[Observations]:
-        r"""Wait until all the asynchronized environments have synchronized.
-        """
-        observations = []
-        for read_fn in self._connection_read_fns:
-            observations.append(read_fn())
-        self._is_waiting = False
-        return observations
+    @profiling_wrapper.RangeContext("wait_step")
+    def wait_step(self) -> List[Any]:
+        r"""Wait until all the asynchronized environments have synchronized."""
+        return [
+            self.wait_step_at(index_env) for index_env in range(self.num_envs)
+        ]
 
     def step(self, data: List[Union[int, str, Dict[str, Any]]]) -> List[Any]:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to
-            pass to `step` method for each Environment. For example,
+            pass to :ref:`step` method for each Environment. For example,
             :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
         :return: list of outputs from the step method of envs.
         """
@@ -392,8 +451,8 @@ class VectorEnv:
         if self._is_closed:
             return
 
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
+        for read_fn in self._connection_read_fns:
+            if read_fn.is_waiting:
                 read_fn()
 
         for write_fn in self._connection_write_fns:
@@ -420,17 +479,15 @@ class VectorEnv:
         only some are active (for example during the last episodes of running
         eval episodes).
         """
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
-                read_fn()
+        if self._connection_read_fns[index].is_waiting:
+            self._connection_read_fns[index]()
         read_fn = self._connection_read_fns.pop(index)
         write_fn = self._connection_write_fns.pop(index)
         worker = self._workers.pop(index)
         self._paused.append((index, read_fn, write_fn, worker))
 
     def resume_all(self) -> None:
-        r"""Resumes any paused envs.
-        """
+        r"""Resumes any paused envs."""
         for index, read_fn, write_fn, worker in reversed(self._paused):
             self._connection_read_fns.insert(index, read_fn)
             self._connection_write_fns.insert(index, write_fn)
@@ -443,20 +500,18 @@ class VectorEnv:
         function_name: str,
         function_args: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        r"""Calls a function (which is passed by name) on the selected env and
-        returns the result.
+        r"""Calls a function or retrieves a property/member variable (which is passed by name)
+        on the selected env and returns the result.
 
         :param index: which env to call the function on.
-        :param function_name: the name of the function to call on the env.
+        :param function_name: the name of the function to call or property to retrieve on the env.
         :param function_args: optional function args.
         :return: result of calling the function.
         """
-        self._is_waiting = True
         self._connection_write_fns[index](
             (CALL_COMMAND, (function_name, function_args))
         )
         result = self._connection_read_fns[index]()
-        self._is_waiting = False
         return result
 
     def call(
@@ -473,7 +528,6 @@ class VectorEnv:
             :py:`len(function_names)`.
         :return: result of calling the function.
         """
-        self._is_waiting = True
         if function_args_list is None:
             function_args_list = [None] * len(function_names)
         assert len(function_names) == len(function_args_list)
@@ -485,14 +539,12 @@ class VectorEnv:
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
-        self._is_waiting = False
         return results
 
     def render(
         self, mode: str = "human", *args, **kwargs
     ) -> Union[np.ndarray, None]:
-        r"""Render observations from all environments in a tiled image.
-        """
+        r"""Render observations from all environments in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]
@@ -514,6 +566,24 @@ class VectorEnv:
     def _valid_start_methods(self) -> Set[str]:
         return {"forkserver", "spawn", "fork"}
 
+    def _warn_cuda_tensors(
+        self, action: Dict[str, Any], prefix: Optional[str] = None
+    ):
+        if torch is None:
+            return
+
+        for k, v in action.items():
+            if isinstance(v, dict):
+                subk = f"{prefix}.{k}" if prefix is not None else k
+                self._warn_cuda_tensors(v, prefix=subk)
+            elif torch.is_tensor(v) and v.device.type == "cuda":
+                subk = f"{prefix}.{k}" if prefix is not None else k
+                warnings.warn(
+                    "Action with key {} is a CUDA tensor."
+                    "  This will result in a CUDA context in the subproccess worker."
+                    "  Using CPU tensors instead is recommended.".format(subk)
+                )
+
     def __del__(self):
         self.close()
 
@@ -525,22 +595,25 @@ class VectorEnv:
 
 
 class ThreadedVectorEnv(VectorEnv):
-    r"""Provides same functionality as `VectorEnv`, the only difference is it
-    runs in a multi-thread setup inside a single process.
+    r"""Provides same functionality as :ref:`VectorEnv`, the only difference
+    is it runs in a multi-thread setup inside a single process.
 
-    `VectorEnv` runs in a multi-proc setup. This makes it much easier to debug
-    when using `VectorEnv` because you can actually put break points in the
-    environment methods. It should not be used for best performance.
+    The :ref:`VectorEnv` runs in a multi-proc setup. This makes it much easier
+    to debug when using :ref:`VectorEnv` because you can actually put break
+    points in the environment methods. It should not be used for best
+    performance.
     """
 
     def _spawn_workers(
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
+        workers_ignore_signals: bool = False,
+    ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
+        queues: Iterator[Tuple[Any, ...]] = zip(
             *[(Queue(), Queue()) for _ in range(self._num_envs)]
         )
+        parent_read_queues, parent_write_queues = queues
         self._workers = []
         for parent_read_queue, parent_write_queue, env_args in zip(
             parent_read_queues, parent_write_queues, env_fn_args
@@ -558,7 +631,13 @@ class ThreadedVectorEnv(VectorEnv):
             self._workers.append(thread)
             thread.daemon = True
             thread.start()
-        return (
-            [q.get for q in parent_read_queues],
-            [q.put for q in parent_write_queues],
-        )
+
+        read_fns = [
+            _ReadWrapper(q.get, rank)
+            for rank, q in enumerate(parent_read_queues)
+        ]
+        write_fns = [
+            _WriteWrapper(q.put, read_wrapper)
+            for q, read_wrapper in zip(parent_write_queues, read_fns)
+        ]
+        return read_fns, write_fns

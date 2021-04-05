@@ -10,13 +10,17 @@ import numpy as np
 import pytest
 
 import habitat
-import habitat.datasets.eqa.mp3d_eqa_dataset as mp3d_dataset
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
+from habitat.datasets.eqa import mp3d_eqa_dataset as mp3d_dataset
 from habitat.tasks.eqa.eqa import AnswerAction
-from habitat.tasks.nav.nav import MoveForwardAction, StopAction
+from habitat.tasks.nav.nav import MoveForwardAction
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quaternion_from_coeff,
+)
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -175,13 +179,10 @@ def test_mp3d_eqa_sim():
                 assert obs["rgb"].shape[:2] == (
                     eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                     eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                ), (
-                    "Observation resolution {} doesn't correspond to config "
-                    "({}, {}).".format(
-                        obs["rgb"].shape[:2],
-                        eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                        eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                    )
+                ), "Observation resolution {} doesn't correspond to config " "({}, {}).".format(
+                    obs["rgb"].shape[:2],
+                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
                 )
 
 
@@ -237,9 +238,9 @@ def test_mp3d_eqa_sim_correspondence():
                     "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
                     "".format(
                         cur_state.position - point.position,
-                        cur_state.rotation
-                        - habitat.utils.geometry_utils.quaternion_wxyz_to_xyzw(
-                            point.rotation
+                        angle_between_quaternions(
+                            cur_state.rotation,
+                            quaternion_from_coeff(point.rotation),
                         ),
                         cur_state.position,
                         point.position,
@@ -297,7 +298,7 @@ def test_eqa_task():
 
         env.reset()
 
-        for i in range(10):
+        for _ in range(10):
             action = sample_non_stop_action(env.action_space)
             if action["action"] != AnswerAction.name:
                 env.step(action)

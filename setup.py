@@ -20,7 +20,7 @@ with open("README.md", encoding="utf8") as f:
     readme = f.read()
 
 with open("LICENSE") as f:
-    license = f.read()
+    license_text = f.read()
 
 with open("requirements.txt") as f:
     reqs = f.read()
@@ -29,7 +29,7 @@ DISTNAME = "habitat"
 DESCRIPTION = "habitat: a suite for embodied agent tasks and benchmarks"
 LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
-LICENSE = license
+LICENSE = license_text
 REQUIREMENTS = reqs.strip().split("\n")
 BASELINE_PATH = ["habitat_baselines", "habitat_baselines.*"]
 DEFAULT_EXCLUSION = ["test", "examples"]
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         author=AUTHOR,
         license=LICENSE,
         setup_requires=["pytest-runner"],
-        tests_require=["pytest", "pytest-mock"],
+        tests_require=["pytest-cov", "pytest-mock", "pytest"],
         include_package_data=True,
         cmdclass={"install": InstallCommand, "develop": DevelopCommand},
     )

@@ -1,0 +1,37 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/imagenav.yaml"
+TRAINER_NAME: "ppo"
+ENV_NAME: "NavRLEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+VIDEO_OPTION: []
+TENSORBOARD_DIR: ""
+EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ppo/imagenav/ckpt.0.pth"
+NUM_ENVIRONMENTS: 1
+CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/imagenav/"
+NUM_UPDATES: 2
+LOG_INTERVAL: 100
+NUM_CHECKPOINTS: 2
+TEST_EPISODE_COUNT: 2
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
+
+RL:
+  PPO:
+    # ppo params
+    clip_param: 0.1
+    ppo_epoch: 4
+    num_mini_batch: 1
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    lr: 2.5e-4
+    eps: 1e-5
+    max_grad_norm: 0.5
+    num_steps: 16
+    hidden_size: 512
+    use_gae: True
+    gamma: 0.99
+    tau: 0.95
+    use_linear_clip_decay: True
+    use_linear_lr_decay: True
+    reward_window_size: 50

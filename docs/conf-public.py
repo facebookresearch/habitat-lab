@@ -10,20 +10,10 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 # Inherit everything from the local config
 from conf import *  # isort:skip
 
-OUTPUT = "../../habitat-sim/build/docs-public/habitat-api/"
-
-HTML_HEADER = """<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-66408458-4"></script>
-<script>
- window.dataLayer = window.dataLayer || [];
- function gtag(){dataLayer.push(arguments);}
- gtag('js', new Date());
- gtag('config', 'UA-66408458-4');
-</script>
-"""
+OUTPUT = "../../habitat-sim/build/docs-public/habitat-lab/"
 
 SEARCH_DOWNLOAD_BINARY = "searchdata-v1.bin"
-SEARCH_BASE_URL = "https://aihabitat.org/docs/habitat-api/"
+SEARCH_BASE_URL = "https://aihabitat.org/docs/habitat-lab/"
 SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:aihabitat.org+{query}"
 
 M_SPHINX_INVENTORIES = [

@@ -3,12 +3,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from habitat.config.default import Config, get_config
 
-r"""Habitat-API Configuration
+r"""Habitat Lab Configuration
 ==============================
 
-Habitat-API uses [Yacs configuration system](https://github.com/rbgirshick/yacs)
+Habitat Lab uses [Yacs configuration system](https://github.com/rbgirshick/yacs)
 with the paradigm of `your code + a YACS config for experiment E (+
 external dependencies + hardware + other nuisance terms ...) =
 reproducible experiment E`. Yacs advantages:
@@ -61,7 +60,7 @@ env = habitat.Env(config)
 ```
 
 ## Extending the config with default values
-Example of how to extend a config outside of `habtiat-api` repository.
+Example of how to extend a config outside of `habtiat-lab` repository.
 First, we create a config extending the default config in the code and re-use
 `habitat.get_config()`:
 ```
@@ -120,5 +119,7 @@ def main():
     env = habitat.Env(config)
 
 ```"""
+
+from habitat.config.default import Config, get_config
 
 __all__ = ["Config", "get_config"]

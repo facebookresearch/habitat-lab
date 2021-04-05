@@ -14,18 +14,17 @@ from habitat.core.simulator import Observations
 
 
 class Agent:
-    r"""Abstract class for defining agents which act inside `core.env.Env`.
+    r"""Abstract class for defining agents which act inside :ref:`core.env.Env`.
 
     This abstract class standardizes agents to allow seamless benchmarking.
     """
 
     def reset(self, last_success=None) -> None:
-        r"""Called before starting a new episode in environment.
-        """
+        r"""Called before starting a new episode in environment."""
         raise NotImplementedError
 
     def act(
-        self, observations: Observations
+        self, observations: "Observations"
     ) -> Union[int, str, Dict[str, Any]]:
         r"""Called to produce an action to perform in an environment.
 

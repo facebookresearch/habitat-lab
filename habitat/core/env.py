@@ -6,12 +6,12 @@
 
 import random
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, cast
 
 import gym
 import numba
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
@@ -20,29 +20,31 @@ from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks import make_task
+from habitat.utils import profiling_wrapper
 
 
 class Env:
-    r"""Fundamental environment class for `habitat`.
+    r"""Fundamental environment class for :ref:`habitat`.
 
     :data observation_space: ``SpaceDict`` object corresponding to sensor in
         sim and task.
     :data action_space: ``gym.space`` object corresponding to valid actions.
 
     All the information  needed for working on embodied tasks with simulator
-    is abstracted inside `Env`. Acts as a base for other derived environment
-    classes. `Env` consists of three major components: ``dataset`` (`episodes`), ``simulator`` (`sim`) and `task` and connects all the three components
-    together.
+    is abstracted inside :ref:`Env`. Acts as a base for other derived
+    environment classes. :ref:`Env` consists of three major components:
+    ``dataset`` (`episodes`), ``simulator`` (:ref:`sim`) and :ref:`task` and
+    connects all the three components together.
     """
 
-    observation_space: SpaceDict
-    action_space: SpaceDict
+    observation_space: spaces.Dict
+    action_space: spaces.Dict
     _config: Config
     _dataset: Optional[Dataset]
     number_of_episodes: Optional[int]
-    _episodes: List[Type[Episode]]
+    _episodes: List[Episode]
     _current_episode_index: Optional[int]
-    _current_episode: Optional[Type[Episode]]
+    _current_episode: Optional[Episode]
     _episode_iterator: Optional[Iterator]
     _sim: Simulator
     _task: EmbodiedTask
@@ -76,12 +78,17 @@ class Env:
             self._dataset = make_dataset(
                 id_dataset=config.DATASET.TYPE, config=config.DATASET
             )
-        self._episodes = self._dataset.episodes if self._dataset else []
+        self._episodes = (
+            self._dataset.episodes
+            if self._dataset
+            else cast(List[Episode], [])
+        )
         self._current_episode = None
         iter_option_dict = {
             k.lower(): v
             for k, v in config.ENVIRONMENT.ITERATOR_OPTIONS.items()
         }
+        iter_option_dict["seed"] = config.SEED
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )
@@ -108,7 +115,7 @@ class Env:
             sim=self._sim,
             dataset=self._dataset,
         )
-        self.observation_space = SpaceDict(
+        self.observation_space = spaces.Dict(
             {
                 **self._sim.sensor_suite.observation_spaces.spaces,
                 **self._task.sensor_suite.observation_spaces.spaces,
@@ -124,12 +131,12 @@ class Env:
         self._episode_over = False
 
     @property
-    def current_episode(self) -> Type[Episode]:
+    def current_episode(self) -> Episode:
         assert self._current_episode is not None
         return self._current_episode
 
     @current_episode.setter
-    def current_episode(self, episode: Type[Episode]) -> None:
+    def current_episode(self, episode: Episode) -> None:
         self._current_episode = episode
 
     @property
@@ -141,11 +148,11 @@ class Env:
         self._episode_iterator = new_iter
 
     @property
-    def episodes(self) -> List[Type[Episode]]:
+    def episodes(self) -> List[Episode]:
         return self._episodes
 
     @episodes.setter
-    def episodes(self, episodes: List[Type[Episode]]) -> None:
+    def episodes(self, episodes: List[Episode]) -> None:
         assert (
             len(episodes) > 0
         ), "Environment doesn't accept empty episodes list."
@@ -203,9 +210,6 @@ class Env:
         self._reset_stats()
 
         assert len(self.episodes) > 0, "Episodes list is empty"
-        if self._current_episode is not None:
-            self._current_episode._shortest_path_cache = None
-
         # Delete the shortest path cache of the current episode
         # Caching it for the next time we see this episode isn't really worth
         # it
@@ -238,10 +242,11 @@ class Env:
     ) -> Observations:
         r"""Perform an action in the environment and return observations.
 
-        :param action: action (belonging to `action_space`) to be performed
-            inside the environment. Action is a name or index of allowed
-            task's action and action arguments (belonging to action's
-            `action_space`) to support parametrized and continuous actions.
+        :param action: action (belonging to :ref:`action_space`) to be
+            performed inside the environment. Action is a name or index of
+            allowed task's action and action arguments (belonging to action's
+            :ref:`action_space`) to support parametrized and continuous
+            actions.
         :return: observations after taking action in environment.
         """
 
@@ -253,7 +258,7 @@ class Env:
         ), "Episode over, call reset before calling step"
 
         # Support simpler interface as well
-        if isinstance(action, str) or isinstance(action, (int, np.integer)):
+        if isinstance(action, (str, int, np.integer)):
             action = {"action": action}
 
         observations = self.task.step(
@@ -308,9 +313,10 @@ class Env:
 class RLEnv(gym.Env):
     r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``.
 
-    This is a wrapper over `Env` for RL users. To create custom RL
+    This is a wrapper over :ref:`Env` for RL users. To create custom RL
     environments users should subclass `RLEnv` and define the following
-    methods: `get_reward_range()`, `get_reward()`, `get_done()`, `get_info()`.
+    methods: :ref:`get_reward_range()`, :ref:`get_reward()`,
+    :ref:`get_done()`, :ref:`get_info()`.
 
     As this is a subclass of ``gym.Env``, it implements `reset()` and
     `step()`.
@@ -323,8 +329,8 @@ class RLEnv(gym.Env):
     ) -> None:
         """Constructor
 
-        :param config: config to construct `Env`
-        :param dataset: dataset to construct `Env`.
+        :param config: config to construct :ref:`Env`
+        :param dataset: dataset to construct :ref:`Env`.
         """
 
         self._env = Env(config, dataset)
@@ -338,17 +344,18 @@ class RLEnv(gym.Env):
         return self._env
 
     @property
-    def episodes(self) -> List[Type[Episode]]:
+    def episodes(self) -> List[Episode]:
         return self._env.episodes
 
-    @property
-    def current_episode(self) -> Type[Episode]:
-        return self._env.current_episode
-
     @episodes.setter
-    def episodes(self, episodes: List[Type[Episode]]) -> None:
+    def episodes(self, episodes: List[Episode]) -> None:
         self._env.episodes = episodes
 
+    @property
+    def current_episode(self) -> Episode:
+        return self._env.current_episode
+
+    @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(self) -> Observations:
         return self._env.reset()
 
@@ -365,7 +372,7 @@ class RLEnv(gym.Env):
         :param observations: observations from simulator and task.
         :return: reward after performing the last action.
 
-        This method is called inside the `step()` method.
+        This method is called inside the :ref:`step()` method.
         """
         raise NotImplementedError
 
@@ -388,6 +395,7 @@ class RLEnv(gym.Env):
         """
         raise NotImplementedError
 
+    @profiling_wrapper.RangeContext("RLEnv.step")
     def step(self, *args, **kwargs) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment.
 

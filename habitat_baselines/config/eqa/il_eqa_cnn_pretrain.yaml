@@ -1,0 +1,30 @@
+BASE_TASK_CONFIG_PATH: "configs/tasks/eqa_mp3d.yaml"
+TRAINER_NAME: "eqa-cnn-pretrain"
+
+ENV_NAME: "EQACNNPretrainILEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+
+DATASET_PATH: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
+
+EVAL_CKPT_PATH_DIR: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
+
+CHECKPOINT_FOLDER: "data/eqa/eqa_cnn_pretrain/checkpoints"
+TENSORBOARD_DIR: "data/eqa/eqa_cnn_pretrain/tb"
+RESULTS_DIR: "data/eqa/eqa_cnn_pretrain/results/{split}/{type}"
+OUTPUT_LOG_DIR: data/eqa/eqa_cnn_pretrain/logs
+
+LOG_METRICS: True
+LOG_INTERVAL: 50
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
+
+IL:
+  EQACNNPretrain:
+    # params
+    max_epochs: 5
+    batch_size: 20
+    lr: 1e-3

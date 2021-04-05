@@ -8,13 +8,12 @@ r"""Implements tasks and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.registry import registry
 from habitat.core.simulator import Observations, SensorSuite, Simulator
 from habitat.core.spaces import ActionSpace, EmptySpace, Space
 
@@ -50,8 +49,7 @@ class Action:
 
     @property
     def action_space(self) -> Space:
-        r"""a current Action's action space.
-        """
+        r"""a current Action's action space."""
         raise NotImplementedError
 
 
@@ -74,8 +72,7 @@ class SimulatorTaskAction(Action):
         return None
 
     def step(self, *args: Any, **kwargs: Any) -> Observations:
-        r"""Step method is called from ``Env`` on each ``step``.
-        """
+        r"""Step method is called from ``Env`` on each ``step``."""
         raise NotImplementedError
 
 
@@ -84,15 +81,15 @@ class Measure:
     and task.
 
     :data uuid: universally unique id.
-    :data _metric: metric for the `Measure`, this has to be updated with
-        each `step() <env.Env.step()>` call on `env.Env`.
+    :data _metric: metric for the :ref:`Measure`, this has to be updated with
+        each :ref:`step() <env.Env.step()>` call on :ref:`env.Env`.
 
     This can be used for tracking statistics when running experiments. The
-    user of this class needs to implement the `reset_metric()` and
-    `update_metric()` method and the user is also required to set the
-    `uuid <Measure.uuid>` and `_metric` attributes.
+    user of this class needs to implement the :ref:`reset_metric()` and
+    :ref:`update_metric()` method and the user is also required to set the
+    :ref:`uuid <Measure.uuid>` and :ref:`_metric` attributes.
 
-    .. (uuid is a builtin Python module, so just `uuid` would link there)
+    .. (uuid is a builtin Python module, so just :ref:`uuid` would link there)
     """
 
     _metric: Any
@@ -106,33 +103,32 @@ class Measure:
         raise NotImplementedError
 
     def reset_metric(self, *args: Any, **kwargs: Any) -> None:
-        r"""Reset `_metric`, this method is called from `env.Env` on each
-        reset.
+        r"""Reset :ref:`_metric`, this method is called from :ref:`env.Env` on
+        each reset.
         """
         raise NotImplementedError
 
     def update_metric(self, *args: Any, **kwargs: Any) -> None:
-        r"""Update `_metric`, this method is called from `env.Env` on each
-        `step() <env.Env.step()>`
+        r"""Update :ref:`_metric`, this method is called from :ref:`env.Env`
+        on each :ref:`step() <env.Env.step()>`
         """
         raise NotImplementedError
 
     def get_metric(self):
         r"""..
 
-        :return: the current metric for `Measure`.
+        :return: the current metric for :ref:`Measure`.
         """
         return self._metric
 
 
 class Metrics(dict):
-    r"""Dictionary containing measurements.
-    """
+    r"""Dictionary containing measurements."""
 
     def __init__(self, measures: Dict[str, Measure]) -> None:
         """Constructor
 
-        :param measures: list of `Measure` whose metrics are fetched and
+        :param measures: list of :ref:`Measure` whose metrics are fetched and
             packaged.
         """
         data = [
@@ -142,8 +138,8 @@ class Metrics(dict):
 
 
 class Measurements:
-    r"""Represents a set of Measures, with each `Measure` being identified
-    through a unique id.
+    r"""Represents a set of Measures, with each :ref:`Measure` being
+    identified through a unique id.
     """
 
     measures: Dict[str, Measure]
@@ -151,8 +147,8 @@ class Measurements:
     def __init__(self, measures: Iterable[Measure]) -> None:
         """Constructor
 
-        :param measures: list containing `Measure`, uuid of each
-            `Measure` must be unique.
+        :param measures: list containing :ref:`Measure`, uuid of each
+            :ref:`Measure` must be unique.
         """
         self.measures = OrderedDict()
         for measure in measures:
@@ -170,8 +166,8 @@ class Measurements:
             measure.update_metric(*args, **kwargs)
 
     def get_metrics(self) -> Metrics:
-        r"""Collects measurement from all `Measure`\ s and returns it
-        packaged inside `Metrics`.
+        r"""Collects measurement from all :ref:`Measure`\ s and returns it
+        packaged inside :ref:`Metrics`.
         """
         return Metrics(self.measures)
 
@@ -204,10 +200,10 @@ class Measurements:
 class EmbodiedTask:
     r"""Base class for embodied tasks. ``EmbodiedTask`` holds definition of
     a task that agent needs to solve: action space, observation space,
-    measures, simulator usage. ``EmbodiedTask`` has `reset` and `step`
-    methods that are called by ``Env``. ``EmbodiedTask`` is the one of main
-    dimensions for the framework extension. Once new embodied task is
-    introduced implementation of ``EmbodiedTask`` is a formal definition of
+    measures, simulator usage. ``EmbodiedTask`` has :ref:`reset` and
+    :ref:`step` methods that are called by ``Env``. ``EmbodiedTask`` is the
+    one of main dimensions for the framework extension. Once new embodied task
+    is introduced implementation of ``EmbodiedTask`` is a formal definition of
     the task that opens opportunity for others to propose solutions and
     include it into benchmark results.
 
@@ -230,6 +226,8 @@ class EmbodiedTask:
     def __init__(
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
+        from habitat.core.registry import registry
+
         self._config = config
         self._sim = sim
         self._dataset = dataset
@@ -278,7 +276,7 @@ class EmbodiedTask:
             )
         return entities
 
-    def reset(self, episode: Type[Episode]):
+    def reset(self, episode: Episode):
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
@@ -291,7 +289,7 @@ class EmbodiedTask:
 
         return observations
 
-    def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+    def step(self, action: Dict[str, Any], episode: Episode):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_name = action["action"]
@@ -320,7 +318,7 @@ class EmbodiedTask:
 
     def get_action_name(self, action_index: int):
         if action_index >= len(self.actions):
-            raise ValueError(f"Action index '{action}' is out of range.")
+            raise ValueError(f"Action index '{action_index}' is out of range.")
         return self._action_keys[action_index]
 
     @property
@@ -333,7 +331,7 @@ class EmbodiedTask:
         )
 
     def overwrite_sim_config(
-        self, sim_config: Config, episode: Type[Episode]
+        self, sim_config: Config, episode: Episode
     ) -> Config:
         r"""Update config merging information from :p:`sim_config` and
         :p:`episode`.
@@ -347,7 +345,7 @@ class EmbodiedTask:
         self,
         *args: Any,
         action: Union[int, Dict[str, Any]],
-        episode: Type[Episode],
+        episode: Episode,
         **kwargs: Any,
     ) -> bool:
         raise NotImplementedError

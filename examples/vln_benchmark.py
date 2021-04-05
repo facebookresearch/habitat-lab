@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import sys
 from collections import defaultdict
+from typing import Dict
 
 import habitat
 from habitat.config.default import get_config
@@ -33,7 +33,7 @@ def reference_path_benchmark(config, num_episodes=None):
         follower.mode = "geodesic_path"
 
         agg_metrics: Dict = defaultdict(float)
-        for i in range(num_episodes):
+        for _ in range(num_episodes):
             env.reset()
 
             for point in env.current_episode.reference_path:

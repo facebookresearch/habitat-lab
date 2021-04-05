@@ -1,0 +1,56 @@
+# Note this config here only for reproducibility's sake.
+# ppo_pointnav.yaml contains the known best practices
+# and should be used as the starting point instead.
+
+VERBOSE: False
+
+BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
+TRAINER_NAME: "ppo"
+ENV_NAME: "NavRLEnv"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+VIDEO_OPTION: []
+# Can be uncommented to generate videos.
+# VIDEO_OPTION: ["disk", "tensorboard"]
+TENSORBOARD_DIR: "tb"
+VIDEO_DIR: "video_dir"
+# Evaluate on all episodes
+TEST_EPISODE_COUNT: -1
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+# This was 6 for mp3d and 8 for gibson in the paper
+NUM_ENVIRONMENTS: 6
+SENSORS: ["DEPTH_SENSOR"]
+CHECKPOINT_FOLDER: "data/new_checkpoints"
+TOTAL_NUM_STEPS: 75e6
+LOG_INTERVAL: 25
+NUM_CHECKPOINTS: 100
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
+
+RL:
+  SUCCESS_REWARD: 10.0
+
+  POLICY:
+    name: "PointNavBaselinePolicy"
+
+  PPO:
+    # ppo params
+    clip_param: 0.1
+    ppo_epoch: 4
+    num_mini_batch: 4
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    lr: 2.5e-4
+    eps: 1e-5
+    max_grad_norm: 0.5
+    num_steps: 128
+    hidden_size: 512
+    use_gae: True
+    gamma: 0.99
+    tau: 0.95
+    use_linear_clip_decay: True
+    use_linear_lr_decay: True
+    reward_window_size: 50
+
+    use_normalized_advantage: True

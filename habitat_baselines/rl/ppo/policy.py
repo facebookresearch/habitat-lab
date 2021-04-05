@@ -6,18 +6,24 @@
 import abc
 
 import torch
-import torch.nn as nn
+from gym import spaces
+from torch import nn as nn
 
+from habitat.config import Config
 from habitat.tasks.nav.nav import (
+    ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
     PointGoalSensor,
 )
-from habitat_baselines.common.utils import CategoricalNet, Flatten
-from habitat_baselines.rl.models.rnn_state_encoder import RNNStateEncoder
+from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
+from habitat_baselines.utils.common import CategoricalNet
 
 
-class Policy(nn.Module):
+class Policy(nn.Module, metaclass=abc.ABCMeta):
     def __init__(self, net, dim_actions):
         super().__init__()
         self.net = net
@@ -70,9 +76,14 @@ class Policy(nn.Module):
         value = self.critic(features)
 
         action_log_probs = distribution.log_probs(action)
-        distribution_entropy = distribution.entropy().mean()
+        distribution_entropy = distribution.entropy()
 
         return value, action_log_probs, distribution_entropy, rnn_hidden_states
+
+    @classmethod
+    @abc.abstractmethod
+    def from_config(cls, config, observation_space, action_space):
+        pass
 
 
 class CriticHead(nn.Module):
@@ -86,13 +97,32 @@ class CriticHead(nn.Module):
         return self.fc(x)
 
 
+@baseline_registry.register_policy
 class PointNavBaselinePolicy(Policy):
-    def __init__(self, observation_space, action_space, hidden_size=512):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        action_space,
+        hidden_size: int = 512,
+        **kwargs
+    ):
         super().__init__(
-            PointNavBaselineNet(
-                observation_space=observation_space, hidden_size=hidden_size
+            PointNavBaselineNet(  # type: ignore
+                observation_space=observation_space,
+                hidden_size=hidden_size,
+                **kwargs,
             ),
             action_space.n,
+        )
+
+    @classmethod
+    def from_config(
+        cls, config: Config, observation_space: spaces.Dict, action_space
+    ):
+        return cls(
+            observation_space=observation_space,
+            action_space=action_space,
+            hidden_size=config.RL.PPO.hidden_size,
         )
 
 
@@ -122,7 +152,11 @@ class PointNavBaselineNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
-    def __init__(self, observation_space, hidden_size):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        hidden_size: int,
+    ):
         super().__init__()
 
         if (
@@ -136,12 +170,20 @@ class PointNavBaselineNet(Net):
             self._n_input_goal = observation_space.spaces[
                 PointGoalSensor.cls_uuid
             ].shape[0]
+        elif ImageGoalSensor.cls_uuid in observation_space.spaces:
+            goal_observation_space = spaces.Dict(
+                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
+            )
+            self.goal_visual_encoder = SimpleCNN(
+                goal_observation_space, hidden_size
+            )
+            self._n_input_goal = hidden_size
 
         self._hidden_size = hidden_size
 
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
-        self.state_encoder = RNNStateEncoder(
+        self.state_encoder = build_rnn_state_encoder(
             (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
             self._hidden_size,
         )
@@ -168,6 +210,9 @@ class PointNavBaselineNet(Net):
 
         elif PointGoalSensor.cls_uuid in observations:
             target_encoding = observations[PointGoalSensor.cls_uuid]
+        elif ImageGoalSensor.cls_uuid in observations:
+            image_goal = observations[ImageGoalSensor.cls_uuid]
+            target_encoding = self.goal_visual_encoder({"rgb": image_goal})
 
         x = [target_encoding]
 
@@ -175,7 +220,9 @@ class PointNavBaselineNet(Net):
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed] + x
 
-        x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        x_out = torch.cat(x, dim=1)
+        x_out, rnn_hidden_states = self.state_encoder(
+            x_out, rnn_hidden_states, masks
+        )
 
-        return x, rnn_hidden_states
+        return x_out, rnn_hidden_states

@@ -9,26 +9,22 @@ https://github.com/JunjH/Revisiting_Single_Depth_Estimation
 Revisiting Single Image Depth Estimation: Toward Higher Resolution Maps With Accurate Object Boundaries
 Junjie Hu and Mete Ozay and Yan Zhang and Takayuki Okatani
 WACV 2019
+
+ResNet code gently borrowed from
+https://github.com/pytorch/vision/blob/master/torchvision/models/py
 """
 
 
 import math
-import os
-import pdb
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.nn.parallel
-import torch.utils.model_zoo as model_zoo
 from PIL import Image
-from torchvision import transforms, utils
-
-r"""ResNet code gently borrowed from
-https://github.com/pytorch/vision/blob/master/torchvision/models/py
-"""
-
+from torch import nn as nn
+from torch.nn import functional as F
+from torch.utils import model_zoo as model_zoo
+from torchvision import transforms
 
 accimage = None
 
@@ -178,7 +174,7 @@ class ResNet(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes))
 
         return nn.Sequential(*layers)
@@ -618,18 +614,19 @@ def define_model(is_resnet, is_densenet, is_senet):
             Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
         )
     if is_densenet:
-        original_model = dendensenet161(pretrained=False)
-        Encoder = E_densenet(original_model)
-        model1 = model(
-            Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208]
-        )
+        # original_model = dendensenet161(pretrained=False)
+        # Encoder = E_densenet(original_model)
+        # model1 = model(
+        #    Encoder, num_features=2208, block_channel=[192, 384, 1056, 2208]
+        # )
+        raise NotImplementedError()
     if is_senet:
-        original_model = senet154(pretrained=False)
-        Encoder = E_senet(original_model)
-        model1 = model(
-            Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
-        )
-
+        # original_model = senet154(pretrained=False)
+        # Encoder = E_senet(original_model)
+        # model1 = model(
+        #    Encoder, num_features=2048, block_channel=[256, 512, 1024, 2048]
+        # )
+        raise NotImplementedError()
     return model1
 
 
@@ -640,7 +637,7 @@ class MonoDepthEstimator:
         )
         self.model = torch.nn.DataParallel(self.model).cuda()
         cpt = torch.load(checkpoint)
-        if "state_dict" in cpt.keys():
+        if "state_dict" in cpt:
             cpt = cpt["state_dict"]
         self.model.load_state_dict(cpt)
         self.model.eval()

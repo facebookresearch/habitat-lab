@@ -21,11 +21,14 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     TypeVar,
+    Union,
 )
 
 import attr
 import numpy as np
+from numpy import ndarray
 
 from habitat.config import Config
 from habitat.core.utils import not_none_validator
@@ -47,7 +50,7 @@ class Episode:
         (https://en.wikipedia.org/wiki/Versor). The rotation specifying the
         agent's orientation is relative to the world coordinate axes.
 
-    This information is provided by a `Dataset` instance.
+    This information is provided by a :ref:`Dataset` instance.
     """
 
     episode_id: str = attr.ib(default=None, validator=not_none_validator)
@@ -58,7 +61,7 @@ class Episode:
     start_rotation: List[float] = attr.ib(
         default=None, validator=not_none_validator
     )
-    info: Optional[Dict[str, str]] = None
+    info: Optional[Dict[str, Any]] = None
     _shortest_path_cache: Any = attr.ib(init=False, default=None)
 
     def __getstate__(self):
@@ -77,8 +80,7 @@ T = TypeVar("T", bound=Episode)
 
 
 class Dataset(Generic[T]):
-    r"""Base class for dataset specification.
-    """
+    r"""Base class for dataset specification."""
     episodes: List[T]
 
     @staticmethod
@@ -102,8 +104,8 @@ class Dataset(Generic[T]):
 
         :return: A list of scene names that would be loaded with the dataset
         """
-        assert cls.check_config_paths_exist(config)
-        dataset = cls(config)
+        assert cls.check_config_paths_exist(config)  # type: ignore[attr-defined]
+        dataset = cls(config)  # type: ignore[call-arg]
         return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
     @classmethod
@@ -123,15 +125,13 @@ class Dataset(Generic[T]):
 
     @property
     def num_episodes(self) -> int:
-        r"""number of episodes in the dataset
-        """
+        r"""number of episodes in the dataset"""
         return len(self.episodes)
 
     @property
     def scene_ids(self) -> List[str]:
-        r"""unique scene ids present in the dataset.
-        """
-        return sorted(list({episode.scene_id for episode in self.episodes}))
+        r"""unique scene ids present in the dataset."""
+        return sorted({episode.scene_id for episode in self.episodes})
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
         r"""..
@@ -153,28 +153,28 @@ class Dataset(Generic[T]):
 
     def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
         r"""Gets episode iterator with options. Options are specified in
-        `EpisodeIterator` documentation.
+        :ref:`EpisodeIterator` documentation.
 
         :param args: positional args for iterator constructor
         :param kwargs: keyword args for iterator constructor
         :return: episode iterator with specified behavior
 
-        To further customize iterator behavior for your `Dataset` subclass,
-        create a customized iterator class like `EpisodeIterator` and override
-        this method.
+        To further customize iterator behavior for your :ref:`Dataset`
+        subclass, create a customized iterator class like
+        :ref:`EpisodeIterator` and override this method.
         """
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
     def to_json(self) -> str:
         class DatasetJSONEncoder(json.JSONEncoder):
-            def default(self, object):
-                if isinstance(object, np.ndarray):
-                    return object.tolist()
+            def default(self, obj):
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
 
                 return (
-                    object.__getstate__()
-                    if hasattr(object, "__getstate__")
-                    else object.__dict__
+                    obj.__getstate__()
+                    if hasattr(obj, "__getstate__")
+                    else obj.__dict__
                 )
 
         result = DatasetJSONEncoder().encode(self)
@@ -282,7 +282,7 @@ class Dataset(Generic[T]):
             self.num_episodes, num_episodes, replace=False
         )
         if collate_scene_ids:
-            scene_ids = {}
+            scene_ids: Dict[str, List[int]] = {}
             for rand_ind in rand_items:
                 scene = self.episodes[rand_ind].scene_id
                 if scene not in scene_ids:
@@ -296,7 +296,7 @@ class Dataset(Generic[T]):
             new_dataset = copy.copy(self)  # Creates a shallow copy
             new_dataset.episodes = []
             new_datasets.append(new_dataset)
-            for ii in range(split_lengths[nn]):
+            for _ii in range(split_lengths[nn]):
                 new_dataset.episodes.append(self.episodes[rand_items[ep_ind]])
                 ep_ind += 1
             if sort_by_episode_id:
@@ -337,7 +337,7 @@ class EpisodeIterator(Iterator):
 
     def __init__(
         self,
-        episodes: List[T],
+        episodes: Sequence[T],
         cycle: bool = True,
         shuffle: bool = False,
         group_by_scene: bool = True,
@@ -345,7 +345,8 @@ class EpisodeIterator(Iterator):
         max_scene_repeat_steps: int = -1,
         num_episode_sample: int = -1,
         step_repetition_range: float = 0.2,
-    ):
+        seed: int = None,
+    ) -> None:
         r"""..
 
         :param episodes: list of episodes.
@@ -367,12 +368,18 @@ class EpisodeIterator(Iterator):
             on each scene switch.  This stops all workers from swapping scenes at
             the same time
         """
+        if seed:
+            random.seed(seed)
+            np.random.seed(seed)
 
         # sample episodes
         if num_episode_sample >= 0:
             episodes = np.random.choice(
                 episodes, num_episode_sample, replace=False
             )
+
+        if not isinstance(episodes, list):
+            episodes = list(episodes)
 
         self.episodes = episodes
         self.cycle = cycle
@@ -390,17 +397,17 @@ class EpisodeIterator(Iterator):
 
         self._rep_count = -1  # 0 corresponds to first episode already returned
         self._step_count = 0
-        self._prev_scene_id = None
+        self._prev_scene_id: Optional[str] = None
 
         self._iterator = iter(self.episodes)
 
         self.step_repetition_range = step_repetition_range
         self._set_shuffle_intervals()
 
-    def __iter__(self):
+    def __iter__(self) -> "EpisodeIterator":
         return self
 
-    def __next__(self):
+    def __next__(self) -> Episode:
         r"""The main logic for handling how episodes will be iterated.
 
         :return: next episode.
@@ -446,7 +453,7 @@ class EpisodeIterator(Iterator):
 
     def _shuffle(self) -> None:
         r"""Internal method that shuffles the remaining episodes.
-            If self.group_by_scene is true, then shuffle groups of scenes.
+        If self.group_by_scene is true, then shuffle groups of scenes.
         """
         assert self.shuffle
         episodes = list(self._iterator)
@@ -458,33 +465,35 @@ class EpisodeIterator(Iterator):
 
         self._iterator = iter(episodes)
 
-    def _group_scenes(self, episodes):
+    def _group_scenes(
+        self, episodes: Union[Sequence[Episode], List[Episode], ndarray]
+    ) -> List[T]:
         r"""Internal method that groups episodes by scene
-            Groups will be ordered by the order the first episode of a given
-            scene is in the list of episodes
+        Groups will be ordered by the order the first episode of a given
+        scene is in the list of episodes
 
-            So if the episodes list shuffled before calling this method,
-            the scenes will be in a random order
+        So if the episodes list shuffled before calling this method,
+        the scenes will be in a random order
         """
         assert self.group_by_scene
 
-        scene_sort_keys = {}
+        scene_sort_keys: Dict[str, int] = {}
         for e in episodes:
             if e.scene_id not in scene_sort_keys:
                 scene_sort_keys[e.scene_id] = len(scene_sort_keys)
 
-        return sorted(episodes, key=lambda e: scene_sort_keys[e.scene_id])
+        return sorted(episodes, key=lambda e: scene_sort_keys[e.scene_id])  # type: ignore[arg-type]
 
-    def step_taken(self):
+    def step_taken(self) -> None:
         self._step_count += 1
 
     @staticmethod
-    def _randomize_value(value, value_range):
+    def _randomize_value(value: int, value_range: float) -> int:
         return random.randint(
             int(value * (1 - value_range)), int(value * (1 + value_range))
         )
 
-    def _set_shuffle_intervals(self):
+    def _set_shuffle_intervals(self) -> None:
         if self.max_scene_repetition_episodes > 0:
             self._max_rep_episode = self.max_scene_repetition_episodes
         else:
@@ -497,7 +506,7 @@ class EpisodeIterator(Iterator):
         else:
             self._max_rep_step = None
 
-    def _forced_scene_switch_if(self):
+    def _forced_scene_switch_if(self) -> None:
         do_switch = False
         self._rep_count += 1
 

@@ -24,8 +24,7 @@ DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 @registry.register_dataset(name="PointNav-v1")
 class PointNavDatasetV1(Dataset):
-    r"""Class inherited from Dataset that loads Point Navigation dataset.
-    """
+    r"""Class inherited from Dataset that loads Point Navigation dataset."""
 
     episodes: List[NavigationEpisode]
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
@@ -67,8 +66,10 @@ class PointNavDatasetV1(Dataset):
             return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
     @staticmethod
-    def _get_scenes_from_folder(content_scenes_path, dataset_dir):
-        scenes = []
+    def _get_scenes_from_folder(
+        content_scenes_path: str, dataset_dir: str
+    ) -> List[str]:
+        scenes: List[str] = []
         content_dir = content_scenes_path.split("{scene}")[0]
         scene_dataset_ext = content_scenes_path.split("{scene}")[1]
         content_dir = content_dir.format(data_path=dataset_dir)

@@ -42,29 +42,10 @@ class SimpleRLEnv(habitat.RLEnv):
         return self.habitat_env.get_metrics()
 
 
-def draw_top_down_map(info, heading, output_size):
-    top_down_map = maps.colorize_topdown_map(
-        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+def draw_top_down_map(info, output_size):
+    return maps.colorize_draw_agent_and_fit_to_height(
+        info["top_down_map"], output_size
     )
-    original_map_size = top_down_map.shape[:2]
-    map_scale = np.array(
-        (1, original_map_size[1] * 1.0 / original_map_size[0])
-    )
-    new_map_size = np.round(output_size * map_scale).astype(np.int32)
-    # OpenCV expects w, h but map size is in h, w
-    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
-
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(
-        map_agent_pos * new_map_size / original_map_size
-    ).astype(np.int32)
-    top_down_map = maps.draw_agent(
-        top_down_map,
-        map_agent_pos,
-        heading - np.pi / 2,
-        agent_radius_px=top_down_map.shape[0] / 40,
-    )
-    return top_down_map
 
 #
 # def get_floor_heights(sim):
@@ -428,9 +409,7 @@ def generate_scenarios(output_filename=None, num_episodes=50000, skip_first_n=0,
             #
             #     observations, reward, done, info = env.step(action)
             #     im = observations["rgb"]
-            #     top_down_map = draw_top_down_map(
-            #         info, observations["heading"][0], im.shape[0]
-            #     )
+            #     top_down_map = draw_top_down_map(info, im.shape[0])
             #     print (env.habitat_env.current_episode.goals[0].position)
             #     agent_state = env.habitat_env.sim.get_agent_state()
             #     agent_pos = agent_state.position

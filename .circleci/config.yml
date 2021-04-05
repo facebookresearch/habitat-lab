@@ -1,7 +1,7 @@
 version: 2
 gpu: &gpu
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-1604-cuda-10.1:201909-23
   resource_class: gpu.small
   environment:
     FPS_THRESHOLD: 900
@@ -15,25 +15,61 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black habitat/. habitat_baselines/. examples/. test/. setup.py --check
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --check
       - run:
           name: run isort
           command: |
               isort --version
-              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              isort -rc habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
+      - run:
+          name: run flake8
+          command: |
+              flake8 --version
+              flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
+  pre-commit:
+    docker:
+      - image: circleci/python:3.6
+    working_directory: ~/repo/
 
+    steps:
+      - checkout
+      - run:
+          name: Combine precommit config and python versions for caching
+          command: |
+            cat .pre-commit-config.yaml > pre-commit-deps.txt
+            python -VV >> pre-commit-deps.txt
+      - restore_cache:
+          keys:
+          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+
+      - run:
+          name: Install Dependencies
+          command: |
+            sudo pip install -U pip setuptools pre-commit
+            # Install the hooks now so that they'll be cached
+            pre-commit install-hooks
+
+      - save_cache:
+          paths:
+            - ~/.cache/pre-commit
+          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+
+      - run:
+          name: Check Code Style using pre-commit
+          command: |
+            SKIP=clang-format,eslint pre-commit run --show-diff-on-failure --all-files
   install_and_test_ubuntu:
     <<: *gpu
     steps:
       - checkout:
-          path: ./habitat-api
+          path: ./habitat-lab
       - run:
           name: Install cmake
           no_output_timeout: 5m
@@ -54,6 +90,7 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
+                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
@@ -63,20 +100,25 @@ jobs:
                   wget \
                   zip \
                   unzip || true
+              sudo apt install --allow-change-held-packages \
+                  texlive-base \
+                  texlive-latex-extra \
+                  texlive-fonts-extra \
+                  texlive-fonts-recommended
       - run:
-          name: Install cuda
+          name: Check CUDA
           no_output_timeout: 20m
           background: true
           command: |
-              wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
-              sudo dpkg -i cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
-              sudo apt-get update || true
-              sudo apt-get --yes --force-yes install cuda
-              touch ./cuda_installed
+              # wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
+              # sudo dpkg -i cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
+              # sudo apt-get update || true
+              # sudo apt-get --yes --force-yes install cuda
+              # touch ./cuda_installed
               nvidia-smi
       - restore_cache:
           keys:
-            - conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -91,6 +133,7 @@ jobs:
                 conda create -y -n habitat python=3.6
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
+                pip install pytest-sugar
               fi
       - run:
           name: Install pytorch
@@ -123,18 +166,18 @@ jobs:
             ccache --max-size=10.0G
       - run:
           name: Build, install habitat-sim and run benchmark
-          no_output_timeout: 20m
+          no_output_timeout: 30m
           command: |
-              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat;
               if [ ! -d ./habitat-sim ]
               then
-                git clone https://github.com/facebookresearch/habitat-sim.git
+                git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
+              # while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              python setup.py install --headless --with-cuda
+              python -u setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
           when: always
@@ -153,9 +196,19 @@ jobs:
                 rm habitat-test-scenes.zip
               fi
       - run:
+          name: Download coda scene
+          command: |
+            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
+            then
+              cd habitat-sim
+              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
+              unzip coda.zip -d data/scene_datasets
+              rm coda.zip
+            fi
+      - run:
           name: Run sim benchmark
           command: |
-              while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
+              # while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
@@ -174,30 +227,52 @@ jobs:
           no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-api
+              . activate habitat; cd habitat-lab
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
               pip install -r requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
       - save_cache:
-          key: conda-{{ checksum "habitat-api/.circleci/config.yml" }}
+          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
           background: true
           paths:
             - ~/miniconda
       - run:
           name: Run api tests
-          no_output_timeout: 20m
+          no_output_timeout: 30m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-api
+              . activate habitat; cd habitat-lab
               python setup.py develop --all
-              python setup.py test
+              export PYTHONPATH=.:$PYTHONPATH
+              python setup.py test --addopts "--cov-report=xml --cov=./"
+
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Build api documentation
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python setup.py develop --all
+
+              # Download sim inventory for crosslinking (no need to build
+              # the whole sim docs for that)
+              # TODO: take it from github.com/facebookmicrosites/habitat-website
+              #   instead
+              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
+              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
+
+              cd docs
+              conda install -y -c conda-forge doxygen==1.8.16
+              conda install -y  jinja2 pygments docutils
+              mkdir -p ../build/docs
+              ./build-public.sh
 
 
 workflows:
   version: 2
   install_and_test:
     jobs:
+      - pre-commit
       - python_lint
       - install_and_test_ubuntu

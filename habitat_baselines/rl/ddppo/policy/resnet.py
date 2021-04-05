@@ -4,11 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import torch
-import torch.nn as nn
+from typing import List, Optional, Type, Union, cast
+
+from torch import Tensor
+from torch import nn as nn
+from torch.nn.modules.container import Sequential
+from torch.nn.modules.conv import Conv2d
 
 
-def conv3x3(in_planes, out_planes, stride=1, groups=1):
+def conv3x3(
+    in_planes: int, out_planes: int, stride: int = 1, groups: int = 1
+) -> Conv2d:
     """3x3 convolution with padding"""
     return nn.Conv2d(
         in_planes,
@@ -21,7 +27,7 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1):
     )
 
 
-def conv1x1(in_planes, out_planes, stride=1):
+def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> Conv2d:
     """1x1 convolution"""
     return nn.Conv2d(
         in_planes, out_planes, kernel_size=1, stride=stride, bias=False
@@ -64,8 +70,13 @@ class BasicBlock(nn.Module):
 
 
 def _build_bottleneck_branch(
-    inplanes, planes, ngroups, stride, expansion, groups=1
-):
+    inplanes: int,
+    planes: int,
+    ngroups: int,
+    stride: int,
+    expansion: int,
+    groups: int = 1,
+) -> Sequential:
     return nn.Sequential(
         conv1x1(inplanes, planes),
         nn.GroupNorm(ngroups, planes),
@@ -108,13 +119,13 @@ class Bottleneck(nn.Module):
 
     def __init__(
         self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
-    ):
+        inplanes: int,
+        planes: int,
+        ngroups: int,
+        stride: int = 1,
+        downsample: Optional[Sequential] = None,
+        cardinality: int = 1,
+    ) -> None:
         super().__init__()
         self.convs = _build_bottleneck_branch(
             inplanes,
@@ -127,7 +138,7 @@ class Bottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
 
-    def _impl(self, x):
+    def _impl(self, x: Tensor) -> Tensor:
         identity = x
 
         out = self.convs(x)
@@ -137,7 +148,7 @@ class Bottleneck(nn.Module):
 
         return self.relu(out + identity)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self._impl(x)
 
 
@@ -179,10 +190,19 @@ class ResNeXtBottleneck(Bottleneck):
     resneXt = True
 
 
+Block = Union[Type[Bottleneck], Type[BasicBlock]]
+
+
 class ResNet(nn.Module):
     def __init__(
-        self, in_channels, base_planes, ngroups, block, layers, cardinality=1
-    ):
+        self,
+        in_channels: int,
+        base_planes: int,
+        ngroups: int,
+        block: Block,
+        layers: List[int],
+        cardinality: int = 1,
+    ) -> None:
         super(ResNet, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
@@ -217,7 +237,14 @@ class ResNet(nn.Module):
         self.final_channels = self.inplanes
         self.final_spatial_compress = 1.0 / (2 ** 5)
 
-    def _make_layer(self, block, ngroups, planes, blocks, stride=1):
+    def _make_layer(
+        self,
+        block: Block,
+        ngroups: int,
+        planes: int,
+        blocks: int,
+        stride: int = 1,
+    ) -> Sequential:
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -237,15 +264,15 @@ class ResNet(nn.Module):
             )
         )
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
+        for _i in range(1, blocks):
             layers.append(block(self.inplanes, planes, ngroups))
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x) -> Tensor:
         x = self.conv1(x)
         x = self.maxpool(x)
-
+        x = cast(Tensor, x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -260,7 +287,7 @@ def resnet18(in_channels, base_planes, ngroups):
     return model
 
 
-def resnet50(in_channels, base_planes, ngroups):
+def resnet50(in_channels: int, base_planes: int, ngroups: int) -> ResNet:
     model = ResNet(in_channels, base_planes, ngroups, Bottleneck, [3, 4, 6, 3])
 
     return model
