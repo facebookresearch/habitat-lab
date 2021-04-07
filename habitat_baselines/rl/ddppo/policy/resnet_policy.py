@@ -23,6 +23,7 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
     ProximitySensor,
 )
+from habitat.core.spaces import ActionSpace
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
@@ -48,12 +49,14 @@ class PointNavResNetPolicy(Policy):
         backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
+        action_distribution_type: str = 'categorical',
         **kwargs
-    ):
+    ):  
+        discrete_actions = action_distribution_type=='categorical'
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
-                action_space=action_space,
+                action_space=action_space, # for previous action
                 hidden_size=hidden_size,
                 num_recurrent_layers=num_recurrent_layers,
                 rnn_type=rnn_type,
@@ -61,9 +64,12 @@ class PointNavResNetPolicy(Policy):
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
                 force_blind_policy=force_blind_policy,
+                discrete_actions=discrete_actions
             ),
-            action_space.n,
+            dim_actions=action_space.n, # for action distribution
+            action_distribution_type=action_distribution_type
         )
+        self.action_distribution_type = action_distribution_type
 
     @classmethod
     def from_config(
@@ -78,6 +84,7 @@ class PointNavResNetPolicy(Policy):
             backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
+            action_distribution_type=config.RL.PPO.action_distribution_type,
         )
 
 
@@ -201,10 +208,16 @@ class PointNavResNetNet(Net):
         resnet_baseplanes,
         normalize_visual_inputs: bool,
         force_blind_policy: bool = False,
+        discrete_actions: bool = True,
     ):
         super().__init__()
 
-        self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
+        self.discrete_actions = discrete_actions
+        if discrete_actions:
+            self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
+        else:
+            self.prev_action_embedding = nn.Linear(action_space.n, 32)
+
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
 
@@ -433,11 +446,14 @@ class PointNavResNetNet(Net):
             goal_output = self.goal_visual_encoder({"rgb": goal_image})
             x.append(self.goal_visual_fc(goal_output))
 
-        prev_actions = prev_actions.squeeze(-1)
-        start_token = torch.zeros_like(prev_actions)
-        prev_actions = self.prev_action_embedding(
-            torch.where(masks.view(-1), prev_actions + 1, start_token)
-        )
+        if self.discrete_actions:
+            prev_actions = prev_actions.squeeze(-1)
+            start_token = torch.zeros_like(prev_actions)
+            prev_actions = self.prev_action_embedding(
+                torch.where(masks.view(-1), prev_actions + 1, start_token)
+            )
+        else:
+            prev_actions = self.prev_action_embedding(prev_actions.float())
 
         x.append(prev_actions)
 
