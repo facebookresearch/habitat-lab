@@ -73,6 +73,43 @@ class CategoricalNet(nn.Module):
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
 
+class CustomNormal(torch.distributions.normal.Normal):
+    def sample(self, sample_shape=torch.Size()):
+        return super().rsample(sample_shape)
+
+    def log_probs(self, actions):
+        ret = (
+            super()
+            .log_prob(actions)
+            .view(actions.size(0), -1)
+            .sum(-1)
+            .unsqueeze(-1)
+        )
+        return ret
+
+class GaussianNet(nn.Module):
+    def __init__(self, num_inputs: int, num_outputs: int) -> None:
+        super().__init__()
+        
+        self.mu  = nn.Linear(num_inputs, num_outputs)
+        self.std = nn.Linear(num_inputs, num_outputs)
+
+        nn.init.orthogonal_(self.mu.weight, gain=0.01)
+        nn.init.constant_(self.mu.bias, 0)
+        nn.init.orthogonal_(self.std.weight, gain=0.01)
+        nn.init.constant_(self.std.bias, 0)
+
+    def forward(self, x):
+        mu = self.mu(x)
+        std = self.std(x)
+
+        std = torch.clamp(std, min=1e-6, max=1)
+
+        # std = torch.clamp(std, min=-5, max=2)
+        # std = torch.clamp(std, min=-5, max=0)
+        # std = std.exp()
+
+        return CustomNormal(mu, std)
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
     r"""Returns a multiplicative factor for linear value decay

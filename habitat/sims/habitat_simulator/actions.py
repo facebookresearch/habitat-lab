@@ -189,3 +189,12 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
                 habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
             ),
         }
+
+@registry.register_action_space_configuration(name="velocitycontrol")
+class HabitatSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
+    def get(self):
+        return {
+            HabitatSimActions.VELOCITY_CTRL: habitat_sim.ActionSpec(
+                "velocity_control"
+            ),
+        }

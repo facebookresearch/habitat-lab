@@ -21,6 +21,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from habitat import Config, VectorEnv, logger
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
+from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
@@ -91,6 +92,11 @@ class PPOTrainer(BaseRLTrainer):
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
 
+        if config.RL.POLICY.action_distribution_type == 'gaussian':
+            config.defrost()
+            config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS = ['VELOCITY_CONTROL']
+            config.freeze()
+
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
@@ -132,8 +138,9 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
+
         self.actor_critic = policy.from_config(
-            self.config, observation_space, self.envs.action_spaces[0]
+            self.config, observation_space, self.policy_action_space
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -250,6 +257,14 @@ class PPOTrainer(BaseRLTrainer):
         if rank0_only() and not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
+        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            self.policy_action_space = ActionSpace({
+                "linear_velocity": EmptySpace(),
+                "angular_velocity": EmptySpace()
+            })
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+
         self._setup_actor_critic_agent(ppo_cfg)
         if self._is_distributed:
             self.agent.init_distributed(find_unused_params=True)
@@ -276,14 +291,20 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
+        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            action_shape = 2
+        else:
+            action_shape = -1
+
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
-            self.envs.action_spaces[0],
+            self.policy_action_space,
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+            action_shape=action_shape
         )
         self.rollouts.to(self.device)
 
@@ -432,8 +453,21 @@ class PPOTrainer(BaseRLTrainer):
 
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
-        ):
-            self.envs.async_step_at(index_env, act.item())
+        ):  
+            lin_vel, ang_vel = act
+            step_action = {
+                    'action': { 
+                        'action': 'VELOCITY_CONTROL',
+                        'action_args': {
+                            'linear_velocity': np.tanh(lin_vel.item()),
+                            'angular_velocity': np.tanh(ang_vel.item()),
+                            'time_step' : 1.0,
+                            'allow_sliding': True,
+                        }
+                    }
+                }
+            self.envs.async_step_at(index_env, step_action)
+            # self.envs.async_step_at(index_env, act.item())
 
         self.env_time += time.time() - t_step_env
 
@@ -867,7 +901,7 @@ class PPOTrainer(BaseRLTrainer):
             config = self.config.clone()
 
         ppo_cfg = config.RL.PPO
-
+        
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
@@ -880,6 +914,14 @@ class PPOTrainer(BaseRLTrainer):
 
         if config.VERBOSE:
             logger.info(f"env config: {config}")
+
+        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            self.policy_action_space = ActionSpace({
+                "linear_velocity": EmptySpace(),
+                "angular_velocity": EmptySpace()
+            })
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
 
         self._init_envs(config)
         self._setup_actor_critic_agent(ppo_cfg)
@@ -905,7 +947,7 @@ class PPOTrainer(BaseRLTrainer):
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            1,
+            2,
             device=self.device,
             dtype=torch.long,
         )
@@ -961,13 +1003,35 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
-
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            step_data = [a.item() for a in actions.to(device="cpu")]
+            # step_data = [a.item() for a in actions.to(device="cpu")]
+            step_data = []
+            for a in actions.to(device="cpu"):
+                # a_item = a.item()
+                # move, turn = -1.,0.
+                # if a_item == 1:
+                #     move = 1.
+                # elif a_item == 2:
+                #     turn = 1.
+                # elif a_item == 3:
+                #     turn = -1.
+                move, turn = torch.tanh(a)
+                a_dict = {
+                    'action': { 
+                        'action': 'VELOCITY_CONTROL',
+                        'action_args': {
+                            'linear_velocity': -move,
+                            'angular_velocity': turn,
+                            'time_step' : 1.0,
+                            'allow_sliding': True,
+                        }
+                    }
+                }
+                step_data.append(a_dict)
 
             outputs = self.envs.step(step_data)
 
