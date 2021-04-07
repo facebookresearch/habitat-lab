@@ -40,18 +40,17 @@ def get_config(name: str):
 
 def test_standard_config_compatibility():
     cfg = get_multi_task_config("configs/tasks/pointnav.yaml")
-    env = MultiTaskEnv(config=cfg)
-    env.reset()
-    actions = 0
+    with MultiTaskEnv(config=cfg) as env:
+        env.reset()
+        actions = 0
 
-    while not env.episode_over:
-        # execute random action
-        env.step(env.action_space.sample())
-        actions += 1
-    assert (
-        actions >= 1
-    ), "You should have performed at least one step with no interruptions"
-    env.close()
+        while not env.episode_over:
+            # execute random action
+            env.step(env.action_space.sample())
+            actions += 1
+        assert (
+            actions >= 1
+        ), "You should have performed at least one step with no interruptions"
 
 
 def test_simple_fixed_change_task():
@@ -64,18 +63,17 @@ def test_simple_fixed_change_task():
     # test meant for 2 tasks
     cfg.TASKS = cfg.TASKS[:2]
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_bit = False
-    for _ in range(5):
-        env.reset()
-        assert (
-            env._curr_task_idx == task_bit
-        ), "Task should change at each new episode"
-        task_bit = not (task_bit)
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-    env.close()
+    with MultiTaskEnv(config=cfg) as env:
+        task_bit = False
+        for _ in range(5):
+            env.reset()
+            assert (
+                env._curr_task_idx == task_bit
+            ), "Task should change at each new episode"
+            task_bit = not (task_bit)
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
 
 
 def test_fixed_change_multiple_tasks():
@@ -87,19 +85,18 @@ def test_fixed_change_multiple_tasks():
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    for i in range(10):
-        env.reset()
-        if i > 0 and i % change_after == 0:
-            task_idx = (task_idx + 1) % len(cfg.TASKS)
-        assert (
-            env._curr_task_idx == task_idx
-        ), "Task should change every {} episodes".format(change_after)
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-    env.close()
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        for i in range(10):
+            env.reset()
+            if i > 0 and i % change_after == 0:
+                task_idx = (task_idx + 1) % len(cfg.TASKS)
+            assert (
+                env._curr_task_idx == task_idx
+            ), "Task should change every {} episodes".format(change_after)
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
 
 
 def test_cum_steps_change_tasks_same_scene():
@@ -111,23 +108,22 @@ def test_cum_steps_change_tasks_same_scene():
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = change_after
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    actions = 0
-    for _ in range(10):
-        env.reset()
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        actions = 0
+        for _ in range(10):
+            env.reset()
 
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-            actions += 1
-            if actions >= change_after:
-                actions = 0
-                task_idx = (task_idx + 1) % len(cfg.TASKS)
-            assert (
-                env._curr_task_idx == task_idx
-            ), "Task should change every {} steps".format(change_after)
-    env.close()
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
+                actions += 1
+                if actions >= change_after:
+                    actions = 0
+                    task_idx = (task_idx + 1) % len(cfg.TASKS)
+                assert (
+                    env._curr_task_idx == task_idx
+                ), "Task should change every {} steps".format(change_after)
 
 
 def test_cum_steps_change_tasks_different_scene():
@@ -140,23 +136,22 @@ def test_cum_steps_change_tasks_different_scene():
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
     cfg.TASKS[0].DATASET.SPLIT = "train"  # get different split for this task
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    actions = 0
-    for _ in range(10):
-        env.reset()
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        actions = 0
+        for _ in range(10):
+            env.reset()
 
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-            actions += 1
-            if actions >= change_after:
-                actions = 0
-                task_idx = (task_idx + 1) % len(cfg.TASKS)
-            assert (
-                env._curr_task_idx == task_idx
-            ), "Task should change every {} steps".format(change_after)
-    env.close()
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
+                actions += 1
+                if actions >= change_after:
+                    actions = 0
+                    task_idx = (task_idx + 1) % len(cfg.TASKS)
+                assert (
+                    env._curr_task_idx == task_idx
+                ), "Task should change every {} steps".format(change_after)
 
 
 def test_ep_or_steps_change_tasks():
@@ -169,27 +164,28 @@ def test_ep_or_steps_change_tasks():
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = change_after_steps
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    actions = 0
-    for i in range(10):
-        env.reset()
-        if i > 0 and i % change_after_eps == 0:
-            task_idx = (task_idx + 1) % len(cfg.TASKS)
-        assert (
-            env._curr_task_idx == task_idx
-        ), "Task should change every {} episodes".format(change_after_eps)
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-            actions += 1
-            if actions >= change_after_steps:
-                actions = 0
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        actions = 0
+        for i in range(10):
+            env.reset()
+            if i > 0 and i % change_after_eps == 0:
                 task_idx = (task_idx + 1) % len(cfg.TASKS)
             assert (
                 env._curr_task_idx == task_idx
-            ), "Task should change every {} steps".format(change_after_steps)
-    env.close()
+            ), "Task should change every {} episodes".format(change_after_eps)
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
+                actions += 1
+                if actions >= change_after_steps:
+                    actions = 0
+                    task_idx = (task_idx + 1) % len(cfg.TASKS)
+                assert (
+                    env._curr_task_idx == task_idx
+                ), "Task should change every {} steps".format(
+                    change_after_steps
+                )
 
 
 def test_random_change_tasks():
@@ -202,34 +198,32 @@ def test_random_change_tasks():
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "ORDER"
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    for i in range(change_after * 2 + 1):
-        env.reset()
-        if i > 0 and i % change_after == 0:
-            task_idx = (task_idx + 1) % len(cfg.TASKS)
-        assert (
-            env._curr_task_idx == task_idx
-        ), "Task should change every {} episodes".format(change_after)
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        for i in range(change_after * 2 + 1):
+            env.reset()
+            if i > 0 and i % change_after == 0:
+                task_idx = (task_idx + 1) % len(cfg.TASKS)
+            assert (
+                env._curr_task_idx == task_idx
+            ), "Task should change every {} episodes".format(change_after)
 
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-    env.close()
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
     # it should never change now
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.CHANGE_TASK_PROB = 0.0
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    for _ in range(change_after * 2 + 1):
-        env.reset()
-        assert env._curr_task_idx == task_idx, "Task should not change"
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        for _ in range(change_after * 2 + 1):
+            env.reset()
+            assert env._curr_task_idx == task_idx, "Task should not change"
 
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-    env.close()
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
 
 
 def test_random_task_loop():
@@ -241,16 +235,15 @@ def test_random_task_loop():
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
     cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "RANDOM"
     cfg.freeze()
-    env = MultiTaskEnv(config=cfg)
-    task_idx = 0
-    for i in range(10):
-        env.reset()
-        if i > 0 and i % change_after == 0:
-            assert (
-                env._curr_task_idx != task_idx
-            ), "Task should change every {} episodes".format(change_after)
-            task_idx = env._curr_task_idx
-        while not env.episode_over:
-            # execute random action
-            env.step(env.action_space.sample())
-    env.close()
+    with MultiTaskEnv(config=cfg) as env:
+        task_idx = 0
+        for i in range(10):
+            env.reset()
+            if i > 0 and i % change_after == 0:
+                assert (
+                    env._curr_task_idx != task_idx
+                ), "Task should change every {} episodes".format(change_after)
+                task_idx = env._curr_task_idx
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())

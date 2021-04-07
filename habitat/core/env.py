@@ -591,7 +591,6 @@ class MultiTaskEnv(Env):
         )
 
         self.action_space = self._task.action_space
-        print("task changed")
         self._task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
         )
