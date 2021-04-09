@@ -293,8 +293,10 @@ class PPOTrainer(BaseRLTrainer):
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
         if self.config.RL.POLICY.action_distribution_type == 'gaussian':
             action_shape = 2
+            discrete_actions = False
         else:
             action_shape = -1
+            discrete_actions = True
 
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -304,7 +306,8 @@ class PPOTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-            action_shape=action_shape
+            action_shape=action_shape,
+            discrete_actions=discrete_actions
         )
         self.rollouts.to(self.device)
 
@@ -915,6 +918,8 @@ class PPOTrainer(BaseRLTrainer):
         if config.VERBOSE:
             logger.info(f"env config: {config}")
 
+        self._init_envs(config)
+
         if self.config.RL.POLICY.action_distribution_type == 'gaussian':
             self.policy_action_space = ActionSpace({
                 "linear_velocity": EmptySpace(),
@@ -923,7 +928,6 @@ class PPOTrainer(BaseRLTrainer):
         else:
             self.policy_action_space = self.envs.action_spaces[0]
 
-        self._init_envs(config)
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -1024,7 +1028,7 @@ class PPOTrainer(BaseRLTrainer):
                     'action': { 
                         'action': 'VELOCITY_CONTROL',
                         'action_args': {
-                            'linear_velocity': -move,
+                            'linear_velocity': move,
                             'angular_velocity': turn,
                             'time_step' : 1.0,
                             'allow_sliding': True,
