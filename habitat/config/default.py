@@ -373,34 +373,18 @@ def get_config(
 
     if opts:
         config.merge_from_list(opts)
+    # multi-task handling
+    # list of tasks to list of config nodes, levaraging `TASK` default values
+    tasks = []
+    for task in config.TASKS:
+        # get default values
+        t = _C.TASK.clone()
+        task = CN(init_dict=task)
 
+        # each task can now have a different dataset, if unspecified the global one is used
+        t.DATASET = config.DATASET.clone()
+        t.merge_from_other_cfg(task)
+        tasks.append(t)
+    config.TASKS = tasks
     config.freeze()
-    return config
-
-
-def get_multi_task_config(
-    config_paths: Optional[Union[List[str], str]] = None,
-    opts: Optional[list] = None,
-) -> CN:
-    config = get_config(config_paths, opts)
-    if len(config.TASKS):
-        # list of tasks to list of config nodes, levaraging `TASK` default values
-        tasks = []
-        config.defrost()
-        for i, task in enumerate(config.TASKS):
-            # get default values
-            t = _C.TASK.clone()
-            task = CN(init_dict=task)
-
-            # copy first task configuration to TASK so that it can be instantiated with habitat logic
-            if i == 0:
-                config.TASK.merge_from_other_cfg(task)
-
-            # each task can now have a different dataset, if unspecified the global one is used
-            t.DATASET = config.DATASET.clone()
-            t.merge_from_other_cfg(task)
-            tasks.append(t)
-        config.TASKS = tasks
-        config.freeze()
-
     return config

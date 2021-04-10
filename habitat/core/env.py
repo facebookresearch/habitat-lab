@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import enum
 import random
 import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, cast
@@ -14,9 +15,9 @@ import numpy as np
 from gym import spaces
 
 from habitat.config import Config
-from habitat.core import CHANGE_TASK_BEHAVIOUR, CHANGE_TASK_CYCLE_BEHAVIOUR
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
+from habitat.core.logging import logger
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
@@ -426,6 +427,17 @@ class RLEnv(gym.Env):
         self.close()
 
 
+# multi-task environment task-change behaviours
+class CHANGE_TASK_BEHAVIOUR(enum.IntEnum):
+    FIXED = 0
+    RANDOM = 1
+
+
+class CHANGE_TASK_CYCLE_BEHAVIOUR(enum.IntEnum):
+    ORDER = 0
+    RANDOM = 1
+
+
 class MultiTaskEnv(Env):
     r"""Environment base class extension designed to handle a stream-line of tasks.
 
@@ -453,7 +465,11 @@ class MultiTaskEnv(Env):
             information. Can be defined as :py:`None` in which case
             dataset will be built using ``make_dataset`` and ``config``.
         """
-        # we let superclass instantiate first task as to not break/change habitat code
+        # let superclass instantiate current task by merging first task in TASKS to TASK
+        if len(config.TASKS):
+            config.defrost()
+            config.TASK.merge_from_other_cfg(config.TASKS[0])
+            config.freeze()
         super().__init__(config, dataset=dataset)
         # instatiate other tasks
         self._tasks = [self._task]
@@ -480,10 +496,22 @@ class MultiTaskEnv(Env):
         self._task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
         )
+        # add task_idx to observation space
+        self.observation_space = spaces.Dict(
+            {
+                **self._sim.sensor_suite.observation_spaces.spaces,
+                **self._task.sensor_suite.observation_spaces.spaces,
+                "task_idx": spaces.Discrete(len(self._tasks)),
+            }
+        )
 
     @property
     def tasks(self) -> List[EmbodiedTask]:
         return self._tasks
+
+    @property
+    def current_task_label(self) -> str:
+        return str(self._task_label)
 
     def _check_change_task(self, is_reset=False):
         """Check whether the change task condition is satified.
@@ -560,6 +588,7 @@ class MultiTaskEnv(Env):
         Args:
             is_reset (bool, optional): [description]. Defaults to False.
         """
+        prev_task_idx = self._curr_task_idx
         if (
             self._task_cycling_behavior
             == CHANGE_TASK_CYCLE_BEHAVIOUR.ORDER.name
@@ -591,8 +620,24 @@ class MultiTaskEnv(Env):
         )
 
         self.action_space = self._task.action_space
+        # task observation space may change too
+        self.observation_space = spaces.Dict(
+            {
+                **self._sim.sensor_suite.observation_spaces.spaces,
+                **self._task.sensor_suite.observation_spaces.spaces,
+                "task_idx": spaces.Discrete(len(self._tasks)),
+            }
+        )
         self._task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
+        )
+        logger.info(
+            "Current task changed from {} (id: {}) to {} (id: {}).".format(
+                self._tasks[prev_task_idx].__class__.__name__,
+                prev_task_idx,
+                self._task.__class__.__name__,
+                self._curr_task_idx,
+            )
         )
         # handle mid-episode change of task
         if not is_reset:
@@ -632,7 +677,7 @@ class MultiTaskEnv(Env):
             # task needs to be changed
             self._change_task()
 
-        obs["task_label"] = self._task_label
+        obs.update({"task_idx": self._curr_task_idx})
         return obs
 
     def reset(self) -> Observations:

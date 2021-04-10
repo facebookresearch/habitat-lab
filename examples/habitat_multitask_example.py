@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 import cv2
 
-from habitat.config import get_multi_task_config
+from habitat.config import get_config
 from habitat.core.env import MultiTaskEnv
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import NavigationEpisode
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     args = args.parse_args()
     ### One Env, many tasks ###
     # cfg = get_config('pointnav.yaml')
-    cfg = get_multi_task_config("configs/test/habitat_cl_example.yaml")
+    cfg = get_config("configs/test/habitat_cl_example.yaml")
     with MultiTaskEnv(config=cfg) as env:
         print(
             "{} episodes created from config file".format(len(env._episodes))

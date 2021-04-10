@@ -2,18 +2,18 @@ import os
 
 import pytest
 
-from habitat.config import get_multi_task_config
+from habitat.config import get_config
 from habitat.core.env import MultiTaskEnv
 
-TEST_CFG_PATH = "configs/test/habitat_cl_example.yaml"
+TEST_CFG_PATH = "configs/test/habitat_multitask_example.yaml"
 
 
-def get_config(name: str):
+def get_test_config(name: str):
     # use test dataset for lighter testing
     datapath = (
         "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
-    cfg = get_multi_task_config(name)
+    cfg = get_config(name)
     if not os.path.exists(cfg.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
     if len(cfg.TASKS) < 2:
@@ -39,7 +39,7 @@ def get_config(name: str):
 
 
 def test_standard_config_compatibility():
-    cfg = get_multi_task_config("configs/tasks/pointnav.yaml")
+    cfg = get_config("configs/tasks/pointnav.yaml")
     with MultiTaskEnv(config=cfg) as env:
         env.reset()
         actions = 0
@@ -54,7 +54,7 @@ def test_standard_config_compatibility():
 
 
 def test_simple_fixed_change_task():
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = 1
@@ -78,7 +78,7 @@ def test_simple_fixed_change_task():
 
 def test_fixed_change_multiple_tasks():
     change_after = 3
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = change_after
@@ -101,7 +101,7 @@ def test_fixed_change_multiple_tasks():
 
 def test_cum_steps_change_tasks_same_scene():
     change_after = 5
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = None
@@ -128,7 +128,7 @@ def test_cum_steps_change_tasks_same_scene():
 
 def test_cum_steps_change_tasks_different_scene():
     change_after = 3
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = None
@@ -157,7 +157,7 @@ def test_cum_steps_change_tasks_different_scene():
 def test_ep_or_steps_change_tasks():
     change_after_eps = 2
     change_after_steps = 10
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = change_after_eps
@@ -190,7 +190,7 @@ def test_ep_or_steps_change_tasks():
 
 def test_random_change_tasks():
     change_after = 3
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "RANDOM"
     cfg.CHANGE_TASK_BEHAVIOUR.CHANGE_TASK_PROB = 1.0
@@ -228,7 +228,7 @@ def test_random_change_tasks():
 
 def test_random_task_loop():
     change_after = 3
-    cfg = get_config(TEST_CFG_PATH)
+    cfg = get_test_config(TEST_CFG_PATH)
     cfg.defrost()
     cfg.CHANGE_TASK_BEHAVIOUR.TYPE = "FIXED"
     cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = change_after
