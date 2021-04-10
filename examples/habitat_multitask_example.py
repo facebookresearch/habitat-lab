@@ -33,7 +33,7 @@ if __name__ == "__main__":
     args = args.parse_args()
     ### One Env, many tasks ###
     # cfg = get_config('pointnav.yaml')
-    cfg = get_config("configs/test/habitat_cl_example.yaml")
+    cfg = get_config("configs/test/habitat_multitask_example.yaml")
     with MultiTaskEnv(config=cfg) as env:
         print(
             "{} episodes created from config file".format(len(env._episodes))
