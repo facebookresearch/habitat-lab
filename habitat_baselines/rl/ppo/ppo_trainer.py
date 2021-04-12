@@ -918,6 +918,14 @@ class PPOTrainer(BaseRLTrainer):
         if config.VERBOSE:
             logger.info(f"env config: {config}")
 
+        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            self.policy_action_space = ActionSpace({
+                "linear_velocity": EmptySpace(),
+                "angular_velocity": EmptySpace()
+            })
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+
         self._init_envs(config)
 
         if self.config.RL.POLICY.action_distribution_type == 'gaussian':
