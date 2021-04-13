@@ -132,8 +132,6 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
-# _C.RL.PPO.action_distribution_type = 'categorical'
-_C.RL.PPO.action_distribution_type = 'gaussian'
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation
