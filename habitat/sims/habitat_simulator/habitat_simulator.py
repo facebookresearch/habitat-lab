@@ -20,6 +20,7 @@ import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
+import quaternion
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -41,6 +42,7 @@ from habitat.core.simulator import (
     VisualObservation,
 )
 from habitat.core.spaces import Space
+from habitat.utils.geometry_utils import quaternion_from_coeff
 
 RGBSENSOR_DIMENSION = 3
 
@@ -544,7 +546,27 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         agent = self.get_agent(agent_id)
         new_state = self.get_agent_state(agent_id)
         new_state.position = position
-        new_state.rotation = rotation
+
+        # TODO: Sometimes 'rotation' is off by ~1e-4 in terms of if the
+        # quaternion it represents is normalized, which throws an error as
+        # habitat-sim/habitat_sim/utils/validators.py has a tolerance of 1e-5.
+        # Thus it's explicitly re-normalized here. Further, 'rotation' is
+        # sometimes not a list, but a quaternion. In these cases,
+        # re-normalization does not seem to be necessary.
+
+        if isinstance(rotation, list):
+            rotation_quat = quaternion_from_coeff(rotation)
+            if np.isclose(rotation_quat.norm(), 1.0, rtol=1e-4, atol=0):
+                new_state.rotation = quaternion.as_float_array(
+                    np.normalized(rotation_quat)
+                )[::-1]
+            else:
+                raise ValueError(
+                    f"""{rotation_quat} is suppose to be a normalized quaternion
+                    but is not: {rotation_quat.norm()}."""
+                )
+        else:
+            new_state.rotation = rotation
 
         # NB: The agent state also contains the sensor states in _absolute_
         # coordinates. In order to set the agent's body to a specific

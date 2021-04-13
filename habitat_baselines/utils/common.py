@@ -88,26 +88,28 @@ class CustomNormal(torch.distributions.normal.Normal):
         return ret
 
 class GaussianNet(nn.Module):
-    def __init__(self, num_inputs: int, num_outputs: int) -> None:
+    def __init__(
+        self,
+        num_inputs: int,
+        num_outputs: int,
+        std_min: float = 1e-6,
+        std_max: float = 1,
+    ) -> None:
         super().__init__()
         
         self.mu  = nn.Linear(num_inputs, num_outputs)
         self.std = nn.Linear(num_inputs, num_outputs)
+        self.std_min = std_min
+        self.std_max = std_max
 
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
         nn.init.constant_(self.mu.bias, 0)
         nn.init.orthogonal_(self.std.weight, gain=0.01)
         nn.init.constant_(self.std.bias, 0)
 
-    def forward(self, x):
-        mu = self.mu(x)
-        std = self.std(x)
-
-        std = torch.clamp(std, min=1e-6, max=1)
-
-        # std = torch.clamp(std, min=-5, max=2)
-        # std = torch.clamp(std, min=-5, max=0)
-        # std = std.exp()
+    def forward(self, x: Tensor) -> CustomNormal:
+        mu = torch.tanh(self.mu(x))
+        std = torch.clamp(self.std(x), min=self.std_min, max=self.std_max)
 
         return CustomNormal(mu, std)
 
@@ -511,3 +513,18 @@ def create_tar_archive(archive_path: str, dataset_path: str) -> None:
 
 def delete_folder(path: str) -> None:
     shutil.rmtree(path)
+
+
+def action_to_velocity_control(action: torch.Tensor) -> Dict:
+    lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
+    step_action = {
+        'action': {
+            'action': 'VELOCITY_CONTROL',
+            'action_args': {
+                'linear_velocity': lin_vel.item(),
+                'angular_velocity': ang_vel.item(),
+                'allow_sliding': True
+            }
+        }
+    }
+    return step_action
