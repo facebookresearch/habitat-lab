@@ -73,8 +73,11 @@ class CategoricalNet(nn.Module):
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
 
+
 class CustomNormal(torch.distributions.normal.Normal):
-    def sample(self, sample_shape=torch.Size()):
+    def sample(
+        self, sample_shape: Size = torch.Size()  # noqa: B008
+    ) -> Tensor:
         return super().rsample(sample_shape)
 
     def log_probs(self, actions):
@@ -87,6 +90,7 @@ class CustomNormal(torch.distributions.normal.Normal):
         )
         return ret
 
+
 class GaussianNet(nn.Module):
     def __init__(
         self,
@@ -96,8 +100,8 @@ class GaussianNet(nn.Module):
         std_max: float = 1,
     ) -> None:
         super().__init__()
-        
-        self.mu  = nn.Linear(num_inputs, num_outputs)
+
+        self.mu = nn.Linear(num_inputs, num_outputs)
         self.std = nn.Linear(num_inputs, num_outputs)
         self.std_min = std_min
         self.std_max = std_max
@@ -112,6 +116,7 @@ class GaussianNet(nn.Module):
         std = torch.clamp(self.std(x), min=self.std_min, max=self.std_max)
 
         return CustomNormal(mu, std)
+
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
     r"""Returns a multiplicative factor for linear value decay
@@ -515,16 +520,18 @@ def delete_folder(path: str) -> None:
     shutil.rmtree(path)
 
 
-def action_to_velocity_control(action: torch.Tensor) -> Dict:
+def action_to_velocity_control(
+    action: torch.Tensor,
+) -> Union[int, str, Dict[str, Any]]:
     lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
     step_action = {
-        'action': {
-            'action': 'VELOCITY_CONTROL',
-            'action_args': {
-                'linear_velocity': lin_vel.item(),
-                'angular_velocity': ang_vel.item(),
-                'allow_sliding': True
-            }
+        "action": {
+            "action": "VELOCITY_CONTROL",
+            "action_args": {
+                "linear_velocity": lin_vel.item(),
+                "angular_velocity": ang_vel.item(),
+                "allow_sliding": True,
+            },
         }
     }
     return step_action

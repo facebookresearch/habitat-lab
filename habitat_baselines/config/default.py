@@ -86,7 +86,7 @@ _C.RL.preemption.save_state_batch_only = False
 # -----------------------------------------------------------------------------
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
-_C.RL.POLICY.action_distribution_type = 'categorical'
+_C.RL.POLICY.action_distribution_type = "categorical"
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------

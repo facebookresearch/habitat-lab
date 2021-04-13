@@ -69,7 +69,7 @@ class RolloutStorage:
         self.buffers["prev_actions"] = torch.zeros(
             numsteps + 1, num_envs, action_shape
         )
-        if ( 
+        if (
             discrete_actions
             and action_space.__class__.__name__ == "ActionSpace"
         ):

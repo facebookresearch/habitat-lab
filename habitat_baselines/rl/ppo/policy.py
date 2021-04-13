@@ -25,27 +25,24 @@ from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
     def __init__(
-        self,
-        net,
-        dim_actions,
-        action_distribution_type='categorical'
+        self, net, dim_actions, action_distribution_type="categorical"
     ):
         super().__init__()
         self.net = net
         self.dim_actions = dim_actions
         self.action_distribution_type = action_distribution_type
 
-        if action_distribution_type == 'categorical':
+        if action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
                 self.net.output_size, self.dim_actions
             )
-        elif action_distribution_type == 'gaussian':
+        elif action_distribution_type == "gaussian":
             self.action_distribution = GaussianNet(
                 self.net.output_size, self.dim_actions
             )
         else:
             ValueError(
-                f'Action distribution {action_distribution_type} not supported.'
+                f"Action distribution {action_distribution_type} not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -68,9 +65,9 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
         value = self.critic(features)
 
         if deterministic:
-            if self.action_distribution_type == 'categorical':
+            if self.action_distribution_type == "categorical":
                 action = distribution.mode()
-            elif self.action_distribution_type == 'gaussian':
+            elif self.action_distribution_type == "gaussian":
                 action = distribution.mean
         else:
             action = distribution.sample()
@@ -123,7 +120,7 @@ class PointNavBaselinePolicy(Policy):
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             PointNavBaselineNet(  # type: ignore

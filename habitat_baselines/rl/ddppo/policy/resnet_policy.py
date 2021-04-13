@@ -23,7 +23,6 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
     ProximitySensor,
 )
-from habitat.core.spaces import ActionSpace
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
@@ -49,14 +48,14 @@ class PointNavResNetPolicy(Policy):
         backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
-        action_distribution_type: str = 'categorical',
+        action_distribution_type: str = "categorical",
         **kwargs
-    ):  
-        discrete_actions = action_distribution_type=='categorical'
+    ):
+        discrete_actions = action_distribution_type == "categorical"
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
-                action_space=action_space, # for previous action
+                action_space=action_space,  # for previous action
                 hidden_size=hidden_size,
                 num_recurrent_layers=num_recurrent_layers,
                 rnn_type=rnn_type,
@@ -64,10 +63,10 @@ class PointNavResNetPolicy(Policy):
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
                 force_blind_policy=force_blind_policy,
-                discrete_actions=discrete_actions
+                discrete_actions=discrete_actions,
             ),
-            dim_actions=action_space.n, # for action distribution
-            action_distribution_type=action_distribution_type
+            dim_actions=action_space.n,  # for action distribution
+            action_distribution_type=action_distribution_type,
         )
         self.action_distribution_type = action_distribution_type
 
