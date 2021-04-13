@@ -8,28 +8,13 @@ import os
 
 import numpy as np
 import pytest
-import quaternion
 
 import habitat
-from habitat.utils.geometry_utils import quaternion_from_coeff
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 TELEPORT_POSITION = np.array([-3.2890449, 0.15067159, 11.124366])
 TELEPORT_ROTATION = np.array([0.92035, 0, -0.39109465, 0])
-
-# Ensure that rotation quaternion is normalized; re-normalize for precision if
-# so, otherwise throw error
-TELEPORT_ROTATION = quaternion_from_coeff(TELEPORT_ROTATION)
-if np.isclose(TELEPORT_ROTATION.norm(), 1.0, rtol=1e-4):
-    TELEPORT_ROTATION = quaternion.as_float_array(
-        np.normalized(TELEPORT_ROTATION)
-    )[::-1]
-else:
-    raise ValueError(
-        f"""{TELEPORT_ROTATION} is suppose to be a normalized quaternion
-        but is not: {TELEPORT_ROTATION.norm()}."""
-    )
 
 
 def test_task_actions():
