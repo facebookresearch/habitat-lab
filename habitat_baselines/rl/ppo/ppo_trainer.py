@@ -19,9 +19,9 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
-from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import get_env_class
@@ -51,9 +51,9 @@ from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
+    action_to_velocity_control,
     batch_obs,
     generate_video,
-    action_to_velocity_control,
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
@@ -93,9 +93,9 @@ class PPOTrainer(BaseRLTrainer):
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
 
-        if config.RL.POLICY.action_distribution_type == 'gaussian':
+        if config.RL.POLICY.action_distribution_type == "gaussian":
             config.defrost()
-            config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS = ['VELOCITY_CONTROL']
+            config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS = ["VELOCITY_CONTROL"]
             config.freeze()
 
     @property
@@ -248,11 +248,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
-            self.policy_action_space = ActionSpace({
-                "linear_velocity": EmptySpace(),
-                "angular_velocity": EmptySpace()
-            })
+        if self.config.RL.POLICY.action_distribution_type == "gaussian":
+            self.policy_action_space = ActionSpace(
+                {
+                    "linear_velocity": EmptySpace(),
+                    "angular_velocity": EmptySpace(),
+                }
+            )
             action_shape = 2
             discrete_actions = False
         else:
@@ -306,7 +308,7 @@ class PPOTrainer(BaseRLTrainer):
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
             action_shape=action_shape,
-            discrete_actions=discrete_actions
+            discrete_actions=discrete_actions,
         )
         self.rollouts.to(self.device)
 
@@ -455,8 +457,8 @@ class PPOTrainer(BaseRLTrainer):
 
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
-        ):  
-            if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+        ):
+            if self.config.RL.POLICY.action_distribution_type == "gaussian":
                 step_action = action_to_velocity_control(act)
             else:
                 step_action = act.item()
@@ -894,7 +896,7 @@ class PPOTrainer(BaseRLTrainer):
             config = self.config.clone()
 
         ppo_cfg = config.RL.PPO
-        
+
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
@@ -910,11 +912,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
-        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
-            self.policy_action_space = ActionSpace({
-                "linear_velocity": EmptySpace(),
-                "angular_velocity": EmptySpace()
-            })
+        if self.config.RL.POLICY.action_distribution_type == "gaussian":
+            self.policy_action_space = ActionSpace(
+                {
+                    "linear_velocity": EmptySpace(),
+                    "angular_velocity": EmptySpace(),
+                }
+            )
             action_shape = 2
             action_type = torch.float
         else:
@@ -1006,7 +1010,7 @@ class PPOTrainer(BaseRLTrainer):
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            if self.config.RL.POLICY.action_distribution_type == "gaussian":
                 step_data = [
                     action_to_velocity_control(a)
                     for a in actions.to(device="cpu")

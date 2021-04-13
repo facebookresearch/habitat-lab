@@ -9,8 +9,8 @@
 from typing import Any, List, Optional, Tuple
 
 import attr
-import numpy as np
 import magnum as mn
+import numpy as np
 from gym import spaces
 
 from habitat.config import Config
@@ -38,7 +38,6 @@ from habitat.utils.geometry_utils import (
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-
 from habitat_sim.bindings import RigidState
 from habitat_sim.physics import VelocityControl
 
@@ -1099,6 +1098,7 @@ class TeleportAction(SimulatorTaskAction):
             }
         )
 
+
 @registry.register_task_action
 class VelocityAction(SimulatorTaskAction):
     name: str = "VELOCITY_CONTROL"
@@ -1111,7 +1111,7 @@ class VelocityAction(SimulatorTaskAction):
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
 
-        config = kwargs['config']
+        config = kwargs["config"]
         self.min_lin_vel, self.max_lin_vel = config.LIN_VEL_RANGE
         self.min_ang_vel, self.max_ang_vel = config.ANG_VEL_RANGE
         self.min_abs_lin_speed = config.MIN_ABS_LIN_SPEED
@@ -1121,14 +1121,14 @@ class VelocityAction(SimulatorTaskAction):
     @property
     def action_space(self):
         return spaces.Box(
-            low=np.array([self.min_lin_vel, self.min_lin_vel]), 
+            low=np.array([self.min_lin_vel, self.min_lin_vel]),
             high=np.array([self.max_lin_vel, self.max_lin_vel]),
             shape=(2,),
             dtype=np.float,
         )
 
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        task.is_stop_called = False
+        task.is_stop_called = False  # type: ignore
 
     def step(
         self,
@@ -1136,52 +1136,53 @@ class VelocityAction(SimulatorTaskAction):
         task: EmbodiedTask,
         linear_velocity: float,
         angular_velocity: float,
-        time_step: Optional[float]=None,
-        allow_sliding: Optional[bool]=None,
+        time_step: Optional[float] = None,
+        allow_sliding: Optional[bool] = None,
         **kwargs: Any,
     ):
         r"""Moves the agent with a provided linear and angular velocity for the
         provided amount of time
 
         Args:
-            linear_velocity: between [-1,1], scaled according to 
+            linear_velocity: between [-1,1], scaled according to
                              config.LIN_VEL_RANGE
-            angular_velocity: between [-1,1], scaled according to 
+            angular_velocity: between [-1,1], scaled according to
                              config.ANG_VEL_RANGE
             time_step: amount of time to move the agent for
             allow_sliding: whether the agent will slide on collision
         """
         if allow_sliding is None:
-            allow_sliding = self._sim.config.sim_cfg.allow_sliding
+            allow_sliding = self._sim.config.sim_cfg.allow_sliding  # type: ignore
         if time_step is None:
             time_step = self.time_step
 
         # Convert from [-1, 1] to [0, 1] range
-        linear_velocity = (linear_velocity+1.)/2.
-        angular_velocity = (angular_velocity+1.)/2.
+        linear_velocity = (linear_velocity + 1.0) / 2.0
+        angular_velocity = (angular_velocity + 1.0) / 2.0
 
         # Scale actions
-        linear_velocity = (
-            self.min_lin_vel
-            +linear_velocity*(self.max_lin_vel-self.min_lin_vel)
+        linear_velocity = self.min_lin_vel + linear_velocity * (
+            self.max_lin_vel - self.min_lin_vel
         )
-        angular_velocity = (
-            self.min_ang_vel
-            +angular_velocity*(self.max_ang_vel-self.min_ang_vel)
+        angular_velocity = self.min_ang_vel + angular_velocity * (
+            self.max_ang_vel - self.min_ang_vel
         )
 
         # Stop is called if both linear/angular speed are below their threshold
         if (
             abs(linear_velocity) < self.min_abs_lin_speed
-            and
-            abs(angular_velocity) < self.min_abs_ang_speed
+            and abs(angular_velocity) < self.min_abs_ang_speed
         ):
-            task.is_stop_called = True
-            return self._sim.get_observations_at()
+            task.is_stop_called = True  # type: ignore
+            return self._sim.get_observations_at(position=None, rotation=None)
 
         angular_velocity = np.deg2rad(angular_velocity)
-        self.vel_control.linear_velocity  = np.array([0., 0., -linear_velocity])
-        self.vel_control.angular_velocity = np.array([0., angular_velocity, 0.])
+        self.vel_control.linear_velocity = np.array(
+            [0.0, 0.0, -linear_velocity]
+        )
+        self.vel_control.angular_velocity = np.array(
+            [0.0, angular_velocity, 0.0]
+        )
         agent_state = self._sim.get_agent_state()
 
         # TODO: Sometimes the rotation given by get_agent_state is off by 1e-4
@@ -1192,8 +1193,7 @@ class VelocityAction(SimulatorTaskAction):
         # Convert from np.quaternion to mn.Quaternion
         normalized_quaternion = np.normalized(agent_state.rotation)
         agent_mn_quat = mn.Quaternion(
-            normalized_quaternion.imag,
-            normalized_quaternion.real
+            normalized_quaternion.imag, normalized_quaternion.real
         )
         current_rigid_state = RigidState(
             agent_mn_quat,
@@ -1207,9 +1207,9 @@ class VelocityAction(SimulatorTaskAction):
 
         # snap rigid state to navmesh and set state to object/agent
         if allow_sliding:
-            step_fn = self._sim.pathfinder.try_step
+            step_fn = self._sim.pathfinder.try_step  # type: ignore
         else:
-            step_fn = self._sim.pathfinder.try_step_no_sliding
+            step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
 
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
@@ -1227,8 +1227,8 @@ class VelocityAction(SimulatorTaskAction):
 
         # NB: There are some cases where ||filter_end - end_pos|| > 0 when a
         # collision _didn't_ happen. One such case is going up stairs.  Instead,
-        # we check to see if the the amount moved after the application of the 
-        # filter is _less_ than the amount moved before the application of the 
+        # we check to see if the the amount moved after the application of the
+        # filter is _less_ than the amount moved before the application of the
         # filter.
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
@@ -1236,12 +1236,13 @@ class VelocityAction(SimulatorTaskAction):
         agent_observations = self._sim.get_observations_at(
             position=final_position,
             rotation=final_rotation,
-            keep_agent_at_new_pose=True
+            keep_agent_at_new_pose=True,
         )
 
-        self._sim._prev_sim_obs["collided"] = collided
+        # TODO: Make a better way to flag collisions
+        self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
-        return agent_observations 
+        return agent_observations
 
 
 @registry.register_task(name="Nav-v0")
