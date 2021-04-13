@@ -53,6 +53,7 @@ from habitat_baselines.utils.common import (
     ObservationBatchingCache,
     batch_obs,
     generate_video,
+    action_to_velocity_control,
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
@@ -247,6 +248,18 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
+        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+            self.policy_action_space = ActionSpace({
+                "linear_velocity": EmptySpace(),
+                "angular_velocity": EmptySpace()
+            })
+            action_shape = 2
+            discrete_actions = False
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = -1
+            discrete_actions = True
+
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
             self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
@@ -256,14 +269,6 @@ class PPOTrainer(BaseRLTrainer):
 
         if rank0_only() and not os.path.isdir(self.config.CHECKPOINT_FOLDER):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
-
-        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
-            self.policy_action_space = ActionSpace({
-                "linear_velocity": EmptySpace(),
-                "angular_velocity": EmptySpace()
-            })
-        else:
-            self.policy_action_space = self.envs.action_spaces[0]
 
         self._setup_actor_critic_agent(ppo_cfg)
         if self._is_distributed:
@@ -291,12 +296,6 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
-        if self.config.RL.POLICY.action_distribution_type == 'gaussian':
-            action_shape = 2
-            discrete_actions = False
-        else:
-            action_shape = -1
-            discrete_actions = True
 
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
@@ -457,20 +456,11 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):  
-            lin_vel, ang_vel = act
-            step_action = {
-                    'action': { 
-                        'action': 'VELOCITY_CONTROL',
-                        'action_args': {
-                            'linear_velocity': np.tanh(lin_vel.item()),
-                            'angular_velocity': np.tanh(ang_vel.item()),
-                            'time_step' : 1.0,
-                            'allow_sliding': True,
-                        }
-                    }
-                }
+            if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+                step_action = action_to_velocity_control(act)
+            else:
+                step_action = act.item()
             self.envs.async_step_at(index_env, step_action)
-            # self.envs.async_step_at(index_env, act.item())
 
         self.env_time += time.time() - t_step_env
 
@@ -925,8 +915,12 @@ class PPOTrainer(BaseRLTrainer):
                 "linear_velocity": EmptySpace(),
                 "angular_velocity": EmptySpace()
             })
+            action_shape = 2
+            action_type = torch.float
         else:
             self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = 1
+            action_type = torch.long
 
         self._setup_actor_critic_agent(ppo_cfg)
 
@@ -951,9 +945,9 @@ class PPOTrainer(BaseRLTrainer):
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            2,
+            action_shape,
             device=self.device,
-            dtype=torch.long,
+            dtype=action_type,
         )
         not_done_masks = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -1012,30 +1006,13 @@ class PPOTrainer(BaseRLTrainer):
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            # step_data = [a.item() for a in actions.to(device="cpu")]
-            step_data = []
-            for a in actions.to(device="cpu"):
-                # a_item = a.item()
-                # move, turn = -1.,0.
-                # if a_item == 1:
-                #     move = 1.
-                # elif a_item == 2:
-                #     turn = 1.
-                # elif a_item == 3:
-                #     turn = -1.
-                move, turn = torch.tanh(a)
-                a_dict = {
-                    'action': { 
-                        'action': 'VELOCITY_CONTROL',
-                        'action_args': {
-                            'linear_velocity': move,
-                            'angular_velocity': turn,
-                            'time_step' : 1.0,
-                            'allow_sliding': True,
-                        }
-                    }
-                }
-                step_data.append(a_dict)
+            if self.config.RL.POLICY.action_distribution_type == 'gaussian':
+                step_data = [
+                    action_to_velocity_control(a)
+                    for a in actions.to(device="cpu")
+                ]
+            else:
+                step_data = [a.item() for a in actions.to(device="cpu")]
 
             outputs = self.envs.step(step_data)
 

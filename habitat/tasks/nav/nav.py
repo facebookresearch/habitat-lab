@@ -1184,6 +1184,11 @@ class VelocityAction(SimulatorTaskAction):
         self.vel_control.angular_velocity = np.array([0., angular_velocity, 0.])
         agent_state = self._sim.get_agent_state()
 
+        # TODO: Sometimes the rotation given by get_agent_state is off by 1e-4
+        # in terms of if the quaternion it represents is normalized, which
+        # throws an error as habitat-sim/habitat_sim/utils/validators.py has a
+        # tolerance of 1e-5. It is thus explicitly re-normalized here.
+
         # Convert from np.quaternion to mn.Quaternion
         normalized_quaternion = np.normalized(agent_state.rotation)
         agent_mn_quat = mn.Quaternion(
@@ -1209,11 +1214,10 @@ class VelocityAction(SimulatorTaskAction):
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
         )
-        coeffs = np.array([
+        final_rotation = [
             *goal_rigid_state.rotation.vector,
             goal_rigid_state.rotation.scalar,
-        ])
-        final_agent_np_quat = quaternion_from_coeff(coeffs)
+        ]
 
         # Check if a collision occured
         dist_moved_before_filter = (
@@ -1231,7 +1235,7 @@ class VelocityAction(SimulatorTaskAction):
 
         agent_observations = self._sim.get_observations_at(
             position=final_position,
-            rotation=final_agent_np_quat,
+            rotation=final_rotation,
             keep_agent_at_new_pose=True
         )
 

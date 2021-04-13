@@ -84,7 +84,7 @@ class PointNavResNetPolicy(Policy):
             backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
-            action_distribution_type=config.RL.PPO.action_distribution_type,
+            action_distribution_type=config.RL.POLICY.action_distribution_type,
         )
 
 
