@@ -17,10 +17,10 @@ from typing import (
 )
 
 import numpy as np
+import quaternion
 from gym import spaces
 from gym.spaces.box import Box
 from numpy import ndarray
-import quaternion
 
 if TYPE_CHECKING:
     from torch import Tensor
