@@ -556,7 +556,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         if isinstance(rotation, list):
             rotation_quat = quaternion_from_coeff(rotation)
-            if np.isclose(rotation_quat.norm(), 1.0, rtol=1e-4, atol=0):
+            if np.isclose(rotation_quat.norm(), 1.0, rtol=1e-4):
                 new_state.rotation = quaternion.as_float_array(
                     np.normalized(rotation_quat)
                 )[::-1]
