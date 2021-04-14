@@ -159,9 +159,10 @@ def batch_obs(
         batch: DefaultDict[str, List] = defaultdict(list)
 
     # Order sensors by size, stack and move the largest first
-    sensor_names = list(observations[0].keys())
-    sensor_names.sort(
-        key=lambda name: np.prod(observations[0][name].shape), reverse=True
+    sensor_names = sorted(
+        observations[0].keys(),
+        key=lambda name: np.prod(observations[0][name].shape),
+        reverse=True,
     )
 
     for sensor_name in sensor_names:
