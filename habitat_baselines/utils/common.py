@@ -158,9 +158,15 @@ def batch_obs(
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
 
-    for i, obs in enumerate(observations):
-        for sensor_name, sensor in obs.items():
-            sensor = torch.as_tensor(sensor)
+    # Order sensors by size, stack and move the largest first
+    sensor_names = list(observations[0].keys())
+    sensor_names.sort(
+        key=lambda name: np.prod(observations[0][name].shape), reverse=True
+    )
+
+    for sensor_name in sensor_names:
+        for i, obs in enumerate(observations):
+            sensor = torch.as_tensor(obs[sensor_name])
             if cache is None:
                 batch[sensor_name].append(sensor)
             else:
@@ -171,11 +177,21 @@ def batch_obs(
 
                 batch_t[sensor_name][i].copy_(sensor)
 
+        # With the batching cache, we use pinned mem
+        # so we can start the move to the GPU async
+        # and continue stacking other things with it
+        if cache is not None:
+            batch_t[sensor_name] = batch_t[sensor_name].to(
+                device, non_blocking=True
+            )
+
     if cache is None:
         for sensor in batch:
             batch_t[sensor] = torch.stack(batch[sensor], dim=0)
 
-    return batch_t.map(lambda v: v.to(device, non_blocking=True))
+        batch_t.map_in_place(lambda v: v.to(device))
+
+    return batch_t
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
