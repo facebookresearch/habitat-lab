@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import numbers
 import os
 import re
 import shutil
@@ -158,10 +159,13 @@ def batch_obs(
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
 
+    obs = observations[0]
     # Order sensors by size, stack and move the largest first
     sensor_names = sorted(
-        observations[0].keys(),
-        key=lambda name: np.prod(observations[0][name].shape),
+        obs.keys(),
+        key=lambda name: 1
+        if isinstance(obs[name], numbers.Number)
+        else np.prod(obs[name].shape),
         reverse=True,
     )
 
