@@ -4,7 +4,6 @@ import cv2
 
 from habitat.config import get_config
 from habitat.core.env import MultiTaskEnv
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import NavigationEpisode
 
 FORWARD_KEY = "w"
@@ -34,6 +33,9 @@ if __name__ == "__main__":
     ### One Env, many tasks ###
     # cfg = get_config('pointnav.yaml')
     cfg = get_config("configs/test/habitat_multitask_example.yaml")
+    # cfg.defrost()
+    # cfg.TASKS[0].SENSORS = ["PROXIMITY_SENSOR"]
+    # cfg.freeze()
     with MultiTaskEnv(config=cfg) as env:
         print(
             "{} episodes created from config file".format(len(env._episodes))
@@ -59,27 +61,34 @@ if __name__ == "__main__":
                     env.current_episode.scene_id,
                 )
             )
+
             # make sure we sample a different episode even if same task is passed
             # env._config.defrost()
             # env._config.SEED = i
             # env._config.freeze()
             while not env.episode_over:
+                print("Current obs space", env.observation_space)
+                print("Current action space", env.action_space)
                 if isinstance(env.current_episode, NavigationEpisode):
                     print("Goal:", env.current_episode.goals)
                 if args.interactive:
                     keystroke = cv2.waitKey(0)
                     # ord gets unicode from one-char string
                     if keystroke == ord(FORWARD_KEY):
-                        action = HabitatSimActions.MOVE_FORWARD
+                        action = "MOVE_FORWARD"
                     elif keystroke == ord(LEFT_KEY):
-                        action = HabitatSimActions.TURN_LEFT
+                        action = "TURN_LEFT"
                     elif keystroke == ord(RIGHT_KEY):
-                        action = HabitatSimActions.TURN_RIGHT
+                        action = "TURN_RIGHT"
                     elif keystroke == ord(FINISH):
-                        action = HabitatSimActions.STOP
+                        action = "STOP"
                     else:
                         print("INVALID KEY")
                         continue
+                    if action not in env.task.actions:
+                        print("Invalid action!")
+                        continue
+
                 else:
                     # execute random action
                     action = env.action_space.sample()

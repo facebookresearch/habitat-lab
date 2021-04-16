@@ -26,6 +26,25 @@ SIMULATOR:
 #     SUCCESS_DISTANCE: 0.2
 
 TASKS:
+  # - TYPE: ObjectNav-v1
+  #   POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+  #   SUCCESS_DISTANCE: 0.1
+
+  #   SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+  #   GOAL_SENSOR_UUID: objectgoal
+
+  #   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+  #   SUCCESS:
+  #     SUCCESS_DISTANCE: 0.2
+  #   # DISTANCE_TO_GOAL:
+  #     # DISTANCE_TO: VIEW_POINTS
+
+  #   DATASET:
+  #     TYPE: ObjectNav-v1
+  #     SPLIT: val
+  #     CONTENT_SCENES: ["*"]
+  #     DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
+  #     SCENES_DIR: "data/scene_datasets/"
   - TYPE: Nav-v0
     SUCCESS_DISTANCE: 0.169
     TASK_LABEL: MyTask
@@ -44,6 +63,8 @@ TASKS:
       DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
   - TYPE: Nav-v0
     SUCCESS_DISTANCE: 0.2
+    # define custom actions for this task only
+    POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_RIGHT"]
 
     SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
     POINTGOAL_WITH_GPS_COMPASS_SENSOR:

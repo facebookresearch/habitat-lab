@@ -4,6 +4,7 @@ import pytest
 
 from habitat.config import get_config
 from habitat.core.env import MultiTaskEnv
+from habitat.tasks.nav.nav import TeleportAction
 
 TEST_CFG_PATH = "configs/test/habitat_multitask_example.yaml"
 
@@ -64,13 +65,14 @@ def test_simple_fixed_change_task():
     cfg.TASKS = cfg.TASKS[:2]
     cfg.freeze()
     with MultiTaskEnv(config=cfg) as env:
-        task_bit = False
+        # we have two tasks, we'll only need task index 0 and 1
+        task_idx = 0
         for _ in range(5):
             env.reset()
             assert (
-                env._curr_task_idx == task_bit
+                env._curr_task_idx == task_idx
             ), "Task should change at each new episode"
-            task_bit = not (task_bit)
+            task_idx = (task_idx + 1) % 2
             while not env.episode_over:
                 # execute random action
                 env.step(env.action_space.sample())
@@ -244,6 +246,142 @@ def test_random_task_loop():
                     env._curr_task_idx != task_idx
                 ), "Task should change every {} episodes".format(change_after)
                 task_idx = env._curr_task_idx
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
+
+
+def test_different_actions_spaces():
+    cfg = get_test_config(TEST_CFG_PATH)
+    if len(cfg.TASKS) <= 2:
+        pytest.skip("Need 3 tasks to run this test")
+
+    cfg.defrost()
+    if "TELEPORT" in cfg.TASKS[0].POSSIBLE_ACTIONS:
+        cfg.TASKS[0].POSSIBLE_ACTIONS.remove("TELEPORT")
+
+    cfg.TASKS[1].POSSIBLE_ACTIONS = cfg.TASKS[0].POSSIBLE_ACTIONS + [
+        "TELEPORT"
+    ]
+    cfg.TASKS[2].POSSIBLE_ACTIONS = ["TELEPORT"]
+    # change after 1 episode
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = 1
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
+    cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "FIXED"
+    cfg.freeze()
+    with MultiTaskEnv(config=cfg) as env:
+        for _ in range(10):
+            env.reset()
+            if env._curr_task_idx == 0:
+                assert not env.action_space.contains(
+                    TeleportAction(config=cfg, sim=env.sim)
+                )
+            elif env._curr_task_idx == 1:
+                assert env.action_space.contains(
+                    TeleportAction(config=cfg, sim=env.sim)
+                )
+            elif env._curr_task_idx == 2:
+                assert (
+                    env.action_space
+                    == TeleportAction(config=cfg, sim=env.sim).action_space
+                )
+
+            while not env.episode_over:
+                # execute random action
+                action = env.action_space.sample()
+                if env._curr_task_idx == 2:
+                    # inputting any other action will raise an exception
+                    assert isinstance(action, TeleportAction)
+                env.step(action)
+
+
+def test_different_observation_spaces():
+    cfg = get_test_config(TEST_CFG_PATH)
+    cfg.defrost()
+    # these tasks have different obs spaces
+    cfg.TASKS[0].SENSORS = ["PROXIMITY_SENSOR"]
+    cfg.TASKS[1].SENSORS = [
+        "POINTGOAL_WITH_GPS_COMPASS_SENSOR",
+        "COMPASS_SENSOR",
+        "PROXIMITY_SENSOR",
+    ]
+    # change after 1 episode
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = 1
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
+    cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "FIXED"
+    cfg.freeze()
+    with MultiTaskEnv(config=cfg) as env:
+        for _ in range(10):
+            env.reset()
+            # should always be in obs space
+            assert "task_idx" in env.observation_space.spaces
+            if env._curr_task_idx == 0:
+                assert (
+                    "POINTGOAL_WITH_GPS_COMPASS".lower()
+                    not in env.observation_space.spaces
+                )
+                assert "PROXIMITY".lower() in env.observation_space.spaces
+            elif env._curr_task_idx == 1:
+                for sens in cfg.TASKS[1].SENSORS:
+                    assert sens[:-7].lower() in env.observation_space.spaces
+
+            while not env.episode_over:
+                # execute random action
+                env.step(env.action_space.sample())
+
+
+def test_different_tasks():
+    cfg = get_test_config(TEST_CFG_PATH)
+    cfg.defrost()
+    # add object nav task (requires additional dataset)
+    cfg.TASKS[0].TYPE = ("ObjectNav-v1",)[0]
+    cfg.TASKS[0].POSSIBLE_ACTIONS = (
+        [
+            "STOP",
+            "MOVE_FORWARD",
+            "TURN_LEFT",
+            "TURN_RIGHT",
+            "LOOK_UP",
+            "LOOK_DOWN",
+        ],
+    )[0]
+    cfg.TASKS[0].SUCCESS_DISTANCE = (0.1,)[0]
+    cfg.TASKS[0].SENSORS = (
+        ["OBJECTGOAL_SENSOR", "COMPASS_SENSOR", "GPS_SENSOR"],
+    )[0]
+    cfg.TASKS[0].GOAL_SENSOR_UUID = ("objectgoal",)[0]
+    cfg.TASKS[0].MEASUREMENTS = (["DISTANCE_TO_GOAL", "SUCCESS", "SPL"],)
+    cfg.TASKS[0].SUCCESS.SUCCESS_DISTANCE = (0.2,)[0]
+    cfg.TASKS[0].DATASET.TYPE = ("ObjectNav-v1",)[0]
+    cfg.TASKS[0].DATASET.SPLIT = ("val",)[0]
+    cfg.TASKS[0].DATASET.CONTENT_SCENES = (["*"],)[0]
+    cfg.TASKS[0].DATASET.DATA_PATH = (
+        "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz",
+    )[0]
+    cfg.TASKS[0].DATASET.SCENES_DIR = "data/scene_datasets/"
+
+    if not os.path.exists(
+        "data/datasets/objectnav/mp3d/v1/val/val.json.gz"
+    ) or not os.path.exists("data/scene_datasets/mp3d/v1"):
+        pytest.skip(
+            "Please download Matterport3D scenes and ObjectNav Dataset to data folder to run this test."
+        )
+
+    # change after 1 episode
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_EPISODES = 1
+    cfg.CHANGE_TASK_BEHAVIOUR.AFTER_N_CUM_STEPS = None
+    cfg.CHANGE_TASK_BEHAVIOUR.LOOP = "FIXED"
+    cfg.freeze()
+    with MultiTaskEnv(config=cfg) as env:
+        for _ in range(3):
+            env.reset()
+            # should always be in obs space
+            assert "task_idx" in env.observation_space.spaces
+            if env._curr_task_idx == 0:
+                assert env.task.__class__.__name__ == "ObjectNavigationTask"
+            elif env._curr_task_idx == 1:
+                assert env.task.__class__.__name__ == "NavigationTask"
+
             while not env.episode_over:
                 # execute random action
                 env.step(env.action_space.sample())

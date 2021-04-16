@@ -467,9 +467,21 @@ class MultiTaskEnv(Env):
         """
         # let superclass instantiate current task by merging first task in TASKS to TASK
         if len(config.TASKS):
+            logger.info(
+                "Overwriting config.TASK ({}) with first entry in config.TASKS ({}).".format(
+                    config.TASK.TYPE, config.TASKS[0].TYPE
+                )
+            )
             config.defrost()
             config.TASK.merge_from_other_cfg(config.TASKS[0])
             config.freeze()
+            # TASK[0] dataset has higher priority over default one (if specified), instatiate it before
+            if dataset is None and config.TASKS[0].DATASET.TYPE:
+                dataset = make_dataset(
+                    id_dataset=config.TASKS[0].DATASET.TYPE,
+                    config=config.TASKS[0].DATASET,
+                )
+        # initialize first task leveraging Env
         super().__init__(config, dataset=dataset)
         # instatiate other tasks
         self._tasks = [self._task]
@@ -493,7 +505,7 @@ class MultiTaskEnv(Env):
         self._change_task_behavior = config.CHANGE_TASK_BEHAVIOUR.TYPE
         self._task_cycling_behavior = config.CHANGE_TASK_BEHAVIOUR.LOOP
         # custom task label can be specified
-        self._task_label = self._task._config.get(
+        self._curr_task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
         )
         # add task_idx to observation space
@@ -511,7 +523,7 @@ class MultiTaskEnv(Env):
 
     @property
     def current_task_label(self) -> str:
-        return str(self._task_label)
+        return str(self._curr_task_label)
 
     def _check_change_task(self, is_reset=False):
         """Check whether the change task condition is satified.
@@ -628,7 +640,7 @@ class MultiTaskEnv(Env):
                 "task_idx": spaces.Discrete(len(self._tasks)),
             }
         )
-        self._task_label = self._task._config.get(
+        self._curr_task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
         )
         logger.info(

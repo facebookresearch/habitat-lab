@@ -62,6 +62,7 @@ def test_overwrite_options():
         ), "Overwriting of config options failed."
 
 
+### Multitask config tests ###
 def test_tasks_keep_defaults():
     defaults = _C.TASK.clone()
     cfg = get_config(MULITASK_TEST_FILENAME)
