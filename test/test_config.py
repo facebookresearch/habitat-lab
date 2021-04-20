@@ -67,13 +67,13 @@ def test_tasks_keep_defaults():
     defaults = _C.TASK.clone()
     cfg = get_config(MULITASK_TEST_FILENAME)
     cfg.defrost()
-    cfg.TASKS[0].TYPE = "MyCustomTestTask"
+    cfg.MULTI_TASK.TASKS[0].TYPE = "MyCustomTestTask"
     cfg.freeze()
     assert (
-        cfg.TASKS[0].TYPE != cfg.TASK.TYPE
+        cfg.MULTI_TASK.TASKS[0].TYPE != cfg.TASK.TYPE
     ), "Each tasks property should be overridable"
     for k in defaults.keys():
-        for task in cfg.TASKS:
+        for task in cfg.MULTI_TASK.TASKS:
             assert (
                 k in task
             ), "Default property should be inherithed by each task"
@@ -82,16 +82,16 @@ def test_tasks_keep_defaults():
 def test_global_dataset_config():
     datatype = "MyDatasetType"
     config = open_yaml(MULITASK_TEST_FILENAME)
-    for task in config["TASKS"]:
+    for task in config["MULTI_TASK"]["TASKS"]:
         if "DATASET" in task:
             del task["DATASET"]
 
     config["DATASET"]["TYPE"] = datatype
-    save_yaml("test.yaml", config)
+    save_yaml("habitat_config_test.yaml", config)
     # load test config
-    cfg = get_config("/tmp/test.yaml")
+    cfg = get_config("/tmp/habitat_config_test.yaml")
     # make sure each tasks has global dataset config
-    for task in cfg.TASKS:
+    for task in cfg.MULTI_TASK.TASKS:
         assert (
             task.DATASET.TYPE == cfg.DATASET.TYPE == datatype
         ), "Each task should inherit global dataset when dataset is not specified"
@@ -101,20 +101,19 @@ def test_global_dataset_config_override():
     datatype = "MyDatasetType"
     datapath = "/some/path/"
     config = open_yaml(MULITASK_TEST_FILENAME)
-    assert "TASKS" in config
-    assert (
-        len(config["TASKS"]) > 0
-    ), "Need at least one task in tasks to run test"
-    for task in config["TASKS"]:
+    for task in config["MULTI_TASK"]["TASKS"]:
         if "DATASET" in task:
             del task["DATASET"]
     # one tasks needs a different dataset
-    config["TASKS"][0]["DATASET"] = {"TYPE": datatype, "DATA_PATH": datapath}
-    save_yaml("test.yaml", config)
+    config["MULTI_TASK"]["TASKS"][0]["DATASET"] = {
+        "TYPE": datatype,
+        "DATA_PATH": datapath,
+    }
+    save_yaml("habitat_config_test.yaml", config)
     # load test config
-    cfg = get_config("/tmp/test.yaml")
+    cfg = get_config("/tmp/habitat_config_test.yaml")
     # make sure each tasks has global dataset config but the first one
-    for i, task in enumerate(cfg.TASKS):
+    for i, task in enumerate(cfg.MULTI_TASK.TASKS):
         if i == 0:
             assert (
                 task.DATASET.TYPE == datatype != cfg.DATASET.TYPE

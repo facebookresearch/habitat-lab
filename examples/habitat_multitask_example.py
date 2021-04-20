@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import cv2
 
 from habitat.config import get_config
-from habitat.core.env import MultiTaskEnv
+from habitat.tasks.multi_task.env import MultiTaskEnv
 from habitat.tasks.nav.nav import NavigationEpisode
 
 FORWARD_KEY = "w"
