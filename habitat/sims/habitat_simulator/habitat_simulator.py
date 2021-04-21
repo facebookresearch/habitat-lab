@@ -7,6 +7,7 @@
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Optional,
@@ -23,6 +24,8 @@ from numpy import ndarray
 
 if TYPE_CHECKING:
     from torch import Tensor
+
+import magnum as mn
 
 import habitat_sim
 from habitat.core.dataset import Episode
@@ -49,7 +52,7 @@ def overwrite_config(
     config_from: Config,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
-    enum_dict: Dict[str, Any] = None,
+    trans_dict: Dict[str, Callable] = None,
 ) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
@@ -71,9 +74,8 @@ def overwrite_config(
         low_attr = attr.lower()
         if ignore_keys is None or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
-                if enum_dict is not None and low_attr in enum_dict:
-                    enum_stub = enum_dict[low_attr]
-                    setattr(config_to, low_attr, getattr(enum_stub, value))
+                if trans_dict is not None and low_attr in trans_dict:
+                    setattr(config_to, low_attr, trans_dict[low_attr](value))
                 else:
                     setattr(config_to, low_attr, if_config_to_lower(value))
             else:
@@ -190,17 +192,20 @@ class HabitatSimSemanticSensor(SemanticSensor):
         check_sim_obs(obs, self)
         return obs
 
+
 @registry.register_sensor
 class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = FisheyeSensorDoubleSphereSpec
+        self._sensor_spec_factory = habitat_sim.FisheyeSensorDoubleSphereSpec
+
 
 @registry.register_sensor
 class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = FisheyeSensorDoubleSphereSpec
+        self._sensor_spec_factory = habitat_sim.FisheyeSensorDoubleSphereSpec
+
 
 def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
     assert obs is not None, (
@@ -297,7 +302,15 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     "type",
                     "width",
                 },
-                enum_dict={"sensor_subtype": habitat_sim.SensorSubType},
+                trans_dict={
+                    "sensor_model_type": lambda v: getattr(
+                        habitat_sim.FisheyeSensorModelType, v
+                    ),
+                    "sensor_subtype": lambda v: getattr(
+                        habitat_sim.SensorSubType, v
+                    ),
+                    "principal_point_offset": lambda v: mn.Vector2(v),
+                },
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(
