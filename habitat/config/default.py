@@ -223,19 +223,29 @@ _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 SIMULATOR_SENSOR = CN()
 SIMULATOR_SENSOR.HEIGHT = 480
 SIMULATOR_SENSOR.WIDTH = 640
-SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
-SIMULATOR_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+
+CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+
+FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
+FISHEYE_SIM_SENSOR.FOCAL_LENGTH = float(FISHEYE_SIM_SENSOR.HEIGHT)
+FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = [FISHEYE_SIM_SENSOR.HEIGHT / 2, FISHEYE_SIM_SENSOR.HEIGHT / 2]
+_C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR
+_C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
+
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
 _C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
 _C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
@@ -243,7 +253,7 @@ _C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT

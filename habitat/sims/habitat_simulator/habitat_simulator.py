@@ -190,6 +190,17 @@ class HabitatSimSemanticSensor(SemanticSensor):
         check_sim_obs(obs, self)
         return obs
 
+@registry.register_sensor
+class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
+    def __init__(self, config) -> None:
+        super().__init__(config=config)
+        self._sensor_spec_factory = FisheyeSensorDoubleSphereSpec
+
+@registry.register_sensor
+class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
+    def __init__(self, config) -> None:
+        super().__init__(config=config)
+        self._sensor_spec_factory = FisheyeSensorDoubleSphereSpec
 
 def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
     assert obs is not None, (
