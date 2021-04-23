@@ -226,10 +226,24 @@ SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 
+# -----------------------------------------------------------------------------
+# EQUIRECT SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECTANGULAR_RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECTANGULAR_RGB_SENSOR.TYPE = (
+    "HabitatSimEquirectangularRGBSensor"
+)
+
+# -----------------------------------------------------------------------------
+# CAMERA SENSOR
+# -----------------------------------------------------------------------------
 CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
 CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
 CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 
+# -----------------------------------------------------------------------------
+# FISHEYE SENSOR
+# -----------------------------------------------------------------------------
 FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
 FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
 FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [FISHEYE_SIM_SENSOR.HEIGHT * 0.5] * 2
@@ -238,6 +252,8 @@ FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = [
     FISHEYE_SIM_SENSOR.HEIGHT / 2,
 ]
 FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
+
+
 _C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR
 _C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR
