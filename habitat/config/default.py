@@ -233,6 +233,11 @@ _C.SIMULATOR.EQUIRECTANGULAR_RGB_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.EQUIRECTANGULAR_RGB_SENSOR.TYPE = (
     "HabitatSimEquirectangularRGBSensor"
 )
+_C.SIMULATOR.EQUIRECTANGULAR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECTANGULAR_DEPTH_SENSOR.TYPE = (
+    "HabitatSimEquirectangularDepthSensor"
+)
+
 
 # -----------------------------------------------------------------------------
 # CAMERA SENSOR
