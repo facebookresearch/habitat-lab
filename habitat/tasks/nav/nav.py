@@ -1185,13 +1185,8 @@ class VelocityAction(SimulatorTaskAction):
         )
         agent_state = self._sim.get_agent_state()
 
-        # TODO: Sometimes the rotation given by get_agent_state is off by 1e-4
-        # in terms of if the quaternion it represents is normalized, which
-        # throws an error as habitat-sim/habitat_sim/utils/validators.py has a
-        # tolerance of 1e-5. It is thus explicitly re-normalized here.
-
         # Convert from np.quaternion to mn.Quaternion
-        normalized_quaternion = np.normalized(agent_state.rotation)
+        normalized_quaternion = agent_state.rotation
         agent_mn_quat = mn.Quaternion(
             normalized_quaternion.imag, normalized_quaternion.real
         )

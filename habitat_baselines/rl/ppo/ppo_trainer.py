@@ -93,10 +93,9 @@ class PPOTrainer(BaseRLTrainer):
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
 
-        if config.RL.POLICY.action_distribution_type == "gaussian":
-            config.defrost()
-            config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS = ["VELOCITY_CONTROL"]
-            config.freeze()
+        self.using_velocity_ctrl = (
+            self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        ) == ["VELOCITY_CONTROL"]
 
     @property
     def obs_space(self):
@@ -248,7 +247,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        if self.config.RL.POLICY.action_distribution_type == "gaussian":
+        if self.using_velocity_ctrl:
             self.policy_action_space = ActionSpace(
                 {
                     "linear_velocity": EmptySpace(),
@@ -458,7 +457,7 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            if self.config.RL.POLICY.action_distribution_type == "gaussian":
+            if self.using_velocity_ctrl:
                 step_action = action_to_velocity_control(act)
             else:
                 step_action = act.item()
@@ -912,7 +911,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
-        if self.config.RL.POLICY.action_distribution_type == "gaussian":
+        if self.using_velocity_ctrl:
             self.policy_action_space = ActionSpace(
                 {
                     "linear_velocity": EmptySpace(),
@@ -1010,7 +1009,7 @@ class PPOTrainer(BaseRLTrainer):
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            if self.config.RL.POLICY.action_distribution_type == "gaussian":
+            if self.using_velocity_ctrl:
                 step_data = [
                     action_to_velocity_control(a)
                     for a in actions.to(device="cpu")

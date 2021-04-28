@@ -48,10 +48,12 @@ class PointNavResNetPolicy(Policy):
         backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
-        action_distribution_type: str = "categorical",
+        policy_config=Config,
         **kwargs
     ):
-        discrete_actions = action_distribution_type == "categorical"
+        discrete_actions = (
+            policy_config.action_distribution_type == "categorical"
+        )
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -66,9 +68,9 @@ class PointNavResNetPolicy(Policy):
                 discrete_actions=discrete_actions,
             ),
             dim_actions=action_space.n,  # for action distribution
-            action_distribution_type=action_distribution_type,
+            policy_config=policy_config,
         )
-        self.action_distribution_type = action_distribution_type
+        self.action_distribution_type = policy_config.action_distribution_type
 
     @classmethod
     def from_config(
@@ -83,7 +85,7 @@ class PointNavResNetPolicy(Policy):
             backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
-            action_distribution_type=config.RL.POLICY.action_distribution_type,
+            policy_config=config.RL.POLICY,
         )
 
 
@@ -452,7 +454,9 @@ class PointNavResNetNet(Net):
                 torch.where(masks.view(-1), prev_actions + 1, start_token)
             )
         else:
-            prev_actions = self.prev_action_embedding(prev_actions.float())
+            prev_actions = self.prev_action_embedding(
+                masks * prev_actions.float()
+            )
 
         x.append(prev_actions)
 
