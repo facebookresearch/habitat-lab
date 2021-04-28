@@ -48,12 +48,19 @@ class PointNavResNetPolicy(Policy):
         backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
-        policy_config=Config,
+        policy_config: Config = None,
         **kwargs
     ):
-        discrete_actions = (
-            policy_config.action_distribution_type == "categorical"
-        )
+        if policy_config is not None:
+            discrete_actions = (
+                policy_config.action_distribution_type == "categorical"
+            )
+            self.action_distribution_type = (
+                policy_config.action_distribution_type
+            )
+        else:
+            discrete_actions = True
+            self.action_distribution_type = "categorical"
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -70,7 +77,6 @@ class PointNavResNetPolicy(Policy):
             dim_actions=action_space.n,  # for action distribution
             policy_config=policy_config,
         )
-        self.action_distribution_type = policy_config.action_distribution_type
 
     @classmethod
     def from_config(
