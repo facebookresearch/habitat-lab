@@ -36,17 +36,17 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
                 policy_config.action_distribution_type
             )
 
-        if policy_config.action_distribution_type == "categorical":
+        if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
                 self.net.output_size, self.dim_actions
             )
-        elif policy_config.action_distribution_type == "gaussian":
+        elif self.action_distribution_type == "gaussian":
             self.action_distribution = GaussianNet(
                 self.net.output_size, self.dim_actions, policy_config
             )
         else:
             ValueError(
-                f"Action distribution {policy_config.action_distribution_type}"
+                f"Action distribution {self.action_distribution_type}"
                 "not supported."
             )
 
