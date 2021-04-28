@@ -543,7 +543,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         agent = self.get_agent(agent_id)
         new_state = self.get_agent_state(agent_id)
         new_state.position = position
-
         new_state.rotation = rotation
 
         # NB: The agent state also contains the sensor states in _absolute_
