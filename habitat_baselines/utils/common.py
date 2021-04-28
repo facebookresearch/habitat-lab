@@ -32,6 +32,7 @@ from torch import Size, Tensor
 from torch import nn as nn
 
 from habitat import logger
+from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
@@ -82,13 +83,7 @@ class CustomNormal(torch.distributions.normal.Normal):
         return super().rsample(sample_shape)
 
     def log_probs(self, actions):
-        ret = (
-            super()
-            .log_prob(actions)
-            .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
-        )
+        ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
         return ret
 
 
@@ -97,15 +92,20 @@ class GaussianNet(nn.Module):
         self,
         num_inputs: int,
         num_outputs: int,
-        std_min: float = 1e-6,
-        std_max: float = 1,
+        config: Config,
     ) -> None:
         super().__init__()
 
+        self.config = config
+        if config.use_log_std:
+            self.min_std = config.min_log_std
+            self.max_std = config.max_log_std
+        else:
+            self.min_std = config.min_std
+            self.max_std = config.max_std
+
         self.mu = nn.Linear(num_inputs, num_outputs)
         self.std = nn.Linear(num_inputs, num_outputs)
-        self.std_min = std_min
-        self.std_max = std_max
 
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
         nn.init.constant_(self.mu.bias, 0)
@@ -113,8 +113,15 @@ class GaussianNet(nn.Module):
         nn.init.constant_(self.std.bias, 0)
 
     def forward(self, x: Tensor) -> CustomNormal:
-        mu = torch.tanh(self.mu(x))
-        std = torch.clamp(self.std(x), min=self.std_min, max=self.std_max)
+        mu = self.mu(x)
+        if self.config.action_activation == "tanh":
+            mu = torch.tanh(mu)
+        elif self.config.action_activation == "softplus":
+            mu = torch.nn.functional.softplus(mu)
+
+        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.config.use_log_std:
+            std = std.exp(std)
 
         return CustomNormal(mu, std)
 
