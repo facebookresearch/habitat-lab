@@ -27,14 +27,32 @@ class TI_TASK_SAMPLING(enum.IntEnum):
 
 class MultiTaskEnv(Env):
     r"""Environment base class extension designed to handle a stream-line of tasks.
+    Multiple tasks can be defined using all configuration properties available for
+    the single task use.
+    The use-cases range from supporting multiple tasks each with a different dataset
+    and scenes up to a single-scene dataset shared by many tasks, each executed
+    without interruption of the episode in a 'continual' stream of tasks.
+    Scene switch will in fact be inhibited when the current active task is changed mid-episode
+    if the tasks share the same scene by replacing the initial position of the agent.
+
+    One can identify the current task being executed by inspecting the `task_idx` key
+    of each observation returned by the MultiTaskEnv.
+    Action space, observation space and episode iterator will also change as tasks are
+    swapped and you can always retrieve them as properties of this class instance using
+    `actions_space`, `observations_space` and `episode_iterator` respectively.
+
+    The environment abstracts away the serving of multiple tasks under
+    the scheduling preferences expressed in the `MULTI_TASK.TASK_ITERATOR` configuration,
+    allowing to cycle through tasks sequentially or sample a different one each time.
+    Timesteps at which active task changes can either be "fixed" or vary by having
+    a `CHANGE_TASK_PROB` which specifies the probability of triggering a change of task
+    after a mininum number of episodes/steps is reached. This can be useful to train or
+    evaluate your agent with no bias on task minimum duration.
 
     The major :ref:`task` component is hereby intended as current task with which
     the agent is currently interacting.
     All tasks handled by the MultiTaskEnv are available through the :ref:`tasks` object
     property.
-
-    The environment abstracts away the serving of multiple tasks under
-    the scheduling preferences expressed in the configuration.
     """
     _tasks: List[EmbodiedTask]
     _episode_iterators: Optional[List[EpisodeIterator]]
@@ -249,6 +267,12 @@ class MultiTaskEnv(Env):
         self._curr_task_label = self._task._config.get(
             "TASK_LABEL", self._curr_task_idx
         )
+
+        # point to new dataset and episodes
+        self._dataset = self._task._dataset
+        self.number_of_episodes = len(self._dataset.episodes)
+        self._episodes = self._dataset.episodes
+
         logger.info(
             "Current task changed from {} (id: {}) to {} (id: {}).".format(
                 self._tasks[prev_task_idx].__class__.__name__,
@@ -309,10 +333,35 @@ class MultiTaskEnv(Env):
         return obs
 
 
-class CRLEnv(RLEnv):
+class MultiTaskRLEnv(RLEnv):
+    r"""Reinforcement Learning (RL) environment class which subclasses ``gym.Env``
+    and adds support for a stream-line of tasks, specifically useful in
+    domains such as Continual Reinforcement Learning or evaluating Hierarchical or
+    Multi-task RL agents.
+
+    This is a wrapper over :ref:`MultiTaskEnv` for RL users. To create custom RL
+    environments users should subclass `MultiTaskRLEnv` and define the following
+    methods: :ref:`get_reward_range()`, :ref:`get_reward()`,
+    :ref:`get_done()`, :ref:`get_info()`, accessing the current task being executed
+    through the underlying `MultiTaskRLEnv` and the `task_idx` returned with every
+    observation.
+
+    As this is a subclass of ``gym.Env``, it implements `reset()` and
+    `step()`.
+    """
+
     def __init__(self, config: Config, dataset: Optional[Dataset]) -> None:
         self._env = MultiTaskEnv(config, dataset)
-        self.observation_space = self._env.observation_space
-        self.action_space = self._env.action_space
-        self.number_of_episodes = self._env.number_of_episodes
         self.reward_range = self.get_reward_range()
+
+    @property
+    def observation_space(self):
+        return self._env.observation_space
+
+    @property
+    def action_space(self):
+        return self._env.action_space
+
+    @property
+    def number_of_episodes(self):
+        return self._env.number_of_episodes
