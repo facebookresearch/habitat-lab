@@ -117,10 +117,10 @@ jobs:
               # sudo apt-get --yes --force-yes install cuda
               # touch ./cuda_installed
               nvidia-smi
-      # Restore's Miniconda Cache.
+      # Restore Conda cache
       - restore_cache:
-            keys:
-              - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+          keys:
+            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
