@@ -25,8 +25,6 @@ from numpy import ndarray
 if TYPE_CHECKING:
     from torch import Tensor
 
-import magnum as mn
-
 import habitat_sim
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
