@@ -13,7 +13,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.5.2
+#       jupytext_version: 1.11.1
 #   kernelspec:
 #     display_name: Python 3
 #     name: python3
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         pass
     env = habitat.Env(config=config)
 
-# %%
+    # %%
     action = None
     obs = env.reset()
     valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     env.close()
 
-# %%
+    # %%
     print(env.get_metrics())
 
 # %% [markdown]
@@ -276,7 +276,7 @@ if __name__ == "__main__":
         pass
     env = habitat.Env(config=config)
 
-# %%
+    # %%
     action = None
     env.reset()
     valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
@@ -358,16 +358,16 @@ if __name__ == "__main__":
         pass
     env = habitat.Env(config=config)
 
-# %%
+    # %%
     obs = env.reset()
 
-# %%
+    # %%
     obs.keys()
 
-# %%
+    # %%
     print(obs["agent_position"])
 
-# %%
+    # %%
     env.close()
 
 # %% [markdown]
