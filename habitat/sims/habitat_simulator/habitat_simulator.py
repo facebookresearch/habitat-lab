@@ -324,7 +324,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     "sensor_subtype": lambda v: getattr(
                         habitat_sim.SensorSubType, v
                     ),
-                    "principal_point_offset": lambda v: mn.Vector2(v),
                 },
             )
             sim_sensor_cfg.uuid = sensor.uuid
