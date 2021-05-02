@@ -383,7 +383,8 @@ def test_get_observations_at():
     [
         ["FISHEYE_RGB_SENSOR"],
         ["FISHEYE_DEPTH_SENSOR"],
-        ["EQUIRECTANGULAR_RGB_SENSOR"],
+        ["EQUIRECT_RGB_SENSOR"],
+        ["EQUIRECT_DEPTH_SENSOR"],
     ],
 )
 def test_smoke_fisheye(sensors):
