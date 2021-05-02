@@ -514,10 +514,6 @@ class FisheyeProjection(CameraProjection):
         # Unpack 3D world points
         x, y, z = world_pts[..., 0], world_pts[..., 1], world_pts[..., 2]
 
-        # Calculate fov
-        world_pts_fov_cos = z  # point3D @ z_axis
-        fov_mask = world_pts_fov_cos >= self.fov_cos
-
         # Calculate projection
         x2 = x * x
         y2 = y * y
@@ -543,7 +539,7 @@ class FisheyeProjection(CameraProjection):
             w1 = (1 - alpha) / alpha
         w2 = w1 + xi / np.sqrt(2 * w1 * xi + xi * xi + 1)
         valid_mask = z > -w2 * d1
-        valid_mask *= fov_mask
+        valid_mask *= ~torch.isnan(proj_pts)
 
         return proj_pts, valid_mask
 
@@ -575,7 +571,7 @@ class FisheyeProjection(CameraProjection):
 
         # Calculate fov
         unproj_fov_cos = unproj_pts[..., 2]  # unproj_pts @ z_axis
-        fov_mask = unproj_fov_cos >= self.fov_cos
+        fov_mask = ~torch.isnan(unproj_fov_cos)
         if alpha > 0.5:
             fov_mask *= r2 <= (1 / (2 * alpha - 1))
 
@@ -1080,8 +1076,10 @@ class CubeMap2Fisheye(ProjectionTransformer):
             len(fish_params) == 3
         ), "fish_params must have three parameters (f, xi, alpha)"
         # fisheye camera parameters
+        # Focal Length
         fx = fish_params[0] * min(fish_shape)
         fy = fx
+        # Principal point
         cx = fish_shape[1] / 2
         cy = fish_shape[0] / 2
         xi = fish_params[1]
