@@ -246,9 +246,10 @@ _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_DEPTH_SENSOR.clone()
-_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(CAMERA_SIM_SENSOR)
+_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
+# -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
