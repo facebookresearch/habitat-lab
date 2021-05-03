@@ -387,7 +387,7 @@ def test_get_observations_at():
         ["EQUIRECT_DEPTH_SENSOR"],
     ],
 )
-def test_smoke_fisheye(sensors):
+def test_smoke_not_pinhole_sensors(sensors):
     N_STEPS = 100
 
     config = get_config()

@@ -227,6 +227,33 @@ SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 
 # -----------------------------------------------------------------------------
+# CAMERA SENSOR
+# -----------------------------------------------------------------------------
+CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+
+SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+SIMULATOR_DEPTH_SENSOR.MIN_DEPTH = 0.0
+SIMULATOR_DEPTH_SENSOR.MAX_DEPTH = 10.0
+SIMULATOR_DEPTH_SENSOR.NORMALIZE_DEPTH = True
+
+# -----------------------------------------------------------------------------
+# RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
+# -----------------------------------------------------------------------------
+# DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_DEPTH_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(CAMERA_SIM_SENSOR)
+_C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
+# SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
+_C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+# -----------------------------------------------------------------------------
 # EQUIRECT SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
@@ -235,15 +262,6 @@ _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
     "HabitatSimEquirectangularDepthSensor"
 )
-
-
-# -----------------------------------------------------------------------------
-# CAMERA SENSOR
-# -----------------------------------------------------------------------------
-CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
-CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
-
 # -----------------------------------------------------------------------------
 # FISHEYE SENSOR
 # -----------------------------------------------------------------------------
@@ -256,7 +274,6 @@ FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = [
 ]
 FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
 
-
 _C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR.clone()
 _C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR.clone()
@@ -264,24 +281,7 @@ _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.MIN_DEPTH = 0.0
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.MAX_DEPTH = 10.0
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.NORMALIZE_DEPTH = True
-# -----------------------------------------------------------------------------
-# RGB SENSOR
-# -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
-# -----------------------------------------------------------------------------
-# DEPTH SENSOR
-# -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
-_C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
-# -----------------------------------------------------------------------------
-# SEMANTIC SENSOR
-# -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+
 # -----------------------------------------------------------------------------
 # AGENT
 # -----------------------------------------------------------------------------
