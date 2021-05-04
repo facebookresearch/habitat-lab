@@ -479,6 +479,7 @@ class FisheyeProjection(CameraProjection):
         self,
         img_h: int,
         img_w: int,
+        fish_fov: float,
         cx: float,
         cy: float,
         fx: float,
@@ -490,15 +491,16 @@ class FisheyeProjection(CameraProjection):
         """Args:
         img_h: (int) the height of fisheye camera image
         img_w: (int) the width of fisheye camera image
+        fish_fov: (float) the fov of fisheye camera in degrees
         cx, cy: (float) the optical center of the fisheye camera
         fx, fy, xi, alpha: (float) the fisheye camera model parameters
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
         super(FisheyeProjection, self).__init__(img_h, img_w, R)
 
-        # self.fish_fov = fish_fov  # FoV in degrees
-        # fov_rad = self.fish_fov / 180 * np.pi  # FoV in radians
-        # self.fov_cos = np.cos(fov_rad / 2)
+        self.fish_fov = fish_fov  # FoV in degrees
+        fov_rad = self.fish_fov / 180 * np.pi  # FoV in radians
+        self.fov_cos = np.cos(fov_rad / 2)
         self.fish_param = [cx, cy, fx, fy, xi, alpha]
 
     def projection(
@@ -511,6 +513,10 @@ class FisheyeProjection(CameraProjection):
         cx, cy, fx, fy, xi, alpha = self.fish_param
         # Unpack 3D world points
         x, y, z = world_pts[..., 0], world_pts[..., 1], world_pts[..., 2]
+
+        # Calculate fov
+        world_pts_fov_cos = z  # point3D @ z_axis
+        fov_mask = world_pts_fov_cos >= self.fov_cos
 
         # Calculate projection
         x2 = x * x
@@ -537,7 +543,7 @@ class FisheyeProjection(CameraProjection):
             w1 = (1 - alpha) / alpha
         w2 = w1 + xi / np.sqrt(2 * w1 * xi + xi * xi + 1)
         valid_mask = z > -w2 * d1
-        valid_mask *= ~torch.isnan(proj_pts)
+        valid_mask *= fov_mask
 
         return proj_pts, valid_mask
 
@@ -569,7 +575,7 @@ class FisheyeProjection(CameraProjection):
 
         # Calculate fov
         unproj_fov_cos = unproj_pts[..., 2]  # unproj_pts @ z_axis
-        fov_mask = ~torch.isnan(unproj_fov_cos)
+        fov_mask = unproj_fov_cos >= self.fov_cos
         if alpha > 0.5:
             fov_mask *= r2 <= (1 / (2 * alpha - 1))
 
@@ -1010,6 +1016,7 @@ class Cube2Fisheye(ProjectionConverter):
         self,
         fish_h: int,
         fish_w: int,
+        fish_fov: float,
         cx: float,
         cy: float,
         fx: float,
@@ -1020,6 +1027,7 @@ class Cube2Fisheye(ProjectionConverter):
         """Args:
         fish_h: (int) the height of the generated fisheye
         fish_w: (int) the width of the generated fisheye
+        fish_fov: (float) the fov of the generated fisheye in degrees
         cx, cy: (float) the optical center of the generated fisheye
         fx, fy, xi, alpha: (float) the fisheye camera model parameters
         """
@@ -1029,7 +1037,7 @@ class Cube2Fisheye(ProjectionConverter):
 
         # Fisheye output
         output_projection = FisheyeProjection(
-            fish_h, fish_w, cx, cy, fx, fy, xi, alpha
+            fish_h, fish_w, fish_fov, cx, cy, fx, fy, xi, alpha
         )
         super(Cube2Fisheye, self).__init__(
             input_projections, output_projection
@@ -1053,6 +1061,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
         self,
         sensor_uuids: List[str],
         fish_shape: Tuple[int, int],
+        fish_fov: float,
         fish_params: Tuple[float],
         channels_last: bool = False,
         target_uuids: Optional[List[str]] = None,
@@ -1060,6 +1069,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
     ):
         r""":param sensor_uuids: List of sensor_uuids: Back, Down, Front, Left, Right, Up.
         :param fish_shape: The shape of the fisheye output (height, width)
+        :param fish_fov: The FoV of the fisheye output in degrees
         :param fish_params: The camera parameters of fisheye output (f, xi, alpha)
         :param channels_last: Are the channels last in the input
         :param target_uuids: Optional List of which of the sensor_uuids to overwrite
@@ -1070,16 +1080,14 @@ class CubeMap2Fisheye(ProjectionTransformer):
             len(fish_params) == 3
         ), "fish_params must have three parameters (f, xi, alpha)"
         # fisheye camera parameters
-        # Focal Length
         fx = fish_params[0] * min(fish_shape)
         fy = fx
-        # Principal point
         cx = fish_shape[1] / 2
         cy = fish_shape[0] / 2
         xi = fish_params[1]
         alpha = fish_params[2]
         converter: ProjectionConverter = Cube2Fisheye(
-            fish_shape[0], fish_shape[1], cx, cy, fx, fy, xi, alpha
+            fish_shape[0], fish_shape[1], fish_fov, cx, cy, fx, fy, xi, alpha
         )
 
         super(CubeMap2Fisheye, self).__init__(
@@ -1105,6 +1113,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
                 cube2fish_config.HEIGHT,
                 cube2fish_config.WIDTH,
             ),
+            fish_fov=cube2fish_config.FOV,
             fish_params=cube2fish_config.PARAMS,
             target_uuids=target_uuids,
         )
