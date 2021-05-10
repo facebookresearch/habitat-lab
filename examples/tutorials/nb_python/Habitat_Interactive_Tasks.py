@@ -389,7 +389,7 @@ def init_objects(sim):
     chair_template_id = obj_attr_mgr.load_object_configs(
         str(os.path.join(data_path, obj_path))
     )[0]
-    chair_attr = obj_attr_mgr.get_template_by_ID(chair_template_id)
+    chair_attr = obj_attr_mgr.get_template_by_id(chair_template_id)
     obj_attr_mgr.register_template(chair_attr)
 
     # Object's initial position 3m away from the agent.
@@ -726,7 +726,7 @@ with habitat_sim.Simulator(cfg) as sim:
     chair_template_id = obj_attr_mgr.load_object_configs(
         str(os.path.join(data_path, obj_path))
     )[0]
-    chair_attr = obj_attr_mgr.get_template_by_ID(chair_template_id)
+    chair_attr = obj_attr_mgr.get_template_by_id(chair_template_id)
     obj_attr_mgr.register_template(chair_attr)
     object_id = sim.add_object_by_handle(chair_attr.handle)
     print(f"Chair's object id is {object_id}")
@@ -908,7 +908,7 @@ class RearrangementSim(HabitatSim):
             object_template_id = obj_attr_mgr.load_object_configs(
                 object_template
             )[0]
-            object_attr = obj_attr_mgr.get_template_by_ID(object_template_id)
+            object_attr = obj_attr_mgr.get_template_by_id(object_template_id)
             obj_attr_mgr.register_template(object_attr)
 
             object_id = self.add_object_by_handle(object_attr.handle)
