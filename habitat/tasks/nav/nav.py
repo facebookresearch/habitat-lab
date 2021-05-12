@@ -9,7 +9,6 @@
 from typing import Any, List, Optional, Tuple
 
 import attr
-import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -38,13 +37,19 @@ from habitat.utils.geometry_utils import (
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-from habitat_sim.bindings import RigidState
-from habitat_sim.physics import VelocityControl
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+    from habitat_sim.bindings import RigidState
+    from habitat_sim.physics import VelocityControl
 except ImportError:
     pass
+
+try:
+    import magnum as mn
+except ImportError:
+    pass
+
 cv2 = try_cv2_import()
 
 
