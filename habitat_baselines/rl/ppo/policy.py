@@ -42,7 +42,9 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
             )
         elif self.action_distribution_type == "gaussian":
             self.action_distribution = GaussianNet(
-                self.net.output_size, self.dim_actions, policy_config
+                self.net.output_size,
+                self.dim_actions,
+                policy_config.ACTION_DIST,
             )
         else:
             ValueError(

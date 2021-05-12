@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
-import numbers
 import os
 import re
 import shutil
@@ -96,7 +95,9 @@ class GaussianNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.config = config
+        self.action_activation = config.action_activation
+        self.use_log_std = config.use_log_std
+        self.use_softplus = config.use_softplus
         if config.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
@@ -114,14 +115,14 @@ class GaussianNet(nn.Module):
 
     def forward(self, x: Tensor) -> CustomNormal:
         mu = self.mu(x)
-        if self.config.action_activation == "tanh":
+        if self.action_activation == "tanh":
             mu = torch.tanh(mu)
-        elif self.config.action_activation == "softplus":
-            mu = torch.nn.functional.softplus(mu)
 
         std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
-        if self.config.use_log_std:
-            std = std.exp(std)
+        if self.use_log_std:
+            std = torch.exp(std)
+        if self.use_softplus:
+            std = torch.nn.functional.softplus(std)
 
         return CustomNormal(mu, std)
 
@@ -210,19 +211,9 @@ def batch_obs(
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
 
-    obs = observations[0]
-    # Order sensors by size, stack and move the largest first
-    sensor_names = sorted(
-        obs.keys(),
-        key=lambda name: 1
-        if isinstance(obs[name], numbers.Number)
-        else np.prod(obs[name].shape),
-        reverse=True,
-    )
-
-    for sensor_name in sensor_names:
-        for i, obs in enumerate(observations):
-            sensor = torch.as_tensor(obs[sensor_name])
+    for i, obs in enumerate(observations):
+        for sensor_name, sensor in obs.items():
+            sensor = torch.as_tensor(sensor)
             if cache is None:
                 batch[sensor_name].append(sensor)
             else:
@@ -233,21 +224,11 @@ def batch_obs(
 
                 batch_t[sensor_name][i].copy_(sensor)
 
-        # With the batching cache, we use pinned mem
-        # so we can start the move to the GPU async
-        # and continue stacking other things with it
-        if cache is not None:
-            batch_t[sensor_name] = batch_t[sensor_name].to(
-                device, non_blocking=True
-            )
-
     if cache is None:
         for sensor in batch:
             batch_t[sensor] = torch.stack(batch[sensor], dim=0)
 
-        batch_t.map_in_place(lambda v: v.to(device))
-
-    return batch_t
+    return batch_t.map(lambda v: v.to(device, non_blocking=True))
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
