@@ -254,11 +254,11 @@ class PPOTrainer(BaseRLTrainer):
                     "angular_velocity": EmptySpace(),
                 }
             )
-            action_shape = 2
+            action_shape = (2,)
             discrete_actions = False
         else:
             self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = -1
+            action_shape = None
             discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
@@ -918,11 +918,11 @@ class PPOTrainer(BaseRLTrainer):
                     "angular_velocity": EmptySpace(),
                 }
             )
-            action_shape = 2
+            action_shape = (2,)
             action_type = torch.float
         else:
             self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = 1
+            action_shape = (1,)
             action_type = torch.long
 
         self._setup_actor_critic_agent(ppo_cfg)
@@ -948,7 +948,7 @@ class PPOTrainer(BaseRLTrainer):
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            action_shape,
+            *action_shape,
             device=self.device,
             dtype=action_type,
         )

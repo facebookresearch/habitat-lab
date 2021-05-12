@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -23,7 +24,7 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        action_shape: int = -1,
+        action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
         discrete_actions: bool = True,
     ):
@@ -57,17 +58,17 @@ class RolloutStorage:
             numsteps + 1, num_envs, 1
         )
 
-        if action_shape == -1:
+        if action_shape is None:
             if action_space.__class__.__name__ == "ActionSpace":
-                action_shape = 1
+                action_shape = (1,)
             else:
-                action_shape = action_space.shape[0]
+                action_shape = action_space.shape
 
         self.buffers["actions"] = torch.zeros(
-            numsteps + 1, num_envs, action_shape
+            numsteps + 1, num_envs, *action_shape
         )
         self.buffers["prev_actions"] = torch.zeros(
-            numsteps + 1, num_envs, action_shape
+            numsteps + 1, num_envs, *action_shape
         )
         if (
             discrete_actions
