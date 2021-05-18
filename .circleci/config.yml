@@ -179,6 +179,7 @@ jobs:
               . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
+              pip install pillow
               python -u setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
