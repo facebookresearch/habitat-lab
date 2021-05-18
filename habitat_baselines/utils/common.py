@@ -127,7 +127,7 @@ class ObservationBatchingCache:
             and device.type == "cuda"
             and cache.device.type == "cpu"
         ):
-            # Pytorch indexing is really slow,
+            # Pytorch indexing is slow,
             # so convert to numpy
             cache = cache.pin_memory().numpy()
 
@@ -185,6 +185,10 @@ def batch_obs(
                         device,
                     )
 
+                # Use isinstance(sensor, np.ndarray) here instead of
+                # np.asarray as this is quickier for the more common
+                # path of sensor being an np.ndarray
+                # np.asarray is ~3x slower than checking
                 if isinstance(sensor, np.ndarray):
                     batch_t[sensor_name][i] = sensor
                 elif torch.is_tensor(sensor):
@@ -200,6 +204,8 @@ def batch_obs(
         if cache is not None:
             # If we were using a numpy array to do indexing and copying,
             # convert back to torch tensor
+            # We know that batch_t[sensor] is either an np.ndarray
+            # or a torch.Tensor, so this is faster than torch.as_tensor
             if isinstance(batch_t[sensor], np.ndarray):
                 batch_t[sensor] = torch.from_numpy(batch_t[sensor])
 
