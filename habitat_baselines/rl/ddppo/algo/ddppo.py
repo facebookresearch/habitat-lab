@@ -87,7 +87,7 @@ class DecentralizedDistributedMixin:
         """
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
-        class Guard:
+        class Guard:  # noqa: SIM119
             def __init__(self, model, device):
                 if torch.cuda.is_available():
                     self.ddp = torch.nn.parallel.DistributedDataParallel(

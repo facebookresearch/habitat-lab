@@ -495,7 +495,7 @@ def _is_numpy_image(img):
     return isinstance(img, np.ndarray) and (img.ndim in {2, 3})
 
 
-class Scale(object):
+class Scale:
     def __init__(self, size):
         self.size = size
 
@@ -510,7 +510,7 @@ class Scale(object):
         return img.resize((ow, oh), interpolation)
 
 
-class CenterCrop(object):
+class CenterCrop:
     def __init__(self, size):
         self.size = size
 
@@ -534,7 +534,7 @@ class CenterCrop(object):
         return image
 
 
-class ToTensor(object):
+class ToTensor:
     r"""Convert a ``PIL.Image`` or ``numpy.ndarray`` to tensor.
     Converts a PIL.Image or numpy.ndarray (H x W x C) in the range
     [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0].
@@ -589,7 +589,7 @@ class ToTensor(object):
             return img
 
 
-class Normalize(object):
+class Normalize:
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
