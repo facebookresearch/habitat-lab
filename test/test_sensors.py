@@ -422,10 +422,15 @@ def smoke_test_sensor(config, N_STEPS=100):
         ["EQUIRECT_SEMANTIC_SENSOR"],
     ],
 )
-def test_smoke_not_pinhole_sensors(sensors):
-
+@pytest.mark.parametrize("cuda", [True, False])
+def test_smoke_not_pinhole_sensors(sensors, cuda):
+    habitat_sim = pytest.importorskip("habitat_sim")
+    if not habitat_sim.cuda_enabled and cuda:
+        pytest.skip("habitat_sim must be built with CUDA to test G2P2GPU")
     config = get_config()
     config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = cuda
+
     config.SIMULATOR.SCENE = (
         "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
     )
@@ -438,14 +443,19 @@ def test_smoke_not_pinhole_sensors(sensors):
     "sensor", ["RGB_SENSOR", "DEPTH_SENSOR", "SEMANTIC_SENSOR"]
 )
 @pytest.mark.parametrize("sensor_subtype", ["ORTHOGRAPHIC", "PINHOLE"])
-def test_smoke_pinhole_sensors(sensor, sensor_subtype):
+@pytest.mark.parametrize("cuda", [True, False])
+def test_smoke_pinhole_sensors(sensor, sensor_subtype, cuda):
+    habitat_sim = pytest.importorskip("habitat_sim")
+    if not habitat_sim.cuda_enabled and cuda:
+        pytest.skip("habitat_sim must be built with CUDA")
     config = get_config()
     config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = cuda
     config.SIMULATOR.SCENE = (
         "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
     )
     config.SIMULATOR.AGENT_0.SENSORS = [sensor]
-    setattr(getattr(config.SIMULATOR, sensor).SENSOR_SUBTYPE, sensor_subtype)
+    getattr(config.SIMULATOR, sensor).SENSOR_SUBTYPE = sensor_subtype
     config.freeze()
     smoke_test_sensor(config)
 
