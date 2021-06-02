@@ -525,9 +525,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
-        )
         return self.get_agent(agent_id).get_state()
 
     def set_agent_state(
