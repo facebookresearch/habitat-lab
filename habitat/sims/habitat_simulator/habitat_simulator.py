@@ -60,6 +60,7 @@ def overwrite_config(
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
         ignore_keys: Optional set of keys to ignore in config_to
+        trans_dict: A Dict of str, callable which can be used on any value that has a matching key if not in ignore_keys.
     """
 
     def if_config_to_lower(config):
