@@ -240,11 +240,6 @@ def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
     )
 
 
-HabitatSimVizSensors = Union[
-    HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
-]
-
-
 @registry.register_simulator(name="Sim-v0")
 class HabitatSim(habitat_sim.Simulator, Simulator):
     r"""Simulator wrapper over habitat-sim
