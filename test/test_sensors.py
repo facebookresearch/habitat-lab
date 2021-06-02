@@ -378,6 +378,7 @@ def test_get_observations_at():
         assert np.allclose(agent_state.rotation, start_state.rotation)
 
 
+# TODO add testing for ortho
 @pytest.mark.parametrize(
     "sensors",
     [
