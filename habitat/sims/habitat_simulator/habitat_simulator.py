@@ -86,9 +86,14 @@ def overwrite_config(
                 )
 
 
-@registry.register_sensor
-class HabitatSimRGBSensor(RGBSensor):
+class HabitatSimSensor:
     sim_sensor_type: habitat_sim.SensorType
+    _get_default_spec = Callable[..., habitat_sim.sensor.SensorSpec]
+    _config_ignore_keys = {"height", "type", "width"}
+
+
+@registry.register_sensor
+class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
 
     def __init__(self, config: Config) -> None:
@@ -115,9 +120,15 @@ class HabitatSimRGBSensor(RGBSensor):
 
 
 @registry.register_sensor
-class HabitatSimDepthSensor(DepthSensor):
-    sim_sensor_type: habitat_sim.SensorType
+class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
+    _config_ignore_keys = HabitatSimSensor._config_ignore_keys.union(
+        {
+            "max_depth",
+            "min_depth",
+            "normalize_depth",
+        }
+    )
     min_depth_value: float
     max_depth_value: float
 
@@ -167,8 +178,7 @@ class HabitatSimDepthSensor(DepthSensor):
 
 
 @registry.register_sensor
-class HabitatSimSemanticSensor(SemanticSensor):
-    sim_sensor_type: habitat_sim.SensorType
+class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
 
     def __init__(self, config):
@@ -299,24 +309,15 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
-            sensor = cast(HabitatSimVizSensors, sensor)
-            sim_sensor_cfg = sensor._get_default_spec()
-            # TODO Handle configs for custom VisualSensors that might need
-            # their own ignore_keys. Maybe with special key / checking
-            # SensorType
+            assert isinstance(sensor, HabitatSimSensor)
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[misc]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
                 # These keys are only used by Hab-Lab
                 # or translated into the sensor config manually
-                ignore_keys={
-                    "height",
-                    "max_depth",
-                    "min_depth",
-                    "normalize_depth",
-                    "type",
-                    "width",
-                },
+                ignore_keys=sensor._config_ignore_keys,
+                # TODO consider making trans_dict a sensor class var too.
                 trans_dict={
                     "sensor_model_type": lambda v: getattr(
                         habitat_sim.FisheyeSensorModelType, v

@@ -271,9 +271,6 @@ _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
 # EQUIRECT SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.merge_from_other_cfg(
-    SIMULATOR_DEPTH_SENSOR
-)
 _C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
     "HabitatSimEquirectangularSemanticSensor"
 )
@@ -303,9 +300,6 @@ _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
 # FISHEYE SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR = FISHEYE_SIM_SENSOR.clone()
-_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.merge_from_other_cfg(
-    SIMULATOR_DEPTH_SENSOR
-)
 _C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
