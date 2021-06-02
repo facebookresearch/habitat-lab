@@ -48,7 +48,7 @@ def overwrite_config(
     config_from: Config,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
-    trans_dict: Dict[str, Callable] = None,
+    trans_dict: Optional[Dict[str, Callable]] = None,
 ) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
