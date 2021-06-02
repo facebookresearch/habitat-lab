@@ -194,44 +194,32 @@ class HabitatSimSemanticSensor(SemanticSensor):
 # TODO Sensor Hierarchy needs to be redone here. These should not subclass camera sensors
 @registry.register_sensor
 class HabitatSimEquirectangularRGBSensor(HabitatSimRGBSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
 
 
 @registry.register_sensor
 class HabitatSimEquirectangularDepthSensor(HabitatSimDepthSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
 
 
 @registry.register_sensor
 class HabitatSimEquirectangularSemanticSensor(HabitatSimSemanticSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
 
 
 @registry.register_sensor
 class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 @registry.register_sensor
 class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 @registry.register_sensor
 class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
-    def __init__(self, config) -> None:
-        super().__init__(config=config)
-        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
