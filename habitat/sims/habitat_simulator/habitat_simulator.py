@@ -43,8 +43,6 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import Space
 
-RGBSENSOR_DIMENSION = 3
-
 
 def overwrite_config(
     config_from: Config,
@@ -96,16 +94,22 @@ class HabitatSimSensor:
 @registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.COLOR
+
+    RGBSENSOR_DIMENSION = 3
 
     def __init__(self, config: Config) -> None:
-        self.sim_sensor_type = habitat_sim.SensorType.COLOR
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
         return spaces.Box(
             low=0,
             high=255,
-            shape=(self.config.HEIGHT, self.config.WIDTH, RGBSENSOR_DIMENSION),
+            shape=(
+                self.config.HEIGHT,
+                self.config.WIDTH,
+                self.RGBSENSOR_DIMENSION,
+            ),
             dtype=np.uint8,
         )
 
@@ -116,7 +120,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
         check_sim_obs(obs, self)
 
         # remove alpha channel
-        obs = obs[:, :, :RGBSENSOR_DIMENSION]  # type: ignore[index]
+        obs = obs[:, :, : self.RGBSENSOR_DIMENSION]  # type: ignore[index]
         return obs
 
 
@@ -130,12 +134,12 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
             "normalize_depth",
         }
     )
+    sim_sensor_type = habitat_sim.SensorType.DEPTH
+
     min_depth_value: float
     max_depth_value: float
 
     def __init__(self, config: Config) -> None:
-        self.sim_sensor_type = habitat_sim.SensorType.DEPTH
-
         if config.NORMALIZE_DEPTH:
             self.min_depth_value = 0
             self.max_depth_value = 1
@@ -181,9 +185,9 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
 @registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
-    def __init__(self, config):
-        self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
+    def __init__(self, config: Config) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
