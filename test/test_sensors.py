@@ -378,28 +378,7 @@ def test_get_observations_at():
         assert np.allclose(agent_state.rotation, start_state.rotation)
 
 
-# TODO add testing for ortho
-@pytest.mark.parametrize(
-    "sensors",
-    [
-        ["FISHEYE_RGB_SENSOR"],
-        ["FISHEYE_DEPTH_SENSOR"],
-        ["FISHEYE_SEMANTIC_SENSOR"],
-        ["EQUIRECT_RGB_SENSOR"],
-        ["EQUIRECT_DEPTH_SENSOR"],
-        ["EQUIRECT_SEMANTIC_SENSOR"],
-    ],
-)
-def test_smoke_not_pinhole_sensors(sensors):
-    N_STEPS = 100
-
-    config = get_config()
-    config.defrost()
-    config.SIMULATOR.SCENE = (
-        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
-    )
-    config.SIMULATOR.AGENT_0.SENSORS = sensors
-    config.freeze()
+def smoke_test_sensor(config, N_STEPS=100):
     if not os.path.exists(config.SIMULATOR.SCENE):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -419,7 +398,6 @@ def test_smoke_not_pinhole_sensors(sensors):
         goals=[NavigationGoal(position=goal_position)],
     )
 
-    print(f"{test_episode}")
     with habitat.Env(config=config, dataset=None) as env:
 
         env.episode_iterator = iter([test_episode])
@@ -431,6 +409,45 @@ def test_smoke_not_pinhole_sensors(sensors):
         ]
         for action in actions:
             assert env.step(action) is not None
+
+
+@pytest.mark.parametrize(
+    "sensors",
+    [
+        ["FISHEYE_RGB_SENSOR"],
+        ["FISHEYE_DEPTH_SENSOR"],
+        ["FISHEYE_SEMANTIC_SENSOR"],
+        ["EQUIRECT_RGB_SENSOR"],
+        ["EQUIRECT_DEPTH_SENSOR"],
+        ["EQUIRECT_SEMANTIC_SENSOR"],
+    ],
+)
+def test_smoke_not_pinhole_sensors(sensors):
+
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.SCENE = (
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    config.SIMULATOR.AGENT_0.SENSORS = sensors
+    config.freeze()
+    smoke_test_sensor(config)
+
+
+@pytest.mark.parametrize(
+    "sensor", ["RGB_SENSOR", "DEPTH_SENSOR", "SEMANTIC_SENSOR"]
+)
+@pytest.mark.parametrize("sensor_subtype", ["ORTHOGRAPHIC", "PINHOLE"])
+def test_smoke_pinhole_sensors(sensor, sensor_subtype):
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.SCENE = (
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    config.SIMULATOR.AGENT_0.SENSORS = [sensor]
+    setattr(getattr(config.SIMULATOR, sensor).SENSOR_SUBTYPE, sensor_subtype)
+    config.freeze()
+    smoke_test_sensor(config)
 
 
 def test_noise_models_rgbd():
