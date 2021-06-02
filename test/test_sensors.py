@@ -383,8 +383,10 @@ def test_get_observations_at():
     [
         ["FISHEYE_RGB_SENSOR"],
         ["FISHEYE_DEPTH_SENSOR"],
+        ["FISHEYE_SEMANTIC_SENSOR"],
         ["EQUIRECT_RGB_SENSOR"],
         ["EQUIRECT_DEPTH_SENSOR"],
+        ["EQUIRECT_SEMANTIC_SENSOR"],
     ],
 )
 def test_smoke_not_pinhole_sensors(sensors):

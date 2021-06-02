@@ -255,14 +255,27 @@ _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
 _C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
 # -----------------------------------------------------------------------------
-# EQUIRECT SENSOR
+# EQUIRECT RGB SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.EQUIRECT_RGB_SENSOR.TYPE = "HabitatSimEquirectangularRGBSensor"
+# -----------------------------------------------------------------------------
+# EQUIRECT DEPTH SENSOR
+# -----------------------------------------------------------------------------
 _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
     "HabitatSimEquirectangularDepthSensor"
+)
+# -----------------------------------------------------------------------------
+# EQUIRECT SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.merge_from_other_cfg(
+    SIMULATOR_DEPTH_SENSOR
+)
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
+    "HabitatSimEquirectangularSemanticSensor"
 )
 # -----------------------------------------------------------------------------
 # FISHEYE SENSOR
@@ -275,12 +288,25 @@ FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = [
     FISHEYE_SIM_SENSOR.WIDTH / 2.0,
 ]
 FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
-
+# -----------------------------------------------------------------------------
+# FISHEYE RGB SENSOR
+# -----------------------------------------------------------------------------
 _C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR.clone()
 _C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE DEPTH SENSOR
+# -----------------------------------------------------------------------------
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR.clone()
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.merge_from_other_cfg(
+    SIMULATOR_DEPTH_SENSOR
+)
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
 # -----------------------------------------------------------------------------

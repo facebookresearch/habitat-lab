@@ -89,7 +89,7 @@ def overwrite_config(
 @registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor):
     sim_sensor_type: habitat_sim.SensorType
-    _sensor_spec_factory = habitat_sim.CameraSensorSpec
+    _get_default_spec = habitat_sim.CameraSensorSpec
 
     def __init__(self, config: Config) -> None:
         self.sim_sensor_type = habitat_sim.SensorType.COLOR
@@ -117,7 +117,7 @@ class HabitatSimRGBSensor(RGBSensor):
 @registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor):
     sim_sensor_type: habitat_sim.SensorType
-    _sensor_spec_factory = habitat_sim.CameraSensorSpec
+    _get_default_spec = habitat_sim.CameraSensorSpec
     min_depth_value: float
     max_depth_value: float
 
@@ -169,7 +169,7 @@ class HabitatSimDepthSensor(DepthSensor):
 @registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor):
     sim_sensor_type: habitat_sim.SensorType
-    _sensor_spec_factory = habitat_sim.CameraSensorSpec
+    _get_default_spec = habitat_sim.CameraSensorSpec
 
     def __init__(self, config):
         self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
@@ -196,28 +196,42 @@ class HabitatSimSemanticSensor(SemanticSensor):
 class HabitatSimEquirectangularRGBSensor(HabitatSimRGBSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = habitat_sim.EquirectangularSensorSpec
+        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
 
 
 @registry.register_sensor
 class HabitatSimEquirectangularDepthSensor(HabitatSimDepthSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = habitat_sim.EquirectangularSensorSpec
+        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
+
+
+@registry.register_sensor
+class HabitatSimEquirectangularSemanticSensor(HabitatSimSemanticSensor):
+    def __init__(self, config) -> None:
+        super().__init__(config=config)
+        self._get_default_spec = habitat_sim.EquirectangularSensorSpec
 
 
 @registry.register_sensor
 class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = habitat_sim.FisheyeSensorDoubleSphereSpec
+        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 @registry.register_sensor
 class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
     def __init__(self, config) -> None:
         super().__init__(config=config)
-        self._sensor_spec_factory = habitat_sim.FisheyeSensorDoubleSphereSpec
+        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+
+
+@registry.register_sensor
+class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
+    def __init__(self, config) -> None:
+        super().__init__(config=config)
+        self._get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
@@ -298,7 +312,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sensor = cast(HabitatSimVizSensors, sensor)
-            sim_sensor_cfg = sensor._sensor_spec_factory()
+            sim_sensor_cfg = sensor._get_default_spec()
             # TODO Handle configs for custom VisualSensors that might need
             # their own ignore_keys. Maybe with special key / checking
             # SensorType
