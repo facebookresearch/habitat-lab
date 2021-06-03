@@ -127,13 +127,11 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 @registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
-    _config_ignore_keys = HabitatSimSensor._config_ignore_keys.union(
-        {
-            "max_depth",
-            "min_depth",
-            "normalize_depth",
-        }
-    )
+    _config_ignore_keys = {
+        "max_depth",
+        "min_depth",
+        "normalize_depth",
+    }.union(HabitatSimSensor._config_ignore_keys)
     sim_sensor_type = habitat_sim.SensorType.DEPTH
 
     min_depth_value: float
