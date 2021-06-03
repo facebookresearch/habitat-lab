@@ -91,7 +91,7 @@ def make_good_config_for_orbslam2(config):
     return
 
 
-class RandomAgent(object):
+class RandomAgent:
     r"""Simplest agent, which returns random actions,
     until reach the goal
     """
