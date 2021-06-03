@@ -289,10 +289,7 @@ FISHEYE_SIM_SENSOR.ALPHA = 0.57
 FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [364.84, 364.86]
 # Place camera at center of screen
 # Can be specified, otherwise is calculated automatically.
-# FISHEYE_SIM_SENSOR.principal_point_offset = (
-#    FISHEYE_SIM_SENSOR.HEIGHT / 2.0,
-#    FISHEYE_SIM_SENSOR.WIDTH / 2.0,i
-# )
+FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = None  # (defaults to (h/2,w/2))
 FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
 # -----------------------------------------------------------------------------
 # FISHEYE RGB SENSOR
