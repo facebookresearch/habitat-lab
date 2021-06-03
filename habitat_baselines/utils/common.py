@@ -204,10 +204,10 @@ def batch_obs(
         if cache is not None:
             # If we were using a numpy array to do indexing and copying,
             # convert back to torch tensor
-            # We know that batch_t[sensor] is either an np.ndarray
+            # We know that batch_t[sensor_name] is either an np.ndarray
             # or a torch.Tensor, so this is faster than torch.as_tensor
-            if isinstance(batch_t[sensor], np.ndarray):
-                batch_t[sensor] = torch.from_numpy(batch_t[sensor])
+            if isinstance(batch_t[sensor_name], np.ndarray):
+                batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
 
             batch_t[sensor_name] = batch_t[sensor_name].to(
                 device, non_blocking=True
