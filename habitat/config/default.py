@@ -279,11 +279,20 @@ _C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
 # -----------------------------------------------------------------------------
 FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
 FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
-FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [FISHEYE_SIM_SENSOR.HEIGHT * 0.5] * 2
-FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = [
-    FISHEYE_SIM_SENSOR.HEIGHT / 2.0,
-    FISHEYE_SIM_SENSOR.WIDTH / 2.0,
-]
+
+# The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
+# Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
+# Camera Model, The International Conference on 3D Vision (3DV), 2018
+# You can find the intrinsic parameters for the other lenses in the same table as well.
+FISHEYE_SIM_SENSOR.XI = -0.27
+FISHEYE_SIM_SENSOR.ALPHA = 0.57
+FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [364.84, 364.86]
+# Place camera at center of screen
+# Can be specified, otherwise is calculated automatically.
+# FISHEYE_SIM_SENSOR.principal_point_offset = (
+#    FISHEYE_SIM_SENSOR.HEIGHT / 2.0,
+#    FISHEYE_SIM_SENSOR.WIDTH / 2.0,i
+# )
 FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
 # -----------------------------------------------------------------------------
 # FISHEYE RGB SENSOR
