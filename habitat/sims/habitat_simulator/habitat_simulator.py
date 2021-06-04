@@ -7,6 +7,7 @@
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Optional,
@@ -42,11 +43,12 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import Space
 
-RGBSENSOR_DIMENSION = 3
-
 
 def overwrite_config(
-    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
+    config_from: Config,
+    config_to: Any,
+    ignore_keys: Optional[Set[str]] = None,
+    trans_dict: Optional[Dict[str, Callable]] = None,
 ) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
@@ -56,6 +58,7 @@ def overwrite_config(
         config_from: Habitat Lab config node.
         config_to: Habitat-Sim config structure.
         ignore_keys: Optional set of keys to ignore in config_to
+        trans_dict: A Dict of str, callable which can be used on any value that has a matching key if not in ignore_keys.
     """
 
     def if_config_to_lower(config):
@@ -68,7 +71,10 @@ def overwrite_config(
         low_attr = attr.lower()
         if ignore_keys is None or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
-                setattr(config_to, low_attr, if_config_to_lower(value))
+                if trans_dict is not None and low_attr in trans_dict:
+                    setattr(config_to, low_attr, trans_dict[low_attr](value))
+                else:
+                    setattr(config_to, low_attr, if_config_to_lower(value))
             else:
                 raise NameError(
                     f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
@@ -79,21 +85,31 @@ def overwrite_config(
                 )
 
 
-@registry.register_sensor
-class HabitatSimRGBSensor(RGBSensor):
+class HabitatSimSensor:
     sim_sensor_type: habitat_sim.SensorType
-    sim_sensor_subtype: habitat_sim.SensorSubType
+    _get_default_spec = Callable[..., habitat_sim.sensor.SensorSpec]
+    _config_ignore_keys = {"height", "type", "width"}
+
+
+@registry.register_sensor
+class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.COLOR
+
+    RGBSENSOR_DIMENSION = 3
 
     def __init__(self, config: Config) -> None:
-        self.sim_sensor_type = habitat_sim.SensorType.COLOR
-        self.sim_sensor_subtype = habitat_sim.SensorSubType.PINHOLE
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
         return spaces.Box(
             low=0,
             high=255,
-            shape=(self.config.HEIGHT, self.config.WIDTH, RGBSENSOR_DIMENSION),
+            shape=(
+                self.config.HEIGHT,
+                self.config.WIDTH,
+                self.RGBSENSOR_DIMENSION,
+            ),
             dtype=np.uint8,
         )
 
@@ -104,21 +120,24 @@ class HabitatSimRGBSensor(RGBSensor):
         check_sim_obs(obs, self)
 
         # remove alpha channel
-        obs = obs[:, :, :RGBSENSOR_DIMENSION]  # type: ignore[index]
+        obs = obs[:, :, : self.RGBSENSOR_DIMENSION]  # type: ignore[index]
         return obs
 
 
 @registry.register_sensor
-class HabitatSimDepthSensor(DepthSensor):
-    sim_sensor_type: habitat_sim.SensorType
-    sim_sensor_subtype: habitat_sim.SensorSubType
+class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    _config_ignore_keys = {
+        "max_depth",
+        "min_depth",
+        "normalize_depth",
+    }.union(HabitatSimSensor._config_ignore_keys)
+    sim_sensor_type = habitat_sim.SensorType.DEPTH
+
     min_depth_value: float
     max_depth_value: float
 
     def __init__(self, config: Config) -> None:
-        self.sim_sensor_type = habitat_sim.SensorType.DEPTH
-        self.sim_sensor_subtype = habitat_sim.SensorSubType.PINHOLE
-
         if config.NORMALIZE_DEPTH:
             self.min_depth_value = 0
             self.max_depth_value = 1
@@ -162,13 +181,11 @@ class HabitatSimDepthSensor(DepthSensor):
 
 
 @registry.register_sensor
-class HabitatSimSemanticSensor(SemanticSensor):
-    sim_sensor_type: habitat_sim.SensorType
-    sim_sensor_subtype: habitat_sim.SensorSubType
+class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
-    def __init__(self, config):
-        self.sim_sensor_type = habitat_sim.SensorType.SEMANTIC
-        self.sim_sensor_subtype = habitat_sim.SensorSubType.PINHOLE
+    def __init__(self, config: Config) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -187,16 +204,42 @@ class HabitatSimSemanticSensor(SemanticSensor):
         return obs
 
 
-def check_sim_obs(obs: ndarray, sensor: Sensor) -> None:
+# TODO Sensor Hierarchy needs to be redone here. These should not subclass camera sensors
+@registry.register_sensor
+class HabitatSimEquirectangularRGBSensor(HabitatSimRGBSensor):
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
+
+
+@registry.register_sensor
+class HabitatSimEquirectangularDepthSensor(HabitatSimDepthSensor):
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
+
+
+@registry.register_sensor
+class HabitatSimEquirectangularSemanticSensor(HabitatSimSemanticSensor):
+    _get_default_spec = habitat_sim.EquirectangularSensorSpec
+
+
+@registry.register_sensor
+class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+
+
+@registry.register_sensor
+class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+
+
+@registry.register_sensor
+class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
+    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+
+
+def check_sim_obs(obs: Optional[ndarray], sensor: Sensor) -> None:
     assert obs is not None, (
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
     )
-
-
-HabitatSimVizSensors = Union[
-    HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
-]
 
 
 @registry.register_simulator(name="Sim-v0")
@@ -263,52 +306,23 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
 
         sensor_specifications = []
-        VisualSensorTypeSet = {
-            habitat_sim.SensorType.COLOR,
-            habitat_sim.SensorType.DEPTH,
-            habitat_sim.SensorType.SEMANTIC,
-        }
-        CameraSensorSubTypeSet = {
-            habitat_sim.SensorSubType.PINHOLE,
-            habitat_sim.SensorSubType.ORTHOGRAPHIC,
-        }
         for sensor in _sensor_suite.sensors.values():
-
-            # Check if type VisualSensorSpec, we know that Sensor is one of HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
-            if (
-                getattr(sensor, "sim_sensor_type", [])
-                not in VisualSensorTypeSet
-            ):
-                raise ValueError(
-                    f"""{getattr(sensor, "sim_sensor_type", [])} is an illegal sensorType that is not implemented yet"""
-                )
-            # Check if type CameraSensorSpec
-            if (
-                getattr(sensor, "sim_sensor_subtype", [])
-                not in CameraSensorSubTypeSet
-            ):
-                raise ValueError(
-                    f"""{getattr(sensor, "sim_sensor_subtype", [])} is an illegal sensorSubType for a VisualSensor"""
-                )
-
-            # TODO: Implement checks for other types of SensorSpecs
-
-            sim_sensor_cfg = habitat_sim.CameraSensorSpec()
-            # TODO Handle configs for custom VisualSensors that might need
-            # their own ignore_keys. Maybe with special key / checking
-            # SensorType
+            assert isinstance(sensor, HabitatSimSensor)
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[misc]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
                 # These keys are only used by Hab-Lab
                 # or translated into the sensor config manually
-                ignore_keys={
-                    "height",
-                    "max_depth",
-                    "min_depth",
-                    "normalize_depth",
-                    "type",
-                    "width",
+                ignore_keys=sensor._config_ignore_keys,
+                # TODO consider making trans_dict a sensor class var too.
+                trans_dict={
+                    "sensor_model_type": lambda v: getattr(
+                        habitat_sim.FisheyeSensorModelType, v
+                    ),
+                    "sensor_subtype": lambda v: getattr(
+                        habitat_sim.SensorSubType, v
+                    ),
                 },
             )
             sim_sensor_cfg.uuid = sensor.uuid
@@ -319,9 +333,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             # We know that the Sensor has to be one of these Sensors
-            sensor = cast(HabitatSimVizSensors, sensor)
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-            sim_sensor_cfg.sensor_subtype = sensor.sim_sensor_subtype
             sim_sensor_cfg.gpu2gpu_transfer = (
                 self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             )
@@ -511,9 +523,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
-        )
         return self.get_agent(agent_id).get_state()
 
     def set_agent_state(
