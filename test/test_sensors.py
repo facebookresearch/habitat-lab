@@ -378,6 +378,88 @@ def test_get_observations_at():
         assert np.allclose(agent_state.rotation, start_state.rotation)
 
 
+def smoke_test_sensor(config, N_STEPS=100):
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+
+    valid_start_position = [-1.3731, 0.08431, 8.60692]
+
+    expected_pointgoal = [0.1, 0.2, 0.3]
+    goal_position = np.add(valid_start_position, expected_pointgoal)
+
+    # starting quaternion is rotated 180 degree along z-axis, which
+    # corresponds to simulator using z-negative as forward action
+    start_rotation = [0, 0, 0, 1]
+    test_episode = NavigationEpisode(
+        episode_id="0",
+        scene_id=config.SIMULATOR.SCENE,
+        start_position=valid_start_position,
+        start_rotation=start_rotation,
+        goals=[NavigationGoal(position=goal_position)],
+    )
+
+    with habitat.Env(config=config, dataset=None) as env:
+
+        env.episode_iterator = iter([test_episode])
+        no_noise_obs = env.reset()
+        assert no_noise_obs is not None
+
+        actions = [
+            sample_non_stop_action(env.action_space) for _ in range(N_STEPS)
+        ]
+        for action in actions:
+            assert env.step(action) is not None
+
+
+@pytest.mark.parametrize(
+    "sensors",
+    [
+        ["FISHEYE_RGB_SENSOR"],
+        ["FISHEYE_DEPTH_SENSOR"],
+        ["FISHEYE_SEMANTIC_SENSOR"],
+        ["EQUIRECT_RGB_SENSOR"],
+        ["EQUIRECT_DEPTH_SENSOR"],
+        ["EQUIRECT_SEMANTIC_SENSOR"],
+    ],
+)
+@pytest.mark.parametrize("cuda", [True, False])
+def test_smoke_not_pinhole_sensors(sensors, cuda):
+    habitat_sim = pytest.importorskip("habitat_sim")
+    if not habitat_sim.cuda_enabled and cuda:
+        pytest.skip("habitat_sim must be built with CUDA to test G2P2GPU")
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = cuda
+
+    config.SIMULATOR.SCENE = (
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    config.SIMULATOR.AGENT_0.SENSORS = sensors
+    config.freeze()
+    smoke_test_sensor(config)
+
+
+@pytest.mark.parametrize(
+    "sensor", ["RGB_SENSOR", "DEPTH_SENSOR", "SEMANTIC_SENSOR"]
+)
+@pytest.mark.parametrize("sensor_subtype", ["ORTHOGRAPHIC", "PINHOLE"])
+@pytest.mark.parametrize("cuda", [True, False])
+def test_smoke_pinhole_sensors(sensor, sensor_subtype, cuda):
+    habitat_sim = pytest.importorskip("habitat_sim")
+    if not habitat_sim.cuda_enabled and cuda:
+        pytest.skip("habitat_sim must be built with CUDA")
+    config = get_config()
+    config.defrost()
+    config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = cuda
+    config.SIMULATOR.SCENE = (
+        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+    )
+    config.SIMULATOR.AGENT_0.SENSORS = [sensor]
+    getattr(config.SIMULATOR, sensor).SENSOR_SUBTYPE = sensor_subtype
+    config.freeze()
+    smoke_test_sensor(config)
+
+
 def test_noise_models_rgbd():
     DEMO_MODE = False
     N_STEPS = 100
@@ -421,24 +503,23 @@ def test_noise_models_rgbd():
         for action in actions:
             no_noise_obs.append(env.step(action))
             no_noise_states.append(env.sim.get_agent_state())
-        env.close()
 
-        config.defrost()
+    config.defrost()
 
-        config.SIMULATOR.RGB_SENSOR.NOISE_MODEL = "GaussianNoiseModel"
-        config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS = habitat.Config()
-        config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.INTENSITY_CONSTANT = 0.5
-        config.SIMULATOR.DEPTH_SENSOR.NOISE_MODEL = "RedwoodDepthNoiseModel"
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL = "GaussianNoiseModel"
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS = habitat.Config()
+    config.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.INTENSITY_CONSTANT = 0.5
+    config.SIMULATOR.DEPTH_SENSOR.NOISE_MODEL = "RedwoodDepthNoiseModel"
 
-        config.SIMULATOR.ACTION_SPACE_CONFIG = "pyrobotnoisy"
-        config.SIMULATOR.NOISE_MODEL = habitat.Config()
-        config.SIMULATOR.NOISE_MODEL.ROBOT = "LoCoBot"
-        config.SIMULATOR.NOISE_MODEL.CONTROLLER = "Proportional"
-        config.SIMULATOR.NOISE_MODEL.NOISE_MULTIPLIER = 0.5
+    config.SIMULATOR.ACTION_SPACE_CONFIG = "pyrobotnoisy"
+    config.SIMULATOR.NOISE_MODEL = habitat.Config()
+    config.SIMULATOR.NOISE_MODEL.ROBOT = "LoCoBot"
+    config.SIMULATOR.NOISE_MODEL.CONTROLLER = "Proportional"
+    config.SIMULATOR.NOISE_MODEL.NOISE_MULTIPLIER = 0.5
 
-        config.freeze()
+    config.freeze()
 
-        env = habitat.Env(config=config, dataset=None)
+    with habitat.Env(config=config, dataset=None) as env:
 
         env.episode_iterator = iter([test_episode])
 

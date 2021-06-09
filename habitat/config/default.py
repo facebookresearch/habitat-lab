@@ -223,27 +223,90 @@ _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 SIMULATOR_SENSOR = CN()
 SIMULATOR_SENSOR.HEIGHT = 480
 SIMULATOR_SENSOR.WIDTH = 640
-SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+
+# -----------------------------------------------------------------------------
+# CAMERA SENSOR
+# -----------------------------------------------------------------------------
+CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+
+SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+SIMULATOR_DEPTH_SENSOR.MIN_DEPTH = 0.0
+SIMULATOR_DEPTH_SENSOR.MAX_DEPTH = 10.0
+SIMULATOR_DEPTH_SENSOR.NORMALIZE_DEPTH = True
+
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
-_C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+# -----------------------------------------------------------------------------
+# EQUIRECT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_RGB_SENSOR.TYPE = "HabitatSimEquirectangularRGBSensor"
+# -----------------------------------------------------------------------------
+# EQUIRECT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
+    "HabitatSimEquirectangularDepthSensor"
+)
+# -----------------------------------------------------------------------------
+# EQUIRECT SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
+    "HabitatSimEquirectangularSemanticSensor"
+)
+# -----------------------------------------------------------------------------
+# FISHEYE SENSOR
+# -----------------------------------------------------------------------------
+FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
+
+# The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
+# Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
+# Camera Model, The International Conference on 3D Vision (3DV), 2018
+# You can find the intrinsic parameters for the other lenses in the same table as well.
+FISHEYE_SIM_SENSOR.XI = -0.27
+FISHEYE_SIM_SENSOR.ALPHA = 0.57
+FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [364.84, 364.86]
+# Place camera at center of screen
+# Can be specified, otherwise is calculated automatically.
+FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = None  # (defaults to (h/2,w/2))
+FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
+# -----------------------------------------------------------------------------
+# FISHEYE RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
 # -----------------------------------------------------------------------------
