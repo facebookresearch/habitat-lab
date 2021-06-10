@@ -23,6 +23,7 @@ jobs:
                 flake8-return \
                 flake8-simplify \
                 isort \
+                mypy \
                 numpy \
                 --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off

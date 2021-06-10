@@ -22,7 +22,9 @@ def angle_between_quaternions(q1: np.quaternion, q2: np.quaternion) -> float:
     return 2 * np.arctan2(np.linalg.norm(dq[1:]), np.abs(dq[0]))
 
 
-def quaternion_from_two_vectors(v0: np.array, v1: np.array) -> np.quaternion:
+def quaternion_from_two_vectors(
+    v0: np.ndarray, v1: np.ndarray
+) -> np.quaternion:
     r"""Computes the quaternion representation of v1 using v0 as the origin."""
     v0 = v0 / np.linalg.norm(v0)
     v1 = v1 / np.linalg.norm(v1)
@@ -55,13 +57,13 @@ def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
     return quat
 
 
-def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
+def quaternion_rotate_vector(quat: np.quaternion, v: np.ndarray) -> np.ndarray:
     r"""Rotates a vector by a quaternion
     Args:
         quaternion: The quaternion to rotate by
         v: The vector to rotate
     Returns:
-        np.array: The rotated vector
+        np.ndarray: The rotated vector
     """
     vq = np.quaternion(0, 0, 0, 0)
     vq.imag = v
@@ -70,7 +72,7 @@ def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
 
 def agent_state_target2ref(
     ref_agent_state: Union[List, Tuple], target_agent_state: Union[List, Tuple]
-) -> Tuple[np.quaternion, np.array]:
+) -> Tuple[np.quaternion, np.ndarray]:
     r"""Computes the target agent_state's rotation and position representation
     with respect to the coordinate system defined by reference agent's rotation and position.
     All rotations must be in [x, y, z, w] format.
