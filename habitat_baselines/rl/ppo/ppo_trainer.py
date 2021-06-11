@@ -737,10 +737,6 @@ class PPOTrainer(BaseRLTrainer):
             count_checkpoints = requeue_stats["count_checkpoints"]
             prev_time = requeue_stats["prev_time"]
 
-            self._last_checkpoint_percent = requeue_stats[
-                "_last_checkpoint_percent"
-            ]
-
             self.running_episode_stats = requeue_stats["running_episode_stats"]
             self.window_episode_stats.update(
                 requeue_stats["window_episode_stats"]

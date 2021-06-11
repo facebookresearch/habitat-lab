@@ -25,7 +25,7 @@ class CameraMock:
         pass
 
 
-class RobotMock:
+class RobotMock:  # noqa: SIM119
     def __init__(self, *args, **kwargs):
         self.camera = CameraMock()
         self.base = BaseMock()

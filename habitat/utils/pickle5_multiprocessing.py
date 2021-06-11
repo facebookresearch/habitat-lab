@@ -48,7 +48,7 @@ else:
     ForkingPickler5 = _ForkingPickler
 
 
-class ConnectionWrapper(object):
+class ConnectionWrapper:
     """Proxy class for _multiprocessing.Connection which uses ForkingPickler to
     serialize objects. Will use the Pickle5 backport if available."""
 
