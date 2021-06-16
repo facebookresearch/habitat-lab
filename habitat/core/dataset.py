@@ -98,7 +98,7 @@ class Dataset(Generic[T]):
     def get_scenes_to_load(cls, config: Config) -> List[str]:
         r"""Returns a list of scene names that would be loaded with this dataset.
 
-        Useful for determing what scenes to split up among different workers.
+        Useful for determining what scenes to split up among different workers.
 
         :param config: The config for the dataset
 

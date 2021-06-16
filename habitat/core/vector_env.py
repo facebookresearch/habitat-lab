@@ -159,7 +159,7 @@ class VectorEnv:
             spawn worker processes. Valid methods are
             :py:`{'spawn', 'forkserver', 'fork'}`; :py:`'forkserver'` is the
             recommended method as it works well with CUDA. If :py:`'fork'` is
-            used, the subproccess  must be started before any other GPU useage.
+            used, the subproccess  must be started before any other GPU usage.
         :param workers_ignore_signals: Whether or not workers will ignore SIGINT and SIGTERM
             and instead will only exit when :ref:`close` is called
         """

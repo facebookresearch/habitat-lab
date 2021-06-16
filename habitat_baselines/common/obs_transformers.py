@@ -960,7 +960,7 @@ class CubeMap2Equirect(ProjectionTransformer):
     FOV.
 
     Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
-    The output will be writen the UUID of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
@@ -1054,7 +1054,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
     FOV.
 
     Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
-    The output will be writen the UUID of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
@@ -1144,7 +1144,7 @@ class Equirect2CubeMap(ProjectionTransformer):
     r"""This is an experimental use of ObservationTransformer that converts
     an equirectangular image to cubemap images.
     Cubemap order is Back, Down, Front, Left, Right, Up.
-    The output will be writen the UUID of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
