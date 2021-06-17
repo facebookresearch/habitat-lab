@@ -29,6 +29,7 @@ from habitat.core.simulator import (
     ShortestPathPoint,
     Simulator,
 )
+from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
@@ -1125,11 +1126,19 @@ class VelocityAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(
-            low=np.array([self.min_lin_vel, self.min_lin_vel]),
-            high=np.array([self.max_lin_vel, self.max_lin_vel]),
-            shape=(2,),
-            dtype=np.float,
+        return ActionSpace(
+            {
+                "linear_velocity": spaces.Box(
+                    low=np.array([self.min_lin_vel]),
+                    high=np.array([self.max_lin_vel]),
+                    dtype=np.float32,
+                ),
+                "angular_velocity": spaces.Box(
+                    low=np.array([self.min_ang_vel]),
+                    high=np.array([self.max_ang_vel]),
+                    dtype=np.float32,
+                ),
+            }
         )
 
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):

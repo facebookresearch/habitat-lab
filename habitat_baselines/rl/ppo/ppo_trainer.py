@@ -19,7 +19,6 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
-from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
@@ -248,12 +247,9 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs()
 
         if self.using_velocity_ctrl:
-            self.policy_action_space = ActionSpace(
-                {
-                    "linear_velocity": EmptySpace(),
-                    "angular_velocity": EmptySpace(),
-                }
-            )
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
             action_shape = (2,)
             discrete_actions = False
         else:
@@ -908,12 +904,9 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config)
 
         if self.using_velocity_ctrl:
-            self.policy_action_space = ActionSpace(
-                {
-                    "linear_velocity": EmptySpace(),
-                    "angular_velocity": EmptySpace(),
-                }
-            )
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
             action_shape = (2,)
             action_type = torch.float
         else:
