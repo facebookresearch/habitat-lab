@@ -68,7 +68,7 @@ def reproject_local_to_global(xyz_local, p):
         xyz = xyz_local
     else:
         raise ValueError(
-            "3d point cloud dim is neighter 3, or 4 (homogenious)"
+            "3d point cloud dim is neighter 3, or 4 (homogeneous)"
         )
     # print(xyz.shape, P.shape)
     xyz_global = torch.mm(p.squeeze(), xyz.t())
