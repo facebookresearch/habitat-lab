@@ -67,8 +67,8 @@ class RolloutStorage:
             numsteps + 1, num_envs, action_shape
         )
         if action_space.__class__.__name__ == "ActionSpace":
-            self.buffers["actions"] = self.buffers["actions"].long()
-            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
+            self.buffers["actions"] = self.buffers["actions"].long()  # type: ignore
+            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()  # type: ignore
 
         self.buffers["masks"] = torch.zeros(
             numsteps + 1, num_envs, 1, dtype=torch.bool
@@ -159,7 +159,7 @@ class RolloutStorage:
             self.buffers["value_preds"][
                 self.current_rollout_step_idx
             ] = next_value
-            gae = torch.tensor(0.0)
+            gae = 0
             for step in reversed(range(self.current_rollout_step_idx)):
                 delta = (
                     self.buffers["rewards"][step]
@@ -171,8 +171,8 @@ class RolloutStorage:
                 gae = (
                     delta + gamma * tau * gae * self.buffers["masks"][step + 1]
                 )
-                self.buffers["returns"][step] = (
-                    gae + self.buffers["value_preds"][step]
+                self.buffers["returns"][step] = (  # type: ignore
+                    gae + self.buffers["value_preds"][step]  # type: ignore
                 )
         else:
             self.buffers["returns"][self.current_rollout_step_idx] = next_value

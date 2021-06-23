@@ -14,7 +14,9 @@ import torch
 
 TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
-TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
+TensorIndexType = Union[
+    int, slice, torch.Tensor, Tuple[Union[int, slice, torch.Tensor], ...]
+]
 
 
 class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
