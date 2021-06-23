@@ -15,6 +15,7 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import NavRLEnv
 
 
+@baseline_registry.register_env(name="RearrangementRLEnv")
 class RearrangementRLEnv(BaseHabEnv):
     """
     Defines additional logic for valid collisions and gripping.

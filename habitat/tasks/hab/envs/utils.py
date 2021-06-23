@@ -348,3 +348,65 @@ def get_largest_island_point(sim, height_thresh=None):
 
     ret = use_vs[sel_i]
     return ret
+
+
+import hashlib
+import os
+import os.path as osp
+import pickle
+import time
+
+CACHE_PATH = "./data/cache"
+
+
+class CacheHelper:
+    def __init__(
+        self, cache_name, lookup_val, def_val=None, verbose=False, rel_dir=""
+    ):
+        self.use_cache_path = osp.join(CACHE_PATH, rel_dir)
+        if not osp.exists(self.use_cache_path):
+            os.makedirs(self.use_cache_path)
+        sec_hash = hashlib.md5(str(lookup_val).encode("utf-8")).hexdigest()
+        cache_id = f"{cache_name}_{sec_hash}.pickle"
+        self.cache_id = osp.join(self.use_cache_path, cache_id)
+        self.def_val = def_val
+        self.verbose = verbose
+
+    def exists(self):
+        return osp.exists(self.cache_id)
+
+    def load(self, load_depth=0):
+        if self.exists():
+            try:
+                with open(self.cache_id, "rb") as f:
+                    if self.verbose:
+                        print("Loading cache @", self.cache_id)
+                    return pickle.load(f)
+            except EOFError as e:
+                if load_depth == 32:
+                    raise e
+                # try again soon
+                print(
+                    "Cache size is ",
+                    osp.getsize(self.cache_id),
+                    "for ",
+                    self.cache_id,
+                )
+                time.sleep(1.0 + np.random.uniform(0.0, 1.0))
+                return self.load(load_depth + 1)
+            return self.def_val
+        else:
+            return self.def_val
+
+
+import gym
+
+
+def reshape_obs_space(obs_space, new_shape):
+    assert isinstance(obs_space, gym.spaces.Box)
+    return gym.spaces.Box(
+        shape=new_shape,
+        high=obs_space.low.reshape(-1)[0],
+        low=obs_space.high.reshape(-1)[0],
+        dtype=obs_space.dtype,
+    )
