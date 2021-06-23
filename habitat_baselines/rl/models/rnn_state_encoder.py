@@ -51,7 +51,7 @@ def _build_pack_info_from_dones(
     # original dones for masking later, so this is fine
     # and simplifies logic considerably
     rollout_boundaries[0] = True
-    rollout_boundaries = rollout_boundaries.nonzero(as_tuple=False)
+    rollout_boundaries = rollout_boundaries.nonzero(as_tuple=False)  # type: ignore
 
     # The rollout_boundaries[:, 0]*N will make the episode_starts index into
     # the T*N flattened tensors
@@ -265,6 +265,7 @@ class RNNStateEncoder(nn.Module):
     is that it takes an addition masks input that resets the hidden state between two adjacent
     timesteps to handle episodes ending in the middle of a rollout.
     """
+    rnn: nn.Module
 
     def layer_init(self):
         for name, param in self.rnn.named_parameters():

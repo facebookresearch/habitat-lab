@@ -66,6 +66,7 @@ class OptionedCommand:
             # self.distribution accesses arguments of setup() in main()
         else:  # install all except test and examples
             self.distribution.install_requires = FULL_REQUIREMENTS
+
         super().run()
 
 

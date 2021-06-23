@@ -1,3 +1,6 @@
 graft habitat/utils/visualizations/assets
+graft habitat/configs
 include habitat/py.typed
+
 include habitat_baselines/py.typed
+include habitat_baselines/config/**.yaml
