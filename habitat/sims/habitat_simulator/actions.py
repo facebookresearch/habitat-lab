@@ -43,7 +43,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
             self._known_actions[action.name] = action.value
 
     def extend_action_space(self, name: str) -> int:
-        r"""Extends the action space to accomodate a new action with
+        r"""Extends the action space to accommodate a new action with
         the name :p:`name`
 
         :param name: The name of the new action

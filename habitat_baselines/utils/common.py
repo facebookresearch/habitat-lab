@@ -93,7 +93,7 @@ class ObservationBatchingCache:
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
-    _pool: Dict[Any, torch.Tensor] = attr.Factory(dict)
+    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = attr.Factory(dict)
 
     def get(
         self,
@@ -101,7 +101,7 @@ class ObservationBatchingCache:
         sensor_name: str,
         sensor: torch.Tensor,
         device: Optional[torch.device] = None,
-    ) -> torch.Tensor:
+    ) -> Union[torch.Tensor, np.ndarray]:
         r"""Returns a tensor of the right size to batch num_obs observations together
 
         If sensor is a cpu-side tensor and device is a cuda device the batched tensor will
@@ -127,7 +127,9 @@ class ObservationBatchingCache:
             and device.type == "cuda"
             and cache.device.type == "cpu"
         ):
-            cache = cache.pin_memory()
+            # Pytorch indexing is slow,
+            # so convert to numpy
+            cache = cache.pin_memory().numpy()
 
         self._pool[key] = cache
         return cache
@@ -171,21 +173,42 @@ def batch_obs(
 
     for sensor_name in sensor_names:
         for i, obs in enumerate(observations):
-            sensor = torch.as_tensor(obs[sensor_name])
+            sensor = obs[sensor_name]
             if cache is None:
-                batch[sensor_name].append(sensor)
+                batch[sensor_name].append(torch.as_tensor(sensor))
             else:
                 if sensor_name not in batch_t:
                     batch_t[sensor_name] = cache.get(
-                        len(observations), sensor_name, sensor, device
+                        len(observations),
+                        sensor_name,
+                        torch.as_tensor(sensor),
+                        device,
                     )
 
-                batch_t[sensor_name][i].copy_(sensor)
+                # Use isinstance(sensor, np.ndarray) here instead of
+                # np.asarray as this is quickier for the more common
+                # path of sensor being an np.ndarray
+                # np.asarray is ~3x slower than checking
+                if isinstance(sensor, np.ndarray):
+                    batch_t[sensor_name][i] = sensor
+                elif torch.is_tensor(sensor):
+                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)
+                # If the sensor wasn't a tensor, then it's some CPU side data
+                # so use a numpy array
+                else:
+                    batch_t[sensor_name][i] = np.asarray(sensor)
 
         # With the batching cache, we use pinned mem
         # so we can start the move to the GPU async
         # and continue stacking other things with it
         if cache is not None:
+            # If we were using a numpy array to do indexing and copying,
+            # convert back to torch tensor
+            # We know that batch_t[sensor_name] is either an np.ndarray
+            # or a torch.Tensor, so this is faster than torch.as_tensor
+            if isinstance(batch_t[sensor_name], np.ndarray):
+                batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
+
             batch_t[sensor_name] = batch_t[sensor_name].to(
                 device, non_blocking=True
             )

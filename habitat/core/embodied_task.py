@@ -188,13 +188,13 @@ class Measurements:
             assert (
                 dependency_measure in self.measures
             ), f"""{measure_name} measure requires {dependency_measure}
-                listed in tje measures list in the config."""
+                listed in the measures list in the config."""
 
         for dependency_measure in dependencies:
             assert measure_index > self._get_measure_index(
                 dependency_measure
             ), f"""{measure_name} measure requires be listed after {dependency_measure}
-                in tje measures list in the config."""
+                in the measures list in the config."""
 
 
 class EmbodiedTask:
