@@ -178,8 +178,8 @@ class RolloutStorage:
                 gae = (
                     delta + gamma * tau * gae * self.buffers["masks"][step + 1]
                 )
-                self.buffers["returns"][step] = (
-                    gae + self.buffers["value_preds"][step]
+                self.buffers["returns"][step] = (  # type: ignore
+                    gae + self.buffers["value_preds"][step]  # type: ignore
                 )
         else:
             self.buffers["returns"][self.current_rollout_step_idx] = next_value

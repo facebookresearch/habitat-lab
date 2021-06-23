@@ -248,7 +248,7 @@ def batch_obs(
                 if isinstance(sensor, np.ndarray):
                     batch_t[sensor_name][i] = sensor
                 elif torch.is_tensor(sensor):
-                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)
+                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)  # type: ignore
                 # If the sensor wasn't a tensor, then it's some CPU side data
                 # so use a numpy array
                 else:
@@ -265,7 +265,7 @@ def batch_obs(
             if isinstance(batch_t[sensor_name], np.ndarray):
                 batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
 
-            batch_t[sensor_name] = batch_t[sensor_name].to(
+            batch_t[sensor_name] = batch_t[sensor_name].to(  # type: ignore
                 device, non_blocking=True
             )
 
