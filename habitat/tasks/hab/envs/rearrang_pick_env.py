@@ -239,11 +239,11 @@ class RearrangPickRLEnv(RearrangementRLEnv):
             and action_args["grip_ac"] <= 0
         )
 
-    def step(self, action_name, action_args):
+    def step(self, action, action_args):
         if self._should_prevent_grip(action_args):
             # No releasing the object once it is held.
             action_args["grip_ac"] = None
-        obs, reward, done, info = super().step(action_name, action_args)
+        obs, reward, done, info = super().step(action, action_args)
         info["dist_to_goal"] = self.cur_dist
         info["is_picked"] = int(self.prev_picked)
         cur_measures = self._env.get_metrics()

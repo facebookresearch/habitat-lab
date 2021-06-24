@@ -141,13 +141,7 @@ def test_rearrange_task():
                     f"{action['action']}, "
                     f"args: {action['action_args']}."
                 )
-                _, _, done, _ = env.step(**action)
+                _, _, done, info = env.step(**action)
 
-            metrics = env.get_metrics()
-            logger.info(metrics)
+            logger.info(info)
 
-        with pytest.raises(AssertionError):
-            env.step({"action": MoveForwardAction.name})
-
-if __name__ == '__main__':
-    test_rearrange_task()

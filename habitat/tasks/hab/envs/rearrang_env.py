@@ -157,8 +157,8 @@ class RearrangementRLEnv(BaseHabEnv):
     def end_episode(self):
         self.should_end = True
 
-    def step(self, action_name, action_args):
-        obs, reward, done, info = super().step(action_name, action_args)
+    def step(self, action, action_args):
+        obs, reward, done, info = super().step(action, action_args)
         # If we have any sort of collision at all the episode is over.
         info["ep_n_picks"] = self.n_succ_picks
         if (
