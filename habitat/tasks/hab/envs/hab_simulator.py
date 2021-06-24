@@ -71,22 +71,17 @@ def load_light_setup_for_glb(json_filepath):
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         lighting_setup = []
-        for l in data["lights"]:
+        for l in data['lights']:
             t = l["position"]
             light_w = 1.0
             position = [float(t[0]), float(t[1]), float(t[2]), light_w]
             color_scale = float(l["color_scale"])
             color = [float(c * color_scale) for c in l["color"]]
-            # print('position: {}'.format(position))
-            # print('color: {}'.format(color))
-            lighting_setup.append(
-                LightInfo(
-                    vector=position,
-                    color=color,
-                    model=LightPositionModel.Global,
-                )
-            )
-        # print("loaded {} lights".format(len(data['lights'])))
+            #print('position: {}'.format(position))
+            #print('color: {}'.format(color))
+            lighting_setup.append(LightInfo(vector=position,
+                color=color, model=LightPositionModel.GLOBAL))
+        #print("loaded {} lights".format(len(data['lights'])))
 
     return lighting_setup
 
@@ -170,7 +165,7 @@ class OrpSim(HabitatSim):
         else:
             raise ValueError("Unrecognized robot")
 
-        self._ik = IkHelper(self.arm_start)
+        #self._ik = IkHelper(self.arm_start)
 
         # A marker you can optionally render to visualize positions
         self.viz_marker = None
@@ -201,7 +196,7 @@ class OrpSim(HabitatSim):
         self.viz_ids = defaultdict(lambda: None)
         self.viz_traj_ids = []
         self._light_setup = load_light_setup_for_glb(
-            "orp/start_data/frl_apartment_stage_pvizplan_empty_lights.json"
+            "data/misc_data/frl_apartment_stage_pvizplan_empty_lights.json"
         )
         obj_attr_mgr = self._sim.get_object_template_manager()
         obj_attr_mgr.load_configs("data/objects")
@@ -418,7 +413,7 @@ class OrpSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
-            self._ik.setup_sim()
+            #self._ik.setup_sim()
             # Capture the starting art states
             for i in self.art_obj_ids:
                 self.start_art_states[

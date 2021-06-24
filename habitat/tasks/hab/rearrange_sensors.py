@@ -17,6 +17,16 @@ EE_GRIPPER_OFFSET = mn.Vector3(0.08, 0, 0)
 
 
 @registry.register_sensor
+class HeadRgbSensor(HabitatSimRGBSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "robot_head_rgb"
+
+@registry.register_sensor
+class HeadDepthSensor(HabitatSimDepthSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "robot_head_depth"
+
+@registry.register_sensor
 class ArmRgbSensor(HabitatSimRGBSensor):
     def _get_uuid(self, *args, **kwargs):
         return "arm_rgb"
