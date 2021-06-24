@@ -111,15 +111,24 @@ def test_dataset_splitting(split):
 
 
 def test_rearrange_task():
-    config = get_config("configs/tasks/rearrang_pick.yaml")
+    import habitat.tasks.hab.envs.hab_simulator
+    from habitat_baselines.config.default import get_config
+
+    config = get_config("configs/tasks/rl_rearrang_pick.yaml")
     # dataset = make_dataset(
     #     id_dataset=config.DATASET.TYPE, config=config.DATASET
     # )
     # env = DummyRLEnv(config=config, dataset=dataset)
+    # from habitat_baselines.common.environments import NavRLEnv
+    # env_class = get_env_class(config.ENV_NAME)
+    from habitat.tasks.hab.envs.rearrang_pick_env import RearrangPickRLEnv
     from habitat_baselines.common.environments import get_env_class
 
-    env_class = get_env_class(config.ENV_NAME)
-    env = habitat_baselines.utils.env_utils.make_env_fn(env_class, config)
+    env_class = RearrangPickRLEnv
+    env = habitat_baselines.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    # env = env_class(config=config)
 
     with env:
         for _ in range(10):

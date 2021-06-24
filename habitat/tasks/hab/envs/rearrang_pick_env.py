@@ -20,12 +20,14 @@ class RearrangPickRLEnv(RearrangementRLEnv):
         super().__init__(config, dataset)
         self.cache = {}
 
-        data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+        data_path = config.TASK_CONFIG.DATASET.DATA_PATH.format(
+            split=config.TASK_CONFIG.DATASET.SPLIT
+        )
 
         mtime = osp.getmtime(data_path)
         cache_name = (
             str(mtime)
-            + self.config.DATASET.SPLIT
+            + self.tcfg.DATASET.SPLIT
             + str(self.tcfg.COUNT_OBJ_COLLISIONS)
         )
         cache_name += str(self.rlcfg.BASE_NOISE)

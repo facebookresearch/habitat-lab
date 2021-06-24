@@ -1,0 +1,454 @@
+DATASET:
+  CONTENT_SCENES: ['*']
+  DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
+  SCENES_DIR: data/scene_datasets
+  SPLIT: train
+  TYPE: PointNav-v1
+ENVIRONMENT:
+  ITERATOR_OPTIONS:
+    CYCLE: True
+    GROUP_BY_SCENE: True
+    MAX_SCENE_REPEAT_EPISODES: -1
+    MAX_SCENE_REPEAT_STEPS: 10000
+    NUM_EPISODE_SAMPLE: -1
+    SHUFFLE: True
+    STEP_REPETITION_RANGE: 0.2
+  MAX_EPISODE_SECONDS: 10000000
+  MAX_EPISODE_STEPS: 1000
+ENV_NAME: RearrangPickRLEnv
+PYROBOT:
+  BASE_CONTROLLER: proportional
+  BASE_PLANNER: none
+  BUMP_SENSOR:
+    TYPE: PyRobotBumpSensor
+  DEPTH_SENSOR:
+    CENTER_CROP: False
+    HEIGHT: 480
+    MAX_DEPTH: 5.0
+    MIN_DEPTH: 0.0
+    NORMALIZE_DEPTH: True
+    TYPE: PyRobotDepthSensor
+    WIDTH: 640
+  LOCOBOT:
+    ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+    BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+    CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+  RGB_SENSOR:
+    CENTER_CROP: False
+    HEIGHT: 480
+    TYPE: PyRobotRGBSensor
+    WIDTH: 640
+  ROBOT: locobot
+  ROBOTS: ['locobot']
+  SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+RL:
+  BASE_ANGLE_NOISE: 0.15
+  BASE_NOISE: 0.05
+  COLL_PEN: 1.0
+  CONSTRAINT_VIOLATE_PEN: 10.0
+  DIST_REWARD: 20.0
+  DROP_PEN: 5.0
+  EASY_INIT: False
+  FORCE_END_PEN: 10.0
+  FORCE_PEN: 0.001
+  HOLD_THRESH: 0.09
+  MAX_FORCE_PEN: 1.0
+  PICK_REWARD: 20.0
+  REWARD_MEASURE: object_to_goal_distance
+  ROBO_OBJ_COLL_PEN: 0.0
+  SLACK_REWARD: -0.01
+  SUCCESS_MEASURE: object_to_goal_distance
+  SUCCESS_REWARD: 2000.0
+  SUCC_REWARD: 10.0
+  SUCC_THRESH: 0.15
+  USE_DIFF: True
+  WRONG_PICK_PEN: 5.0
+SEED: 100
+SIMULATOR:
+  ACTION_SPACE_CONFIG: v0
+  AGENTS: ['AGENT_0']
+  AGENT_0:
+    ANGULAR_ACCELERATION: 12.56
+    ANGULAR_FRICTION: 1.0
+    COEFFICIENT_OF_RESTITUTION: 0.0
+    HEIGHT: 1.5
+    IS_SET_START_STATE: False
+    LINEAR_ACCELERATION: 20.0
+    LINEAR_FRICTION: 0.5
+    MASS: 32.0
+    RADIUS: 0.1
+    SENSORS: ['RGB_SENSOR']
+    START_POSITION: [0, 0, 0]
+    START_ROTATION: [0, 0, 0, 1]
+  DEFAULT_AGENT_ID: 0
+  DEPTH_SENSOR:
+    HEIGHT: 480
+    HFOV: 90
+    MAX_DEPTH: 10.0
+    MIN_DEPTH: 0.0
+    NORMALIZE_DEPTH: True
+    ORIENTATION: [0.0, 0.0, 0.0]
+    POSITION: [0, 1.25, 0]
+    TYPE: HabitatSimDepthSensor
+    WIDTH: 640
+  FORWARD_STEP_SIZE: 0.25
+  HABITAT_SIM_V0:
+    ALLOW_SLIDING: True
+    ENABLE_PHYSICS: False
+    GPU_DEVICE_ID: 0
+    GPU_GPU: False
+    PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+  RGB_SENSOR:
+    HEIGHT: 480
+    HFOV: 90
+    ORIENTATION: [0.0, 0.0, 0.0]
+    POSITION: [0, 1.25, 0]
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+  SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+  SEED: 100
+  SEMANTIC_SENSOR:
+    HEIGHT: 480
+    HFOV: 90
+    ORIENTATION: [0.0, 0.0, 0.0]
+    POSITION: [0, 1.25, 0]
+    TYPE: HabitatSimSemanticSensor
+    WIDTH: 640
+  TILT_ANGLE: 15
+  TURN_ANGLE: 10
+  TYPE: Sim-v0
+TASK:
+  ACTIONS:
+    ANSWER:
+      TYPE: AnswerAction
+    LOOK_DOWN:
+      TYPE: LookDownAction
+    LOOK_UP:
+      TYPE: LookUpAction
+    MOVE_FORWARD:
+      TYPE: MoveForwardAction
+    STOP:
+      TYPE: StopAction
+    TELEPORT:
+      TYPE: TeleportAction
+    TURN_LEFT:
+      TYPE: TurnLeftAction
+    TURN_RIGHT:
+      TYPE: TurnRightAction
+  ANSWER_ACCURACY:
+    TYPE: AnswerAccuracy
+  COLLISIONS:
+    TYPE: Collisions
+  COMPASS_SENSOR:
+    TYPE: CompassSensor
+  CORRECT_ANSWER:
+    TYPE: CorrectAnswer
+  DISTANCE_TO_GOAL:
+    DISTANCE_TO: POINT
+    TYPE: DistanceToGoal
+  EPISODE_INFO:
+    TYPE: EpisodeInfo
+  GOAL_SENSOR_UUID: pointgoal
+  GPS_SENSOR:
+    DIMENSIONALITY: 2
+    TYPE: GPSSensor
+  HEADING_SENSOR:
+    TYPE: HeadingSensor
+  IMAGEGOAL_SENSOR:
+    TYPE: ImageGoalSensor
+  INSTRUCTION_SENSOR:
+    TYPE: InstructionSensor
+  INSTRUCTION_SENSOR_UUID: instruction
+  MEASUREMENTS: []
+  OBJECTGOAL_SENSOR:
+    GOAL_SPEC: TASK_CATEGORY_ID
+    GOAL_SPEC_MAX_VAL: 50
+    TYPE: ObjectGoalSensor
+  POINTGOAL_SENSOR:
+    DIMENSIONALITY: 2
+    GOAL_FORMAT: POLAR
+    TYPE: PointGoalSensor
+  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+    DIMENSIONALITY: 2
+    GOAL_FORMAT: POLAR
+    TYPE: PointGoalWithGPSCompassSensor
+  POSSIBLE_ACTIONS: ['STOP', 'MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT']
+  PROXIMITY_SENSOR:
+    MAX_DETECTION_RADIUS: 2.0
+    TYPE: ProximitySensor
+  QUESTION_SENSOR:
+    TYPE: QuestionSensor
+  SENSORS: []
+  SOFT_SPL:
+    TYPE: SoftSPL
+  SPL:
+    TYPE: SPL
+  SUCCESS:
+    SUCCESS_DISTANCE: 0.2
+    TYPE: Success
+  SUCCESS_DISTANCE: 0.2
+  TOP_DOWN_MAP:
+    DRAW_BORDER: True
+    DRAW_GOAL_AABBS: True
+    DRAW_GOAL_POSITIONS: True
+    DRAW_SHORTEST_PATH: True
+    DRAW_SOURCE: True
+    DRAW_VIEW_POINTS: True
+    FOG_OF_WAR:
+      DRAW: True
+      FOV: 90
+      VISIBILITY_DIST: 5.0
+    MAP_PADDING: 3
+    MAP_RESOLUTION: 1024
+    MAX_EPISODE_STEPS: 1000
+    TYPE: TopDownMap
+  TYPE: OrpTask-v0
+TASK_CONFIG:
+  COUNT_OBJ_COLLISIONS: True
+  COUNT_ROBO_OBJ_COLLS: False
+  DATASET:
+    CONTENT_SCENES: ['*']
+    DATA_PATH: data/episode_data/train_fridge_5000_500.json.gz
+    SCENES_DIR: data/scene_datasets
+    SPLIT: train
+    TYPE: OrpDataset-v0
+  ENVIRONMENT:
+    ITERATOR_OPTIONS:
+      CYCLE: True
+      GROUP_BY_SCENE: True
+      MAX_SCENE_REPEAT_EPISODES: -1
+      MAX_SCENE_REPEAT_STEPS: 10000
+      NUM_EPISODE_SAMPLE: -1
+      SHUFFLE: True
+      STEP_REPETITION_RANGE: 0.2
+    MAX_EPISODE_SECONDS: 10000000
+    MAX_EPISODE_STEPS: 200
+  FIX_BASE_TO_OBJ: None
+  FORCE_BASED: True
+  MAX_ACCUM_FORCE: 5000.0
+  MAX_COLLISIONS: 2000.0
+  PYROBOT:
+    BASE_CONTROLLER: proportional
+    BASE_PLANNER: none
+    BUMP_SENSOR:
+      TYPE: PyRobotBumpSensor
+    DEPTH_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      MAX_DEPTH: 5.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      TYPE: PyRobotDepthSensor
+      WIDTH: 640
+    LOCOBOT:
+      ACTIONS: ['BASE_ACTIONS', 'CAMERA_ACTIONS']
+      BASE_ACTIONS: ['go_to_relative', 'go_to_absolute']
+      CAMERA_ACTIONS: ['set_pan', 'set_tilt', 'set_pan_tilt']
+    RGB_SENSOR:
+      CENTER_CROP: False
+      HEIGHT: 480
+      TYPE: PyRobotRGBSensor
+      WIDTH: 640
+    ROBOT: locobot
+    ROBOTS: ['locobot']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'BUMP_SENSOR']
+  SEED: 100
+  SIMULATOR:
+    ACTION_SPACE_CONFIG: v0
+    AC_FREQ_RATIO: 4
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+      ANGULAR_ACCELERATION: 12.56
+      ANGULAR_FRICTION: 1.0
+      COEFFICIENT_OF_RESTITUTION: 0.0
+      HEIGHT: 1.5
+      IS_SET_START_STATE: False
+      LINEAR_ACCELERATION: 20.0
+      LINEAR_FRICTION: 0.5
+      MASS: 32.0
+      RADIUS: 0.1
+      SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+      START_POSITION: [0, 0, 0]
+      START_ROTATION: [0, 0, 0, 1]
+    ARM_DEPTH_SENSOR:
+      HEIGHT: 128
+      HFOV: 90
+      MAX_DEPTH: 10.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0, 0]
+      TYPE: ArmDepthSensor
+      WIDTH: 128
+    ARM_REST: [0.6, 0.0, 0.9]
+    ARM_RGB_SENSOR:
+      HEIGHT: 128
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0, 0]
+      TYPE: ArmRgbSensor
+      WIDTH: 128
+    CTRL_FREQ: 120.0
+    DEFAULT_AGENT_ID: 0
+    DEPTH_SENSOR:
+      HEIGHT: 128
+      HFOV: 90
+      MAX_DEPTH: 10.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0, 0]
+      TYPE: HabitatSimDepthSensor
+      WIDTH: 128
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+      ALLOW_SLIDING: True
+      ENABLE_PHYSICS: True
+      GPU_DEVICE_ID: 0
+      GPU_GPU: False
+      PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+      SCENE_LIGHT_SETUP:
+    HIGH_RES_DIM: 512
+    LAG_OBSERVATIONS: 2
+    POV: 1st
+    RGB_SENSOR:
+      HEIGHT: 128
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 0, 0]
+      TYPE: HabitatSimRGBSensor
+      WIDTH: 128
+    ROBOT_URDF: ./orp/robots/opt_fetch/robots/fetch_no_base.urdf
+    SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
+    SEED: 100
+    SEMANTIC_SENSOR:
+      HEIGHT: 480
+      HFOV: 90
+      ORIENTATION: [0.0, 0.0, 0.0]
+      POSITION: [0, 1.25, 0]
+      TYPE: HabitatSimSemanticSensor
+      WIDTH: 640
+    TILT_ANGLE: 15
+    TURN_ANGLE: 10
+    TYPE: OrpSim-v0
+  TASK:
+    ABS_GOAL_SENSOR:
+      DIMENSIONALITY: 3
+      GOAL_FORMAT: CARTESIAN
+      TYPE: AbsGoalSensor
+    ABS_TARGET_START_SENSOR:
+      DIMENSIONALITY: 3
+      GOAL_FORMAT: CARTESIAN
+      TYPE: AbsTargetStartSensor
+    ACTIONS:
+      ANSWER:
+        TYPE: AnswerAction
+      ARM_ACTION:
+        ARM_CONTROLLER: ArmEEAction
+        DISABLE_GRIP: False
+        EE_CTRL_LIM: 0.015
+        GRASP_THRESH_DIST: 0.15
+        GRIP_CONTROLLER: MagicGraspAction
+        TYPE: ArmAction
+      LOOK_DOWN:
+        TYPE: LookDownAction
+      LOOK_UP:
+        TYPE: LookUpAction
+      MOVE_FORWARD:
+        TYPE: MoveForwardAction
+      STOP:
+        TYPE: StopAction
+      TELEPORT:
+        TYPE: TeleportAction
+      TURN_LEFT:
+        TYPE: TurnLeftAction
+      TURN_RIGHT:
+        TYPE: TurnRightAction
+    ANSWER_ACCURACY:
+      TYPE: AnswerAccuracy
+    COLLISIONS:
+      TYPE: Collisions
+    COMPASS_SENSOR:
+      TYPE: CompassSensor
+    CORRECT_ANSWER:
+      TYPE: CorrectAnswer
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: POINT
+      TYPE: DistanceToGoal
+    EE_SENSOR:
+      TYPE: EeSensor
+    END_EFFECTOR_TO_OBJECT_DISTANCE:
+      TYPE: EndEffectorToObjectDistance
+    EPISODE_INFO:
+      TYPE: EpisodeInfo
+    GOAL_SENSOR:
+      DIMENSIONALITY: 3
+      GOAL_FORMAT: CARTESIAN
+      TYPE: GoalSensor
+    GOAL_SENSOR_UUID: pointgoal
+    GPS_SENSOR:
+      DIMENSIONALITY: 2
+      TYPE: GPSSensor
+    HEADING_SENSOR:
+      TYPE: HeadingSensor
+    IMAGEGOAL_SENSOR:
+      TYPE: ImageGoalSensor
+    INSTRUCTION_SENSOR:
+      TYPE: InstructionSensor
+    INSTRUCTION_SENSOR_UUID: instruction
+    IS_HOLDING_SENSOR:
+      TYPE: IsHoldingSensor
+    JOINT_SENSOR:
+      TYPE: JointSensor
+    LOCAL_SENSOR:
+      TYPE: LocalizationSensor
+    MEASUREMENTS: ['OBJECT_TO_GOAL_DISTANCE', 'END_EFFECTOR_TO_OBJECT_DISTANCE']
+    OBJECTGOAL_SENSOR:
+      GOAL_SPEC: TASK_CATEGORY_ID
+      GOAL_SPEC_MAX_VAL: 50
+      TYPE: ObjectGoalSensor
+    OBJECT_TO_GOAL_DISTANCE:
+      TYPE: ObjectToGoalDistance
+    POINTGOAL_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalSensor
+    POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+      DIMENSIONALITY: 2
+      GOAL_FORMAT: POLAR
+      TYPE: PointGoalWithGPSCompassSensor
+    POSSIBLE_ACTIONS: ['ARM_ACTION']
+    PROXIMITY_SENSOR:
+      MAX_DETECTION_RADIUS: 2.0
+      TYPE: ProximitySensor
+    QUESTION_SENSOR:
+      TYPE: QuestionSensor
+    SENSORS: ['TARGET_START_SENSOR', 'GOAL_SENSOR', 'JOINT_SENSOR', 'IS_HOLDING_SENSOR', 'EE_SENSOR', 'LOCAL_SENSOR']
+    SOFT_SPL:
+      TYPE: SoftSPL
+    SPL:
+      TYPE: SPL
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.2
+      TYPE: Success
+    SUCCESS_DISTANCE: 0.2
+    TARGET_START_SENSOR:
+      DIMENSIONALITY: 3
+      GOAL_FORMAT: CARTESIAN
+      TYPE: TargetStartSensor
+    TOP_DOWN_MAP:
+      DRAW_BORDER: True
+      DRAW_GOAL_AABBS: True
+      DRAW_GOAL_POSITIONS: True
+      DRAW_SHORTEST_PATH: True
+      DRAW_SOURCE: True
+      DRAW_VIEW_POINTS: True
+      FOG_OF_WAR:
+        DRAW: True
+        FOV: 90
+        VISIBILITY_DIST: 5.0
+      MAP_PADDING: 3
+      MAP_RESOLUTION: 1024
+      MAX_EPISODE_STEPS: 1000
+      TYPE: TopDownMap
+    TYPE: OrpTask-v0

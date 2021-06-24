@@ -1,5 +1,6 @@
 import numpy as np
 
+print("base hab env regs")
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.environments import NavRLEnv
 

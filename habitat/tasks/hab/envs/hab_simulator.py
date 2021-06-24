@@ -83,7 +83,7 @@ def load_light_setup_for_glb(json_filepath):
                 LightInfo(
                     vector=position,
                     color=color,
-                    model=LightPositionModel.GLOBAL,
+                    model=LightPositionModel.Global,
                 )
             )
         # print("loaded {} lights".format(len(data['lights'])))
