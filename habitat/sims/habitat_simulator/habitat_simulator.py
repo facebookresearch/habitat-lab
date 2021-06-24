@@ -205,34 +205,34 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
 
 
 # TODO Sensor Hierarchy needs to be redone here. These should not subclass camera sensors
-@registry.register_sensor
-class HabitatSimEquirectangularRGBSensor(HabitatSimRGBSensor):
-    _get_default_spec = habitat_sim.EquirectangularSensorSpec
-
-
-@registry.register_sensor
-class HabitatSimEquirectangularDepthSensor(HabitatSimDepthSensor):
-    _get_default_spec = habitat_sim.EquirectangularSensorSpec
-
-
-@registry.register_sensor
-class HabitatSimEquirectangularSemanticSensor(HabitatSimSemanticSensor):
-    _get_default_spec = habitat_sim.EquirectangularSensorSpec
-
-
-@registry.register_sensor
-class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
-    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
-
-
-@registry.register_sensor
-class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
-    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
-
-
-@registry.register_sensor
-class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
-    _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+# @registry.register_sensor
+# class HabitatSimEquirectangularRGBSensor(HabitatSimRGBSensor):
+#     _get_default_spec = habitat_sim.EquirectangularSensorSpec
+#
+#
+# @registry.register_sensor
+# class HabitatSimEquirectangularDepthSensor(HabitatSimDepthSensor):
+#     _get_default_spec = habitat_sim.EquirectangularSensorSpec
+#
+#
+# @registry.register_sensor
+# class HabitatSimEquirectangularSemanticSensor(HabitatSimSemanticSensor):
+#     _get_default_spec = habitat_sim.EquirectangularSensorSpec
+#
+#
+# @registry.register_sensor
+# class HabitatSimFisheyeRGBSensor(HabitatSimRGBSensor):
+#     _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+#
+#
+# @registry.register_sensor
+# class HabitatSimFisheyeDepthSensor(HabitatSimDepthSensor):
+#     _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
+#
+#
+# @registry.register_sensor
+# class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
+#     _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
 def check_sim_obs(obs: Optional[ndarray], sensor: Sensor) -> None:
