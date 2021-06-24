@@ -12,7 +12,6 @@ from habitat.tasks.hab.envs.utils import (
     rearrang_collision,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-import habitat.tasks.hab.rearrange_sensors
 
 
 @baseline_registry.register_env(name="RearrangementRLEnv")

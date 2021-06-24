@@ -47,6 +47,16 @@ TASK:
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmVelAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            VEL_CTRL_LIM: 0.0125
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
@@ -66,11 +76,11 @@ SIMULATOR:
         START_POSITION: [0, 0, 0]
         START_ROTATION: [0, 0, 0, 1]
     HEAD_RGB_SENSOR:
-        TYPE: 'HeadRgbSensor'
+        TYPE: HeadRgbSensor
         WIDTH: 128
         HEIGHT: 128
     HEAD_DEPTH_SENSOR:
-        TYPE: 'HeadDepthSensor'
+        TYPE: HeadDepthSensor
         WIDTH: 128
         HEIGHT: 128
         MIN_DEPTH: 0.0
