@@ -75,6 +75,10 @@ def load_articulated_objs(name_obj_dat, sim, obj_ids=[], auto_sleep=True):
             fixed_base = True
         if len(obj_ids) == 0:
             obj_id = sim.add_articulated_object_from_urdf(name, fixed_base)
+            if obj_id < 0:
+                raise FileNotFoundError(
+                    f"Error loading articulated object from {name}."
+                )
         else:
             obj_id = obj_ids[i]
         T = mn.Matrix4(trans)
