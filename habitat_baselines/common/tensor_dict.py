@@ -93,7 +93,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
         strict: bool = True,
     ) -> None:
         if isinstance(index, str):
-            super().__setitem__(index, value)
+            super().__setitem__(index, value)  # type: ignore
         else:
             if strict and (self.keys() != value.keys()):
                 raise KeyError(
