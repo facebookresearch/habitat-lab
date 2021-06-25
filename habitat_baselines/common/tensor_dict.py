@@ -95,8 +95,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
         strict: bool = True,
     ) -> None:
         if isinstance(index, str):
-            assert isinstance(value, (TensorDict, torch.Tensor))
-            super().__setitem__(index, value)
+            super().__setitem__(index, value)  # type: ignore
         else:
             if not isinstance(value, dict):
                 raise RuntimeError(
