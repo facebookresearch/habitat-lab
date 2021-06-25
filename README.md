@@ -22,7 +22,7 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
 
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
 <p align="center">
-  <img src="res/img/habitat_compressed.gif"  height="400">
+  <img src="https://github.com/facebookresearch/habitat-lab/blob/master/res/img/habitat_compressed.gif?raw=true"  height="400">
 </p>
 
 ---
