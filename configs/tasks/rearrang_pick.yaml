@@ -127,7 +127,7 @@ SIMULATOR:
     HIGH_RES_DIM: 512
     LAG_OBSERVATIONS: 2
     POV: 1st
-    ROBOT_URDF: ./data/misc_data/robots/opt_fetch/robots/fetch.urdf
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     SCENE: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
     SEED: 100
     SEMANTIC_SENSOR:

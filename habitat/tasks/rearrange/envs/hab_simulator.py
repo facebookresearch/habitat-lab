@@ -84,12 +84,28 @@ def load_light_setup_for_glb(json_filepath):
                 LightInfo(
                     vector=position,
                     color=color,
-                    model=LightPositionModel.Global,  # GLOBAL,
+                    model=LightPositionModel.Global,
                 )
             )
         # print("loaded {} lights".format(len(data['lights'])))
 
     return lighting_setup
+
+
+def merge_sim_episode_with_object_config(sim_config, episode):
+    sim_config.defrost()
+    sim_config.ep_info = [episode.__dict__]
+    sim_config.freeze()
+    return sim_config
+
+
+@registry.register_task(name="OrpTask-v0")
+class OrpTask(NavigationTask):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+    def overwrite_sim_config(self, sim_config, episode):
+        return merge_sim_episode_with_object_config(sim_config, episode)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -127,34 +143,6 @@ class OrpSim(HabitatSim):
         self.prev_scene_id = None
         self.robot_name = agent_config.ROBOT_URDF.split("/")[-1].split(".")[0]
         self._force_back_pos = None
-
-        self.wheel_ids = None
-        self._gripper_state = 0.0
-        if (
-            self.robot_name == "fetch_no_base"
-            or self.robot_name == "fetch_no_base_inv_arm"
-        ):
-            self.ee_link = 20
-            self.gripper_joints = [11, 12]
-            self.arm_start = 4
-            self.back_joint_id = 0
-            self.head_rot_jid = 3
-            self.head_tilt_jid = 2
-        elif (
-            self.robot_name == "fetch"
-            or self.robot_name == "fetch_arm_retract"
-        ):
-            self.ee_link = 22
-            self.gripper_joints = [13, 14]
-            self.arm_start = 6
-            self.wheel_ids = [0, 1]
-            self.back_joint_id = 2
-            self.head_rot_jid = 5
-            self.head_tilt_jid = 4
-        else:
-            raise ValueError("Unrecognized robot")
-
-        # self._ik = IkHelper(self.arm_start)
 
         # A marker you can optionally render to visualize positions
         self.viz_marker = None

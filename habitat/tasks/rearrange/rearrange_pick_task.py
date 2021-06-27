@@ -2,14 +2,14 @@ import numpy as np
 from PIL import Image
 
 from habitat.core.registry import registry
-from habitat.tasks.hab.envs.rearrang_env import RearrangementRLEnv
-from habitat.tasks.hab.envs.utils import (
+from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.rearrange.envs.rearrang_env import RearrangementRLEnv
+from habitat.tasks.rearrange.envs.utils import (
     CacheHelper,
     get_angle,
     rearrang_collision,
     reshape_obs_space,
 )
-from habitat.tasks.nav.nav import NavigationTask
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 
