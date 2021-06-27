@@ -123,9 +123,7 @@ class TargetStartSensor(MultiObjSensor):
     cls_uuid: str = "obj_start_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        ee_T = self._sim.get_end_effector_trans()
-        obj_local_T = mn.Matrix4.translation(EE_GRIPPER_OFFSET)
-        global_T = ee_T @ obj_local_T
+        global_T = self._sim.robot.get_end_effector_transform()
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
         for i in range(pos.shape[0]):
@@ -170,9 +168,7 @@ class DynObjPosStartOrGoal(MultiObjSensor):
     cls_uuid: str = "dyn_obj_start_or_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        ee_T = self._sim.get_end_effector_trans()
-        obj_local_T = mn.Matrix4.translation(EE_GRIPPER_OFFSET)
-        global_T = ee_T @ obj_local_T
+        global_T = self._sim.robot.get_end_effector_transform()
         T_inv = global_T.inverted()
 
         if self._sim.snapped_obj_id is not None:
@@ -194,9 +190,7 @@ class GoalSensor(MultiObjSensor):
     cls_uuid: str = "obj_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        ee_T = self._sim.get_end_effector_trans()
-        obj_local_T = mn.Matrix4.translation(EE_GRIPPER_OFFSET)
-        global_T = ee_T @ obj_local_T
+        global_T = self._sim.robot.get_end_effector_transform()
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
@@ -255,7 +249,7 @@ class LocalizationSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.get_robot_transform()
+        trans = self._sim.robot._robot.transformation
         forward = np.array([1.0, 0, 0])
         heading = np.array(trans.transform_vector(forward))
         forward = forward[[0, 2]]
@@ -289,11 +283,8 @@ class JointSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_robot_joint_state()
-        arm_start = self._sim.arm_start
-        return np.array(joints_pos[arm_start : arm_start + 9]).astype(
-            np.float32
-        )
+        joints_pos = self._sim.robot.get_arm_pos()
+        return np.array(joints_pos).astype(np.float32)
 
 
 @registry.register_sensor
@@ -350,8 +341,8 @@ class EeSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.get_robot_transform()
-        ee_pos = self._sim.get_end_effector_pos()
+        trans = self._sim.robot._robot.transformation
+        ee_pos = self._sim.robot.get_end_effector_transform().translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         return np.array(local_ee_pos)
@@ -422,7 +413,7 @@ class EndEffectorToObjectDistance(Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, episode, *args, **kwargs):
-        ee_pos = self._sim.get_end_effector_pos()
+        ee_pos = self._sim.robot.get_end_effector_transform().translation
 
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()

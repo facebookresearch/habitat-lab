@@ -74,19 +74,18 @@ def load_articulated_objs(name_obj_dat, sim, obj_ids=[], auto_sleep=True):
         else:
             fixed_base = True
         if len(obj_ids) == 0:
-            obj_id = sim.add_articulated_object_from_urdf(name, fixed_base)
-            if obj_id < 0:
-                raise FileNotFoundError(
-                    f"Error loading articulated object from {name}."
-                )
+            ao_mgr = sim.get_articulated_object_manager()
+            ao = ao_mgr.add_articulated_object_from_urdf(name, fixed_base)
         else:
-            obj_id = obj_ids[i]
+            ao = obj_ids[i]
         T = mn.Matrix4(trans)
-        sim.set_articulated_object_root_state(obj_id, T)
-        if auto_sleep:
-            sim.set_articulated_object_sleep(obj_id, True)
-        sim.set_articulated_object_motion_type(obj_id, motion_type)
-        art_obj_ids.append(obj_id)
+        ao.transformation = T
+
+        #TODO: Broken in release.
+        #if auto_sleep:
+        #    ao.can_sleep = True
+        ao.motion_type = motion_type
+        art_obj_ids.append(ao)
     if len(obj_ids) != 0:
         return obj_ids
     return art_obj_ids
@@ -96,7 +95,7 @@ def init_art_objs(idx_and_state, sim, auto_clamp=False):
     for art_obj_idx, art_state in idx_and_state:
         # Need to not sleep so the update actually happens
         prev_sleep = sim.get_articulated_object_sleep(art_obj_idx)
-        sim.set_articulated_object_sleep(art_obj_idx, False)
+        #sim.set_articulated_object_sleep(art_obj_idx, False)
 
         sim.set_articulated_object_positions(art_obj_idx, np.array(art_state))
         # Default motors for all NONROBOT articulated objects.
@@ -134,8 +133,9 @@ def load_objs(name_obj_dat, sim, obj_ids, auto_sleep=True):
         sim.set_linear_velocity(mn.Vector3(0, 0, 0), obj_id)
         sim.set_angular_velocity(mn.Vector3(0, 0, 0), obj_id)
         sim.set_object_motion_type(MotionType(obj_type), obj_id)
-        if auto_sleep:
-            sim.set_object_sleep(obj_id, True)
+        #TODO: Broken in Hab2.0 release
+        #if auto_sleep:
+        #    sim.set_object_sleep(obj_id, True)
         static_obj_ids.append(obj_id)
     if len(obj_ids) != 0:
         return obj_ids

@@ -298,6 +298,7 @@ class RearrangPickRLEnv(RearrangementRLEnv):
                     ignore_base=False,
                 )
                 rot_noise = np.random.normal(0.0, self.rlcfg.BASE_ANGLE_NOISE)
+
                 sim.set_robot_pos(start_pos[[0, 2]])
                 sim.set_robot_rot(start_rot + rot_noise)
                 if not did_collide:

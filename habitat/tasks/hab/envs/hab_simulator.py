@@ -29,6 +29,7 @@ from habitat.tasks.hab.envs.utils import (
 )
 from habitat.tasks.nav.nav import NavigationTask
 from habitat_sim.physics import MotionType
+from habitat_sim.robots import FetchRobot
 
 # (unique id, Filename, BB size, BB offset, Robot base offset [can be none])
 ART_BBS = [
@@ -80,7 +81,7 @@ def load_light_setup_for_glb(json_filepath):
             #print('position: {}'.format(position))
             #print('color: {}'.format(color))
             lighting_setup.append(LightInfo(vector=position,
-                color=color, model=LightPositionModel.GLOBAL))
+                color=color, model=LightPositionModel.Global))
         #print("loaded {} lights".format(len(data['lights'])))
 
     return lighting_setup
@@ -122,7 +123,6 @@ class OrpSim(HabitatSim):
 
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
-        self.robot_id = None
         self.first_setup = True
         self.is_render_obs = False
         self.pov_mode = agent_config.POV
@@ -139,34 +139,6 @@ class OrpSim(HabitatSim):
         self.robot_name = agent_config.ROBOT_URDF.split("/")[-1].split(".")[0]
         self._force_back_pos = None
 
-        self.wheel_ids = None
-        self._gripper_state = 0.0
-        if (
-            self.robot_name == "fetch_no_base"
-            or self.robot_name == "fetch_no_base_inv_arm"
-        ):
-            self.ee_link = 20
-            self.gripper_joints = [11, 12]
-            self.arm_start = 4
-            self.back_joint_id = 0
-            self.head_rot_jid = 3
-            self.head_tilt_jid = 2
-        elif (
-            self.robot_name == "fetch"
-            or self.robot_name == "fetch_arm_retract"
-        ):
-            self.ee_link = 22
-            self.gripper_joints = [13, 14]
-            self.arm_start = 6
-            self.wheel_ids = [0, 1]
-            self.back_joint_id = 2
-            self.head_rot_jid = 5
-            self.head_tilt_jid = 4
-        else:
-            raise ValueError("Unrecognized robot")
-
-        #self._ik = IkHelper(self.arm_start)
-
         # A marker you can optionally render to visualize positions
         self.viz_marker = None
         self.move_cam_pos = np.zeros(3)
@@ -179,7 +151,7 @@ class OrpSim(HabitatSim):
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
 
-        self.art_obj_ids = []
+        self.art_objs = []
         self.start_art_states = {}
         self.cached_art_obj_ids = []
         self.scene_obj_ids = []
@@ -215,8 +187,8 @@ class OrpSim(HabitatSim):
         ):
             if urdf_name not in self.art_name_to_id:
                 continue
-            art_id = self.art_name_to_id[urdf_name]
-            art_T = self._sim.get_articulated_object_root_state(art_id)
+            ao = self.art_name_to_id[urdf_name]
+            art_T = ao.transformation
 
             if robo_pos is not None:
                 robo_pos = [robo_pos[0], 0.5, robo_pos[1]]
@@ -326,7 +298,8 @@ class OrpSim(HabitatSim):
         return robo_pos
 
     def _try_acquire_context(self):
-        self._sim.renderer.acquire_gl_context()
+        if self.concur_render:
+            self._sim.renderer.acquire_gl_context()
 
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
@@ -349,9 +322,9 @@ class OrpSim(HabitatSim):
 
         if ep_info["scene_id"] != self.prev_scene_id:
             # Object instances are not valid between scenes.
-            self.art_obj_ids = []
+            self.art_objs = []
             self.scene_obj_ids = []
-            self.robot_id = None
+            self.robot = None
             self.viz_obj_ids = []
             self.snapped_obj_constraint_id = []
             self.snapped_obj_id = None
@@ -373,7 +346,10 @@ class OrpSim(HabitatSim):
         self.viz_traj_ids = []
 
         self._add_objs(ep_info)
-        self._load_robot(ep_info)
+        if self.robot is None:
+            self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self._sim)
+            self.robot.reconfigure()
+        self.robot.reset()
 
         set_pos = {}
         # Set articulated object joint states.
@@ -381,12 +357,13 @@ class OrpSim(HabitatSim):
             for i, art_state in self.start_art_states.items():
                 set_pos[i] = art_state
             for i, art_state in ep_info["art_states"]:
-                set_pos[self.art_obj_ids[i]] = art_state
-            init_art_objs(
-                set_pos.items(),
-                self._sim,
-                self.habitat_config.get("AUTO_SLEEP_ART_OBJS", True),
-            )
+                set_pos[self.art_objs[i]] = art_state
+            #TODO: NEED TO FIX
+            #init_art_objs(
+            #    set_pos.items(),
+            #    self._sim,
+            #    self.habitat_config.get("AUTO_SLEEP_ART_OBJS", True),
+            #)
 
         # Get the positions after things have settled down.
         self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
@@ -402,12 +379,11 @@ class OrpSim(HabitatSim):
         sn = self.ep_info["scene_config_path"]
         if "cab_top_left" in sn and "closed" not in sn:
             offset = mn.Vector3(-0.5, 0.0, 0.0)
-            cab_T = self.get_articulated_object_root_state(self.art_obj_ids[0])
+            cab_T = self.art_objs[0].transformation
             offset = cab_T.transform_vector(offset)
             self.target_start_pos += offset
-            self._sim.set_articulated_object_positions(
-                self.art_obj_ids[1], [0, 0]
-            )
+
+            self.art_objs[1].joint_positions = [0,0]
 
         ###########################################################################
 
@@ -415,10 +391,7 @@ class OrpSim(HabitatSim):
             self.first_setup = False
             #self._ik.setup_sim()
             # Capture the starting art states
-            for i in self.art_obj_ids:
-                self.start_art_states[
-                    i
-                ] = self._sim.get_articulated_object_positions(i)
+            self.start_art_states = {ao: ao.joint_positions for ao in self.art_objs}
 
         self.update_i = 0
         self.allowed_region = ep_info["allowed_region"]
@@ -440,8 +413,8 @@ class OrpSim(HabitatSim):
             if urdf_name not in self.art_name_to_id:
                 continue
 
-            art_id = self.art_name_to_id[urdf_name]
-            art_T = self._sim.get_articulated_object_root_state(art_id)
+            ao = self.art_name_to_id[urdf_name]
+            art_T = ao.transformation
 
             bb_T = art_T @ mn.Matrix4.translation(mn.Vector3(*bb_pos))
 
@@ -472,22 +445,24 @@ class OrpSim(HabitatSim):
             print("Cached navmesh to ", inferred_path)
 
     def _update_markers(self):
-        for marker_name, marker in self.markers.items():
-            if "relative" not in marker:
-                continue
-            targ_idx, targ_link = marker["relative"]
-            abs_targ_idx = self.art_obj_ids[targ_idx]
-            link_state = self._sim.get_articulated_link_rigid_state(
-                abs_targ_idx, targ_link
-            )
-            link_T = mn.Matrix4.from_(
-                link_state.rotation.to_matrix(), link_state.translation
-            )
-            local_pos = marker["local_pos"]
-            local_pos = mn.Vector3(*local_pos)
-            global_pos = link_T.transform_point(local_pos)
-            marker["T"] = link_T @ mn.Matrix4.translation(local_pos)
-            marker["global_pos"] = global_pos
+        raise ValueError("Not ready for release")
+        #TODO: Not ready for Hab2.0 release
+        #for marker_name, marker in self.markers.items():
+        #    if "relative" not in marker:
+        #        continue
+        #    targ_idx, targ_link = marker["relative"]
+        #    abs_targ_idx = self.art_obj_ids[targ_idx]
+        #    link_state = self._sim.get_articulated_link_rigid_state(
+        #        abs_targ_idx, targ_link
+        #    )
+        #    link_T = mn.Matrix4.from_(
+        #        link_state.rotation.to_matrix(), link_state.translation
+        #    )
+        #    local_pos = marker["local_pos"]
+        #    local_pos = mn.Vector3(*local_pos)
+        #    global_pos = link_T.transform_point(local_pos)
+        #    marker["T"] = link_T @ mn.Matrix4.translation(local_pos)
+        #    marker["global_pos"] = global_pos
 
     def _load_markers(self, ep_info):
         self.markers = {}
@@ -501,7 +476,7 @@ class OrpSim(HabitatSim):
                 self.markers[marker["name"]] = {
                     "global_pos": marker["global_pos"]
                 }
-        self._update_markers()
+        #self._update_markers()
 
     def reset(self):
         self.event_callbacks = []
@@ -546,25 +521,27 @@ class OrpSim(HabitatSim):
         self.scene_obj_ids = []
 
         if art_names is None or self.cached_art_obj_ids != art_names:
-            for art_obj in self.art_obj_ids:
-                self._sim.remove_articulated_object(art_obj)
-            self.art_obj_ids = []
+            #for art_obj in self.art_obj_ids:
+            #    self._sim.remove_articulated_object(art_obj)
+            ao_mgr = self.get_articulated_object_manager()
+            ao_mgr.remove_all_objects()
+            self.art_objs = []
 
     def _add_objs(self, ep_info):
         art_names = [x[0] for x in ep_info["art_objs"]]
         self.clear_objs(art_names)
 
         if self.habitat_config.get("LOAD_ART_OBJS", True):
-            self.art_obj_ids = load_articulated_objs(
+            self.art_objs = load_articulated_objs(
                 convert_legacy_cfg(ep_info["art_objs"]),
                 self._sim,
-                self.art_obj_ids,
+                self.art_objs,
                 auto_sleep=self.habitat_config.get("AUTO_SLEEP", True),
             )
             self.cached_art_obj_ids = art_names
             self.art_name_to_id = {
                 name.split("/")[-1]: art_id
-                for name, art_id in zip(art_names, self.art_obj_ids)
+                for name, art_id in zip(art_names, self.art_objs)
             }
             self._create_art_bbs()
 
@@ -588,21 +565,16 @@ class OrpSim(HabitatSim):
         - set_pos: 2D coordinates of where the robot will be placed. The height
           will be same as current position.
         """
-        base_transform = self._sim.get_articulated_object_root_state(
-            self.robot_id
-        )
-        pos = base_transform.translation
-        base_transform.translation = mn.Vector3(set_pos[0], pos[1], set_pos[1])
-        self._sim.set_articulated_object_root_state(
-            self.robot_id, base_transform
-        )
+        pos = self.robot._robot.translation
+        new_set_pos = [set_pos[0], pos[1], set_pos[1]]
+        self.robot._robot.transformation.translation = new_set_pos
 
     def set_robot_rot(self, rot_rad):
         """
         Set the rotation of the robot along the y-axis. The position will
         remain the same.
         """
-        cur_trans = self._sim.get_articulated_object_root_state(self.robot_id)
+        cur_trans = self.robot._robot.transformation
         pos = cur_trans.translation
 
         rot_trans = mn.Matrix4.rotation(mn.Rad(-1.56), mn.Vector3(1.0, 0, 0))
@@ -611,99 +583,7 @@ class OrpSim(HabitatSim):
         )
         new_trans = rot_trans @ add_rot_mat
         new_trans.translation = pos
-        self._sim.set_articulated_object_root_state(self.robot_id, new_trans)
-
-    def _load_robot(self, ep_info):
-        if not self.habitat_config.get("LOAD_ROBOT", True):
-            return
-
-        if self.robot_id is None:
-            agent_config = self.habitat_config
-            urdf_name = agent_config.ROBOT_URDF
-            self.robot_id = self._sim.add_articulated_object_from_urdf(
-                urdf_name, True
-            )
-            if self.robot_id == -1:
-                raise ValueError("Could not load " + urdf_name)
-
-        rot_trans = mn.Matrix4.rotation(mn.Rad(-1.56), mn.Vector3(1.0, 0, 0))
-        # Setting the rotation as a single number indicating rotation on z-axis
-        # or as a full quaternion consisting of 4 numbers
-        start_rot = ep_info["start_rotation"]
-        if isinstance(start_rot, list):
-            rot_quat = mn.Quaternion(start_rot[:3], start_rot[3])
-            add_rot_mat = mn.Matrix4.from_(
-                rot_quat.to_matrix(), mn.Vector3(0, 0, 0)
-            )
-        else:
-            add_rot_mat = mn.Matrix4.rotation(
-                mn.Deg(start_rot), mn.Vector3(0.0, 0, 1)
-            )
-        base_transform = rot_trans @ add_rot_mat
-        self._sim.set_articulated_object_root_state(
-            self.robot_id, base_transform
-        )
-        robo_start = self.habitat_config.get("ROBOT_START", None)
-
-        if robo_start is not None:
-            self.start_pos = eval(robo_start.replace("/", ","))
-            self.start_pos = [self.start_pos[0], 0.15, self.start_pos[1]]
-            self.start_pos = self._sim.pathfinder.snap_point(self.start_pos)
-        else:
-            start_pos = ep_info["start_position"]
-            if start_pos == [0, 0]:
-                # Hand tuned constants for the ReplicaCAD dataset to spawn the
-                # robot in reasonable areas.
-                start_pos = get_largest_island_point(self._sim, 0.15, -0.2)
-            self.start_pos = start_pos
-
-        base_transform.translation = mn.Vector3(self.start_pos)
-        self._sim.set_articulated_object_root_state(
-            self.robot_id, base_transform
-        )
-
-        if self.arm_start is not None:
-            # Initialize the arm. This will be called on every reset.
-            jms = habitat_sim.physics.JointMotorSettings(
-                0,  # position_target
-                0.3,  # position_gain
-                0,  # velocity_target
-                0.3,  # velocity_gain
-                10.0,  # max_impulse
-            )
-            for i in range(self.arm_start, self.arm_start + 9):
-                self._sim.update_joint_motor(self.robot_id, i, jms)
-
-            # Init the fetch starting joint positions.
-            self.arm_init_params = [
-                -0.45,
-                -1.08,
-                0.1,
-                0.935,
-                -0.001,
-                1.573,
-                0.005,
-                0.00,
-                0.00,
-            ]
-            if self.robot_name == "fetch":
-                self.arm_init_params[-2:] = [0.04, 0.04]
-
-            self.set_arm_pos(self.arm_init_params)
-
-        if self.wheel_ids is not None:
-            jms = habitat_sim.physics.JointMotorSettings(
-                0,  # position_target
-                0.0,  # position_gain
-                0,  # velocity_target
-                1.3,  # velocity_gain
-                100.0,  # max_impulse
-            )
-            for i in self.wheel_ids:
-                self._sim.update_joint_motor(self.robot_id, i, jms)
-
-        if self.robot_name == "fetch_arm_retract":
-            self.retract_arm()
+        self.robot._robot.transformation = new_trans
 
     def _create_obj_viz(self, ep_info):
         self.viz_obj_ids = []
@@ -719,19 +599,19 @@ class OrpSim(HabitatSim):
     def capture_state(self, with_robo_js=False):
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
-        robot_T = self._sim.get_articulated_object_root_state(self.robot_id)
+        robot_T = self.robot._robot.transformation
         art_T = [
-            self._sim.get_articulated_object_root_state(i)
-            for i in self.art_obj_ids
+            ao.transformation
+            for ao in self.art_objs
         ]
         static_T = [
             self._sim.get_transformation(i) for i in self.scene_obj_ids
         ]
         art_pos = [
-            self._sim.get_articulated_object_positions(i)
-            for i in self.art_obj_ids
+            ao.joint_positions
+            for ao in self.art_objs
         ]
-        robo_js = self._sim.get_articulated_object_positions(self.robot_id)
+        robo_js = self.robot._robot.joint_positions
 
         return {
             "robot_T": robot_T,
@@ -750,30 +630,20 @@ class OrpSim(HabitatSim):
           it will have.
         """
         if state["robot_T"] is not None:
-            self._sim.set_articulated_object_root_state(
-                self.robot_id, state["robot_T"]
-            )
-            forces = self._sim.get_articulated_object_forces(self.robot_id)
-            vel = self._sim.get_articulated_object_velocities(self.robot_id)
-            self._sim.set_articulated_object_forces(
-                self.robot_id, np.zeros((len(forces),))
-            )
-            self._sim.set_articulated_object_velocities(
-                self.robot_id, np.zeros((len(vel),))
-            )
-        if "robo_js" in state:
-            self._sim.set_articulated_object_positions(
-                self.robot_id, state["robo_js"]
-            )
+            self.robot._robot.transformation = state["robot_T"]
+            self.robot._robot.clear_joint_states()
 
-        for T, i in zip(state["art_T"], self.art_obj_ids):
-            self._sim.set_articulated_object_root_state(i, T)
+        if "robo_js" in state:
+            self.robot._robo.joint_positions = state["robo_js"]
+
+        for T, ao in zip(state["art_T"], self.art_objs):
+            ao.transformation = T
 
         for T, i in zip(state["static_T"], self.scene_obj_ids):
             self.reset_obj_T(i, T)
 
-        for p, i in zip(state["art_pos"], self.art_obj_ids):
-            self.reset_art_obj_pos(i, p)
+        for p, ao in zip(state["art_pos"], self.art_objs):
+            ao.joint_positions = p
 
         if set_hold:
             if state["obj_hold"] is not None:
@@ -800,151 +670,6 @@ class OrpSim(HabitatSim):
         steps = int(seconds * self.ctrl_freq)
         for _ in range(steps):
             self._sim.step_world(-1)
-
-    def get_arm_pos(self):
-        return np.array(
-            [
-                self.get_joint_pos(i)
-                for i in range(self.arm_start, self.arm_start + 7)
-            ]
-        )
-
-    def get_arm_vel(self):
-        vel = self.get_joints_vel()
-        return np.array(
-            [vel[i] for i in range(self.arm_start, self.arm_start + 7)]
-        )
-
-    def set_arm_pos(self, ctrl):
-        """
-        Does not set the gripper position
-        """
-        for i in range(7):
-            jidx = self.arm_start + i
-            self.set_mtr_pos(jidx, ctrl[i])
-            self.set_joint_pos(jidx, ctrl[i])
-
-    def set_arm_mtr_pos(self, ctrl):
-        for i in range(7):
-            jidx = self.arm_start + i
-            self.set_mtr_pos(jidx, ctrl[i])
-
-    def set_mtr_vel(self, joint, ctrl):
-        jms = self._sim.get_joint_motor_settings(self.robot_id, joint)
-
-        jms.velocity_target = ctrl
-        self._sim.update_joint_motor(self.robot_id, joint, jms)
-
-    def set_mtr_pos(self, joint, ctrl):
-        jms = self._sim.get_joint_motor_settings(self.robot_id, joint)
-        jms.position_target = ctrl
-        self._sim.update_joint_motor(self.robot_id, joint, jms)
-
-    def add_mtr_pos(self, joint, ctrl):
-        jms = self._sim.get_joint_motor_settings(self.robot_id, joint)
-        jms.position_target += ctrl
-        self._sim.update_joint_motor(self.robot_id, joint, jms)
-
-    def get_mtr_pos(self, joint):
-        jms = self._sim.get_joint_motor_settings(self.robot_id, joint)
-        return jms.position_target
-
-    def get_joint_pos(self, joint_idx):
-        return np.array(
-            self._sim.get_articulated_object_positions(self.robot_id)
-        )[joint_idx]
-
-    def get_joints_pos(self):
-        return np.array(
-            self._sim.get_articulated_object_positions(self.robot_id)
-        )
-
-    def get_joints_vel(self):
-        return np.array(
-            self._sim.get_articulated_object_velocities(self.robot_id)
-        )
-
-    def set_joint_pos(self, joint_idx, angle):
-        set_pos = np.array(
-            self._sim.get_articulated_object_positions(self.robot_id)
-        )
-        set_pos[joint_idx] = angle
-        self._sim.set_articulated_object_positions(self.robot_id, set_pos)
-
-    def set_joint_vel(self, joint_idx, angle):
-        set_vel = np.array(
-            self._sim.get_articulated_object_velocities(self.robot_id)
-        )
-        set_vel[joint_idx] = angle
-        self._sim.set_articulated_object_velocities(self.robot_id, set_vel)
-
-    def move_cam(self, delta_xyz):
-        self.move_cam_pos += np.array(delta_xyz)
-
-    def _follow_robot(self):
-        robot_state = self._sim.get_articulated_object_root_state(
-            self.robot_id
-        )
-
-        node = self._sim._default_agent.scene_node
-
-        if self.pov_mode == "bird":
-            cam_pos = mn.Vector3(0.0, 0.0, 4.0)
-        elif self.pov_mode == "3rd":
-            cam_pos = mn.Vector3(0.0, -1.2, 1.5)
-        elif self.pov_mode == "1st":
-            cam_pos = mn.Vector3(0.17, 0.0, 0.90 + self.h_offset)
-        elif self.pov_mode == "move":
-            cam_pos = mn.Vector3(*self.move_cam_pos)
-        else:
-            raise ValueError()
-
-        look_at = mn.Vector3(1, 0.0, 0.75)
-        look_at = robot_state.transform_point(look_at)
-        if self.pov_mode == "move":
-            agent_config = self.habitat_config
-            if "LOOK_AT" in agent_config:
-                x, y, z = agent_config.LOOK_AT
-            else:
-                x, y, z = self.get_end_effector_pos()
-            look_at = mn.Vector3(x, y, z)
-        else:
-            cam_pos = robot_state.transform_point(cam_pos)
-
-        node.transformation = mn.Matrix4.look_at(
-            cam_pos, look_at, mn.Vector3(0, -1, 0)
-        )
-        # print('node at  :', ['%.2f' % x for x in node.transformation.translation])
-
-        self.cam_trans = node.transformation
-        self.cam_look_at = look_at
-        self.cam_pos = cam_pos
-
-        # Lock all arm cameras to the end effector.
-        for k in self._sensors:
-            if "arm" not in k:
-                continue
-            sens_obj = self._sensors[k]._sensor_object
-            cur_t = sens_obj.node.transformation
-
-            link_rigid_state = self._sim.get_articulated_link_rigid_state(
-                self.robot_id, self.ee_link
-            )
-            ee_trans = mn.Matrix4.from_(
-                link_rigid_state.rotation.to_matrix(),
-                link_rigid_state.translation,
-            )
-
-            offset_trans = mn.Matrix4.translation(mn.Vector3(0, 0.0, 0.1))
-            rot_trans = mn.Matrix4.rotation_y(mn.Deg(-90))
-            spin_trans = mn.Matrix4.rotation_z(mn.Deg(90))
-            arm_T = ee_trans @ offset_trans @ rot_trans @ spin_trans
-            sens_obj.node.transformation = (
-                node.transformation.inverted() @ arm_T
-            )
-
-        # Viz the camera position
-        # self.viz_marker = self.viz_pos(self.cam_pos, self.viz_marker)
 
     def full_snap(self, obj_id):
         """
@@ -995,7 +720,7 @@ class OrpSim(HabitatSim):
                     self._sim, "create_articulated_p2p_constraint_with_pivots"
                 ):
                     return self._sim.create_articulated_p2p_constraint_with_pivots(
-                        self.robot_id,
+                        self.robot._robot.get_robot_sim_id(),
                         self.ee_link,
                         use_snap_obj_id,
                         pivot_in_link,
@@ -1004,7 +729,7 @@ class OrpSim(HabitatSim):
                     )
                 else:
                     return self._sim.create_articulated_p2p_constraint(
-                        self.robot_id,
+                        self.robot._robot.get_robot_sim_id(),
                         self.ee_link,
                         use_snap_obj_id,
                         pivot_in_link,
@@ -1027,7 +752,8 @@ class OrpSim(HabitatSim):
         else:
             self.snapped_obj_constraint_id = [
                 self._sim.create_articulated_p2p_constraint(
-                    self.robot_id, self.ee_link, use_snap_obj_id, max_impulse
+                    self.robot._robot.get_robot_sim_id(),
+                    self.ee_link, use_snap_obj_id, max_impulse
                 )
             ]
         if any([x == -1 for x in self.snapped_obj_constraint_id]):
@@ -1050,7 +776,7 @@ class OrpSim(HabitatSim):
         marker_abs_art_idx = self.art_obj_ids[marker_targ_idx]
 
         constraint_id = self._sim.create_articulated_p2p_constraint(
-            self.robot_id,
+            self.robot._robot.get_robot_sim_id(),
             self.ee_link,
             EE_GRIPPER_OFFSET,
             marker_abs_art_idx,
@@ -1124,45 +850,6 @@ class OrpSim(HabitatSim):
             return [agent_pos, path.points[0]]
         return path.points
 
-    def inter_target(self, targs, idxs, seconds):
-        curs = np.array([self.get_mtr_pos(i) for i in idxs])
-        diff = targs - curs
-        T = int(seconds * self.ctrl_freq)
-        delta = diff / T
-
-        for i in range(T):
-            for j, jidx in enumerate(idxs):
-                self.set_mtr_pos(jidx, delta[j] * (i + 1) + curs[j])
-                self.set_joint_pos(jidx, delta[j] * (i + 1) + curs[j])
-            self._sim.step_world(1 / self.ctrl_freq)
-
-    def hack_retract_arm(self):
-        retracted_state = np.array(self.arm_init_params)
-        retracted_state[:2] = [1.2299035787582397, 2.345386505126953]
-        self.set_arm_pos(retracted_state)
-        self._sim.internal_step(-1)
-
-    def hack_ready_arm(self):
-        retracted_state = np.array(self.arm_init_params)
-        self.set_arm_pos(retracted_state)
-        self._sim.internal_step(-1)
-
-    def retract_arm(self):
-        self.inter_target(
-            [1.2299035787582397, 2.345386505126953],
-            [self.arm_start + 1, self.arm_start + 3],
-            1 / self.ctrl_freq,
-        )
-        self.ctrl_arm = False
-
-    def ready_arm(self):
-        self.inter_target(
-            [-0.45, 0.1],
-            [self.arm_start + 1, self.arm_start + 3],
-            1 / self.ctrl_freq,
-        )
-        self.ctrl_arm = True
-
     def step(self, action):
         self.update_i += 1
 
@@ -1185,7 +872,6 @@ class OrpSim(HabitatSim):
             add_back_viz_objs[name] = before_pos
         self.viz_obj_ids = []
         self.viz_ids = defaultdict(lambda: None)
-        self._follow_robot()
 
         remove_idxs = []
         for i, event in enumerate(self.event_callbacks):
@@ -1263,40 +949,10 @@ class OrpSim(HabitatSim):
         """
 
         self._sim.step_world(dt)
-        if self.robot_id is not None:
-            # Fix the head.
-            self.set_joint_pos(self.head_rot_jid, np.pi / 2)
-            self.set_joint_pos(self.head_tilt_jid, 0)
-            # Fix the back
-            fix_back_val = 0.15
-            self.set_joint_pos(self.back_joint_id, fix_back_val)
-            self.set_mtr_pos(self.back_joint_id, fix_back_val)
-            for grip_idx in self.gripper_joints:
-                self._sim.set_mtr_pos(grip_idx, self._gripper_state)
-                self._sim.set_joint_pos(grip_idx, self._gripper_state)
+        if self.robot is not None:
+            self.robot.update()
 
-            # Guard against out of limit joints
-            if self.habitat_config.get("LIMIT_ROBO_JOINTS", True):
-                upper_lims = self._sim.get_articulated_object_position_limits(
-                    self.robot_id, True
-                )
-                lower_lims = self._sim.get_articulated_object_position_limits(
-                    self.robot_id, False
-                )
-                robot_joint_pos = self._sim.get_articulated_object_positions(
-                    self.robot_id
-                )
-                new_robot_joint_pos = np.clip(
-                    robot_joint_pos, lower_lims, upper_lims
-                )
-                if (new_robot_joint_pos != robot_joint_pos).any():
-                    self._sim.set_articulated_object_positions(
-                        self.robot_id, new_robot_joint_pos
-                    )
-
-            self._sim.set_articulated_object_sleep(self.robot_id, False)
-
-        self._update_markers()
+        #self._update_markers()
 
     def get_targets(self):
         """
@@ -1331,28 +987,9 @@ class OrpSim(HabitatSim):
             [self._sim.get_translation(idx) for idx in self.scene_obj_ids]
         )
 
-    def get_end_effector_trans(self):
-        link_rigid_state = self._sim.get_articulated_link_rigid_state(
-            self.robot_id, self.ee_link
-        )
-        # Move the end effector up a bit so it is in the middle of the gripper
-        return mn.Matrix4.from_(
-            link_rigid_state.rotation.to_matrix(), link_rigid_state.translation
-        )
-
-    def get_end_effector_pos(self):
-        trans = self.get_end_effector_trans()
-        real_pos = trans.transform_point(EE_GRIPPER_OFFSET)
-
-        return np.array(real_pos)
-
-    def get_robot_transform(self):
-        return self._sim.get_articulated_object_root_state(self.robot_id)
-
-    def get_robot_joint_state(self):
-        return self._sim.get_articulated_object_positions(self.robot_id)
-
     def get_collisions(self):
+        #TODO: NEED TO FIX
+        return []
         def extract_coll_info(coll, n_point):
             parts = coll.split(",")
             coll_type, name, link = parts[:3]
