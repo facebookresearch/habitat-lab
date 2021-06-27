@@ -125,7 +125,7 @@ class TargetStartSensor(MultiObjSensor):
     cls_uuid: str = "obj_start_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.robot.get_end_effector_transform()
+        global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
         for i in range(pos.shape[0]):
@@ -170,7 +170,7 @@ class DynObjPosStartOrGoal(MultiObjSensor):
     cls_uuid: str = "dyn_obj_start_or_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.robot.get_end_effector_transform()
+        global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
 
         if self._sim.snapped_obj_id is not None:
@@ -192,7 +192,7 @@ class GoalSensor(MultiObjSensor):
     cls_uuid: str = "obj_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.robot.get_end_effector_transform()
+        global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
@@ -285,7 +285,7 @@ class JointSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.robot.get_arm_pos()
+        joints_pos = self._sim.robot.arm_pos
         return np.array(joints_pos).astype(np.float32)
 
 
@@ -344,7 +344,7 @@ class EeSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         trans = self._sim.robot._robot.transformation
-        ee_pos = self._sim.robot.get_end_effector_transform().translation
+        ee_pos = self._sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         return np.array(local_ee_pos)
@@ -415,7 +415,7 @@ class EndEffectorToObjectDistance(Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, episode, *args, **kwargs):
-        ee_pos = self._sim.robot.get_end_effector_transform().translation
+        ee_pos = self._sim.robot.ee_transform.translation
 
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()

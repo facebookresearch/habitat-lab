@@ -115,7 +115,7 @@ class RearrangementRLEnv(BaseHabEnv):
         # Is the object firmly in the grasp of the robot?
         hold_obj = sim.snapped_obj_id
         cur_measures = self._env.get_metrics()
-        ee_pos = self._env._sim.robot.get_end_effector_transform().translation
+        ee_pos = self._env._sim.robot.ee_transform.translation
         if hold_obj is not None:
             obj_pos = self._env._sim.get_translation(hold_obj)
             if np.linalg.norm(ee_pos - obj_pos) >= self.rlcfg.HOLD_THRESH:

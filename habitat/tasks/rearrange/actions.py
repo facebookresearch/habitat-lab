@@ -105,7 +105,7 @@ class MagicGraspAction(SimulatorTaskAction):
 class ArmVelAction(SimulatorTaskAction):
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(shape=(9,), low=0, high=1, dtype=np.float32)
 
     def step(self, vel, should_step=True, **kwargs):
         # clip from -1 to 1
@@ -113,7 +113,7 @@ class ArmVelAction(SimulatorTaskAction):
         vel *= self._config.VEL_CTRL_LIM
         # TODO: THIS IS DIFFERENT FROM MY CODE. I NEED TO ADD TO THE TARGETS NOT
         # THE ACTUAL JOINT POSITIONS
-        self._sim.robot.set_arm_mtr_pos(vel + self._sim.robot.get_arm_pos())
+        self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_pos
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
 
