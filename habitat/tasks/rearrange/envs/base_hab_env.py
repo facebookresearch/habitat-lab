@@ -69,8 +69,9 @@ class BaseHabEnv(NavRLEnv):
         pass
 
     def step(self, action, action_args):
-        obs, reward, done, info = super().step(action={'action': action,
-            'action_args': action_args})
+        obs, reward, done, info = super().step(
+            action={"action": action, "action_args": action_args}
+        )
         self._pre_step()
         reward = self._my_get_reward(obs)
         add_info = {}

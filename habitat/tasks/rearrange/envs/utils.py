@@ -260,8 +260,8 @@ def convert_legacy_cfg(obj_list):
 
     def convert_fn(obj_dat):
         path = obj_dat[0]
-        fname = '/'.join(path.split('/')[-2:])
-        if '.urdf' in fname:
+        fname = "/".join(path.split("/")[-2:])
+        if ".urdf" in fname:
             obj_dat[0] = osp.join("data/misc_data/URDF", fname)
 
         if (
@@ -348,7 +348,9 @@ def get_largest_island_point(sim, height_thresh=None, z_min=None):
         use_vs = use_vs[use_vs[:, 1] < height_thresh]
     if z_min is not None:
         use_vs = use_vs[use_vs[:, 2] > z_min]
-    nav_vs_r = np.array([sim.pathfinder.island_radius(nav_v) for nav_v in use_vs])
+    nav_vs_r = np.array(
+        [sim.pathfinder.island_radius(nav_v) for nav_v in use_vs]
+    )
     largest_island = np.max(nav_vs_r)
     use_vs = use_vs[nav_vs_r == largest_island]
     sel_i = np.random.randint(len(use_vs))
@@ -365,13 +367,15 @@ import time
 
 CACHE_PATH = "./data/cache"
 
+
 class CacheHelper:
-    def __init__(self, cache_name, lookup_val, def_val=None, verbose=False,
-            rel_dir=''):
+    def __init__(
+        self, cache_name, lookup_val, def_val=None, verbose=False, rel_dir=""
+    ):
         self.use_cache_path = osp.join(CACHE_PATH, rel_dir)
         if not osp.exists(self.use_cache_path):
             os.makedirs(self.use_cache_path)
-        sec_hash = hashlib.md5(str(lookup_val).encode('utf-8')).hexdigest()
+        sec_hash = hashlib.md5(str(lookup_val).encode("utf-8")).hexdigest()
         cache_id = f"{cache_name}_{sec_hash}.pickle"
         self.cache_id = osp.join(self.use_cache_path, cache_id)
         self.def_val = def_val
@@ -383,26 +387,30 @@ class CacheHelper:
     def load(self, load_depth=0):
         if self.exists():
             try:
-                with open(self.cache_id, 'rb') as f:
+                with open(self.cache_id, "rb") as f:
                     if self.verbose:
-                        print('Loading cache @', self.cache_id)
+                        print("Loading cache @", self.cache_id)
                     return pickle.load(f)
             except EOFError as e:
                 if load_depth == 32:
                     raise e
                 # try again soon
-                print("Cache size is ", osp.getsize(self.cache_id), 'for ', self.cache_id)
+                print(
+                    "Cache size is ",
+                    osp.getsize(self.cache_id),
+                    "for ",
+                    self.cache_id,
+                )
                 time.sleep(1.0 + np.random.uniform(0.0, 1.0))
-                return self.load(load_depth+1)
+                return self.load(load_depth + 1)
             return self.def_val
         else:
             return self.def_val
 
-
     def save(self, val):
-        with open(self.cache_id, 'wb') as f:
+        with open(self.cache_id, "wb") as f:
             if self.verbose:
-                print('Saving cache @', self.cache_id)
+                print("Saving cache @", self.cache_id)
             pickle.dump(val, f)
 
 

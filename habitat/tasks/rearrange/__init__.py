@@ -11,12 +11,12 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 def _try_register_rearrange_task():
     try:
-        import habitat.tasks.hab.envs.rearrang_env  # noqa: F401
-        import habitat.tasks.hab.envs.rearrang_pick_env
-        import habitat.tasks.hab.rearrange_pick_task
-        import habitat.tasks.hab.rearrange_sensors
-        import habitat.tasks.hab.rearrange_task
-    # import habitat.tasks.hab.envs.hab_simulator
+        import habitat.tasks.rearrange.envs.rearrang_env  # noqa: F401
+        import habitat.tasks.rearrange.envs.rearrang_pick_env
+        import habitat.tasks.rearrange.rearrange_pick_task
+        import habitat.tasks.rearrange.rearrange_sensors
+        import habitat.tasks.rearrange.rearrange_task
+    # import habitat.tasks.rearrange.envs.hab_simulator
     except ImportError as e:
         print(e)
         rearrangetask_import_error = e
@@ -27,7 +27,7 @@ def _try_register_rearrange_task():
     #             raise rearrangetask_import_error
 
     # Register actions
-    import habitat.tasks.hab.actions
+    import habitat.tasks.rearrange.actions
 
     if not HabitatSimActions.has_action("ARM_ACTION"):
         HabitatSimActions.extend_action_space("ARM_ACTION")

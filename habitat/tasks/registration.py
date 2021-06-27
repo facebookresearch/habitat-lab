@@ -7,8 +7,8 @@
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.tasks.eqa import _try_register_eqa_task
-from habitat.tasks.hab import _try_register_rearrange_task
 from habitat.tasks.nav import _try_register_nav_task
+from habitat.tasks.rearrange import _try_register_rearrange_task
 from habitat.tasks.vln import _try_register_vln_task
 
 

@@ -554,3 +554,55 @@ class RearrangePickReward(Measure):
         self.prev_picked = cur_picked
 
         self._metric = reward
+
+
+@registry.register_measure
+class RearrangePickSuccess(Measure):
+    cls_uuid: str = "rearrangepick_success"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._prev_ee_pos = None
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangePickReward.cls_uuid
+
+    def reset_metric(self, episode, task, observations, *args, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
+        )
+        self._prev_ee_pos = observations["ee_pos"]
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, episode, observations, task, *args, **kwargs):
+        ee_to_object_distance = task.measurements.measures[
+            EndEffectorToObjectDistance.cls_uuid
+        ].get_metric()
+        # Is the agent holding the object and it's at the start?
+        abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+        obj_to_ee = ee_to_object_distance[task.targ_idx]
+
+        # Check that we are holding the right object and the object is actually
+        # being held.
+        if (
+            abs_targ_obj_idx == self._sim.snapped_obj_id
+            and obj_to_ee < self.rlcfg.HOLD_THRESH
+        ):
+            cur_measures = self._env.get_metrics()
+            rest_dist = np.linalg.norm(
+                self._prev_ee_pos - task.desired_resting
+            )
+            if rest_dist < self._config.SUCC_THRESH:
+                return True
+
+        self._prev_ee_pos = observations["ee_pos"]
+        return False

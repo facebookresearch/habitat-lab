@@ -2,7 +2,7 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.tasks.hab.envs.utils import get_aabb, make_render_only
+from habitat.tasks.rearrange.envs.utils import get_aabb, make_render_only
 from habitat_sim.physics import MotionType
 
 
@@ -81,8 +81,8 @@ def load_articulated_objs(name_obj_dat, sim, obj_ids=[], auto_sleep=True):
         T = mn.Matrix4(trans)
         ao.transformation = T
 
-        #TODO: Broken in release.
-        #if auto_sleep:
+        # TODO: Broken in release.
+        # if auto_sleep:
         #    ao.can_sleep = True
         ao.motion_type = motion_type
         art_obj_ids.append(ao)
@@ -95,7 +95,7 @@ def init_art_objs(idx_and_state, sim, auto_clamp=False):
     for art_obj_idx, art_state in idx_and_state:
         # Need to not sleep so the update actually happens
         prev_sleep = sim.get_articulated_object_sleep(art_obj_idx)
-        #sim.set_articulated_object_sleep(art_obj_idx, False)
+        # sim.set_articulated_object_sleep(art_obj_idx, False)
 
         sim.set_articulated_object_positions(art_obj_idx, np.array(art_state))
         # Default motors for all NONROBOT articulated objects.
@@ -133,8 +133,8 @@ def load_objs(name_obj_dat, sim, obj_ids, auto_sleep=True):
         sim.set_linear_velocity(mn.Vector3(0, 0, 0), obj_id)
         sim.set_angular_velocity(mn.Vector3(0, 0, 0), obj_id)
         sim.set_object_motion_type(MotionType(obj_type), obj_id)
-        #TODO: Broken in Hab2.0 release
-        #if auto_sleep:
+        # TODO: Broken in Hab2.0 release
+        # if auto_sleep:
         #    sim.set_object_sleep(obj_id, True)
         static_obj_ids.append(obj_id)
     if len(obj_ids) != 0:

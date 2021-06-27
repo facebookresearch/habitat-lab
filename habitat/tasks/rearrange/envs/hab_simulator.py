@@ -12,14 +12,15 @@ import quaternion
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.hab.envs.obj_loaders import (
+from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.rearrange.envs.obj_loaders import (
     add_obj,
     init_art_objs,
     load_articulated_objs,
     load_objs,
     place_viz_objs,
 )
-from habitat.tasks.hab.envs.utils import (
+from habitat.tasks.rearrange.envs.utils import (
     IkHelper,
     convert_legacy_cfg,
     get_aabb,
@@ -27,7 +28,6 @@ from habitat.tasks.hab.envs.utils import (
     get_nav_mesh_settings,
     make_render_only,
 )
-from habitat.tasks.nav.nav import NavigationTask
 from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot
 
@@ -84,7 +84,7 @@ def load_light_setup_for_glb(json_filepath):
                 LightInfo(
                     vector=position,
                     color=color,
-                    model=LightPositionModel.GLOBAL,
+                    model=LightPositionModel.Global,  # GLOBAL,
                 )
             )
         # print("loaded {} lights".format(len(data['lights'])))

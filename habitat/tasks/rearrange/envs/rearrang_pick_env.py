@@ -4,8 +4,8 @@ import os.path as osp
 import numpy as np
 from PIL import Image
 
-from habitat.tasks.hab.envs.rearrang_env import RearrangementRLEnv
-from habitat.tasks.hab.envs.utils import (
+from habitat.tasks.rearrange.envs.rearrang_env import RearrangementRLEnv
+from habitat.tasks.rearrange.envs.utils import (
     CacheHelper,
     get_angle,
     rearrang_collision,

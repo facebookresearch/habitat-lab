@@ -5,8 +5,8 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.tasks.hab.envs.base_hab_env import BaseHabEnv
-from habitat.tasks.hab.envs.utils import (
+from habitat.tasks.rearrange.envs.base_hab_env import BaseHabEnv
+from habitat.tasks.rearrange.envs.utils import (
     CollDetails,
     allowed_region_to_bb,
     rearrang_collision,
@@ -224,7 +224,7 @@ class RearrangementRLEnv(BaseHabEnv):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
-        #TODO: CANNOT GET CONTACT INFO
+        # TODO: CANNOT GET CONTACT INFO
         return 0, 0, 0
         snapped_obj = self._env._sim.snapped_obj_id
         robo_id = self._env._sim.robot_id
