@@ -71,35 +71,24 @@ def load_light_setup_for_glb(json_filepath):
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         lighting_setup = []
-        for l in data['lights']:
+        for l in data["lights"]:
             t = l["position"]
             light_w = 1.0
             position = [float(t[0]), float(t[1]), float(t[2]), light_w]
             color_scale = float(l["color_scale"])
             color = [float(c * color_scale) for c in l["color"]]
-            #print('position: {}'.format(position))
-            #print('color: {}'.format(color))
-            lighting_setup.append(LightInfo(vector=position,
-                color=color, model=LightPositionModel.GLOBAL))
-        #print("loaded {} lights".format(len(data['lights'])))
+            # print('position: {}'.format(position))
+            # print('color: {}'.format(color))
+            lighting_setup.append(
+                LightInfo(
+                    vector=position,
+                    color=color,
+                    model=LightPositionModel.GLOBAL,
+                )
+            )
+        # print("loaded {} lights".format(len(data['lights'])))
 
     return lighting_setup
-
-
-def merge_sim_episode_with_object_config(sim_config, episode):
-    sim_config.defrost()
-    sim_config.ep_info = [episode.__dict__]
-    sim_config.freeze()
-    return sim_config
-
-
-@registry.register_task(name="OrpTask-v0")
-class OrpTask(NavigationTask):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-    def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -165,7 +154,7 @@ class OrpSim(HabitatSim):
         else:
             raise ValueError("Unrecognized robot")
 
-        #self._ik = IkHelper(self.arm_start)
+        # self._ik = IkHelper(self.arm_start)
 
         # A marker you can optionally render to visualize positions
         self.viz_marker = None
@@ -413,7 +402,7 @@ class OrpSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
-            #self._ik.setup_sim()
+            # self._ik.setup_sim()
             # Capture the starting art states
             for i in self.art_obj_ids:
                 self.start_art_states[

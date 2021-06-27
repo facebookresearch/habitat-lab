@@ -21,10 +21,12 @@ class HeadRgbSensor(HabitatSimRGBSensor):
     def _get_uuid(self, *args, **kwargs):
         return "robot_head_rgb"
 
+
 @registry.register_sensor
 class HeadDepthSensor(HabitatSimDepthSensor):
     def _get_uuid(self, *args, **kwargs):
         return "robot_head_depth"
+
 
 @registry.register_sensor
 class ArmRgbSensor(HabitatSimRGBSensor):
@@ -474,3 +476,90 @@ class EndEffectorToPosDistance(Measure):
         distance = np.linalg.norm(self._target_pos - ee_pos, ord=2)
 
         self._metric = distance
+
+
+@registry.register_measure
+class RearrangePickReward(Measure):
+    cls_uuid: str = "rearrangepick_reward"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangePickReward.cls_uuid
+
+    def reset_metric(self, episode, task, observations, *args, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, episode, observations, task, *args, **kwargs):
+        ee_to_object_distance = task.measurements.measures[
+            EndEffectorToObjectDistance.cls_uuid
+        ].get_metric()
+        reward = 0
+
+        snapped_id = self._sim.snapped_obj_id
+        cur_picked = snapped_id is not None
+        ee_pos = observations["ee_pos"]  # self._sim.get_end_effector_pos()  #
+
+        if cur_picked:
+            dist_to_goal = np.linalg.norm(ee_pos - task.desired_resting)
+        else:
+            dist_to_goal = ee_to_object_distance[task.targ_idx]
+
+        abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+
+        did_pick = cur_picked and (not self.task)
+        if did_pick:
+            if snapped_id == abs_targ_obj_idx:
+                task.n_succ_picks += 1
+                reward += self._config.PICK_REWARD
+                # If we just transitioned to the next stage our current
+                # distance is stale.
+                self.cur_dist = -1
+            else:
+                # picked the wrong object...
+                reward -= self._config.WRONG_PICK_PEN
+                self.should_end = True
+                self._metric = reward
+                return
+
+        if self._config.USE_DIFF:
+            if self.cur_dist < 0:
+                dist_diff = 0.0
+            else:
+                dist_diff = self.cur_dist - dist_to_goal
+
+            # Filter out the small fluctuations
+            dist_diff = round(dist_diff, 3)
+            reward += self._config.DIST_REWARD * dist_diff
+        else:
+            reward -= self._config.DIST_REWARD * dist_to_goal
+        self.cur_dist = dist_to_goal
+
+        if not cur_picked and self.prev_picked:
+            # Dropped the object...
+            reward -= self._config.DROP_PEN
+            self.should_end = True
+            self._metric = reward
+            return
+
+        if self._my_episode_success():
+            reward += self.rlcfg.SUCC_REWARD
+
+        reward += self._get_coll_reward()
+
+        self.prev_picked = cur_picked
+
+        self._metric = reward

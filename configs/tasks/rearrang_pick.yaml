@@ -13,7 +13,7 @@ DATASET:
     DATA_PATH: data/episode_data/{split}_counter_L_analysis_5000_500.json.gz
     SCENES_DIR: "data/scene_datasets/"
 TASK:
-    TYPE: OrpTask-v0
+    TYPE: RearrangePickTask-v0
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
@@ -44,9 +44,26 @@ TASK:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
+    REARRANGE_PICK_REWARD:
+        TYPE: "RearrangePickReward"
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PICK_REWARD: 20.0
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        DROP_PEN: 5.0
+        WRONG_PICK_PEN: 5.0
+        COLL_PEN: 1.0
+        ROBO_OBJ_COLL_PEN: 0.0
+
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+
+        USE_DIFF: True
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+#        - "REARRANGE_PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"

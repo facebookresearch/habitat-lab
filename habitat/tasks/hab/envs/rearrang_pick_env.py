@@ -54,9 +54,6 @@ class RearrangPickRLEnv(RearrangementRLEnv):
     def _my_get_reward(self, observations):
         self.prev_obs = observations
 
-        def get_abs(x, k):
-            return min(x[k].values())
-
         cur_measures = self._env.get_metrics()
         reward = 0
 
