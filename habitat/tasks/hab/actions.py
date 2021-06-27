@@ -98,10 +98,9 @@ class ArmVelAction(SimulatorTaskAction):
         # clip from -1 to 1
         vel = np.clip(vel, -1, 1)
         vel *= self._config.VEL_CTRL_LIM
-        #TODO: WILL CHANGE A LOT WITH ROBOT WRAPPER
-        for i, joint in enumerate(range(self._sim.arm_start, self._sim.arm_start+7)):
-            self._sim.add_mtr_pos(joint, vel[i])
-
+        #TODO: THIS IS DIFFERENT FROM MY CODE. I NEED TO ADD TO THE TARGETS NOT
+        #THE ACTUAL JOINT POSITIONS
+        self._sim.robot.set_arm_mtr_pos(vel+self._sim.robot.get_arm_pos())
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
 

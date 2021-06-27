@@ -115,7 +115,7 @@ class RearrangementRLEnv(BaseHabEnv):
         # Is the object firmly in the grasp of the robot?
         hold_obj = sim.snapped_obj_id
         cur_measures = self._env.get_metrics()
-        ee_pos = self._env._sim.get_end_effector_pos()
+        ee_pos = self._env._sim.robot.get_end_effector_transform().translation
         if hold_obj is not None:
             obj_pos = self._env._sim.get_translation(hold_obj)
             if np.linalg.norm(ee_pos - obj_pos) >= self.rlcfg.HOLD_THRESH:
@@ -224,6 +224,8 @@ class RearrangementRLEnv(BaseHabEnv):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
+        #TODO: CANNOT GET CONTACT INFO
+        return 0, 0, 0
         snapped_obj = self._env._sim.snapped_obj_id
         robo_id = self._env._sim.robot_id
         contact_points = self._env._sim._sim.get_physics_contact_points()
