@@ -121,6 +121,7 @@ def test_rearrange_task():
     # env = DummyRLEnv(config=config, dataset=dataset)
     # from habitat_baselines.common.environments import NavRLEnv
     # env_class = get_env_class(config.ENV_NAME)
+    # registration doesn't work well yet
     import habitat.tasks.rearrange.rearrange_pick_task
     from habitat.tasks.rearrange.envs.rearrang_pick_env import (
         RearrangPickRLEnv,
