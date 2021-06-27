@@ -224,7 +224,7 @@ class RearrangementRLEnv(BaseHabEnv):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
-        #TODO: CANNOT GET CONTACT INFO
+        # TODO: CANNOT GET CONTACT INFO
         return 0, 0, 0
         snapped_obj = self._env._sim.snapped_obj_id
         robo_id = self._env._sim.robot_id
