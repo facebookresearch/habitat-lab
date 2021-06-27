@@ -92,22 +92,6 @@ def load_light_setup_for_glb(json_filepath):
     return lighting_setup
 
 
-def merge_sim_episode_with_object_config(sim_config, episode):
-    sim_config.defrost()
-    sim_config.ep_info = [episode.__dict__]
-    sim_config.freeze()
-    return sim_config
-
-
-@registry.register_task(name="OrpTask-v0")
-class OrpTask(NavigationTask):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-    def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
-
-
 @attr.s(auto_attribs=True, slots=True)
 class SimEvent:
     is_ready: Callable[[], bool]
@@ -119,8 +103,8 @@ class SimEvent:
 EE_GRIPPER_OFFSET = mn.Vector3(0.08, 0, 0)
 
 
-@registry.register_simulator(name="OrpSim-v0")
-class OrpSim(HabitatSim):
+@registry.register_simulator(name="RearrangeSim-v0")
+class RearrangeSim(HabitatSim):
     def __init__(self, config):
         self.n_objs = config.N_OBJS
 

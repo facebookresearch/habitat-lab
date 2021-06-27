@@ -211,7 +211,7 @@ TASK_CONFIG:
     DATA_PATH: data/episode_data/train_fridge_5000_500.json.gz
     SCENES_DIR: data/scene_datasets
     SPLIT: train
-    TYPE: OrpDataset-v0
+    TYPE: RearrangeDataset-v0
   ENVIRONMENT:
     ITERATOR_OPTIONS:
       CYCLE: True
@@ -330,7 +330,7 @@ TASK_CONFIG:
       WIDTH: 640
     TILT_ANGLE: 15
     TURN_ANGLE: 10
-    TYPE: OrpSim-v0
+    TYPE: RearrangeSim-v0
   TASK:
     ABS_GOAL_SENSOR:
       DIMENSIONALITY: 3

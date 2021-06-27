@@ -8,7 +8,7 @@ COUNT_ROBO_OBJ_COLLS: False
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
-    TYPE: OrpDataset-v0
+    TYPE: RearrangeDataset-v0
     SPLIT: train
     DATA_PATH: data/episode_data/{split}_counter_L_analysis_5000_500.json.gz
     SCENES_DIR: "data/scene_datasets/"
@@ -58,6 +58,11 @@ TASK:
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+
+    REARRANGE_PICK_SUCCESS:
+        TYPE: "RearrangePickSuccess"
+        SUCC_THRESH: 0.15
+        HOLD_THRESH: 0.09
 
         USE_DIFF: True
     MEASUREMENTS:
@@ -139,4 +144,4 @@ SIMULATOR:
         WIDTH: 640
     TILT_ANGLE: 15
     TURN_ANGLE: 10
-    TYPE: OrpSim-v0
+    TYPE: RearrangeSim-v0

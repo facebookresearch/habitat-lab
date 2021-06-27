@@ -14,7 +14,7 @@ from habitat.tasks.nav.nav import NavigationGoal
 
 
 @attr.s(auto_attribs=True, kw_only=True)
-class OrpEpisode(Episode):
+class RearrangeEpisode(Episode):
     art_objs: object
     static_objs: object
     targets: object
@@ -27,10 +27,10 @@ class OrpEpisode(Episode):
     force_spawn_pos: List = None
 
 
-@registry.register_dataset(name="OrpDataset-v0")
-class OrpDatasetV0(PointNavDatasetV1):
+@registry.register_dataset(name="RearrangeDataset-v0")
+class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
-    episodes: List[OrpEpisode]
+    episodes: List[RearrangeEpisode]
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def to_json(self) -> str:
@@ -47,35 +47,6 @@ class OrpDatasetV0(PointNavDatasetV1):
         dir_path = osp.dirname(osp.realpath(__file__))
 
         for i, episode in enumerate(deserialized["episodes"]):
-            rearrangement_episode = OrpEpisode(**episode)
+            rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
             self.episodes.append(rearrangement_episode)
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class OrpNavEpisode(OrpEpisode):
-    goals: List[NavigationGoal] = attr.ib(
-        default=None, validator=not_none_validator
-    )
-    start_room: Optional[str] = None
-    shortest_paths: Optional[List[List[ShortestPathPoint]]] = None
-
-
-@registry.register_dataset(name="OrpNavDataset-v0")
-class OrpNavDatasetV0(OrpDatasetV0):
-    episodes: List[OrpNavEpisode]
-
-    def from_json(
-        self, json_str: str, scenes_dir: Optional[str] = None
-    ) -> None:
-        deserialized = json.loads(json_str)
-        dir_path = osp.dirname(osp.realpath(__file__))
-
-        for i, episode in enumerate(deserialized["episodes"]):
-            episode = OrpNavEpisode(**episode)
-            episode.episode_id = str(i)
-
-            for g_index, goal in enumerate(episode.goals):
-                episode.goals[g_index] = NavigationGoal(**goal)
-
-            self.episodes.append(episode)

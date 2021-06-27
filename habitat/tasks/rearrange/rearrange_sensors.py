@@ -547,7 +547,7 @@ class RearrangePickReward(Measure):
             return
 
         if self._my_episode_success():
-            reward += self.rlcfg.SUCC_REWARD
+            reward += self._config.SUCC_REWARD
 
         reward += self._get_coll_reward()
 
@@ -587,6 +587,7 @@ class RearrangePickSuccess(Measure):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
+        self._metric = False
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
         obj_to_ee = ee_to_object_distance[task.targ_idx]
@@ -595,14 +596,13 @@ class RearrangePickSuccess(Measure):
         # being held.
         if (
             abs_targ_obj_idx == self._sim.snapped_obj_id
-            and obj_to_ee < self.rlcfg.HOLD_THRESH
+            and obj_to_ee < self._config.HOLD_THRESH
         ):
             cur_measures = self._env.get_metrics()
             rest_dist = np.linalg.norm(
                 self._prev_ee_pos - task.desired_resting
             )
             if rest_dist < self._config.SUCC_THRESH:
-                return True
+                self._metric = True
 
         self._prev_ee_pos = observations["ee_pos"]
-        return False

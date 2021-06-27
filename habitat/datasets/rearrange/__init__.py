@@ -18,7 +18,7 @@ from habitat.core.registry import registry
 def _try_register_rearrangedatasetv1():
     try:
         from habitat.datasets.rearrange.rearrange_dataset import (  # noqa: F401
-            OrpDatasetV0,
+            RearrangeDatasetV0,
         )
 
     except ImportError as e:
