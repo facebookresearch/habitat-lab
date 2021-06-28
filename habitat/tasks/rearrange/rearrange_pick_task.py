@@ -87,21 +87,19 @@ class RearrangePickTaskV1(RearrangeTask):
         return merge_sim_episode_with_object_config(sim_config, episode)
 
     def __init__(self, *args, config, dataset=None, **kwargs):
-        super().__init__(config=config, *args, **kwargs)
+        super().__init__(config=config, *args, dataset=dataset, **kwargs)
         # super().__init__(config, dataset)
         self.cache = {}
 
-        data_path = config.TASK_CONFIG.DATASET.DATA_PATH.format(
-            split=config.TASK_CONFIG.DATASET.SPLIT
-        )
+        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
 
         mtime = osp.getmtime(data_path)
         cache_name = (
             str(mtime)
-            + self.tcfg.DATASET.SPLIT
-            + str(self.tcfg.COUNT_OBJ_COLLISIONS)
+            + dataset.config.SPLIT
+            + str(self._config.COUNT_OBJ_COLLISIONS)
         )
-        cache_name += str(self.rlcfg.BASE_NOISE)
+        cache_name += str(self._config.BASE_NOISE)
         cache_name = cache_name.replace(".", "_")
 
         fname = data_path.split("/")[-1].split(".")[0]
@@ -115,20 +113,21 @@ class RearrangePickTaskV1(RearrangeTask):
         self.force_set_idx = None
         self.set_force_back = None
 
-        self.observation_space.spaces["obj_start_sensor"] = reshape_obs_space(
-            self.observation_space.spaces["obj_start_sensor"], (3,)
-        )
+        # TODO refactor
+        # self.observation_space.spaces["obj_start_sensor"] = reshape_obs_space(
+        #     self.observation_space.spaces["obj_start_sensor"], (3,)
+        # )
 
     def _is_holding_obj(self):
-        return self._env._sim.snapped_obj_id is not None
+        return self._sim.snapped_obj_id is not None
 
     def _my_get_reward(self, observations):
         self.prev_obs = observations
 
-        cur_measures = self._env.get_metrics()
+        cur_measures = self.measures.get_metrics()
         reward = 0
 
-        snapped_id = self._env._sim.snapped_obj_id
+        snapped_id = self._sim.snapped_obj_id
         cur_picked = snapped_id is not None
 
         if cur_picked:
@@ -138,23 +137,23 @@ class RearrangePickTaskV1(RearrangeTask):
         else:
             dist_to_goal = cur_measures["ee_to_object_distance"][self.targ_idx]
 
-        abs_targ_obj_idx = self._env._sim.scene_obj_ids[self.abs_targ_idx]
+        abs_targ_obj_idx = self._sim.scene_obj_ids[self.abs_targ_idx]
 
         did_pick = cur_picked and (not self.prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 self.n_succ_picks += 1
-                reward += self.rlcfg.PICK_REWARD
+                reward += self._config.PICK_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self.cur_dist = -1
             else:
                 # picked the wrong object...
-                reward -= self.rlcfg.WRONG_PICK_PEN
+                reward -= self._config.WRONG_PICK_PEN
                 self.should_end = True
                 return reward
 
-        if self.rlcfg.USE_DIFF:
+        if self._config.USE_DIFF:
             if self.cur_dist < 0:
                 dist_diff = 0.0
             else:
@@ -162,19 +161,19 @@ class RearrangePickTaskV1(RearrangeTask):
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
-            reward += self.rlcfg.DIST_REWARD * dist_diff
+            reward += self._config.DIST_REWARD * dist_diff
         else:
-            reward -= self.rlcfg.DIST_REWARD * dist_to_goal
+            reward -= self._config.DIST_REWARD * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self.prev_picked:
             # Dropped the object...
-            reward -= self.rlcfg.DROP_PEN
+            reward -= self._config.DROP_PEN
             self.should_end = True
             return reward
 
         if self._my_episode_success():
-            reward += self.rlcfg.SUCC_REWARD
+            reward += self._config.SUCC_REWARD
 
         reward += self._get_coll_reward()
 
@@ -184,21 +183,21 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def _my_episode_success(self):
         # Is the agent holding the object and it's at the start?
-        abs_targ_obj_idx = self._env._sim.scene_obj_ids[self.abs_targ_idx]
-        cur_measures = self._env.get_metrics()
+        abs_targ_obj_idx = self._sim.scene_obj_ids[self.abs_targ_idx]
+        cur_measures = self.measures.get_metrics()
         obj_to_ee = cur_measures["ee_to_object_distance"][self.targ_idx]
 
         # Check that we are holding the right object and the object is actually
         # being held.
         if (
-            abs_targ_obj_idx == self._env._sim.snapped_obj_id
-            and obj_to_ee < self.rlcfg.HOLD_THRESH
+            abs_targ_obj_idx == self._sim.snapped_obj_id
+            and obj_to_ee < self._config.HOLD_THRESH
         ):
-            cur_measures = self._env.get_metrics()
+            cur_measures = self.measures.get_metrics()
             rest_dist = np.linalg.norm(
                 self.prev_obs["ee_pos"] - self.desired_resting
             )
-            if rest_dist < self.rlcfg.SUCC_THRESH:
+            if rest_dist < self._config.SUCC_THRESH:
                 return True
 
         return False
@@ -225,7 +224,7 @@ class RearrangePickTaskV1(RearrangeTask):
         timeout = 1000
         for attempt in range(timeout):
             start_pos = orig_start_pos + np.random.normal(
-                0, self.rlcfg.BASE_NOISE, size=(3,)
+                0, self._config.BASE_NOISE, size=(3,)
             )
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
 
@@ -255,7 +254,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 did_collide, details = rearrang_collision(
                     colls,
                     None,
-                    self.tcfg.COUNT_OBJ_COLLISIONS,
+                    self._config.COUNT_OBJ_COLLISIONS,
                     ignore_base=False,
                 )
 
@@ -307,14 +306,25 @@ class RearrangePickTaskV1(RearrangeTask):
             and action_args["grip_ac"] <= 0
         )
 
-    def step(self, action, action_args):
+    def step(self, action, episode):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
+        action_name = action["action"]
+        if isinstance(action_name, (int, np.integer)):
+            action_name = self.get_action_name(action_name)
+        assert (
+            action_name in self.actions
+        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
+        action_args = action["action_args"]
+
         if self._should_prevent_grip(action_args):
             # No releasing the object once it is held.
             action_args["grip_ac"] = None
-        obs, reward, done, info = super().step(action, action_args)
+        obs = super().step(action=action, episode=episode)
+        reward, done, info = 0, False, {}  # TODO Fix done and etc
         info["dist_to_goal"] = self.cur_dist
         info["is_picked"] = int(self.prev_picked)
-        cur_measures = self._env.get_metrics()
+        cur_measures = self.measures.get_metrics()
         info["ee_to_obj"] = cur_measures["ee_to_object_distance"][
             self.abs_targ_idx
         ]
@@ -323,7 +333,7 @@ class RearrangePickTaskV1(RearrangeTask):
         # pick
         obs = self._trans_obs(obs)
 
-        return obs, reward, done, info
+        return obs
 
     def _trans_obs(self, obs):
         if "obj_start_sensor" in obs:
@@ -337,7 +347,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def reset(self, episode: Episode):
         super_reset = True
-        sim = self._env._sim
+        sim = self._sim
 
         if super_reset:
             sim.set_force_back(self.set_force_back)
@@ -351,7 +361,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 start_pos, start_rot, sel_idx = self.start_states[episode_id]
             else:
                 start_pos, start_rot, sel_idx = self._gen_start_pos(
-                    sim, self.rlcfg.EASY_INIT
+                    sim, self._config.EASY_INIT
                 )
                 self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
                 if self.force_set_idx is None:
@@ -363,10 +373,12 @@ class RearrangePickTaskV1(RearrangeTask):
                 did_collide, _ = rearrang_collision(
                     colls,
                     None,
-                    self.tcfg.COUNT_OBJ_COLLISIONS,
+                    self._config.COUNT_OBJ_COLLISIONS,
                     ignore_base=False,
                 )
-                rot_noise = np.random.normal(0.0, self.rlcfg.BASE_ANGLE_NOISE)
+                rot_noise = np.random.normal(
+                    0.0, self._config.BASE_ANGLE_NOISE
+                )
                 sim.set_robot_pos(start_pos[[0, 2]])
                 sim.set_robot_rot(start_rot + rot_noise)
                 if not did_collide:
@@ -380,10 +392,10 @@ class RearrangePickTaskV1(RearrangeTask):
         # Value < 0 will not be used. Need to do this instead of None since
         # debug renderer expects a valid number.
         self.cur_dist = -1.0
-        snapped_id = self._env._sim.snapped_obj_id
+        snapped_id = self._sim.snapped_obj_id
         self.prev_picked = snapped_id is not None
 
         if super_reset:
             sim.set_force_back(None)
 
-        return self.get_task_obs()
+        return super(RearrangePickTaskV1, self).reset(episode)

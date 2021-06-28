@@ -39,6 +39,7 @@ class RearrangeDatasetV0(PointNavDatasetV1):
 
     def __init__(self, config: Optional[Config] = None) -> None:
         super().__init__(config)
+        self.config = config
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None

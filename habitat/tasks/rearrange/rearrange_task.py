@@ -28,11 +28,13 @@ class RearrangeTask(NavigationTask):
     Defines additional logic for valid collisions and gripping.
     """
 
-    def __init__(self, config, sim, dataset=None) -> None:
-        super().__init__(config, dataset)
+    def __init__(self, config, sim, dataset=None, *args, **kwargs) -> None:
+        super().__init__(
+            *args, config=config, sim=sim, dataset=dataset, **kwargs
+        )
         self.is_gripper_closed = False
         self._sim = sim
-        self.use_max_accum_force = self.tcfg.MAX_ACCUM_FORCE
+        self.use_max_accum_force = self._config.MAX_ACCUM_FORCE
         self.n_objs = len(dataset.episodes[0].targets)
 
     def reset(self, episode: Episode):
@@ -42,7 +44,7 @@ class RearrangeTask(NavigationTask):
             observations = super().reset(episode)
         else:
             observations = None
-        self.prev_measures = self._env.get_metrics()
+        self.prev_measures = self.measurements.get_metrics()
         self.prev_picked = False
         self.n_succ_picks = 0
         self.coll_accum = CollDetails()
@@ -51,10 +53,10 @@ class RearrangeTask(NavigationTask):
         self.accum_force = 0
         self.prev_force = None
 
-        sim = self._env._sim
+        sim = self._sim
 
-        self.allowed_region = self._env._sim.allowed_region
-        task_allowed_region = self.tcfg.get("ALLOWED_REGION", [])
+        self.allowed_region = self._sim.allowed_region
+        task_allowed_region = self._config.get("ALLOWED_REGION", [])
         if len(task_allowed_region) > 0:
             # Task allowed region overrides the scene one.
             allowed_region = task_allowed_region
@@ -99,7 +101,7 @@ class RearrangeTask(NavigationTask):
 
     def _pre_step(self):
         robo_force, _, overall_force = self._get_coll_forces()
-        if self.tcfg.COUNT_OBJ_COLLISIONS:
+        if self._config.COUNT_OBJ_COLLISIONS:
             self.cur_force = overall_force
         else:
             self.cur_force = robo_force
@@ -119,19 +121,19 @@ class RearrangeTask(NavigationTask):
         self.update_coll_count()
 
     def _is_violating_hold_constraint(self):
-        if self.tcfg.get("IGNORE_HOLD_VIOLATE", False):
+        if self._config.get("IGNORE_HOLD_VIOLATE", False):
             return False
-        sim = self._env._sim
+        sim = self._sim
         # Is the object firmly in the grasp of the robot?
         hold_obj = sim.snapped_obj_id
-        cur_measures = self._env.get_metrics()
-        ee_pos = self._env._sim.get_end_effector_pos()
+        cur_measures = self.measurements.get_metrics()
+        ee_pos = self._sim.get_end_effector_pos()
         if hold_obj is not None:
-            obj_pos = self._env._sim.get_translation(hold_obj)
+            obj_pos = self._sim.get_translation(hold_obj)
             if np.linalg.norm(ee_pos - obj_pos) >= self.rlcfg.HOLD_THRESH:
                 return True
 
-        if self.tcfg.get("IGNORE_ART_HOLD_VIOLATE", False):
+        if self._config.get("IGNORE_ART_HOLD_VIOLATE", False):
             return False
 
         art_hold_thresh = self.rlcfg.get("ART_HOLD_THRESH", 0.2)
@@ -145,7 +147,7 @@ class RearrangeTask(NavigationTask):
 
     def _get_coll_reward(self):
         reward = 0
-        if self.tcfg.FORCE_BASED:
+        if self._config.FORCE_BASED:
             # Penalize the force that was added to the accumulated force at the
             # last time step.
             reward -= min(
@@ -158,7 +160,7 @@ class RearrangeTask(NavigationTask):
             total_colls = (
                 delta_coll.obj_scene_colls + delta_coll.robo_scene_colls
             )
-            if self.tcfg.COUNT_ROBO_OBJ_COLLS:
+            if self._config.COUNT_ROBO_OBJ_COLLS:
                 total_colls += delta_coll.robo_obj_colls
             reward -= self.rlcfg.COLL_PEN * (min(1, total_colls))
         return reward
@@ -178,8 +180,8 @@ class RearrangeTask(NavigationTask):
         # If we have any sort of collision at all the episode is over.
         info["ep_n_picks"] = self.n_succ_picks
         if (
-            self.tcfg.MAX_COLLISIONS > 0
-            and self.cur_collisions > self.tcfg.MAX_COLLISIONS
+            self._config.MAX_COLLISIONS > 0
+            and self.cur_collisions > self._config.MAX_COLLISIONS
         ):
             done = True
 
@@ -200,7 +202,7 @@ class RearrangeTask(NavigationTask):
         else:
             info["ep_constraint_violate"] = 0.0
 
-        if self.tcfg.FORCE_BASED:
+        if self._config.FORCE_BASED:
             if (
                 self.use_max_accum_force > 0
                 and self.accum_force > self.use_max_accum_force
@@ -215,9 +217,9 @@ class RearrangeTask(NavigationTask):
 
         if (
             isinstance(self.allowed_region, mn.Range2D)
-            and self.tcfg.END_OUT_OF_REGION
+            and self._config.END_OUT_OF_REGION
         ):
-            robot_pos = self._env._sim.get_robot_transform().translation
+            robot_pos = self._sim.get_robot_transform().translation
             robot_pos = mn.Vector2(robot_pos[0], robot_pos[2])
             in_region = self.allowed_region.contains(robot_pos)
             if not in_region:
@@ -241,9 +243,9 @@ class RearrangeTask(NavigationTask):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
-        snapped_obj = self._env._sim.snapped_obj_id
-        robo_id = self._env._sim.robot_id
-        contact_points = self._env._sim._sim.get_physics_contact_points()
+        snapped_obj = self._sim.snapped_obj_id
+        robo_id = self._sim.robot_id
+        contact_points = self._sim._sim.get_physics_contact_points()
 
         def get_max_force(contact_points, check_id):
             match_contacts = [
@@ -276,11 +278,11 @@ class RearrangeTask(NavigationTask):
         return max_robo_force, max_obj_force, max_force
 
     def update_coll_count(self):
-        colls = self._env._sim.get_collisions()
+        colls = self._sim.get_collisions()
         _, coll_details = rearrang_collision(
             colls,
-            self._env._sim.snapped_obj_id,
-            self.tcfg.COUNT_OBJ_COLLISIONS,
+            self._sim.snapped_obj_id,
+            self._config.COUNT_OBJ_COLLISIONS,
         )
 
         self.coll_accum.obj_scene_colls += coll_details.obj_scene_colls
@@ -292,7 +294,7 @@ class RearrangeTask(NavigationTask):
         ret = (
             self.coll_accum.obj_scene_colls + self.coll_accum.robo_scene_colls
         )
-        if self.tcfg.COUNT_ROBO_OBJ_COLLS:
+        if self._config.COUNT_ROBO_OBJ_COLLS:
             ret += self.coll_accum.robo_obj_colls
         return ret
 
