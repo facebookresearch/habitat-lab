@@ -110,46 +110,6 @@ def test_dataset_splitting(split):
     ), "Intersection of split datasets is not the empty set"
 
 
-def test_rearrange_task():
-    import habitat.tasks.rearrange.envs.hab_simulator
-    from habitat_baselines.config.default import get_config
-
-    config = get_config("configs/tasks/rl_rearrang_pick.yaml")
-    # dataset = make_dataset(
-    #     id_dataset=config.DATASET.TYPE, config=config.DATASET
-    # )
-    # env = DummyRLEnv(config=config, dataset=dataset)
-    # from habitat_baselines.common.environments import NavRLEnv
-    # env_class = get_env_class(config.ENV_NAME)
-    # registration doesn't work well yet
-    import habitat.tasks.rearrange.rearrange_pick_task
-    from habitat.tasks.rearrange.envs.rearrang_pick_env import (
-        RearrangPickRLEnv,
-    )
-    from habitat_baselines.common.environments import get_env_class
-
-    env_class = RearrangPickRLEnv
-    env = habitat_baselines.utils.env_utils.make_env_fn(
-        env_class=env_class, config=config
-    )
-    # env = env_class(config=config)
-
-    with env:
-        for _ in range(10):
-            env.reset()
-            done = False
-            while not done:
-                action = env.action_space.sample()
-                habitat.logger.info(
-                    f"Action : "
-                    f"{action['action']}, "
-                    f"args: {action['action_args']}."
-                )
-                _, _, done, info = env.step(**action)
-
-            logger.info(info)
-
-
 def test_rearrange_habitat_env():
     import habitat.tasks.rearrange.envs.hab_simulator
     import habitat.tasks.rearrange.rearrange_pick_task
@@ -163,6 +123,13 @@ def test_rearrange_habitat_env():
         for _ in range(10):
             env.reset()
             while not env.episode_over:
-                env.step(env.action_space.sample())
+                action = env.action_space.sample()
+                obs = env.step(action)
+                habitat.logger.info(
+                    f"Action : "
+                    f"{action['action']}, "
+                    f"args: {action['action_args']}."
+                    f"obs: {list(obs.keys())}."
+                )
 
         env.reset()

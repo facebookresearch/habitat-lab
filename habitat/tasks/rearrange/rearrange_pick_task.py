@@ -7,7 +7,6 @@ from PIL import Image
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.envs.rearrang_env import RearrangementRLEnv
 from habitat.tasks.rearrange.envs.utils import (
     CacheHelper,
     get_angle,
@@ -15,7 +14,6 @@ from habitat.tasks.rearrange.envs.utils import (
     reshape_obs_space,
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat_baselines.common.baseline_registry import baseline_registry
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):

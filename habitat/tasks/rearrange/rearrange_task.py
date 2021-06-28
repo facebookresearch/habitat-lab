@@ -10,8 +10,6 @@ import habitat_sim
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.envs.base_hab_env import BaseHabEnv
-from habitat.tasks.rearrange.envs.rearrang_env import RearrangementRLEnv
 from habitat.tasks.rearrange.envs.utils import (
     CacheHelper,
     CollDetails,
@@ -20,7 +18,6 @@ from habitat.tasks.rearrange.envs.utils import (
     rearrang_collision,
     reshape_obs_space,
 )
-from habitat_baselines.common.baseline_registry import baseline_registry
 
 
 class RearrangeTask(NavigationTask):
