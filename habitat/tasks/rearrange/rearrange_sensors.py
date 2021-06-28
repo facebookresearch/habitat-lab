@@ -377,9 +377,7 @@ class IsHoldingSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         snapped_id = self._sim.snapped_obj_id
-        is_holding = (snapped_id is not None) or (
-            self._sim.snapped_marker_name is not None
-        )
+        is_holding = snapped_id is not None
 
         return np.array(int(is_holding)).reshape((1,))
 

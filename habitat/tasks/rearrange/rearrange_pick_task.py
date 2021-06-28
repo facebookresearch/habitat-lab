@@ -109,7 +109,6 @@ class RearrangePickTaskV1(RearrangeTask):
         self.desired_resting = np.array([0.5, 0.0, 1.0])
         self.targ_idx = None
         self.force_set_idx = None
-        self.set_force_back = None
 
         # TODO refactor
         # self.observation_space.spaces["obj_start_sensor"] = reshape_obs_space(
@@ -340,15 +339,11 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
-        if "force_back_pos" in kwargs:
-            self.set_force_back = kwargs["force_back_pos"]
 
     def reset(self, episode: Episode):
         super_reset = True
         sim = self._sim
 
-        if super_reset:
-            sim.set_force_back(self.set_force_back)
         super().reset(episode)
 
         self.prev_colls = 0
@@ -377,6 +372,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 rot_noise = np.random.normal(
                     0.0, self._config.BASE_ANGLE_NOISE
                 )
+
                 sim.set_robot_pos(start_pos[[0, 2]])
                 sim.set_robot_rot(start_rot + rot_noise)
                 if not did_collide:
@@ -392,8 +388,5 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cur_dist = -1.0
         snapped_id = self._sim.snapped_obj_id
         self.prev_picked = snapped_id is not None
-
-        if super_reset:
-            sim.set_force_back(None)
 
         return super(RearrangePickTaskV1, self).reset(episode)

@@ -52,48 +52,6 @@ class RearrangeTask(NavigationTask):
 
         sim = self._sim
 
-        self.allowed_region = self._sim.allowed_region
-        task_allowed_region = self._config.get("ALLOWED_REGION", [])
-        if len(task_allowed_region) > 0:
-            # Task allowed region overrides the scene one.
-            allowed_region = task_allowed_region
-
-            allowed_square = allowed_region[:2]
-            allowed_root_art_id = allowed_region[2]
-            allowed_region = allowed_region_to_bb(allowed_square)
-            art_id = sim.art_name_to_id[allowed_root_art_id]
-            art_T = sim._sim.get_articulated_object_root_state(art_id)
-
-            # Transform the 2D BB
-            center = allowed_region.center()
-            size = allowed_region.size()
-            allowed_region_3d = mn.Range3D.from_center(
-                mn.Vector3(center[0], 0.0, center[1]),
-                mn.Vector3(size[0] / 2, 0.5 / 2, size[1] / 2),
-            )
-            allowed_region_3d = habitat_sim.geo.get_transformed_bb(
-                allowed_region_3d, art_T
-            )
-            center = allowed_region_3d.center()
-            size = allowed_region_3d.size()
-            self.allowed_region = mn.Range2D.from_center(
-                mn.Vector2(center[0], center[2]),
-                mn.Vector2(size[0] / 2, size[2] / 2),
-            )
-
-            # To visualize the allowed region.
-            fence_points = [
-                self.allowed_region.bottom_right,
-                self.allowed_region.bottom_left,
-                self.allowed_region.top_left,
-                self.allowed_region.top_right,
-            ]
-            for i, p in enumerate(fence_points):
-                full_p = [p[0], 0.5, p[1]]
-                sim.viz_ids["fence_%i" % i] = sim.viz_pos(
-                    full_p, sim.viz_ids["fence_%i" % i]
-                )
-
         return observations
 
     def _pre_step(self):
@@ -134,11 +92,6 @@ class RearrangeTask(NavigationTask):
             return False
 
         art_hold_thresh = self._config.get("ART_HOLD_THRESH", 0.2)
-
-        if sim.snapped_marker_name is not None:
-            hold_pos = sim.markers[sim.snapped_marker_name]["global_pos"]
-            if np.linalg.norm(ee_pos - hold_pos) >= art_hold_thresh:
-                return True
 
         return False
 
@@ -214,22 +167,6 @@ class RearrangeTask(NavigationTask):
                 info["ep_accum_force_end"] = 0.0
         else:
             info["ep_accum_force_end"] = 0.0
-
-        if (
-            isinstance(self.allowed_region, mn.Range2D)
-            and self._config.END_OUT_OF_REGION
-        ):
-            robot_pos = self._sim.get_robot_transform().translation
-            robot_pos = mn.Vector2(robot_pos[0], robot_pos[2])
-            in_region = self.allowed_region.contains(robot_pos)
-            if not in_region:
-                reward -= self._config.OUT_OF_REGION_PEN
-                done = True
-                info["ep_out_of_region"] = 1.0
-            else:
-                info["ep_out_of_region"] = 0.0
-        else:
-            info["ep_out_of_region"] = 0.0
 
         return obs
 
