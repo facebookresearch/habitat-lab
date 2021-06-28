@@ -1,35 +1,45 @@
 import copy
+from typing import Any, Dict
 
 import attr
 import magnum as mn
 import numpy as np
+from PIL import Image
 
 import habitat_sim
+from habitat.core.dataset import Episode
+from habitat.core.registry import registry
+from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.envs.base_hab_env import BaseHabEnv
+from habitat.tasks.rearrange.envs.rearrang_env import RearrangementRLEnv
 from habitat.tasks.rearrange.envs.utils import (
+    CacheHelper,
     CollDetails,
     allowed_region_to_bb,
+    get_angle,
     rearrang_collision,
+    reshape_obs_space,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 
-@baseline_registry.register_env(name="RearrangementRLEnv")
-class RearrangementRLEnv(BaseHabEnv):
+class RearrangeTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping.
     """
 
-    def __init__(self, config, dataset=None):
+    def __init__(self, config, sim, dataset=None) -> None:
         super().__init__(config, dataset)
         self.is_gripper_closed = False
-        self._internal_sim = self._env._sim
+        self._sim = sim
         self.use_max_accum_force = self.tcfg.MAX_ACCUM_FORCE
+        self.n_objs = len(dataset.episodes[0].targets)
 
-    def reset(self, super_reset=True):
+    def reset(self, episode: Episode):
+        super_reset = True
         self._ignore_collisions = []
         if super_reset:
-            observations = super().reset()
+            observations = super().reset(episode)
         else:
             observations = None
         self.prev_measures = self._env.get_metrics()
@@ -153,11 +163,18 @@ class RearrangementRLEnv(BaseHabEnv):
             reward -= self.rlcfg.COLL_PEN * (min(1, total_colls))
         return reward
 
-    def end_episode(self):
-        self.should_end = True
-
-    def step(self, action, action_args):
-        obs, reward, done, info = super().step(action, action_args)
+    def step(self, action: Dict[str, Any], episode: Episode):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
+        action_name = action["action"]
+        if isinstance(action_name, (int, np.integer)):
+            action_name = self.get_action_name(action_name)
+        assert (
+            action_name in self.actions
+        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
+        action_args = action["action_args"]
+        obs = super().step(action=action, episode=episode)
+        reward, done, info = 0, False, {}
         # If we have any sort of collision at all the episode is over.
         info["ep_n_picks"] = self.n_succ_picks
         if (
@@ -212,7 +229,7 @@ class RearrangementRLEnv(BaseHabEnv):
         else:
             info["ep_out_of_region"] = 0.0
 
-        return obs, reward, done, info
+        return obs
 
     @property
     def _delta_coll(self):
@@ -278,3 +295,6 @@ class RearrangementRLEnv(BaseHabEnv):
         if self.tcfg.COUNT_ROBO_OBJ_COLLS:
             ret += self.coll_accum.robo_obj_colls
         return ret
+
+    def get_n_targets(self):
+        return self.n_objs

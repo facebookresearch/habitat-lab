@@ -16,10 +16,17 @@ def _try_register_rearrange_task():
         print(e)
 
     try:
-        import habitat.tasks.rearrange.envs.rearrang_env  # noqa: F401
-        import habitat.tasks.rearrange.envs.rearrang_pick_env
         import habitat.tasks.rearrange.rearrange_pick_task
         import habitat.tasks.rearrange.rearrange_task
+
+    # import habitat.tasks.rearrange.envs.hab_simulator
+    except ImportError as e:
+        print(e)
+
+    try:
+        import habitat.tasks.rearrange.rearrange_pick_task
+        import habitat.tasks.rearrange.rearrange_task
+
     # import habitat.tasks.rearrange.envs.hab_simulator
     except ImportError as e:
         print(e)

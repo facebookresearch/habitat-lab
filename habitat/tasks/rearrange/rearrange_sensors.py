@@ -56,6 +56,12 @@ class ThirdDepthSensor(HabitatSimDepthSensor):
 class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
     cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
 
+    def __init__(self, task, *args, **kwargs):
+        self._task = task
+        super(TargetPointGoalGPSAndCompassSensor, self).__init__(
+            *args, task=task, **kwargs
+        )
+
     def get_observation(self, observations, episode, *args, **kwargs):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
@@ -68,8 +74,12 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
 
 
 class MultiObjSensor(PointGoalSensor):
+    def __init__(self, task, *args, **kwargs):
+        self._task = task
+        super(MultiObjSensor, self).__init__(*args, task=task, **kwargs)
+
     def _get_observation_space(self, *args, **kwargs):
-        n_targets = self._sim.get_n_targets()
+        n_targets = 1  # self._task.get_n_targets()
         return spaces.Box(
             shape=(n_targets, 3),
             low=np.finfo(np.float32).min,
@@ -251,7 +261,7 @@ class LocalizationSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot._robot.transformation
+        trans = self._sim.robot.sim_obj.transformation
         forward = np.array([1.0, 0, 0])
         heading = np.array(trans.transform_vector(forward))
         forward = forward[[0, 2]]
@@ -285,7 +295,7 @@ class JointSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.robot.arm_pos
+        joints_pos = self._sim.robot.arm_joint_pos
         return np.array(joints_pos).astype(np.float32)
 
 
@@ -343,7 +353,7 @@ class EeSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot._robot.transformation
+        trans = self._sim.robot.sim_obj.transformation
         ee_pos = self._sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 

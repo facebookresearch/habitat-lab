@@ -106,8 +106,6 @@ EE_GRIPPER_OFFSET = mn.Vector3(0.08, 0, 0)
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
     def __init__(self, config):
-        self.n_objs = config.N_OBJS
-
         super().__init__(config)
 
         agent_config = self.habitat_config
@@ -556,16 +554,16 @@ class RearrangeSim(HabitatSim):
         - set_pos: 2D coordinates of where the robot will be placed. The height
           will be same as current position.
         """
-        pos = self.robot._robot.translation
+        pos = self.robot.sim_obj.translation
         new_set_pos = [set_pos[0], pos[1], set_pos[1]]
-        self.robot._robot.transformation.translation = new_set_pos
+        self.robot.sim_obj.transformation.translation = new_set_pos
 
     def set_robot_rot(self, rot_rad):
         """
         Set the rotation of the robot along the y-axis. The position will
         remain the same.
         """
-        cur_trans = self.robot._robot.transformation
+        cur_trans = self.robot.sim_obj.transformation
         pos = cur_trans.translation
 
         rot_trans = mn.Matrix4.rotation(mn.Rad(-1.56), mn.Vector3(1.0, 0, 0))
@@ -574,7 +572,7 @@ class RearrangeSim(HabitatSim):
         )
         new_trans = rot_trans @ add_rot_mat
         new_trans.translation = pos
-        self.robot._robot.transformation = new_trans
+        self.robot.sim_obj.transformation = new_trans
 
     def _create_obj_viz(self, ep_info):
         self.viz_obj_ids = []
@@ -590,13 +588,13 @@ class RearrangeSim(HabitatSim):
     def capture_state(self, with_robo_js=False):
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
-        robot_T = self.robot._robot.transformation
+        robot_T = self.robot.sim_obj.transformation
         art_T = [ao.transformation for ao in self.art_objs]
         static_T = [
             self._sim.get_transformation(i) for i in self.scene_obj_ids
         ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
-        robo_js = self.robot._robot.joint_positions
+        robo_js = self.robot.sim_obj.joint_positions
 
         return {
             "robot_T": robot_T,
@@ -615,8 +613,8 @@ class RearrangeSim(HabitatSim):
           it will have.
         """
         if state["robot_T"] is not None:
-            self.robot._robot.transformation = state["robot_T"]
-            self.robot._robot.clear_joint_states()
+            self.robot.sim_obj.transformation = state["robot_T"]
+            self.robot.sim_obj.clear_joint_states()
 
         if "robo_js" in state:
             self.robot._robo.joint_positions = state["robo_js"]
@@ -705,7 +703,7 @@ class RearrangeSim(HabitatSim):
                     self._sim, "create_articulated_p2p_constraint_with_pivots"
                 ):
                     return self._sim.create_articulated_p2p_constraint_with_pivots(
-                        self.robot._robot.get_robot_sim_id(),
+                        self.robot.sim_obj.get_robot_sim_id(),
                         self.ee_link,
                         use_snap_obj_id,
                         pivot_in_link,
@@ -714,7 +712,7 @@ class RearrangeSim(HabitatSim):
                     )
                 else:
                     return self._sim.create_articulated_p2p_constraint(
-                        self.robot._robot.get_robot_sim_id(),
+                        self.robot.sim_obj.get_robot_sim_id(),
                         self.ee_link,
                         use_snap_obj_id,
                         pivot_in_link,
@@ -737,7 +735,7 @@ class RearrangeSim(HabitatSim):
         else:
             self.snapped_obj_constraint_id = [
                 self._sim.create_articulated_p2p_constraint(
-                    self.robot._robot.get_robot_sim_id(),
+                    self.robot.sim_obj.get_robot_sim_id(),
                     self.ee_link,
                     use_snap_obj_id,
                     max_impulse,
@@ -763,7 +761,7 @@ class RearrangeSim(HabitatSim):
         marker_abs_art_idx = self.art_obj_ids[marker_targ_idx]
 
         constraint_id = self._sim.create_articulated_p2p_constraint(
-            self.robot._robot.get_robot_sim_id(),
+            self.robot.sim_obj.get_robot_sim_id(),
             self.ee_link,
             EE_GRIPPER_OFFSET,
             marker_abs_art_idx,
@@ -963,6 +961,7 @@ class RearrangeSim(HabitatSim):
             return []
         return [self.scene_obj_ids[x] for x in self.get_targets()[0]]
 
+    # deprecated
     def get_n_targets(self):
         return self.n_objs
 

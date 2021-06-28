@@ -148,3 +148,21 @@ def test_rearrange_task():
                 _, _, done, info = env.step(**action)
 
             logger.info(info)
+
+
+def test_rearrange_habitat_env():
+    import habitat.tasks.rearrange.envs.hab_simulator
+    import habitat.tasks.rearrange.rearrange_pick_task
+    import habitat.tasks.rearrange.rearrange_task
+
+    config = get_config("configs/tasks/rearrang_pick_task.yaml")
+
+    config.defrost()
+    config.freeze()
+    with habitat.Env(config=config, dataset=None) as env:
+        for _ in range(10):
+            env.reset()
+            while not env.episode_over:
+                env.step(env.action_space.sample())
+
+        env.reset()
