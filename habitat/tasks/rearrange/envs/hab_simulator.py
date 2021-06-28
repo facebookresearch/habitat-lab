@@ -617,7 +617,7 @@ class RearrangeSim(HabitatSim):
             self.robot.sim_obj.clear_joint_states()
 
         if "robo_js" in state:
-            self.robot._robo.joint_positions = state["robo_js"]
+            self._sim.robot.arm_joint_pos = state["robo_js"]
 
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
@@ -801,7 +801,7 @@ class RearrangeSim(HabitatSim):
             else:
 
                 def is_ready():
-                    ee_pos = self.get_end_effector_pos()
+                    ee_pos = self.robot.ee_transform.translation
                     dist = np.linalg.norm(ee_pos - c)
                     return dist >= r
 

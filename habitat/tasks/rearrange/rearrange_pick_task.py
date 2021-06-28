@@ -124,7 +124,7 @@ class RearrangePickTaskV1(RearrangeTask):
     def _my_get_reward(self, observations):
         self.prev_obs = observations
 
-        cur_measures = self.measures.get_metrics()
+        cur_measures = self.measurements.get_metrics()
         reward = 0
 
         snapped_id = self._sim.snapped_obj_id
@@ -184,7 +184,7 @@ class RearrangePickTaskV1(RearrangeTask):
     def _my_episode_success(self):
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[self.abs_targ_idx]
-        cur_measures = self.measures.get_metrics()
+        cur_measures = self.measurements.get_metrics()
         obj_to_ee = cur_measures["ee_to_object_distance"][self.targ_idx]
 
         # Check that we are holding the right object and the object is actually
@@ -193,7 +193,7 @@ class RearrangePickTaskV1(RearrangeTask):
             abs_targ_obj_idx == self._sim.snapped_obj_id
             and obj_to_ee < self._config.HOLD_THRESH
         ):
-            cur_measures = self.measures.get_metrics()
+            cur_measures = self.measurements.get_metrics()
             rest_dist = np.linalg.norm(
                 self.prev_obs["ee_pos"] - self.desired_resting
             )
@@ -324,7 +324,7 @@ class RearrangePickTaskV1(RearrangeTask):
         reward, done, info = 0, False, {}  # TODO Fix done and etc
         info["dist_to_goal"] = self.cur_dist
         info["is_picked"] = int(self.prev_picked)
-        cur_measures = self.measures.get_metrics()
+        cur_measures = self.measurements.get_metrics()
         info["ee_to_obj"] = cur_measures["ee_to_object_distance"][
             self.abs_targ_idx
         ]

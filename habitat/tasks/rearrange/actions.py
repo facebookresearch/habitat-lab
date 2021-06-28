@@ -59,9 +59,8 @@ class MagicGraspAction(SimulatorTaskAction):
         return spaces.Discrete(1)
 
     def _grasp(self):
-        scene_obj_ids = self._sim.scene_obj_ids
         scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self._sim.get_end_effector_pos()
+        ee_pos = self._sim.robot.ee_transform.translation
         if len(scene_obj_pos) != 0:
             # Get the target the EE is closest to.
             closest_obj_idx = np.argmin(

@@ -102,7 +102,7 @@ class TargetObjectSensor(MultiObjSensor):
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
 
-        ee_pos = self._sim.get_end_effector_pos()
+        ee_pos = self._sim.robot.ee_transform.translation
         to_targ = pos - ee_pos
         trans = self._sim.get_robot_transform()
         for i in range(to_targ.shape[0]):
@@ -144,7 +144,7 @@ class TargetStartSensor(MultiObjSensor):
         return pos
 
         # pos = self._sim.get_target_objs_start()
-        # ee_pos = self._sim.get_end_effector_pos()
+        # ee_pos = self._sim.robot.ee_transform.translation
         # to_targ = pos - ee_pos
         # trans = self._sim.get_robot_transform()
         # for i in range(to_targ.shape[0]):
@@ -472,7 +472,7 @@ class EndEffectorToPosDistance(Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, episode, *args, **kwargs):
-        ee_pos = self._sim.get_end_effector_pos()
+        ee_pos = self._sim.robot.ee_transform.translation
 
         distance = np.linalg.norm(self._target_pos - ee_pos, ord=2)
 
@@ -512,7 +512,9 @@ class RearrangePickReward(Measure):
 
         snapped_id = self._sim.snapped_obj_id
         cur_picked = snapped_id is not None
-        ee_pos = observations["ee_pos"]  # self._sim.get_end_effector_pos()  #
+        ee_pos = observations[
+            "ee_pos"
+        ]  # self._sim.robot.ee_transform.translation  #
 
         if cur_picked:
             dist_to_goal = np.linalg.norm(ee_pos - task.desired_resting)

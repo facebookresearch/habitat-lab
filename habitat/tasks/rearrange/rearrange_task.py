@@ -127,16 +127,16 @@ class RearrangeTask(NavigationTask):
         # Is the object firmly in the grasp of the robot?
         hold_obj = sim.snapped_obj_id
         cur_measures = self.measurements.get_metrics()
-        ee_pos = self._sim.get_end_effector_pos()
+        ee_pos = self._sim.robot.ee_transform.translation
         if hold_obj is not None:
             obj_pos = self._sim.get_translation(hold_obj)
-            if np.linalg.norm(ee_pos - obj_pos) >= self.rlcfg.HOLD_THRESH:
+            if np.linalg.norm(ee_pos - obj_pos) >= self._config.HOLD_THRESH:
                 return True
 
         if self._config.get("IGNORE_ART_HOLD_VIOLATE", False):
             return False
 
-        art_hold_thresh = self.rlcfg.get("ART_HOLD_THRESH", 0.2)
+        art_hold_thresh = self._config.get("ART_HOLD_THRESH", 0.2)
 
         if sim.snapped_marker_name is not None:
             hold_pos = sim.markers[sim.snapped_marker_name]["global_pos"]
@@ -151,18 +151,21 @@ class RearrangeTask(NavigationTask):
             # Penalize the force that was added to the accumulated force at the
             # last time step.
             reward -= min(
-                self.rlcfg.FORCE_PEN * self.add_force, self.rlcfg.MAX_FORCE_PEN
+                self._config.FORCE_PEN * self.add_force,
+                self._config.MAX_FORCE_PEN,
             )
         else:
             delta_coll = self._delta_coll
-            reward -= self.rlcfg.ROBO_OBJ_COLL_PEN * delta_coll.robo_obj_colls
+            reward -= (
+                self._config.ROBO_OBJ_COLL_PEN * delta_coll.robo_obj_colls
+            )
 
             total_colls = (
                 delta_coll.obj_scene_colls + delta_coll.robo_scene_colls
             )
             if self._config.COUNT_ROBO_OBJ_COLLS:
                 total_colls += delta_coll.robo_obj_colls
-            reward -= self.rlcfg.COLL_PEN * (min(1, total_colls))
+            reward -= self._config.COLL_PEN * (min(1, total_colls))
         return reward
 
     def step(self, action: Dict[str, Any], episode: Episode):
@@ -196,7 +199,7 @@ class RearrangeTask(NavigationTask):
         self.prev_coll_accum = copy.copy(self.coll_accum)
 
         if self._is_violating_hold_constraint():
-            reward -= self.rlcfg.CONSTRAINT_VIOLATE_PEN
+            reward -= self._config.CONSTRAINT_VIOLATE_PEN
             done = True
             info["ep_constraint_violate"] = 1.0
         else:
@@ -207,7 +210,7 @@ class RearrangeTask(NavigationTask):
                 self.use_max_accum_force > 0
                 and self.accum_force > self.use_max_accum_force
             ):
-                reward -= self.rlcfg.FORCE_END_PEN
+                reward -= self._config.FORCE_END_PEN
                 done = True
                 info["ep_accum_force_end"] = 1.0
             else:
@@ -223,7 +226,7 @@ class RearrangeTask(NavigationTask):
             robot_pos = mn.Vector2(robot_pos[0], robot_pos[2])
             in_region = self.allowed_region.contains(robot_pos)
             if not in_region:
-                reward -= self.rlcfg.OUT_OF_REGION_PEN
+                reward -= self._config.OUT_OF_REGION_PEN
                 done = True
                 info["ep_out_of_region"] = 1.0
             else:
