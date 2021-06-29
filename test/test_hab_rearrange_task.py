@@ -107,7 +107,10 @@ def test_dataset_splitting(split):
 def test_rearrange_habitat_env():
     import habitat.tasks.rearrange.rearrange_task
 
-    config = get_config("configs/tasks/rearrang_pick_task.yaml")
+    config = get_config(CFG_TEST)
+
+    if not RearrangeDatasetV0.check_config_paths_exist(config.DATASET):
+        pytest.skip("Test skipped as dataset files are missing.")
 
     config.defrost()
     config.freeze()
@@ -134,20 +137,13 @@ def test_rearrange_task():
     config = get_config(
         "habitat_baselines/config/rearrange/rl_rearrang_pick.yaml"
     )
-    # dataset = make_dataset(
-    #     id_dataset=config.DATASET.TYPE, config=config.DATASET
-    # )
-    # env = DummyRLEnv(config=config, dataset=dataset)
-    # from habitat_baselines.common.environments import NavRLEnv
     from habitat_baselines.common.environments import get_env_class
 
     env_class = get_env_class(config.ENV_NAME)
-    # registration doesn't work well yet
 
     env = habitat_baselines.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
-    # env = env_class(config=config)
 
     with env:
         for _ in range(10):
