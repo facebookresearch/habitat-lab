@@ -10,6 +10,7 @@ from habitat.sims.habitat_simulator.habitat_simulator import (
     HabitatSimRGBSensor,
 )
 from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
 from habitat.tasks.utils import get_angle
 
 # TODO: @maksymets should be accessed through Robot API
@@ -57,6 +58,7 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
     cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
 
     def __init__(self, task, *args, **kwargs):
+        self._sim: RearrangeSim
         self._task = task
         super(TargetPointGoalGPSAndCompassSensor, self).__init__(
             *args, task=task, **kwargs
@@ -74,8 +76,9 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
 
 
 class MultiObjSensor(PointGoalSensor):
-    def __init__(self, task, *args, **kwargs):
+    def __init__(self, *args, task, **kwargs):
         self._task = task
+        self._sim: RearrangeSim
         super(MultiObjSensor, self).__init__(*args, task=task, **kwargs)
 
     def _get_observation_space(self, *args, **kwargs):
@@ -98,6 +101,7 @@ class TargetObjectSensor(MultiObjSensor):
     cls_uuid: str = "obj_cur_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        self._sim: RearrangeSim
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
@@ -119,6 +123,7 @@ class AbsTargetObjectSensor(MultiObjSensor):
     cls_uuid: str = "abs_obj_cur_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        self._sim: RearrangeSim
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
@@ -135,6 +140,7 @@ class TargetStartSensor(MultiObjSensor):
     cls_uuid: str = "obj_start_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
@@ -149,6 +155,7 @@ class AbsTargetStartSensor(MultiObjSensor):
     cls_uuid: str = "abs_obj_start_sensor"
 
     def _get_observation_space(self, *args, **kwargs):
+        self._sim: RearrangeSim
         n_targets = self._sim.get_n_targets()
         return spaces.Box(
             shape=(n_targets, 3),
@@ -367,10 +374,10 @@ class ObjectToGoalDistance(Measure):
     def _get_uuid(*args, **kwargs):
         return ObjectToGoalDistance.cls_uuid
 
-    def reset_metric(self, episode, *args, **kwargs):
+    def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, episode, *args, **kwargs):
+    def update_metric(self, *args, episode, **kwargs):
         idxs, goal_pos = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
@@ -391,10 +398,10 @@ class EndEffectorToObjectDistance(Measure):
     def _get_uuid(*args, **kwargs):
         return EndEffectorToObjectDistance.cls_uuid
 
-    def reset_metric(self, episode, *args, **kwargs):
+    def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, episode, *args, **kwargs):
+    def update_metric(self, *args, episode, **kwargs):
         ee_pos = self._sim.robot.ee_transform.translation
 
         idxs, _ = self._sim.get_targets()
@@ -414,10 +421,10 @@ class DummyMeasure(Measure):
     def _get_uuid(*args, **kwargs):
         return DummyMeasure.cls_uuid
 
-    def reset_metric(self, episode, *args, **kwargs):
+    def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, episode, *args, **kwargs):
+    def update_metric(self, *args, episode, **kwargs):
         self._metric = 0
 
 
@@ -438,10 +445,10 @@ class EndEffectorToPosDistance(Measure):
     def _get_uuid(*args, **kwargs):
         return EndEffectorToPosDistance.cls_uuid
 
-    def reset_metric(self, episode, *args, **kwargs):
+    def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, episode, *args, **kwargs):
+    def update_metric(self, *args, episode, **kwargs):
         ee_pos = self._sim.robot.ee_transform.translation
 
         distance = np.linalg.norm(self._target_pos - ee_pos, ord=2)
@@ -453,17 +460,17 @@ class EndEffectorToPosDistance(Measure):
 class RearrangePickReward(Measure):
     cls_uuid: str = "rearrangepick_reward"
 
-    def __init__(self, sim, config, task, *args, **kwargs):
+    def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config
         self._task = task
-        super().__init__(sim=sim, config=config, task=task, **kwargs)
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return RearrangePickReward.cls_uuid
 
-    def reset_metric(self, episode, task, observations, *args, **kwargs):
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
@@ -480,7 +487,7 @@ class RearrangePickReward(Measure):
             **kwargs
         )
 
-    def update_metric(self, episode, observations, task, *args, **kwargs):
+    def update_metric(self, *args, episode, task, observations, **kwargs):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
@@ -502,7 +509,7 @@ class RearrangePickReward(Measure):
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
-        did_pick = cur_picked and (not self.task)
+        did_pick = cur_picked and (not self._task)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 task.n_succ_picks += 1
@@ -562,7 +569,7 @@ class RearrangePickReward(Measure):
             # Penalize the force that was added to the accumulated force at the
             # last time step.
             reward -= min(
-                self._config.FORCE_PEN * self.add_force,
+                self._config.FORCE_PEN * self._task.add_force,
                 self._config.MAX_FORCE_PEN,
             )
         else:
@@ -594,8 +601,8 @@ class RearrangePickSuccess(Measure):
     def _get_uuid(*args, **kwargs):
         return RearrangePickSuccess.cls_uuid
 
-    def reset_metric(self, episode, task, observations, *args, **kwargs):
-        task.measurements.check_measure_dependencies(
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measuremeupdate_metricnts.check_measure_dependencies(
             self.uuid, [EndEffectorToObjectDistance.cls_uuid]
         )
         self._prev_ee_pos = observations["ee_pos"]
@@ -607,7 +614,7 @@ class RearrangePickSuccess(Measure):
             **kwargs
         )
 
-    def update_metric(self, episode, observations, task, *args, **kwargs):
+    def update_metric(self, *args, episode, task, observations, **kwargs):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()

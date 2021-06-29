@@ -1,11 +1,12 @@
 import copy
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 import attr
 import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
 from habitat.tasks.rearrange.envs.utils import CollDetails, rearrang_collision
 
 
@@ -14,15 +15,15 @@ class RearrangeTask(NavigationTask):
     Defines additional logic for valid collisions and gripping.
     """
 
-    def __init__(self, config, sim, dataset=None, *args, **kwargs) -> None:
-        super().__init__(
-            *args, config=config, sim=sim, dataset=dataset, **kwargs
-        )
+    def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
+        super().__init__(*args, sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
-        self._sim = sim
+        self._sim: RearrangeSim = sim
         self.use_max_accum_force = self._config.MAX_ACCUM_FORCE
         self._done = False
         self.n_objs = len(dataset.episodes[0].targets)
+        self._ignore_collisions: List[Any] = []
+        self.prev_force: Optional[float] = None
 
     def reset(self, episode: Episode):
         super_reset = True
@@ -51,7 +52,7 @@ class RearrangeTask(NavigationTask):
             self.cur_force = robot_force
 
         if self.prev_force is not None:
-            force_diff = self.cur_force - self.prev_force
+            force_diff: float = self.cur_force - self.prev_force
             self.add_force = 0.0
             if force_diff > 20:
                 self.add_force = force_diff
