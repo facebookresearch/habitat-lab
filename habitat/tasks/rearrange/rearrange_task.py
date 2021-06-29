@@ -40,6 +40,7 @@ class RearrangeTask(NavigationTask):
         self.accum_force = 0
         self.prev_force = None
         self._done = False
+        self.add_force = 0.0
 
         return observations
 
@@ -134,6 +135,8 @@ class RearrangeTask(NavigationTask):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
+        return 0, 0, 0
+
         snapped_obj = self._sim.snapped_obj_id
         robot_id = self._sim.robot_id
         contact_points = self._sim._sim.get_physics_contact_points()

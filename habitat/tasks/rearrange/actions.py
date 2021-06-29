@@ -58,7 +58,7 @@ class MagicGraspAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Discrete(1)
+        return spaces.Box(shape=(1,), low=-1.0, high=1.0, dtype=np.float32)
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
