@@ -83,7 +83,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
-        # super().__init__(config, dataset)
         self.cache = {}
 
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
@@ -224,7 +223,6 @@ class RearrangePickTaskV1(RearrangeTask):
         self.force_set_idx = obj
 
     def reset(self, episode: Episode):
-        super_reset = True
         sim = self._sim
 
         super().reset(episode)
@@ -232,36 +230,31 @@ class RearrangePickTaskV1(RearrangeTask):
         self.prev_colls = 0
         episode_id = sim.ep_info["episode_id"]
 
-        if super_reset:
-            if episode_id in self.start_states and self.force_set_idx is None:
-                start_pos, start_rot, sel_idx = self.start_states[episode_id]
-            else:
-                start_pos, start_rot, sel_idx = self._gen_start_pos(
-                    sim, self._config.EASY_INIT
-                )
-                self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
-                if self.force_set_idx is None:
-                    self.cache.save(self.start_states)
-
-            for _ in range(5):
-                sim.internal_step(-1)
-                colls = sim.get_collisions()
-                did_collide, _ = rearrang_collision(
-                    colls,
-                    None,
-                    self._config.COUNT_OBJ_COLLISIONS,
-                    ignore_base=False,
-                )
-                rot_noise = np.random.normal(
-                    0.0, self._config.BASE_ANGLE_NOISE
-                )
-
-                sim.set_robot_pos(start_pos[[0, 2]])
-                sim.set_robot_rot(start_rot + rot_noise)
-                if not did_collide:
-                    break
+        if episode_id in self.start_states and self.force_set_idx is None:
+            start_pos, start_rot, sel_idx = self.start_states[episode_id]
         else:
-            sel_idx = self.force_set_idx
+            start_pos, start_rot, sel_idx = self._gen_start_pos(
+                sim, self._config.EASY_INIT
+            )
+            self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
+            if self.force_set_idx is None:
+                self.cache.save(self.start_states)
+
+        for _ in range(5):
+            sim.internal_step(-1)
+            colls = sim.get_collisions()
+            did_collide, _ = rearrang_collision(
+                colls,
+                None,
+                self._config.COUNT_OBJ_COLLISIONS,
+                ignore_base=False,
+            )
+            rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
+
+            sim.set_robot_pos(start_pos[[0, 2]])
+            sim.set_robot_rot(start_rot + rot_noise)
+            if not did_collide:
+                break
 
         self.targ_idx = sel_idx
         assert self.targ_idx is not None

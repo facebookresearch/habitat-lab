@@ -60,12 +60,12 @@ def load_light_setup_for_glb(json_filepath):
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         lighting_setup = []
-        for l in data["lights"]:
-            t = l["position"]
+        for light in data["lights"]:
+            t = light["position"]
             light_w = 1.0
             position = [float(t[0]), float(t[1]), float(t[2]), light_w]
-            color_scale = float(l["color_scale"])
-            color = [float(c * color_scale) for c in l["color"]]
+            color_scale = float(light["color_scale"])
+            color = [float(c * color_scale) for c in light["color"]]
             # print('position: {}'.format(position))
             # print('color: {}'.format(color))
             lighting_setup.append(

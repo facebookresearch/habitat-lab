@@ -20,7 +20,6 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self.use_max_accum_force = self._config.MAX_ACCUM_FORCE
-        self._done = False
         self.n_objs = len(dataset.episodes[0].targets)
         self._ignore_collisions: List[Any] = []
         self.prev_force: Optional[float] = None
@@ -44,7 +43,7 @@ class RearrangeTask(NavigationTask):
 
         return observations
 
-    def _pre_step(self):
+    def _get_collision_info(self):
         robot_force, _, overall_force = self._get_coll_forces()
         if self._config.COUNT_OBJ_COLLISIONS:
             self.cur_force = overall_force
@@ -82,47 +81,10 @@ class RearrangeTask(NavigationTask):
         return False
 
     def step(self, action: Dict[str, Any], episode: Episode):
-        if "action_args" not in action or action["action_args"] is None:
-            action["action_args"] = {}
-        action_name = action["action"]
-        if isinstance(action_name, (int, np.integer)):
-            action_name = self.get_action_name(action_name)
-        assert (
-            action_name in self.actions
-        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
-
         obs = super().step(action=action, episode=episode)
 
-        self._pre_step()
-
-        from habitat.tasks.rearrange.rearrange_sensors import (
-            RearrangePickSuccess,
-        )
-
-        if self.measurements.get_metrics()[RearrangePickSuccess.cls_uuid]:
-            self._done = True
-
-        # If we have any sort of collision at all the episode is over.
-        if (
-            self._config.MAX_COLLISIONS > 0
-            and self.cur_collisions > self._config.MAX_COLLISIONS
-        ):
-            self._done = True
-
-        if self.should_end:
-            self._done = True
-
+        self._get_collision_info()
         self.prev_coll_accum = copy.copy(self.coll_accum)
-
-        if self._is_violating_hold_constraint():
-            self._done = True
-
-        if (
-            self._config.FORCE_BASED
-            and self.use_max_accum_force > 0
-            and self.accum_force > self.use_max_accum_force
-        ):
-            self._done = True
 
         return obs
 
@@ -133,7 +95,34 @@ class RearrangeTask(NavigationTask):
         episode: Episode,
         **kwargs: Any,
     ) -> bool:
-        return self._done
+        from habitat.tasks.rearrange.rearrange_sensors import (
+            RearrangePickSuccess,
+        )
+
+        done = False
+        if self.measurements.get_metrics()[RearrangePickSuccess.cls_uuid]:
+            done = True
+
+        # If we have any sort of collision at all the episode is over.
+        if (
+            self._config.MAX_COLLISIONS > 0
+            and self.cur_collisions > self._config.MAX_COLLISIONS
+        ):
+            done = True
+
+        if self.should_end:
+            done = True
+
+        if self._is_violating_hold_constraint():
+            done = True
+
+        if (
+            self._config.FORCE_BASED
+            and self.use_max_accum_force > 0
+            and self.accum_force > self.use_max_accum_force
+        ):
+            done = True
+        return not done
 
     @property
     def _delta_coll(self):

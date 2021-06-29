@@ -69,6 +69,9 @@ TASK:
         FORCE_END_PEN: 10.0
         USE_DIFF: True
 
+        DROP_OBJ_SHOULD_END: False
+        WRONG_PICK_SHOULD_END: False
+
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
