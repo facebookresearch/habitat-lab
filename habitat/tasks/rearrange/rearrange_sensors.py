@@ -10,7 +10,7 @@ from habitat.sims.habitat_simulator.habitat_simulator import (
     HabitatSimRGBSensor,
 )
 from habitat.tasks.nav.nav import PointGoalSensor
-from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.utils import get_angle
 
 # TODO: @maksymets should be accessed through Robot API
@@ -57,7 +57,7 @@ class ThirdDepthSensor(HabitatSimDepthSensor):
 class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
     cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
 
-    def __init__(self, task, *args, **kwargs):
+    def __init__(self, *args, task, **kwargs):
         self._sim: RearrangeSim
         self._task = task
         super(TargetPointGoalGPSAndCompassSensor, self).__init__(
@@ -82,36 +82,13 @@ class MultiObjSensor(PointGoalSensor):
         super(MultiObjSensor, self).__init__(*args, task=task, **kwargs)
 
     def _get_observation_space(self, *args, **kwargs):
-        n_targets = 1  # self._task.get_n_targets()
+        n_targets = self._task.get_n_targets()
         return spaces.Box(
             shape=(n_targets, 3),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
         )
-
-
-@registry.register_sensor
-class TargetObjectSensor(MultiObjSensor):
-    """
-    Relative to the end effector. This is the ground truth position, accurate
-    at every time step.
-    """
-
-    cls_uuid: str = "obj_cur_sensor"
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        self._sim: RearrangeSim
-        idxs, _ = self._sim.get_targets()
-        scene_pos = self._sim.get_scene_pos()
-        pos = scene_pos[idxs]
-
-        ee_pos = self._sim.robot.ee_transform.translation
-        to_targ = pos - ee_pos
-        trans = self._sim.get_robot_transform()
-        for i in range(to_targ.shape[0]):
-            to_targ[i] = trans.inverted().transform_vector(to_targ[i])
-        return to_targ
 
 
 @registry.register_sensor
@@ -134,12 +111,12 @@ class AbsTargetObjectSensor(MultiObjSensor):
 @registry.register_sensor
 class TargetStartSensor(MultiObjSensor):
     """
-    Relative to the end effector
+    Relative position from end effector to target object
     """
 
     cls_uuid: str = "obj_start_sensor"
 
-    def get_observation(self, observations, episode, *args, **kwargs):
+    def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
@@ -152,6 +129,10 @@ class TargetStartSensor(MultiObjSensor):
 
 @registry.register_sensor
 class AbsTargetStartSensor(MultiObjSensor):
+    """
+    Relative position from end effector to target object
+    """
+
     cls_uuid: str = "abs_obj_start_sensor"
 
     def _get_observation_space(self, *args, **kwargs):
@@ -520,7 +501,8 @@ class RearrangePickReward(Measure):
             else:
                 # picked the wrong object...
                 reward -= self._config.WRONG_PICK_PEN
-                self._task.should_end = True
+                if self._config.WRONG_PICK_SHOULD_END:
+                    self._task.should_end = True
                 self._metric = reward
                 return
 
@@ -540,7 +522,8 @@ class RearrangePickReward(Measure):
         if not cur_picked and self._task.prev_picked:
             # Dropped the object...
             reward -= self._config.DROP_PEN
-            self._task.should_end = True
+            if self._config.DROP_OBJ_SHOULD_END:
+                self._task.should_end = True
             self._metric = reward
             return
 
@@ -602,7 +585,7 @@ class RearrangePickSuccess(Measure):
         return RearrangePickSuccess.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measuremeupdate_metricnts.check_measure_dependencies(
+        task.measurements.check_measure_dependencies(
             self.uuid, [EndEffectorToObjectDistance.cls_uuid]
         )
         self._prev_ee_pos = observations["ee_pos"]

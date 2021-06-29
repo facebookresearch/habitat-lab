@@ -6,8 +6,8 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
-from habitat.tasks.rearrange.envs.utils import CollDetails, rearrang_collision
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import CollDetails, rearrang_collision
 
 
 class RearrangeTask(NavigationTask):
@@ -16,11 +16,12 @@ class RearrangeTask(NavigationTask):
     """
 
     def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
+        self.n_objs = len(dataset.episodes[0].targets)
+
         super().__init__(*args, sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self.use_max_accum_force = self._config.MAX_ACCUM_FORCE
-        self.n_objs = len(dataset.episodes[0].targets)
         self._ignore_collisions: List[Any] = []
         self.prev_force: Optional[float] = None
 
@@ -40,7 +41,7 @@ class RearrangeTask(NavigationTask):
         self.accum_force = 0
         self.prev_force = None
         self._done = False
-        self.add_force = 0.0
+        self._get_collision_info()
 
         return observations
 
@@ -135,11 +136,9 @@ class RearrangeTask(NavigationTask):
         return CollDetails(**delta)
 
     def _get_coll_forces(self):
-        return 0, 0, 0
-
         snapped_obj = self._sim.snapped_obj_id
-        robot_id = self._sim.robot_id
-        contact_points = self._sim._sim.get_physics_contact_points()
+        robot_id = self._sim.robot.sim_obj.object_id
+        contact_points = self._sim.get_physics_contact_points()
 
         def get_max_force(contact_points, check_id):
             match_contacts = [

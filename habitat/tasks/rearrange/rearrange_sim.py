@@ -11,13 +11,13 @@ import numpy as np
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.envs.obj_loaders import (
+from habitat.tasks.rearrange.obj_loaders import (
     add_obj,
     load_articulated_objs,
     load_objs,
     place_viz_objs,
 )
-from habitat.tasks.rearrange.envs.utils import (
+from habitat.tasks.rearrange.utils import (
     convert_legacy_cfg,
     get_aabb,
     get_nav_mesh_settings,

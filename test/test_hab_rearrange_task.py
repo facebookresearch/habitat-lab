@@ -105,8 +105,6 @@ def test_dataset_splitting(split):
 
 
 def test_rearrange_habitat_env():
-    import habitat.tasks.rearrange.envs.hab_simulator
-    import habitat.tasks.rearrange.rearrange_pick_task
     import habitat.tasks.rearrange.rearrange_task
 
     config = get_config("configs/tasks/rearrang_pick_task.yaml")
@@ -130,7 +128,7 @@ def test_rearrange_habitat_env():
 
 
 def test_rearrange_task():
-    import habitat.tasks.rearrange.envs.hab_simulator
+    import habitat.tasks.rearrange.rearrange_sim
     from habitat_baselines.config.default import get_config
 
     config = get_config(

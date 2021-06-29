@@ -6,8 +6,8 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
-from habitat.tasks.rearrange.envs.utils import rearrang_collision
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import rearrang_collision
 
 
 @registry.register_task_action
@@ -58,7 +58,7 @@ class MagicGraspAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(1,), low=-1.0, high=1.0, dtype=np.float32)
+        return spaces.Discrete(1)
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()

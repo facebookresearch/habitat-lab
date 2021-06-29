@@ -2,7 +2,7 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.tasks.rearrange.envs.utils import get_aabb, make_render_only
+from habitat.tasks.rearrange.utils import get_aabb, make_render_only
 from habitat_sim.physics import MotionType
 
 

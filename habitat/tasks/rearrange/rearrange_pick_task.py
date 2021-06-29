@@ -5,12 +5,12 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.envs.utils import (
+from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+from habitat.tasks.rearrange.utils import (
     CacheHelper,
     get_angle,
     rearrang_collision,
 )
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
