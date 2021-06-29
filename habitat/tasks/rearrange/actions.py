@@ -115,6 +115,8 @@ class ArmVelAction(SimulatorTaskAction):
         self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_motor_pos
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
+        else:
+            return None
 
 
 @registry.register_task_action
@@ -217,3 +219,5 @@ class BaseVelAction(SimulatorTaskAction):
 
         if should_step:
             return self._sim.step(HabitatSimActions.BASE_VEL)
+        else:
+            return None

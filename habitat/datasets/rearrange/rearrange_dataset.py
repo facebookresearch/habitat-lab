@@ -1,5 +1,4 @@
 import json
-import os.path as osp
 from typing import List, Optional
 
 import attr
@@ -7,10 +6,8 @@ import attr
 from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.core.simulator import ShortestPathPoint
-from habitat.core.utils import DatasetFloatJSONEncoder, not_none_validator
+from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.tasks.nav.nav import NavigationGoal
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -45,7 +42,6 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
-        dir_path = osp.dirname(osp.realpath(__file__))
 
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)

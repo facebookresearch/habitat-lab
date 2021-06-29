@@ -19,15 +19,14 @@ def _try_register_rearrange_task():
         import habitat.tasks.rearrange.rearrange_pick_task
         import habitat.tasks.rearrange.rearrange_task
 
-    # import habitat.tasks.rearrange.envs.hab_simulator
     except ImportError as e:
         print(e)
         rearrangetask_import_error = e
-    #
-    #     @registry.register_task(name="Rearrange-v0")
-    #     class RearrangeTaskImportError(EmbodiedTask):
-    #         def __init__(self, *args, **kwargs):
-    #             raise rearrangetask_import_error
+
+        @registry.register_task(name="Rearrange-v0")
+        class RearrangeTaskImportError(EmbodiedTask):
+            def __init__(self, *args, **kwargs):
+                raise rearrangetask_import_error
 
     # Register actions
     import habitat.tasks.rearrange.actions
