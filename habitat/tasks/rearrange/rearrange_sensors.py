@@ -562,7 +562,7 @@ class RearrangePickReward(Measure):
             # Penalize the force that was added to the accumulated force at the
             # last time step.
             reward -= min(
-                self._config.FORCE_PEN * self.add_force,
+                self._config.FORCE_PEN * self._task.add_force,
                 self._config.MAX_FORCE_PEN,
             )
         else:
