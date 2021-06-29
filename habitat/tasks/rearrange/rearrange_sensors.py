@@ -136,8 +136,7 @@ class AbsTargetStartSensor(MultiObjSensor):
     cls_uuid: str = "abs_obj_start_sensor"
 
     def _get_observation_space(self, *args, **kwargs):
-        self._sim: RearrangeSim
-        n_targets = self._sim.get_n_targets()
+        n_targets = self._task.get_n_targets()
         return spaces.Box(
             shape=(n_targets, 3),
             low=np.finfo(np.float32).min,

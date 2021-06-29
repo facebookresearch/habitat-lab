@@ -18,7 +18,7 @@ class RearrangeTask(NavigationTask):
     def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
 
-        super().__init__(*args, sim=sim, dataset=dataset, **kwargs)
+        super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self.use_max_accum_force = self._config.MAX_ACCUM_FORCE
@@ -38,7 +38,7 @@ class RearrangeTask(NavigationTask):
         self.coll_accum = CollDetails()
         self.prev_coll_accum = CollDetails()
         self.should_end = False
-        self.accum_force = 0
+        self.accum_force = 0.0
         self.prev_force = None
         self._done = False
         self._get_collision_info()

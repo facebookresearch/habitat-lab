@@ -1,8 +1,6 @@
 import json
-import queue
-import re
 from collections import defaultdict
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import attr
 import magnum as mn
@@ -125,10 +123,10 @@ class RearrangeSim(HabitatSim):
         self.scene_obj_ids = []
         self.viz_obj_ids = []
         self.event_callbacks = []
-        # Horrible hack to get data from the RL environment class to sensors.
+        # Used to get data from the RL environment class to sensors.
         self.track_markers = []
         self._goal_pos = None
-        self.viz_ids = defaultdict(lambda: None)
+        self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
@@ -158,10 +156,9 @@ class RearrangeSim(HabitatSim):
             art_T = ao.transformation
 
             if robo_pos is not None:
-                robo_pos = [robo_pos[0], 0.5, robo_pos[1]]
-                robo_pos = art_T.transform_point(mn.Vector3(*robo_pos))
-                robo_pos = np.array(robo_pos)
-                robo_pos = robo_pos[[0, 2]]
+                robo_pos_vec = mn.Vector3([robo_pos[0], 0.5, robo_pos[1]])
+                robo_pos_vec = art_T.transform_point(robo_pos_vec)
+                robo_pos = np.array(robo_pos_vec)[[0, 2]]
 
             bb = mn.Range3D.from_center(
                 mn.Vector3(*bb_pos), mn.Vector3(*bb_size)
@@ -380,12 +377,6 @@ class RearrangeSim(HabitatSim):
             # Lighting reconfigure NEEDS to be in the reset function and NOT
             # the reconfigure function!
             self.set_light_setup(self._light_setup)
-
-        # Lag observations for N steps
-        lag_n_steps = self.habitat_config.LAG_OBSERVATIONS
-        self._sim_obs_queue = queue.Queue(lag_n_steps + 1)
-        for _ in range(lag_n_steps):
-            self._sim_obs_queue.put(ret)
 
         return ret
 
@@ -695,8 +686,6 @@ class RearrangeSim(HabitatSim):
                     self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations()
-            # self._sim_obs_queue.put(self._sensor_suite.get_observations(self._prev_sim_obs))
-            # obs = self._sim_obs_queue.get()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         else:
@@ -707,10 +696,7 @@ class RearrangeSim(HabitatSim):
                     self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
-            # obs = self._sensor_suite.get_observations(self._prev_sim_obs)
-            f_obs = self._sensor_suite.get_observations(self._prev_sim_obs)
-            self._sim_obs_queue.put(f_obs)
-            obs = self._sim_obs_queue.get()  #
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         if "high_rgb" in obs:
             self.is_render_obs = True
@@ -768,18 +754,6 @@ class RearrangeSim(HabitatSim):
         ]
         return a, np.array(b)
 
-    def get_target_obj_idxs(self):
-        """
-        - Returns: [idx: int] where the idx is the simulator absolute idx.
-        """
-        if len(self.get_targets()) == 0:
-            return []
-        return [self.scene_obj_ids[x] for x in self.get_targets()[0]]
-
-    # deprecated
-    def get_n_targets(self):
-        return self.n_objs
-
     def get_target_objs_start(self):
         return np.array(self.target_start_pos)
 
@@ -789,34 +763,8 @@ class RearrangeSim(HabitatSim):
         )
 
     def get_collisions(self):
-        # TODO: NEED TO FIX
+        # TODO: @ASzot incorporate collisions from the robot wrapper
         return []
-
-        def extract_coll_info(coll, n_point):
-            parts = coll.split(",")
-            coll_type, name, link = parts[:3]
-            return {
-                "type": coll_type.strip(),
-                "name": name.strip(),
-                "link": link.strip(),
-                "n_points": n_point,
-            }
-
-        sum_str = self.get_physics_step_collision_summary()
-        colls = sum_str.split("\n")
-        if "no active" in colls[0]:
-            return []
-        n_points = [
-            int(c.split(",")[-1].strip().split(" ")[0])
-            for c in colls
-            if c != ""
-        ]
-        colls = [
-            [extract_coll_info(x, n) for x in re.findall(r"\[(.*?)\]", s)]
-            for n, s in zip(n_points, colls)
-        ]
-        colls = [x for x in colls if len(x) != 0]
-        return colls
 
     def is_holding_obj(self):
         return self.snapped_obj_id is not None

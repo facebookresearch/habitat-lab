@@ -83,8 +83,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
-        self.cache = {}
-
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
 
         mtime = osp.getmtime(data_path)

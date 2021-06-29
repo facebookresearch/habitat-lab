@@ -27,7 +27,7 @@ class RearrangeEpisode(Episode):
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
-    episodes: List[RearrangeEpisode]
+    episodes: List[RearrangeEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def to_json(self) -> str:
