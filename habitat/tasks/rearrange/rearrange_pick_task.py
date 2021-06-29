@@ -10,7 +10,6 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
@@ -27,37 +26,6 @@ def merge_sim_episode_with_object_config(sim_config, episode):
 
 
 @registry.register_task(name="RearrangePickTask-v0")
-class RearrangePickTask(NavigationTask):
-
-    """
-    Embodied Question Answering Task
-    Usage example:
-        env = habitat.Env(config=eqa_config)
-
-        env.reset()
-
-        for i in range(10):
-            action = sample_non_stop_action(env.action_space)
-            if action["action"] != AnswerAction.name:
-                env.step(action)
-            metrics = env.get_metrics() # to check distance to target
-
-        correct_answer_id = env.current_episode.question.answer_token
-        env.step(
-            {
-                "action": AnswerAction.name,
-                "action_args": {"answer_id": correct_answer_id},
-            }
-        )
-
-        metrics = env.get_metrics()
-    """
-
-    def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
-
-
-@registry.register_task(name="RearrangePickTask-v1")
 class RearrangePickTaskV1(RearrangeTask):
 
     """

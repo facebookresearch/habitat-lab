@@ -17,7 +17,7 @@ from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
-CFG_TEST = "configs/tasks/rearrang_pick_task.yaml"
+CFG_TEST = "configs/tasks/rearrangpick_replica_cad.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -135,7 +135,7 @@ def test_rearrange_task():
     from habitat_baselines.config.default import get_config
 
     config = get_config(
-        "habitat_baselines/config/rearrange/rl_rearrang_pick.yaml"
+        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
     )
     from habitat_baselines.common.environments import get_env_class
 

@@ -6,7 +6,7 @@ DATASET:
     DATA_PATH: data/episode_data/{split}_counter_L_analysis_5000_500.json.gz
     SCENES_DIR: "data/scene_datasets/"
 TASK:
-    TYPE: RearrangePickTask-v1
+    TYPE: RearrangePickTask-v0
     MAX_ACCUM_FORCE: 5000.0
     MAX_COLLISIONS: 2000.0
 
