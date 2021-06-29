@@ -34,9 +34,9 @@ def add_obj(name, sim):
     return obj_id
 
 
-def place_viz_objs(name_trans, sim, obj_ids=[]):
+def place_viz_objs(name_trans, sim, obj_ids):
     viz_obj_ids = []
-    for i, (name, assoc_obj_idx, trans) in enumerate(name_trans):
+    for i, (_, assoc_obj_idx, trans) in enumerate(name_trans):
         if len(obj_ids) == 0:
             obj_bb = get_aabb(assoc_obj_idx, sim, False)
             obj_mgr = sim.get_object_template_manager()
@@ -60,7 +60,7 @@ def place_viz_objs(name_trans, sim, obj_ids=[]):
     return viz_obj_ids
 
 
-def load_articulated_objs(name_obj_dat, sim, obj_ids=[], auto_sleep=True):
+def load_articulated_objs(name_obj_dat, sim, obj_ids, auto_sleep=True):
     """
     Same params as `orp.obj_loaders.load_objs`
     """

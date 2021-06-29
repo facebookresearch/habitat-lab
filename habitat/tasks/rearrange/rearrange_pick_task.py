@@ -1,8 +1,6 @@
-import os
 import os.path as osp
 
 import numpy as np
-from PIL import Image
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -11,7 +9,6 @@ from habitat.tasks.rearrange.envs.utils import (
     CacheHelper,
     get_angle,
     rearrang_collision,
-    reshape_obs_space,
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
@@ -118,87 +115,6 @@ class RearrangePickTaskV1(RearrangeTask):
     def _is_holding_obj(self):
         return self._sim.snapped_obj_id is not None
 
-    def _my_get_reward(self, observations):
-        self.prev_obs = observations
-
-        cur_measures = self.measurements.get_metrics()
-        reward = 0
-
-        snapped_id = self._sim.snapped_obj_id
-        cur_picked = snapped_id is not None
-
-        if cur_picked:
-            dist_to_goal = np.linalg.norm(
-                observations["ee_pos"] - self.desired_resting
-            )
-        else:
-            dist_to_goal = cur_measures["ee_to_object_distance"][self.targ_idx]
-
-        abs_targ_obj_idx = self._sim.scene_obj_ids[self.abs_targ_idx]
-
-        did_pick = cur_picked and (not self.prev_picked)
-        if did_pick:
-            if snapped_id == abs_targ_obj_idx:
-                self.n_succ_picks += 1
-                reward += self._config.PICK_REWARD
-                # If we just transitioned to the next stage our current
-                # distance is stale.
-                self.cur_dist = -1
-            else:
-                # picked the wrong object...
-                reward -= self._config.WRONG_PICK_PEN
-                self.should_end = True
-                return reward
-
-        if self._config.USE_DIFF:
-            if self.cur_dist < 0:
-                dist_diff = 0.0
-            else:
-                dist_diff = self.cur_dist - dist_to_goal
-
-            # Filter out the small fluctuations
-            dist_diff = round(dist_diff, 3)
-            reward += self._config.DIST_REWARD * dist_diff
-        else:
-            reward -= self._config.DIST_REWARD * dist_to_goal
-        self.cur_dist = dist_to_goal
-
-        if not cur_picked and self.prev_picked:
-            # Dropped the object...
-            reward -= self._config.DROP_PEN
-            self.should_end = True
-            return reward
-
-        if self._my_episode_success():
-            reward += self._config.SUCC_REWARD
-
-        reward += self._get_coll_reward()
-
-        self.prev_picked = cur_picked
-
-        return reward
-
-    def _my_episode_success(self):
-        # Is the agent holding the object and it's at the start?
-        abs_targ_obj_idx = self._sim.scene_obj_ids[self.abs_targ_idx]
-        cur_measures = self.measurements.get_metrics()
-        obj_to_ee = cur_measures["ee_to_object_distance"][self.targ_idx]
-
-        # Check that we are holding the right object and the object is actually
-        # being held.
-        if (
-            abs_targ_obj_idx == self._sim.snapped_obj_id
-            and obj_to_ee < self._config.HOLD_THRESH
-        ):
-            cur_measures = self.measurements.get_metrics()
-            rest_dist = np.linalg.norm(
-                self.prev_obs["ee_pos"] - self.desired_resting
-            )
-            if rest_dist < self._config.SUCC_THRESH:
-                return True
-
-        return False
-
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
@@ -219,7 +135,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
         # Add a bit of noise
         timeout = 1000
-        for attempt in range(timeout):
+        for _attempt in range(timeout):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
@@ -245,7 +161,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
             # Make sure the robot is not colliding with anything in this
             # position.
-            for i in range(100):
+            for _ in range(100):
                 sim.internal_step(-1)
                 colls = sim.get_collisions()
                 did_collide, details = rearrang_collision(
@@ -264,33 +180,10 @@ class RearrangePickTaskV1(RearrangeTask):
 
             if not did_collide:
                 break
-        if attempt == timeout - 1:
-            if not is_easy_init:
-                # print('Could not satisfy for %s! Trying with easy init' % sim.ep_info['scene_config_path'])
-                start_pos, angle_to_obj, sel_idx = self._gen_start_pos(
-                    sim, True
-                )
-            else:
-                print("collided", did_collide, details)
-                print("targ dist", targ_dist)
-                print(
-                    "is navigable", sim._sim.pathfinder.is_navigable(start_pos)
-                )
-                print("was easy init", is_easy_init)
-                print("Scene config", sim.ep_info["scene_config_path"])
-                print("failed!")
-                sim_obs = sim._sim.get_sensor_observations()
-                obs = sim._sensor_suite.get_observations(sim_obs)
-                save_dir = "data/inits"
-                if not osp.exists(save_dir):
-                    os.makedirs(save_dir)
-                fname = osp.join(save_dir, "ep_%s_%i.jpeg" % ("train", 0))
-                im = Image.fromarray(np.flip(obs["rgb"], 0)).save(fname)
-                print(
-                    "Saved image with the observation on the error episode to: ",
-                    fname,
-                )
-                # raise ValueError('Could not generate config')
+
+        if _attempt == timeout - 1 and (not is_easy_init):
+            # print('Could not satisfy for %s! Trying with easy init' % sim.ep_info['scene_config_path'])
+            start_pos, angle_to_obj, sel_idx = self._gen_start_pos(sim, True)
 
         sim.set_state(state)
 
@@ -318,16 +211,6 @@ class RearrangePickTaskV1(RearrangeTask):
             # No releasing the object once it is held.
             action_args["grip_ac"] = None
         obs = super().step(action=action, episode=episode)
-        reward, done, info = 0, False, {}  # TODO Fix done and etc
-        info["dist_to_goal"] = self.cur_dist
-        info["is_picked"] = int(self.prev_picked)
-        cur_measures = self.measurements.get_metrics()
-        info["ee_to_obj"] = cur_measures["ee_to_object_distance"][
-            self.abs_targ_idx
-        ]
-
-        # only return info about the particular object that we are trying to
-        # pick
         obs = self._trans_obs(obs)
 
         return obs

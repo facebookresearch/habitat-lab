@@ -1,9 +1,13 @@
+import hashlib
+import os
+import os.path as osp
+import pickle
+import time
+
 import attr
 import magnum as mn
 import numpy as np
-import pybullet as p
 import quaternion
-from PIL import Image
 
 import habitat_sim
 from habitat_sim.nav import NavMeshSettings
@@ -46,17 +50,10 @@ def make_render_only(obj_idx, sim):
         sim.set_object_is_collidable(False, obj_idx)
 
 
-def has_collision(name, colls):
-    for coll0, coll1 in colls:
-        if coll0["name"] == name or coll1["name"] == name:
-            return True
-    return False
-
-
 def get_collision_matches(link, colls, search_key="link"):
     matches = []
     for coll0, coll1 in colls:
-        if coll0[search_key] == link or coll1[search_key] == link:
+        if link in [coll0[search_key], coll1[search_key]]:
             matches.append((coll0, coll1))
     return matches
 
@@ -72,7 +69,7 @@ def coll_name(coll, name):
 
 
 def coll_prop(coll, val, prop):
-    return coll[0][prop] == val or coll[1][prop] == val
+    return val in [coll[0][prop], coll[1][prop]]
 
 
 def coll_link(coll, link):
@@ -82,89 +79,6 @@ def coll_link(coll, link):
 def swap_axes(x):
     x[1], x[2] = x[2], x[1]
     return x
-
-
-class IkHelper:
-    def __init__(self, arm_start):
-        self._arm_start = arm_start
-        self._arm_len = 7
-
-    def setup_sim(self):
-        self.pc_id = p.connect(p.DIRECT)
-
-        self.robo_id = p.loadURDF(
-            "./orp/robots/opt_fetch/robots/fetch_onlyarm.urdf",
-            basePosition=[0, 0, 0],
-            useFixedBase=True,
-            flags=p.URDF_USE_INERTIA_FROM_FILE,
-            physicsClientId=self.pc_id,
-        )
-
-        p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
-        JOINT_DAMPING = 0.5
-        self.pb_link_idx = 7
-
-        for link_idx in range(15):
-            p.changeDynamics(
-                self.robo_id,
-                link_idx,
-                linearDamping=0.0,
-                angularDamping=0.0,
-                jointDamping=JOINT_DAMPING,
-                physicsClientId=self.pc_id,
-            )
-            p.changeDynamics(
-                self.robo_id,
-                link_idx,
-                maxJointVelocity=200,
-                physicsClientId=self.pc_id,
-            )
-
-    def set_arm_state(self, joint_pos, joint_vel=None):
-        if joint_vel is None:
-            joint_vel = np.zeros((len(joint_pos),))
-        for i in range(7):
-            p.resetJointState(
-                self.robo_id,
-                i,
-                joint_pos[i],
-                joint_vel[i],
-                physicsClientId=self.pc_id,
-            )
-
-    def calc_fk(self, js):
-        self.set_arm_state(js, np.zeros(js.shape))
-        ls = p.getLinkState(
-            self.robo_id,
-            self.pb_link_idx,
-            computeForwardKinematics=1,
-            physicsClientId=self.pc_id,
-        )
-        world_ee = ls[4]
-        return world_ee
-
-    def get_joint_limits(self):
-        lower = []
-        upper = []
-        for joint_i in range(self._arm_len):
-            ret = p.getJointInfo(
-                self.robo_id, joint_i, physicsClientId=self.pc_id
-            )
-            lower.append(ret[8])
-            if ret[9] == -1:
-                upper.append(2 * np.pi)
-            else:
-                upper.append(ret[9])
-        return np.array(lower), np.array(upper)
-
-    def calc_ik(self, targ_ee):
-        """
-        targ_ee is in ROBOT COORDINATE FRAME NOT IN EE COORDINATE FRAME
-        """
-        js = p.calculateInverseKinematics(
-            self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
-        )
-        return js[: self._arm_len]
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -179,7 +93,7 @@ def rearrang_collision(
     snapped_obj_id,
     count_obj_colls,
     verbose=False,
-    ignore_names=[],
+    ignore_names=None,
     ignore_base=True,
 ):
     """
@@ -193,14 +107,13 @@ def rearrang_collision(
             if not ("base" in x[0]["link"] or "base" in x[1]["link"])
         ]
 
-    def should_ignore(x):
-        for ignore_name in ignore_names:
-            if coll_name(x, ignore_name):
-                return True
-        return False
+    def should_keep(x):
+        if ignore_names is None:
+            return True
+        return any(coll_name(x, ignore_name) for ignore_name in ignore_names)
 
     # Filter out any collisions with the ignore objects
-    colls = [x for x in colls if not should_ignore(x)]
+    colls = list(filter(should_keep, colls))
 
     # Check for robot collision
     robo_obj_colls = 0
@@ -223,15 +136,14 @@ def rearrang_collision(
 
     # Checking for holding object collision
     obj_scene_colls = 0
-    if count_obj_colls:
-        if snapped_obj_id is not None:
-            matches = get_collision_matches(
-                "id %i" % snapped_obj_id, colls, "link"
-            )
-            for match in matches:
-                if coll_name(match, "fetch"):
-                    continue
-                obj_scene_colls += 1
+    if count_obj_colls and snapped_obj_id is not None:
+        matches = get_collision_matches(
+            "id %i" % snapped_obj_id, colls, "link"
+        )
+        for match in matches:
+            if coll_name(match, "fetch"):
+                continue
+            obj_scene_colls += 1
 
     total_colls = robo_obj_colls + robo_scene_colls + obj_scene_colls
     return total_colls > 0, CollDetails(
@@ -292,13 +204,6 @@ def get_aabb(obj_id, sim, transformed=False):
     return obj_bb
 
 
-def inter_any_bb(bb0, bbs):
-    for bb in bbs:
-        if mn.math.intersects(bb0, bb):
-            return True
-    return False
-
-
 def euler_to_quat(rpy):
     rot = quaternion.from_euler_angles(rpy)
     rot = mn.Quaternion(mn.Vector3(rot.vec), rot.w)
@@ -316,8 +221,6 @@ def recover_nav_island_point(v, ref_v, sim):
     Snaps a point to the LARGEST island.
     """
     nav_vs = sim.pathfinder.build_navmesh_vertices()
-
-    cur_r = sim.pathfinder.island_radius(v)
     ref_r = sim.pathfinder.island_radius(ref_v)
 
     nav_vs_r = {
@@ -335,35 +238,6 @@ def recover_nav_island_point(v, ref_v, sim):
     print("Could not find point off of island")
     return v
 
-
-def get_largest_island_point(sim, height_thresh=None, z_min=None):
-    """
-    Samples a point from the largest island on the navmesh
-    - height_thresh: Maximum possible height
-    - z_thresh: Minimum possible z value.
-    """
-    use_vs = np.array(sim.pathfinder.build_navmesh_vertices())
-
-    if height_thresh is not None:
-        use_vs = use_vs[use_vs[:, 1] < height_thresh]
-    if z_min is not None:
-        use_vs = use_vs[use_vs[:, 2] > z_min]
-    nav_vs_r = np.array(
-        [sim.pathfinder.island_radius(nav_v) for nav_v in use_vs]
-    )
-    largest_island = np.max(nav_vs_r)
-    use_vs = use_vs[nav_vs_r == largest_island]
-    sel_i = np.random.randint(len(use_vs))
-
-    ret = use_vs[sel_i]
-    return ret
-
-
-import hashlib
-import os
-import os.path as osp
-import pickle
-import time
 
 CACHE_PATH = "./data/cache"
 

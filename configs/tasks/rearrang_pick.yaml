@@ -58,6 +58,7 @@ TASK:
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+        USE_DIFF: True
 
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"

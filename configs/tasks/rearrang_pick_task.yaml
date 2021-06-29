@@ -67,17 +67,18 @@ TASK:
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+        USE_DIFF: True
 
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
         HOLD_THRESH: 0.09
 
-        USE_DIFF: True
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
-#        - "REARRANGE_PICK_REWARD"
+        - "REARRANGE_PICK_SUCCESS"
+        - "REARRANGE_PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"

@@ -1,4 +1,4 @@
-import copy
+import json
 import queue
 import re
 from collections import defaultdict
@@ -7,27 +7,22 @@ from typing import Callable
 import attr
 import magnum as mn
 import numpy as np
-import quaternion
 
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.envs.obj_loaders import (
     add_obj,
-    init_art_objs,
     load_articulated_objs,
     load_objs,
     place_viz_objs,
 )
 from habitat.tasks.rearrange.envs.utils import (
-    IkHelper,
     convert_legacy_cfg,
     get_aabb,
-    get_largest_island_point,
     get_nav_mesh_settings,
-    make_render_only,
 )
+from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot
 
@@ -60,15 +55,8 @@ ART_BBS = [
 ]
 
 
-import json
-
-from habitat_sim.gfx import LightInfo, LightPositionModel
-
-
 # temp workflow for loading lights into Habitat scene
 def load_light_setup_for_glb(json_filepath):
-    lighting_setup = None
-
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         lighting_setup = []
@@ -161,7 +149,7 @@ class RearrangeSim(HabitatSim):
         Creates transformed bounding boxes for the articulated objects.
         """
         self.art_bbs = []
-        for i, (name, urdf_name, bb_size, bb_pos, robo_pos) in enumerate(
+        for _, (name, urdf_name, bb_size, bb_pos, robo_pos) in enumerate(
             ART_BBS
         ):
             if urdf_name not in self.art_name_to_id:
@@ -326,7 +314,6 @@ class RearrangeSim(HabitatSim):
             obj_s = "/BOX_" + "_".join([str(x) for x in art_bb[2]])
             urdf_name = art_bb[1]
             bb_pos = art_bb[3]
-            robo_pos = art_bb[4]
             if urdf_name not in self.art_name_to_id:
                 continue
 
@@ -464,9 +451,7 @@ class RearrangeSim(HabitatSim):
         # automatically be set to 0 in `set_state`.
         robot_T = self.robot.sim_obj.transformation
         art_T = [ao.transformation for ao in self.art_objs]
-        static_T = [
-            self.get_transformation(i) for i in self.scene_obj_ids
-        ]
+        static_T = [self.get_transformation(i) for i in self.scene_obj_ids]
         art_pos = [ao.joint_positions for ao in self.art_objs]
         robo_js = self.robot.sim_obj.joint_positions
 
@@ -650,9 +635,7 @@ class RearrangeSim(HabitatSim):
                 self.event_callbacks.append(
                     SimEvent(
                         is_ready,
-                        lambda: self.override_collision_group(
-                            snap_obj_id, 1
-                        ),
+                        lambda: self.override_collision_group(snap_obj_id, 1),
                     )
                 )
         if self.do_grab_using_constraint:
@@ -682,9 +665,7 @@ class RearrangeSim(HabitatSim):
         if self.is_render_obs:
             self._try_acquire_context()
             for obj_idx, _ in self.ep_info["targets"]:
-                self.set_object_bb_draw(
-                    False, self.scene_obj_ids[obj_idx]
-                )
+                self.set_object_bb_draw(False, self.scene_obj_ids[obj_idx])
         for viz_obj in self.viz_obj_ids:
             self.remove_object(viz_obj)
 
@@ -710,7 +691,7 @@ class RearrangeSim(HabitatSim):
 
         if not self.concur_render:
             if self.habitat_config.get("STEP_PHYSICS", True):
-                for i in range(self.ac_freq_ratio):
+                for _ in range(self.ac_freq_ratio):
                     self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations()
@@ -719,17 +700,13 @@ class RearrangeSim(HabitatSim):
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         else:
-            self._prev_sim_obs = (
-                self.get_sensor_observations_async_start()
-            )
+            self._prev_sim_obs = self.get_sensor_observations_async_start()
 
             if self.habitat_config.get("STEP_PHYSICS", True):
-                for i in range(self.ac_freq_ratio):
+                for _ in range(self.ac_freq_ratio):
                     self.internal_step(-1)
 
-            self._prev_sim_obs = (
-                self.get_sensor_observations_async_finish()
-            )
+            self._prev_sim_obs = self.get_sensor_observations_async_finish()
             # obs = self._sensor_suite.get_observations(self._prev_sim_obs)
             f_obs = self._sensor_suite.get_observations(self._prev_sim_obs)
             self._sim_obs_queue.put(f_obs)
@@ -784,7 +761,7 @@ class RearrangeSim(HabitatSim):
           Note that goal_pos is the desired position of the object, not the
           starting position.
         """
-        targ_idx, targ_trans = [x for x in zip(*self._get_target_trans())]
+        targ_idx, targ_trans = list(zip(*self._get_target_trans()))
 
         a, b = np.array(targ_idx), [
             np.array(x.translation) for x in targ_trans
@@ -835,7 +812,7 @@ class RearrangeSim(HabitatSim):
             if c != ""
         ]
         colls = [
-            [extract_coll_info(x, n) for x in re.findall("\[(.*?)\]", s)]
+            [extract_coll_info(x, n) for x in re.findall(r"\[(.*?)\]", s)]
             for n, s in zip(n_points, colls)
         ]
         colls = [x for x in colls if len(x) != 0]
@@ -843,4 +820,3 @@ class RearrangeSim(HabitatSim):
 
     def is_holding_obj(self):
         return self.snapped_obj_id is not None
-

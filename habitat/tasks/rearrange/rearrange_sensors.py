@@ -143,14 +143,6 @@ class TargetStartSensor(MultiObjSensor):
 
         return pos
 
-        # pos = self._sim.get_target_objs_start()
-        # ee_pos = self._sim.robot.ee_transform.translation
-        # to_targ = pos - ee_pos
-        # trans = self._sim.get_robot_transform()
-        # for i in range(to_targ.shape[0]):
-        #    to_targ[i] = trans.inverted().transform_vector(to_targ[i])
-        # return to_targ
-
 
 @registry.register_sensor
 class AbsTargetStartSensor(MultiObjSensor):
@@ -218,26 +210,6 @@ class AbsGoalSensor(MultiObjSensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         _, pos = self._sim.get_targets()
         return pos
-
-
-@registry.register_sensor
-class DummySensor(Sensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "dummy"
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(1,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        return np.zeros(1)
 
 
 @registry.register_sensor
@@ -481,10 +453,11 @@ class EndEffectorToPosDistance(Measure):
 class RearrangePickReward(Measure):
     cls_uuid: str = "rearrangepick_reward"
 
-    def __init__(self, sim, config, *args, **kwargs):
+    def __init__(self, sim, config, task, *args, **kwargs):
         self._sim = sim
         self._config = config
-        super().__init__(**kwargs)
+        self._task = task
+        super().__init__(sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -492,8 +465,13 @@ class RearrangePickReward(Measure):
 
     def reset_metric(self, episode, task, observations, *args, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
+            self.uuid,
+            [
+                EndEffectorToObjectDistance.cls_uuid,
+                RearrangePickSuccess.cls_uuid,
+            ],
         )
+
         self.update_metric(
             *args,
             episode=episode,
@@ -505,6 +483,9 @@ class RearrangePickReward(Measure):
     def update_metric(self, episode, observations, task, *args, **kwargs):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
+        ].get_metric()
+        success = task.measurements.measures[
+            RearrangePickSuccess.cls_uuid
         ].get_metric()
         reward = 0
 
@@ -528,42 +509,75 @@ class RearrangePickReward(Measure):
                 reward += self._config.PICK_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
-                self.cur_dist = -1
+                self._task.cur_dist = -1
             else:
                 # picked the wrong object...
                 reward -= self._config.WRONG_PICK_PEN
-                self.should_end = True
+                self._task.should_end = True
                 self._metric = reward
                 return
 
         if self._config.USE_DIFF:
-            if self.cur_dist < 0:
+            if self._task.cur_dist < 0:
                 dist_diff = 0.0
             else:
-                dist_diff = self.cur_dist - dist_to_goal
+                dist_diff = self._task.cur_dist - dist_to_goal
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
             reward += self._config.DIST_REWARD * dist_diff
         else:
             reward -= self._config.DIST_REWARD * dist_to_goal
-        self.cur_dist = dist_to_goal
+        self._task.cur_dist = dist_to_goal
 
-        if not cur_picked and self.prev_picked:
+        if not cur_picked and self._task.prev_picked:
             # Dropped the object...
             reward -= self._config.DROP_PEN
-            self.should_end = True
+            self._task.should_end = True
             self._metric = reward
             return
 
-        if self._my_episode_success():
+        if success:
             reward += self._config.SUCC_REWARD
 
         reward += self._get_coll_reward()
 
-        self.prev_picked = cur_picked
+        if self._task._is_violating_hold_constraint():
+            reward -= self._config.CONSTRAINT_VIOLATE_PEN
+
+        if (
+            self._task._config.FORCE_BASED
+            and self._task.use_max_accum_force > 0
+            and self._task.accum_force > self._task.use_max_accum_force
+        ):
+            reward -= self._config.FORCE_END_PEN
+
+        self._task.prev_picked = cur_picked
 
         self._metric = reward
+
+    def _get_coll_reward(self):
+        reward = 0
+        if self._task._config.FORCE_BASED:
+            # Penalize the force that was added to the accumulated force at the
+            # last time step.
+            reward -= min(
+                self._config.FORCE_PEN * self.add_force,
+                self._config.MAX_FORCE_PEN,
+            )
+        else:
+            delta_coll = self._task._delta_coll
+            reward -= (
+                self._config.ROBO_OBJ_COLL_PEN * delta_coll.robo_obj_colls
+            )
+
+            total_colls = (
+                delta_coll.obj_scene_colls + delta_coll.robo_scene_colls
+            )
+            if self._task._config.COUNT_ROBO_OBJ_COLLS:
+                total_colls += delta_coll.robo_obj_colls
+            reward -= self._config.COLL_PEN * (min(1, total_colls))
+        return reward
 
 
 @registry.register_measure
@@ -578,7 +592,7 @@ class RearrangePickSuccess(Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RearrangePickReward.cls_uuid
+        return RearrangePickSuccess.cls_uuid
 
     def reset_metric(self, episode, task, observations, *args, **kwargs):
         task.measurements.check_measure_dependencies(
@@ -608,7 +622,6 @@ class RearrangePickSuccess(Measure):
             abs_targ_obj_idx == self._sim.snapped_obj_id
             and obj_to_ee < self._config.HOLD_THRESH
         ):
-            cur_measures = self._env.get_metrics()
             rest_dist = np.linalg.norm(
                 self._prev_ee_pos - task.desired_resting
             )

@@ -15,10 +15,9 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
-from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
-from habitat.tasks.nav.nav import MoveForwardAction
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
-CFG_TEST = "configs/test/habitat_mp3d_object_nav_test.yaml"
+CFG_TEST = "configs/tasks/rearrang_pick_task.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -29,7 +28,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
     logger.info(
         "JSON conversion finished. {} sec".format((time.time() - start_time))
     )
-    decoded_dataset = ObjectNavDatasetV1()
+    decoded_dataset = RearrangeDatasetV0()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) == len(dataset.episodes)
     episode = decoded_dataset.episodes[0]
@@ -42,11 +41,11 @@ def check_json_serializaiton(dataset: habitat.Dataset):
     ), "JSON dataset encoding/decoding isn't consistent"
 
 
-def test_mp3d_object_nav_dataset():
+def test_rearrange_dataset():
     dataset_config = get_config(CFG_TEST).DATASET
-    if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
+    if not RearrangeDatasetV0.check_config_paths_exist(dataset_config):
         pytest.skip(
-            "Please download Matterport3D ObjectNav Dataset to data folder."
+            "Please download ReplicaCAD RearrangeDataset Dataset to data folder."
         )
 
     dataset = habitat.make_dataset(
@@ -54,11 +53,6 @@ def test_mp3d_object_nav_dataset():
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
-    dataset.goals_by_category = {
-        k: v
-        for k, v in dataset.goals_by_category.items()
-        if k in (ep.goals_key for ep in dataset.episodes)
-    }
     check_json_serializaiton(dataset)
 
 
@@ -68,10 +62,10 @@ def test_dataset_splitting(split):
     dataset_config.defrost()
     dataset_config.SPLIT = split
 
-    if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
+    if not RearrangeDatasetV0.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
 
-    scenes = ObjectNavDatasetV1.get_scenes_to_load(config=dataset_config)
+    scenes = RearrangeDatasetV0.get_scenes_to_load(config=dataset_config)
     assert (
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
@@ -133,3 +127,41 @@ def test_rearrange_habitat_env():
                 )
 
         env.reset()
+
+
+def test_rearrange_task():
+    import habitat.tasks.rearrange.envs.hab_simulator
+    from habitat_baselines.config.default import get_config
+
+    config = get_config(
+        "habitat_baselines/config/rearrange/rl_rearrang_pick.yaml"
+    )
+    # dataset = make_dataset(
+    #     id_dataset=config.DATASET.TYPE, config=config.DATASET
+    # )
+    # env = DummyRLEnv(config=config, dataset=dataset)
+    # from habitat_baselines.common.environments import NavRLEnv
+    from habitat_baselines.common.environments import get_env_class
+
+    env_class = get_env_class(config.ENV_NAME)
+    # registration doesn't work well yet
+
+    env = habitat_baselines.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    # env = env_class(config=config)
+
+    with env:
+        for _ in range(10):
+            env.reset()
+            done = False
+            while not done:
+                action = env.action_space.sample()
+                habitat.logger.info(
+                    f"Action : "
+                    f"{action['action']}, "
+                    f"args: {action['action_args']}."
+                )
+                _, _, done, info = env.step(action=action)
+
+            logger.info(info)
