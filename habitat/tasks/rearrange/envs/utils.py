@@ -259,27 +259,25 @@ class CacheHelper:
         return osp.exists(self.cache_id)
 
     def load(self, load_depth=0):
-        if self.exists():
-            try:
-                with open(self.cache_id, "rb") as f:
-                    if self.verbose:
-                        print("Loading cache @", self.cache_id)
-                    return pickle.load(f)
-            except EOFError as e:
-                if load_depth == 32:
-                    raise e
-                # try again soon
-                print(
-                    "Cache size is ",
-                    osp.getsize(self.cache_id),
-                    "for ",
-                    self.cache_id,
-                )
-                time.sleep(1.0 + np.random.uniform(0.0, 1.0))
-                return self.load(load_depth + 1)
+        if not self.exists():
             return self.def_val
-        else:
-            return self.def_val
+        try:
+            with open(self.cache_id, "rb") as f:
+                if self.verbose:
+                    print("Loading cache @", self.cache_id)
+                return pickle.load(f)
+        except EOFError as e:
+            if load_depth == 32:
+                raise e
+            # try again soon
+            print(
+                "Cache size is ",
+                osp.getsize(self.cache_id),
+                "for ",
+                self.cache_id,
+            )
+            time.sleep(1.0 + np.random.uniform(0.0, 1.0))
+            return self.load(load_depth + 1)
 
     def save(self, val):
         with open(self.cache_id, "wb") as f:

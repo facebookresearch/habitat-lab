@@ -12,11 +12,12 @@ in habitat. Customized environments should be registered using
 
 from typing import Optional, Type
 
-from habitat import Config, Dataset, RLEnv
+import habitat
+from habitat import Config, Dataset
 from habitat_baselines.common.baseline_registry import baseline_registry
 
 
-def get_env_class(env_name: str) -> Type[RLEnv]:
+def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
     r"""Return environment class based on name.
 
     Args:
@@ -29,7 +30,7 @@ def get_env_class(env_name: str) -> Type[RLEnv]:
 
 
 @baseline_registry.register_env(name="NavRLEnv")
-class NavRLEnv(RLEnv):
+class NavRLEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         self._rl_config = config.RL
         self._core_env_config = config.TASK_CONFIG

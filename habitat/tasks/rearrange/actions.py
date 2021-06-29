@@ -6,6 +6,7 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.envs.hab_simulator import RearrangeSim
 from habitat.tasks.rearrange.envs.utils import rearrang_collision
 
 
@@ -13,7 +14,7 @@ from habitat.tasks.rearrange.envs.utils import rearrang_collision
 class ArmAction(SimulatorTaskAction):
     """An arm control and grip control into one action space."""
 
-    def __init__(self, *args, config, sim, **kwargs):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         arm_controller_cls = eval(self._config.ARM_CONTROLLER)
         grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
@@ -49,8 +50,9 @@ class ArmAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class MagicGraspAction(SimulatorTaskAction):
-    def __init__(self, *args, config, sim, **kwargs):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
         self.thresh_dist = config.GRASP_THRESH_DIST
         self.snap_markers = config.get("GRASP_MARKERS", False)
 
@@ -112,6 +114,7 @@ class ArmVelAction(SimulatorTaskAction):
         vel *= self._config.VEL_CTRL_LIM
         # TODO: THIS IS DIFFERENT FROM MY CODE. I NEED TO ADD TO THE TARGETS NOT
         # THE ACTUAL JOINT POSITIONS
+        self._sim: RearrangeSim
         self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_motor_pos
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
@@ -121,9 +124,9 @@ class ArmVelAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class BaseVelAction(SimulatorTaskAction):
-    def __init__(self, *args, config, sim, **kwargs):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-
+        self._sim: RearrangeSim = sim
         self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
         self.base_vel_ctrl.controlling_lin_vel = True
         self.base_vel_ctrl.lin_vel_is_local = True
@@ -148,7 +151,7 @@ class BaseVelAction(SimulatorTaskAction):
             "pos": art_pos,
         }
 
-    def _set_robo_state(self, robot_id, sim, set_dat):
+    def _set_robo_state(self, robot_id, sim: RearrangeSim, set_dat):
         sim.set_articulated_object_forces(robot_id, set_dat["forces"])
         sim.set_articulated_object_velocities(robot_id, set_dat["vel"])
         sim.set_articulated_object_positions(robot_id, set_dat["pos"])
@@ -199,8 +202,6 @@ class BaseVelAction(SimulatorTaskAction):
             raise ValueError(
                 "Not allowing backwards does not work with detecting backwards action"
             )
-            # Scale from [-1,1] to [0,1]
-            lin_vel = (lin_vel + 1.0) / 2.0
         lin_vel *= self._config.LIN_SPEED
         ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
 
