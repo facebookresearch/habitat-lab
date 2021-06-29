@@ -71,7 +71,7 @@ class RearrangePickTaskV1(RearrangeTask):
         fname = data_path.split("/")[-1].split(".")[0]
 
         self.cache = CacheHelper(
-            "start_pos", cache_name, {}, verbose=True, rel_dir=fname
+            "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
         self.start_states = self.cache.load()
         self.desired_resting = np.array([0.5, 0.0, 1.0])

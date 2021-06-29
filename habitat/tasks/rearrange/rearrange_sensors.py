@@ -66,9 +66,7 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
     def __init__(self, *args, task, **kwargs):
         self._sim: RearrangeSim
         self._task = task
-        super(TargetPointGoalGPSAndCompassSensor, self).__init__(
-            *args, task=task, **kwargs
-        )
+        super().__init__(*args, task=task, **kwargs)
 
     def get_observation(self, observations, episode, *args, **kwargs):
         agent_state = self._sim.get_agent_state()
@@ -152,29 +150,6 @@ class AbsTargetStartSensor(MultiObjSensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
-        return pos
-
-
-@registry.register_sensor
-class DynObjPosStartOrGoal(MultiObjSensor):
-    """
-    Returns the goal position if the robot is holding an object and the object
-    starting position if the robot is not holding the object.
-    """
-
-    cls_uuid: str = "dyn_obj_start_or_goal_sensor"
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.robot.ee_transform
-        T_inv = global_T.inverted()
-
-        if self._sim.snapped_obj_id is not None:
-            _, pos = self._sim.get_targets()
-        else:
-            pos = self._sim.get_target_objs_start()
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
-
         return pos
 
 

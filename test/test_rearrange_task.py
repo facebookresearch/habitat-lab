@@ -10,12 +10,16 @@ import time
 import pytest
 
 import habitat
+import habitat.tasks.rearrange.rearrange_sim
+import habitat.tasks.rearrange.rearrange_task
 import habitat_baselines.utils.env_utils
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
+from habitat_baselines.common.environments import get_env_class
+from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "configs/tasks/rearrangpick_replica_cad.yaml"
 EPISODES_LIMIT = 6
@@ -105,8 +109,6 @@ def test_dataset_splitting(split):
 
 
 def test_rearrange_habitat_env():
-    import habitat.tasks.rearrange.rearrange_task
-
     config = get_config(CFG_TEST)
 
     if not RearrangeDatasetV0.check_config_paths_exist(config.DATASET):
@@ -131,13 +133,13 @@ def test_rearrange_habitat_env():
 
 
 def test_rearrange_task():
-    import habitat.tasks.rearrange.rearrange_sim
-    from habitat_baselines.config.default import get_config
-
-    config = get_config(
+    config = baselines_get_config(
         "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
     )
-    from habitat_baselines.common.environments import get_env_class
+    if not RearrangeDatasetV0.check_config_paths_exist(
+        config.TASK_CONFIG.DATASET
+    ):
+        pytest.skip("Test skipped as dataset files are missing.")
 
     env_class = get_env_class(config.ENV_NAME)
 

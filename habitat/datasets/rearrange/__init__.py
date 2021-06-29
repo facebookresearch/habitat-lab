@@ -15,7 +15,7 @@ from habitat.core.registry import registry
 # habitat-sim installed. In a future PR we will implement a base simulator
 # action class which will be the connection point for tasks and datasets.
 # Post that PR we would no longer need try register blocks.
-def _try_register_rearrangedatasetv1():
+def _try_register_rearrangedatasetv0():
     try:
         from habitat.datasets.rearrange.rearrange_dataset import (  # noqa: F401
             RearrangeDatasetV0,
