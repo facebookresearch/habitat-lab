@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrangpick_replica_cad.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrangepick_replica_cad.yaml
 
 RL:
     REWARD_MEASURE: "rearrangepick_reward"

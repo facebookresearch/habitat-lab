@@ -13,7 +13,7 @@ from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import rearrang_collision
+from habitat.tasks.rearrange.utils import rearrange_collision
 
 
 @registry.register_task_action
@@ -182,7 +182,7 @@ class BaseVelAction(SimulatorTaskAction):
             # we have to revert back to the previous transform
             self._sim.internal_step(-1)
             colls = self._sim.get_collisions()
-            did_coll, _ = rearrang_collision(
+            did_coll, _ = rearrange_collision(
                 colls, self._sim.snapped_obj_id, False
             )
             if did_coll:

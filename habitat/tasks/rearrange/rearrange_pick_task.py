@@ -11,7 +11,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import CacheHelper, rearrang_collision
+from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
 from habitat.tasks.utils import get_angle
 
 
@@ -112,7 +112,7 @@ class RearrangePickTaskV1(RearrangeTask):
             for _ in range(100):
                 sim.internal_step(-1)
                 colls = sim.get_collisions()
-                did_collide, details = rearrang_collision(
+                did_collide, details = rearrange_collision(
                     colls,
                     None,
                     self._config.COUNT_OBJ_COLLISIONS,
@@ -177,7 +177,7 @@ class RearrangePickTaskV1(RearrangeTask):
         for _ in range(5):
             sim.internal_step(-1)
             colls = sim.get_collisions()
-            did_collide, _ = rearrang_collision(
+            did_collide, _ = rearrange_collision(
                 colls,
                 None,
                 self._config.COUNT_OBJ_COLLISIONS,

@@ -67,7 +67,7 @@ class CollDetails:
     robo_scene_colls: int = 0
 
 
-def rearrang_collision(
+def rearrange_collision(
     colls,
     snapped_obj_id,
     count_obj_colls,

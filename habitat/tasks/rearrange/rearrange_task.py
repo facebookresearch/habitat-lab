@@ -13,7 +13,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails, rearrang_collision
+from habitat.tasks.rearrange.utils import CollDetails, rearrange_collision
 
 
 class RearrangeTask(NavigationTask):
@@ -178,7 +178,7 @@ class RearrangeTask(NavigationTask):
 
     def update_coll_count(self):
         colls = self._sim.get_collisions()
-        _, coll_details = rearrang_collision(
+        _, coll_details = rearrange_collision(
             colls,
             self._sim.snapped_obj_id,
             self._config.COUNT_OBJ_COLLISIONS,
