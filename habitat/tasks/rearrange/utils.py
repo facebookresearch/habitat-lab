@@ -161,10 +161,13 @@ def convert_legacy_cfg(obj_list):
         return obj_list
 
     def convert_fn(obj_dat):
-        path = obj_dat[0]
-        fname = "/".join(path.split("/")[-2:])
+        fname = "/".join(obj_dat[0].split("/")[-2:])
         if ".urdf" in fname:
-            obj_dat[0] = osp.join("data/misc_data/URDF", fname)
+            obj_dat[0] = osp.join("data/replica_cad/urdf", fname)
+        else:
+            obj_dat[0] = obj_dat[0].replace(
+                "data/objects/", "data/objects/ycb/"
+            )
 
         if (
             len(obj_dat) == 2
