@@ -11,14 +11,12 @@ def example():
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
     with habitat.Env(
-        config=habitat.get_config(
-            "configs/tasks/rearrangpick_replica_cad.yaml"
-        )
+        config=habitat.get_config("configs/tasks/pointnav.yaml")
     ) as env:
         print("Environment creation successful")
         observations = env.reset()  # noqa: F841
 
-        print("Agent acting inside environment.")
+        print("Agent stepping around inside environment.")
         count_steps = 0
         while not env.episode_over:
             observations = env.step(env.action_space.sample())  # noqa: F841

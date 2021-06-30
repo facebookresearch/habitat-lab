@@ -7,6 +7,8 @@
  Tokenize and vocabulary utils originally authored by @apsdehal and are
  taken from Pythia.
 """
+import json
+import os
 import re
 import typing
 from collections import Counter
@@ -26,6 +28,7 @@ except ImportError:
     pass
 
 SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
+DEFAULT_PHYSICS_CONFIG_PATH = "data/default.physics_config.json"
 
 
 def tokenize(
@@ -209,3 +212,20 @@ def get_action_shortest_path(
     if step_count == max_episode_steps:
         logger.warning("Shortest path wasn't found.")
     return shortest_path
+
+
+def check_and_gen_physics_config():
+    if os.path.exists(DEFAULT_PHYSICS_CONFIG_PATH):
+        return
+    #  Config is sourced from
+    #  https://github.com/facebookresearch/habitat-sim/blob/master/data/default.physics_config.json
+    physics_config = {
+        "physics_simulator": "bullet",
+        "timestep": 0.008,
+        "gravity": [0, -9.8, 0],
+        "friction_coefficient": 0.4,
+        "restitution_coefficient": 0.1,
+        "rigid object paths": ["objects"],
+    }
+    with open(DEFAULT_PHYSICS_CONFIG_PATH, "w") as f:
+        json.dump(physics_config, f)
