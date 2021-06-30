@@ -10,13 +10,12 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import attr
 import numpy as np
-import torch
 from gym import Space, spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Episode
 
-VisualObservation = Union[torch.Tensor, np.ndarray]
+VisualObservation = Union[np.ndarray]
 
 
 @attr.s(auto_attribs=True)
