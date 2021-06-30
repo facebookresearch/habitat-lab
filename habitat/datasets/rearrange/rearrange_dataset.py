@@ -9,11 +9,13 @@ from typing import Any, Dict, List, Optional
 
 import attr
 
+import habitat_sim.utils.datasets_download as data_downloader
 from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.datasets.utils import check_and_gen_physics_config
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -41,8 +43,16 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         return result
 
     def __init__(self, config: Optional[Config] = None) -> None:
-        super().__init__(config)
         self.config = config
+        if config and not self.__class__.check_config_paths_exist(config):
+            print(
+                "Rearrange task assets are not downloaded locally, downloading and extracting now..."
+            )
+            data_downloader.main(["--uids", "rearrange_task_assets"])
+            print("Downloaded and extracted the data.")
+        check_and_gen_physics_config()
+
+        super().__init__(config)
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
@@ -52,10 +62,14 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
-            rearrangement_episode.scene_id = (
-                rearrangement_episode.scene_id.replace(
-                    "data/scene_datasets/", "data/replica_cad/stages/Stage_"
-                )[:-7]
-                + ".glb"
-            )
+
+            #  Converting path data/scene_datasets/{scene}_\d\d.glb into new format
+            if "replica_cad" not in rearrangement_episode.scene_id:
+                rearrangement_episode.scene_id = (
+                    rearrangement_episode.scene_id.replace(".glb", "").replace(
+                        "data/scene_datasets/",
+                        "data/replica_cad/stages/Stage_",
+                    )[:-3]
+                    + ".glb"
+                )
             self.episodes.append(rearrangement_episode)

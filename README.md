@@ -77,13 +77,10 @@ If you use the Habitat platform in your research, please cite the following [pap
     python setup.py develop --all # install habitat and habitat_baselines
     ```
 
-2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
+2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat`.
 
-3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `habitat-lab/data/` where `habitat-lab/` is the github repository folder.
+3. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 18 steps.`).
 
-4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
-
-5. Run `python examples/benchmark.py` to evaluate a forward only agent in a test environment downloaded in step-3.
 
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->

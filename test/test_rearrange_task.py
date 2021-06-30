@@ -34,6 +34,7 @@ def check_json_serializaiton(dataset: habitat.Dataset):
     )
     decoded_dataset = RearrangeDatasetV0()
     decoded_dataset.from_json(json_str)
+    decoded_dataset.config = dataset.config
     assert len(decoded_dataset.episodes) == len(dataset.episodes)
     episode = decoded_dataset.episodes[0]
     assert isinstance(episode, Episode)
@@ -135,10 +136,8 @@ def test_rearrange_task():
     config = baselines_get_config(
         "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
     )
-    if not RearrangeDatasetV0.check_config_paths_exist(
-        config.TASK_CONFIG.DATASET
-    ):
-        pytest.skip("Test skipped as dataset files are missing.")
+    # if not RearrangeDatasetV0.check_config_paths_exist(config.TASK_CONFIG.DATASET):
+    #     pytest.skip("Test skipped as dataset files are missing.")
 
     env_class = get_env_class(config.ENV_NAME)
 
