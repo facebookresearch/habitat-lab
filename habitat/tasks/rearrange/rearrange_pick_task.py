@@ -11,11 +11,8 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import (
-    CacheHelper,
-    get_angle,
-    rearrang_collision,
-)
+from habitat.tasks.rearrange.utils import CacheHelper, rearrang_collision
+from habitat.tasks.utils import get_angle
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -182,13 +179,7 @@ class RearrangePickTaskV1(RearrangeTask):
             # No releasing the object once it is held.
             action_args["grip_ac"] = None
         obs = super().step(action=action, episode=episode)
-        obs = self._trans_obs(obs)
 
-        return obs
-
-    def _trans_obs(self, obs):
-        if "obj_start_sensor" in obs:
-            obs["obj_start_sensor"] = obs["obj_start_sensor"][self.targ_idx]
         return obs
 
     def set_args(self, obj, **kwargs):

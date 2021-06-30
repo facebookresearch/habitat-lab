@@ -15,6 +15,8 @@ try:
 except ImportError:
     pass
 
+DEFAULT_CFG = "configs/tasks/rearrangpick_replica_cad_example.yaml"
+
 
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
@@ -244,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-actions", action="store_true", default=False)
     parser.add_argument("--load-actions", type=str, default=None)
-    parser.add_argument("--cfg", type=str, default=None, required=True)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG, required=True)
     parser.add_argument("--cfg-opts", type=str, default="")
     args = parser.parse_args()
 

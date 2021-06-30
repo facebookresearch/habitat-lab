@@ -11,52 +11,12 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.sims.habitat_simulator.habitat_simulator import (
-    HabitatSimDepthSensor,
-    HabitatSimRGBSensor,
-)
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.utils import get_angle
 
 # TODO: @maksymets should be accessed through Robot API
 EE_GRIPPER_OFFSET = mn.Vector3(0.08, 0, 0)
-
-
-@registry.register_sensor
-class HeadRgbSensor(HabitatSimRGBSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "robot_head_rgb"
-
-
-@registry.register_sensor
-class HeadDepthSensor(HabitatSimDepthSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "robot_head_depth"
-
-
-@registry.register_sensor
-class ArmRgbSensor(HabitatSimRGBSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "arm_rgb"
-
-
-@registry.register_sensor
-class ArmDepthSensor(HabitatSimDepthSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "arm_depth"
-
-
-@registry.register_sensor
-class ThirdRgbSensor(HabitatSimRGBSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "3rd_rgb"
-
-
-@registry.register_sensor
-class ThirdDepthSensor(HabitatSimDepthSensor):
-    def _get_uuid(self, *args, **kwargs):
-        return "3rd_depth"
 
 
 @registry.register_sensor
@@ -128,7 +88,7 @@ class TargetStartSensor(MultiObjSensor):
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
 
-        return pos
+        return pos[self._task.targ_idx]
 
 
 @registry.register_sensor

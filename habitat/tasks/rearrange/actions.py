@@ -140,7 +140,6 @@ class BaseVelAction(SimulatorTaskAction):
         self.base_vel_ctrl.ang_vel_is_local = True
 
         self.end_on_stop = self._config.get("END_ON_STOP", False)
-        self.allow_back = self._config.get("ALLOW_BACK", True)
 
     @property
     def action_space(self):
@@ -204,10 +203,6 @@ class BaseVelAction(SimulatorTaskAction):
     def step(self, base_vel, should_step=True, **kwargs):
         lin_vel, ang_vel = base_vel
         lin_vel = np.clip(lin_vel, -1, 1)
-        if not self.allow_back:
-            raise ValueError(
-                "Not allowing backwards does not work with detecting backwards action"
-            )
         lin_vel *= self._config.LIN_SPEED
         ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
 

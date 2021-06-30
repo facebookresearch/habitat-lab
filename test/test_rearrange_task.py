@@ -60,7 +60,7 @@ def test_rearrange_dataset():
     check_json_serializaiton(dataset)
 
 
-@pytest.mark.parametrize("split", ["train", "val"])
+@pytest.mark.parametrize("split", ["train", "test"])
 def test_dataset_splitting(split):
     dataset_config = get_config(CFG_TEST).DATASET
     dataset_config.defrost()
@@ -114,7 +114,6 @@ def test_rearrange_habitat_env():
     if not RearrangeDatasetV0.check_config_paths_exist(config.DATASET):
         pytest.skip("Test skipped as dataset files are missing.")
 
-    config.defrost()
     config.freeze()
     with habitat.Env(config=config, dataset=None) as env:
         for _ in range(10):

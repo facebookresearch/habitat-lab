@@ -159,15 +159,14 @@ To make things easier we expect `data` folder of particular structure or symlink
 ### Scenes datasets
 | Scenes models | Extract path | Archive size |
 | --- | --- | --- |
-| [ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/{scene}/{scene}.glb` | 15 GB |
+| [ReplicaCAD](#ReplicaCAD) | `data/replica_cad/stages/{scene}.glb` | 123 MB |
 | [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
 | [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
 
 #### ReplicaCAD
 Download [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/) dataset using download utility:
 ```
-wget https://raw.githubusercontent.com/facebookresearch/habitat-sim/master/habitat_sim/utils/datasets_download.py
-python datasets_download.py  --uids replica_cad_dataset --data-path data/scene_datasets/
+python -m habitat_sim.utils.datasets_download --uids replica_cad_dataset --data-path data/
 ```
 
 #### Matterport3D

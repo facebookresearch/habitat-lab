@@ -32,22 +32,6 @@ def make_border_red(img):
     return img
 
 
-def get_angle(x, y):
-    """
-    Gets the angle between two vectors in radians.
-    """
-    if np.linalg.norm(x) != 0:
-        x_norm = x / np.linalg.norm(x)
-    else:
-        x_norm = x
-
-    if np.linalg.norm(y) != 0:
-        y_norm = y / np.linalg.norm(y)
-    else:
-        y_norm = y
-    return np.arccos(np.clip(np.dot(x_norm, y_norm), -1, 1))
-
-
 def make_render_only(obj_idx, sim):
     if hasattr(MotionType, "RENDER_ONLY"):
         sim.set_object_motion_type(MotionType.RENDER_ONLY, obj_idx)

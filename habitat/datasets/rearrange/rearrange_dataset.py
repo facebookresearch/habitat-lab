@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import attr
 
@@ -18,15 +18,15 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
-    art_objs: object
-    static_objs: object
-    targets: object
+    art_objs: List[List[Any]]
+    static_objs: List[List[Any]]
+    targets: List[List[Any]]
     fixed_base: bool
-    art_states: object
+    art_states: List[Any]
     nav_mesh_path: str
     scene_config_path: str
-    allowed_region: List = []
-    markers: List = []
+    allowed_region: List[Any] = []
+    markers: List[Dict[str, Any]] = []
     force_spawn_pos: List = None
 
 

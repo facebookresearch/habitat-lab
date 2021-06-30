@@ -212,7 +212,7 @@ class RearrangeSim(HabitatSim):
             rel_art_bb_id, offset = force_spawn_pos
             _, urdf_name, _, _, robo_pos = ART_BBS[rel_art_bb_id]
             art_id = self.art_name_to_id[urdf_name]
-            art_T = self._sim.get_articulated_object_root_state(art_id)
+            art_T = self.get_articulated_object_root_state(art_id)
 
             robo_pos = [robo_pos[0] + offset[0], 0.5, robo_pos[1] + offset[1]]
             robo_pos = art_T.transform_point(mn.Vector3(*robo_pos))
@@ -226,20 +226,18 @@ class RearrangeSim(HabitatSim):
             if bb.contains(pos):
                 set_pos = bb_info[2]
         if set_pos is None:
-            if self._sim.pathfinder.island_radius(pos) == 0.0:
+            if self.pathfinder.island_radius(pos) == 0.0:
                 # TODO: Hack for points which somehow end up in 0 radius island.
                 return np.array(
-                    self._sim.pathfinder.snap_point(
-                        pos - np.array([0, 0, 0.3])
-                    )
+                    self.pathfinder.snap_point(pos - np.array([0, 0, 0.3]))
                 )
-            return np.array(self._sim.pathfinder.snap_point(pos))
+            return np.array(self.pathfinder.snap_point(pos))
         else:
             return np.array([set_pos[0], 0.5, set_pos[1]])
 
     def _try_acquire_context(self):
         if self.concur_render:
-            self._sim.renderer.acquire_gl_context()
+            self.renderer.acquire_gl_context()
 
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
@@ -288,7 +286,7 @@ class RearrangeSim(HabitatSim):
             # TODO: NEED TO FIX
             # init_art_objs(
             #    set_pos.items(),
-            #    self._sim,
+            #    self,
             #    self.habitat_config.get("AUTO_SLEEP_ART_OBJS", True),
             # )
 
@@ -394,7 +392,7 @@ class RearrangeSim(HabitatSim):
 
         if art_names is None or self.cached_art_obj_ids != art_names:
             # for art_obj in self.art_obj_ids:
-            #    self._sim.remove_articulated_object(art_obj)
+            #    self.remove_articulated_object(art_obj)
             ao_mgr = self.get_articulated_object_manager()
             ao_mgr.remove_all_objects()
             self.art_objs = []
