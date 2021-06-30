@@ -112,7 +112,7 @@ class RearrangePickTaskV1(RearrangeTask):
             )
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
 
-            is_navigable = is_easy_init or sim._sim.pathfinder.is_navigable(
+            is_navigable = is_easy_init or sim.pathfinder.is_navigable(
                 start_pos
             )
 
