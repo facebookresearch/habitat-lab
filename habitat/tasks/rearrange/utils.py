@@ -11,6 +11,7 @@ import pickle
 import time
 
 import attr
+import gym
 import magnum as mn
 import numpy as np
 import quaternion
@@ -18,18 +19,6 @@ import quaternion
 import habitat_sim
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
-
-MP_TEST_DIR = "mp_test3"
-
-
-def make_border_red(img):
-    border_color = [255, 0, 0]
-    border_width = 10
-    img[:, :border_width] = border_color
-    img[:border_width, :] = border_color
-    img[-border_width:, :] = border_color
-    img[:, -border_width:] = border_color
-    return img
 
 
 def make_render_only(obj_idx, sim):
@@ -277,9 +266,6 @@ class CacheHelper:
             if self.verbose:
                 print("Saving cache @", self.cache_id)
             pickle.dump(val, f)
-
-
-import gym
 
 
 def reshape_obs_space(obs_space, new_shape):

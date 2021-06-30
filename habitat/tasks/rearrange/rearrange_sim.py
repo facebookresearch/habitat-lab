@@ -70,8 +70,6 @@ def load_light_setup_for_glb(json_filepath):
             position = [float(t[0]), float(t[1]), float(t[2]), light_w]
             color_scale = float(light["intensity"])
             color = [float(c * color_scale) for c in light["color"]]
-            # print('position: {}'.format(position))
-            # print('color: {}'.format(color))
             lighting_setup.append(
                 LightInfo(
                     vector=position,
@@ -79,7 +77,6 @@ def load_light_setup_for_glb(json_filepath):
                     model=LightPositionModel.Global,
                 )
             )
-        # print("loaded {} lights".format(len(data['lights'])))
 
     return lighting_setup
 
@@ -242,13 +239,6 @@ class RearrangeSim(HabitatSim):
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
 
-        # obj_order = list(range(len(ep_info['static_objs'])))
-        # random.shuffle(obj_order)
-        # ep_info['static_objs'] = [ep_info['static_objs'][i] for i in obj_order]
-
-        # for j in range(len(ep_info['targets'])):
-        #    ep_info['targets'][j][0] = obj_order.index(ep_info['targets'][j][0])
-
         config["SCENE"] = ep_info["scene_id"]
         super().reconfigure(config)
 
@@ -283,12 +273,6 @@ class RearrangeSim(HabitatSim):
                 set_pos[i] = art_state
             for i, art_state in ep_info["art_states"]:
                 set_pos[self.art_objs[i]] = art_state
-            # TODO: NEED TO FIX
-            # init_art_objs(
-            #    set_pos.items(),
-            #    self,
-            #    self.habitat_config.get("AUTO_SLEEP_ART_OBJS", True),
-            # )
 
         # Get the positions after things have settled down.
         self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
@@ -301,7 +285,6 @@ class RearrangeSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
-            # self._ik.setup_sim()
             # Capture the starting art states
             self.start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
@@ -378,21 +361,18 @@ class RearrangeSim(HabitatSim):
         self.event_callbacks = []
         ret = super().reset()
         if self._light_setup:
-            # Lighting reconfigure NEEDS to be in the reset function and NOT
-            # the reconfigure function!
+            # Lighting reconfigure needs to be in the reset function and not
+            # the reconfigure function.
             self.set_light_setup(self._light_setup)
 
         return ret
 
     def clear_objs(self, art_names=None):
-        # Clear the objects out.
         for scene_obj in self.scene_obj_ids:
             self.remove_object(scene_obj)
         self.scene_obj_ids = []
 
         if art_names is None or self.cached_art_obj_ids != art_names:
-            # for art_obj in self.art_obj_ids:
-            #    self.remove_articulated_object(art_obj)
             ao_mgr = self.get_articulated_object_manager()
             ao_mgr.remove_all_objects()
             self.art_objs = []
@@ -574,7 +554,6 @@ class RearrangeSim(HabitatSim):
                     )
 
             self.snapped_obj_constraint_id = [
-                # create_hold_constraint(mn.Vector3(0.0, 0, 0), mn.Vector3(0, 0, 0)),
                 create_hold_constraint(
                     mn.Vector3(0.1, 0, 0), mn.Vector3(0, 0, 0)
                 ),
@@ -607,13 +586,6 @@ class RearrangeSim(HabitatSim):
             return
 
         if self.snapped_obj_id is not None and self.snap_to_link_on_grab:
-            # todo: find a safe time to restore the collision group for the
-            # grasped object. At the moment of release, it is probably
-            # still overlapping the link, so now is not a good time to
-            # re-enable collision between the object and robot.
-            # free_object_group = 8
-            # self.override_collision_group(use_snap_obj_id, free_object_group)
-            # TODO: This AABB will not work well for rotated objects.
             obj_bb = get_aabb(self.snapped_obj_id, self)
             r = max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z())
             c = self.get_translation(self.snapped_obj_id)
@@ -767,7 +739,6 @@ class RearrangeSim(HabitatSim):
         )
 
     def get_collisions(self):
-        # TODO: @ASzot incorporate collisions from the robot wrapper
         return []
 
     def is_holding_obj(self):

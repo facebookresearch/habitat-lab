@@ -26,27 +26,7 @@ def merge_sim_episode_with_object_config(sim_config, episode):
 class RearrangePickTaskV1(RearrangeTask):
 
     """
-    Embodied Question Answering Task
-    Usage example:
-        env = habitat.Env(config=eqa_config)
-
-        env.reset()
-
-        for i in range(10):
-            action = sample_non_stop_action(env.action_space)
-            if action["action"] != AnswerAction.name:
-                env.step(action)
-            metrics = env.get_metrics() # to check distance to target
-
-        correct_answer_id = env.current_episode.question.answer_token
-        env.step(
-            {
-                "action": AnswerAction.name,
-                "action_args": {"answer_id": correct_answer_id},
-            }
-        )
-
-        metrics = env.get_metrics()
+    Rearrange Pick Task with Fetch robot interacting with objects and environment.
     """
 
     def overwrite_sim_config(self, sim_config, episode):
@@ -74,11 +54,10 @@ class RearrangePickTaskV1(RearrangeTask):
         self.desired_resting = np.array([0.5, 0.0, 1.0])
         self.targ_idx = None
         self.force_set_idx = None
-
-        # TODO refactor
-        # self.observation_space.spaces["obj_start_sensor"] = reshape_obs_space(
-        #     self.observation_space.spaces["obj_start_sensor"], (3,)
-        # )
+        self.prev_colls = None
+        self.abs_targ_idx = None
+        self.cur_dist = -1.0
+        self.prev_picked = False
 
     def _is_holding_obj(self):
         return self._sim.snapped_obj_id is not None
@@ -100,6 +79,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
         forward = np.array([1.0, 0, 0])
         dist_thresh = 0.1
+        did_collide = False
 
         # Add a bit of noise
         timeout = 1000
@@ -150,7 +130,6 @@ class RearrangePickTaskV1(RearrangeTask):
                 break
 
         if _attempt == timeout - 1 and (not is_easy_init):
-            # print('Could not satisfy for %s! Trying with easy init' % sim.ep_info['scene_config_path'])
             start_pos, angle_to_obj, sel_idx = self._gen_start_pos(sim, True)
 
         sim.set_state(state)
@@ -165,14 +144,6 @@ class RearrangePickTaskV1(RearrangeTask):
         )
 
     def step(self, action, episode):
-        if "action_args" not in action or action["action_args"] is None:
-            action["action_args"] = {}
-        action_name = action["action"]
-        if isinstance(action_name, (int, np.integer)):
-            action_name = self.get_action_name(action_name)
-        assert (
-            action_name in self.actions
-        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         action_args = action["action_args"]
 
         if self._should_prevent_grip(action_args):
@@ -222,8 +193,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.targ_idx = sel_idx
         assert self.targ_idx is not None
         self.abs_targ_idx = sim.get_targets()[0][sel_idx]
-        # Value < 0 will not be used. Need to do this instead of None since
-        # debug renderer expects a valid number.
+        # Value < 0 will not be used
         self.cur_dist = -1.0
         snapped_id = self._sim.snapped_obj_id
         self.prev_picked = snapped_id is not None

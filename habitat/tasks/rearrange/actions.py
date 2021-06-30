@@ -97,16 +97,6 @@ class MagicGraspAction(SimulatorTaskAction):
     def step(self, state, should_step=True, **kwargs):
         return
 
-        # TODO: CANNOT GET CODE INTEGRATED UNTIL ROBO WRAPPER READY
-        # if state == 1:
-        #    self._grasp()
-        #    self._sim.use_robo.close_gripper()
-        # else:
-        #    self._sim.desnap_object()
-        #    self._sim.use_robo.open_gripper()
-        # if should_step:
-        #    return self._sim.step(HabitatSimActions.MAGIC_GRASP)
-
 
 @registry.register_task_action
 class ArmVelAction(SimulatorTaskAction):
@@ -118,8 +108,7 @@ class ArmVelAction(SimulatorTaskAction):
         # clip from -1 to 1
         vel = np.clip(vel, -1, 1)
         vel *= self._config.VEL_CTRL_LIM
-        # TODO: THIS IS DIFFERENT FROM MY CODE. I NEED TO ADD TO THE TARGETS NOT
-        # THE ACTUAL JOINT POSITIONS
+        # The actual joint positions
         self._sim: RearrangeSim
         self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_motor_pos
         if should_step:
@@ -166,13 +155,12 @@ class BaseVelAction(SimulatorTaskAction):
         self.does_want_terminate = False
 
     def update_base(self):
-        sim = self._sim._sim
-        robot_id = sim.use_robo.get_robot_sim_id()
+        robot_id = self._sim.use_robo.get_robot_sim_id()
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robo_state(robot_id, sim)
+        before_trans_state = self._capture_robo_state(robot_id, self._sim)
 
-        trans = sim.get_articulated_object_root_state(robot_id)
+        trans = self._sim.get_articulated_object_root_state(robot_id)
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
@@ -180,25 +168,27 @@ class BaseVelAction(SimulatorTaskAction):
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
-        end_pos = sim.step_filter(
+        end_pos = self._sim.step_filter(
             rigid_state.translation, target_rigid_state.translation
         )
 
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        sim.set_articulated_object_root_state(robot_id, target_trans)
+        self._sim.set_articulated_object_root_state(robot_id, target_trans)
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything. If so
             # we have to revert back to the previous transform
-            sim.internal_step(-1)
-            colls = sim.get_collisions()
-            did_coll, _ = rearrang_collision(colls, sim.snapped_obj_id, False)
+            self._sim.internal_step(-1)
+            colls = self._sim.get_collisions()
+            did_coll, _ = rearrang_collision(
+                colls, self._sim.snapped_obj_id, False
+            )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robo_state(robot_id, sim, before_trans_state)
-                sim.set_articulated_object_root_state(robot_id, trans)
+                self._set_robo_state(robot_id, self._sim, before_trans_state)
+                self._sim.set_articulated_object_root_state(robot_id, trans)
 
     def step(self, base_vel, should_step=True, **kwargs):
         lin_vel, ang_vel = base_vel

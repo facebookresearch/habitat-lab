@@ -135,14 +135,14 @@ class GoalSensor(MultiObjSensor):
 class AbsGoalSensor(MultiObjSensor):
     cls_uuid: str = "abs_obj_goal_sensor"
 
-    def get_observation(self, observations, episode, *args, **kwargs):
+    def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
         return pos
 
 
 @registry.register_sensor
 class LocalizationSensor(Sensor):
-    def __init__(self, sim, config, *args, **kwargs):
+    def __init__(self, *args, sim, config, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
@@ -419,9 +419,7 @@ class RearrangePickReward(Measure):
 
         snapped_id = self._sim.snapped_obj_id
         cur_picked = snapped_id is not None
-        ee_pos = observations[
-            "ee_pos"
-        ]  # self._sim.robot.ee_transform.translation  #
+        ee_pos = observations["ee_pos"]
 
         if cur_picked:
             dist_to_goal = np.linalg.norm(ee_pos - task.desired_resting)
@@ -439,7 +437,7 @@ class RearrangePickReward(Measure):
                 # distance is stale.
                 self._task.cur_dist = -1
             else:
-                # picked the wrong object...
+                # picked the wrong object
                 reward -= self._config.WRONG_PICK_PEN
                 if self._config.WRONG_PICK_SHOULD_END:
                     self._task.should_end = True
@@ -460,7 +458,7 @@ class RearrangePickReward(Measure):
         self._task.cur_dist = dist_to_goal
 
         if not cur_picked and self._task.prev_picked:
-            # Dropped the object...
+            # Dropped the object
             reward -= self._config.DROP_PEN
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
@@ -477,8 +475,7 @@ class RearrangePickReward(Measure):
 
         if (
             self._task._config.FORCE_BASED
-            and self._task.use_max_accum_force > 0
-            and self._task.accum_force > self._task.use_max_accum_force
+            and 0 < self._task.use_max_accum_force < self._task.accum_force
         ):
             reward -= self._config.FORCE_END_PEN
 
