@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
+from typing import Iterator
 
 import numpy as np
 import torch
@@ -66,8 +67,8 @@ class RolloutStorage:
             numsteps + 1, num_envs, action_shape
         )
         if action_space.__class__.__name__ == "ActionSpace":
-            self.buffers["actions"] = self.buffers["actions"].long()
-            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
+            self.buffers["actions"] = self.buffers["actions"].long()  # type: ignore
+            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()  # type: ignore
 
         self.buffers["masks"] = torch.zeros(
             numsteps + 1, num_envs, 1, dtype=torch.bool
@@ -170,8 +171,8 @@ class RolloutStorage:
                 gae = (
                     delta + gamma * tau * gae * self.buffers["masks"][step + 1]
                 )
-                self.buffers["returns"][step] = (
-                    gae + self.buffers["value_preds"][step]
+                self.buffers["returns"][step] = (  # type: ignore
+                    gae + self.buffers["value_preds"][step]  # type: ignore
                 )
         else:
             self.buffers["returns"][self.current_rollout_step_idx] = next_value
@@ -183,7 +184,9 @@ class RolloutStorage:
                     + self.buffers["rewards"][step]
                 )
 
-    def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
+    def recurrent_generator(
+        self, advantages, num_mini_batch
+    ) -> Iterator[TensorDict]:
         num_environments = advantages.size(1)
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "

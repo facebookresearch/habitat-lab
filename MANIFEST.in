@@ -1,6 +1,6 @@
 graft habitat/utils/visualizations/assets
-graft configs
+graft habitat/configs
 include habitat/py.typed
+
 include habitat_baselines/py.typed
-include requirements.txt
-include LICENSE
+include habitat_baselines/config/**.yaml

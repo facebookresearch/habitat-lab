@@ -252,7 +252,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._setup_actor_critic_agent(ppo_cfg)
         if self._is_distributed:
-            self.agent.init_distributed(find_unused_params=True)
+            self.agent.init_distributed(find_unused_params=True)  # type: ignore
 
         logger.info(
             "agent number of parameters: {}".format(
@@ -291,13 +291,13 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
-        self.rollouts.buffers["observations"][0] = batch
+        self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
@@ -468,7 +468,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         rewards = torch.tensor(
             rewards_l,
@@ -717,7 +717,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.RL.PPO
 
         with (
-            TensorboardWriter(
+            TensorboardWriter(  # type: ignore
                 self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
             if rank0_only()
@@ -887,7 +887,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
@@ -970,12 +970,12 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(
+            batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,
                 cache=self._obs_batching_cache,
             )
-            batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+            batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
             not_done_masks = torch.tensor(
                 [[not done] for done in dones],
