@@ -88,14 +88,14 @@ If you use the Habitat platform in your research, please cite the following [pap
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->
 
-Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.yaml) for configuration of task and agent.
+Example code-snippet which uses [`tasks/rearrangpick_replica_cad.yaml`](configs/tasks/rearrangpick_replica_cad.yaml) for configuration of task and agent.
 
 ```python
 import habitat
 
-# Load embodied AI task (PointNav) and a pre-specified virtual robot
+# Load embodied AI task (RearrangePick) and a pre-specified virtual robot
 env = habitat.Env(
-    config=habitat.get_config("configs/tasks/pointnav.yaml")
+    config=habitat.get_config("configs/tasks/rearrangpick_replica_cad.yaml")
 )
 
 observations = env.reset()
@@ -159,19 +159,28 @@ To make things easier we expect `data` folder of particular structure or symlink
 ### Scenes datasets
 | Scenes models | Extract path | Archive size |
 | --- | --- | --- |
+| [ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/{scene}/{scene}.glb` | 15 GB |
 | [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
 | [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
+
+#### ReplicaCAD
+Download [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/) dataset using download utility:
+```
+wget https://raw.githubusercontent.com/facebookresearch/habitat-sim/master/habitat_sim/utils/datasets_download.py
+python datasets_download.py  --uids replica_cad_dataset --data-path data/scene_datasets/
+```
 
 #### Matterport3D
 The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded using the official [Matterport3D](https://niessner.github.io/Matterport/) download script as follows: `python download_mp.py --task habitat -o data/scene_datasets/mp3d/`. You only need the habitat zip archive and not the entire Matterport3D dataset. Note that this download script requires python 2.7 to run. Extract the matterport data to `data/scene_datasets/mp3d`.
 
 #### Gibson
-Download the Habitat related Gibson dataset following the instructions [here](https://github.com/StanfordVL/GibsonEnv#database). After downloading extract the dataset to folder `habitat-lab/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
+Download the Habitat related Gibson dataset following the instructions [here](https://aihabitat.org/datasets/replica_cad/). After downloading extract the dataset to folder `habitat-lab/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
 
 
 ### Task datasets
 | Task | Scenes | Link | Extract path | Config to use | Archive size |
 | --- | --- | --- | --- | --- | --- |
+| [Rearrange Pick](https://arxiv.org/abs/2106.14405) | ReplicaCAD | [rearrange_pick_replica_cad_v0.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0.zip) | `data/datasets/rearrange_pick/replica_cad/v0/` |  [`datasets/rearrangpick/replica_cad.yaml`](configs/datasets/rearrangpick/replica_cad.yaml) | 11 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | [Point goal navigation corresponding to Sim2LoCoBot experiment configuration](https://arxiv.org/abs/1912.06321) | Gibson | [pointnav_gibson_v2.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v2/pointnav_gibson_v2.zip) | `data/datasets/pointnav/gibson/v2/` |  [`datasets/pointnav/gibson_v2.yaml`](configs/datasets/pointnav/gibson_v2.yaml) | 274 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
