@@ -99,7 +99,7 @@ import habitat
 
 # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
 env = habitat.Env(
-    config=habitat.get_config("configs/tasks/rearrangpick_replica_cad.yaml")
+    config=habitat.get_config("configs/tasks/rearrangepick_replica_cad.yaml")
 )
 
 observations = env.reset()

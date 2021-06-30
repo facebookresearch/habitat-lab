@@ -15,7 +15,7 @@ try:
 except ImportError:
     pass
 
-DEFAULT_CFG = "configs/tasks/rearrangpick_replica_cad_example.yaml"
+DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
 
 
 def make_video_cv2(observations, prefix=""):
