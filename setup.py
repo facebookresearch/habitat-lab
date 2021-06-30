@@ -19,17 +19,17 @@ from version import VERSION  # isort:skip noqa
 with open("README.md", encoding="utf8") as f:
     readme = f.read()
 
-with open("LICENSE") as f:
+with open("LICENSE", encoding="utf-8") as f:
     license_text = f.read()
 
-with open("requirements.txt") as f:
+with open("requirements.txt", encoding="utf-8") as f:
     reqs = f.read()
 
 DISTNAME = "habitat-lab"
 DESCRIPTION = "Habitat Lab: a modular high-level library for end-to-end development in Embodied AI."
 LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
-LICENSE = license_text
+LICENSE = "MIT License"
 REQUIREMENTS = reqs.strip().split("\n")
 BASELINE_PATH = ["habitat_baselines", "habitat_baselines.*"]
 DEFAULT_EXCLUSION = ["test", "examples"]
