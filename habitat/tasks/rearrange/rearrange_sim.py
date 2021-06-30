@@ -64,11 +64,11 @@ def load_light_setup_for_glb(json_filepath):
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         lighting_setup = []
-        for light in data["lights"]:
+        for light in data["lights"].values():
             t = light["position"]
             light_w = 1.0
             position = [float(t[0]), float(t[1]), float(t[2]), light_w]
-            color_scale = float(light["color_scale"])
+            color_scale = float(light["intensity"])
             color = [float(c * color_scale) for c in light["color"]]
             # print('position: {}'.format(position))
             # print('color: {}'.format(color))
@@ -139,7 +139,7 @@ class RearrangeSim(HabitatSim):
         self.ctrl_arm = True
 
         self._light_setup = load_light_setup_for_glb(
-            "data/misc_data/frl_apartment_stage_pvizplan_empty_lights.json"
+            "data/replica_cad/configs/lighting/frl_apartment_stage.lighting_config.json"
         )
         obj_attr_mgr = self.get_object_template_manager()
         obj_attr_mgr.load_configs("data/objects")
