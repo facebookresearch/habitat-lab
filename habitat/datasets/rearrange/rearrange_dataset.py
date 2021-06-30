@@ -52,4 +52,10 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
+            (
+                rearrangement_episode.scene_id.replace(
+                    "data/scene_datasets/", "data/replica_cad/stages/Stage_"
+                )[:-7]
+                + ".glb"
+            )
             self.episodes.append(rearrangement_episode)
