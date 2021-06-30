@@ -279,6 +279,36 @@ _C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
 # -----------------------------------------------------------------------------
 FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
 FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
+# -----------------------------------------------------------------------------
+# ROBOT HEAD RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.HEAD_RGB_SENSOR.UUID = "robot_head_rgb"
+# -----------------------------------------------------------------------------
+# ROBOT HEAD DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.HEAD_DEPTH_SENSOR.UUID = "robot_head_depth"
+# -----------------------------------------------------------------------------
+# ARM RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ARM_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.ARM_RGB_SENSOR.UUID = "arm_rgb"
+# -----------------------------------------------------------------------------
+# ARM DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "arm_depth"
+# -----------------------------------------------------------------------------
+# 3rd RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.THIRD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "3rd_rgb"
+# -----------------------------------------------------------------------------
+# 3rd DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "3rd_rgb"
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere

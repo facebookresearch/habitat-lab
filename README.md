@@ -84,25 +84,22 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
     python setup.py develop --all # install habitat and habitat_baselines
     ```
 
-2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim).
+2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat`.
 
-3. Download the [test scenes data](http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip) and extract `data` folder in zip to `habitat-lab/data/` where `habitat-lab/` is the github repository folder.
+3. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 18 steps.`).
 
-4. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 2 steps.`). To verify that tests pass run `python setup.py test` which should print out a log about passed, skipped and failed tests.
-
-5. Run `python examples/benchmark.py` to evaluate a forward only agent in a test environment downloaded in step-3.
 
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->
 
-Example code-snippet which uses [`tasks/pointnav.yaml`](configs/tasks/pointnav.yaml) for configuration of task and agent.
+Example code-snippet which uses [`tasks/rearrangpick_replica_cad.yaml`](configs/tasks/rearrangpick_replica_cad.yaml) for configuration of task and agent.
 
 ```python
 import habitat
 
-# Load embodied AI task (PointNav) and a pre-specified virtual robot
+# Load embodied AI task (RearrangePick) and a pre-specified virtual robot
 env = habitat.Env(
-    config=habitat.get_config("configs/tasks/pointnav.yaml")
+    config=habitat.get_config("configs/tasks/rearrangpick_replica_cad.yaml")
 )
 
 observations = env.reset()
@@ -166,23 +163,31 @@ To make things easier we expect `data` folder of particular structure or symlink
 ### Scenes datasets
 | Scenes models | Extract path | Archive size |
 | --- | --- | --- |
+| [ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/configs/scenes/{scene}.scene_instance.json` | 123 MB |
 | [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
 | [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
+
+#### ReplicaCAD
+Download [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/) dataset using download utility:
+```
+python -m habitat_sim.utils.datasets_download --uids replica_cad_dataset
+```
 
 #### Matterport3D
 The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded using the official [Matterport3D](https://niessner.github.io/Matterport/) download script as follows: `python download_mp.py --task habitat -o data/scene_datasets/mp3d/`. You only need the habitat zip archive and not the entire Matterport3D dataset. Note that this download script requires python 2.7 to run. Extract the matterport data to `data/scene_datasets/mp3d`.
 
 #### Gibson
-Download the Habitat related Gibson dataset following the instructions [here](https://github.com/StanfordVL/GibsonEnv#database). After downloading extract the dataset to folder `habitat-lab/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
+Download the Habitat related Gibson dataset following the instructions [here](https://aihabitat.org/datasets/replica_cad/). After downloading extract the dataset to folder `habitat-lab/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
 
 
 ### Task datasets
 | Task | Scenes | Link | Extract path | Config to use | Archive size |
 | --- | --- | --- | --- | --- | --- |
+| [Rearrange Pick](https://arxiv.org/abs/2106.14405) | ReplicaCAD | [rearrange_pick_replica_cad_v0.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0.zip) | `data/datasets/rearrange_pick/replica_cad/v0/` |  [`datasets/rearrangpick/replica_cad.yaml`](configs/datasets/rearrangpick/replica_cad.yaml) | 11 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | [Point goal navigation corresponding to Sim2LoCoBot experiment configuration](https://arxiv.org/abs/1912.06321) | Gibson | [pointnav_gibson_v2.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v2/pointnav_gibson_v2.zip) | `data/datasets/pointnav/gibson/v2/` |  [`datasets/pointnav/gibson_v2.yaml`](configs/datasets/pointnav/gibson_v2.yaml) | 274 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
-| Object goal navigation | MatterPort3D | [objectnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/objectnav/m3d/v1/objectnav_mp3d_v1.zip) | `data/datasets/objectnav/mp3d/v1/` | [`datasets/objectnav/mp3d.yaml`](configs/datasets/objectnav/mp3d.yaml) | 170 MB |
+| [Object goal navigation](https://arxiv.org/abs/2006.13171) | MatterPort3D | [objectnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/objectnav/m3d/v1/objectnav_mp3d_v1.zip) | `data/datasets/objectnav/mp3d/v1/` | [`datasets/objectnav/mp3d.yaml`](configs/datasets/objectnav/mp3d.yaml) | 170 MB |
 | [Embodied Question Answering](https://embodiedqa.org/) | MatterPort3D | [eqa_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/eqa/mp3d/v1/eqa_mp3d_v1.zip) | `data/datasets/eqa/mp3d/v1/` | [`datasets/eqa/mp3d.yaml`](configs/datasets/eqa/mp3d.yaml) | 44 MB |
 | [Visual Language Navigation](https://bringmeaspoon.org/) | MatterPort3D | [vln_r2r_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/vln/mp3d/r2r/v1/vln_r2r_mp3d_v1.zip) | `data/datasets/vln/mp3d/r2r/v1` | [`datasets/vln/mp3d_r2r.yaml`](configs/datasets/vln/mp3d_r2r.yaml) | 2.7 MB |
 | [Image goal navigation](https://github.com/facebookresearch/habitat-lab/pull/333) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/imagenav/gibson.yaml`](configs/datasets/imagenav/gibson.yaml) | 385 MB |
