@@ -49,7 +49,9 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             print(
                 "Rearrange task assets are not downloaded locally, downloading and extracting now..."
             )
-            data_downloader.main(["--uids", "rearrange_task_assets"])
+            data_downloader.main(
+                ["--uids", "rearrange_task_assets", "--data-path", "data/"]
+            )
             print("Downloaded and extracted the data.")
         check_and_gen_physics_config()
 
