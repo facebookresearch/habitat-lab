@@ -165,7 +165,7 @@ To make things easier we expect `data` folder of particular structure or symlink
 | Scenes models | Extract path | Archive size |
 | --- | --- | --- |
 | 🆕[ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/configs/scenes/{scene}.scene_instance.json` | 123 MB |
-| 🆕[HM3D](#HM3D) | `data/scene_datasets/hm3d/00\d\d\d-{scene}/{scene}.basis.glb` | 130 GB |
+| 🆕[HM3D](#HM3D) | `data/scene_datasets/hm3d/{split}/00\d\d\d-{scene}/{scene}.basis.glb` | 130 GB |
 | [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
 | [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
 
