@@ -148,7 +148,7 @@ def get_wrapped_prop(venv, prop):
 def play_env(env, args, config):
     if not args.no_render:
         pygame.init()
-        render_dim = config.SIMULATOR.HEAD_RGB_SENSOR.WIDTH
+        render_dim = config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH
         screen = pygame.display.set_mode([render_dim, render_dim])
 
     render_count = None
@@ -192,7 +192,7 @@ def play_env(env, args, config):
 
         total_reward += reward
 
-        obs["rgb"] = obs["robot_head_rgb"]
+        obs["rgb"] = obs["robot_third_rgb"]
         use_ob = observations_to_image(obs, info)
         if len(use_ob) == 1:
             use_ob = use_ob[0]
@@ -232,27 +232,21 @@ def play_env(env, args, config):
     if args.save_obs:
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
-        use_scene_name = args.hab_scene_name
-        if use_scene_name is None:
-            use_scene_name = "nav"
-        make_video_cv2(all_obs, "setup_%s" % use_scene_name)
+        make_video_cv2(all_obs, "interactive_play")
     pygame.quit()
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-actions", action="store_true", default=False)
     parser.add_argument("--load-actions", type=str, default=None)
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG, required=True)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument("--cfg-opts", type=str, default="")
     args = parser.parse_args()
 
-    config = get_config(args.cfg)
+    config = habitat.get_config(args.cfg)
 
-    config.defrost()
-    config.freeze()
-    with habitat.Env(config=config, dataset=None) as env:
+    with habitat.Env(config=config) as env:
         play_env(env, args, config)

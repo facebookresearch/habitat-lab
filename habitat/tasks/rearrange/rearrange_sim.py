@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict
 import attr
 import magnum as mn
 import numpy as np
+import os.path as osp
 
 import habitat_sim
 from habitat.core.registry import registry
@@ -236,8 +237,21 @@ class RearrangeSim(HabitatSim):
         if self.concur_render:
             self.renderer.acquire_gl_context()
 
+    def _update_config(self, ep_info):
+        """Updates config from legacy settings. Hopefully this can be
+        depricated soon.
+        """
+        scene = ep_info['scene_id']
+        if 'replica_cad' in scene and 'glb' in scene:
+            parts = scene.split('/')
+            base_replica_path = '/'.join(parts[:-2])
+            end_replica_path = '/'.join(parts[-2:]).split('.')[0]
+            ep_info['scene_id'] = osp.join(base_replica_path, 'configs', end_replica_path)
+        return ep_info
+
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
+        ep_info = self._update_config(ep_info)
 
         config["SCENE"] = ep_info["scene_id"]
         super().reconfigure(config)
@@ -263,6 +277,8 @@ class RearrangeSim(HabitatSim):
         self._add_objs(ep_info)
         if self.robot is None:
             self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
+            #0.17, 0.0, 1.2
+            self.robot.params.third_cam_offset_pos = mn.Vector3(-0.5, 1.7, -0.5)
             self.robot.reconfigure()
         self.robot.reset()
 
@@ -349,11 +365,10 @@ class RearrangeSim(HabitatSim):
         cur_trans = self.robot.sim_obj.transformation
         pos = cur_trans.translation
 
-        rot_trans = mn.Matrix4.rotation(mn.Rad(-1.56), mn.Vector3(1.0, 0, 0))
-        add_rot_mat = mn.Matrix4.rotation(
-            mn.Rad(rot_rad), mn.Vector3(0.0, 0, 1)
+        new_trans = mn.Matrix4.rotation(
+            mn.Rad(rot_rad), mn.Vector3(0, 1, 0)
         )
-        new_trans = rot_trans @ add_rot_mat
+
         new_trans.translation = pos
         self.robot.sim_obj.transformation = new_trans
 

@@ -135,32 +135,28 @@ class BaseVelAction(SimulatorTaskAction):
         lim = 20
         return spaces.Box(shape=(2,), low=-lim, high=lim, dtype=np.float32)
 
-    def _capture_robo_state(self, robot_id, sim):
-        forces = sim.get_articulated_object_forces(robot_id)
-        vel = sim.get_articulated_object_velocities(robot_id)
-        art_pos = sim.get_articulated_object_positions(robot_id)
+    def _capture_robo_state(self, sim):
         return {
-            "forces": forces,
-            "vel": vel,
-            "pos": art_pos,
+            "forces": sim.robot.sim_obj.joint_forces ,
+            "vel": sim.robot.sim_obj.joint_velocities ,
+            "pos": sim.robot.sim_obj.joint_positions ,
         }
 
-    def _set_robo_state(self, robot_id, sim: RearrangeSim, set_dat):
-        sim.set_articulated_object_forces(robot_id, set_dat["forces"])
-        sim.set_articulated_object_velocities(robot_id, set_dat["vel"])
-        sim.set_articulated_object_positions(robot_id, set_dat["pos"])
+    def _set_robo_state(self, sim: RearrangeSim, set_dat):
+        sim.robot.sim_obj.joint_positions = set_dat['forces']
+        sim.robot.sim_obj.joint_velocities = set_dat['vel']
+        sim.robot.sim_obj.joint_forces = set_dat['pos']
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
     def update_base(self):
-        robot_id = self._sim.use_robo.get_robot_sim_id()
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robo_state(robot_id, self._sim)
+        before_trans_state = self._capture_robo_state(self._sim)
 
-        trans = self._sim.get_articulated_object_root_state(robot_id)
+        trans = self._sim.robot.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
@@ -175,7 +171,7 @@ class BaseVelAction(SimulatorTaskAction):
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        self._sim.set_articulated_object_root_state(robot_id, target_trans)
+        self._sim.robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything. If so
@@ -187,8 +183,8 @@ class BaseVelAction(SimulatorTaskAction):
             )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robo_state(robot_id, self._sim, before_trans_state)
-                self._sim.set_articulated_object_root_state(robot_id, trans)
+                self._set_robo_state(self._sim, before_trans_state)
+                self._sim.robot.sim_obj.transformation = trans
 
     def step(self, base_vel, should_step=True, **kwargs):
         lin_vel, ang_vel = base_vel
@@ -204,7 +200,7 @@ class BaseVelAction(SimulatorTaskAction):
             self.does_want_terminate = True
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
-        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, 0, ang_vel)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
         if lin_vel != 0.0 or ang_vel != 0.0:
             self.update_base()
@@ -213,3 +209,5 @@ class BaseVelAction(SimulatorTaskAction):
             return self._sim.step(HabitatSimActions.BASE_VEL)
         else:
             return None
+
+
