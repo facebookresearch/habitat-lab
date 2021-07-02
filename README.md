@@ -39,7 +39,7 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
    1. [Baselines](#baselines)
    1. [License](#license)
    1. [Acknowledgments](#acknowledgments)
-   1. [References](#references-and-citation)
+   1. [References](#references)
 
 ## Motivation
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
@@ -93,14 +93,14 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->
 
-🆕Example code-snippet which uses [`tasks/rearrangpick_replica_cad.yaml`](configs/tasks/rearrangpick_replica_cad.yaml) for configuration of task and agent.
+🆕Example code-snippet which uses [`tasks/rearrangepick_replica_cad.yaml`](configs/tasks/rearrangepick_replica_cad.yaml) for configuration of task and agent.
 
 ```python
 import habitat
 
 # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
 env = habitat.Env(
-    config=habitat.get_config("configs/tasks/rearrangpick_replica_cad.yaml")
+    config=habitat.get_config("configs/tasks/rearrangepick_replica_cad.yaml")
 )
 
 observations = env.reset()
