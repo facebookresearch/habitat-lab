@@ -39,7 +39,7 @@ We also have a dev slack channel, please follow this [link](https://join.slack.c
    1. [Baselines](#baselines)
    1. [License](#license)
    1. [Acknowledgments](#acknowledgments)
-   1. [References](#references-and-citation)
+   1. [References](#references)
 
 ## Motivation
 While there has been significant progress in the vision and language communities thanks to recent advances in deep representations, we believe there is a growing disconnect between ‘internet AI’ and embodied AI. The focus of the former is pattern recognition in images, videos, and text on datasets typically curated from the internet. The focus of the latter is to enable action by an embodied agent in an environment (e.g. a robot). This brings to the forefront issues of active perception, long-term planning, learning from interaction, and holding a dialog grounded in an environment.
@@ -86,13 +86,14 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
 
 2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat`.
 
+
 3. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 18 steps.`).
 
 
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->
 
-Example code-snippet which uses [`tasks/rearrangpick_replica_cad.yaml`](configs/tasks/rearrangpick_replica_cad.yaml) for configuration of task and agent.
+🆕Example code-snippet which uses [`tasks/rearrangepick_replica_cad.yaml`](configs/tasks/rearrangepick_replica_cad.yaml) for configuration of task and agent.
 
 ```python
 import habitat
@@ -163,14 +164,21 @@ To make things easier we expect `data` folder of particular structure or symlink
 ### Scenes datasets
 | Scenes models | Extract path | Archive size |
 | --- | --- | --- |
-| [ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/configs/scenes/{scene}.scene_instance.json` | 123 MB |
+| 🆕[ReplicaCAD](#ReplicaCAD) | `data/scene_datasets/replica_cad/configs/scenes/{scene}.scene_instance.json` | 123 MB |
+| 🆕[HM3D](#HM3D) | `data/scene_datasets/hm3d/{split}/00\d\d\d-{scene}/{scene}.basis.glb` | 130 GB |
 | [Gibson](#Gibson) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
 | [MatterPort3D](#Matterport3D) | `data/scene_datasets/mp3d/{scene}/{scene}.glb` | 15 GB |
 
-#### ReplicaCAD
+#### 🆕ReplicaCAD
 Download [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/) dataset using download utility:
 ```
 python -m habitat_sim.utils.datasets_download --uids replica_cad_dataset
+```
+
+#### 🆕Habitat Matterport
+Download [HM3D](https://aihabitat.org/datasets/hm3d/) dataset using download utility and [instructions](https://github.com/facebookresearch/habitat-sim/blob/089f6a41474f5470ca10222197c23693eef3a001/datasets/HM3D.md):
+```
+python -m habitat_sim.utils.datasets_download --username <api-token-id> --password <api-token-secret> --uids hm3d_minival
 ```
 
 #### Matterport3D
@@ -183,7 +191,7 @@ Download the Habitat related Gibson dataset following the instructions [here](ht
 ### Task datasets
 | Task | Scenes | Link | Extract path | Config to use | Archive size |
 | --- | --- | --- | --- | --- | --- |
-| [Rearrange Pick](https://arxiv.org/abs/2106.14405) | ReplicaCAD | [rearrange_pick_replica_cad_v0.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0.zip) | `data/datasets/rearrange_pick/replica_cad/v0/` |  [`datasets/rearrangpick/replica_cad.yaml`](configs/datasets/rearrangpick/replica_cad.yaml) | 11 MB |
+| 🆕[Rearrange Pick](https://arxiv.org/abs/2106.14405) | ReplicaCAD | [rearrange_pick_replica_cad_v0.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0.zip) | `data/datasets/rearrange_pick/replica_cad/v0/` |  [`datasets/rearrangpick/replica_cad.yaml`](configs/datasets/rearrangpick/replica_cad.yaml) | 11 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/pointnav/gibson.yaml`](configs/datasets/pointnav/gibson.yaml) | 385 MB |
 | [Point goal navigation corresponding to Sim2LoCoBot experiment configuration](https://arxiv.org/abs/1912.06321) | Gibson | [pointnav_gibson_v2.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v2/pointnav_gibson_v2.zip) | `data/datasets/pointnav/gibson/v2/` |  [`datasets/pointnav/gibson_v2.yaml`](configs/datasets/pointnav/gibson_v2.yaml) | 274 MB |
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
@@ -211,6 +219,6 @@ The trained models and the task datasets are considered data derived from the co
 - Matterport3D based task datasets and trained models are distributed with [Matterport3D Terms of Use](http://kaldir.vc.in.tum.de/matterport/MP_TOS.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
 - Gibson based task datasets, the code for generating such datasets, and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
 
-## References and Citation
-1. [Habitat 2.0: Training Home Assistants to Rearrange their Habitat](https://arxiv.org/abs/2106.14405) Andrew Szot, Alex Clegg, Eric Undersander, Erik Wijmans, Yili Zhao, John Turner, Noah Maestre, Mustafa Mukadam, Devendra Chaplot, Oleksandr Maksymets, Aaron Gokaslan, Vladimir Vondrus, Sameer Dharur, Franziska Meier, Wojciech Galuba, Angel Chang, Zsolt Kira, Vladlen Koltun, Jitendra Malik, Manolis Savva, Dhruv Batra. arXiv preprint arXiv:2106.14405, 2021.
+## References
+1. 🆕[Habitat 2.0: Training Home Assistants to Rearrange their Habitat](https://arxiv.org/abs/2106.14405) Andrew Szot, Alex Clegg, Eric Undersander, Erik Wijmans, Yili Zhao, John Turner, Noah Maestre, Mustafa Mukadam, Devendra Chaplot, Oleksandr Maksymets, Aaron Gokaslan, Vladimir Vondrus, Sameer Dharur, Franziska Meier, Wojciech Galuba, Angel Chang, Zsolt Kira, Vladlen Koltun, Jitendra Malik, Manolis Savva, Dhruv Batra. arXiv preprint arXiv:2106.14405, 2021.
 2. [Habitat: A Platform for Embodied AI Research](https://arxiv.org/abs/1904.01201). Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.
