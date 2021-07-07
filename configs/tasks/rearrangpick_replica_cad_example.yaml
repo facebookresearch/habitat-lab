@@ -7,22 +7,20 @@ DATASET:
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
-    MAX_ACCUM_FORCE: -1.0
     MAX_COLLISIONS: -1.0
-
-    FIX_BASE_TO_OBJ: None
-    FORCE_BASED: True
-
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBO_OBJ_COLLS: False
 
     # In radians
-    BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
+    #BASE_ANGLE_NOISE: 0.15
+    #BASE_NOISE: 0.05
+    BASE_ANGLE_NOISE: 0.0
+    BASE_NOISE: 0.0
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
+    FORCE_RECACHE: True
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
@@ -49,6 +47,11 @@ TASK:
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
     SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
+    ROBO_FORCE:
+        TYPE: "RoboForce"
+        MIN_FORCE: 20.0
+    ROBO_COLLS:
+      TYPE: "RoboCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
@@ -63,6 +66,7 @@ TASK:
         WRONG_PICK_PEN: 5.0
         COLL_PEN: 1.0
         ROBO_OBJ_COLL_PEN: 0.0
+        MAX_ACCUM_FORCE: null
 
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
@@ -75,10 +79,11 @@ TASK:
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
-        HOLD_THRESH: 0.09
 
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
+        - "ROBO_FORCE"
+        - "ROBO_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
@@ -87,7 +92,7 @@ TASK:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmVelAction"
             GRIP_CONTROLLER: "MagicGraspAction"
-            GRASP_THRESH_DIST: 0.15
+            GRASP_THRESH_DIST: 5.15
             DISABLE_GRIP: False
             VEL_CTRL_LIM: 0.0125
         BASE_VEL:
@@ -99,12 +104,17 @@ TASK:
             ALLOW_BACK: True
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
+        EMPTY:
+            TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - BASE_VEL
+        - EMPTY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.09
     AC_FREQ_RATIO: 4
     AGENTS: ['AGENT_0']
     AGENT_0:
@@ -153,7 +163,6 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     HIGH_RES_DIM: 512
     LAG_OBSERVATIONS: 2
-    POV: 1st
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     SEED: 100
     SEMANTIC_SENSOR:

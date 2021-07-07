@@ -7,12 +7,7 @@ DATASET:
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
-    MAX_ACCUM_FORCE: 5000.0
-    MAX_COLLISIONS: 2000.0
-
-    FIX_BASE_TO_OBJ: None
-    FORCE_BASED: True
-
+    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBO_OBJ_COLLS: False
 
@@ -49,6 +44,11 @@ TASK:
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
     SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
+    ROBO_FORCE:
+        TYPE: "RoboForce"
+        MIN_FORCE: 20.0
+    ROBO_COLLS:
+      TYPE: "RoboCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
@@ -63,6 +63,7 @@ TASK:
         WRONG_PICK_PEN: 5.0
         COLL_PEN: 1.0
         ROBO_OBJ_COLL_PEN: 0.0
+        MAX_ACCUM_FORCE: 5000.0
 
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
@@ -75,10 +76,11 @@ TASK:
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
-        HOLD_THRESH: 0.09
 
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
+        - "ROBO_FORCE"
+        - "ROBO_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
@@ -95,7 +97,6 @@ TASK:
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
-    AC_FREQ_RATIO: 4
     AGENTS: ['AGENT_0']
     AGENT_0:
         ANGULAR_ACCELERATION: 12.56
@@ -128,20 +129,27 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
+
+    # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
-    DEFAULT_AGENT_ID: 0
+    AC_FREQ_RATIO: 4
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     FORWARD_STEP_SIZE: 0.25
+    LAG_OBSERVATIONS: 1
+    HIGH_RES_DIM: 512
+
+    # Grasping
+    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 1000.0
+
+    DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
         ALLOW_SLIDING: True
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    HIGH_RES_DIM: 512
-    LAG_OBSERVATIONS: 2
-    POV: 1st
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480

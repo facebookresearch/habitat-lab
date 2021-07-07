@@ -15,6 +15,16 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrang_collision
 
+@registry.register_task_action
+class EmptyAction(SimulatorTaskAction):
+    """A No-op action useful for testing.
+    """
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
+
+    def step(self, **kwargs):
+        return self._sim.step(HabitatSimActions.EMPTY)
 
 @registry.register_task_action
 class ArmAction(SimulatorTaskAction):
@@ -59,12 +69,10 @@ class MagicGraspAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.thresh_dist = config.GRASP_THRESH_DIST
-        self.snap_markers = config.get("GRASP_MARKERS", False)
 
     @property
     def action_space(self):
-        return spaces.Discrete(1)
+        return spaces.Box(shape=(1,), high=1.0, low=-1.0)
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
@@ -77,25 +85,22 @@ class MagicGraspAction(SimulatorTaskAction):
 
             closest_obj_pos = scene_obj_pos[closest_obj_idx]
             to_target = np.linalg.norm(ee_pos - closest_obj_pos, ord=2)
+            sim_idx = self._sim.scene_obj_ids[closest_obj_idx]
 
-            if to_target < self.thresh_dist:
-                self._sim.set_snapped_obj(closest_obj_idx)
+            if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.grasp_mgr.snap_to_obj(sim_idx)
 
-        # Get the marker the EE is closest to.
-        marker_name_pos = self._sim.get_marker_positions()
-        if self.snap_markers and len(marker_name_pos) > 0:
-            marker_name, marker_pos = zip(*marker_name_pos.items())
-            marker_pos = np.array(marker_pos)
-            closest_marker_idx = np.argmin(
-                np.linalg.norm(ee_pos - marker_pos, axis=-1)
-            )
-            closest_marker_pos = marker_pos[closest_marker_idx]
-            to_marker = np.linalg.norm(ee_pos - closest_marker_pos)
-            if to_marker < self.thresh_dist:
-                self._sim.set_snapped_marker(marker_name[closest_marker_idx])
+    def _ungrasp(self):
+        self._sim.desnap_object()
 
-    def step(self, state, should_step=True, **kwargs):
-        return
+    def step(self, grip_ac, should_step=True, **kwargs):
+        if grip_ac is None:
+            return
+
+        if grip_ac >= 0 and not self._sim.grasp_mgr.is_grasped:
+            self._grasp()
+        elif grip_ac < 0 and self._sim.grasp_mgr.is_grasped:
+            self._ungrasp()
 
 
 @registry.register_task_action

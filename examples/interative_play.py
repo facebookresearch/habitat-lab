@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+
 import argparse
 import os
 import os.path as osp
@@ -17,6 +24,22 @@ except ImportError:
 
 DEFAULT_CFG = "configs/tasks/rearrangpick_replica_cad_example.yaml"
 
+if __name__ == "__main__":
+    """
+    Manually control the robot to interact with the environment.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-render", action="store_true", default=False)
+    parser.add_argument("--save-obs", action="store_true", default=False)
+    parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument("--load-actions", type=str, default=None)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    args = parser.parse_args()
+
+    config = habitat.get_config(args.cfg)
+
+    with habitat.Env(config=config) as env:
+        play_env(env, args, config)
 
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
@@ -33,6 +56,64 @@ def make_video_cv2(observations, prefix=""):
     video.release()
     print("Saved to", vid_name)
 
+def append_text_to_image(image: np.ndarray, text: str):
+    r"""Appends text underneath an image of size (height, width, channels).
+    The returned image has white text on a black background. Uses textwrap to
+    split long text into multiple lines.
+    Args:
+        image: the image to put text underneath
+        text: a string to display
+    Returns:
+        A new image with text inserted underneath the input image
+    """
+    h, w, c = image.shape
+    font_size = 0.5
+    font_thickness = 1
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    blank_image = np.zeros(image.shape, dtype=np.uint8)
+
+    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
+
+    y = 0
+    for line in text:
+        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
+        y += textsize[1] + 10
+        x = 10
+        cv2.putText(
+            blank_image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (255, 255, 255),
+            font_thickness,
+            lineType=cv2.LINE_AA,
+        )
+    text_image = blank_image[0 : y + 10, 0:w]
+    text_image = cv2.flip(text_image, 0)
+    final = np.concatenate((image, text_image), axis=0)
+    return final
+
+def overlay_frame(frame, info):
+    lines = []
+    if 'object_to_goal_distance' in info:
+        lines.append("Obj to goal %.2f" % info['object_to_goal_distance'][0])
+    if 'ee_to_object_distance' in info:
+        lines.append("EE to obj %.2f" % info['ee_to_object_distance'][0])
+    if 'robo_force' in info:
+        lines.append("Force: %.2f" % info['robo_force'])
+    if 'robo_collisions' in info:
+        coll_info = info['robo_collisions']
+        lines.extend([
+            "Obj-Scene Coll: %.2f" % coll_info['obj_scene_colls'],
+            "Robo-Obj Coll: %.2f" % coll_info['robo_obj_colls'],
+            "Robo-Scene Coll: %.2f" % coll_info['robo_scene_colls'],
+            ])
+
+    frame = append_text_to_image(frame, lines)
+
+    return frame
+
 
 def step_env(env, action_name, action_args, args):
     return env.step({"action": action_name, "action_args": action_args})
@@ -40,7 +121,7 @@ def step_env(env, action_name, action_args, args):
 
 def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     if skip_pygame:
-        return step_env(env, "NOOP", {}, g_args), None
+        return step_env(env, "EMPTY", {}, g_args), None
 
     arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces["arm_ac"]
 
@@ -70,12 +151,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    elif keys[pygame.K_o]:
-        # Snap
-        print("[play.py]: Snapping")
-        magic_grasp = 1
-
-    # Velocity control
+    # Velocity control. A different key for each joint
     if keys[pygame.K_q]:
         arm_action[0] = 1.0
     elif keys[pygame.K_1]:
@@ -114,7 +190,16 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     if keys[pygame.K_p]:
         print("[play.py]: Unsnapping")
         # Unsnap
-        magic_grasp = 0
+        magic_grasp = -1
+    elif keys[pygame.K_o]:
+        # Snap
+        print("[play.py]: Snapping")
+        magic_grasp = 1
+
+    elif keys[pygame.K_PERIOD]:
+        # Print the current position of the robot, useful for debugging.
+        pos = ['%.3f' % x for x in env._sim.robot.sim_obj.translation]
+        print(pos)
 
     args = {}
     if base_action is not None:
@@ -188,12 +273,14 @@ def play_env(env, args, config):
         # obs, reward, done, info = step_result
         obs = step_result
         reward = 0.0
-        info = {}
+        info = env.get_metrics()
 
         total_reward += reward
 
         obs["rgb"] = obs["robot_third_rgb"]
         use_ob = observations_to_image(obs, info)
+        use_ob = overlay_frame(use_ob, info)
+
         if len(use_ob) == 1:
             use_ob = use_ob[0]
         draw_ob = use_ob[:]
@@ -236,17 +323,3 @@ def play_env(env, args, config):
     pygame.quit()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--no-render", action="store_true", default=False)
-    parser.add_argument("--save-obs", action="store_true", default=False)
-    parser.add_argument("--save-actions", action="store_true", default=False)
-    parser.add_argument("--load-actions", type=str, default=None)
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
-    parser.add_argument("--cfg-opts", type=str, default="")
-    args = parser.parse_args()
-
-    config = habitat.get_config(args.cfg)
-
-    with habitat.Env(config=config) as env:
-        play_env(env, args, config)

@@ -18,7 +18,9 @@ import quaternion
 
 import habitat_sim
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.physics import MotionType
+from habitat_sim.physics import MotionType, ContactPointData
+from habitat_sim.robots import MobileManipulator
+from typing import List
 
 
 def make_render_only(obj_idx, sim):
@@ -29,30 +31,15 @@ def make_render_only(obj_idx, sim):
         sim.set_object_is_collidable(False, obj_idx)
 
 
-def get_collision_matches(link, colls, search_key="link"):
-    matches = []
-    for coll0, coll1 in colls:
-        if link in [coll0[search_key], coll1[search_key]]:
-            matches.append((coll0, coll1))
-    return matches
+def coll_name_matches(coll, name):
+    return name in [coll.object_id_a, coll.object_id_b]
 
-
-def get_other_matches(link, colls):
-    matches = get_collision_matches(link, colls)
-    other_surfaces = [b if a["link"] == link else a for a, b in matches]
-    return other_surfaces
-
-
-def coll_name(coll, name):
-    return coll_prop(coll, name, "name")
-
-
-def coll_prop(coll, val, prop):
-    return val in [coll[0][prop], coll[1][prop]]
-
-
-def coll_link(coll, link):
-    return coll_prop(coll, link, "link")
+def get_match_link(coll, name):
+    if name == coll.object_id_a:
+        return coll.link_id_a
+    if name == coll.object_id_b:
+        return coll.link_id_b
+    return None
 
 
 def swap_axes(x):
@@ -66,30 +53,43 @@ class CollDetails:
     robo_obj_colls: int = 0
     robo_scene_colls: int = 0
 
+    @property
+    def total_colls(self):
+        return self.obj_scene_colls + self.robo_obj_colls + self.robo_scene_colls
+
+    def __add__(self, other):
+        return CollDetails(
+                obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
+                robo_obj_colls=self.robo_obj_colls + other.robo_obj_colls,
+                robo_scene_colls=self.robo_scene_colls + other.robo_scene_colls)
+
 
 def rearrang_collision(
-    colls,
-    snapped_obj_id,
-    count_obj_colls,
-    verbose=False,
-    ignore_names=None,
-    ignore_base=True,
+    sim,
+    count_obj_colls: bool,
+    verbose: bool=False,
+    ignore_names: bool=None,
+    ignore_base: bool=True,
 ):
+    """Defines what counts as a collision for the Rearrange environment execution
     """
-    Defines what counts as a collision for the Rearrange environment execution
-    """
-    # Filter out any collisions from the base
-    if ignore_base:
-        colls = [
-            x
-            for x in colls
-            if not ("base" in x[0]["link"] or "base" in x[1]["link"])
-        ]
+    robot_model = sim.robot
+    colls = sim.get_physics_contact_points()
+    robot_id = robot_model.get_robot_sim_id()
+    added_objs = sim.scene_obj_ids
+    snapped_obj_id = sim.grasp_mgr.snap_idx
 
     def should_keep(x):
-        if ignore_names is None:
-            return True
-        return any(coll_name(x, ignore_name) for ignore_name in ignore_names)
+        if ignore_base:
+            match_link = get_match_link(x, robot_id)
+            if match_link is not None and robot_model.is_base_link(match_link):
+                return False
+
+        if ignore_names is not None:
+            should_ignore = any(coll_name_matches(x, ignore_name) for ignore_name in ignore_names)
+            if should_ignore:
+                return False
+        return True
 
     # Filter out any collisions with the ignore objects
     colls = list(filter(should_keep, colls))
@@ -97,39 +97,29 @@ def rearrang_collision(
     # Check for robot collision
     robo_obj_colls = 0
     robo_scene_colls = 0
-    robo_scene_matches = get_collision_matches("fetch", colls, "name")
+    robo_scene_matches = [c for c in colls if coll_name_matches(c, robot_id)]
     for match in robo_scene_matches:
-        urdf_on_urdf = (
-            match[0]["type"] == "URDF" and match[1]["type"] == "URDF"
-        )
-        with_stage = coll_prop(match, "Stage", "type")
-        fetch_on_fetch = (
-            match[0]["name"] == "fetch" and match[1]["name"] == "fetch"
-        )
-        if fetch_on_fetch:
-            continue
-        if urdf_on_urdf or with_stage:
-            robo_scene_colls += 1
-        else:
+        reg_obj_coll = any([coll_name_matches(match, obj_id) for obj_id in added_objs])
+        if reg_obj_coll:
             robo_obj_colls += 1
+        else:
+            robo_scene_colls += 1
 
     # Checking for holding object collision
     obj_scene_colls = 0
     if count_obj_colls and snapped_obj_id is not None:
-        matches = get_collision_matches(
-            "id %i" % snapped_obj_id, colls, "link"
-        )
+        matches = [c for c in colls if coll_name_matches(c, snapped_obj_id)]
         for match in matches:
-            if coll_name(match, "fetch"):
+            if coll_name_matches(match, robot_id):
                 continue
             obj_scene_colls += 1
 
-    total_colls = robo_obj_colls + robo_scene_colls + obj_scene_colls
-    return total_colls > 0, CollDetails(
+    coll_details = CollDetails(
         obj_scene_colls=min(obj_scene_colls, 1),
         robo_obj_colls=min(robo_obj_colls, 1),
         robo_scene_colls=min(robo_scene_colls, 1),
     )
+    return coll_details.total_colls > 0, coll_details
 
 
 def get_nav_mesh_settings(agent_config):
@@ -177,7 +167,8 @@ def convert_legacy_cfg(obj_list):
 
 
 def get_aabb(obj_id, sim, transformed=False):
-    obj_node = sim.get_object_scene_node(obj_id)
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    obj_node = obj.root_scene_node
     obj_bb = obj_node.cumulative_bb
     if transformed:
         obj_bb = habitat_sim.geo.get_transformed_bb(
@@ -198,31 +189,7 @@ def allowed_region_to_bb(allowed_region):
     return mn.Range2D(allowed_region[0], allowed_region[1])
 
 
-def recover_nav_island_point(v, ref_v, sim):
-    """
-    Snaps a point to the LARGEST island.
-    """
-    nav_vs = sim.pathfinder.build_navmesh_vertices()
-    ref_r = sim.pathfinder.island_radius(ref_v)
-
-    nav_vs_r = {
-        i: sim.pathfinder.island_radius(nav_v)
-        for i, nav_v in enumerate(nav_vs)
-    }
-    # Get the points closest to "v"
-    v_dist = np.linalg.norm(v - nav_vs, axis=-1)
-    ordered_idxs = np.argsort(v_dist)
-
-    # Go through the closest points until one has the same island radius.
-    for i in ordered_idxs:
-        if nav_vs_r[i] == ref_r:
-            return nav_vs[i]
-    print("Could not find point off of island")
-    return v
-
-
 CACHE_PATH = "./data/cache"
-
 
 class CacheHelper:
     def __init__(
