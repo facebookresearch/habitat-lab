@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import magnum as mn
+import attr
 import numpy as np
 from gym import spaces
 
@@ -13,9 +13,9 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.utils import get_angle
 from habitat.tasks.rearrange.utils import CollDetails
-import attr
+from habitat.tasks.utils import get_angle
+
 
 @registry.register_sensor
 class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
@@ -371,9 +371,11 @@ class EndEffectorToPosDistance(Measure):
 
         self._metric = distance
 
+
 @registry.register_measure
 class RoboCollisions(Measure):
-    cls_uuid: str = "robo_collisions"
+    cls_uuid: str = "robot_collisions"
+
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config
@@ -398,13 +400,15 @@ class RoboCollisions(Measure):
         cur_coll_info = self._task.get_cur_collision_info()
         self._accum_coll_info += cur_coll_info
         self._metric = {
-                "total_colls": self._accum_coll_info.total_colls,
-                **attr.asdict(self._accum_coll_info)
-                }
+            "total_colls": self._accum_coll_info.total_colls,
+            **attr.asdict(self._accum_coll_info),
+        }
+
 
 @registry.register_measure
 class RoboForce(Measure):
-    cls_uuid: str = "robo_force"
+    cls_uuid: str = "robot_force"
+
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config
@@ -552,10 +556,12 @@ class RearrangePickReward(Measure):
             reward -= self._config.CONSTRAINT_VIOLATE_PEN
 
         accum_force = task.measurements.measures[
-                RoboForce.cls_uuid
-                ].get_metric()
-        if (self._config.MAX_ACCUM_FORCE is not None and
-                accum_force > self._config.MAX_ACCUM_FORCE):
+            RoboForce.cls_uuid
+        ].get_metric()
+        if (
+            self._config.MAX_ACCUM_FORCE is not None
+            and accum_force > self._config.MAX_ACCUM_FORCE
+        ):
             reward -= self._config.FORCE_END_PEN
             self._task.should_end = True
 
@@ -604,13 +610,9 @@ class RearrangePickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        ee_to_object_distance = task.measurements.measures[
-            EndEffectorToObjectDistance.cls_uuid
-        ].get_metric()
         self._metric = False
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
-        obj_to_ee = ee_to_object_distance[task.targ_idx]
 
         # Check that we are holding the right object and the object is actually
         # being held.

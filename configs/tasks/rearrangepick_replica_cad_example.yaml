@@ -7,9 +7,8 @@ DATASET:
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
-    COUNT_ROBO_OBJ_COLLS: False
+    COUNT_ROBOT_OBJ_COLLS: False
 
     # In radians
     #BASE_ANGLE_NOISE: 0.15
@@ -47,10 +46,10 @@ TASK:
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
     SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
-    ROBO_FORCE:
+    ROBOT_FORCE:
         TYPE: "RoboForce"
         MIN_FORCE: 20.0
-    ROBO_COLLS:
+    ROBOT_COLLS:
       TYPE: "RoboCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
@@ -65,7 +64,7 @@ TASK:
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
         COLL_PEN: 1.0
-        ROBO_OBJ_COLL_PEN: 0.0
+        ROBOT_OBJ_COLL_PEN: 0.0
         MAX_ACCUM_FORCE: null
 
         FORCE_PEN: 0.001
@@ -82,8 +81,8 @@ TASK:
 
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
-        - "ROBO_FORCE"
-        - "ROBO_COLLS"
+        - "ROBOT_FORCE"
+        - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"

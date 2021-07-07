@@ -7,14 +7,16 @@
 
 import magnum as mn
 import numpy as np
-from habitat.tasks.rearrange.utils import get_aabb
-from typing import Callable
-import attr
-from habitat_sim.physics import (CollisionGroups, RigidConstraintSettings,
-        CollisionGroupHelper, CollisionGroupHelper)
-import habitat_sim.physics
 
-class RearrangeGraspManager(object):
+from habitat.tasks.rearrange.utils import get_aabb
+from habitat_sim.physics import (
+    CollisionGroupHelper,
+    CollisionGroups,
+    RigidConstraintSettings,
+)
+
+
+class RearrangeGraspManager:
     def __init__(self, sim, config):
         self._sim = sim
         self._snapped_obj_id = None
@@ -27,8 +29,9 @@ class RearrangeGraspManager(object):
 
         # Setup the collision groups. UserGroup7 is the held object group, it
         # can interact with anything except for the robot.
-        CollisionGroupHelper.set_mask_for_group(CollisionGroups.UserGroup7,
-                ~CollisionGroups.Robot)
+        CollisionGroupHelper.set_mask_for_group(
+            CollisionGroups.UserGroup7, ~CollisionGroups.Robot
+        )
 
         self.desnap()
 
@@ -36,7 +39,6 @@ class RearrangeGraspManager(object):
         if self._config.get("IGNORE_HOLD_VIOLATE", False):
             return False
         # Is the object firmly in the grasp of the robot?
-        hold_obj = self._sim.grasp_mgr.snap_idx
         ee_pos = self._sim.robot.ee_transform.translation
         if self.is_grasped:
             obj_pos = self._sim.get_translation(self._snapped_obj_id)
@@ -54,11 +56,12 @@ class RearrangeGraspManager(object):
             ee_pos = self._sim.robot.ee_transform.translation
             dist = np.linalg.norm(ee_pos - self._leave_info[0])
             if dist >= self._leave_info[1]:
-                self.snap_rigid_obj.override_collision_group(CollisionGroups.Default)
+                self.snap_rigid_obj.override_collision_group(
+                    CollisionGroups.Default
+                )
 
     def desnap(self, force=False):
-        """Removes any hold constraints currently active.
-        """
+        """Removes any hold constraints currently active."""
         if len(self._snap_constraints) == 0:
             # No constraints to unsnap
             self._snapped_obj_id = None
@@ -67,10 +70,14 @@ class RearrangeGraspManager(object):
         if self._snapped_obj_id is not None:
             obj_bb = get_aabb(self.snap_idx, self._sim)
             if force:
-                self.snap_rigid_obj.override_collision_group(CollisionGroups.Default)
+                self.snap_rigid_obj.override_collision_group(
+                    CollisionGroups.Default
+                )
             else:
-                self._leave_info = (self.get_translation(self._snapped_obj_id),
-                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()))
+                self._leave_info = (
+                    self._sim.get_translation(self._snapped_obj_id),
+                    max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                )
 
         for constraint_id in self._snap_constraints:
             self._sim.remove_rigid_constraint(constraint_id)
@@ -84,9 +91,11 @@ class RearrangeGraspManager(object):
 
     @property
     def snap_rigid_obj(self):
-        return self._sim.get_rigid_object_manager().get_object_by_id(self._snapped_obj_id)
+        return self._sim.get_rigid_object_manager().get_object_by_id(
+            self._snapped_obj_id
+        )
 
-    def snap_to_obj(self, snap_obj_id: int, force: bool=True):
+    def snap_to_obj(self, snap_obj_id: int, force: bool = True):
         """
         :param snap_obj_id: Simulator object index.
         :force: Will transform the object to be in the robot's grasp, even if
@@ -94,11 +103,15 @@ class RearrangeGraspManager(object):
         """
         if len(self._snap_constraints) != 0:
             # We were already grabbing something else.
-            raise ValueError(f"Tried snapping to {snap_obj_id} when already snapped to {self._snapped_obj_id}")
+            raise ValueError(
+                f"Tried snapping to {snap_obj_id} when already snapped to {self._snapped_obj_id}"
+            )
 
         if force:
             # Set the transformation to be in the robot's hand already.
-            self._sim.set_transformation(self._sim.robot.ee_transform, snap_obj_id)
+            self._sim.set_transformation(
+                self._sim.robot.ee_transform, snap_obj_id
+            )
 
         if snap_obj_id == self._snapped_obj_id:
             # Already grasping this object.
@@ -108,7 +121,9 @@ class RearrangeGraspManager(object):
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.
-        self.snap_rigid_obj.override_collision_group(CollisionGroups.UserGroup7)
+        self.snap_rigid_obj.override_collision_group(
+            CollisionGroups.UserGroup7
+        )
 
         def create_hold_constraint(pivot_in_link, pivot_in_obj):
             c = RigidConstraintSettings()
@@ -121,9 +136,7 @@ class RearrangeGraspManager(object):
             return self._sim.create_rigid_constraint(c)
 
         self._snap_constraints = [
-            create_hold_constraint(
-                mn.Vector3(0.1, 0, 0), mn.Vector3(0, 0, 0)
-            ),
+            create_hold_constraint(mn.Vector3(0.1, 0, 0), mn.Vector3(0, 0, 0)),
             create_hold_constraint(
                 mn.Vector3(0.0, 0, 0), mn.Vector3(-0.1, 0, 0)
             ),
@@ -132,6 +145,5 @@ class RearrangeGraspManager(object):
             ),
         ]
 
-        if any([x == -1 for x in self._snap_constraints]):
+        if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")
-

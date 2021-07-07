@@ -5,32 +5,31 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import os.path as osp
 from collections import defaultdict
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
-import attr
 import magnum as mn
 import numpy as np
-import os.path as osp
 
-import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.obj_loaders import (
-    add_obj,
     load_articulated_objs,
     load_objs,
     place_viz_objs,
 )
+from habitat.tasks.rearrange.rearrange_grasp_manager import (
+    RearrangeGraspManager,
+)
 from habitat.tasks.rearrange.utils import (
     convert_legacy_cfg,
-    get_aabb,
     get_nav_mesh_settings,
 )
 from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot
-from habitat.tasks.rearrange.rearrange_grasp_manager import RearrangeGraspManager
+
 
 # temp workflow for loading lights into Habitat scene
 def load_light_setup_for_glb(json_filepath):
@@ -121,14 +120,16 @@ class RearrangeSim(HabitatSim):
 
     def _update_config(self, ep_info):
         """Updates config from legacy settings. Hopefully this can be
-        depricated soon.
+        deprecated soon.
         """
-        scene = ep_info['scene_id']
-        if 'replica_cad' in scene and 'glb' in scene:
-            parts = scene.split('/')
-            base_replica_path = '/'.join(parts[:-2])
-            end_replica_path = '/'.join(parts[-2:]).split('.')[0]
-            ep_info['scene_id'] = osp.join(base_replica_path, 'configs', end_replica_path)
+        scene = ep_info["scene_id"]
+        if "replica_cad" in scene and "glb" in scene:
+            parts = scene.split("/")
+            base_replica_path = "/".join(parts[:-2])
+            end_replica_path = "/".join(parts[-2:]).split(".")[0]
+            ep_info["scene_id"] = osp.join(
+                base_replica_path, "configs", end_replica_path
+            )
         return ep_info
 
     def reconfigure(self, config):
@@ -268,18 +269,18 @@ class RearrangeSim(HabitatSim):
             target_name_pos, self, self.viz_obj_ids
         )
 
-    def capture_state(self, with_robo_js=False):
+    def capture_state(self, with_robot_js=False):
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
         robot_T = self.robot.sim_obj.transformation
         art_T = [ao.transformation for ao in self.art_objs]
         static_T = [self.get_transformation(i) for i in self.scene_obj_ids]
         art_pos = [ao.joint_positions for ao in self.art_objs]
-        robo_js = self.robot.sim_obj.joint_positions
+        robot_js = self.robot.sim_obj.joint_positions
 
         return {
             "robot_T": robot_T,
-            "robo_js": robo_js,
+            "robot_js": robot_js,
             "art_T": art_T,
             "static_T": static_T,
             "art_pos": art_pos,
@@ -296,8 +297,8 @@ class RearrangeSim(HabitatSim):
             self.robot.sim_obj.transformation = state["robot_T"]
             self.robot.sim_obj.clear_joint_states()
 
-        if "robo_js" in state:
-            self.robot.sim_obj.joint_positions = state["robo_js"]
+        if "robot_js" in state:
+            self.robot.sim_obj.joint_positions = state["robot_js"]
 
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
@@ -403,9 +404,7 @@ class RearrangeSim(HabitatSim):
         return obs
 
     def internal_step(self, dt):
-        """
-        Never call sim.step_world directly.
-        """
+        """Never call sim.step_world directly."""
 
         self.step_world(dt)
         if self.robot is not None:
@@ -432,4 +431,3 @@ class RearrangeSim(HabitatSim):
         return np.array(
             [self.get_translation(idx) for idx in self.scene_obj_ids]
         )
-

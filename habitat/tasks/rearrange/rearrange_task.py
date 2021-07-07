@@ -5,18 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
-from typing import Any, Dict, List, Optional, Union
-
-import attr
-import numpy as np
+from typing import Any, Dict, List, Union
 
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.rearrange.rearrange_sensors import RearrangePickSuccess
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollDetails, rearrange_collision
-from habitat.tasks.rearrange.rearrange_sensors import (
-    RearrangePickSuccess,
-)
+
 
 class RearrangeTask(NavigationTask):
     """
@@ -65,13 +61,6 @@ class RearrangeTask(NavigationTask):
 
         done = False
         if self.measurements.get_metrics()[RearrangePickSuccess.cls_uuid]:
-            done = True
-
-        # If we have any sort of collision at all the episode is over.
-        if (
-            self._config.MAX_COLLISIONS > 0
-            and self.cur_collisions > self._config.MAX_COLLISIONS
-        ):
             done = True
 
         if self.should_end:

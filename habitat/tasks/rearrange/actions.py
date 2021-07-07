@@ -15,16 +15,18 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision
 
+
 @registry.register_task_action
 class EmptyAction(SimulatorTaskAction):
-    """A No-op action useful for testing.
-    """
+    """A No-op action useful for testing."""
+
     @property
     def action_space(self):
         return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
 
-    def step(self, **kwargs):
+    def step(self, *args, **kwargs):
         return self._sim.step(HabitatSimActions.EMPTY)
+
 
 @registry.register_task_action
 class ArmAction(SimulatorTaskAction):
@@ -57,7 +59,7 @@ class ArmAction(SimulatorTaskAction):
             }
         )
 
-    def step(self, arm_ac, grip_ac, **kwargs):
+    def step(self, arm_ac, grip_ac, *args, **kwargs):
         self.arm_ctrlr.step(arm_ac, should_step=False)
         if grip_ac is not None and not self.disable_grip:
             self.grip_ctrlr.step(grip_ac, should_step=False)
@@ -93,7 +95,7 @@ class MagicGraspAction(SimulatorTaskAction):
     def _ungrasp(self):
         self._sim.desnap_object()
 
-    def step(self, grip_ac, should_step=True, **kwargs):
+    def step(self, grip_ac, should_step=True, *args, **kwargs):
         if grip_ac is None:
             return
 
@@ -109,7 +111,7 @@ class ArmVelAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
 
-    def step(self, vel, should_step=True, **kwargs):
+    def step(self, vel, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         vel = np.clip(vel, -1, 1)
         vel *= self._config.VEL_CTRL_LIM
@@ -140,17 +142,17 @@ class BaseVelAction(SimulatorTaskAction):
         lim = 20
         return spaces.Box(shape=(2,), low=-lim, high=lim, dtype=np.float32)
 
-    def _capture_robo_state(self, sim):
+    def _capture_robot_state(self, sim):
         return {
-            "forces": sim.robot.sim_obj.joint_forces ,
-            "vel": sim.robot.sim_obj.joint_velocities ,
-            "pos": sim.robot.sim_obj.joint_positions ,
+            "forces": sim.robot.sim_obj.joint_forces,
+            "vel": sim.robot.sim_obj.joint_velocities,
+            "pos": sim.robot.sim_obj.joint_positions,
         }
 
-    def _set_robo_state(self, sim: RearrangeSim, set_dat):
-        sim.robot.sim_obj.joint_positions = set_dat['forces']
-        sim.robot.sim_obj.joint_velocities = set_dat['vel']
-        sim.robot.sim_obj.joint_forces = set_dat['pos']
+    def _set_robot_state(self, sim: RearrangeSim, set_dat):
+        sim.robot.sim_obj.joint_positions = set_dat["forces"]
+        sim.robot.sim_obj.joint_velocities = set_dat["vel"]
+        sim.robot.sim_obj.joint_forces = set_dat["pos"]
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
@@ -159,7 +161,7 @@ class BaseVelAction(SimulatorTaskAction):
     def update_base(self):
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robo_state(self._sim)
+        before_trans_state = self._capture_robot_state(self._sim)
 
         trans = self._sim.robot.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
@@ -188,10 +190,10 @@ class BaseVelAction(SimulatorTaskAction):
             )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robo_state(self._sim, before_trans_state)
+                self._set_robot_state(self._sim, before_trans_state)
                 self._sim.robot.sim_obj.transformation = trans
 
-    def step(self, base_vel, should_step=True, **kwargs):
+    def step(self, base_vel, should_step=True, *args, **kwargs):
         lin_vel, ang_vel = base_vel
         lin_vel = np.clip(lin_vel, -1, 1)
         lin_vel *= self._config.LIN_SPEED
@@ -214,5 +216,3 @@ class BaseVelAction(SimulatorTaskAction):
             return self._sim.step(HabitatSimActions.BASE_VEL)
         else:
             return None
-
-

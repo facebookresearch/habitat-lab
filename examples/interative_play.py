@@ -15,7 +15,6 @@ import numpy as np
 
 import habitat.tasks.rearrange.rearrange_task
 from habitat.utils.visualizations.utils import observations_to_image
-from habitat_baselines.config.default import get_config
 
 try:
     import pygame
@@ -23,6 +22,7 @@ except ImportError:
     pass
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+
 
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
@@ -39,6 +39,7 @@ def make_video_cv2(observations, prefix=""):
     video.release()
     print("Saved to", vid_name)
 
+
 def append_text_to_image(image: np.ndarray, text: str):
     r"""Appends text underneath an image of size (height, width, channels).
     The returned image has white text on a black background. Uses textwrap to
@@ -54,8 +55,6 @@ def append_text_to_image(image: np.ndarray, text: str):
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)
-
-    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
 
     y = 0
     for line in text:
@@ -77,21 +76,24 @@ def append_text_to_image(image: np.ndarray, text: str):
     final = np.concatenate((image, text_image), axis=0)
     return final
 
+
 def overlay_frame(frame, info):
     lines = []
-    if 'object_to_goal_distance' in info:
-        lines.append("Obj to goal %.2f" % info['object_to_goal_distance'][0])
-    if 'ee_to_object_distance' in info:
-        lines.append("EE to obj %.2f" % info['ee_to_object_distance'][0])
-    if 'robo_force' in info:
-        lines.append("Force: %.2f" % info['robo_force'])
-    if 'robo_collisions' in info:
-        coll_info = info['robo_collisions']
-        lines.extend([
-            "Obj-Scene Coll: %.2f" % coll_info['obj_scene_colls'],
-            "Robo-Obj Coll: %.2f" % coll_info['robo_obj_colls'],
-            "Robo-Scene Coll: %.2f" % coll_info['robo_scene_colls'],
-            ])
+    if "object_to_goal_distance" in info:
+        lines.append("Obj to goal %.2f" % info["object_to_goal_distance"][0])
+    if "ee_to_object_distance" in info:
+        lines.append("EE to obj %.2f" % info["ee_to_object_distance"][0])
+    if "robot_force" in info:
+        lines.append("Force: %.2f" % info["robot_force"])
+    if "robot_collisions" in info:
+        coll_info = info["robot_collisions"]
+        lines.extend(
+            [
+                "Obj-Scene Coll: %.2f" % coll_info["obj_scene_colls"],
+                "Robo-Obj Coll: %.2f" % coll_info["robot_obj_colls"],
+                "Robo-Scene Coll: %.2f" % coll_info["robot_scene_colls"],
+            ]
+        )
 
     frame = append_text_to_image(frame, lines)
 
@@ -181,7 +183,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
 
     elif keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = ['%.3f' % x for x in env._sim.robot.sim_obj.translation]
+        pos = ["%.3f" % x for x in env._sim.robot.sim_obj.translation]
         print(pos)
 
     args = {}
@@ -322,5 +324,3 @@ if __name__ == "__main__":
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)
-
-

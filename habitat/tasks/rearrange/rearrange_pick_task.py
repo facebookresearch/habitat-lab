@@ -36,10 +36,7 @@ class RearrangePickTaskV1(RearrangeTask):
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
 
         mtime = osp.getmtime(data_path)
-        cache_name = (
-            str(mtime)
-            + dataset.config.SPLIT
-        )
+        cache_name = str(mtime) + dataset.config.SPLIT
         cache_name += str(self._config.BASE_NOISE)
         cache_name = cache_name.replace(".", "_")
 
@@ -76,7 +73,9 @@ class RearrangePickTaskV1(RearrangeTask):
         # Add noise to the base position and angle for a collision free
         # starting position
         timeout = 1000
-        for attempt in range(timeout):
+        attempt = 0
+        while attempt < timeout:
+            attempt += 1
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
@@ -101,7 +100,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             sim.robot.base_rot = angle_to_obj + rot_noise
-            break
 
             # Make sure the robot is not colliding with anything in this
             # position.
@@ -115,7 +113,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
                 if is_easy_init:
                     # Only care about collisions between the robot and scene.
-                    did_collide = details.robo_scene_colls != 0
+                    did_collide = details.robot_scene_colls != 0
 
                 if did_collide:
                     break

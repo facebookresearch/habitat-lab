@@ -9,6 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
+from typing import List, Optional
 
 import attr
 import gym
@@ -18,9 +19,7 @@ import quaternion
 
 import habitat_sim
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.physics import MotionType, ContactPointData
-from habitat_sim.robots import MobileManipulator
-from typing import List
+from habitat_sim.physics import MotionType
 
 
 def make_render_only(obj_idx, sim):
@@ -33,6 +32,7 @@ def make_render_only(obj_idx, sim):
 
 def coll_name_matches(coll, name):
     return name in [coll.object_id_a, coll.object_id_b]
+
 
 def get_match_link(coll, name):
     if name == coll.object_id_a:
@@ -50,28 +50,33 @@ def swap_axes(x):
 @attr.s(auto_attribs=True, kw_only=True)
 class CollDetails:
     obj_scene_colls: int = 0
-    robo_obj_colls: int = 0
-    robo_scene_colls: int = 0
+    robot_obj_colls: int = 0
+    robot_scene_colls: int = 0
 
     @property
     def total_colls(self):
-        return self.obj_scene_colls + self.robo_obj_colls + self.robo_scene_colls
+        return (
+            self.obj_scene_colls
+            + self.robot_obj_colls
+            + self.robot_scene_colls
+        )
 
     def __add__(self, other):
         return CollDetails(
-                obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
-                robo_obj_colls=self.robo_obj_colls + other.robo_obj_colls,
-                robo_scene_colls=self.robo_scene_colls + other.robo_scene_colls)
+            obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
+            robot_obj_colls=self.robot_obj_colls + other.robot_obj_colls,
+            robot_scene_colls=self.robot_scene_colls + other.robot_scene_colls,
+        )
 
 
 def rearrange_collision(
     sim,
     count_obj_colls: bool,
-    verbose: bool=False,
-    ignore_names: bool=None,
-    ignore_base: bool=True):
-    """Defines what counts as a collision for the Rearrange environment execution
-    """
+    verbose: bool = False,
+    ignore_names: Optional[List[str]] = None,
+    ignore_base: bool = True,
+):
+    """Defines what counts as a collision for the Rearrange environment execution"""
     robot_model = sim.robot
     colls = sim.get_physics_contact_points()
     robot_id = robot_model.get_robot_sim_id()
@@ -85,7 +90,10 @@ def rearrange_collision(
                 return False
 
         if ignore_names is not None:
-            should_ignore = any(coll_name_matches(x, ignore_name) for ignore_name in ignore_names)
+            should_ignore = any(
+                coll_name_matches(x, ignore_name)
+                for ignore_name in ignore_names
+            )
             if should_ignore:
                 return False
         return True
@@ -94,15 +102,17 @@ def rearrange_collision(
     colls = list(filter(should_keep, colls))
 
     # Check for robot collision
-    robo_obj_colls = 0
-    robo_scene_colls = 0
-    robo_scene_matches = [c for c in colls if coll_name_matches(c, robot_id)]
-    for match in robo_scene_matches:
-        reg_obj_coll = any([coll_name_matches(match, obj_id) for obj_id in added_objs])
+    robot_obj_colls = 0
+    robot_scene_colls = 0
+    robot_scene_matches = [c for c in colls if coll_name_matches(c, robot_id)]
+    for match in robot_scene_matches:
+        reg_obj_coll = any(
+            [coll_name_matches(match, obj_id) for obj_id in added_objs]
+        )
         if reg_obj_coll:
-            robo_obj_colls += 1
+            robot_obj_colls += 1
         else:
-            robo_scene_colls += 1
+            robot_scene_colls += 1
 
     # Checking for holding object collision
     obj_scene_colls = 0
@@ -115,8 +125,8 @@ def rearrange_collision(
 
     coll_details = CollDetails(
         obj_scene_colls=min(obj_scene_colls, 1),
-        robo_obj_colls=min(robo_obj_colls, 1),
-        robo_scene_colls=min(robo_scene_colls, 1),
+        robot_obj_colls=min(robot_obj_colls, 1),
+        robot_scene_colls=min(robot_scene_colls, 1),
     )
     return coll_details.total_colls > 0, coll_details
 
@@ -189,6 +199,7 @@ def allowed_region_to_bb(allowed_region):
 
 
 CACHE_PATH = "./data/cache"
+
 
 class CacheHelper:
     def __init__(
