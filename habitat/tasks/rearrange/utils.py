@@ -69,7 +69,7 @@ def rearrange_collision(
     count_obj_colls: bool,
     verbose: bool=False,
     ignore_names: bool=None,
-    ignore_base: bool=True,
+    ignore_base: bool=True):
     """Defines what counts as a collision for the Rearrange environment execution
     """
     robot_model = sim.robot
