@@ -13,7 +13,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails, rearrang_collision
+from habitat.tasks.rearrange.utils import CollDetails, rearrange_collision
 from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangePickSuccess,
 )
@@ -118,7 +118,7 @@ class RearrangeTask(NavigationTask):
         return max_robot_force, max_obj_force, max_force
 
     def get_cur_collision_info(self) -> CollDetails:
-        _, coll_details = rearrang_collision(
+        _, coll_details = rearrange_collision(
             self._sim,
             self._config.COUNT_OBJ_COLLISIONS,
         )

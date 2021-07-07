@@ -22,7 +22,7 @@ try:
 except ImportError:
     pass
 
-DEFAULT_CFG = "configs/tasks/rearrangpick_replica_cad_example.yaml"
+DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
 
 if __name__ == "__main__":
     """
