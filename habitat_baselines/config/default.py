@@ -86,6 +86,17 @@ _C.RL.preemption.save_state_batch_only = False
 # -----------------------------------------------------------------------------
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
+_C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
+# For gaussian action distribution:
+_C.RL.POLICY.ACTION_DIST = CN()
+_C.RL.POLICY.ACTION_DIST.use_log_std = False
+_C.RL.POLICY.ACTION_DIST.use_softplus = False
+_C.RL.POLICY.ACTION_DIST.min_std = 1e-6
+_C.RL.POLICY.ACTION_DIST.max_std = 1
+_C.RL.POLICY.ACTION_DIST.min_log_std = -5
+_C.RL.POLICY.ACTION_DIST.max_log_std = 2
+# For continuous action distributions (including gaussian):
+_C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------

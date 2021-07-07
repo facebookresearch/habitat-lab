@@ -32,6 +32,7 @@ from torch import Size, Tensor
 from torch import nn as nn
 
 from habitat import logger
+from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
@@ -73,6 +74,58 @@ class CategoricalNet(nn.Module):
     def forward(self, x: Tensor) -> CustomFixedCategorical:
         x = self.linear(x)
         return CustomFixedCategorical(logits=x)
+
+
+class CustomNormal(torch.distributions.normal.Normal):
+    def sample(
+        self, sample_shape: Size = torch.Size()  # noqa: B008
+    ) -> Tensor:
+        return super().rsample(sample_shape)
+
+    def log_probs(self, actions) -> Tensor:
+        ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
+        return ret
+
+
+class GaussianNet(nn.Module):
+    def __init__(
+        self,
+        num_inputs: int,
+        num_outputs: int,
+        config: Config,
+    ) -> None:
+        super().__init__()
+
+        self.action_activation = config.action_activation
+        self.use_log_std = config.use_log_std
+        self.use_softplus = config.use_softplus
+        if config.use_log_std:
+            self.min_std = config.min_log_std
+            self.max_std = config.max_log_std
+        else:
+            self.min_std = config.min_std
+            self.max_std = config.max_std
+
+        self.mu = nn.Linear(num_inputs, num_outputs)
+        self.std = nn.Linear(num_inputs, num_outputs)
+
+        nn.init.orthogonal_(self.mu.weight, gain=0.01)
+        nn.init.constant_(self.mu.bias, 0)
+        nn.init.orthogonal_(self.std.weight, gain=0.01)
+        nn.init.constant_(self.std.bias, 0)
+
+    def forward(self, x: Tensor) -> CustomNormal:
+        mu = self.mu(x)
+        if self.action_activation == "tanh":
+            mu = torch.tanh(mu)
+
+        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.use_log_std:
+            std = torch.exp(std)
+        if self.use_softplus:
+            std = torch.nn.functional.softplus(std)
+
+        return CustomNormal(mu, std)
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
@@ -518,3 +571,21 @@ def create_tar_archive(archive_path: str, dataset_path: str) -> None:
 
 def delete_folder(path: str) -> None:
     shutil.rmtree(path)
+
+
+def action_to_velocity_control(
+    action: torch.Tensor,
+    allow_sliding: bool = None,
+) -> Dict[str, Any]:
+    lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
+    step_action = {
+        "action": {
+            "action": "VELOCITY_CONTROL",
+            "action_args": {
+                "linear_velocity": lin_vel.item(),
+                "angular_velocity": ang_vel.item(),
+                "allow_sliding": allow_sliding,
+            },
+        }
+    }
+    return step_action

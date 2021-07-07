@@ -50,6 +50,7 @@ from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
+    action_to_velocity_control,
     batch_obs,
     generate_video,
 )
@@ -90,6 +91,10 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
+
+        self.using_velocity_ctrl = (
+            self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        ) == ["VELOCITY_CONTROL"]
 
     @property
     def obs_space(self):
@@ -132,8 +137,9 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
+
         self.actor_critic = policy.from_config(
-            self.config, observation_space, self.envs.action_spaces[0]
+            self.config, observation_space, self.policy_action_space
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -240,6 +246,17 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
+        if self.using_velocity_ctrl:
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
+            action_shape = (2,)
+            discrete_actions = False
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = None
+            discrete_actions = True
+
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
             self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
@@ -276,14 +293,17 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
+
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
-            self.envs.action_spaces[0],
+            self.policy_action_space,
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+            action_shape=action_shape,
+            discrete_actions=discrete_actions,
         )
         self.rollouts.to(self.device)
 
@@ -433,7 +453,11 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            self.envs.async_step_at(index_env, act.item())
+            if self.using_velocity_ctrl:
+                step_action = action_to_velocity_control(act)
+            else:
+                step_action = act.item()
+            self.envs.async_step_at(index_env, step_action)
 
         self.env_time += time.time() - t_step_env
 
@@ -878,6 +902,18 @@ class PPOTrainer(BaseRLTrainer):
             logger.info(f"env config: {config}")
 
         self._init_envs(config)
+
+        if self.using_velocity_ctrl:
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
+            action_shape = (2,)
+            action_type = torch.float
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = (1,)
+            action_type = torch.long
+
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -901,9 +937,9 @@ class PPOTrainer(BaseRLTrainer):
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            1,
+            *action_shape,
             device=self.device,
-            dtype=torch.long,
+            dtype=action_type,
         )
         not_done_masks = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -957,13 +993,18 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
-
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            step_data = [a.item() for a in actions.to(device="cpu")]
+            if self.using_velocity_ctrl:
+                step_data = [
+                    action_to_velocity_control(a)
+                    for a in actions.to(device="cpu")
+                ]
+            else:
+                step_data = [a.item() for a in actions.to(device="cpu")]
 
             outputs = self.envs.step(step_data)
 
