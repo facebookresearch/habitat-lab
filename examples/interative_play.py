@@ -24,23 +24,6 @@ except ImportError:
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
 
-if __name__ == "__main__":
-    """
-    Manually control the robot to interact with the environment.
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--no-render", action="store_true", default=False)
-    parser.add_argument("--save-obs", action="store_true", default=False)
-    parser.add_argument("--save-actions", action="store_true", default=False)
-    parser.add_argument("--load-actions", type=str, default=None)
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
-    args = parser.parse_args()
-
-    config = habitat.get_config(args.cfg)
-
-    with habitat.Env(config=config) as env:
-        play_env(env, args, config)
-
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
     if not osp.exists(output_path):
@@ -321,5 +304,23 @@ def play_env(env, args, config):
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         make_video_cv2(all_obs, "interactive_play")
     pygame.quit()
+
+
+if __name__ == "__main__":
+    """
+    Manually control the robot to interact with the environment.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-render", action="store_true", default=False)
+    parser.add_argument("--save-obs", action="store_true", default=False)
+    parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument("--load-actions", type=str, default=None)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    args = parser.parse_args()
+
+    config = habitat.get_config(args.cfg)
+
+    with habitat.Env(config=config) as env:
+        play_env(env, args, config)
 
 
