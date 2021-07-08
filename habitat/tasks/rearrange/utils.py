@@ -30,6 +30,16 @@ def make_render_only(obj_idx, sim):
         sim.set_object_is_collidable(False, obj_idx)
 
 
+def make_border_red(img):
+    border_color = [255, 0, 0]
+    border_width = 10
+    img[:, :border_width] = border_color
+    img[:border_width, :] = border_color
+    img[-border_width:, :] = border_color
+    img[:, -border_width:] = border_color
+    return img
+
+
 def coll_name_matches(coll, name):
     return name in [coll.object_id_a, coll.object_id_b]
 
@@ -253,3 +263,98 @@ def reshape_obs_space(obs_space, new_shape):
         low=obs_space.high.reshape(-1)[0],
         dtype=obs_space.dtype,
     )
+
+
+try:
+    import pybullet as p
+except ImportError:
+    p = None
+
+
+def check_pb_install(p):
+    if p is None:
+        raise ImportError(
+            "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
+        )
+
+
+class IkHelper:
+    def __init__(self, only_arm_urdf, arm_start):
+        check_pb_install(p)
+        self._arm_start = arm_start
+        self._arm_len = 7
+        self.pc_id = p.connect(p.DIRECT)
+
+        self.robo_id = p.loadURDF(
+            only_arm_urdf,
+            basePosition=[0, 0, 0],
+            useFixedBase=True,
+            flags=p.URDF_USE_INERTIA_FROM_FILE,
+            physicsClientId=self.pc_id,
+        )
+
+        p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
+        JOINT_DAMPING = 0.5
+        self.pb_link_idx = 7
+
+        for link_idx in range(15):
+            p.changeDynamics(
+                self.robo_id,
+                link_idx,
+                linearDamping=0.0,
+                angularDamping=0.0,
+                jointDamping=JOINT_DAMPING,
+                physicsClientId=self.pc_id,
+            )
+            p.changeDynamics(
+                self.robo_id,
+                link_idx,
+                maxJointVelocity=200,
+                physicsClientId=self.pc_id,
+            )
+
+    def set_arm_state(self, joint_pos, joint_vel=None):
+        if joint_vel is None:
+            joint_vel = np.zeros((len(joint_pos),))
+        for i in range(7):
+            p.resetJointState(
+                self.robo_id,
+                i,
+                joint_pos[i],
+                joint_vel[i],
+                physicsClientId=self.pc_id,
+            )
+
+    def calc_fk(self, js):
+        self.set_arm_state(js, np.zeros(js.shape))
+        ls = p.getLinkState(
+            self.robo_id,
+            self.pb_link_idx,
+            computeForwardKinematics=1,
+            physicsClientId=self.pc_id,
+        )
+        world_ee = ls[4]
+        return world_ee
+
+    def get_joint_limits(self):
+        lower = []
+        upper = []
+        for joint_i in range(self._arm_len):
+            ret = p.getJointInfo(
+                self.robo_id, joint_i, physicsClientId=self.pc_id
+            )
+            lower.append(ret[8])
+            if ret[9] == -1:
+                upper.append(2 * np.pi)
+            else:
+                upper.append(ret[9])
+        return np.array(lower), np.array(upper)
+
+    def calc_ik(self, targ_ee):
+        """
+        targ_ee is in ROBOT COORDINATE FRAME NOT IN EE COORDINATE FRAME
+        """
+        js = p.calculateInverseKinematics(
+            self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
+        )
+        return js[: self._arm_len]

@@ -1,0 +1,28 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrangepick_replica_cad.yaml
+
+SPA:
+  VERBOSE: True
+  RUN_FREQ: 4
+  KINEMATIC_CTRL: True
+  N_GRASPS: 100
+  MP_OBJ: True
+  MP_MARGIN: null
+  MP_RENDER: True
+  TIMEOUT: 30
+  EXEC_EE_THRESH: 0.1
+  # "Priv" or "Reg"
+  MP_SIM_TYPE: "Priv"
+  VIDEO_DIR: 'data/vids'
+  DEBUG_DIR: "data/mp_test"
+
+
+SIMULATOR:
+  IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
+COUNT_OBJ_COLLISIONS: True
+COUNT_ROBOT_OBJ_COLLS: False
+# A value of -1 means the episode will never terminate due to a force
+# violation.
+MAX_ACCUM_FORCE: 5000.0
+
+ENV_NAME: "NavRLEnv"

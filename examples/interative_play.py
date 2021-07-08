@@ -4,6 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""
+Manually control the robot to interact with the environment. Running as `python
+examples/interative_play.py` runs with a good testing configuration.
+
+To Run you need PyGame installed.
+
+Controls:
+    - For velocity control
+        - 1-7 to increase the motor target for the robot arm joints
+        - Q-U to decrease the motor target for the robot arm joints
+    - IJKL to move the robot base around
+    - PERIOD to print the current world coordinates of the robot base.
+"""
 
 import argparse
 import os
@@ -14,12 +27,13 @@ import cv2
 import numpy as np
 
 import habitat.tasks.rearrange.rearrange_task
+from habitat.tasks.rearrange.actions import ArmEEAction, ArmVelAction
 from habitat.utils.visualizations.utils import observations_to_image
 
 try:
     import pygame
 except ImportError:
-    pass
+    pygame = None
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
 
@@ -109,6 +123,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         return step_env(env, "EMPTY", {}, g_args), None
 
     arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces["arm_ac"]
+    arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
 
     arm_action = np.zeros(arm_action_space.shape[0])
     base_action = None
@@ -136,41 +151,59 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    # Velocity control. A different key for each joint
-    if keys[pygame.K_q]:
-        arm_action[0] = 1.0
-    elif keys[pygame.K_1]:
-        arm_action[0] = -1.0
+    if isinstance(arm_ctrlr, ArmVelAction):
+        # Velocity control. A different key for each joint
+        if keys[pygame.K_q]:
+            arm_action[0] = 1.0
+        elif keys[pygame.K_1]:
+            arm_action[0] = -1.0
 
-    elif keys[pygame.K_w]:
-        arm_action[1] = 1.0
-    elif keys[pygame.K_2]:
-        arm_action[1] = -1.0
+        elif keys[pygame.K_w]:
+            arm_action[1] = 1.0
+        elif keys[pygame.K_2]:
+            arm_action[1] = -1.0
 
-    elif keys[pygame.K_e]:
-        arm_action[2] = 1.0
-    elif keys[pygame.K_3]:
-        arm_action[2] = -1.0
+        elif keys[pygame.K_e]:
+            arm_action[2] = 1.0
+        elif keys[pygame.K_3]:
+            arm_action[2] = -1.0
 
-    elif keys[pygame.K_r]:
-        arm_action[3] = 1.0
-    elif keys[pygame.K_4]:
-        arm_action[3] = -1.0
+        elif keys[pygame.K_r]:
+            arm_action[3] = 1.0
+        elif keys[pygame.K_4]:
+            arm_action[3] = -1.0
 
-    elif keys[pygame.K_t]:
-        arm_action[4] = 1.0
-    elif keys[pygame.K_5]:
-        arm_action[4] = -1.0
+        elif keys[pygame.K_t]:
+            arm_action[4] = 1.0
+        elif keys[pygame.K_5]:
+            arm_action[4] = -1.0
 
-    elif keys[pygame.K_y]:
-        arm_action[5] = 1.0
-    elif keys[pygame.K_6]:
-        arm_action[5] = -1.0
+        elif keys[pygame.K_y]:
+            arm_action[5] = 1.0
+        elif keys[pygame.K_6]:
+            arm_action[5] = -1.0
 
-    elif keys[pygame.K_u]:
-        arm_action[6] = 1.0
-    elif keys[pygame.K_7]:
-        arm_action[6] = -1.0
+        elif keys[pygame.K_u]:
+            arm_action[6] = 1.0
+        elif keys[pygame.K_7]:
+            arm_action[6] = -1.0
+    elif isinstance(arm_ctrlr, ArmEEAction):
+        EE_FACTOR = 0.5
+        # End effector control
+        if keys[pygame.K_d]:
+            arm_action[1] += EE_FACTOR
+        elif keys[pygame.K_a]:
+            arm_action[1] -= EE_FACTOR
+        elif keys[pygame.K_w]:
+            arm_action[0] += EE_FACTOR
+        elif keys[pygame.K_s]:
+            arm_action[0] -= EE_FACTOR
+        elif keys[pygame.K_q]:
+            arm_action[2] += EE_FACTOR
+        elif keys[pygame.K_e]:
+            arm_action[2] -= EE_FACTOR
+    else:
+        raise ValueError("Unrecognized arm action space")
 
     if keys[pygame.K_p]:
         print("[play.py]: Unsnapping")
@@ -309,9 +342,10 @@ def play_env(env, args, config):
 
 
 if __name__ == "__main__":
-    """
-    Manually control the robot to interact with the environment.
-    """
+    if pygame is None:
+        raise ImportError(
+            "Need to install PyGame (run `pip install pygame==2.0.1`)"
+        )
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)

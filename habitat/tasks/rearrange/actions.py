@@ -18,7 +18,9 @@ from habitat.tasks.rearrange.utils import rearrange_collision
 
 @registry.register_task_action
 class EmptyAction(SimulatorTaskAction):
-    """A No-op action useful for testing."""
+    """A No-op action useful for testing and in some controllers where we want
+    to wait before the next operation.
+    """
 
     @property
     def action_space(self):
@@ -214,5 +216,66 @@ class BaseVelAction(SimulatorTaskAction):
 
         if should_step:
             return self._sim.step(HabitatSimActions.BASE_VEL)
+        else:
+            return None
+
+
+@registry.register_task_action
+class ArmEEAction(SimulatorTaskAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.robot_ee_constraints = np.array(
+            [
+                [0.4, 1.2],
+                [-0.7, 0.7],
+                [0.25, 1.5],
+            ]
+        )
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        self.ee_targ = np.zeros((3,))
+
+        arm_pos = self.set_desired_ee_pos(np.array([0.5, 0.0, 1.0]))
+
+        self._sim.robot.arm_joint_pos = arm_pos
+        self._sim.settle_sim(0.1)
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+
+    def apply_ee_constraints(self):
+        self.ee_targ = np.clip(
+            self.ee_targ,
+            self.robot_ee_constraints[:, 0],
+            self.robot_ee_constraints[:, 1],
+        )
+
+    def set_desired_ee_pos(self, des_rel_pos):
+        self.ee_targ += np.array(des_rel_pos)
+        self.apply_ee_constraints()
+
+        ik = self._sim.ik_helper
+
+        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_vel = np.zeros(joint_pos.shape)
+
+        ik.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = ik.calc_ik(self.ee_targ)
+        des_joint_pos = list(des_joint_pos)
+        self._sim.robot.arm_motor_pos = des_joint_pos
+
+        return des_joint_pos
+
+    def step(self, rel_ee_pos, should_step=True, **kwargs):
+        rel_ee_pos = np.clip(rel_ee_pos, -1, 1)
+        rel_ee_pos *= self._config.EE_CTRL_LIM
+        self.set_desired_ee_pos(rel_ee_pos)
+
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_EE)
         else:
             return None

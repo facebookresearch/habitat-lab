@@ -89,11 +89,17 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmVelAction"
+            # Uncomment to run with velocity control
+            #ARM_CONTROLLER: "ArmVelAction"
+
+            # Uncomment to run with end-effector control
+            ARM_CONTROLLER: "ArmEEAction"
+
             GRIP_CONTROLLER: "MagicGraspAction"
-            GRASP_THRESH_DIST: 5.15
+            GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             VEL_CTRL_LIM: 0.0125
+            EE_CTRL_LIM: 0.015
         BASE_VEL:
             TYPE: "BaseVelAction"
             LIN_SPEED: 12.0
@@ -161,8 +167,10 @@ SIMULATOR:
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     HIGH_RES_DIM: 512
-    LAG_OBSERVATIONS: 2
+    LAG_OBSERVATIONS: 1
+    SHOULD_RENDER_DEBUG: True
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480

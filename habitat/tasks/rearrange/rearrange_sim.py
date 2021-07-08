@@ -23,6 +23,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import (
+    IkHelper,
     convert_legacy_cfg,
     get_nav_mesh_settings,
 )
@@ -81,6 +82,8 @@ class RearrangeSim(HabitatSim):
         self.track_markers = []
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
+
+        self.ik_helper = None
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
@@ -180,6 +183,11 @@ class RearrangeSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
+            if self.habitat_config.get("IK_ARM_URDF", None) is not None:
+                self.ik_helper = IkHelper(
+                    self.habitat_config.IK_ARM_URDF,
+                    self.robot.params.arm_init_params,
+                )
             # Capture the starting art states
             self.start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
@@ -370,7 +378,7 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if "high_rgb" in obs:
+        if "robot_third_rgb" in obs:
             self.is_render_obs = True
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
@@ -385,7 +393,7 @@ class RearrangeSim(HabitatSim):
                 self.set_object_bb_draw(True, self.scene_obj_ids[obj_idx])
 
             debug_obs = self.get_sensor_observations()
-            obs["high_rgb"] = debug_obs["high_rgb"][:, :, :3]
+            obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
 
         if self.habitat_config.HABITAT_SIM_V0.get(
             "ENABLE_GFX_REPLAY_SAVE", False
