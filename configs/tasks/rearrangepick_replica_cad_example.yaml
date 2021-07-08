@@ -100,7 +100,7 @@ TASK:
             DISABLE_GRIP: False
             VEL_CTRL_LIM: 0.0125
             EE_CTRL_LIM: 0.015
-        BASE_VEL:
+        BASE_VELOCITY:
             TYPE: "BaseVelAction"
             LIN_SPEED: 12.0
             ANG_SPEED: 12.0
@@ -113,7 +113,7 @@ TASK:
             TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        - BASE_VEL
+        - BASE_VELOCITY
         - EMPTY
 
 SIMULATOR:

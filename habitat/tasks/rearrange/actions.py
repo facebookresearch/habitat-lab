@@ -215,7 +215,7 @@ class BaseVelAction(SimulatorTaskAction):
             self.update_base()
 
         if should_step:
-            return self._sim.step(HabitatSimActions.BASE_VEL)
+            return self._sim.step(HabitatSimActions.BASE_VELOCITY)
         else:
             return None
 

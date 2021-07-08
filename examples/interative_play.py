@@ -223,7 +223,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
 
     args = {}
     if base_action is not None:
-        name = "BASE_VEL"
+        name = "BASE_VELOCITY"
         args = {"base_vel": base_action}
     else:
         name = "ARM_ACTION"
