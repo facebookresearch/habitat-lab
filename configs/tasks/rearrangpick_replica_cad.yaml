@@ -44,10 +44,10 @@ TASK:
         TYPE: "LocalizationSensor"
     SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
     ROBOT_FORCE:
-        TYPE: "RoboForce"
+        TYPE: "RobotForce"
         MIN_FORCE: 20.0
     ROBOT_COLLS:
-      TYPE: "RoboCollisions"
+      TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:

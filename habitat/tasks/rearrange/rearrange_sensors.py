@@ -373,7 +373,7 @@ class EndEffectorToPosDistance(Measure):
 
 
 @registry.register_measure
-class RoboCollisions(Measure):
+class RobotCollisions(Measure):
     cls_uuid: str = "robot_collisions"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -384,7 +384,7 @@ class RoboCollisions(Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RoboCollisions.cls_uuid
+        return RobotCollisions.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._accum_coll_info = CollDetails()
@@ -406,7 +406,7 @@ class RoboCollisions(Measure):
 
 
 @registry.register_measure
-class RoboForce(Measure):
+class RobotForce(Measure):
     cls_uuid: str = "robot_force"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -417,7 +417,7 @@ class RoboForce(Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RoboForce.cls_uuid
+        return RobotForce.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._accum_force = 0.0
@@ -478,7 +478,7 @@ class RearrangePickReward(Measure):
             [
                 EndEffectorToObjectDistance.cls_uuid,
                 RearrangePickSuccess.cls_uuid,
-                RoboForce.cls_uuid,
+                RobotForce.cls_uuid,
             ],
         )
 
@@ -556,7 +556,7 @@ class RearrangePickReward(Measure):
             reward -= self._config.CONSTRAINT_VIOLATE_PEN
 
         accum_force = task.measurements.measures[
-            RoboForce.cls_uuid
+            RobotForce.cls_uuid
         ].get_metric()
         if (
             self._config.MAX_ACCUM_FORCE is not None
@@ -572,7 +572,7 @@ class RearrangePickReward(Measure):
     def _get_coll_reward(self):
         reward = 0
 
-        force_metric = self._task.measurements.measures[RoboForce.cls_uuid]
+        force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
         # Penalize the force that was added to the accumulated force at the
         # last time step.
         reward -= min(
