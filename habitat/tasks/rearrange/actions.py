@@ -56,15 +56,15 @@ class ArmAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Dict(
             {
-                "arm_ac": self.arm_ctrlr.action_space,
-                "grip_ac": self.grip_ctrlr.action_space,
+                "arm_action": self.arm_ctrlr.action_space,
+                "grip_action": self.grip_ctrlr.action_space,
             }
         )
 
-    def step(self, arm_ac, grip_ac, *args, **kwargs):
-        self.arm_ctrlr.step(arm_ac, should_step=False)
-        if grip_ac is not None and not self.disable_grip:
-            self.grip_ctrlr.step(grip_ac, should_step=False)
+    def step(self, arm_action, grip_action, *args, **kwargs):
+        self.arm_ctrlr.step(arm_action, should_step=False)
+        if grip_action is not None and not self.disable_grip:
+            self.grip_ctrlr.step(grip_action, should_step=False)
         return self._sim.step(HabitatSimActions.ARM_ACTION)
 
 
@@ -97,13 +97,13 @@ class MagicGraspAction(SimulatorTaskAction):
     def _ungrasp(self):
         self._sim.desnap_object()
 
-    def step(self, grip_ac, should_step=True, *args, **kwargs):
-        if grip_ac is None:
+    def step(self, grip_action, should_step=True, *args, **kwargs):
+        if grip_action is None:
             return
 
-        if grip_ac >= 0 and not self._sim.grasp_mgr.is_grasped:
+        if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
             self._grasp()
-        elif grip_ac < 0 and self._sim.grasp_mgr.is_grasped:
+        elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
             self._ungrasp()
 
 

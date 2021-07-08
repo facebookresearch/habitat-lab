@@ -122,7 +122,9 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     if skip_pygame:
         return step_env(env, "EMPTY", {}, g_args), None
 
-    arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces["arm_ac"]
+    arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
+        "arm_action"
+    ]
     arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
 
     arm_action = np.zeros(arm_action_space.shape[0])
