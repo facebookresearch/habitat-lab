@@ -89,6 +89,7 @@ def rearrange_collision(
     verbose: bool = False,
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
+    get_extra_coll_data: bool = False,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
     robot_model = sim.robot
@@ -143,13 +144,20 @@ def rearrange_collision(
                 continue
             obj_scene_colls += 1
 
-    coll_details = CollDetails(
-        obj_scene_colls=min(obj_scene_colls, 1),
-        robot_obj_colls=min(robot_obj_colls, 1),
-        robot_scene_colls=min(robot_scene_colls, 1),
-        robot_coll_ids=robot_coll_ids,
-        all_colls=[(x.object_id_a, x.object_id_b) for x in colls],
-    )
+    if get_extra_coll_data:
+        coll_details = CollDetails(
+            obj_scene_colls=min(obj_scene_colls, 1),
+            robot_obj_colls=min(robot_obj_colls, 1),
+            robot_scene_colls=min(robot_scene_colls, 1),
+            robot_coll_ids=robot_coll_ids,
+            all_colls=[(x.object_id_a, x.object_id_b) for x in colls],
+        )
+    else:
+        coll_details = CollDetails(
+            obj_scene_colls=min(obj_scene_colls, 1),
+            robot_obj_colls=min(robot_obj_colls, 1),
+            robot_scene_colls=min(robot_scene_colls, 1),
+        )
     return coll_details.total_colls > 0, coll_details
 
 

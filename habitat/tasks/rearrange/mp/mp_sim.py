@@ -122,6 +122,7 @@ class HabMpSim(MpSim):
             count_obj_colls,
             ignore_names=ignore_names,
             verbose=verbose,
+            get_extra_coll_data=True,
         )
 
     @property
