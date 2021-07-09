@@ -84,7 +84,21 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
     python setup.py develop --all # install habitat and habitat_baselines
     ```
 
-2. Install `habitat-sim` from [github repo](https://github.com/facebookresearch/habitat-sim): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat`.
+2. Install `habitat-sim`:
+
+      For a machine with an attached display,
+
+      ```bash
+      conda install habitat-sim withbullet -c conda-forge -c aihabitat
+      ```
+
+      For a machine with multiple GPUs or without an attached display (i.e. a cluster),
+
+      ```bash
+       conda install habitat-sim withbullet headless -c conda-forge -c aihabitat
+      ```
+
+      See habitat-sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more detials.
 
 
 3. Run the example script `python examples/example.py ` which in the end should print out number of steps agent took inside an environment (eg: `Episode finished after 18 steps.`).
