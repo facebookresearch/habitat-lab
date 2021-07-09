@@ -26,6 +26,7 @@ from habitat.tasks.rearrange.utils import (
     IkHelper,
     convert_legacy_cfg,
     get_nav_mesh_settings,
+    make_render_only,
 )
 from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
@@ -402,6 +403,22 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
+    def viz_pos(self, pos, viz_id=None, r=0.05):
+        if viz_id is None:
+            obj_mgr = self.get_object_template_manager()
+            template = obj_mgr.get_template_by_handle(
+                obj_mgr.get_template_handles("sphere")[0]
+            )
+            template.scale = mn.Vector3(r, r, r)
+            new_template_handle = obj_mgr.register_template(
+                template, "ball_new_viz"
+            )
+            viz_id = self.add_object(new_template_handle)
+            make_render_only(viz_id, self)
+        self.set_translation(mn.Vector3(*pos), viz_id)
+
+        return viz_id
+
     def draw_obs(self):
         """Synchronously gets the observation at the current step"""
         # Update the world state to get most recent render
@@ -439,3 +456,13 @@ class RearrangeSim(HabitatSim):
         return np.array(
             [self.get_translation(idx) for idx in self.scene_obj_ids]
         )
+
+    def draw_sphere(self, r, template_name="ball_new"):
+        obj_mgr = self.get_object_template_manager()
+        template_handle = obj_mgr.get_template_handles("sphere")[0]
+        template = obj_mgr.get_template_by_handle(template_handle)
+        template.scale = mn.Vector3(r, r, r)
+        new_template_handle = obj_mgr.register_template(template, "ball_new")
+        obj_id = self.add_object(new_template_handle)
+        self.set_object_motion_type(MotionType.KINEMATIC, obj_id)
+        return obj_id

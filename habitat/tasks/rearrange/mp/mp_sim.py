@@ -12,8 +12,12 @@ except ImportError:
 
 from habitat.tasks.rearrange.mp.projector.voxel_gen import VoxelMapper
 from habitat.tasks.rearrange.mp.robot_target import ObjPlanningData
-from habitat.tasks.rearrange.utils import check_pb_install, get_aabb
-from habitat_sim.physics import MotionType
+from habitat.tasks.rearrange.utils import (
+    check_pb_install,
+    get_aabb,
+    rearrange_collision,
+)
+from habitat_sim.physics import CollisionGroups, MotionType
 
 
 class MpSim(ABC):
@@ -23,7 +27,7 @@ class MpSim(ABC):
 
     def __init__(self, sim):
         self._sim = sim
-        self._ik = self._sim._ik
+        self._ik = self._sim.ik_helper
 
     def setup(self, use_prev):
         pass
@@ -46,7 +50,7 @@ class MpSim(ABC):
         """
 
     @abstractmethod
-    def get_collisions(self):
+    def get_collisions(self, count_obj_colls, ignore_names, verbose):
         """
         Returns a list of pairs that collided where each element in the pair is
         of the form:
@@ -112,47 +116,49 @@ class MpSim(ABC):
 
 
 class HabMpSim(MpSim):
-    def get_collisions(self):
-        return self._sim.get_collisions()
+    def get_collisions(self, count_obj_colls, ignore_names, verbose):
+        return rearrange_collision(
+            self._sim,
+            count_obj_colls,
+            ignore_names=ignore_names,
+            verbose=verbose,
+        )
 
     @property
-    def _hold_local_idx(self):
-        if self._sim.snapped_obj_id is None:
-            return None
-        return self._sim.scene_obj_ids.index(self._sim.snapped_obj_id)
+    def _snap_idx(self):
+        return self._sim.grasp_mgr.snap_idx
 
     def capture_state(self):
         env_state = self._sim.capture_state()
         return env_state
 
     def get_ee_pos(self):
-        return self._sim.get_end_effector_pos()
+        return self._sim.robot.ee_transform.translation
 
     def set_state(self, state):
-        if self._hold_local_idx is not None:
+        if self._snap_idx is not None:
             # Auto-snap the held object to the robot's hand.
-            state["static_T"][
-                self._hold_local_idx
-            ] = self._sim.robot.ee_transform
+            local_idx = self._sim.scene_obj_ids.index(self._snap_idx)
+            state["static_T"][local_idx] = self._sim.robot.ee_transform
         self._sim.set_state(state)
 
     def set_arm_pos(self, joint_pos):
-        self._sim.set_arm_pos(joint_pos)
+        self._sim.robot.arm_joint_pos = joint_pos
 
     def get_robot_transform(self):
-        return self._sim.get_robot_transform()
+        return self._sim.robot.sim_obj.transformation
 
     def get_obj_info(self, obj_idx) -> ObjPlanningData:
         return ObjPlanningData(
-            bb=get_aabb(obj_idx, self._sim._sim),
-            trans=self._sim._sim.get_transformation(obj_idx),
+            bb=get_aabb(obj_idx, self._sim),
+            trans=self._sim.get_transformation(obj_idx),
         )
 
     def set_position(self, pos, obj_id):
-        self._sim._sim.set_translation(pos, obj_id)
+        self._sim.set_translation(pos, obj_id)
 
     def get_arm_pos(self):
-        return self._sim.get_arm_pos()
+        return self._sim.robot.arm_joint_pos
 
     def micro_step(self):
         # self._sim.perform_discrete_collision_detection()
@@ -160,27 +166,31 @@ class HabMpSim(MpSim):
 
     def add_sphere(self, radius, color):
         sphere_id = self._sim.draw_sphere(radius)
-        self._sim._sim.override_collision_group(sphere_id, 64)
+
+        rigid_obj = self._sim.get_rigid_object_manager().get_object_by_id(
+            sphere_id
+        )
+        rigid_obj.override_collision_group(CollisionGroups.UserGroup7)
         return sphere_id
 
     def remove_object(self, obj_id):
-        self._sim._sim.remove_object(obj_id)
+        self._sim.remove_object(obj_id)
 
     def set_targ_obj_idx(self, targ_obj_idx):
         if targ_obj_idx is not None:
-            self._sim._sim.override_collision_group(targ_obj_idx, 128)
+            self._sim.override_collision_group(targ_obj_idx, 128)
 
     def unset_targ_obj_idx(self, targ_obj_idx):
         if targ_obj_idx is not None:
-            self._sim._sim.override_collision_group(targ_obj_idx, 8)
+            self._sim.override_collision_group(targ_obj_idx, 8)
 
     def render(self):
         obs = self._sim.step(0)
-        if "high_rgb" not in obs:
+        if "robot_third_rgb" not in obs:
             raise ValueError(
                 ("CHECKPOINT_RENDER_INTERVAL must be 1 " "to use mod_mp_")
             )
-        pic = obs["high_rgb"]
+        pic = obs["robot_third_rgb"]
         pic = np.flip(pic, 0)
         if pic.shape[-1] > 3:
             # Skip the depth part.
@@ -189,7 +199,7 @@ class HabMpSim(MpSim):
 
     def start_mp(self):
         self.prev_motion_types = {}
-        self.hold_obj = self._hold_local_idx
+        self.hold_obj = self._snap_idx
         if self.hold_obj is not None:
             self._sim.desnap_object(force=True)
             self._sim.do_grab_using_constraint = False
@@ -200,7 +210,7 @@ class HabMpSim(MpSim):
             self.prev_motion_types[obj_id] = self._sim.get_object_motion_type(
                 obj_id
             )
-            if obj_id == self._sim.snapped_obj_id:
+            if obj_id == self._snap_idx:
                 pass
                 # self._sim.set_object_motion_type(MotionType.KINEMATIC, obj_id)
             else:
@@ -297,7 +307,7 @@ class PbMpSim(MpSim):
         voxels = voxels[:take_count, :3]
 
         if not use_prev:
-            self._sim.set_arm_pos(orig_arm)
+            self._sim.robot.arm_joint_pos = orig_arm
 
         sphere_id = p.createCollisionShape(
             p.GEOM_SPHERE, radius=sphere_radius, physicsClientId=self.pc_id
@@ -351,7 +361,7 @@ class PbMpSim(MpSim):
     def get_robot_transform(self):
         return self.robot_transform
 
-    def get_collisions(self):
+    def get_collisions(self, count_obj_colls, ignore_names, verbose):
         colls = p.getContactPoints(physicsClientId=self.pc_id)
 
         def convert_coll(x):
@@ -494,7 +504,7 @@ class PbMpSim(MpSim):
         def_obj_bb = mn.Range3D.from_center(
             mn.Vector3(0, 0, 0), mn.Vector3(r, r, r)
         )
-        obj_pos = self._sim._sim.get_translation(obj_idx)
+        obj_pos = self._sim.get_translation(obj_idx)
         return ObjPlanningData(
             bb=def_obj_bb, trans=mn.Matrix4.translation(obj_pos)
         )

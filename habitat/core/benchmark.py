@@ -132,8 +132,8 @@ class Benchmark:
 
         count_episodes = 0
         while count_episodes < num_episodes:
-            agent.reset()
             observations = self._env.reset()
+            agent.reset()
 
             while not self._env.episode_over:
                 action = agent.act(observations)

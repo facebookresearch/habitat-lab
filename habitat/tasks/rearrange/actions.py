@@ -127,6 +127,40 @@ class ArmVelAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
+class ArmAbsPosAction(SimulatorTaskAction):
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+
+    def step(self, set_pos, should_step=True, *args, **kwargs):
+        # No clipping because the arm is being set to exactly where it needs to
+        # go.
+        self._sim: RearrangeSim
+        self._sim.robot.arm_motor_pos = set_pos
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_ABS_POS)
+        else:
+            return None
+
+
+@registry.register_task_action
+class ArmAbsPosKinematicAction(SimulatorTaskAction):
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+
+    def step(self, set_pos, should_step=True, *args, **kwargs):
+        # No clipping because the arm is being set to exactly where it needs to
+        # go.
+        self._sim: RearrangeSim
+        self._sim.robot.arm_joint_pos = set_pos
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_ABS_POS_KINEMATIC)
+        else:
+            return None
+
+
+@registry.register_task_action
 class BaseVelAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)

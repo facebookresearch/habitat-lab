@@ -9,7 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import attr
 import gym
@@ -62,6 +62,8 @@ class CollDetails:
     obj_scene_colls: int = 0
     robot_obj_colls: int = 0
     robot_scene_colls: int = 0
+    robot_coll_ids: List[int] = []
+    all_colls: List[Tuple[int, int]] = []
 
     @property
     def total_colls(self):
@@ -76,6 +78,8 @@ class CollDetails:
             obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
             robot_obj_colls=self.robot_obj_colls + other.robot_obj_colls,
             robot_scene_colls=self.robot_scene_colls + other.robot_scene_colls,
+            robot_coll_ids=[*self.robot_coll_ids, *other.robot_coll_ids],
+            all_colls=[*self.all_colls, *other.all_colls],
         )
 
 
@@ -110,6 +114,7 @@ def rearrange_collision(
 
     # Filter out any collisions with the ignore objects
     colls = list(filter(should_keep, colls))
+    robot_coll_ids = []
 
     # Check for robot collision
     robot_obj_colls = 0
@@ -124,6 +129,11 @@ def rearrange_collision(
         else:
             robot_scene_colls += 1
 
+        if match.object_id_a == robot_id:
+            robot_coll_ids.append(match.object_id_b)
+        else:
+            robot_coll_ids.append(match.object_id_a)
+
     # Checking for holding object collision
     obj_scene_colls = 0
     if count_obj_colls and snapped_obj_id is not None:
@@ -137,6 +147,8 @@ def rearrange_collision(
         obj_scene_colls=min(obj_scene_colls, 1),
         robot_obj_colls=min(robot_obj_colls, 1),
         robot_scene_colls=min(robot_scene_colls, 1),
+        robot_coll_ids=robot_coll_ids,
+        all_colls=[(x.object_id_a, x.object_id_b) for x in colls],
     )
     return coll_details.total_colls > 0, coll_details
 

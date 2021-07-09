@@ -210,9 +210,9 @@ class JsMpSpace(MpSpace):
         return 0.1
 
     def set_arm(self, des_joint_pos):
+        des_joint_pos = self.convert_state(des_joint_pos)
         self._fk(des_joint_pos)
         self._mp_sim.set_state(self.env_state)
-        des_joint_pos = self.convert_state(des_joint_pos)
         des_joint_pos = np.array(des_joint_pos)[:7]
 
     def convert_sol(self, path):

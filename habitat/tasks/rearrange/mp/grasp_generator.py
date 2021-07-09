@@ -65,7 +65,7 @@ class GraspGenerator:
         for iter_i in range(timeout):
             if iter_i == 0:
                 # Check if the starting state can already achieve the goal.
-                cur_js = start_arm_js
+                cur_js = np.array(start_arm_js)
             else:
                 cur_js = np.random.uniform(lower_lims, upper_lims)
 

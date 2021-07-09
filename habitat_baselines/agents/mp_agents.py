@@ -12,12 +12,20 @@ from habitat.tasks.rearrange.mp.robot_target import RobotTarget
 
 
 class ParameterizedAgent(habitat.Agent):
-    def __init__(self, env, config, actions_config, should_auto_end=True):
+    def __init__(
+        self,
+        env,
+        config,
+        action_config,
+        should_auto_end=True,
+        auto_get_args_fn=None,
+    ):
         self._should_auto_end = should_auto_end
+        self._auto_get_args_fn = auto_get_args_fn
         self._last_info = {}
 
         self._config = config
-        self._agent_config = actions_config
+        self._agent_config = action_config
 
         self._sim = env._sim
         self._task = env
@@ -37,7 +45,8 @@ class ParameterizedAgent(habitat.Agent):
         return ret
 
     def reset(self) -> None:
-        pass
+        if self._auto_get_args_fn is not None:
+            self.set_args(**self._auto_get_args_fn(self))
 
     def set_args(self, **kwargs) -> None:
         pass
@@ -56,7 +65,18 @@ class ParameterizedAgent(habitat.Agent):
 
 
 class AgentComposition(ParameterizedAgent):
-    def __init__(self, skills):
+    def __init__(
+        self,
+        skills,
+        env,
+        config,
+        action_config,
+        should_auto_end=True,
+        auto_get_args_fn=None,
+    ):
+        super().__init__(
+            env, config, action_config, should_auto_end, auto_get_args_fn
+        )
         self.skills: List[ParameterizedAgent] = skills
         self.cur_skill: int = 0
 
@@ -73,11 +93,13 @@ class AgentComposition(ParameterizedAgent):
         return r
 
     def set_args(self, **kwargs):
-        self.enter_kwargs = kwargs
-        self.skills[self.cur_skill].set_args(**self.enter_kwargs)
+        self._enter_kwargs = kwargs
+        self.skills[self.cur_skill].set_args(**self._enter_kwargs)
 
     def reset(self):
+        super().reset()
         self.cur_skill = 0
+        self.skills[self.cur_skill].reset()
 
     def act(self, observations):
         action = self.skills[self.cur_skill].act(observations)
@@ -88,20 +110,31 @@ class AgentComposition(ParameterizedAgent):
             self.cur_skill += 1
             if self.cur_skill < len(self.skills):
                 self._log(f"Moving to skill {self.skills[self.cur_skill]}")
-                self.skills[self.cur_skill].set_args(**self.enter_kwargs)
+                self.skills[self.cur_skill].reset()
+                self.skills[self.cur_skill].set_args(**self._enter_kwargs)
         return self.cur_skill >= len(self.skills)
 
 
 class ArmTargModule(ParameterizedAgent):
     """Reaches the arm to a target position."""
 
-    def __init__(self, env, config, should_auto_end=True):
-        super().__init__(env, config, should_auto_end)
+    def __init__(
+        self,
+        env,
+        config,
+        action_config,
+        should_auto_end=True,
+        auto_get_args_fn=None,
+    ):
+        super().__init__(
+            env, config, action_config, should_auto_end, auto_get_args_fn
+        )
         self._grasp_thresh = self._agent_config.ARM_ACTION.GRASP_THRESH_DIST
         self._viz_points = []
 
         self._mp = MotionPlanner(self._sim, self._config)
         self._mp.set_should_render(self._config.MP_RENDER)
+        self._enter_kwargs = None
 
     @property
     def wait_after(self) -> int:
@@ -116,6 +149,8 @@ class ArmTargModule(ParameterizedAgent):
         self._enter_kwargs = kwargs
 
     def reset(self) -> None:
+        self._enter_kwargs = None
+        super().reset()
         self._log("Entered arm targ")
         self._plan_idx = 0
         self._term = False
@@ -138,6 +173,8 @@ class ArmTargModule(ParameterizedAgent):
         return self._config.KINEMATIC_CTRL
 
     def act(self, observations: Observations) -> Dict[str, Any]:
+        assert self._enter_kwargs is not None, "Need to first call `set_args`!"
+
         if not self._has_generated_plan:
             self._plan = self._generate_plan(
                 observations, **self._enter_kwargs
@@ -153,9 +190,15 @@ class ArmTargModule(ParameterizedAgent):
         if not self._is_ee_plan:
             des_js = cur_plan_ac
             if self.is_kinematic_ctrl:
-                return {"SET_ARM_JS": des_js}
+                return {
+                    "action": "ARM_ABS_POS_KINEMATIC",
+                    "action_args": {"set_pos": des_js},
+                }
             else:
-                return {"MTR_ARM_JS": des_js}
+                return {
+                    "action": "ARM_ABS_POS",
+                    "action_args": {"set_pos": des_js},
+                }
         else:
             raise NotImplementedError("EE control not yet supported")
 
@@ -315,8 +358,18 @@ class MpgManipPick(ArmTargModule):
 
 
 class MpgResetModule(ArmTargModule):
-    def __init__(self, env, config, should_auto_end=True, ignore_first=False):
-        super().__init__(env, config, should_auto_end)
+    def __init__(
+        self,
+        env,
+        config,
+        action_config,
+        should_auto_end=True,
+        ignore_first=False,
+        auto_get_args_fn=None,
+    ):
+        super().__init__(
+            env, config, action_config, should_auto_end, auto_get_args_fn
+        )
         self._ignore_first = ignore_first
 
     def _generate_plan(self, observations, **kwargs):
@@ -389,12 +442,26 @@ def main():
     ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
     spa_cfg = config.SPA
     env = benchmark._env
+
+    def get_args(skill):
+        target_idx = skill._sim.get_targets()[0][0]
+        return {"obj": target_idx}
+
     skills = {
         "pick": AgentComposition(
             [
-                MpgManipPick(env, spa_cfg, ac_cfg),
-                MpgResetModule(env, spa_cfg, ac_cfg, ignore_first=True),
-            ]
+                MpgManipPick(env, spa_cfg, ac_cfg, auto_get_args_fn=get_args),
+                MpgResetModule(
+                    env,
+                    spa_cfg,
+                    ac_cfg,
+                    ignore_first=True,
+                    auto_get_args_fn=get_args,
+                ),
+            ],
+            env,
+            spa_cfg,
+            ac_cfg,
         )
     }
     use_skill = skills[args.skill_type]

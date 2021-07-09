@@ -29,7 +29,7 @@ from functools import partial
 from habitat.tasks.rearrange.mp.grasp_generator import GraspGenerator
 from habitat.tasks.rearrange.mp.mp_sim import HabMpSim, PbMpSim
 from habitat.tasks.rearrange.mp.mp_spaces import JsMpSpace
-from habitat.tasks.rearrange.utils import make_border_red, rearrange_collision
+from habitat.tasks.rearrange.utils import make_border_red
 
 
 class MotionPlanner:
@@ -83,7 +83,10 @@ class MotionPlanner:
 
     def get_mp_space(self):
         return JsMpSpace(
-            self._use_sim, self._sim._ik, self._num_calls, self._should_render
+            self._use_sim,
+            self._sim.ik_helper,
+            self._num_calls,
+            self._should_render,
         )
 
     def _is_state_valid(self, x, is_real=False):
@@ -93,25 +96,20 @@ class MotionPlanner:
                 self._use_sim.get_ee_pos(), self._sphere_id
             )
         self._use_sim.micro_step()
-        colls = self._use_sim.get_collisions()
+        did_collide, coll_details = self._use_sim.get_collisions(
+            self._config.COUNT_OBJ_COLLISIONS, self._ignore_names, True
+        )
         if (
             self._ignore_first
             or self._use_sim.should_ignore_first_collisions()
         ) and self._coll_check_count == 0:
-            start_colls = [b["name"] for a, b in colls]
-            self._ignore_names.extend(start_colls)
+            self._ignore_names.extend(coll_details.robot_coll_ids)
             self._log(
                 "First run, ignoring collisions from "
                 + str(self._ignore_names)
             )
         self._coll_check_count += 1
 
-        did_collide, coll_details = rearrange_collision(
-            self._sim,
-            self._config.COUNT_OBJ_COLLISIONS,
-            ignore_names=self._ignore_names,
-            verbose=True,
-        )
         if not self._use_sim.should_ignore_first_collisions():
             # We only want to continue to ignore collisions from this if we are
             # using a point cloud approach.
@@ -120,7 +118,9 @@ class MotionPlanner:
             return False
 
         # Check we satisfy the EE margin, if there is one.
-        if not self._check_ee_coll(self._ee_margin, self._sphere_id, colls):
+        if not self._check_ee_coll(
+            self._ee_margin, self._sphere_id, coll_details
+        ):
             return False
 
         return True
@@ -145,7 +145,7 @@ class MotionPlanner:
         self._mp_space = self.get_mp_space()
         self._ignore_names = []
         self._ignore_first = ignore_first
-        self._hold_id = self._sim.snapped_obj_id
+        self._hold_id = self._sim.grasp_mgr.snap_idx
         self._use_sim.setup(use_prev)
         if self.traj_viz_id is not None:
             self._sim.remove_traj_obj(self.traj_viz_id)
@@ -153,7 +153,7 @@ class MotionPlanner:
         self.grasp_gen = GraspGenerator(
             self._use_sim,
             self._mp_space,
-            self._sim._ik,
+            self._sim.ik_helper,
             self,
             self._should_render,
             grasp_thresh,
@@ -218,7 +218,7 @@ class MotionPlanner:
         if robot_target.is_guess:
             return None
 
-        self.hold_id = self._sim.snapped_obj_id
+        self.hold_id = self._sim.grasp_mgr.snap_idx
 
         use_sim.start_mp()
         self._log("Starting plan from %s" % str(start_js))
@@ -348,22 +348,18 @@ class MotionPlanner:
         else:
             raise ValueError("Unrecognized simulator type")
 
-    def _check_ee_coll(self, ee_margin, sphere_id, colls):
-        return True
-        # if ee_margin is not None:
-        #    obj_id = self.hold_id
-        #    if obj_id is None:
-        #        obj_id = self._reach_for_obj
+    def _check_ee_coll(self, ee_margin, sphere_id, coll_details):
+        if ee_margin is not None:
+            obj_id = self.hold_id
 
-        #    # This is how the collision is checked in Habitat Sim
-        #    matches = get_collision_matches("group 64", colls, 'link')
-        #    if len(matches) > 0:
-        #        return False
-        #    # This is how the collision is checked in PyBullet.
-        #    matches = get_collision_matches(str(sphere_id), colls, 'name')
-        #    if len(matches) > 0:
-        #        return False
-        # return True
+            if obj_id is None:
+                obj_id = self._reach_for_obj
+
+            any_match = any([sphere_id in x for x in coll_details.all_colls])
+            if any_match:
+                return False
+
+        return True
 
     def _get_path(
         self, is_state_valid, start_js, robot_targ, use_sim, mp_space, timeout
