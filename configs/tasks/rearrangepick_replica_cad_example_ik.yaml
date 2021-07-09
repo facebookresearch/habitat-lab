@@ -89,11 +89,7 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmVelAction"
-
-            # Uncomment to run with end-effector control
-            #ARM_CONTROLLER: "ArmEEAction"
-
+            ARM_CONTROLLER: "ArmEEAction"
             GRIP_CONTROLLER: "MagicGraspAction"
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
@@ -169,8 +165,7 @@ SIMULATOR:
     LAG_OBSERVATIONS: 1
     SHOULD_RENDER_DEBUG: True
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    # Uncomment to use IK control
-    #IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480
