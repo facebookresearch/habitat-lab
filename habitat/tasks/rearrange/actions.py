@@ -287,7 +287,15 @@ class ArmEEAction(SimulatorTaskAction):
             self.robot_ee_constraints[:, 1],
         )
 
+    @property
+    def global_ee_targ(self):
+        robot_T = self._sim.robot.base_transformation
+        global_ee_targ = robot_T.transform_point(self.ee_targ)
+        return global_ee_targ
+
     def set_desired_ee_pos(self, des_rel_pos):
+        # print('EE error ',
+        #        np.linalg.norm(self._sim.robot.ee_transform.translation - self.global_ee_targ))
         self.ee_targ += np.array(des_rel_pos)
         self.apply_ee_constraints()
 
@@ -297,6 +305,9 @@ class ArmEEAction(SimulatorTaskAction):
         joint_vel = np.zeros(joint_pos.shape)
 
         ik.set_arm_state(joint_pos, joint_vel)
+        # self._sim.viz_ids['ee_targ_local'] = self._sim.viz_pos(
+        #        self.ee_targ,
+        #        self._sim.viz_ids['ee_targ_local'], r=0.1)
 
         des_joint_pos = ik.calc_ik(self.ee_targ)
         des_joint_pos = list(des_joint_pos)

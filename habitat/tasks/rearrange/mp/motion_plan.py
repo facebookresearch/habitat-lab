@@ -45,6 +45,8 @@ class MotionPlanner:
         self._ignore_names: List[str] = []
         self.traj_viz_id = None
         self._sim = sim
+        if not osp.exists(self._config.DEBUG_DIR):
+            os.makedirs(self._config.DEBUG_DIR)
 
         self._use_sim = self._get_sim()
         self.grasp_gen = None
@@ -71,7 +73,7 @@ class MotionPlanner:
         if pic.shape[-1] > 3:
             pic = pic[:, :, :3]
         im = Image.fromarray(pic)
-        save_name = "data/%s/%s%s_%s.jpeg" % (
+        save_name = "%s/%s%s_%s.jpeg" % (
             self._config.DEBUG_DIR,
             before_txt,
             str(uuid.uuid4())[:4],
@@ -89,13 +91,14 @@ class MotionPlanner:
             self._should_render,
         )
 
-    def _is_state_valid(self, x, is_real=False):
+    def _is_state_valid(self, x, take_image=False):
         self._mp_space.set_arm(x)
         if self._ee_margin is not None and self._sphere_id is not None:
             self._use_sim.set_position(
                 self._use_sim.get_ee_pos(), self._sphere_id
             )
         self._use_sim.micro_step()
+
         did_collide, coll_details = self._use_sim.get_collisions(
             self._config.COUNT_OBJ_COLLISIONS, self._ignore_names, True
         )
@@ -109,6 +112,8 @@ class MotionPlanner:
                 + str(self._ignore_names)
             )
         self._coll_check_count += 1
+        if take_image:
+            self.photo(f"{did_collide}")
 
         if not self._use_sim.should_ignore_first_collisions():
             # We only want to continue to ignore collisions from this if we are
@@ -160,6 +165,7 @@ class MotionPlanner:
             n_gen_grasps,
             self._config.MP_SIM_TYPE == "Priv",
             self._config.DEBUG_DIR,
+            self._config.GRASP_GEN_IS_VERBOSE,
         )
 
     def setup_ee_margin(self, obj_targ):

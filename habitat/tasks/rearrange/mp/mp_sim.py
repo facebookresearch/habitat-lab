@@ -77,7 +77,7 @@ class MpSim(ABC):
         pass
 
     @abstractmethod
-    def add_sphere(self, radius, color):
+    def add_sphere(self, radius, color=None):
         pass
 
     @abstractmethod
@@ -147,7 +147,7 @@ class HabMpSim(MpSim):
         self._sim.robot.arm_joint_pos = joint_pos
 
     def get_robot_transform(self):
-        return self._sim.robot.sim_obj.transformation
+        return self._sim.robot.base_transformation
 
     def get_obj_info(self, obj_idx) -> ObjPlanningData:
         return ObjPlanningData(
@@ -165,7 +165,7 @@ class HabMpSim(MpSim):
         # self._sim.perform_discrete_collision_detection()
         self._sim.internal_step(-1)
 
-    def add_sphere(self, radius, color):
+    def add_sphere(self, radius, color=None):
         sphere_id = self._sim.draw_sphere(radius)
 
         rigid_obj = self._sim.get_rigid_object_manager().get_object_by_id(
@@ -429,7 +429,7 @@ class PbMpSim(MpSim):
             ]
         )
 
-    def add_sphere(self, radius, color):
+    def add_sphere(self, radius, color=None):
         if color is None:
             color = [0, 1, 0, 1]
         sphere_coll = p.createCollisionShape(

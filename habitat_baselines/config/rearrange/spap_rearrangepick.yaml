@@ -15,6 +15,10 @@ SPA:
   VIDEO_DIR: 'data/vids'
   DEBUG_DIR: "data/mp_test"
   COUNT_OBJ_COLLISIONS: True
+  GRASP_GEN_IS_VERBOSE: True
+VIDEO_DIR: "data/vids/"
+VIDEO_OPTIONS: ["disk"]
+
 
 COUNT_OBJ_COLLISIONS: True
 COUNT_ROBOT_OBJ_COLLS: False

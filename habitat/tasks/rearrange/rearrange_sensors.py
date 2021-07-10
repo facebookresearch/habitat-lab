@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import attr
 import numpy as np
 from gym import spaces
 
@@ -159,7 +158,7 @@ class LocalizationSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.sim_obj.transformation
+        trans = self._sim.robot.base_transformation
         forward = np.array([1.0, 0, 0])
         heading = np.array(trans.transform_vector(forward))
         forward = forward[[0, 2]]
@@ -251,7 +250,7 @@ class EeSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.sim_obj.transformation
+        trans = self._sim.robot.base_transformation
         ee_pos = self._sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
@@ -401,7 +400,9 @@ class RobotCollisions(Measure):
         self._accum_coll_info += cur_coll_info
         self._metric = {
             "total_colls": self._accum_coll_info.total_colls,
-            **attr.asdict(self._accum_coll_info),
+            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
         }
 
 

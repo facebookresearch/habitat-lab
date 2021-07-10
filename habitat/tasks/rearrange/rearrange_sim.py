@@ -160,7 +160,9 @@ class RearrangeSim(HabitatSim):
 
         self._add_objs(ep_info)
         if self.robot is None:
-            self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
+            self.robot = FetchRobot(
+                self.habitat_config.ROBOT_URDF, self, limit_robo_joints=False
+            )
             self.robot.reconfigure()
         self.robot.reset()
         self.grasp_mgr.reset()
@@ -287,14 +289,16 @@ class RearrangeSim(HabitatSim):
         art_pos = [ao.joint_positions for ao in self.art_objs]
         robot_js = self.robot.sim_obj.joint_positions
 
-        return {
+        ret = {
             "robot_T": robot_T,
-            "robot_js": robot_js,
             "art_T": art_T,
             "static_T": static_T,
             "art_pos": art_pos,
             "obj_hold": self.grasp_mgr.snap_idx,
         }
+        if with_robot_js:
+            ret["robot_js"] = robot_js
+        return ret
 
     def set_state(self, state, set_hold=False):
         """
@@ -304,7 +308,9 @@ class RearrangeSim(HabitatSim):
         """
         if state["robot_T"] is not None:
             self.robot.sim_obj.transformation = state["robot_T"]
-            self.robot.sim_obj.clear_joint_states()
+            n_dof = len(self.robot.sim_obj.joint_forces)
+            self.robot.sim_obj.joint_forces = np.zeros(n_dof)
+            self.robot.sim_obj.joint_velocities = np.zeros(n_dof)
 
         if "robot_js" in state:
             self.robot.sim_obj.joint_positions = state["robot_js"]

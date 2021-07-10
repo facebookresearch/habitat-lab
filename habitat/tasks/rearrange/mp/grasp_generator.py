@@ -7,8 +7,6 @@ from habitat.tasks.rearrange.mp.robot_target import (
     RobotTarget,
 )
 
-VERBOSE = False
-
 
 class GraspGenerator:
     def __init__(
@@ -22,6 +20,7 @@ class GraspGenerator:
         n_gen_grasps,
         knows_other_objs,
         log_dir,
+        is_verbose,
     ):
         self._mp_sim = use_sim
         self._ik = ik
@@ -36,6 +35,7 @@ class GraspGenerator:
         self._n_gen_grasps = n_gen_grasps
         self.knows_other_objs = knows_other_objs
         self._log_dir = log_dir
+        self._is_verbose = is_verbose
 
     def get_def_js(self):
         # A reference state which we should generally stay close to.
@@ -55,7 +55,6 @@ class GraspGenerator:
         start_state = self._mp_sim.capture_state()
 
         self._mp_space.set_env_state(start_state)
-        start_js = self._mp_sim.get_arm_pos()
 
         start_arm_js = self._mp_sim.get_arm_pos()
         state_lims = self._mp_space.get_state_lims(True)
@@ -71,6 +70,9 @@ class GraspGenerator:
 
             self._ik.set_arm_state(cur_js, np.zeros(cur_js.shape))
             desired_js = self._ik.calc_ik(local_ee_targ)
+            self._mp_sim.set_arm_pos(desired_js)
+            self._mp_sim.micro_step()
+
             state_valid = all(
                 [self._is_state_valid_fn(desired_js) for _ in range(5)]
             )
@@ -78,7 +80,7 @@ class GraspGenerator:
                 found_sol = np.array(desired_js)
                 break
 
-        self._mp_sim.set_arm_pos(start_js)
+        self._mp_sim.set_arm_pos(start_arm_js)
         self._mp_sim.set_state(start_state)
         return found_sol, found_sol is not None
 
@@ -113,7 +115,7 @@ class GraspGenerator:
         return targ
 
     def _verbose_log(self, s):
-        if VERBOSE:
+        if self._is_verbose:
             print(f"GraspPlanner: {s}")
 
     def get_obj_goal_offset(self, obj_idx):
@@ -259,7 +261,9 @@ class GraspGenerator:
             ee_dist = np.linalg.norm(real_ee_pos - obj_pos)
             if ee_dist >= self._grasp_thresh:
                 found_goal_js = goal_js
-                self._verbose_log("Actual EE wasn't in grasp range")
+                self._verbose_log(
+                    f"Actual EE wasn't in grasp range. {ee_dist} away"
+                )
                 continue
 
             if self.knows_other_objs:
@@ -276,7 +280,7 @@ class GraspGenerator:
                     real_ee_pos, sim.viz_ids["ee"], r=5.0
                 )
                 Image.fromarray(self._mp_sim.render()).save(
-                    f"data/{self._log_dir}/grasp_plan_{i}_{ee_dist}.jpeg"
+                    f"{self._log_dir}/grasp_plan_{i}_{ee_dist}.jpeg"
                 )
 
             self._verbose_log(f"Found solution at {i}, breaking")

@@ -227,7 +227,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         args = {"base_vel": base_action}
     else:
         name = "ARM_ACTION"
-        args = {"arm_ac": arm_action, "grip_ac": magic_grasp}
+        args = {"arm_action": arm_action, "grip_action": magic_grasp}
 
     if end_ep:
         env.reset()
@@ -276,6 +276,7 @@ def play_env(env, args, config):
     while True:
         if render_count is not None and i > render_count:
             break
+
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[i] if use_arm_actions is not None else None,

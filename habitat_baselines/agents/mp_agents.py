@@ -9,6 +9,7 @@ from habitat.config.default import get_config
 from habitat.core.simulator import Observations
 from habitat.tasks.rearrange.mp.motion_plan import MotionPlanner
 from habitat.tasks.rearrange.mp.robot_target import RobotTarget
+from habitat_baselines.agents.benchmark_render import BenchmarkRenderer
 
 
 class ParameterizedAgent(habitat.Agent):
@@ -427,6 +428,7 @@ class MpgResetModule(ArmTargModule):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--skill-type", default="pick")
+    parser.add_argument("--num-eval", type=int, default=None)
     parser.add_argument(
         "opts",
         default=None,
@@ -437,7 +439,9 @@ def main():
     cfg_path = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
 
     config = get_config(cfg_path, args.opts)
-    benchmark = habitat.Benchmark(config.BASE_TASK_CONFIG_PATH)
+    benchmark = BenchmarkRenderer(
+        config.BASE_TASK_CONFIG_PATH, config.VIDEO_OPTIONS, config.VIDEO_DIR
+    )
 
     ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
     spa_cfg = config.SPA
@@ -466,7 +470,7 @@ def main():
     }
     use_skill = skills[args.skill_type]
 
-    metrics = benchmark.evaluate(use_skill)
+    metrics = benchmark.evaluate(use_skill, args.num_eval)
     for k, v in metrics.items():
         habitat.logger.info("{}: {:.3f}".format(k, v))
 
