@@ -7,6 +7,7 @@ import numpy as np
 import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import Observations
+from habitat.tasks.rearrange.actions import get_empty_action
 from habitat.tasks.rearrange.mp.motion_plan import MotionPlanner
 from habitat.tasks.rearrange.mp.robot_target import RobotTarget
 from habitat_baselines.agents.benchmark_render import BenchmarkRenderer
@@ -103,10 +104,15 @@ class AgentComposition(ParameterizedAgent):
         self.skills[self.cur_skill].reset()
 
     def act(self, observations):
+        if self.should_term(observations):
+            return get_empty_action()
+
         action = self.skills[self.cur_skill].act(observations)
         return action
 
     def should_term(self, observations):
+        if self.cur_skill >= len(self.skills):
+            return True
         if self.skills[self.cur_skill].should_term(observations):
             self.cur_skill += 1
             if self.cur_skill < len(self.skills):
@@ -168,11 +174,6 @@ class ArmTargModule(ParameterizedAgent):
         )
         self._viz_points.append(pos_name)
 
-    @property
-    def is_kinematic_ctrl(self) -> bool:
-        r"""Are we using kinematic control?"""
-        return self._config.KINEMATIC_CTRL
-
     def act(self, observations: Observations) -> Dict[str, Any]:
         assert self._enter_kwargs is not None, "Need to first call `set_args`!"
 
@@ -184,22 +185,17 @@ class ArmTargModule(ParameterizedAgent):
 
         cur_plan_ac = self._get_plan_ac(observations)
         if cur_plan_ac is None:
-            self.term = True
-            return {"EMPTY": {}}
+            self._term = True
+            return get_empty_action()
 
         self._plan_idx += 1
+        grip = self._get_gripper_ac(cur_plan_ac)
         if not self._is_ee_plan:
             des_js = cur_plan_ac
-            if self.is_kinematic_ctrl:
-                return {
-                    "action": "ARM_ABS_POS_KINEMATIC",
-                    "action_args": {"set_pos": des_js},
-                }
-            else:
-                return {
-                    "action": "ARM_ABS_POS",
-                    "action_args": {"set_pos": des_js},
-                }
+            return {
+                "action": "ARM_ACTION",
+                "action_args": {"arm_action": des_js, "grip_action": grip},
+            }
         else:
             raise NotImplementedError("EE control not yet supported")
 
@@ -220,7 +216,7 @@ class ArmTargModule(ParameterizedAgent):
         return False
 
     def should_term(self, observations: Observations) -> bool:
-        done = self.term
+        done = self._term
         if (
             self._plan is not None
             and self.adjusted_plan_idx >= len(self._plan) + self.wait_after
@@ -289,8 +285,8 @@ class MpgManipPick(ArmTargModule):
     def wait_after(self):
         return 5
 
-    def _internal_should_term(self, state, add_state):
-        is_holding = add_state["is_holding"].item() == 1
+    def _internal_should_term(self, observations):
+        is_holding = observations["is_holding"].item() == 1
         if is_holding:
             self._log("Robot is holding object, leaving pick")
             # Override indicating we succeeded
@@ -414,7 +410,7 @@ class MpgResetModule(ArmTargModule):
         self._clean_mp()
 
     def _get_gripper_ac(self, plan_ac):
-        if self._sim.is_gripper_open():
+        if self._sim.robot.is_gripper_open:
             grip = -1.0
         else:
             grip = 1.0
@@ -440,7 +436,12 @@ def main():
 
     config = get_config(cfg_path, args.opts)
     benchmark = BenchmarkRenderer(
-        config.BASE_TASK_CONFIG_PATH, config.VIDEO_OPTIONS, config.VIDEO_DIR
+        config.BASE_TASK_CONFIG_PATH,
+        config.VIDEO_OPTIONS,
+        config.VIDEO_DIR,
+        {
+            "rearrangepick_success",
+        },
     )
 
     ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
@@ -466,6 +467,7 @@ def main():
             env,
             spa_cfg,
             ac_cfg,
+            auto_get_args_fn=get_args,
         )
     }
     use_skill = skills[args.skill_type]

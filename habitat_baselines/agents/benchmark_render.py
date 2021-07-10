@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
@@ -13,12 +13,14 @@ class BenchmarkRenderer(Benchmark):
         config_paths: Optional[str],
         video_option: List[str],
         video_dir: str,
+        vid_filename_metrics: Set[str],
         writer=None,
     ) -> None:
         super().__init__(config_paths, False)
         self._video_option = video_option
         self._video_dir = video_dir
         self._writer = writer
+        self._vid_filename_metrics = vid_filename_metrics
 
     def evaluate(
         self,
@@ -75,7 +77,11 @@ class BenchmarkRenderer(Benchmark):
                     episode_id=None,
                     # episode_id=self._env.episode_id,
                     checkpoint_idx=0,
-                    metrics=metrics,
+                    metrics={
+                        k: v
+                        for k, v in metrics.items()
+                        if k in self._vid_filename_metrics
+                    },
                     tb_writer=self._writer,
                 )
 

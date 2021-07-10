@@ -61,13 +61,16 @@ class RearrangeTask(NavigationTask):
 
         done = False
         if self.measurements.get_metrics()[RearrangePickSuccess.cls_uuid]:
+            print("success")
             done = True
 
         if self.should_end:
+            print("should ned")
             done = True
 
         if self._sim.grasp_mgr.is_violating_hold_constraint():
             done = True
+            print("violating hold")
 
         return not done
 

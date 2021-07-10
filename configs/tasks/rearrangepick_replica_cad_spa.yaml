@@ -53,6 +53,8 @@ TASK:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
     REARRANGE_PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -63,7 +65,7 @@ TASK:
         WRONG_PICK_PEN: 5.0
         COLL_PEN: 1.0
         ROBOT_OBJ_COLL_PEN: 0.0
-        MAX_ACCUM_FORCE: 5000.0
+        MAX_ACCUM_FORCE: null
 
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
@@ -75,31 +77,28 @@ TASK:
 
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
-        SUCC_THRESH: 0.15
+        SUCC_THRESH: 0.3
 
     MEASUREMENTS:
-        - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmVelAction"
+            ARM_CONTROLLER: "ArmAbsPosKinematicAction"
             GRIP_CONTROLLER: "MagicGraspAction"
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             VEL_CTRL_LIM: 0.0125
-        ARM_ABS_POS_KINEMATIC:
-          TYPE: "ArmAbsPosKinematicAction"
-        ARM_ABS_POS:
-          TYPE: "ArmAbsPosAction"
+        EMPTY:
+            TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        - ARM_ABS_POS_KINEMATIC
-        - ARM_ABS_POS
+        - EMPTY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0

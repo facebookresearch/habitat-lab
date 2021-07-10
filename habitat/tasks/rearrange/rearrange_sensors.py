@@ -329,6 +329,31 @@ class EndEffectorToObjectDistance(Measure):
 
 
 @registry.register_measure
+class EndEffectorToRestDistance(Measure):
+    cls_uuid: str = "ee_to_rest"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EndEffectorToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, **kwargs):
+        ee_pos = self._sim.robot.ee_transform.translation
+        inv_robot_T = self._sim.robot.base_transformation.inverted()
+        local_ee = inv_robot_T.transform_point(ee_pos)
+        rest_dist = np.linalg.norm(local_ee - task.desired_resting)
+
+        self._metric = rest_dist
+
+
+@registry.register_measure
 class DummyMeasure(Measure):
     cls_uuid: str = "dummy_measure"
 
@@ -495,17 +520,20 @@ class RearrangePickReward(Measure):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
         success = task.measurements.measures[
             RearrangePickSuccess.cls_uuid
         ].get_metric()
+
         reward = 0
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
-        ee_pos = observations["ee_pos"]
 
         if cur_picked:
-            dist_to_goal = np.linalg.norm(ee_pos - task.desired_resting)
+            dist_to_goal = ee_to_rest_distance
         else:
             dist_to_goal = ee_to_object_distance[task.targ_idx]
 
@@ -611,20 +639,19 @@ class RearrangePickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = False
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
         # Check that we are holding the right object and the object is actually
         # being held.
-        if (
+        self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-        ):
-            rest_dist = np.linalg.norm(
-                self._prev_ee_pos - task.desired_resting
-            )
-            if rest_dist < self._config.SUCC_THRESH:
-                self._metric = True
+            and ee_to_rest_distance < self._config.SUCC_THRESH
+        )
 
         self._prev_ee_pos = observations["ee_pos"]

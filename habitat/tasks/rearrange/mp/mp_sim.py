@@ -192,7 +192,6 @@ class HabMpSim(MpSim):
                 ("CHECKPOINT_RENDER_INTERVAL must be 1 " "to use mod_mp_")
             )
         pic = obs["robot_third_rgb"]
-        pic = np.flip(pic, 0)
         if pic.shape[-1] > 3:
             # Skip the depth part.
             pic = pic[:, :, :3]
@@ -202,9 +201,9 @@ class HabMpSim(MpSim):
         self.prev_motion_types = {}
         self.hold_obj = self._snap_idx
         if self.hold_obj is not None:
-            self._sim.desnap_object(force=True)
+            self._sim.grasp_mgr.desnap(force=True)
             self._sim.do_grab_using_constraint = False
-            self._sim.set_snapped_obj(self.hold_obj)
+            self._sim.grasp_mgr.snap_to_obj(self.hold_obj)
 
         # Set everything to STATIC
         for obj_id in self._sim.scene_obj_ids:
@@ -223,9 +222,9 @@ class HabMpSim(MpSim):
             self._sim.set_object_motion_type(mt, obj_id)
 
         if self.hold_obj is not None:
-            self._sim.desnap_object(force=True)
+            self._sim.grasp_mgr.desnap(force=True)
             self._sim.do_grab_using_constraint = True
-            self._sim.set_snapped_obj(self.hold_obj)
+            self._sim.grasp_mgr.snap_to_obj(self.hold_obj)
 
 
 class PbMpSim(MpSim):
