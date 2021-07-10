@@ -280,7 +280,7 @@ class ArmTargModule(ParameterizedAgent):
             self._mp.traj_viz_id = None
 
 
-class MpgManipPick(ArmTargModule):
+class SpaManipPick(ArmTargModule):
     @property
     def wait_after(self):
         return 5
@@ -354,7 +354,7 @@ class MpgManipPick(ArmTargModule):
         return grip
 
 
-class MpgResetModule(ArmTargModule):
+class SpaResetModule(ArmTargModule):
     def __init__(
         self,
         env,
@@ -455,8 +455,8 @@ def main():
     skills = {
         "pick": AgentComposition(
             [
-                MpgManipPick(env, spa_cfg, ac_cfg, auto_get_args_fn=get_args),
-                MpgResetModule(
+                SpaManipPick(env, spa_cfg, ac_cfg, auto_get_args_fn=get_args),
+                SpaResetModule(
                     env,
                     spa_cfg,
                     ac_cfg,
