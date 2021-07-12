@@ -41,6 +41,7 @@ TASK:
         DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
+        JOINT_DIM: 7
     EE_SENSOR:
         TYPE: "EeSensor"
     IS_HOLDING_SENSOR:

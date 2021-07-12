@@ -177,5 +177,7 @@ def test_gym_wrapper():
     assert isinstance(env.action_space, spaces.Box)
     obs = env.reset()
     assert isinstance(obs, np.ndarray), f"Obs {obs}"
+    assert obs.shape == env.observation_space.shape
     obs, _, _, _ = env.step(env.action_space.sample())
     assert isinstance(obs, np.ndarray), f"Obs {obs}"
+    assert obs.shape == env.observation_space.shape
