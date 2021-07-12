@@ -70,6 +70,28 @@ class AbsTargetObjectSensor(MultiObjSensor):
 
 
 @registry.register_sensor
+class TargetObjectSensor(MultiObjSensor):
+    """
+    This is the ground truth position
+    """
+
+    cls_uuid: str = "obj_cur_sensor"
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        self._sim: RearrangeSim
+        T_inv = self._sim.robot.ee_transform.inverted()
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        pos = scene_pos[idxs]
+
+        for i in range(pos.shape[0]):
+            pos[i] = T_inv.transform_point(pos[i])
+
+        return pos[self._task.targ_idx]
+
+
+@registry.register_sensor
 class TargetStartSensor(MultiObjSensor):
     """
     Relative position from end effector to target object

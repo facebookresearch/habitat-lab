@@ -425,6 +425,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--skill-type", default="pick")
     parser.add_argument("--num-eval", type=int, default=None)
+    parser.add_argument("--traj-save-path", type=str, default=None)
     parser.add_argument(
         "opts",
         default=None,
@@ -442,6 +443,7 @@ def main():
         {
             "rearrangepick_success",
         },
+        args.traj_save_path,
     )
 
     ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS

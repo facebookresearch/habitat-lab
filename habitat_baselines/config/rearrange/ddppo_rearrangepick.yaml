@@ -5,6 +5,7 @@ RL:
     SUCCESS_MEASURE: "rearrangepick_success"
     SUCCESS_REWARD: 2000.0
     SLACK_REWARD: -0.01
+    GYM_OBS_KEYS: ['obj_start_sensor', 'joint', 'is_holding', 'ee_pos']
 
     DIST_REWARD: 20.0
     SUCC_REWARD: 10.0
