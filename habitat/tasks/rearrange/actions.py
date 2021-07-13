@@ -99,7 +99,7 @@ class MagicGraspAction(SimulatorTaskAction):
                 self._sim.grasp_mgr.snap_to_obj(sim_idx)
 
     def _ungrasp(self):
-        self._sim.desnap_object()
+        self._sim.grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
