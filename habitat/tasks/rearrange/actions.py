@@ -17,6 +17,20 @@ from habitat.tasks.rearrange.utils import rearrange_collision
 
 
 @registry.register_task_action
+class EmptyAction(SimulatorTaskAction):
+    """A No-op action useful for testing and in some controllers where we want
+    to wait before the next operation.
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
+
+    def step(self, *args, **kwargs):
+        return self._sim.step(HabitatSimActions.EMPTY)
+
+
+@registry.register_task_action
 class ArmAction(SimulatorTaskAction):
     """An arm control and grip control into one action space."""
 
@@ -42,15 +56,15 @@ class ArmAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Dict(
             {
-                "arm_ac": self.arm_ctrlr.action_space,
-                "grip_ac": self.grip_ctrlr.action_space,
+                "arm_action": self.arm_ctrlr.action_space,
+                "grip_action": self.grip_ctrlr.action_space,
             }
         )
 
-    def step(self, arm_ac, grip_ac, **kwargs):
-        self.arm_ctrlr.step(arm_ac, should_step=False)
-        if grip_ac is not None and not self.disable_grip:
-            self.grip_ctrlr.step(grip_ac, should_step=False)
+    def step(self, arm_action, grip_action, *args, **kwargs):
+        self.arm_ctrlr.step(arm_action, should_step=False)
+        if grip_action is not None and not self.disable_grip:
+            self.grip_ctrlr.step(grip_action, should_step=False)
         return self._sim.step(HabitatSimActions.ARM_ACTION)
 
 
@@ -59,12 +73,10 @@ class MagicGraspAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.thresh_dist = config.GRASP_THRESH_DIST
-        self.snap_markers = config.get("GRASP_MARKERS", False)
 
     @property
     def action_space(self):
-        return spaces.Discrete(1)
+        return spaces.Box(shape=(1,), high=1.0, low=-1.0)
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
@@ -77,25 +89,22 @@ class MagicGraspAction(SimulatorTaskAction):
 
             closest_obj_pos = scene_obj_pos[closest_obj_idx]
             to_target = np.linalg.norm(ee_pos - closest_obj_pos, ord=2)
+            sim_idx = self._sim.scene_obj_ids[closest_obj_idx]
 
-            if to_target < self.thresh_dist:
-                self._sim.set_snapped_obj(closest_obj_idx)
+            if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.grasp_mgr.snap_to_obj(sim_idx)
 
-        # Get the marker the EE is closest to.
-        marker_name_pos = self._sim.get_marker_positions()
-        if self.snap_markers and len(marker_name_pos) > 0:
-            marker_name, marker_pos = zip(*marker_name_pos.items())
-            marker_pos = np.array(marker_pos)
-            closest_marker_idx = np.argmin(
-                np.linalg.norm(ee_pos - marker_pos, axis=-1)
-            )
-            closest_marker_pos = marker_pos[closest_marker_idx]
-            to_marker = np.linalg.norm(ee_pos - closest_marker_pos)
-            if to_marker < self.thresh_dist:
-                self._sim.set_snapped_marker(marker_name[closest_marker_idx])
+    def _ungrasp(self):
+        self._sim.grasp_mgr.desnap()
 
-    def step(self, state, should_step=True, **kwargs):
-        return
+    def step(self, grip_action, should_step=True, *args, **kwargs):
+        if grip_action is None:
+            return
+
+        if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
+            self._grasp()
+        elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
+            self._ungrasp()
 
 
 @registry.register_task_action
@@ -104,7 +113,7 @@ class ArmVelAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
 
-    def step(self, vel, should_step=True, **kwargs):
+    def step(self, vel, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         vel = np.clip(vel, -1, 1)
         vel *= self._config.VEL_CTRL_LIM
@@ -135,32 +144,28 @@ class BaseVelAction(SimulatorTaskAction):
         lim = 20
         return spaces.Box(shape=(2,), low=-lim, high=lim, dtype=np.float32)
 
-    def _capture_robo_state(self, robot_id, sim):
-        forces = sim.get_articulated_object_forces(robot_id)
-        vel = sim.get_articulated_object_velocities(robot_id)
-        art_pos = sim.get_articulated_object_positions(robot_id)
+    def _capture_robot_state(self, sim):
         return {
-            "forces": forces,
-            "vel": vel,
-            "pos": art_pos,
+            "forces": sim.robot.sim_obj.joint_forces,
+            "vel": sim.robot.sim_obj.joint_velocities,
+            "pos": sim.robot.sim_obj.joint_positions,
         }
 
-    def _set_robo_state(self, robot_id, sim: RearrangeSim, set_dat):
-        sim.set_articulated_object_forces(robot_id, set_dat["forces"])
-        sim.set_articulated_object_velocities(robot_id, set_dat["vel"])
-        sim.set_articulated_object_positions(robot_id, set_dat["pos"])
+    def _set_robot_state(self, sim: RearrangeSim, set_dat):
+        sim.robot.sim_obj.joint_positions = set_dat["forces"]
+        sim.robot.sim_obj.joint_velocities = set_dat["vel"]
+        sim.robot.sim_obj.joint_forces = set_dat["pos"]
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
     def update_base(self):
-        robot_id = self._sim.use_robo.get_robot_sim_id()
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robo_state(robot_id, self._sim)
+        before_trans_state = self._capture_robot_state(self._sim)
 
-        trans = self._sim.get_articulated_object_root_state(robot_id)
+        trans = self._sim.robot.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
@@ -175,7 +180,7 @@ class BaseVelAction(SimulatorTaskAction):
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        self._sim.set_articulated_object_root_state(robot_id, target_trans)
+        self._sim.robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything. If so
@@ -187,10 +192,10 @@ class BaseVelAction(SimulatorTaskAction):
             )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robo_state(robot_id, self._sim, before_trans_state)
-                self._sim.set_articulated_object_root_state(robot_id, trans)
+                self._set_robot_state(self._sim, before_trans_state)
+                self._sim.robot.sim_obj.transformation = trans
 
-    def step(self, base_vel, should_step=True, **kwargs):
+    def step(self, base_vel, should_step=True, *args, **kwargs):
         lin_vel, ang_vel = base_vel
         lin_vel = np.clip(lin_vel, -1, 1)
         lin_vel *= self._config.LIN_SPEED
@@ -204,12 +209,73 @@ class BaseVelAction(SimulatorTaskAction):
             self.does_want_terminate = True
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
-        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, 0, ang_vel)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
         if lin_vel != 0.0 or ang_vel != 0.0:
             self.update_base()
 
         if should_step:
-            return self._sim.step(HabitatSimActions.BASE_VEL)
+            return self._sim.step(HabitatSimActions.BASE_VELOCITY)
+        else:
+            return None
+
+
+@registry.register_task_action
+class ArmEEAction(SimulatorTaskAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.robot_ee_constraints = np.array(
+            [
+                [0.4, 1.2],
+                [-0.7, 0.7],
+                [0.25, 1.5],
+            ]
+        )
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        self.ee_targ = np.zeros((3,))
+
+        arm_pos = self.set_desired_ee_pos(np.array([0.5, 0.0, 1.0]))
+
+        self._sim.robot.arm_joint_pos = arm_pos
+        self._sim.settle_sim(0.1)
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+
+    def apply_ee_constraints(self):
+        self.ee_targ = np.clip(
+            self.ee_targ,
+            self.robot_ee_constraints[:, 0],
+            self.robot_ee_constraints[:, 1],
+        )
+
+    def set_desired_ee_pos(self, des_rel_pos):
+        self.ee_targ += np.array(des_rel_pos)
+        self.apply_ee_constraints()
+
+        ik = self._sim.ik_helper
+
+        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_vel = np.zeros(joint_pos.shape)
+
+        ik.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = ik.calc_ik(self.ee_targ)
+        des_joint_pos = list(des_joint_pos)
+        self._sim.robot.arm_motor_pos = des_joint_pos
+
+        return des_joint_pos
+
+    def step(self, rel_ee_pos, should_step=True, **kwargs):
+        rel_ee_pos = np.clip(rel_ee_pos, -1, 1)
+        rel_ee_pos *= self._config.EE_CTRL_LIM
+        self.set_desired_ee_pos(rel_ee_pos)
+
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_EE)
         else:
             return None

@@ -37,3 +37,9 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("ARM_VEL")
     if not HabitatSimActions.has_action("MAGIC_GRASP"):
         HabitatSimActions.extend_action_space("MAGIC_GRASP")
+    if not HabitatSimActions.has_action("BASE_VELOCITY"):
+        HabitatSimActions.extend_action_space("BASE_VELOCITY")
+    if not HabitatSimActions.has_action("ARM_EE"):
+        HabitatSimActions.extend_action_space("ARM_EE")
+    if not HabitatSimActions.has_action("EMPTY"):
+        HabitatSimActions.extend_action_space("EMPTY")

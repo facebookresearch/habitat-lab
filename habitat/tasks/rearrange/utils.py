@@ -9,6 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
+from typing import List, Optional
 
 import attr
 import gym
@@ -29,30 +30,26 @@ def make_render_only(obj_idx, sim):
         sim.set_object_is_collidable(False, obj_idx)
 
 
-def get_collision_matches(link, colls, search_key="link"):
-    matches = []
-    for coll0, coll1 in colls:
-        if link in [coll0[search_key], coll1[search_key]]:
-            matches.append((coll0, coll1))
-    return matches
+def make_border_red(img):
+    border_color = [255, 0, 0]
+    border_width = 10
+    img[:, :border_width] = border_color
+    img[:border_width, :] = border_color
+    img[-border_width:, :] = border_color
+    img[:, -border_width:] = border_color
+    return img
 
 
-def get_other_matches(link, colls):
-    matches = get_collision_matches(link, colls)
-    other_surfaces = [b if a["link"] == link else a for a, b in matches]
-    return other_surfaces
+def coll_name_matches(coll, name):
+    return name in [coll.object_id_a, coll.object_id_b]
 
 
-def coll_name(coll, name):
-    return coll_prop(coll, name, "name")
-
-
-def coll_prop(coll, val, prop):
-    return val in [coll[0][prop], coll[1][prop]]
-
-
-def coll_link(coll, link):
-    return coll_prop(coll, link, "link")
+def get_match_link(coll, name):
+    if name == coll.object_id_a:
+        return coll.link_id_a
+    if name == coll.object_id_b:
+        return coll.link_id_b
+    return None
 
 
 def swap_axes(x):
@@ -63,73 +60,85 @@ def swap_axes(x):
 @attr.s(auto_attribs=True, kw_only=True)
 class CollDetails:
     obj_scene_colls: int = 0
-    robo_obj_colls: int = 0
-    robo_scene_colls: int = 0
+    robot_obj_colls: int = 0
+    robot_scene_colls: int = 0
+
+    @property
+    def total_colls(self):
+        return (
+            self.obj_scene_colls
+            + self.robot_obj_colls
+            + self.robot_scene_colls
+        )
+
+    def __add__(self, other):
+        return CollDetails(
+            obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
+            robot_obj_colls=self.robot_obj_colls + other.robot_obj_colls,
+            robot_scene_colls=self.robot_scene_colls + other.robot_scene_colls,
+        )
 
 
 def rearrange_collision(
-    colls,
-    snapped_obj_id,
-    count_obj_colls,
-    verbose=False,
-    ignore_names=None,
-    ignore_base=True,
+    sim,
+    count_obj_colls: bool,
+    verbose: bool = False,
+    ignore_names: Optional[List[str]] = None,
+    ignore_base: bool = True,
 ):
-    """
-    Defines what counts as a collision for the Rearrange environment execution
-    """
-    # Filter out any collisions from the base
-    if ignore_base:
-        colls = [
-            x
-            for x in colls
-            if not ("base" in x[0]["link"] or "base" in x[1]["link"])
-        ]
+    """Defines what counts as a collision for the Rearrange environment execution"""
+    robot_model = sim.robot
+    colls = sim.get_physics_contact_points()
+    robot_id = robot_model.get_robot_sim_id()
+    added_objs = sim.scene_obj_ids
+    snapped_obj_id = sim.grasp_mgr.snap_idx
 
     def should_keep(x):
-        if ignore_names is None:
-            return True
-        return any(coll_name(x, ignore_name) for ignore_name in ignore_names)
+        if ignore_base:
+            match_link = get_match_link(x, robot_id)
+            if match_link is not None and robot_model.is_base_link(match_link):
+                return False
+
+        if ignore_names is not None:
+            should_ignore = any(
+                coll_name_matches(x, ignore_name)
+                for ignore_name in ignore_names
+            )
+            if should_ignore:
+                return False
+        return True
 
     # Filter out any collisions with the ignore objects
     colls = list(filter(should_keep, colls))
 
     # Check for robot collision
-    robo_obj_colls = 0
-    robo_scene_colls = 0
-    robo_scene_matches = get_collision_matches("fetch", colls, "name")
-    for match in robo_scene_matches:
-        urdf_on_urdf = (
-            match[0]["type"] == "URDF" and match[1]["type"] == "URDF"
+    robot_obj_colls = 0
+    robot_scene_colls = 0
+    robot_scene_matches = [c for c in colls if coll_name_matches(c, robot_id)]
+    for match in robot_scene_matches:
+        reg_obj_coll = any(
+            [coll_name_matches(match, obj_id) for obj_id in added_objs]
         )
-        with_stage = coll_prop(match, "Stage", "type")
-        fetch_on_fetch = (
-            match[0]["name"] == "fetch" and match[1]["name"] == "fetch"
-        )
-        if fetch_on_fetch:
-            continue
-        if urdf_on_urdf or with_stage:
-            robo_scene_colls += 1
+        if reg_obj_coll:
+            robot_obj_colls += 1
         else:
-            robo_obj_colls += 1
+            robot_scene_colls += 1
 
     # Checking for holding object collision
     obj_scene_colls = 0
     if count_obj_colls and snapped_obj_id is not None:
-        matches = get_collision_matches(
-            "id %i" % snapped_obj_id, colls, "link"
-        )
+        matches = [c for c in colls if coll_name_matches(c, snapped_obj_id)]
         for match in matches:
-            if coll_name(match, "fetch"):
+            if coll_name_matches(match, robot_id):
                 continue
             obj_scene_colls += 1
 
-    total_colls = robo_obj_colls + robo_scene_colls + obj_scene_colls
-    return total_colls > 0, CollDetails(
+    coll_details = CollDetails(
         obj_scene_colls=min(obj_scene_colls, 1),
-        robo_obj_colls=min(robo_obj_colls, 1),
-        robo_scene_colls=min(robo_scene_colls, 1),
+        robot_obj_colls=min(robot_obj_colls, 1),
+        robot_scene_colls=min(robot_scene_colls, 1),
     )
+    return coll_details.total_colls > 0, coll_details
 
 
 def get_nav_mesh_settings(agent_config):
@@ -177,7 +186,8 @@ def convert_legacy_cfg(obj_list):
 
 
 def get_aabb(obj_id, sim, transformed=False):
-    obj_node = sim.get_object_scene_node(obj_id)
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    obj_node = obj.root_scene_node
     obj_bb = obj_node.cumulative_bb
     if transformed:
         obj_bb = habitat_sim.geo.get_transformed_bb(
@@ -196,29 +206,6 @@ def allowed_region_to_bb(allowed_region):
     if len(allowed_region) == 0:
         return allowed_region
     return mn.Range2D(allowed_region[0], allowed_region[1])
-
-
-def recover_nav_island_point(v, ref_v, sim):
-    """
-    Snaps a point to the LARGEST island.
-    """
-    nav_vs = sim.pathfinder.build_navmesh_vertices()
-    ref_r = sim.pathfinder.island_radius(ref_v)
-
-    nav_vs_r = {
-        i: sim.pathfinder.island_radius(nav_v)
-        for i, nav_v in enumerate(nav_vs)
-    }
-    # Get the points closest to "v"
-    v_dist = np.linalg.norm(v - nav_vs, axis=-1)
-    ordered_idxs = np.argsort(v_dist)
-
-    # Go through the closest points until one has the same island radius.
-    for i in ordered_idxs:
-        if nav_vs_r[i] == ref_r:
-            return nav_vs[i]
-    print("Could not find point off of island")
-    return v
 
 
 CACHE_PATH = "./data/cache"
@@ -276,3 +263,98 @@ def reshape_obs_space(obs_space, new_shape):
         low=obs_space.high.reshape(-1)[0],
         dtype=obs_space.dtype,
     )
+
+
+try:
+    import pybullet as p
+except ImportError:
+    p = None
+
+
+def check_pb_install(p):
+    if p is None:
+        raise ImportError(
+            "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
+        )
+
+
+class IkHelper:
+    def __init__(self, only_arm_urdf, arm_start):
+        check_pb_install(p)
+        self._arm_start = arm_start
+        self._arm_len = 7
+        self.pc_id = p.connect(p.DIRECT)
+
+        self.robo_id = p.loadURDF(
+            only_arm_urdf,
+            basePosition=[0, 0, 0],
+            useFixedBase=True,
+            flags=p.URDF_USE_INERTIA_FROM_FILE,
+            physicsClientId=self.pc_id,
+        )
+
+        p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
+        JOINT_DAMPING = 0.5
+        self.pb_link_idx = 7
+
+        for link_idx in range(15):
+            p.changeDynamics(
+                self.robo_id,
+                link_idx,
+                linearDamping=0.0,
+                angularDamping=0.0,
+                jointDamping=JOINT_DAMPING,
+                physicsClientId=self.pc_id,
+            )
+            p.changeDynamics(
+                self.robo_id,
+                link_idx,
+                maxJointVelocity=200,
+                physicsClientId=self.pc_id,
+            )
+
+    def set_arm_state(self, joint_pos, joint_vel=None):
+        if joint_vel is None:
+            joint_vel = np.zeros((len(joint_pos),))
+        for i in range(7):
+            p.resetJointState(
+                self.robo_id,
+                i,
+                joint_pos[i],
+                joint_vel[i],
+                physicsClientId=self.pc_id,
+            )
+
+    def calc_fk(self, js):
+        self.set_arm_state(js, np.zeros(js.shape))
+        ls = p.getLinkState(
+            self.robo_id,
+            self.pb_link_idx,
+            computeForwardKinematics=1,
+            physicsClientId=self.pc_id,
+        )
+        world_ee = ls[4]
+        return world_ee
+
+    def get_joint_limits(self):
+        lower = []
+        upper = []
+        for joint_i in range(self._arm_len):
+            ret = p.getJointInfo(
+                self.robo_id, joint_i, physicsClientId=self.pc_id
+            )
+            lower.append(ret[8])
+            if ret[9] == -1:
+                upper.append(2 * np.pi)
+            else:
+                upper.append(ret[9])
+        return np.array(lower), np.array(upper)
+
+    def calc_ik(self, targ_ee):
+        """
+        targ_ee is in ROBOT COORDINATE FRAME NOT IN EE COORDINATE FRAME
+        """
+        js = p.calculateInverseKinematics(
+            self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
+        )
+        return js[: self._arm_len]

@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import magnum as mn
+import attr
 import numpy as np
 from gym import spaces
 
@@ -13,10 +13,8 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import CollDetails
 from habitat.tasks.utils import get_angle
-
-# TODO: @maksymets should be accessed through Robot API
-EE_GRIPPER_OFFSET = mn.Vector3(0.08, 0, 0)
 
 
 @registry.register_sensor
@@ -276,10 +274,7 @@ class IsHoldingSensor(Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        snapped_id = self._sim.snapped_obj_id
-        is_holding = snapped_id is not None
-
-        return np.array(int(is_holding)).reshape((1,))
+        return np.array(int(self._sim.grasp_mgr.is_grasped)).reshape((1,))
 
 
 @registry.register_measure
@@ -378,6 +373,92 @@ class EndEffectorToPosDistance(Measure):
 
 
 @registry.register_measure
+class RobotCollisions(Measure):
+    cls_uuid: str = "robot_collisions"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RobotCollisions.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._accum_coll_info = CollDetails()
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        cur_coll_info = self._task.get_cur_collision_info()
+        self._accum_coll_info += cur_coll_info
+        self._metric = {
+            "total_colls": self._accum_coll_info.total_colls,
+            **attr.asdict(self._accum_coll_info),
+        }
+
+
+@registry.register_measure
+class RobotForce(Measure):
+    cls_uuid: str = "robot_force"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RobotForce.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._accum_force = 0.0
+        self._prev_force = None
+        self._cur_force = None
+        self._add_force = None
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    @property
+    def add_force(self):
+        return self._add_force
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_force, _, overall_force = self._task.get_coll_forces()
+        if self._task._config.COUNT_OBJ_COLLISIONS:
+            self._cur_force = overall_force
+        else:
+            self._cur_force = robot_force
+
+        if self._prev_force is not None:
+            self._add_force = self._cur_force - self._prev_force
+            if self._add_force > self._config.MIN_FORCE:
+                self._accum_force += self._add_force
+                self._prev_force = self._cur_force
+            elif self._add_force < 0.0:
+                self._prev_force = self._cur_force
+            else:
+                self._add_force = 0.0
+        else:
+            self._prev_force = self._cur_force
+            self._add_force = 0.0
+        self._metric = self._accum_force
+
+
+@registry.register_measure
 class RearrangePickReward(Measure):
     cls_uuid: str = "rearrangepick_reward"
 
@@ -397,6 +478,7 @@ class RearrangePickReward(Measure):
             [
                 EndEffectorToObjectDistance.cls_uuid,
                 RearrangePickSuccess.cls_uuid,
+                RobotForce.cls_uuid,
             ],
         )
 
@@ -417,7 +499,7 @@ class RearrangePickReward(Measure):
         ].get_metric()
         reward = 0
 
-        snapped_id = self._sim.snapped_obj_id
+        snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
         ee_pos = observations["ee_pos"]
 
@@ -470,14 +552,18 @@ class RearrangePickReward(Measure):
 
         reward += self._get_coll_reward()
 
-        if self._task._is_violating_hold_constraint():
+        if self._sim.grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.CONSTRAINT_VIOLATE_PEN
 
+        accum_force = task.measurements.measures[
+            RobotForce.cls_uuid
+        ].get_metric()
         if (
-            self._task._config.FORCE_BASED
-            and 0 < self._task.use_max_accum_force < self._task.accum_force
+            self._config.MAX_ACCUM_FORCE is not None
+            and accum_force > self._config.MAX_ACCUM_FORCE
         ):
             reward -= self._config.FORCE_END_PEN
+            self._task.should_end = True
 
         self._task.prev_picked = cur_picked
 
@@ -485,25 +571,14 @@ class RearrangePickReward(Measure):
 
     def _get_coll_reward(self):
         reward = 0
-        if self._task._config.FORCE_BASED:
-            # Penalize the force that was added to the accumulated force at the
-            # last time step.
-            reward -= min(
-                self._config.FORCE_PEN * self._task.add_force,
-                self._config.MAX_FORCE_PEN,
-            )
-        else:
-            delta_coll = self._task._delta_coll
-            reward -= (
-                self._config.ROBO_OBJ_COLL_PEN * delta_coll.robo_obj_colls
-            )
 
-            total_colls = (
-                delta_coll.obj_scene_colls + delta_coll.robo_scene_colls
-            )
-            if self._task._config.COUNT_ROBO_OBJ_COLLS:
-                total_colls += delta_coll.robo_obj_colls
-            reward -= self._config.COLL_PEN * (min(1, total_colls))
+        force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
+        # Penalize the force that was added to the accumulated force at the
+        # last time step.
+        reward -= min(
+            self._config.FORCE_PEN * force_metric.add_force,
+            self._config.MAX_FORCE_PEN,
+        )
         return reward
 
 
@@ -535,19 +610,15 @@ class RearrangePickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        ee_to_object_distance = task.measurements.measures[
-            EndEffectorToObjectDistance.cls_uuid
-        ].get_metric()
         self._metric = False
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
-        obj_to_ee = ee_to_object_distance[task.targ_idx]
 
         # Check that we are holding the right object and the object is actually
         # being held.
         if (
-            abs_targ_obj_idx == self._sim.snapped_obj_id
-            and obj_to_ee < self._config.HOLD_THRESH
+            abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
+            and not self._sim.grasp_mgr.is_violating_hold_constraint()
         ):
             rest_dist = np.linalg.norm(
                 self._prev_ee_pos - task.desired_resting
