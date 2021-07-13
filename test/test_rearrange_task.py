@@ -181,3 +181,7 @@ def test_gym_wrapper():
     obs, _, _, _ = env.step(env.action_space.sample())
     assert isinstance(obs, np.ndarray), f"Obs {obs}"
     assert obs.shape == env.observation_space.shape
+
+    frame = env.render()
+    assert isinstance(frame, np.ndarray)
+    assert len(frame.shape) == 3 and frame.shape[-1] == 3

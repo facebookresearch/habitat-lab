@@ -2,11 +2,14 @@ import gym
 import numpy as np
 from gym import spaces
 
+from habitat.utils.visualizations.utils import observations_to_image
+
 
 class HabGymWrapper(gym.Env):
     def __init__(self, env):
         action_space = env.action_space
         self._gym_obs_keys = env._rl_config.GYM_OBS_KEYS
+        self._last_obs = None
         self.action_mapping = {}
         if len(action_space.spaces) != 1:
             raise ValueError("Cannot convert this action space")
@@ -62,6 +65,7 @@ class HabGymWrapper(gym.Env):
             "action_args": action_args,
         }
         obs, reward, done, info = self._env.step(action=action)
+        self._last_obs = obs
         obs = self._transform_obs(obs)
         return obs, reward, done, info
 
@@ -73,7 +77,12 @@ class HabGymWrapper(gym.Env):
 
     def reset(self):
         obs = self._env.reset()
+        self._last_obs = obs
         return self._transform_obs(obs)
 
-    def render(self):
-        return self._env.render()
+    def render(self, mode="rgb_array"):
+        frame = observations_to_image(
+            self._last_obs, self._env._env.get_metrics()
+        )
+
+        return frame

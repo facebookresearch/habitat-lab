@@ -20,6 +20,7 @@ class BenchmarkRenderer(Benchmark):
         video_dir: str,
         vid_filename_metrics: Set[str],
         traj_save_dir: str = None,
+        keep_obs_keys: Optional[Set[str]] = None,
         writer=None,
     ) -> None:
         super().__init__(config_paths, False)
@@ -28,6 +29,7 @@ class BenchmarkRenderer(Benchmark):
         self._writer = writer
         self._vid_filename_metrics = vid_filename_metrics
         self._traj_save_path = traj_save_dir
+        self._keep_obs_keys = keep_obs_keys
 
     def evaluate(
         self,
@@ -52,10 +54,15 @@ class BenchmarkRenderer(Benchmark):
 
         count_episodes = 0
         dones = []
-        obs = []
-        next_obs = []
+        all_obs = []
+        all_next_obs = []
         actions = []
         episode_ids = []
+
+        def filter_obs(obs):
+            if self._keep_obs_keys is None:
+                return obs
+            return {k: v for k, v in obs.items() if k in self._keep_obs_keys}
 
         while count_episodes < num_episodes:
             observations = self._env.reset()
@@ -67,7 +74,7 @@ class BenchmarkRenderer(Benchmark):
                 rgb_frames.append(frame)
 
             while not self._env.episode_over:
-                obs.append(observations)
+                all_obs.append(filter_obs(observations))
 
                 action = agent.act(observations)
                 actions.append(action)
@@ -76,7 +83,7 @@ class BenchmarkRenderer(Benchmark):
 
                 observations = self._env.step(action)
 
-                next_obs.append(observations)
+                all_next_obs.append(filter_obs(observations))
 
                 if should_render:
                     frame = observations_to_image(
@@ -126,13 +133,13 @@ class BenchmarkRenderer(Benchmark):
             save_dir = osp.dirname(self._traj_save_path)
             if not osp.exists(save_dir):
                 os.makedirs(save_dir)
-            obs = batch_obs(obs)
-            next_obs = batch_obs(next_obs)
+            all_obs = batch_obs(all_obs)
+            all_next_obs = batch_obs(all_next_obs)
             torch.save(
                 {
                     "done": torch.FloatTensor(dones),
-                    "obs": obs,
-                    "next_obs": next_obs,
+                    "obs": all_obs,
+                    "next_obs": all_next_obs,
                     "episode_ids": episode_ids,
                     "actions": torch.tensor(
                         [compress_action(action) for action in actions]
