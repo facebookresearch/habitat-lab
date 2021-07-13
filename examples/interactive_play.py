@@ -5,16 +5,27 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Manually control the robot to interact with the environment. Running as `python
-examples/interative_play.py` runs with a good testing configuration.
+Manually control the robot to interact with the environment. Run as
+```
+python examples/interative_play.py
+```
 
 To Run you need PyGame installed.
+
+By default this controls with velocity control (which makes controlling the
+robot hard). To use IK control instead: run with
+```
+python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_cad_example_ik.yaml
+```
 
 Controls:
     - For velocity control
         - 1-7 to increase the motor target for the robot arm joints
         - Q-U to decrease the motor target for the robot arm joints
-    - IJKL to move the robot base around
+    - For IK control
+        - W,S,A,D to move side to side
+        - E,Q to move up and down
+    - I,J,K,L to move the robot base around
     - PERIOD to print the current world coordinates of the robot base.
 """
 
@@ -276,7 +287,6 @@ def play_env(env, args, config):
     while True:
         if render_count is not None and i > render_count:
             break
-
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[i] if use_arm_actions is not None else None,

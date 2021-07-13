@@ -104,7 +104,6 @@ class MagicGraspAction(SimulatorTaskAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
         if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
@@ -309,9 +308,6 @@ class ArmEEAction(SimulatorTaskAction):
         joint_vel = np.zeros(joint_pos.shape)
 
         ik.set_arm_state(joint_pos, joint_vel)
-        # self._sim.viz_ids['ee_targ_local'] = self._sim.viz_pos(
-        #        self.ee_targ,
-        #        self._sim.viz_ids['ee_targ_local'], r=0.1)
 
         des_joint_pos = ik.calc_ik(self.ee_targ)
         des_joint_pos = list(des_joint_pos)
