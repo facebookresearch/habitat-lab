@@ -10,13 +10,13 @@ except ImportError:
     p = None
 
 
-from habitat.tasks.rearrange.mp.projector.voxel_gen import VoxelMapper
-from habitat.tasks.rearrange.mp.robot_target import ObjPlanningData
 from habitat.tasks.rearrange.utils import (
     check_pb_install,
     get_aabb,
     rearrange_collision,
 )
+from habitat_baselines.motion_planning.projector.voxel_gen import VoxelMapper
+from habitat_baselines.motion_planning.robot_target import ObjPlanningData
 from habitat_sim.physics import CollisionGroups, MotionType
 
 
@@ -188,9 +188,7 @@ class HabMpSim(MpSim):
     def render(self):
         obs = self._sim.step(0)
         if "robot_third_rgb" not in obs:
-            raise ValueError(
-                ("CHECKPOINT_RENDER_INTERVAL must be 1 " "to use mod_mp_")
-            )
+            raise ValueError("No render camera")
         pic = obs["robot_third_rgb"]
         if pic.shape[-1] > 3:
             # Skip the depth part.

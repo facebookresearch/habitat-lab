@@ -2,7 +2,7 @@ import magnum as mn
 import numpy as np
 from PIL import Image
 
-from habitat.tasks.rearrange.mp.robot_target import (
+from habitat_baselines.motion_planning.robot_target import (
     ObjPlanningData,
     RobotTarget,
 )

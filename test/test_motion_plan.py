@@ -6,14 +6,17 @@ from habitat_baselines.agents.mp_agents import (
     SpaManipPick,
     SpaResetModule,
 )
+from habitat_baselines.motion_planning.motion_plan import is_ompl_installed
 
 TEST_CFG = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
 
 
 def test_pick_motion_planning():
+    # This test will only run if OMPL is installed.
+    if not is_ompl_installed():
+        print("OMPL not installed skipping test")
+        return
     config = get_config(TEST_CFG)
-    # if not RearrangeDatasetV0.check_config_paths_exist(config.DATASET):
-    #    pytest.skip("Test skipped as dataset files are missing.")
 
     benchmark = Benchmark(config.BASE_TASK_CONFIG_PATH)
 

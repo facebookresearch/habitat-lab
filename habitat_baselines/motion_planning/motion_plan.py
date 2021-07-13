@@ -26,15 +26,19 @@ except ImportError:
 from copy import copy
 from functools import partial
 
-from habitat.tasks.rearrange.mp.grasp_generator import GraspGenerator
-from habitat.tasks.rearrange.mp.mp_sim import HabMpSim, PbMpSim
-from habitat.tasks.rearrange.mp.mp_spaces import JsMpSpace
 from habitat.tasks.rearrange.utils import make_border_red
+from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
+from habitat_baselines.motion_planning.mp_sim import HabMpSim, PbMpSim
+from habitat_baselines.motion_planning.mp_spaces import JsMpSpace
+
+
+def is_ompl_installed():
+    return ou is not None
 
 
 class MotionPlanner:
     def __init__(self, sim, config):
-        if ou is None:
+        if not is_ompl_installed:
             raise ImportError("Need to install OMPL to use motion planning")
         self._config = config
         self._reach_for_obj = None

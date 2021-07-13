@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from habitat.tasks.rearrange.mp.projector.core import ProjectorUtils
+from habitat_baselines.motion_planning.projector.core import ProjectorUtils
 
 
 class PointCloud(ProjectorUtils):

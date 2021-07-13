@@ -8,9 +8,9 @@ import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import Observations
 from habitat.tasks.rearrange.actions import get_empty_action
-from habitat.tasks.rearrange.mp.motion_plan import MotionPlanner
-from habitat.tasks.rearrange.mp.robot_target import RobotTarget
 from habitat_baselines.agents.benchmark_render import BenchmarkRenderer
+from habitat_baselines.motion_planning.motion_plan import MotionPlanner
+from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 
 class ParameterizedAgent(habitat.Agent):

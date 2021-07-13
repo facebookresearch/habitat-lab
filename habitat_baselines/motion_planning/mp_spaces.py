@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from PIL import Image
 
-from habitat.tasks.rearrange.mp.robot_target import RobotTarget
+from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 try:
     from ompl import base as ob  # pylint: disable=import-error
@@ -118,7 +118,7 @@ class JsMpSpace(MpSpace):
             return np.stack([[-2 * np.pi] * 7, [2 * np.pi] * 7], axis=-1)
 
     def get_state_dim(self):
-        return 7
+        return len(self._mp_sim._sim.robot.arm_joint_pos)
 
     def _fk(self, js):
         self._mp_sim.set_arm_pos(js)
@@ -218,51 +218,3 @@ class JsMpSpace(MpSpace):
     def convert_sol(self, path):
         plan = np.array([self.convert_state(x) for x in path.getStates()])
         return plan
-
-
-class EeMpSpace(MpSpace):
-    """
-    Do motion planning in end-effector space. I don't use this anymore.
-    """
-
-    def __init__(self, use_sim, ik):
-        super().__init__(use_sim, ik)
-
-    def convert_state(self, x):
-        return np.array([x[0], x[1], x[2]])
-
-    def set_arm(self, x):
-        self._mp_sim.set_state(self.env_state)
-        use_x = self.convert_state(x)
-        des_joint_pos = self._ik.calc_ik(use_x)
-        des_joint_pos = np.array(des_joint_pos)[:7]
-        self._mp_sim.set_arm_pos(des_joint_pos)
-
-    def get_state_lims(self):
-        lims = np.array(
-            [
-                [0.4, 1.2],
-                [-0.7, 0.7],
-                [0.2, 1.5],
-            ]
-        )
-        return lims
-
-    def get_state_dim(self):
-        return 3
-
-    def convert_sol(self, path):
-        joint_plan = []
-        path = np.array([[x[0], x[1], x[2]] for x in path.getStates()])
-        for x in path:
-            self._mp_sim.set_state(self.env_state)
-            joint = self._ik.calc_ik(x)
-            joint = np.array(joint)[:7]
-            joint_plan.append(joint)
-        return joint_plan
-
-    def get_range(self):
-        return 0.05
-
-    def get_planner(self, si):
-        return og.RRTConnect(si)

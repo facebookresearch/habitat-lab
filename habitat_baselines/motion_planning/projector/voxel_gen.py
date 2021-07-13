@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from matplotlib import cm
 
-from habitat.tasks.rearrange.mp.projector import PointCloud
+from habitat_baselines.motion_planning.projector import PointCloud
 
 
 class VoxelMapper:
