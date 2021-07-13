@@ -160,9 +160,7 @@ class RearrangeSim(HabitatSim):
 
         self._add_objs(ep_info)
         if self.robot is None:
-            self.robot = FetchRobot(
-                self.habitat_config.ROBOT_URDF, self, limit_robo_joints=False
-            )
+            self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
             self.robot.reconfigure()
         self.robot.reset()
         self.grasp_mgr.reset()

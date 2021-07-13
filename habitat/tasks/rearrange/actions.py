@@ -290,15 +290,7 @@ class ArmEEAction(SimulatorTaskAction):
             self.robot_ee_constraints[:, 1],
         )
 
-    @property
-    def global_ee_targ(self):
-        robot_T = self._sim.robot.base_transformation
-        global_ee_targ = robot_T.transform_point(self.ee_targ)
-        return global_ee_targ
-
     def set_desired_ee_pos(self, des_rel_pos):
-        # print('EE error ',
-        #        np.linalg.norm(self._sim.robot.ee_transform.translation - self.global_ee_targ))
         self.ee_targ += np.array(des_rel_pos)
         self.apply_ee_constraints()
 
