@@ -308,7 +308,6 @@ def play_env(env, args, config):
 
         total_reward += reward
 
-        obs["rgb"] = obs["robot_third_rgb"]
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)
 

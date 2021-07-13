@@ -56,6 +56,8 @@ TASK:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
     REARRANGE_PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -85,6 +87,7 @@ TASK:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
     ACTIONS:
@@ -162,7 +165,6 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    HIGH_RES_DIM: 512
     LAG_OBSERVATIONS: 1
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf

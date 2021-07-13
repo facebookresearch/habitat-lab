@@ -164,11 +164,13 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         generated image of a single frame.
     """
     egocentric_view_l: List[np.ndarray] = []
+    obs_names = []
     for k in observation:
         if "rgb" in k:
             rgb = observation[k]
             if not isinstance(rgb, np.ndarray):
                 rgb = rgb.cpu().numpy()
+            obs_names.append(k)
 
             egocentric_view_l.append(rgb)
 
