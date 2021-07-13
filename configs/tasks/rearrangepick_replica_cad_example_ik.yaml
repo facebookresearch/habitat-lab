@@ -164,7 +164,6 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     HIGH_RES_DIM: 512
     LAG_OBSERVATIONS: 1
-    SHOULD_RENDER_DEBUG: True
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
