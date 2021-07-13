@@ -55,6 +55,7 @@ class BenchmarkRenderer(Benchmark):
         obs = []
         next_obs = []
         actions = []
+        episode_ids = []
 
         while count_episodes < num_episodes:
             observations = self._env.reset()
@@ -71,6 +72,7 @@ class BenchmarkRenderer(Benchmark):
                 action = agent.act(observations)
                 actions.append(action)
                 dones.append(False)
+                episode_ids.append(int(self._env.current_episode.episode_id))
 
                 observations = self._env.step(action)
 
@@ -102,24 +104,6 @@ class BenchmarkRenderer(Benchmark):
                     ]
                 )
 
-            if self._traj_save_path is not None:
-                save_dir = osp.dirname(self._traj_save_path)
-                if not osp.exists(save_dir):
-                    os.makedirs(save_dir)
-                obs = batch_obs(obs)
-                next_obs = batch_obs(next_obs)
-                torch.save(
-                    {
-                        "done": torch.FloatTensor(dones),
-                        "obs": obs,
-                        "next_obs": next_obs,
-                        "actions": torch.tensor(
-                            [compress_action(action) for action in actions]
-                        ),
-                    },
-                    self._traj_save_path,
-                )
-
             if should_render:
                 generate_video(
                     video_option=self._video_option,
@@ -137,6 +121,25 @@ class BenchmarkRenderer(Benchmark):
                 )
 
             count_episodes += 1
+
+        if self._traj_save_path is not None:
+            save_dir = osp.dirname(self._traj_save_path)
+            if not osp.exists(save_dir):
+                os.makedirs(save_dir)
+            obs = batch_obs(obs)
+            next_obs = batch_obs(next_obs)
+            torch.save(
+                {
+                    "done": torch.FloatTensor(dones),
+                    "obs": obs,
+                    "next_obs": next_obs,
+                    "episode_ids": episode_ids,
+                    "actions": torch.tensor(
+                        [compress_action(action) for action in actions]
+                    ),
+                },
+                self._traj_save_path,
+            )
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
 
