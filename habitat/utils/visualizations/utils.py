@@ -103,6 +103,7 @@ def images_to_video(
     video_name: str,
     fps: int = 10,
     quality: Optional[float] = 5,
+    verbose: bool = True,
     **kwargs,
 ):
     r"""Calls imageio to run FFMPEG on a list of images. For more info on
@@ -130,7 +131,11 @@ def images_to_video(
         **kwargs,
     )
     logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
-    for im in tqdm.tqdm(images):
+    if verbose:
+        images_iter = tqdm.tqdm(images)
+    else:
+        images_iter = images
+    for im in images_iter:
         writer.append_data(im)
     writer.close()
 
