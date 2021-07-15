@@ -119,11 +119,19 @@ class BenchmarkGym:
             if self._should_save_fn is None or self._should_save_fn(
                 self._env.get_metrics()
             ):
+                assert sum(traj_dones) == 1
                 all_obs.extend(traj_obs)
                 all_dones.extend(traj_dones)
                 all_next_obs.extend(traj_next_obs)
                 all_actions.extend(traj_actions)
                 all_episode_ids.extend(traj_episode_ids)
+
+                traj_obs = []
+                traj_dones = []
+                traj_next_obs = []
+                traj_actions = []
+                traj_episode_ids = []
+
                 count_episodes += 1
                 pbar.update(1)
 
