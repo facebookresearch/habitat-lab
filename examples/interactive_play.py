@@ -79,7 +79,7 @@ def append_text_to_image(image: np.ndarray, text: str):
     font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    text_image = np.zeros(image.shape, dtype=np.uint8)
+    text_image = np.zeros_like(image)
 
     y = 0
     for line in text:
