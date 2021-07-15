@@ -261,7 +261,7 @@ def get_wrapped_prop(venv, prop):
 def play_env(env, args, config):
     render_count = None
     if args.no_render:
-        render_count = 60 * 60
+        render_count = 60
 
     use_arm_actions = None
     if args.load_actions is not None:
