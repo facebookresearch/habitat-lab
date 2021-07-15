@@ -5,10 +5,23 @@ from gym import spaces
 from habitat.utils.visualizations.utils import observations_to_image
 
 
+def flatten_dict(d, parent_key=""):
+    # From https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + str(k) if parent_key else str(k)
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
 class HabGymWrapper(gym.Env):
     def __init__(self, env):
         action_space = env.action_space
         self._gym_obs_keys = env._rl_config.GYM_OBS_KEYS
+        self._fix_info_dict = env._rl_config.GYM_FIX_INFO_DICT
         self._last_obs = None
         self.action_mapping = {}
         if len(action_space.spaces) != 1:
@@ -67,6 +80,10 @@ class HabGymWrapper(gym.Env):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
+        if self._fix_info_dict:
+            info = flatten_dict(info)
+            info = {k: float(v) for k, v in info.items()}
+
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
