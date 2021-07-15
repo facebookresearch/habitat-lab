@@ -195,12 +195,14 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     shapes = [x.shape for x in egocentric_view_l]
 
     if len(set(shapes)) != 1:
+        # Get the images in descending order of vertical height.
         egocentric_view_l = sorted(
             egocentric_view_l, key=lambda x: x.shape[0], reverse=True
         )
         img_cols = [[egocentric_view_l[0]]]
         max_height = egocentric_view_l[0].shape[0]
         cur_y = 0.0
+        # Arrange the images in columns with the largest image to the left.
         col = []
         for i in range(len(egocentric_view_l) - 1):
             im = egocentric_view_l[i + 1]
@@ -215,7 +217,10 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         col_widths = [
             max([col_ele.shape[1] for col_ele in col]) for col in img_cols
         ]
+        # Get the total width of all the columns put together.
         total_width = sum(col_widths)
+
+        # Tile the images, pasting the columns side by side.
         final_im = np.zeros(
             (max_height, total_width, 3), dtype=egocentric_view_l[0].dtype
         )

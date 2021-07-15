@@ -313,7 +313,6 @@ def play_env(env, args, config):
         use_ob = overlay_frame(use_ob, info)
 
         draw_ob = use_ob[:]
-        # cv2.imshow('viewer', draw_ob[..., ::-1])
 
         if not args.no_render:
             draw_ob = np.transpose(draw_ob, (1, 0, 2))
