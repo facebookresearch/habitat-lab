@@ -14,6 +14,7 @@ TASK:
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
+    FORCE_RECACHE: False
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -21,6 +22,10 @@ TASK:
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    TARGET_SENSOR:
+        TYPE: "TargetObjectSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     GOAL_SENSOR:
@@ -48,7 +53,7 @@ TASK:
         TYPE: "IsHoldingSensor"
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR", "TARGET_CUR_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0

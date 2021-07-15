@@ -5,12 +5,25 @@ from typing import Any, Dict, List
 import numpy as np
 
 import habitat
-from habitat.config.default import get_config
 from habitat.core.simulator import Observations
-from habitat.tasks.rearrange.actions import get_empty_action
-from habitat_baselines.agents.benchmark_render import BenchmarkRenderer
+from habitat_baselines.agents.benchmark_gym import BenchmarkGym
+from habitat_baselines.config.default import get_config
 from habitat_baselines.motion_planning.motion_plan import MotionPlanner
 from habitat_baselines.motion_planning.robot_target import RobotTarget
+
+
+def get_noop_arm_action(sim):
+    if sim.robot.is_gripper_open:
+        grip_state = 1.0
+    else:
+        grip_state = 0.0
+    return {
+        "action": "ARM_ACTION",
+        "action_args": {
+            "arm_action": sim.robot.arm_joint_pos,
+            "grip_action": grip_state,
+        },
+    }
 
 
 class ParameterizedAgent(habitat.Agent):
@@ -33,7 +46,7 @@ class ParameterizedAgent(habitat.Agent):
         self._task = env
 
     def _end_episode(self):
-        self._task.end_episode()
+        self._task.should_end = True
 
     def _set_info(self, k: str, v: Any) -> None:
         self._last_info[k] = v
@@ -96,7 +109,14 @@ class AgentComposition(ParameterizedAgent):
 
     def set_args(self, **kwargs):
         self._enter_kwargs = kwargs
+        if self._is_done_with_skills:
+            return
+
         self.skills[self.cur_skill].set_args(**self._enter_kwargs)
+
+    @property
+    def _is_done_with_skills(self):
+        return self.cur_skill >= len(self.skills)
 
     def reset(self):
         super().reset()
@@ -105,13 +125,13 @@ class AgentComposition(ParameterizedAgent):
 
     def act(self, observations):
         if self.should_term(observations):
-            return get_empty_action()
+            return get_noop_arm_action(self._sim)
 
         action = self.skills[self.cur_skill].act(observations)
         return action
 
     def should_term(self, observations):
-        if self.cur_skill >= len(self.skills):
+        if self._is_done_with_skills:
             return True
         if self.skills[self.cur_skill].should_term(observations):
             self.cur_skill += 1
@@ -186,7 +206,7 @@ class ArmTargModule(ParameterizedAgent):
         cur_plan_ac = self._get_plan_ac(observations)
         if cur_plan_ac is None:
             self._term = True
-            return get_empty_action()
+            return get_noop_arm_action(self._sim)
 
         self._plan_idx += 1
         grip = self._get_gripper_ac(cur_plan_ac)
@@ -426,6 +446,7 @@ def main():
     parser.add_argument("--skill-type", default="pick")
     parser.add_argument("--num-eval", type=int, default=None)
     parser.add_argument("--traj-save-path", type=str, default=None)
+    parser.add_argument("--spa-overrides", type=str, default=None)
     parser.add_argument(
         "opts",
         default=None,
@@ -436,17 +457,19 @@ def main():
     cfg_path = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
 
     config = get_config(cfg_path, args.opts)
-    benchmark = BenchmarkRenderer(
-        config.BASE_TASK_CONFIG_PATH,
+
+    benchmark = BenchmarkGym(
+        config,
         config.VIDEO_OPTIONS,
         config.VIDEO_DIR,
         {
             "rearrangepick_success",
         },
         args.traj_save_path,
+        should_save_fn=lambda metrics: metrics["rearrangepick_success"],
     )
 
-    ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
+    ac_cfg = config.TASK_CONFIG.TASK.ACTIONS
     spa_cfg = config.SPA
     env = benchmark._env
 

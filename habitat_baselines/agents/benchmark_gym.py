@@ -1,35 +1,57 @@
 import os
 import os.path as osp
 from collections import defaultdict
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from habitat.core.agent import Agent
-from habitat.core.benchmark import Benchmark
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.utils.common import batch_obs, generate_video
+from habitat_baselines.utils.env_utils import make_env_fn
+from habitat_baselines.utils.gym_adapter import HabGymWrapper
 
 
-class BenchmarkRenderer(Benchmark):
+def compress_action(action):
+    return np.concatenate(
+        [
+            action["action_args"]["arm_action"],
+            np.array(
+                [action["action_args"]["grip_action"]],
+                dtype=np.float32,
+            ),
+        ]
+    )
+
+
+class BenchmarkGym:
     def __init__(
         self,
-        config_paths: Optional[str],
+        config: Any,
         video_option: List[str],
         video_dir: str,
         vid_filename_metrics: Set[str],
         traj_save_dir: str = None,
-        keep_obs_keys: Optional[Set[str]] = None,
+        should_save_fn=None,
         writer=None,
     ) -> None:
-        super().__init__(config_paths, False)
+
+        env_class = get_env_class(config.ENV_NAME)
+
+        env = make_env_fn(env_class=env_class, config=config)
+        self._gym_env = HabGymWrapper(env, save_orig_obs=True)
         self._video_option = video_option
         self._video_dir = video_dir
         self._writer = writer
         self._vid_filename_metrics = vid_filename_metrics
         self._traj_save_path = traj_save_dir
-        self._keep_obs_keys = keep_obs_keys
+        self._should_save_fn = should_save_fn
+
+    @property
+    def _env(self):
+        return self._gym_env._env._env
 
     def evaluate(
         self,
@@ -53,44 +75,57 @@ class BenchmarkRenderer(Benchmark):
         should_render = len(self._video_option) > 0
 
         count_episodes = 0
-        dones = []
+        all_dones = []
         all_obs = []
         all_next_obs = []
-        actions = []
-        episode_ids = []
+        all_actions = []
+        all_episode_ids = []
 
-        def filter_obs(obs):
-            if self._keep_obs_keys is None:
-                return obs
-            return {k: v for k, v in obs.items() if k in self._keep_obs_keys}
+        traj_obs = []
+        traj_dones = []
+        traj_next_obs = []
+        traj_actions = []
+        traj_episode_ids = []
+        pbar = tqdm(total=num_episodes)
 
         while count_episodes < num_episodes:
-            observations = self._env.reset()
+            observations = self._gym_env.reset()
             agent.reset()
             if should_render:
-                frame = observations_to_image(
-                    observations, self._env.get_metrics()
+                rgb_frames.append(self._gym_env.render())
+
+            done = False
+
+            while not done:
+                traj_obs.append(observations)
+
+                action = agent.act(self._gym_env.orig_obs)
+                traj_actions.append(action)
+                traj_dones.append(False)
+                traj_episode_ids.append(
+                    int(self._env.current_episode.episode_id)
                 )
-                rgb_frames.append(frame)
 
-            while not self._env.episode_over:
-                all_obs.append(filter_obs(observations))
+                observations, _, done, _ = self._gym_env.direct_hab_step(
+                    action
+                )
 
-                action = agent.act(observations)
-                actions.append(action)
-                dones.append(False)
-                episode_ids.append(int(self._env.current_episode.episode_id))
-
-                observations = self._env.step(action)
-
-                all_next_obs.append(filter_obs(observations))
+                traj_next_obs.append(observations)
 
                 if should_render:
-                    frame = observations_to_image(
-                        observations, self._env.get_metrics()
-                    )
-                    rgb_frames.append(frame)
-            dones[-1] = True
+                    rgb_frames.append(self._gym_env.render())
+            traj_dones[-1] = True
+
+            if self._should_save_fn is None or self._should_save_fn(
+                self._env.get_metrics()
+            ):
+                all_obs.extend(traj_obs)
+                all_dones.extend(traj_dones)
+                all_next_obs.extend(traj_next_obs)
+                all_actions.extend(traj_actions)
+                all_episode_ids.extend(traj_episode_ids)
+                count_episodes += 1
+                pbar.update(1)
 
             metrics = self._env.get_metrics()
             for m, v in metrics.items():
@@ -100,24 +135,12 @@ class BenchmarkRenderer(Benchmark):
                 else:
                     agg_metrics[m] += v
 
-            def compress_action(action):
-                return np.concatenate(
-                    [
-                        action["action_args"]["arm_action"],
-                        np.array(
-                            [action["action_args"]["grip_action"]],
-                            dtype=np.float32,
-                        ),
-                    ]
-                )
-
             if should_render:
                 generate_video(
                     video_option=self._video_option,
                     video_dir=self._video_dir,
                     images=rgb_frames,
-                    episode_id=None,
-                    # episode_id=self._env.episode_id,
+                    episode_id=self._env.current_episode.episode_id,
                     checkpoint_idx=0,
                     metrics={
                         k: v
@@ -125,9 +148,8 @@ class BenchmarkRenderer(Benchmark):
                         if k in self._vid_filename_metrics
                     },
                     tb_writer=self._writer,
+                    verbose=False,
                 )
-
-            count_episodes += 1
 
         if self._traj_save_path is not None:
             save_dir = osp.dirname(self._traj_save_path)
@@ -137,17 +159,18 @@ class BenchmarkRenderer(Benchmark):
             all_next_obs = batch_obs(all_next_obs)
             torch.save(
                 {
-                    "done": torch.FloatTensor(dones),
+                    "done": torch.FloatTensor(all_dones),
                     "obs": all_obs,
                     "next_obs": all_next_obs,
-                    "episode_ids": episode_ids,
+                    "episode_ids": all_episode_ids,
                     "actions": torch.tensor(
-                        [compress_action(action) for action in actions]
+                        [compress_action(action) for action in all_actions]
                     ),
                 },
                 self._traj_save_path,
             )
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+        pbar.close()
 
         return avg_metrics
