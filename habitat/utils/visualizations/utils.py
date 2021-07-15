@@ -204,8 +204,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         cur_y = 0.0
         # Arrange the images in columns with the largest image to the left.
         col = []
-        for i in range(len(egocentric_view_l) - 1):
-            im = egocentric_view_l[i + 1]
+        for im in egocentric_view_l[1:]:
             if cur_y + im.shape[0] <= max_height:
                 col.append(im)
                 cur_y += im.shape[0]
