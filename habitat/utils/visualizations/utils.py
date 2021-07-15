@@ -214,7 +214,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
                 cur_y = 0.0
         img_cols.append(col)
         col_widths = [
-            max([col_ele.shape[1] for col_ele in col]) for col in img_cols
+            max(col_ele.shape[1] for col_ele in col) for col in img_cols
         ]
         # Get the total width of all the columns put together.
         total_width = sum(col_widths)
