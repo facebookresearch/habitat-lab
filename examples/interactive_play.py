@@ -351,8 +351,12 @@ def play_env(env, args, config):
     pygame.quit()
 
 
+def has_pygame():
+    return pygame is not None
+
+
 if __name__ == "__main__":
-    if pygame is None:
+    if not has_pygame():
         raise ImportError(
             "Need to install PyGame (run `pip install pygame==2.0.1`)"
         )
