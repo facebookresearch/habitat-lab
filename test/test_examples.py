@@ -6,8 +6,6 @@ from os import path as osp
 
 import pytest
 
-from examples.interactive_play import has_pygame
-
 
 def run_main(*args):
     # patch sys.args
@@ -58,10 +56,6 @@ def run_main_subproc(args):
             "--no-make-video",
         ),
         ("examples/tutorials/nb_python/Habitat_Lab.py",),
-        (
-            "examples/interactive_play.py",
-            "--no-render",
-        ),
     ],
 )
 def test_example_modules(args):
@@ -78,6 +72,4 @@ def test_example_modules(args):
     ],
 )
 def test_rearrange_example_modules(args):
-    if not has_pygame():
-        return
     run_main_subproc(args)

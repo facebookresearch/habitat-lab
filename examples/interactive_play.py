@@ -348,7 +348,8 @@ def play_env(env, args, config):
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         make_video_cv2(all_obs, "interactive_play")
-    pygame.quit()
+    if not args.no_render:
+        pygame.quit()
 
 
 def has_pygame():
@@ -356,10 +357,6 @@ def has_pygame():
 
 
 if __name__ == "__main__":
-    if not has_pygame():
-        raise ImportError(
-            "Need to install PyGame (run `pip install pygame==2.0.1`)"
-        )
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
@@ -367,6 +364,10 @@ if __name__ == "__main__":
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     args = parser.parse_args()
+    if not has_pygame() and not args.no_render:
+        raise ImportError(
+            "Need to install PyGame (run `pip install pygame==2.0.1`)"
+        )
 
     config = habitat.get_config(args.cfg)
 
