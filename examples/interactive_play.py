@@ -79,7 +79,7 @@ def append_text_to_image(image: np.ndarray, text: str):
     font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    text_image = np.zeros_like(image)
+    text_image = np.zeros_like(image, dtype=np.uint8)
 
     y = 0
     for line in text:
@@ -96,7 +96,7 @@ def append_text_to_image(image: np.ndarray, text: str):
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    return image + text_image
+    return np.clip(image + text_image, 0, 255)
 
 
 def overlay_frame(frame, info):
