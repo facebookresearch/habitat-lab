@@ -79,7 +79,7 @@ def append_text_to_image(image: np.ndarray, text: str):
     font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(image.shape, dtype=np.uint8)
+    text_image = np.zeros(image.shape, dtype=np.uint8)
 
     y = 0
     for line in text:
@@ -87,7 +87,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         y += textsize[1] + 10
         x = 10
         cv2.putText(
-            blank_image,
+            text_image,
             line,
             (x, y),
             font,
@@ -96,10 +96,7 @@ def append_text_to_image(image: np.ndarray, text: str):
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    text_image = blank_image[0 : y + 10, 0:w]
-    text_image = cv2.flip(text_image, 0)
-    final = np.concatenate((image, text_image), axis=0)
-    return final
+    return image + text_image
 
 
 def overlay_frame(frame, info):
@@ -153,10 +150,10 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     # Base control
     elif keys[pygame.K_j]:
         # Left
-        base_action = [0, -1]
+        base_action = [0, 1]
     elif keys[pygame.K_l]:
         # Right
-        base_action = [0, 1]
+        base_action = [0, -1]
     elif keys[pygame.K_k]:
         # Back
         base_action = [-1, 0]
@@ -204,9 +201,9 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         EE_FACTOR = 0.5
         # End effector control
         if keys[pygame.K_d]:
-            arm_action[1] += EE_FACTOR
-        elif keys[pygame.K_a]:
             arm_action[1] -= EE_FACTOR
+        elif keys[pygame.K_a]:
+            arm_action[1] += EE_FACTOR
         elif keys[pygame.K_w]:
             arm_action[0] += EE_FACTOR
         elif keys[pygame.K_s]:
@@ -262,11 +259,6 @@ def get_wrapped_prop(venv, prop):
 
 
 def play_env(env, args, config):
-    if not args.no_render:
-        pygame.init()
-        render_dim = config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH
-        screen = pygame.display.set_mode([render_dim, render_dim])
-
     render_count = None
     if args.no_render:
         render_count = 60 * 60
@@ -277,6 +269,15 @@ def play_env(env, args, config):
             use_arm_actions = np.load(f)
 
     obs = env.reset()
+
+    if not args.no_render:
+        obs = env.step({"action": "EMPTY", "action_args": {}})
+        draw_obs = observations_to_image(obs, {})
+        pygame.init()
+        screen = pygame.display.set_mode(
+            [draw_obs.shape[1], draw_obs.shape[0]]
+        )
+
     i = 0
     target_fps = 60.0
     prev_time = time.time()
@@ -308,16 +309,13 @@ def play_env(env, args, config):
 
         total_reward += reward
 
-        obs["rgb"] = obs["robot_third_rgb"]
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)
 
-        if len(use_ob) == 1:
-            use_ob = use_ob[0]
         draw_ob = use_ob[:]
+        # cv2.imshow('viewer', draw_ob[..., ::-1])
 
         if not args.no_render:
-            draw_ob = np.flip(draw_ob, 0)
             draw_ob = np.transpose(draw_ob, (1, 0, 2))
             draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
             screen.blit(draw_obuse_ob, (0, 0))

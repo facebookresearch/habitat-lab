@@ -164,22 +164,21 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         generated image of a single frame.
     """
     egocentric_view_l: List[np.ndarray] = []
-    if "rgb" in observation:
-        rgb = observation["rgb"]
-        if not isinstance(rgb, np.ndarray):
-            rgb = rgb.cpu().numpy()
+    for k in observation:
+        if "rgb" in k:
+            rgb = observation[k]
+            if not isinstance(rgb, np.ndarray):
+                rgb = rgb.cpu().numpy()
 
-        egocentric_view_l.append(rgb)
+            egocentric_view_l.append(rgb)
+        elif "depth" in k:
+            depth_map = observation[k].squeeze() * 255.0
+            if not isinstance(depth_map, np.ndarray):
+                depth_map = depth_map.cpu().numpy()
 
-    # draw depth map if observation has depth info
-    if "depth" in observation:
-        depth_map = observation["depth"].squeeze() * 255.0
-        if not isinstance(depth_map, np.ndarray):
-            depth_map = depth_map.cpu().numpy()
-
-        depth_map = depth_map.astype(np.uint8)
-        depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-        egocentric_view_l.append(depth_map)
+            depth_map = depth_map.astype(np.uint8)
+            depth_map = np.stack([depth_map for _ in range(3)], axis=2)
+            egocentric_view_l.append(depth_map)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:
@@ -192,7 +191,43 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     assert (
         len(egocentric_view_l) > 0
     ), "Expected at least one visual sensor enabled."
-    egocentric_view = np.concatenate(egocentric_view_l, axis=1)
+
+    shapes = [x.shape for x in egocentric_view_l]
+
+    if len(set(shapes)) != 1:
+        egocentric_view_l = sorted(
+            egocentric_view_l, key=lambda x: x.shape[0], reverse=True
+        )
+        img_cols = [[egocentric_view_l[0]]]
+        max_height = egocentric_view_l[0].shape[0]
+        cur_y = 0.0
+        col = []
+        for i in range(len(egocentric_view_l) - 1):
+            im = egocentric_view_l[i + 1]
+            if cur_y + im.shape[0] <= max_height:
+                col.append(im)
+                cur_y += im.shape[0]
+            else:
+                img_cols.append(col)
+                col = [im]
+                cur_y = 0.0
+        img_cols.append(col)
+        col_widths = [
+            max([col_ele.shape[1] for col_ele in col]) for col in img_cols
+        ]
+        total_width = sum(col_widths)
+        final_im = np.zeros(
+            (max_height, total_width, 3), dtype=egocentric_view_l[0].dtype
+        )
+        cur_x = 0
+        for i in range(len(img_cols)):
+            next_x = cur_x + col_widths[i]
+            total_col_im = np.concatenate(img_cols[i], axis=0)
+            final_im[: total_col_im.shape[0], cur_x:next_x] = total_col_im
+            cur_x = next_x
+        egocentric_view = final_im
+    else:
+        egocentric_view = np.concatenate(egocentric_view_l, axis=1)
 
     # draw collision
     if "collisions" in info and info["collisions"]["is_collision"]:
