@@ -114,6 +114,7 @@ class BenchmarkGym:
 
                 if should_render:
                     rgb_frames.append(self._gym_env.render())
+
             traj_dones[-1] = True
 
             if self._should_save_fn is None or self._should_save_fn(
@@ -126,14 +127,14 @@ class BenchmarkGym:
                 all_actions.extend(traj_actions)
                 all_episode_ids.extend(traj_episode_ids)
 
-                traj_obs = []
-                traj_dones = []
-                traj_next_obs = []
-                traj_actions = []
-                traj_episode_ids = []
-
                 count_episodes += 1
                 pbar.update(1)
+
+            traj_obs = []
+            traj_dones = []
+            traj_next_obs = []
+            traj_actions = []
+            traj_episode_ids = []
 
             metrics = self._env.get_metrics()
             for m, v in metrics.items():
