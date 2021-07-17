@@ -28,7 +28,7 @@ from functools import partial
 
 from habitat.tasks.rearrange.utils import make_border_red
 from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
-from habitat_baselines.motion_planning.mp_sim import HabMpSim, PbMpSim
+from habitat_baselines.motion_planning.mp_sim import HabMpSim
 from habitat_baselines.motion_planning.mp_spaces import JsMpSpace
 
 
@@ -351,9 +351,7 @@ class MotionPlanner:
         """
         The two different simulators used for planning.
         """
-        if self._config.MP_SIM_TYPE == "Reg":
-            return PbMpSim(self._sim)
-        elif self._config.MP_SIM_TYPE == "Priv":
+        if self._config.MP_SIM_TYPE == "Priv":
             return HabMpSim(self._sim)
         else:
             raise ValueError("Unrecognized simulator type")
