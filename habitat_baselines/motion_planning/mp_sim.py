@@ -1,11 +1,5 @@
 from abc import ABC, abstractmethod
 
-try:
-    import pybullet as p
-except ImportError:
-    p = None
-
-
 from habitat.tasks.rearrange.utils import get_aabb, rearrange_collision
 from habitat_baselines.motion_planning.robot_target import ObjPlanningData
 from habitat_sim.physics import CollisionGroups, MotionType
