@@ -6,9 +6,14 @@ DATASET:
     DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
-    TYPE: RearrangePickTask-v0
+    #TYPE: RearrangePickTask-v0
+    TYPE: RearrangeReachTask-v0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
+
+    # Reach task config
+    RENDER_TARGET: True
+    EE_SAMPLE_FACTOR: 0.8
 
     # In radians
     #BASE_ANGLE_NOISE: 0.15
@@ -46,7 +51,9 @@ TASK:
         TYPE: "IsHoldingSensor"
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0

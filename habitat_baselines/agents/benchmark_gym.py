@@ -3,6 +3,7 @@ import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set
 
+import gym.spaces as spaces
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -164,8 +165,9 @@ class BenchmarkGym:
             save_dir = osp.dirname(self._traj_save_path)
             if not osp.exists(save_dir):
                 os.makedirs(save_dir)
-            all_obs = batch_obs(all_obs)
-            all_next_obs = batch_obs(all_next_obs)
+            if isinstance(self._gym_env.observation_space, spaces.Dict):
+                all_obs = batch_obs(all_obs)
+                all_next_obs = batch_obs(all_next_obs)
             torch.save(
                 {
                     "done": torch.FloatTensor(all_dones),

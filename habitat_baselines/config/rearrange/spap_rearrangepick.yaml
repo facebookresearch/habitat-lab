@@ -16,6 +16,7 @@ SPA:
   DEBUG_DIR: "data/mp_test"
   COUNT_OBJ_COLLISIONS: True
   GRASP_GEN_IS_VERBOSE: True
+  IK_DIST_THRESH: 0.1
 RL:
     REWARD_MEASURE: "rearrangepick_reward"
     SUCCESS_MEASURE: "rearrangepick_success"

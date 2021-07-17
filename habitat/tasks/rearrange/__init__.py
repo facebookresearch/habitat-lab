@@ -17,6 +17,7 @@ def _try_register_rearrange_task():
 
     try:
         import habitat.tasks.rearrange.rearrange_pick_task
+        import habitat.tasks.rearrange.rearrange_reach_task
         import habitat.tasks.rearrange.rearrange_task
 
     except ImportError as e:

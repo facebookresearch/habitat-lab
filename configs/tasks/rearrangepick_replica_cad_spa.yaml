@@ -104,6 +104,7 @@ TASK:
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             VEL_CTRL_LIM: 0.0125
+            EE_CTRL_LIM: 0.015
         EMPTY:
             TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:

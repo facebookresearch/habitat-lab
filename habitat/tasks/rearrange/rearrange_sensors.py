@@ -253,12 +253,15 @@ class TrackMarkerSensor(Sensor):
 
 @registry.register_sensor
 class EeSensor(Sensor):
+    cls_uuid: str = "ee_pos"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
-    def _get_uuid(self, *args, **kwargs):
-        return "ee_pos"
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EeSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -277,6 +280,37 @@ class EeSensor(Sensor):
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         return np.array(local_ee_pos)
+
+
+@registry.register_sensor
+class RelativeRestingPositionSensor(Sensor):
+    cls_uuid: str = "relative_resting_position"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeRestingPositionSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        trans = self._sim.robot.base_transformation
+        relative_desired_resting = trans.inverted().transform_point(
+            task.desired_resting
+        )
+
+        return np.array(relative_desired_resting)
 
 
 @registry.register_sensor
@@ -391,34 +425,6 @@ class DummyMeasure(Measure):
 
 
 @registry.register_measure
-class EndEffectorToPosDistance(Measure):
-    cls_uuid: str = "ee_to_pos_distance"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        self._sim = sim
-        self._config = config
-        self._target_pos = np.zeros(3)
-        super().__init__(**kwargs)
-
-    def set_target_pos(self, target_pos):
-        self._target_pos = target_pos
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return EndEffectorToPosDistance.cls_uuid
-
-    def reset_metric(self, *args, episode, **kwargs):
-        self.update_metric(*args, episode=episode, **kwargs)
-
-    def update_metric(self, *args, episode, **kwargs):
-        ee_pos = self._sim.robot.ee_transform.translation
-
-        distance = np.linalg.norm(self._target_pos - ee_pos, ord=2)
-
-        self._metric = distance
-
-
-@registry.register_measure
 class RobotCollisions(Measure):
     cls_uuid: str = "robot_collisions"
 
@@ -504,6 +510,74 @@ class RobotForce(Measure):
             self._prev_force = self._cur_force
             self._add_force = 0.0
         self._metric = self._accum_force
+
+
+@registry.register_measure
+class RearrangeReachReward(Measure):
+    cls_uuid: str = "rearrange_reach_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangeReachReward.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = (
+            -1.0
+            * task.measurements.measures[
+                EndEffectorToRestDistance.cls_uuid
+            ].get_metric()
+        )
+
+
+@registry.register_measure
+class RearrangeReachSuccess(Measure):
+    cls_uuid: str = "rearrange_reach_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangeReachSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self._config = config
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = (
+            task.measurements.measures[
+                EndEffectorToRestDistance.cls_uuid
+            ].get_metric()
+            < self._config.SUCC_THRESH
+        )
 
 
 @registry.register_measure

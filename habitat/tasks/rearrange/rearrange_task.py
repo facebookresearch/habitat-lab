@@ -7,17 +7,29 @@
 import copy
 from typing import Any, Dict, List, Union
 
+import numpy as np
+
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.rearrange_sensors import RearrangePickSuccess
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollDetails, rearrange_collision
 
 
+def merge_sim_episode_with_object_config(sim_config, episode):
+    sim_config.defrost()
+    sim_config.ep_info = [episode.__dict__]
+    sim_config.freeze()
+    return sim_config
+
+
 class RearrangeTask(NavigationTask):
     """
-    Defines additional logic for valid collisions and gripping.
+    Defines additional logic for valid collisions and gripping shared between
+    all rearrangement tasks.
     """
+
+    def overwrite_sim_config(self, sim_config, episode):
+        return merge_sim_episode_with_object_config(sim_config, episode)
 
     def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
@@ -26,6 +38,11 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
+        self._desired_resting = np.array([0.5, 0.0, 1.0])
+
+    @property
+    def desired_resting(self):
+        return self._desired_resting
 
     def reset(self, episode: Episode):
         super_reset = True
@@ -60,9 +77,6 @@ class RearrangeTask(NavigationTask):
     ) -> bool:
 
         done = False
-        if self.measurements.get_metrics()[RearrangePickSuccess.cls_uuid]:
-            done = True
-
         if self.should_end:
             done = True
 

@@ -6,6 +6,7 @@ import numpy as np
 
 import habitat
 from habitat.core.simulator import Observations
+from habitat.tasks.rearrange.rearrange_sensors import EeSensor
 from habitat_baselines.agents.benchmark_gym import BenchmarkGym
 from habitat_baselines.config.default import get_config
 from habitat_baselines.motion_planning.motion_plan import MotionPlanner
@@ -43,7 +44,7 @@ class ParameterizedAgent(habitat.Agent):
         self._agent_config = action_config
 
         self._sim = env._sim
-        self._task = env
+        self._task = env._task
 
     def _end_episode(self):
         self._task.should_end = True
@@ -210,14 +211,10 @@ class ArmTargModule(ParameterizedAgent):
 
         self._plan_idx += 1
         grip = self._get_gripper_ac(cur_plan_ac)
-        if not self._is_ee_plan:
-            des_js = cur_plan_ac
-            return {
-                "action": "ARM_ACTION",
-                "action_args": {"arm_action": des_js, "grip_action": grip},
-            }
-        else:
-            raise NotImplementedError("EE control not yet supported")
+        return {
+            "action": "ARM_ACTION",
+            "action_args": {"arm_action": cur_plan_ac, "grip_action": grip},
+        }
 
     def _get_plan_ac(self, observations) -> np.ndarray:
         r"""Get the plan action for the current timestep. By default return the
@@ -255,6 +252,7 @@ class ArmTargModule(ParameterizedAgent):
             done = True
 
         if done:
+            self._log("Skill requested hard termination")
             self._on_done()
         return done
 
@@ -274,17 +272,17 @@ class ArmTargModule(ParameterizedAgent):
             del self._sim.viz_ids[viz_point_name]
         self._viz_points = []
 
-    @abc.abstractmethod
     def _get_gripper_ac(self, plan_ac) -> float:
-        pass
+        # keep the gripper state as is.
+        if self._sim.robot.is_gripper_open:
+            grip = -1.0
+        else:
+            grip = 1.0
+        return grip
 
     @property
     def adjusted_plan_idx(self) -> bool:
         return self._plan_idx // self._config.RUN_FREQ
-
-    @property
-    def _is_ee_plan(self) -> bool:
-        return False
 
     @abc.abstractmethod
     def _generate_plan(self, observations, **kwargs) -> np.ndarray:
@@ -298,6 +296,31 @@ class ArmTargModule(ParameterizedAgent):
         if self._mp.traj_viz_id is not None:
             self._sim._sim.remove_traj_obj(self._mp.traj_viz_id)
             self._mp.traj_viz_id = None
+
+
+class IkMoveArm(ArmTargModule):
+    def _get_plan_ac(self, observations):
+        ee_pos = observations[EeSensor.cls_uuid]
+        to_target = self._robot_target - ee_pos
+        to_target = self._config.IK_SPEED_FACTOR * (
+            to_target / np.linalg.norm(to_target)
+        )
+        return to_target
+
+    def _on_done(self):
+        super()._on_done()
+        self._set_info("execute_ik_failure", 0)
+
+    def _generate_plan(self, observations, robot_target, **kwargs):
+        self._set_info("execute_ik_failure", 1)
+        self._robot_target = robot_target
+
+    def _internal_should_term(self, observations):
+        dist_to_target = np.linalg.norm(
+            observations["ee_pos"] - self._robot_target
+        )
+
+        return dist_to_target < self._config.IK_DIST_THRESH
 
 
 class SpaManipPick(ArmTargModule):
@@ -419,10 +442,6 @@ class SpaResetModule(ArmTargModule):
         self._set_info("execute_reset_failure", int(plan is not None))
         return plan
 
-    @property
-    def _is_ee_plan(self):
-        return False
-
     def _on_done(self):
         super()._on_done()
         self._set_info("execute_reset_failure", 0)
@@ -446,7 +465,11 @@ def main():
     parser.add_argument("--skill-type", default="pick")
     parser.add_argument("--num-eval", type=int, default=None)
     parser.add_argument("--traj-save-path", type=str, default=None)
-    parser.add_argument("--spa-overrides", type=str, default=None)
+    parser.add_argument(
+        "--task-cfg",
+        type=str,
+        default="habitat_baselines/config/rearrange/spap_rearrangepick.yaml",
+    )
     parser.add_argument(
         "opts",
         default=None,
@@ -454,46 +477,51 @@ def main():
         help="Modify config options from command line",
     )
     args = parser.parse_args()
-    cfg_path = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
 
-    config = get_config(cfg_path, args.opts)
+    config = get_config(args.task_cfg, args.opts)
 
     benchmark = BenchmarkGym(
         config,
         config.VIDEO_OPTIONS,
         config.VIDEO_DIR,
-        {
-            "rearrangepick_success",
-        },
+        {config.RL.SUCCESS_MEASURE},
         args.traj_save_path,
-        should_save_fn=lambda metrics: metrics["rearrangepick_success"],
+        should_save_fn=lambda metrics: metrics[config.RL.SUCCESS_MEASURE],
     )
 
     ac_cfg = config.TASK_CONFIG.TASK.ACTIONS
     spa_cfg = config.SPA
     env = benchmark._env
 
-    def get_args(skill):
+    def get_object_args(skill):
         target_idx = skill._sim.get_targets()[0][0]
         return {"obj": target_idx}
 
+    def get_arm_rest_args(skill):
+        return {"robot_target": skill._task.desired_resting}
+
     skills = {
+        "reach": IkMoveArm(
+            env, spa_cfg, ac_cfg, auto_get_args_fn=get_arm_rest_args
+        ),
         "pick": AgentComposition(
             [
-                SpaManipPick(env, spa_cfg, ac_cfg, auto_get_args_fn=get_args),
+                SpaManipPick(
+                    env, spa_cfg, ac_cfg, auto_get_args_fn=get_object_args
+                ),
                 SpaResetModule(
                     env,
                     spa_cfg,
                     ac_cfg,
                     ignore_first=True,
-                    auto_get_args_fn=get_args,
+                    auto_get_args_fn=get_object_args,
                 ),
             ],
             env,
             spa_cfg,
             ac_cfg,
-            auto_get_args_fn=get_args,
-        )
+            auto_get_args_fn=get_object_args,
+        ),
     }
     use_skill = skills[args.skill_type]
 

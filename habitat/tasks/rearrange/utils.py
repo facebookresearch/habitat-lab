@@ -370,9 +370,9 @@ class IkHelper:
                 upper.append(ret[9])
         return np.array(lower), np.array(upper)
 
-    def calc_ik(self, targ_ee):
+    def calc_ik(self, targ_ee: np.ndarray):
         """
-        targ_ee is in ROBOT COORDINATE FRAME NOT IN EE COORDINATE FRAME
+        :param targ_ee: 3D target position in the ROBOT BASE coordinate frame
         """
         js = p.calculateInverseKinematics(
             self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id

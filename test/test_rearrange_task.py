@@ -135,6 +135,33 @@ def test_rearrange_habitat_env():
         env.reset()
 
 
+def test_rearrange_reach_task():
+    config = baselines_get_config(
+        "habitat_baselines/config/rearrange/ddppo_rearrange_reach.yaml"
+    )
+
+    env_class = get_env_class(config.ENV_NAME)
+
+    env = habitat_baselines.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+
+    with env:
+        for _ in range(10):
+            env.reset()
+            done = False
+            while not done:
+                action = env.action_space.sample()
+                habitat.logger.info(
+                    f"Action : "
+                    f"{action['action']}, "
+                    f"args: {action['action_args']}."
+                )
+                _, _, done, info = env.step(action=action)
+
+            logger.info(info)
+
+
 def test_rearrange_task():
     config = baselines_get_config(
         "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"

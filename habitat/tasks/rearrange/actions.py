@@ -41,33 +41,38 @@ class ArmAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         arm_controller_cls = eval(self._config.ARM_CONTROLLER)
-        grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
-        self.grip_ctrlr = grip_controller_cls(
-            *args, config=config, sim=sim, **kwargs
-        )
+
+        if self._config.GRIP_CONTROLLER is not None:
+            grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
+            self.grip_ctrlr = grip_controller_cls(
+                *args, config=config, sim=sim, **kwargs
+            )
+        else:
+            self.grip_ctrlr = None
         self.disable_grip = False
         if "DISABLE_GRIP" in config:
             self.disable_grip = config["DISABLE_GRIP"]
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
-        self.grip_ctrlr.reset(*args, **kwargs)
+        if self.grip_ctrlr is not None:
+            self.grip_ctrlr.reset(*args, **kwargs)
 
     @property
     def action_space(self):
-        return spaces.Dict(
-            {
-                "arm_action": self.arm_ctrlr.action_space,
-                "grip_action": self.grip_ctrlr.action_space,
-            }
-        )
+        action_spaces = {
+            "arm_action": self.arm_ctrlr.action_space,
+        }
+        if self.grip_ctrlr is not None:
+            action_spaces["grip_action"] = self.grip_ctrlr.action_space
+        return spaces.Dict(action_spaces)
 
-    def step(self, arm_action, grip_action, *args, **kwargs):
+    def step(self, arm_action, grip_action=None, *args, **kwargs):
         self.arm_ctrlr.step(arm_action, should_step=False)
-        if grip_action is not None and not self.disable_grip:
+        if self.grip_ctrlr is not None and not self.disable_grip:
             self.grip_ctrlr.step(grip_action, should_step=False)
         return self._sim.step(HabitatSimActions.ARM_ACTION)
 
@@ -290,8 +295,9 @@ class ArmEEAction(SimulatorTaskAction):
             self.robot_ee_constraints[:, 1],
         )
 
-    def set_desired_ee_pos(self, des_rel_pos):
-        self.ee_targ += np.array(des_rel_pos)
+    def set_desired_ee_pos(self, ee_pos):
+        self.ee_targ += np.array(ee_pos)
+
         self.apply_ee_constraints()
 
         ik = self._sim.ik_helper
@@ -307,10 +313,18 @@ class ArmEEAction(SimulatorTaskAction):
 
         return des_joint_pos
 
-    def step(self, rel_ee_pos, should_step=True, **kwargs):
-        rel_ee_pos = np.clip(rel_ee_pos, -1, 1)
-        rel_ee_pos *= self._config.EE_CTRL_LIM
-        self.set_desired_ee_pos(rel_ee_pos)
+    def step(self, ee_pos, should_step=True, **kwargs):
+        ee_pos = np.clip(ee_pos, -1, 1)
+        ee_pos *= self._config.EE_CTRL_LIM
+        self.set_desired_ee_pos(ee_pos)
+
+        if self._config.get("RENDER_EE_TARGET", False):
+            global_pos = self._sim.robot.base_transformation.transform_point(
+                self.ee_targ
+            )
+            self._sim.viz_ids["ee_target"] = self._sim.viz_pos(
+                global_pos, self._sim.viz_ids["ee_target"]
+            )
 
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_EE)

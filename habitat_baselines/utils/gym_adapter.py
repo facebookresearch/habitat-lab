@@ -63,7 +63,9 @@ class HabGymWrapper(gym.Env):
         self._save_orig_obs = save_orig_obs
         self.orig_obs = None
         if len(action_space.spaces) != 1:
-            raise ValueError("Cannot convert this action space")
+            raise ValueError(
+                "Cannot convert this action space, more than one action"
+            )
 
         self.orig_action_name = list(action_space.spaces.keys())[0]
         action_space = action_space.spaces[self.orig_action_name]
