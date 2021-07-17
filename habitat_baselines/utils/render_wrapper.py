@@ -1,0 +1,76 @@
+from typing import List
+
+import cv2
+import gym
+import numpy as np
+
+from habitat_baselines.utils.gym_adapter import flatten_dict
+
+
+def append_text_to_image(image: np.ndarray, text: List[str]):
+    r"""Appends text underneath an image of size (height, width, channels).
+    The returned image has white text on a black background. Uses textwrap to
+    split long text into multiple lines.
+    Args:
+        image: the image to put text underneath
+        text: a string to display
+    Returns:
+        A new image with text inserted underneath the input image
+    """
+    h, w, c = image.shape
+    font_size = 0.5
+    font_thickness = 1
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    text_image = np.zeros_like(image, dtype=np.uint8)
+
+    y = 0
+    for line in text:
+        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
+        y += textsize[1] + 10
+        x = 10
+        cv2.putText(
+            text_image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (255, 255, 255),
+            font_thickness,
+            lineType=cv2.LINE_AA,
+        )
+    return np.clip(image + text_image, 0, 255)
+
+
+def overlay_frame(frame, info):
+    lines = []
+    flattened_info = flatten_dict(info)
+    for k, v in flattened_info.items():
+        lines.append(f"{k}: {v:.2f}")
+
+    frame = append_text_to_image(frame, lines)
+
+    return frame
+
+
+class HabRenderWrapper(gym.Wrapper):
+    def __init__(self, env):
+        if not isinstance(env, gym.Env):
+            raise ValueError("Can only wrap gym env")
+        super().__init__(env)
+        self._last_info = None
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        self._last_info = info
+
+        return obs, reward, done, info
+
+    def reset(self):
+        self._last_info = None
+        return super().reset()
+
+    def render(self, mode="rgb_array"):
+        frame = super().render(mode=mode)
+        if self._last_info is not None:
+            frame = overlay_frame(frame, self._last_info)
+        return frame
