@@ -153,6 +153,8 @@ class RearrangeSim(HabitatSim):
             self.art_objs = []
             self.scene_obj_ids = []
             self.robot = None
+            self.viz_ids = defaultdict(lambda: None)
+            self.viz_obj_ids = []
         self.grasp_mgr.desnap(force=True)
         self.prev_scene_id = ep_info["scene_id"]
 
