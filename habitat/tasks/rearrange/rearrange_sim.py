@@ -189,7 +189,7 @@ class RearrangeSim(HabitatSim):
             if self.habitat_config.get("IK_ARM_URDF", None) is not None:
                 self.ik_helper = IkHelper(
                     self.habitat_config.IK_ARM_URDF,
-                    self.robot.params.arm_init_params,
+                    np.array(self.robot.params.arm_init_params),
                 )
             # Capture the starting art states
             self.start_art_states = {

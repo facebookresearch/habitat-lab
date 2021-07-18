@@ -305,10 +305,11 @@ class RelativeRestingPositionSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        trans = self._sim.robot.base_transformation
-        relative_desired_resting = trans.inverted().transform_point(
-            task.desired_resting
-        )
+        base_trans = self._sim.robot.base_transformation
+        ee_pos = self._sim.robot.ee_transform.translation
+        local_ee_pos = base_trans.inverted().transform_point(ee_pos)
+
+        relative_desired_resting = task.desired_resting - local_ee_pos
 
         return np.array(relative_desired_resting)
 
@@ -400,11 +401,10 @@ class EndEffectorToRestDistance(Measure):
     def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, *args, episode, task, **kwargs):
-        ee_pos = self._sim.robot.ee_transform.translation
-        inv_robot_T = self._sim.robot.base_transformation.inverted()
-        local_ee = inv_robot_T.transform_point(ee_pos)
-        rest_dist = np.linalg.norm(local_ee - task.desired_resting)
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
+        print("to resting", to_resting)
+        rest_dist = np.linalg.norm(to_resting)
 
         self._metric = rest_dist
 
