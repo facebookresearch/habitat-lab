@@ -47,6 +47,7 @@ except ImportError:
     pygame = None
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+DEFAULT_RENDER_STEPS_LIMIT = 60
 
 
 def make_video_cv2(observations, prefix=""):
@@ -259,9 +260,9 @@ def get_wrapped_prop(venv, prop):
 
 
 def play_env(env, args, config):
-    render_count = None
+    render_steps_limit = None
     if args.no_render:
-        render_count = 60
+        render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
 
     use_arm_actions = None
     if args.load_actions is not None:
@@ -286,7 +287,7 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     while True:
-        if render_count is not None and i > render_count:
+        if render_steps_limit is not None and i > render_steps_limit:
             break
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
