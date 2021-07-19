@@ -403,7 +403,6 @@ class EndEffectorToRestDistance(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
-        print("to resting", to_resting)
         rest_dist = np.linalg.norm(to_resting)
 
         self._metric = rest_dist
@@ -520,7 +519,12 @@ class RearrangeReachReward(Measure):
     def _get_uuid(*args, **kwargs):
         return RearrangeReachReward.cls_uuid
 
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
     def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._prev = None
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
@@ -536,12 +540,18 @@ class RearrangeReachReward(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = (
-            -1.0
-            * task.measurements.measures[
-                EndEffectorToRestDistance.cls_uuid
-            ].get_metric()
-        )
+        cur_dist = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+        if self._config.DIFF_REWARD:
+            if self._prev is None:
+                self._metric = 0.0
+            else:
+                self._metric = self._prev - cur_dist
+        else:
+            self._metric = -1.0 * self._config.SCALE * cur_dist
+
+        self._prev = cur_dist
 
 
 @registry.register_measure

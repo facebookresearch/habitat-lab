@@ -267,6 +267,7 @@ def play_env(env, args, config):
         if not args.no_render:
             pygame.event.pump()
         if env.episode_over:
+            total_reward = 0
             env.reset()
 
         curr_time = time.time()

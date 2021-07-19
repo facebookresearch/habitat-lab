@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 50
+    MAX_EPISODE_STEPS: 50000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -23,6 +23,8 @@ TASK:
         TYPE: "EndEffectorToRestDistance"
     REARRANGE_REACH_REWARD:
         TYPE: "RearrangeReachReward"
+        SCALE: 1.0
+        DIFF_REWARD: True
     REARRANGE_REACH_SUCCESS:
         TYPE: "RearrangeReachSuccess"
         SUCC_THRESH: 0.1
@@ -37,7 +39,7 @@ TASK:
             GRIP_CONTROLLER: null
             EE_CTRL_LIM: 0.025
             GRASP_THRESH_DIST: 0.15
-            VEL_CTRL_LIM: 0.0125
+            VEL_CTRL_LIM: 0.025
             RENDER_EE_TARGET: True
     POSSIBLE_ACTIONS:
         - ARM_ACTION
@@ -73,6 +75,7 @@ SIMULATOR:
     FORWARD_STEP_SIZE: 0.25
     LAG_OBSERVATIONS: 0
     IK_ARM_URDF: null
+    LOAD_OBJS: False
 
     # Grasping
     HOLD_THRESH: 0.09

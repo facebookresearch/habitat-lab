@@ -4,11 +4,8 @@ RL:
     REWARD_MEASURE: "rearrange_reach_reward"
     SUCCESS_MEASURE: "rearrange_reach_success"
     SUCCESS_REWARD: 10.0
-    SLACK_REWARD: -0.01
     GYM_OBS_KEYS: ['joint', 'relative_resting_position']
     GYM_FIX_INFO_DICT: True
     GYM_ACTION_KEYS: ['ARM_ACTION']
 
-    SUCC_THRESH: 0.15
-
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RearrangeRLEnv"

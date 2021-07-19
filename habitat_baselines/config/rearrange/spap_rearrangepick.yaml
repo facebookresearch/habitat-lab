@@ -52,7 +52,7 @@ RL:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RearrangeRLEnv"
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]
 

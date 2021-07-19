@@ -41,11 +41,13 @@ def append_text_to_image(image: np.ndarray, text: List[str]):
     return np.clip(image + text_image, 0, 255)
 
 
-def overlay_frame(frame, info):
+def overlay_frame(frame, info, additional=None):
     lines = []
     flattened_info = flatten_dict(info)
     for k, v in flattened_info.items():
         lines.append(f"{k}: {v:.2f}")
+    if additional is not None:
+        lines.extend(additional)
 
     frame = append_text_to_image(frame, lines)
 
@@ -58,19 +60,32 @@ class HabRenderWrapper(gym.Wrapper):
             raise ValueError("Can only wrap gym env")
         super().__init__(env)
         self._last_info = None
+        self._total_reward = 0.0
+        self._n_step = 0
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
         self._last_info = info
+        self._total_reward += reward
+        self._n_step += 1
 
         return obs, reward, done, info
 
     def reset(self):
         self._last_info = None
+        self._total_reward = 0.0
+        self._n_step = 0
         return super().reset()
 
     def render(self, mode="rgb_array"):
         frame = super().render(mode=mode)
         if self._last_info is not None:
-            frame = overlay_frame(frame, self._last_info)
+            frame = overlay_frame(
+                frame,
+                self._last_info,
+                [
+                    f"Step {self._n_step}",
+                    f"Total Reward {self._total_reward:.4f}",
+                ],
+            )
         return frame

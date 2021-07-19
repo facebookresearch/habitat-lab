@@ -38,4 +38,4 @@ COUNT_ROBOT_OBJ_COLLS: False
 # violation.
 MAX_ACCUM_FORCE: 5000.0
 
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RearrangeRLEnv"
