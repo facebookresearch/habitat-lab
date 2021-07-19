@@ -47,6 +47,7 @@ except ImportError:
     pygame = None
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+DEFAULT_RENDER_STEPS_LIMIT = 60
 
 
 def make_video_cv2(observations, prefix=""):
@@ -79,7 +80,7 @@ def append_text_to_image(image: np.ndarray, text: str):
     font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(image.shape, dtype=np.uint8)
+    text_image = np.zeros_like(image, dtype=np.uint8)
 
     y = 0
     for line in text:
@@ -87,7 +88,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         y += textsize[1] + 10
         x = 10
         cv2.putText(
-            blank_image,
+            text_image,
             line,
             (x, y),
             font,
@@ -96,10 +97,7 @@ def append_text_to_image(image: np.ndarray, text: str):
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    text_image = blank_image[0 : y + 10, 0:w]
-    text_image = cv2.flip(text_image, 0)
-    final = np.concatenate((image, text_image), axis=0)
-    return final
+    return np.clip(image + text_image, 0, 255)
 
 
 def overlay_frame(frame, info):
@@ -153,10 +151,10 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     # Base control
     elif keys[pygame.K_j]:
         # Left
-        base_action = [0, -1]
+        base_action = [0, 1]
     elif keys[pygame.K_l]:
         # Right
-        base_action = [0, 1]
+        base_action = [0, -1]
     elif keys[pygame.K_k]:
         # Back
         base_action = [-1, 0]
@@ -204,9 +202,9 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         EE_FACTOR = 0.5
         # End effector control
         if keys[pygame.K_d]:
-            arm_action[1] += EE_FACTOR
-        elif keys[pygame.K_a]:
             arm_action[1] -= EE_FACTOR
+        elif keys[pygame.K_a]:
+            arm_action[1] += EE_FACTOR
         elif keys[pygame.K_w]:
             arm_action[0] += EE_FACTOR
         elif keys[pygame.K_s]:
@@ -262,14 +260,9 @@ def get_wrapped_prop(venv, prop):
 
 
 def play_env(env, args, config):
-    if not args.no_render:
-        pygame.init()
-        render_dim = config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH
-        screen = pygame.display.set_mode([render_dim, render_dim])
-
-    render_count = None
+    render_steps_limit = None
     if args.no_render:
-        render_count = 60 * 60
+        render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
 
     use_arm_actions = None
     if args.load_actions is not None:
@@ -277,6 +270,15 @@ def play_env(env, args, config):
             use_arm_actions = np.load(f)
 
     obs = env.reset()
+
+    if not args.no_render:
+        obs = env.step({"action": "EMPTY", "action_args": {}})
+        draw_obs = observations_to_image(obs, {})
+        pygame.init()
+        screen = pygame.display.set_mode(
+            [draw_obs.shape[1], draw_obs.shape[0]]
+        )
+
     i = 0
     target_fps = 60.0
     prev_time = time.time()
@@ -285,7 +287,7 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     while True:
-        if render_count is not None and i > render_count:
+        if render_steps_limit is not None and i > render_steps_limit:
             break
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
@@ -308,16 +310,12 @@ def play_env(env, args, config):
 
         total_reward += reward
 
-        obs["rgb"] = obs["robot_third_rgb"]
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)
 
-        if len(use_ob) == 1:
-            use_ob = use_ob[0]
         draw_ob = use_ob[:]
 
         if not args.no_render:
-            draw_ob = np.flip(draw_ob, 0)
             draw_ob = np.transpose(draw_ob, (1, 0, 2))
             draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
             screen.blit(draw_obuse_ob, (0, 0))
@@ -351,14 +349,15 @@ def play_env(env, args, config):
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         make_video_cv2(all_obs, "interactive_play")
-    pygame.quit()
+    if not args.no_render:
+        pygame.quit()
+
+
+def has_pygame():
+    return pygame is not None
 
 
 if __name__ == "__main__":
-    if pygame is None:
-        raise ImportError(
-            "Need to install PyGame (run `pip install pygame==2.0.1`)"
-        )
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
@@ -366,6 +365,10 @@ if __name__ == "__main__":
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     args = parser.parse_args()
+    if not has_pygame() and not args.no_render:
+        raise ImportError(
+            "Need to install PyGame (run `pip install pygame==2.0.1`)"
+        )
 
     config = habitat.get_config(args.cfg)
 
