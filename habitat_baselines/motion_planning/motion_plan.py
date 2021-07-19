@@ -49,8 +49,7 @@ class MotionPlanner:
         self._ignore_names: List[str] = []
         self.traj_viz_id = None
         self._sim = sim
-        if not osp.exists(self._config.DEBUG_DIR):
-            os.makedirs(self._config.DEBUG_DIR)
+        os.makedirs(self._config.DEBUG_DIR, exist_ok=True)
 
         self._use_sim = self._get_sim()
         self.grasp_gen = None
@@ -335,8 +334,7 @@ class MotionPlanner:
             dist_to_goal = -1.0
 
         save_dir = osp.join(self._run_cfg.VIDEO_DIR, "mp_plans")
-        if not osp.exists(save_dir):
-            os.makedirs(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
         mp_name = "ep%s_%i_%.3f" % (
             self._sim.ep_info["episode_id"],
             self._num_calls,

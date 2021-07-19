@@ -2,6 +2,9 @@ import magnum as mn
 import numpy as np
 from PIL import Image
 
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import IkHelper
+from habitat_baselines.motion_planning.mp_spaces import MpSpace
 from habitat_baselines.motion_planning.robot_target import (
     ObjPlanningData,
     RobotTarget,
@@ -11,16 +14,16 @@ from habitat_baselines.motion_planning.robot_target import (
 class GraspGenerator:
     def __init__(
         self,
-        use_sim,
-        mp_space,
-        ik,
+        use_sim: RearrangeSim,
+        mp_space: MpSpace,
+        ik: IkHelper,
         mp,
-        should_render,
-        grasp_thresh,
-        n_gen_grasps,
-        knows_other_objs,
-        log_dir,
-        is_verbose,
+        should_render: bool,
+        grasp_thresh: float,
+        n_gen_grasps: int,
+        knows_other_objs: bool,
+        log_dir: str,
+        is_verbose: bool,
     ):
         self._mp_sim = use_sim
         self._ik = ik

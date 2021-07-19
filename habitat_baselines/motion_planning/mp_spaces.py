@@ -1,10 +1,13 @@
 import os
 import os.path as osp
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List
 
 import numpy as np
 from PIL import Image
 
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import IkHelper
 from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 try:
@@ -26,35 +29,35 @@ class MpSpace(ABC):
     Defines an abstract planning space for OMPL to interface with.
     """
 
-    def __init__(self, use_sim, ik):
+    def __init__(self, use_sim: RearrangeSim, ik: IkHelper):
         self._mp_sim = use_sim
         self._ik = ik
 
     @abstractmethod
-    def convert_state(self, x):
+    def convert_state(self, x) -> np.ndarray:
         pass
 
     @abstractmethod
-    def set_arm(self, x):
+    def set_arm(self, x: List[float]):
         pass
 
-    def set_env_state(self, env_state):
+    def set_env_state(self, env_state: Dict[str, Any]):
         self.env_state = env_state
 
     @abstractmethod
-    def get_range(self):
+    def get_range(self) -> float:
         pass
 
     @abstractmethod
-    def get_state_lims(self, restrictive=False):
+    def get_state_lims(self, restrictive: bool = False) -> np.ndarray:
         pass
 
     @abstractmethod
-    def get_state_dim(self):
+    def get_state_dim(self) -> int:
         pass
 
     @abstractmethod
-    def convert_sol(self, path):
+    def convert_sol(self, path) -> np.ndarray:
         pass
 
     @abstractmethod
@@ -186,8 +189,7 @@ class JsMpSpace(MpSpace):
             self._mp_sim.set_position(targ_state, targ_viz_id)
 
         use_dir = osp.join(render_dir, subdir)
-        if not osp.exists(use_dir):
-            os.makedirs(use_dir)
+        os.makedirs(use_dir, exist_ok=True)
         # Visualize the target position.
         # NOTE: The object will not immediately snap to the robot's hand if a target joint
         # state is provided. This is not an issue, it only affects this one

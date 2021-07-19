@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import List, Optional
 
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import get_aabb, rearrange_collision
 from habitat_baselines.motion_planning.robot_target import ObjPlanningData
 from habitat_sim.physics import CollisionGroups, MotionType
@@ -10,7 +12,7 @@ class MpSim(ABC):
     The abstract simulator interface for the motion planner.
     """
 
-    def __init__(self, sim):
+    def __init__(self, sim: RearrangeSim):
         self._sim = sim
         self._ik = self._sim.ik_helper
 
@@ -101,7 +103,12 @@ class MpSim(ABC):
 
 
 class HabMpSim(MpSim):
-    def get_collisions(self, count_obj_colls, ignore_names, verbose):
+    def get_collisions(
+        self,
+        count_obj_colls: bool,
+        ignore_names: Optional[List[str]],
+        verbose: bool,
+    ):
         return rearrange_collision(
             self._sim,
             count_obj_colls,

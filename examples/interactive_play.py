@@ -52,8 +52,7 @@ DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
 
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
-    if not osp.exists(output_path):
-        os.makedirs(output_path)
+    os.makedirs(output_path, exist_ok=True)
     shp = observations[0].shape
     videodims = (shp[1], shp[0])
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
@@ -280,8 +279,7 @@ def play_env(env, args, config):
         assert len(all_arm_actions) > 200
         all_arm_actions = np.array(all_arm_actions)[:200]
         save_dir = "orp/start_data/"
-        if not osp.exists(save_dir):
-            os.makedirs(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
         save_path = osp.join(save_dir, "bench_ac.txt")
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)

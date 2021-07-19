@@ -163,8 +163,7 @@ class BenchmarkGym:
 
         if self._traj_save_path is not None:
             save_dir = osp.dirname(self._traj_save_path)
-            if not osp.exists(save_dir):
-                os.makedirs(save_dir)
+            os.makedirs(save_dir, exist_ok=True)
             if isinstance(self._gym_env.observation_space, spaces.Dict):
                 all_obs = batch_obs(all_obs)
                 all_next_obs = batch_obs(all_next_obs)

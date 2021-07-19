@@ -423,7 +423,7 @@ class SpaResetModule(ArmTargModule):
             use_prev=True,
         )
 
-        robo_targ = RobotTarget(js_targ=self._mp.grasp_gen.get_def_js())
+        robo_targ = RobotTarget(js_targ=self._sim.robot.params.arm_init_params)
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,

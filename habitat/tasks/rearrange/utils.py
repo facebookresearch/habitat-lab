@@ -236,8 +236,7 @@ class CacheHelper:
         self, cache_name, lookup_val, def_val=None, verbose=False, rel_dir=""
     ):
         self.use_cache_path = osp.join(CACHE_PATH, rel_dir)
-        if not osp.exists(self.use_cache_path):
-            os.makedirs(self.use_cache_path)
+        os.makedirs(self.use_cache_path, exist_ok=True)
         sec_hash = hashlib.md5(str(lookup_val).encode("utf-8")).hexdigest()
         cache_id = f"{cache_name}_{sec_hash}.pickle"
         self.cache_id = osp.join(self.use_cache_path, cache_id)
