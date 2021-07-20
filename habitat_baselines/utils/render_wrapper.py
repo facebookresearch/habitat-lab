@@ -8,14 +8,10 @@ from habitat_baselines.utils.gym_adapter import flatten_dict
 
 
 def append_text_to_image(image: np.ndarray, text: List[str]):
-    r"""Appends text underneath an image of size (height, width, channels).
-    The returned image has white text on a black background. Uses textwrap to
-    split long text into multiple lines.
-    Args:
-        image: the image to put text underneath
-        text: a string to display
-    Returns:
-        A new image with text inserted underneath the input image
+    r"""Appends lines of text underneath an image.
+    :param image: the image to put text underneath
+    :param text: The list of strings which will be rendered, separated by new lines.
+    :returns: A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
     font_size = 0.5

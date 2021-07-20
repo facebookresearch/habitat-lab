@@ -48,6 +48,7 @@ except ImportError:
     pygame = None
 
 DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+DEFAULT_RENDER_STEPS_LIMIT = 60
 
 
 def make_video_cv2(observations, prefix=""):
@@ -202,14 +203,9 @@ def get_wrapped_prop(venv, prop):
 
 
 def play_env(env, args, config):
-    if not args.no_render:
-        pygame.init()
-        render_dim = config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH
-        screen = pygame.display.set_mode([render_dim, render_dim])
-
-    render_count = None
+    render_steps_limit = None
     if args.no_render:
-        render_count = 60 * 60
+        render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
 
     use_arm_actions = None
     if args.load_actions is not None:
@@ -217,6 +213,15 @@ def play_env(env, args, config):
             use_arm_actions = np.load(f)
 
     obs = env.reset()
+
+    if not args.no_render:
+        obs = env.step({"action": "EMPTY", "action_args": {}})
+        draw_obs = observations_to_image(obs, {})
+        pygame.init()
+        screen = pygame.display.set_mode(
+            [draw_obs.shape[1], draw_obs.shape[0]]
+        )
+
     i = 0
     target_fps = 60.0
     prev_time = time.time()
@@ -225,7 +230,7 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     while True:
-        if render_count is not None and i > render_count:
+        if render_steps_limit is not None and i > render_steps_limit:
             break
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
@@ -251,8 +256,6 @@ def play_env(env, args, config):
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)
 
-        if len(use_ob) == 1:
-            use_ob = use_ob[0]
         draw_ob = use_ob[:]
 
         if not args.no_render:
@@ -289,14 +292,15 @@ def play_env(env, args, config):
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         make_video_cv2(all_obs, "interactive_play")
-    pygame.quit()
+    if not args.no_render:
+        pygame.quit()
+
+
+def has_pygame():
+    return pygame is not None
 
 
 if __name__ == "__main__":
-    if pygame is None:
-        raise ImportError(
-            "Need to install PyGame (run `pip install pygame==2.0.1`)"
-        )
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
@@ -304,6 +308,10 @@ if __name__ == "__main__":
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     args = parser.parse_args()
+    if not has_pygame() and not args.no_render:
+        raise ImportError(
+            "Need to install PyGame (run `pip install pygame==2.0.1`)"
+        )
 
     config = habitat.get_config(args.cfg)
 
