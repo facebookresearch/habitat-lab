@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 50000
+    MAX_EPISODE_STEPS: 50
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -8,7 +8,7 @@ DATASET:
 TASK:
     TYPE: RearrangeReachTask-v0
     RENDER_TARGET: True
-    EE_SAMPLE_FACTOR: 0.8
+    EE_SAMPLE_FACTOR: 0.5
 
     JOINT_SENSOR:
         TYPE: "JointSensor"

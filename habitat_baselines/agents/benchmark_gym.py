@@ -179,6 +179,7 @@ class BenchmarkGym:
                 },
                 self._traj_save_path,
             )
+            print(f"Saved trajectories to {self._traj_save_path}")
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         pbar.close()
