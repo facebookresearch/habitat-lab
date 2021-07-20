@@ -3,7 +3,7 @@ import os
 import os.path as osp
 import sys
 import uuid
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 from gym import spaces
@@ -24,20 +24,23 @@ except ImportError:
     ou = None
 
 from copy import copy
-from functools import partial
 
-from habitat.tasks.rearrange.utils import make_border_red
+from yacs.config import CfgNode
+
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import CollDetails, make_border_red
 from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
-from habitat_baselines.motion_planning.mp_sim import HabMpSim
-from habitat_baselines.motion_planning.mp_spaces import JsMpSpace
+from habitat_baselines.motion_planning.mp_sim import HabMpSim, MpSim
+from habitat_baselines.motion_planning.mp_spaces import JsMpSpace, MpSpace
+from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 
-def is_ompl_installed():
+def is_ompl_installed() -> bool:
     return ou is not None
 
 
 class MotionPlanner:
-    def __init__(self, sim, config):
+    def __init__(self, sim: RearrangeSim, config: CfgNode):
         if not is_ompl_installed:
             raise ImportError("Need to install OMPL to use motion planning")
         self._config = config
@@ -47,20 +50,23 @@ class MotionPlanner:
         self._num_calls = 0
         self._sphere_id: Optional[int] = None
         self._ignore_names: List[str] = []
-        self.traj_viz_id = None
+        self.traj_viz_id: Optional[int] = None
         self._sim = sim
         os.makedirs(self._config.DEBUG_DIR, exist_ok=True)
 
         self._use_sim = self._get_sim()
-        self.grasp_gen = None
+        self.grasp_gen: Optional[GraspGenerator] = None
 
-    def set_should_render(self, should_render):
+    def set_should_render(self, should_render: bool):
         self._should_render = should_render
         if self._should_render:
             for f in glob.glob(f"{self._config.DEBUG_DIR}/*"):
                 os.remove(f)
 
-    def _log(self, txt):
+    def _log(self, txt: str):
+        """
+        Logs text to console only if logging is enabled.
+        """
         if self._config.VERBOSE:
             print("MP:", txt)
 
@@ -68,9 +74,12 @@ class MotionPlanner:
     def action_space(self):
         return spaces.Box(shape=(3,), low=0, high=1, dtype=np.float32)
 
-    def photo(self, add_txt, before_txt="", should_save=True):
+    def _render_debug_image(
+        self, add_txt: str, before_txt="", should_save=True
+    ):
         """
-        Render debug utility helper
+        Render debug utility helper. Renders an image of the current scene to
+        the debug directory.
         """
         pic = self._use_sim.render()
         if pic.shape[-1] > 3:
@@ -86,7 +95,7 @@ class MotionPlanner:
             im.save(save_name)
         return pic
 
-    def get_mp_space(self):
+    def get_mp_space(self) -> MpSpace:
         return JsMpSpace(
             self._use_sim,
             self._sim.ik_helper,
@@ -94,7 +103,10 @@ class MotionPlanner:
             self._should_render,
         )
 
-    def _is_state_valid(self, x, take_image=False):
+    def _is_state_valid(self, x: np.ndarray, take_image: bool = False) -> bool:
+        """Returns if a state is collision free.
+        :param take_image: If true, will render a debug image.
+        """
         self._mp_space.set_arm(x)
         if self._ee_margin is not None and self._sphere_id is not None:
             self._use_sim.set_position(
@@ -116,7 +128,7 @@ class MotionPlanner:
             )
         self._coll_check_count += 1
         if take_image:
-            self.photo(f"{did_collide}")
+            self._render_debug_image(f"{did_collide}")
 
         if not self._use_sim.should_ignore_first_collisions():
             # We only want to continue to ignore collisions from this if we are
@@ -135,13 +147,13 @@ class MotionPlanner:
 
     def set_config(
         self,
-        ee_margin,
-        count_obj_collisions,
-        grasp_thresh,
-        n_gen_grasps,
-        run_cfg,
+        ee_margin: float,
+        count_obj_collisions: bool,
+        grasp_thresh: float,
+        n_gen_grasps: int,
+        run_cfg: CfgNode,
         ignore_first: bool = False,
-        use_prev=False,
+        use_prev: bool = False,
     ):
         """
         Sets up the parameters of this motion planning call.
@@ -171,7 +183,7 @@ class MotionPlanner:
             self._config.GRASP_GEN_IS_VERBOSE,
         )
 
-    def setup_ee_margin(self, obj_targ):
+    def setup_ee_margin(self, obj_targ: int):
         """
         Adds a collision margin sphere around the end-effector if it was
         specified in the run config. This sphere intersects with everything but
@@ -182,10 +194,11 @@ class MotionPlanner:
             self._sphere_id = use_sim.add_sphere(self._ee_margin)
             use_sim.set_targ_obj_idx(obj_targ)
 
-    def remove_ee_margin(self, obj_targ):
+    def remove_ee_margin(self, obj_targ: int):
         """
         Removes the collision margin sphere around the end-effector. If not
         called this object is never removed and will cause problems!
+        :param obj_targ: ID of the object we are planning towards.
         """
         use_sim = self._use_sim
         if self._ee_margin is not None:
@@ -193,13 +206,19 @@ class MotionPlanner:
             use_sim.unset_targ_obj_idx(obj_targ)
             self._sphere_id = None
 
-    def get_recent_plan_stats(self, plan, robo_targ, name=""):
+    def get_recent_plan_stats(
+        self, plan: np.ndarray, robo_targ: RobotTarget, name: str = ""
+    ):
+        """
+        Return logging information about the most recent plan
+        """
         is_start_bad = False
         is_goal_bad = False
         if not robo_targ.is_guess and plan is None:
             # Planning failed, but was it the planner's fault?
-            is_start_bad = self._is_state_valid(self._mp_space.used_js_start)
-            is_goal_bad = self._is_state_valid(self._mp_space.used_js_goal)
+            js_start, js_goal = self._mp_space.get_start_goal()
+            is_start_bad = self._is_state_valid(js_start)
+            is_goal_bad = self._is_state_valid(js_goal)
 
         return {
             f"plan_{name}bad_coll": int(self.was_bad_coll),
@@ -212,13 +231,18 @@ class MotionPlanner:
 
     def motion_plan(
         self,
-        start_js,
-        robot_target,
-        obs,
-        timeout=30,
-        use_prev_obs=False,
-        ignore_names=None,
+        start_js: np.ndarray,
+        robot_target: RobotTarget,
+        timeout: int = 30,
+        ignore_names: Optional[List[str]] = None,
     ):
+        """
+        Runs the motion planning.
+        :param timeout: Time in seconds to run the motion planner for. If no
+            plan is found in the time, returns failure.
+        :param ignore_names: A list of IDs for objects to ignore collisions
+            with.
+        """
         if ignore_names is None:
             ignore_names = []
         use_sim = self._use_sim
@@ -245,7 +269,7 @@ class MotionPlanner:
         self.setup_ee_margin(robot_target.obj_targ)
 
         joint_plan = self._get_path(
-            partial(self._is_state_valid),
+            self._is_state_valid,
             start_js,
             robot_target,
             use_sim,
@@ -282,7 +306,12 @@ class MotionPlanner:
 
         return joint_plan
 
-    def _render_verify_motion_plan(self, use_sim, robot_target, joint_plan):
+    def _render_verify_motion_plan(
+        self,
+        use_sim: MpSim,
+        robot_target: RobotTarget,
+        joint_plan: np.ndarray,
+    ) -> None:
         """
         Renders the motion plan to a video by teleporting the arm to the
         planned joint states. Does not reset the environment state after
@@ -310,17 +339,11 @@ class MotionPlanner:
                 )
             did_collide = not self._is_state_valid(js, True)
             if did_collide and self._should_render:
-                # If this executes this means a state the motion planner
-                # planned was not valid. This means a problem with the
-                # simulator.
-                print(
-                    "Is state valid more?",
-                    [self._is_state_valid(js) for _ in range(5)],
-                )
-                print("FAILED FAILED FAILED")
                 self.was_bad_coll = True
 
-            pic = self.photo("", f"{i}_{self._num_calls}", should_save=False)
+            pic = self._render_debug_image(
+                "", f"{i}_{self._num_calls}", should_save=False
+            )
             if did_collide:
                 pic = make_border_red(pic)
             all_frames.append(pic)
@@ -345,7 +368,7 @@ class MotionPlanner:
     def set_plan_ignore_obj(self, obj_id):
         self._reach_for_obj = obj_id
 
-    def _get_sim(self):
+    def _get_sim(self) -> MpSim:
         """
         The two different simulators used for planning.
         """
@@ -354,7 +377,9 @@ class MotionPlanner:
         else:
             raise ValueError("Unrecognized simulator type")
 
-    def _check_ee_coll(self, ee_margin, sphere_id, coll_details):
+    def _check_ee_coll(
+        self, ee_margin: float, sphere_id: int, coll_details: CollDetails
+    ) -> bool:
         if ee_margin is not None:
             obj_id = self.hold_id
 
@@ -368,7 +393,13 @@ class MotionPlanner:
         return True
 
     def _get_path(
-        self, is_state_valid, start_js, robot_targ, use_sim, mp_space, timeout
+        self,
+        is_state_valid: Callable[[np.ndarray], bool],
+        start_js: np.ndarray,
+        robot_targ: RobotTarget,
+        use_sim: MpSim,
+        mp_space: MpSpace,
+        timeout: int,
     ):
         """
         Does the low-level path planning with OMPL.

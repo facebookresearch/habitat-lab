@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 from PIL import Image
@@ -60,6 +60,13 @@ class MpSpace(ABC):
     def get_state_dim(self) -> int:
         """
         Get the dimensionality of the planning problem
+        """
+
+    @abstractmethod
+    def get_start_goal(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Gets the used start and goal states for the planner. This is after
+        clipping and any additional pre-processing.
         """
 
     @abstractmethod
@@ -150,6 +157,9 @@ class JsMpSpace(MpSpace):
         """Sets the joint state and applys the change"""
         self._mp_sim.set_arm_pos(js)
         self._mp_sim.micro_step()
+
+    def get_start_goal(self) -> Tuple[np.ndarray, np.ndarray]:
+        return (self.used_js_start, self.used_js_goal)
 
     def set_problem(
         self,

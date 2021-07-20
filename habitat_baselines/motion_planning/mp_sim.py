@@ -56,6 +56,10 @@ class MpSim(ABC):
         pass
 
     @abstractmethod
+    def set_arm_pos(self, joint_pos):
+        pass
+
+    @abstractmethod
     def set_position(self, pos, obj_id):
         pass
 

@@ -360,7 +360,6 @@ class SpaManipPick(ArmTargModule):
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,
-            observations,
             timeout=self._config.TIMEOUT,
         )
 
@@ -427,7 +426,6 @@ class SpaResetModule(ArmTargModule):
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,
-            observations,
             timeout=self._config.TIMEOUT,
         )
 
