@@ -207,7 +207,7 @@ class JointSensor(Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(config.JOINT_DIM,),
+            shape=(config.DIMENSIONALITY,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,

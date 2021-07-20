@@ -39,14 +39,14 @@ TASK:
         DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
-        JOINT_DIM: 7
-    EE_SENSOR:
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
         TYPE: "EeSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -91,7 +91,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             # Uncomment to run with velocity control
-            #ARM_CONTROLLER: "ArmVelAction"
+            #ARM_CONTROLLER: "ArmRelPosAction"
 
             # Uncomment to run with end-effector control
             ARM_CONTROLLER: "ArmEEAction"
@@ -99,7 +99,7 @@ TASK:
             GRIP_CONTROLLER: "MagicGraspAction"
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            VEL_CTRL_LIM: 0.0125
+            DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"

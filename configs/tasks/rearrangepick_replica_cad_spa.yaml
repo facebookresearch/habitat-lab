@@ -1,3 +1,4 @@
+# The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -46,8 +47,8 @@ TASK:
         DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
-        JOINT_DIM: 7
-    EE_SENSOR:
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
         TYPE: "EeSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
@@ -55,7 +56,7 @@ TASK:
         TYPE: "LocalizationSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR", "TARGET_CUR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR", "TARGET_CUR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -105,7 +106,7 @@ TASK:
             GRIP_CONTROLLER: "MagicGraspAction"
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            VEL_CTRL_LIM: 0.0125
+            DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
         EMPTY:
             TYPE: "EmptyAction"

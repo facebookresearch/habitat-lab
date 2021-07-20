@@ -38,7 +38,7 @@ import cv2
 import numpy as np
 
 import habitat.tasks.rearrange.rearrange_task
-from habitat.tasks.rearrange.actions import ArmEEAction, ArmVelAction
+from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 
@@ -105,7 +105,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    if isinstance(arm_ctrlr, ArmVelAction):
+    if isinstance(arm_ctrlr, ArmRelPosAction):
         # Velocity control. A different key for each joint
         if keys[pygame.K_q]:
             arm_action[0] = 1.0

@@ -116,18 +116,25 @@ class MagicGraspAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmVelAction(SimulatorTaskAction):
+class ArmRelPosAction(SimulatorTaskAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
     @property
     def action_space(self):
         return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
 
-    def step(self, vel, should_step=True, *args, **kwargs):
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
-        vel = np.clip(vel, -1, 1)
-        vel *= self._config.VEL_CTRL_LIM
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
         # The actual joint positions
         self._sim: RearrangeSim
-        self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_motor_pos
+        self._sim.robot.arm_motor_pos = (
+            delta_pos + self._sim.robot.arm_motor_pos
+        )
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
         return None
@@ -135,6 +142,11 @@ class ArmVelAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class ArmAbsPosAction(SimulatorTaskAction):
+    """
+    The arm motor targets are directly set to the joint configuration specified by the
+    action.
+    """
+
     @property
     def action_space(self):
         return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
@@ -152,6 +164,11 @@ class ArmAbsPosAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class ArmAbsPosKinematicAction(SimulatorTaskAction):
+    """
+    The arm is kinematically directly set to the joint configuration specified
+    by the action.
+    """
+
     @property
     def action_space(self):
         return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
