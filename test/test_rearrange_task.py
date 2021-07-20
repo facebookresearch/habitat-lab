@@ -7,9 +7,7 @@
 import json
 import time
 
-import numpy as np
 import pytest
-from gym import spaces
 
 import habitat
 import habitat.tasks.rearrange.rearrange_sim
@@ -22,7 +20,6 @@ from habitat.datasets import make_dataset
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
 
 CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
 EPISODES_LIMIT = 6
@@ -189,29 +186,3 @@ def test_rearrange_task():
                 _, _, done, info = env.step(action=action)
 
             logger.info(info)
-
-
-def test_gym_wrapper():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
-    )
-    env_class = get_env_class(config.ENV_NAME)
-
-    env = habitat_baselines.utils.env_utils.make_env_fn(
-        env_class=env_class, config=config
-    )
-    env = HabGymWrapper(env)
-    assert isinstance(env.action_space, spaces.Box)
-    obs = env.reset()
-    assert isinstance(obs, np.ndarray), f"Obs {obs}"
-    assert obs.shape == env.observation_space.shape
-    obs, _, _, info = env.step(env.action_space.sample())
-    assert isinstance(obs, np.ndarray), f"Obs {obs}"
-    assert obs.shape == env.observation_space.shape
-
-    frame = env.render()
-    assert isinstance(frame, np.ndarray)
-    assert len(frame.shape) == 3 and frame.shape[-1] == 3
-
-    for _, v in info.items():
-        assert not isinstance(v, dict)

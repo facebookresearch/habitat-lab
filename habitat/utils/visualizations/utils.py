@@ -177,7 +177,7 @@ def tile_images(render_obs_images: List[np.ndarray]) -> np.ndarray:
         else:
             img_cols.append(col)
             col = [im]
-            cur_y = 0.0
+            cur_y = im.shape[0]
     img_cols.append(col)
     col_widths = [max(col_ele.shape[1] for col_ele in col) for col in img_cols]
     # Get the total width of all the columns put together.
@@ -236,10 +236,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         len(render_obs_images) > 0
     ), "Expected at least one visual sensor enabled."
 
-    shapes_are_equal = np.all(
-        [x.shape for x in render_obs_images] == render_obs_images[0].shape
-    )
-
+    shapes_are_equal = len(set(x.shape for x in render_obs_images)) == 1
     if not shapes_are_equal:
         render_frame = tile_images(render_obs_images)
     else:
