@@ -6,8 +6,7 @@ DATASET:
     DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
-    #TYPE: RearrangePickTask-v0
-    TYPE: RearrangeReachTask-v0
+    TYPE: RearrangePickTask-v0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
