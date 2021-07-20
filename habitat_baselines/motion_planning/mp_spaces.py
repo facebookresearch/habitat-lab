@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 import numpy as np
 from PIL import Image
@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 
-def to_ob_state(vec, space, dim):
+def to_ob_state(vec: np.ndarray, space: "ob.StateSpace", dim: int):
     ob_vec = ob.State(space)
     for i in range(dim):
         ob_vec[i] = vec[i]
@@ -34,7 +34,7 @@ class MpSpace(ABC):
         self._ik = ik
 
     @abstractmethod
-    def convert_state(self, x) -> np.ndarray:
+    def convert_state(self, x: Iterable) -> np.ndarray:
         pass
 
     @abstractmethod
@@ -46,32 +46,55 @@ class MpSpace(ABC):
 
     @abstractmethod
     def get_range(self) -> float:
-        pass
+        """
+        Gets the planner step size range.
+        """
 
     @abstractmethod
     def get_state_lims(self, restrictive: bool = False) -> np.ndarray:
-        pass
+        """
+        Get the state limits of the planning problem.
+        """
 
     @abstractmethod
     def get_state_dim(self) -> int:
-        pass
+        """
+        Get the dimensionality of the planning problem
+        """
 
     @abstractmethod
     def convert_sol(self, path) -> np.ndarray:
-        pass
+        """
+        Convert a solution from OMPL format to numpy array
+        """
 
     @abstractmethod
-    def get_planner(self, si):
+    def get_planner(self, si: "ob.SpaceInformation"):
         pass
 
     @abstractmethod
     def set_problem(
-        self, pdef, space, si, start_state, targ_state, is_state_valid
+        self,
+        pdef: "ob.ProblemDefinition",
+        space: "ob.StateSpace",
+        si: "ob.SpaceInformation",
+        start_state: "ob.State",
+        targ_state: RobotTarget,
     ):
-        pass
+        """
+        Sets up the planning problem
+        """
 
-    def render_start_targ(self, render_dir, subdir, targ_state):
-        pass
+    def render_start_targ(
+        self,
+        render_dir: str,
+        subdir: str,
+        targ_state: np.ndarray,
+        suffix: str = "targ",
+    ):
+        """
+        Renders the start and target to images for visualization
+        """
 
 
 def getPathLengthObjWithCostToGo(si):
@@ -99,12 +122,12 @@ class JsMpSpace(MpSpace):
         return np.arctan2(np.sin(angles), np.cos(angles))
 
     def get_planner(self, si):
-        # return og.BITstar(si)
-        # return og.RRTstar(si)
-        # return og.InformedRRTstar(si)
         return og.RRTConnect(si)
 
     def get_state_lims(self, restrictive=False):
+        """Get the state limits of the planning problem. If restrictive is true then
+        this returns the joint limts based on the PyBullet joint limits
+        """
         if restrictive:
             lower_joint_lims, upper_joint_lims = self._ik.get_joint_limits()
             lower_joint_lims = [
@@ -124,6 +147,7 @@ class JsMpSpace(MpSpace):
         return len(self._mp_sim._sim.robot.arm_joint_pos)
 
     def _fk(self, js):
+        """Sets the joint state and applys the change"""
         self._mp_sim.set_arm_pos(js)
         self._mp_sim.micro_step()
 
@@ -133,8 +157,7 @@ class JsMpSpace(MpSpace):
         space,
         si,
         js_start,
-        robot_targ: RobotTarget,
-        is_state_valid,
+        robot_targ,
     ):
         """
         Sets up the OMPL problem
@@ -181,9 +204,6 @@ class JsMpSpace(MpSpace):
         pdef.setOptimizationObjective(getPathLengthObjWithCostToGo(si))
 
     def render_start_targ(self, render_dir, subdir, targ_state, suffix="targ"):
-        """
-        Renders the start and target to images for visualization
-        """
         if targ_state is not None:
             targ_viz_id = self._mp_sim.add_sphere(0.06, color=[0, 0, 1, 1])
             self._mp_sim.set_position(targ_state, targ_viz_id)

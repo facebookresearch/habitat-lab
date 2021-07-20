@@ -390,9 +390,7 @@ class MotionPlanner:
         si.setup()
 
         pdef = ob.ProblemDefinition(si)
-        mp_space.set_problem(
-            pdef, space, si, start_js, robot_targ, is_state_valid
-        )
+        mp_space.set_problem(pdef, space, si, start_js, robot_targ)
 
         planner = mp_space.get_planner(si)
         planner.setProblemDefinition(pdef)
