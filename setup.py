@@ -25,14 +25,19 @@ with open("LICENSE") as f:
 with open("requirements.txt") as f:
     reqs = f.read()
 
-DISTNAME = "habitat"
-DESCRIPTION = "habitat: a suite for embodied agent tasks and benchmarks"
+DISTNAME = "habitat-lab"
+DESCRIPTION = "Habitat Lab: a modular high-level library for end-to-end development in Embodied AI."
 LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = license_text
 REQUIREMENTS = reqs.strip().split("\n")
 BASELINE_PATH = ["habitat_baselines", "habitat_baselines.*"]
 DEFAULT_EXCLUSION = ["test", "examples"]
+URL = "https://aihabitat.org/"
+PROJECT_URLS = {
+    "GitHub repo": "https://github.com/facebookresearch/habitat-lab/",
+    "Bug Tracker": "https://github.com/facebookresearch/habitat-lab/issues",
+}
 FULL_REQUIREMENTS = set()
 # collect requirements.txt file in all subdirectories
 for file_name in ["requirements.txt"] + glob.glob(
@@ -55,7 +60,7 @@ class OptionedCommand:
 
     def initialize_options(self):
         super().initialize_options()
-        self.all = None
+        self.all = True  # None
 
     def run(self):
         if not self.all:  # install core only
@@ -91,10 +96,35 @@ if __name__ == "__main__":
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
+        long_description_content_type="text/markdown",
         author=AUTHOR,
         license=LICENSE,
         setup_requires=["pytest-runner"],
-        tests_require=["pytest-cov", "pytest-mock", "pytest"],
+        tests_require=[
+            "pytest-cov",
+            "pytest-mock",
+            "pytest",
+            "pybullet==3.0.4",
+        ],
         include_package_data=True,
         cmdclass={"install": InstallCommand, "develop": DevelopCommand},
+        url=URL,
+        project_urls=PROJECT_URLS,
+        classifiers=[
+            "Intended Audience :: Science/Research",
+            "Development Status :: 5 - Production/Stable",
+            "License :: OSI Approved :: MIT License",
+            "Topic :: Scientific/Engineering :: Artificial Intelligence",
+            "Programming Language :: Python",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Education",
+            "Intended Audience :: Science/Research",
+            "Operating System :: MacOS",
+            "Operating System :: Unix",
+        ],
     )
