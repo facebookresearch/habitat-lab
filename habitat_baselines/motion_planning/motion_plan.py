@@ -28,7 +28,7 @@ from copy import copy
 from yacs.config import CfgNode
 
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails, make_border_red
+from habitat.tasks.rearrange.utils import CollisionDetails, make_border_red
 from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
 from habitat_baselines.motion_planning.mp_sim import HabMpSim, MpSim
 from habitat_baselines.motion_planning.mp_spaces import JsMpSpace, MpSpace
@@ -183,7 +183,7 @@ class MotionPlanner:
             self._config.GRASP_GEN_IS_VERBOSE,
         )
 
-    def setup_ee_margin(self, obj_targ: int):
+    def setup_ee_margin(self, obj_id_target: int):
         """
         Adds a collision margin sphere around the end-effector if it was
         specified in the run config. This sphere intersects with everything but
@@ -192,18 +192,18 @@ class MotionPlanner:
         use_sim = self._use_sim
         if self._ee_margin is not None:
             self._sphere_id = use_sim.add_sphere(self._ee_margin)
-            use_sim.set_targ_obj_idx(obj_targ)
+            use_sim.set_targ_obj_idx(obj_id_target)
 
-    def remove_ee_margin(self, obj_targ: int):
+    def remove_ee_margin(self, obj_id_target: int):
         """
         Removes the collision margin sphere around the end-effector. If not
         called this object is never removed and will cause problems!
-        :param obj_targ: ID of the object we are planning towards.
+        :param obj_id_target: ID of the object we are planning towards.
         """
         use_sim = self._use_sim
         if self._ee_margin is not None:
             use_sim.remove_object(self._sphere_id)
-            use_sim.unset_targ_obj_idx(obj_targ)
+            use_sim.unset_targ_obj_idx(obj_id_target)
             self._sphere_id = None
 
     def get_recent_plan_stats(
@@ -266,7 +266,7 @@ class MotionPlanner:
         self._ignore_names = ["ball_new", *ignore_names]
         self._coll_check_count = 0
 
-        self.setup_ee_margin(robot_target.obj_targ)
+        self.setup_ee_margin(robot_target.obj_id_target)
 
         joint_plan = self._get_path(
             self._is_state_valid,
@@ -281,7 +281,7 @@ class MotionPlanner:
             self._mp_space.render_start_targ(
                 self._run_cfg.VIDEO_DIR,
                 "mp_fail",
-                robot_target.ee_targ,
+                robot_target.ee_target_pos,
                 f"ep{self._sim.ep_info['episode_id']}",
             )
 
@@ -290,7 +290,7 @@ class MotionPlanner:
 
             self._log("MP: Got plan of length %i" % len(joint_plan))
 
-        self.remove_ee_margin(robot_target.obj_targ)
+        self.remove_ee_margin(robot_target.obj_id_target)
 
         self._num_calls += 1
 
@@ -321,23 +321,25 @@ class MotionPlanner:
         all_frames = []
 
         # Visualize the target position.
-        if robot_target.ee_targ is not None:
+        if robot_target.ee_target_pos is not None:
             robo_trans = use_sim.get_robot_transform()
-            use_targ_state = robo_trans.transform_point(robot_target.ee_targ)
+            use_targ_state = robo_trans.transform_point(
+                robot_target.ee_target_pos
+            )
             targ_viz_id = use_sim.add_sphere(0.03, color=[0, 0, 1, 1])
             use_sim.set_position(use_targ_state, targ_viz_id)
         else:
             targ_viz_id = None
 
         all_ee_pos = []
-        for i, js in enumerate(joint_plan):
-            use_sim.set_arm_pos(js)
+        for i, joints in enumerate(joint_plan):
+            use_sim.set_arm_pos(joints)
             all_ee_pos.append(use_sim.get_ee_pos())
             if self._ee_margin is not None:
                 use_sim.set_position(
                     self._use_sim.get_ee_pos(), self._sphere_id
                 )
-            did_collide = not self._is_state_valid(js, True)
+            did_collide = not self._is_state_valid(joints, True)
             if did_collide and self._should_render:
                 self.was_bad_coll = True
 
@@ -378,7 +380,7 @@ class MotionPlanner:
             raise ValueError("Unrecognized simulator type")
 
     def _check_ee_coll(
-        self, ee_margin: float, sphere_id: int, coll_details: CollDetails
+        self, ee_margin: float, sphere_id: int, coll_details: CollisionDetails
     ) -> bool:
         if ee_margin is not None:
             obj_id = self.hold_id

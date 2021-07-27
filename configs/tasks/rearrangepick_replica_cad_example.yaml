@@ -41,7 +41,7 @@ TASK:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
-        TYPE: "EeSensor"
+        TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
     LOCAL_SENSOR:
@@ -97,6 +97,7 @@ TASK:
             ARM_CONTROLLER: "ArmEEAction"
 
             GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125

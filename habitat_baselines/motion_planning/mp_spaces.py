@@ -153,9 +153,9 @@ class JsMpSpace(MpSpace):
     def get_state_dim(self):
         return len(self._mp_sim._sim.robot.arm_joint_pos)
 
-    def _fk(self, js):
+    def _fk(self, joints):
         """Sets the joint state and applys the change"""
-        self._mp_sim.set_arm_pos(js)
+        self._mp_sim.set_arm_pos(joints)
         self._mp_sim.micro_step()
 
     def get_start_goal(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -172,7 +172,7 @@ class JsMpSpace(MpSpace):
         """
         Sets up the OMPL problem
         """
-        js_end = robot_targ.js_targ
+        js_end = robot_targ.joints_target
 
         joint_shape = self._lower_joint_lims.shape
 
@@ -202,7 +202,7 @@ class JsMpSpace(MpSpace):
             # FK to get both in EE space.
             self._fk(use_cur_state)
             cur_ee_state = self._mp_sim.get_ee_pos()
-            ret = np.linalg.norm(robot_targ.ee_targ - cur_ee_state)
+            ret = np.linalg.norm(robot_targ.ee_target_pos - cur_ee_state)
             return ret
 
         def getPathLengthObjWithCostToGo(si):

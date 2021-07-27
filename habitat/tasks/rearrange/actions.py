@@ -24,7 +24,12 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, *args, **kwargs):
         return self._sim.step(HabitatSimActions.EMPTY)
@@ -124,7 +129,12 @@ class ArmRelPosAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
@@ -176,7 +186,12 @@ class ArmAbsPosAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, set_pos, should_step=True, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to
@@ -198,7 +213,12 @@ class ArmAbsPosKinematicAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, set_pos, should_step=True, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to
@@ -308,6 +328,7 @@ class BaseVelAction(SimulatorTaskAction):
 @registry.register_task_action
 class ArmEEAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        self.ee_target = None
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.robot_ee_constraints = np.array(
@@ -320,7 +341,7 @@ class ArmEEAction(SimulatorTaskAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
-        self.ee_targ = np.zeros((3,))
+        self.ee_target = np.zeros((3,))
 
         arm_pos = self.set_desired_ee_pos(np.array([0.5, 0.0, 1.0]))
 
@@ -332,14 +353,14 @@ class ArmEEAction(SimulatorTaskAction):
         return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
 
     def apply_ee_constraints(self):
-        self.ee_targ = np.clip(
-            self.ee_targ,
+        self.ee_target = np.clip(
+            self.ee_target,
             self.robot_ee_constraints[:, 0],
             self.robot_ee_constraints[:, 1],
         )
 
-    def set_desired_ee_pos(self, ee_pos):
-        self.ee_targ += np.array(ee_pos)
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> np.ndarray:
+        self.ee_target += np.array(ee_pos)
 
         self.apply_ee_constraints()
 
@@ -350,7 +371,7 @@ class ArmEEAction(SimulatorTaskAction):
 
         ik.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = ik.calc_ik(self.ee_targ)
+        des_joint_pos = ik.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
         self._sim.robot.arm_motor_pos = des_joint_pos
 
@@ -363,9 +384,9 @@ class ArmEEAction(SimulatorTaskAction):
 
         if self._config.get("RENDER_EE_TARGET", False):
             global_pos = self._sim.robot.base_transformation.transform_point(
-                self.ee_targ
+                self.ee_target
             )
-            self._sim.viz_ids["ee_target"] = self._sim.viz_pos(
+            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
 

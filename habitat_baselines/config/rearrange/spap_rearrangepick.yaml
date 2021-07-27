@@ -1,6 +1,6 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrangepick_replica_cad_spa.yaml
 
-SPA:
+SENSE_PLAN_ACT:
   VERBOSE: True
   RUN_FREQ: 4
   KINEMATIC_CTRL: True
@@ -23,7 +23,7 @@ RL:
     SUCCESS_REWARD: 2000.0
     SLACK_REWARD: -0.01
 
-    GYM_OBS_KEYS: ['obj_cur_sensor', 'joint', 'is_holding', 'ee_pos']
+    GYM_OBS_KEYS: ['obj_goal_pos_sensor', 'joint', 'is_holding', 'ee_pos']
     GYM_DESIRED_GOAL_KEYS: ['obj_start_sensor']
     GYM_ACHIEVED_GOAL_KEYS: []
     GYM_FIX_INFO_DICT: True

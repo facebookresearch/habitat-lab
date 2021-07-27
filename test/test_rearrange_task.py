@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import json
 import time
 
@@ -132,37 +133,14 @@ def test_rearrange_habitat_env():
         env.reset()
 
 
-def test_rearrange_reach_task():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrange_reach.yaml"
-    )
-
-    env_class = get_env_class(config.ENV_NAME)
-
-    env = habitat_baselines.utils.env_utils.make_env_fn(
-        env_class=env_class, config=config
-    )
-
-    with env:
-        for _ in range(10):
-            env.reset()
-            done = False
-            while not done:
-                action = env.action_space.sample()
-                habitat.logger.info(
-                    f"Action : "
-                    f"{action['action']}, "
-                    f"args: {action['action_args']}."
-                )
-                _, _, done, info = env.step(action=action)
-
-            logger.info(info)
-
-
-def test_rearrange_task():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
-    )
+@pytest.mark.parametrize(
+    "test_cfg_path",
+    list(
+        glob("habitat_baselines/config/rearrange/*"),
+    ),
+)
+def test_rearrange_task(test_cfg_path):
+    config = baselines_get_config(test_cfg_path)
     # if not RearrangeDatasetV0.check_config_paths_exist(config.TASK_CONFIG.DATASET):
     #     pytest.skip("Test skipped as dataset files are missing.")
 

@@ -58,7 +58,7 @@ def swap_axes(x):
 
 
 @attr.s(auto_attribs=True, kw_only=True)
-class CollDetails:
+class CollisionDetails:
     obj_scene_colls: int = 0
     robot_obj_colls: int = 0
     robot_scene_colls: int = 0
@@ -66,7 +66,7 @@ class CollDetails:
     all_colls: List[Tuple[int, int]] = []
 
     @property
-    def total_colls(self):
+    def total_collisions(self):
         return (
             self.obj_scene_colls
             + self.robot_obj_colls
@@ -74,7 +74,7 @@ class CollDetails:
         )
 
     def __add__(self, other):
-        return CollDetails(
+        return CollisionDetails(
             obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
             robot_obj_colls=self.robot_obj_colls + other.robot_obj_colls,
             robot_scene_colls=self.robot_scene_colls + other.robot_scene_colls,
@@ -145,7 +145,7 @@ def rearrange_collision(
             obj_scene_colls += 1
 
     if get_extra_coll_data:
-        coll_details = CollDetails(
+        coll_details = CollisionDetails(
             obj_scene_colls=min(obj_scene_colls, 1),
             robot_obj_colls=min(robot_obj_colls, 1),
             robot_scene_colls=min(robot_scene_colls, 1),
@@ -153,12 +153,12 @@ def rearrange_collision(
             all_colls=[(x.object_id_a, x.object_id_b) for x in colls],
         )
     else:
-        coll_details = CollDetails(
+        coll_details = CollisionDetails(
             obj_scene_colls=min(obj_scene_colls, 1),
             robot_obj_colls=min(robot_obj_colls, 1),
             robot_scene_colls=min(robot_scene_colls, 1),
         )
-    return coll_details.total_colls > 0, coll_details
+    return coll_details.total_collisions > 0, coll_details
 
 
 def get_nav_mesh_settings(agent_config):

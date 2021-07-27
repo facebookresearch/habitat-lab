@@ -12,7 +12,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails, rearrange_collision
+from habitat.tasks.rearrange.utils import CollisionDetails, rearrange_collision
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -54,8 +54,8 @@ class RearrangeTask(NavigationTask):
         self.prev_measures = self.measurements.get_metrics()
         self.prev_picked = False
         self.n_succ_picks = 0
-        self.coll_accum = CollDetails()
-        self.prev_coll_accum = CollDetails()
+        self.coll_accum = CollisionDetails()
+        self.prev_coll_accum = CollisionDetails()
         self.should_end = False
         self._done = False
 
@@ -120,7 +120,7 @@ class RearrangeTask(NavigationTask):
         max_robot_force = get_max_force(contact_points, robot_id)
         return max_robot_force, max_obj_force, max_force
 
-    def get_cur_collision_info(self) -> CollDetails:
+    def get_cur_collision_info(self) -> CollisionDetails:
         _, coll_details = rearrange_collision(
             self._sim,
             self._config.COUNT_OBJ_COLLISIONS,

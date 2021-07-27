@@ -1,5 +1,12 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import gym.spaces as spaces
 import numpy as np
+import pytest
 
 import habitat_baselines.utils.env_utils
 from habitat_baselines.common.environments import get_env_class
@@ -8,10 +15,15 @@ from habitat_baselines.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 
-def test_gym_pick_wrapper():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
-    )
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
+        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml",
+    ],
+)
+def test_gym_wrapper_contract(config_file):
+    config = baselines_get_config(config_file)
     env_class = get_env_class(config.ENV_NAME)
 
     env = habitat_baselines.utils.env_utils.make_env_fn(

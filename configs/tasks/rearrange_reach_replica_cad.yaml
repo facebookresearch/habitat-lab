@@ -18,7 +18,7 @@ TASK:
     RESTING_POS_SENSOR:
         TYPE: "RestingPositionSensor"
     END_EFFECTOR_SENSOR:
-        TYPE: "EeSensor"
+        TYPE: "EEPositionSensor"
     SENSORS: ["JOINT_SENSOR", "RELATIVE_RESTING_POS_SENSOR", 'END_EFFECTOR_SENSOR', "RESTING_POS_SENSOR"]
 
     END_EFFECTOR_TO_REST_DISTANCE:
@@ -38,6 +38,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
+            ARM_JOINT_DIMENSIONALITY: 7
             GRIP_CONTROLLER: null
             EE_CTRL_LIM: 0.025
             GRASP_THRESH_DIST: 0.15

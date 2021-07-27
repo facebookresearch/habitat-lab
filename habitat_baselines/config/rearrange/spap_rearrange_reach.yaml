@@ -1,5 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange_reach_replica_cad.yaml
-SPA:
+SENSE_PLAN_ACT:
   VERBOSE: True
   RUN_FREQ: 4
   KINEMATIC_CTRL: True

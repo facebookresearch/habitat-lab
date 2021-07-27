@@ -1,3 +1,5 @@
+import pytest
+
 from habitat.config.default import get_config
 from habitat.core.benchmark import Benchmark
 from habitat.tasks.rearrange.rearrange_sensors import RearrangePickSuccess
@@ -11,11 +13,11 @@ from habitat_baselines.motion_planning.motion_plan import is_ompl_installed
 TEST_CFG = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
 
 
+@pytest.mark.skipif(
+    not is_ompl_installed(),
+    reason="The Open Motion Planning Library is not installed.",
+)
 def test_pick_motion_planning():
-    # This test will only run if OMPL is installed.
-    if not is_ompl_installed():
-        print("OMPL not installed skipping test")
-        return
     config = get_config(TEST_CFG)
 
     benchmark = Benchmark(config.BASE_TASK_CONFIG_PATH)
@@ -25,7 +27,7 @@ def test_pick_motion_planning():
         return {"obj": target_idx}
 
     ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
-    spa_cfg = config.SPA
+    spa_cfg = config.SENSE_PLAN_ACT
     env = benchmark._env
     pick_skill = AgentComposition(
         [
