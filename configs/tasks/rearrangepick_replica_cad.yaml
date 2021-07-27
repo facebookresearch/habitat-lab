@@ -95,6 +95,7 @@ TASK:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
             GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125

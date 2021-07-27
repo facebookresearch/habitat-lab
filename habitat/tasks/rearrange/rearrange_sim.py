@@ -389,7 +389,7 @@ class RearrangeSim(HabitatSim):
             self.is_render_obs = True
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.viz_pos(pos)
+                self.viz_ids[k] = self.visualize_position(pos)
 
             # Also render debug information
             if self.habitat_config.get("RENDER_TARGS", True):
@@ -409,7 +409,9 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def viz_pos(self, pos, viz_id=None, r=0.05):
+    def visualize_position(self, position, viz_id=None, r=0.05):
+        """Adds the sphere object to the specified position for visualization purpose."""
+
         if viz_id is None:
             obj_mgr = self.get_object_template_manager()
             template = obj_mgr.get_template_by_handle(
@@ -421,7 +423,7 @@ class RearrangeSim(HabitatSim):
             )
             viz_id = self.add_object(new_template_handle)
             make_render_only(viz_id, self)
-        self.set_translation(mn.Vector3(*pos), viz_id)
+        self.set_translation(mn.Vector3(*position), viz_id)
 
         return viz_id
 

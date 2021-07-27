@@ -36,6 +36,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
+            ARM_JOINT_DIMENSIONALITY: 7
             GRIP_CONTROLLER: null
             EE_CTRL_LIM: 0.025
             GRASP_THRESH_DIST: 0.15

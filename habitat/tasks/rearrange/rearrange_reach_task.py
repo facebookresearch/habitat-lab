@@ -34,7 +34,7 @@ class RearrangeReachTaskV1(RearrangeTask):
             global_pos = self._sim.robot.base_transformation.transform_point(
                 self._desired_resting
             )
-            self._sim.viz_ids["reach_target"] = self._sim.viz_pos(
+            self._sim.viz_ids["reach_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["reach_target"]
             )
 

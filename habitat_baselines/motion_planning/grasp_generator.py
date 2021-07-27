@@ -1,4 +1,3 @@
-import magnum as mn
 import numpy as np
 from PIL import Image
 
@@ -6,7 +5,7 @@ from habitat.tasks.rearrange.utils import IkHelper
 from habitat_baselines.motion_planning.mp_sim import MpSim
 from habitat_baselines.motion_planning.mp_spaces import MpSpace
 from habitat_baselines.motion_planning.robot_target import (
-    ObjPlanningData,
+    ObjectGraspTarget,
     RobotTarget,
 )
 
@@ -52,7 +51,7 @@ class GraspGenerator:
         - local_ee_targ: 3D desired EE position in robot's base coordinate frame.
         - grasp_idx: The grasp index attempt. Used for debugging.
         Returns: (target_js, is_feasible) target_js has joint position to
-        achieve EE target. is_feasible is if a collision JS was found.
+        achieve EE target. is_feasible is if a collision joints was found.
         """
 
         start_state = self._mp_sim.capture_state()
@@ -87,8 +86,8 @@ class GraspGenerator:
         self._mp_sim.set_state(start_state)
         return found_sol, found_sol is not None
 
-    def _fk(self, js):
-        self._mp_sim.set_arm_pos(js)
+    def _fk(self, joints):
+        self._mp_sim.set_arm_pos(joints)
         self._mp_sim.micro_step()
 
     def gen_target_from_ee_pos(self, ee_pos):
@@ -101,17 +100,19 @@ class GraspGenerator:
         use_js = None
         real_ee_pos = None
         for _ in range(20):
-            js, is_feasible = self._gen_goal_state(local_ee_pos)
+            joints, is_feasible = self._gen_goal_state(local_ee_pos)
             if not is_feasible:
                 continue
-            real_ee_pos = self._get_real_ee_pos(js)
+            real_ee_pos = self._get_real_ee_pos(joints)
             ee_dist = np.linalg.norm(real_ee_pos - ee_pos)
             if ee_dist < self._grasp_thresh:
-                use_js = js
+                use_js = joints
                 break
 
         targ = RobotTarget(
-            js_targ=use_js, is_guess=use_js is None, ee_targ=real_ee_pos
+            joints_target=use_js,
+            is_guess=use_js is None,
+            ee_target_pos=real_ee_pos,
         )
 
         self.mp.remove_ee_margin(None)
@@ -126,90 +127,10 @@ class GraspGenerator:
         size_y = obj_dat.bb.size_y() / 2.0
         return np.array([0.0, size_y, 0.0])
 
-    def _bounding_box_sample(
-        self, obj_idx: int, obj_dat: ObjPlanningData
-    ) -> RobotTarget:
-        """
-        DEPRECATED use _bounding_sphere_sample instead.
-
-        Return target joint and end-effector position based on the object
-        bounding box.
-        """
-        T = obj_dat.trans
-        offset_dist = 0.03
-        size_y = obj_dat.bb.size_y() / 2.0
-        size_z = obj_dat.bb.size_z() / 2.0
-        size_x = obj_dat.bb.size_x() / 2.0
-
-        # Centers of bounding box faces
-        bb_points = [
-            (
-                T.transform_point(mn.Vector3(0.0, offset_dist + size_y, 0.0)),
-                size_y,
-            ),
-            (
-                T.transform_point(mn.Vector3(0.0, 0.0, offset_dist + size_z)),
-                size_z,
-            ),
-            (
-                T.transform_point(
-                    mn.Vector3(0.0, 0.0, -(offset_dist + size_z))
-                ),
-                size_z,
-            ),
-            (
-                T.transform_point(mn.Vector3(offset_dist + size_x, 0.0, 0.0)),
-                size_x,
-            ),
-            (
-                T.transform_point(
-                    mn.Vector3(-(offset_dist + size_x), 0.0, 0.0)
-                ),
-                size_x,
-            ),
-        ]
-
-        # Prefer the point on top of the object since it is typically easiest to grasp.
-        bb_points = sorted(bb_points, key=lambda x: x[0][1], reverse=True)
-        # Uncomment to visualize the candidate grasp positions on the bounding box.
-        # if self._should_render:
-        #    for bb_point in bb_points:
-        #        #self._mp_sim.create_viz(bb_point[0])
-        #        self._mp_sim._sim.viz_pos(bb_point[0], None)
-
-        inv_robo_T = self._mp_sim.get_robot_transform().inverted()
-
-        self.mp.setup_ee_margin(obj_idx)
-        self._is_state_valid_fn = self.mp._is_state_valid
-
-        # Try to generate a valid JS for the desired EE pos.
-        for i, (bb_point, _) in enumerate(bb_points):
-            local_bb_point = inv_robo_T.transform_point(bb_point)
-            local_bb_point = np.array(local_bb_point)
-            goal_js, is_feasible = self._gen_goal_state(local_bb_point)
-            if is_feasible:
-                if self._should_render:
-                    print("Using grasp point idx", i)
-                break
-        self.mp.remove_ee_margin(obj_idx)
-
-        if not is_feasible:
-            print("Nothing was feasible")
-            # If nothing works, first priority is first specified bb point.
-            goal_js, _ = self._gen_goal_state(np.array(bb_points[0][0]))
-
-        # Generate grasp positions on each side of the bounding box
-        return RobotTarget(
-            js_targ=goal_js,
-            obj_targ=obj_idx,
-            is_guess=not is_feasible,
-            ee_targ=bb_point,
-        )
-
     def _bounding_sphere_sample(
-        self, obj_idx: int, obj_dat: ObjPlanningData
+        self, obj_idx: int, obj_dat: ObjectGraspTarget
     ) -> RobotTarget:
-        obj_pos = np.array(obj_dat.trans.translation)
+        obj_pos = np.array(obj_dat.translation.translation)
 
         inv_robo_T = self._mp_sim.get_robot_transform().inverted()
 
@@ -254,7 +175,7 @@ class GraspGenerator:
 
             goal_js, is_feasible = self._gen_goal_state(local_point, i)
             if not is_feasible:
-                self._verbose_log("Could not find JS for grasp point")
+                self._verbose_log("Could not find joints for grasp point")
                 continue
 
             # Check the final end-effector position is indeed within
@@ -279,7 +200,7 @@ class GraspGenerator:
                     continue
 
             if self._should_render:
-                sim.viz_ids["ee"] = sim.viz_pos(
+                sim.viz_ids["ee"] = sim.visualize_position(
                     real_ee_pos, sim.viz_ids["ee"], r=5.0
                 )
                 Image.fromarray(self._mp_sim.render()).save(
@@ -294,18 +215,18 @@ class GraspGenerator:
         self.mp.remove_ee_margin(obj_idx)
 
         return RobotTarget(
-            js_targ=found_goal_js,
-            obj_targ=obj_idx,
+            joints_target=found_goal_js,
+            obj_id_target=obj_idx,
             is_guess=found_goal_js is None,
-            ee_targ=real_ee_pos,
+            ee_target_pos=real_ee_pos,
         )
 
-    def _get_real_ee_pos(self, js):
-        if js is None:
+    def _get_real_ee_pos(self, joints):
+        if joints is None:
             return None
         start_state = self._mp_sim.capture_state()
         start_js = self._mp_sim.get_arm_pos()
-        self._mp_sim.set_arm_pos(js)
+        self._mp_sim.set_arm_pos(joints)
         self._mp_sim.micro_step()
         real_ee_pos = self._mp_sim.get_ee_pos()
         self._mp_sim.set_arm_pos(start_js)
@@ -329,16 +250,14 @@ class GraspGenerator:
     def _grasp_debug_points(self, obj_pos, grasp_point):
         sim = self._mp_sim._sim
         if self._should_render:
-            sim.viz_ids["obj"] = sim.viz_pos(
+            sim.viz_ids["obj"] = sim.visualize_position(
                 obj_pos, sim.viz_ids["obj"], r=5.0
             )
 
-            sim.viz_ids["grasp"] = sim.viz_pos(
+            sim.viz_ids["grasp"] = sim.visualize_position(
                 grasp_point, sim.viz_ids["grasp"], r=5.0
             )
 
     def gen_target_from_obj_idx(self, obj_idx):
         obj_dat = self._mp_sim.get_obj_info(obj_idx)
-
-        # return self._bounding_box_sample(obj_idx, obj_dat)
         return self._bounding_sphere_sample(obj_idx, obj_dat)

@@ -12,7 +12,7 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails
+from habitat.tasks.rearrange.utils import CollisionDetails
 from habitat.tasks.utils import get_angle
 
 
@@ -53,12 +53,12 @@ class MultiObjSensor(PointGoalSensor):
 
 
 @registry.register_sensor
-class AbsTargetObjectSensor(MultiObjSensor):
+class AbsObjectGoalPositionSensor(MultiObjSensor):
     """
-    This is the ground truth position
+    This is the ground truth object position sensor relative to the scene coordinate frame.
     """
 
-    cls_uuid: str = "abs_obj_cur_sensor"
+    cls_uuid: str = "abs_obj_goal_pos_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
@@ -70,12 +70,12 @@ class AbsTargetObjectSensor(MultiObjSensor):
 
 
 @registry.register_sensor
-class TargetObjectSensor(MultiObjSensor):
+class ObjectGoalPositionSensor(MultiObjSensor):
     """
-    This is the ground truth position
+    This is the ground truth object position sensor relative to the robot coordinate frame.
     """
 
-    cls_uuid: str = "obj_cur_sensor"
+    cls_uuid: str = "obj_goal_pos_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
@@ -387,7 +387,11 @@ class EndEffectorToObjectDistance(Measure):
 
 @registry.register_measure
 class EndEffectorToRestDistance(Measure):
-    cls_uuid: str = "ee_to_rest"
+    """
+    Distance between current end effector position and position where end effector rests within the robot body.
+    """
+
+    cls_uuid: str = "ee_to_rest_distance"
 
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
@@ -438,7 +442,7 @@ class RobotCollisions(Measure):
         return RobotCollisions.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._accum_coll_info = CollDetails()
+        self._accum_coll_info = CollisionDetails()
         self.update_metric(
             *args,
             episode=episode,
@@ -451,7 +455,7 @@ class RobotCollisions(Measure):
         cur_coll_info = self._task.get_cur_collision_info()
         self._accum_coll_info += cur_coll_info
         self._metric = {
-            "total_colls": self._accum_coll_info.total_colls,
+            "total_collisions": self._accum_coll_info.total_collisions,
             "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
             "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
             "obj_scene_colls": self._accum_coll_info.obj_scene_colls,

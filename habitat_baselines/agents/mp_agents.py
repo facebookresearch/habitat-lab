@@ -190,7 +190,7 @@ class ArmTargModule(ParameterizedAgent):
 
     def _add_debug_viz_point(self, pos):
         pos_name = f"arm_targ_{len(self._viz_points)}"
-        self._sim.viz_ids[pos_name] = self._sim.viz_pos(
+        self._sim.viz_ids[pos_name] = self._sim.visualize_position(
             pos, self._sim.viz_ids[pos_name]
         )
         self._viz_points.append(pos_name)
@@ -355,7 +355,7 @@ class SpaManipPick(ArmTargModule):
         self._robo_targ = robo_targ
 
         if self._config.VERBOSE:
-            self._add_debug_viz_point(robo_targ.ee_targ)
+            self._add_debug_viz_point(robo_targ.ee_target)
 
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
@@ -375,7 +375,7 @@ class SpaManipPick(ArmTargModule):
         cur_ee = self._sim.robot.ee_transform.translation
         obj_pos = np.array(self._sim.get_translation(self._targ_obj_idx))
 
-        ee_dist = np.linalg.norm(self._robo_targ.ee_targ - cur_ee)
+        ee_dist = np.linalg.norm(self._robo_targ.ee_target - cur_ee)
         ee_dist_to_obj = np.linalg.norm(obj_pos - cur_ee)
         if (
             ee_dist_to_obj < self._grasp_thresh
@@ -422,7 +422,9 @@ class SpaResetModule(ArmTargModule):
             use_prev=True,
         )
 
-        robo_targ = RobotTarget(js_targ=self._sim.robot.params.arm_init_params)
+        robo_targ = RobotTarget(
+            joints_target=self._sim.robot.params.arm_init_params
+        )
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,
@@ -488,7 +490,7 @@ def main():
     )
 
     ac_cfg = config.TASK_CONFIG.TASK.ACTIONS
-    spa_cfg = config.SPA
+    spa_cfg = config.SENSE_PLAN_ACT
     env = benchmark._env
 
     def get_object_args(skill):

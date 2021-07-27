@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import get_aabb, rearrange_collision
-from habitat_baselines.motion_planning.robot_target import ObjPlanningData
+from habitat_baselines.motion_planning.robot_target import ObjectGraspTarget
 from habitat_sim.physics import CollisionGroups, MotionType
 
 
@@ -100,7 +100,7 @@ class MpSim(ABC):
         pass
 
     @abstractmethod
-    def get_obj_info(self, obj_idx) -> ObjPlanningData:
+    def get_obj_info(self, obj_idx) -> ObjectGraspTarget:
         """
         Returns information about an object for the grasp planner
         """
@@ -145,10 +145,10 @@ class HabMpSim(MpSim):
     def get_robot_transform(self):
         return self._sim.robot.base_transformation
 
-    def get_obj_info(self, obj_idx) -> ObjPlanningData:
-        return ObjPlanningData(
+    def get_obj_info(self, obj_idx) -> ObjectGraspTarget:
+        return ObjectGraspTarget(
             bb=get_aabb(obj_idx, self._sim),
-            trans=self._sim.get_transformation(obj_idx),
+            translation=self._sim.get_transformation(obj_idx),
         )
 
     def set_position(self, pos, obj_id):

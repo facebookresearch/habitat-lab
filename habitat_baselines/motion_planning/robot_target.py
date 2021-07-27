@@ -6,21 +6,22 @@ import numpy as np
 @attr.s(auto_attribs=True, slots=True)
 class RobotTarget:
     """
-    Data class to define the input for the motion planner
+    Data class to define the target needed as input for the motion planner.
     """
 
     # End-effector in world coordinate frame.
-    ee_targ: np.ndarray = None
-    obj_targ: int = None
-    js_targ: np.ndarray = None
+    ee_target_pos: np.ndarray = None
+    obj_id_target: int = None
+    joints_target: np.ndarray = None
     is_guess: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ObjPlanningData:
+class ObjectGraspTarget:
     """
-    Data class to define the input to the grasp planner.
+    Data class to define the target needed as input for the grasp planner.
     """
 
+    # Bounding Box
     bb: mn.Range3D
-    trans: mn.Matrix4
+    translation: mn.Matrix4
