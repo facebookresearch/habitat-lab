@@ -24,7 +24,12 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, *args, **kwargs):
         return self._sim.step(HabitatSimActions.EMPTY)
@@ -124,7 +129,12 @@ class ArmRelPosAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
@@ -149,7 +159,12 @@ class ArmAbsPosAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, set_pos, should_step=True, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to
@@ -171,7 +186,12 @@ class ArmAbsPosKinematicAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, set_pos, should_step=True, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to

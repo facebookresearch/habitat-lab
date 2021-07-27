@@ -6,7 +6,7 @@ import numpy as np
 
 import habitat
 from habitat.core.simulator import Observations
-from habitat.tasks.rearrange.rearrange_sensors import EeSensor
+from habitat.tasks.rearrange.rearrange_sensors import EEPositionSensor
 from habitat_baselines.agents.benchmark_gym import BenchmarkGym
 from habitat_baselines.config.default import get_config
 from habitat_baselines.motion_planning.motion_plan import MotionPlanner
@@ -300,7 +300,7 @@ class ArmTargModule(ParameterizedAgent):
 
 class IkMoveArm(ArmTargModule):
     def _get_plan_ac(self, observations):
-        ee_pos = observations[EeSensor.cls_uuid]
+        ee_pos = observations[EEPositionSensor.cls_uuid]
         to_target = self._robot_target - ee_pos
         to_target = self._config.IK_SPEED_FACTOR * (
             to_target / np.linalg.norm(to_target)

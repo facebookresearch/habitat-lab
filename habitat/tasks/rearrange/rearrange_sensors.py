@@ -252,7 +252,7 @@ class TrackMarkerSensor(Sensor):
 
 
 @registry.register_sensor
-class EeSensor(Sensor):
+class EEPositionSensor(Sensor):
     cls_uuid: str = "ee_pos"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -261,7 +261,7 @@ class EeSensor(Sensor):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return EeSensor.cls_uuid
+        return EEPositionSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR

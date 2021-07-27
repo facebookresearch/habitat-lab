@@ -39,7 +39,7 @@ TASK:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
-        TYPE: "EeSensor"
+        TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:

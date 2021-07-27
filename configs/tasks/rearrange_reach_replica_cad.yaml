@@ -16,7 +16,7 @@ TASK:
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
     END_EFFECTOR_SENSOR:
-        TYPE: "EeSensor"
+        TYPE: "EEPositionSensor"
     SENSORS: ["JOINT_SENSOR", "RELATIVE_RESTING_POS_SENSOR", 'END_EFFECTOR_SENSOR']
 
     END_EFFECTOR_TO_REST_DISTANCE:
