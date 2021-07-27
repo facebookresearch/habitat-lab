@@ -25,7 +25,7 @@ class EmptyAction(SimulatorTaskAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(self._config.DIMENSIONALITY,),
             low=-1,
             high=1,
             dtype=np.float32,

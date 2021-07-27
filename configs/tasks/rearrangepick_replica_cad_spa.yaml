@@ -111,6 +111,7 @@ TASK:
             EE_CTRL_LIM: 0.015
         EMPTY:
             TYPE: "EmptyAction"
+            DIMENSIONALITY: 7
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - EMPTY

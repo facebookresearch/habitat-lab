@@ -113,6 +113,7 @@ TASK:
             MIN_ABS_ANG_SPEED: 1.0
         EMPTY:
             TYPE: "EmptyAction"
+            DIMENSIONALITY: 7
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - BASE_VELOCITY
