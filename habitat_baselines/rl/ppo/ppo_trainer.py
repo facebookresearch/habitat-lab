@@ -73,10 +73,6 @@ class PPOTrainer(BaseRLTrainer):
     actor_critic: Policy
 
     def __init__(self, config=None):
-        resume_state = load_resume_state(config)
-        if resume_state is not None:
-            config = resume_state["config"]
-
         super().__init__(config)
         self.actor_critic = None
         self.agent = None
@@ -202,6 +198,13 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def _init_train(self):
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.config: Config = resume_state["config"]
+            self.using_velocity_ctrl = (
+                self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+            ) == ["VELOCITY_CONTROL"]
+
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
 
