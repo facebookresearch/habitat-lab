@@ -22,6 +22,9 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
+DESIRED_FETCH_ARM_RESTING_REL_LOCATION = np.array([0.5, 0.0, 1.0])
+
+
 class RearrangeTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping shared between
@@ -38,7 +41,7 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
-        self._desired_resting = np.array([0.5, 0.0, 1.0])
+        self._desired_resting = DESIRED_FETCH_ARM_RESTING_REL_LOCATION
 
     @property
     def desired_resting(self):

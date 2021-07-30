@@ -39,10 +39,6 @@ class EmptyAction(SimulatorTaskAction):
         return self._sim.step(HabitatSimActions.EMPTY)
 
 
-def get_empty_action():
-    return {"action": "EMPTY", "action_args": {}}
-
-
 @registry.register_task_action
 class ArmAction(SimulatorTaskAction):
     """An arm control and grip control into one action space."""
