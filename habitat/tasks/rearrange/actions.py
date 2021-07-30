@@ -25,7 +25,7 @@ class EmptyAction(SimulatorTaskAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.DIMENSIONALITY,),
+            shape=(1,),
             low=-1,
             high=1,
             dtype=np.float32,
@@ -144,6 +144,38 @@ class ArmRelPosAction(SimulatorTaskAction):
         self._sim: RearrangeSim
         self._sim.robot.arm_motor_pos = (
             delta_pos + self._sim.robot.arm_motor_pos
+        )
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_VEL)
+        return None
+
+
+@registry.register_task_action
+class ArmRelPosKinematicAction(SimulatorTaskAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            print("CLIPPING!")
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self._sim.robot.arm_joint_pos = (
+            delta_pos + self._sim.robot.arm_joint_pos
         )
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)

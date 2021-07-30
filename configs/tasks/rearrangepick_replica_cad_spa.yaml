@@ -25,10 +25,6 @@ TASK:
         TYPE: "TargetStartSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
-    OBJECT_GOAL_POS_SENSOR:
-        TYPE: "ObjectGoalPositionSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
     GOAL_SENSOR:
         TYPE: "GoalSensor"
         GOAL_FORMAT: "CARTESIAN"

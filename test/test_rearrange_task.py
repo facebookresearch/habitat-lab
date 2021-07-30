@@ -141,8 +141,6 @@ def test_rearrange_habitat_env():
 )
 def test_rearrange_task(test_cfg_path):
     config = baselines_get_config(test_cfg_path)
-    # if not RearrangeDatasetV0.check_config_paths_exist(config.TASK_CONFIG.DATASET):
-    #     pytest.skip("Test skipped as dataset files are missing.")
 
     env_class = get_env_class(config.ENV_NAME)
 

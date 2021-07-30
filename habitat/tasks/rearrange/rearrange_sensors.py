@@ -315,6 +315,32 @@ class RelativeRestingPositionSensor(Sensor):
 
 
 @registry.register_sensor
+class RestingPositionSensor(Sensor):
+    cls_uuid: str = "resting_position"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RestingPositionSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        return np.array(task.desired_resting)
+
+
+@registry.register_sensor
 class IsHoldingSensor(Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
