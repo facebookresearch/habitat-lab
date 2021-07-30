@@ -1,7 +1,10 @@
+from typing import Any, Dict, Optional, Union
+
 import gym
 import numpy as np
 from gym import spaces
 
+from habitat.core.simulator import Observations
 from habitat.utils.visualizations.utils import observations_to_image
 
 
@@ -38,7 +41,44 @@ def smash_observation_space(obs_space, limit_keys):
 
 
 class HabGymWrapper(gym.Env):
-    def __init__(self, env, save_orig_obs=False):
+    """
+    Wraps a Habitat RLEnv into a format compatible with the standard OpenAI Gym
+    interface. Currently does not support discrete actions. This wrapper
+    therefore changes the behavior so that:
+    - The action input to `.step(...)` is always a numpy array
+    - The returned value of `.step(...)` and `.reset()` is a either a numpy array or a
+      dictionary consisting of string keys and numpy array values.
+    - The action space is converted to a `gym.spaces.Box`, action spaces from the RLEnv are
+      flattened into one Box space.
+    - The observation space is either a `gym.spaces.Box` or a `gym.spaces.Dict`
+      where the spaces of the Dict are `gym.spaces.Box`.
+    Configuration allows filtering the included observations, specifying goals,
+    or filtering actions. Listed below are the
+    config keys:
+    - `RL.GYM_OBS_KEYS`: Which observation names from the wrapped environment
+      to include. The order of the key names is kept in the output observation array.
+    - `RL.GYM_DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
+      any observations are returned in the `desired_goal` returned key of the
+      observation.
+    - `RL.GYM_FIX_INFO_DICT`: By default False, but if specified as true, this
+      flattens the returned info dictionary to have depth 1 where sub-keys are
+      concatenated to parent keys.
+    - `RL.GYM_ACTION_KEYS`: Include a subset of the allowed actions in the
+      wrapped environment. If not specified or empty, all actions are included.
+    Example usage:
+    ```
+    config = baselines_get_config(hab_cfg_path)
+    env_class = get_env_class(config.ENV_NAME)
+
+    env = habitat_baselines.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    env = HabGymWrapper(env)
+    env = HabRenderWrapper(env)
+    ```
+    """
+
+    def __init__(self, env, save_orig_obs: bool = False):
         self._gym_goal_keys = env._rl_config.get("GYM_DESIRED_GOAL_KEYS", [])
         self._gym_achieved_goal_keys = env._rl_config.get(
             "GYM_ACHIEVED_GOAL_KEYS", []
@@ -58,7 +98,7 @@ class HabGymWrapper(gym.Env):
                 )
             }
         )
-        self._last_obs = None
+        self._last_obs: Optional[Observations] = None
         self.action_mapping = {}
         self._save_orig_obs = save_orig_obs
         self.orig_obs = None
@@ -111,7 +151,7 @@ class HabGymWrapper(gym.Env):
 
         self._env = env
 
-    def step(self, action):
+    def step(self, action: np.ndarray):
         action_args = {}
         for k, (start_i, end_i) in self.action_mapping.items():
             action_args[k] = action[start_i:end_i]
@@ -121,7 +161,7 @@ class HabGymWrapper(gym.Env):
         }
         return self.direct_hab_step(action)
 
-    def direct_hab_step(self, action):
+    def direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
@@ -159,14 +199,18 @@ class HabGymWrapper(gym.Env):
 
         return observation
 
-    def reset(self):
+    def reset(self) -> Union[np.ndarray, Dict[str, np.ndarray]]:
         obs = self._env.reset()
         self._last_obs = obs
         return self._transform_obs(obs)
 
-    def render(self, mode="rgb_array"):
-        frame = observations_to_image(
-            self._last_obs, self._env._env.get_metrics()
-        )
+    def render(self, mode: str = "rgb_array") -> np.ndarray:
+        frame = None
+        if mode == "rgb_array":
+            frame = observations_to_image(
+                self._last_obs, self._env._env.get_metrics()
+            )
+        else:
+            raise ValueError(f"Render mode {mode} not currently supported.")
 
         return frame
