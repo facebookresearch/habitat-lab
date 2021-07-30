@@ -25,7 +25,7 @@ class EmptyAction(SimulatorTaskAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(1,),
             low=-1,
             high=1,
             dtype=np.float32,
@@ -159,7 +159,12 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         if self._config.get("SHOULD_CLIP", True):
