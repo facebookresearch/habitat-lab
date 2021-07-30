@@ -45,7 +45,7 @@ class HabGymWrapper(gym.Env):
         )
         self._fix_info_dict = env._rl_config.get("GYM_FIX_INFO_DICT", False)
         self._gym_action_keys = env._rl_config.get("GYM_ACTION_KEYS", None)
-        self._gym_obs_keys = env._rl_config.GYM_OBS_KEYS
+        self._gym_obs_keys = env._rl_config.get("GYM_OBS_KEYS", None)
 
         action_space = env.action_space
         action_space = spaces.Dict(

@@ -24,11 +24,15 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(
-            shape=(1,),
-            low=-1,
-            high=1,
-            dtype=np.float32,
+        return spaces.Dict(
+            {
+                "empty_action": spaces.Box(
+                    shape=(1,),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
+                )
+            }
         )
 
     def step(self, *args, **kwargs):

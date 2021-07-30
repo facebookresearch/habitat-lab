@@ -18,7 +18,7 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 @pytest.mark.parametrize(
     "config_file",
     [
-        "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
+        # "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
         "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml",
     ],
 )
