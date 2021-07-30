@@ -51,6 +51,22 @@ def overlay_frame(frame, info, additional=None):
 
 
 class HabRenderWrapper(gym.Wrapper):
+    """
+    Overlays the measures values as text over the rendered frame. Only affects
+    the behavior of the `.render()` method. Also records and displays the
+    accumulated reward and number of steps. Example usage:
+    ```
+    config = baselines_get_config(self.args.hab_cfg, config_args)
+    env_class = get_env_class(config.ENV_NAME)
+
+    env = habitat_baselines.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    env = HabGymWrapper(env)
+    env = HabRenderWrapper(env)
+    ```
+    """
+
     def __init__(self, env):
         if not isinstance(env, gym.Env):
             raise ValueError("Can only wrap gym env")
