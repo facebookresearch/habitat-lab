@@ -15,21 +15,11 @@ from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
 from habitat.tasks.utils import get_angle
 
 
-def merge_sim_episode_with_object_config(sim_config, episode):
-    sim_config.defrost()
-    sim_config.ep_info = [episode.__dict__]
-    sim_config.freeze()
-    return sim_config
-
-
 @registry.register_task(name="RearrangePickTask-v0")
 class RearrangePickTaskV1(RearrangeTask):
     """
     Rearrange Pick Task with Fetch robot interacting with objects and environment.
     """
-
-    def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
@@ -46,7 +36,6 @@ class RearrangePickTaskV1(RearrangeTask):
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
         self.start_states = self.cache.load()
-        self.desired_resting = np.array([0.5, 0.0, 1.0])
         self.targ_idx = None
         self.prev_colls = None
         self.abs_targ_idx = None

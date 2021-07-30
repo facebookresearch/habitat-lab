@@ -9,7 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import attr
 import gym
@@ -58,13 +58,15 @@ def swap_axes(x):
 
 
 @attr.s(auto_attribs=True, kw_only=True)
-class CollDetails:
+class CollisionDetails:
     obj_scene_colls: int = 0
     robot_obj_colls: int = 0
     robot_scene_colls: int = 0
+    robot_coll_ids: List[int] = []
+    all_colls: List[Tuple[int, int]] = []
 
     @property
-    def total_colls(self):
+    def total_collisions(self):
         return (
             self.obj_scene_colls
             + self.robot_obj_colls
@@ -72,10 +74,12 @@ class CollDetails:
         )
 
     def __add__(self, other):
-        return CollDetails(
+        return CollisionDetails(
             obj_scene_colls=self.obj_scene_colls + other.obj_scene_colls,
             robot_obj_colls=self.robot_obj_colls + other.robot_obj_colls,
             robot_scene_colls=self.robot_scene_colls + other.robot_scene_colls,
+            robot_coll_ids=[*self.robot_coll_ids, *other.robot_coll_ids],
+            all_colls=[*self.all_colls, *other.all_colls],
         )
 
 
@@ -85,6 +89,7 @@ def rearrange_collision(
     verbose: bool = False,
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
+    get_extra_coll_data: bool = False,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
     robot_model = sim.robot
@@ -110,6 +115,7 @@ def rearrange_collision(
 
     # Filter out any collisions with the ignore objects
     colls = list(filter(should_keep, colls))
+    robot_coll_ids = []
 
     # Check for robot collision
     robot_obj_colls = 0
@@ -124,6 +130,11 @@ def rearrange_collision(
         else:
             robot_scene_colls += 1
 
+        if match.object_id_a == robot_id:
+            robot_coll_ids.append(match.object_id_b)
+        else:
+            robot_coll_ids.append(match.object_id_a)
+
     # Checking for holding object collision
     obj_scene_colls = 0
     if count_obj_colls and snapped_obj_id is not None:
@@ -133,12 +144,21 @@ def rearrange_collision(
                 continue
             obj_scene_colls += 1
 
-    coll_details = CollDetails(
-        obj_scene_colls=min(obj_scene_colls, 1),
-        robot_obj_colls=min(robot_obj_colls, 1),
-        robot_scene_colls=min(robot_scene_colls, 1),
-    )
-    return coll_details.total_colls > 0, coll_details
+    if get_extra_coll_data:
+        coll_details = CollisionDetails(
+            obj_scene_colls=min(obj_scene_colls, 1),
+            robot_obj_colls=min(robot_obj_colls, 1),
+            robot_scene_colls=min(robot_scene_colls, 1),
+            robot_coll_ids=robot_coll_ids,
+            all_colls=[(x.object_id_a, x.object_id_b) for x in colls],
+        )
+    else:
+        coll_details = CollisionDetails(
+            obj_scene_colls=min(obj_scene_colls, 1),
+            robot_obj_colls=min(robot_obj_colls, 1),
+            robot_scene_colls=min(robot_scene_colls, 1),
+        )
+    return coll_details.total_collisions > 0, coll_details
 
 
 def get_nav_mesh_settings(agent_config):
@@ -216,8 +236,7 @@ class CacheHelper:
         self, cache_name, lookup_val, def_val=None, verbose=False, rel_dir=""
     ):
         self.use_cache_path = osp.join(CACHE_PATH, rel_dir)
-        if not osp.exists(self.use_cache_path):
-            os.makedirs(self.use_cache_path)
+        os.makedirs(self.use_cache_path, exist_ok=True)
         sec_hash = hashlib.md5(str(lookup_val).encode("utf-8")).hexdigest()
         cache_id = f"{cache_name}_{sec_hash}.pickle"
         self.cache_id = osp.join(self.use_cache_path, cache_id)
@@ -350,9 +369,9 @@ class IkHelper:
                 upper.append(ret[9])
         return np.array(lower), np.array(upper)
 
-    def calc_ik(self, targ_ee):
+    def calc_ik(self, targ_ee: np.ndarray):
         """
-        targ_ee is in ROBOT COORDINATE FRAME NOT IN EE COORDINATE FRAME
+        :param targ_ee: 3D target position in the ROBOT BASE coordinate frame
         """
         js = p.calculateInverseKinematics(
             self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id

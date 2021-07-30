@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import attr
 import numpy as np
 from gym import spaces
 
@@ -13,7 +12,7 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollDetails
+from habitat.tasks.rearrange.utils import CollisionDetails
 from habitat.tasks.utils import get_angle
 
 
@@ -54,12 +53,12 @@ class MultiObjSensor(PointGoalSensor):
 
 
 @registry.register_sensor
-class AbsTargetObjectSensor(MultiObjSensor):
+class AbsObjectGoalPositionSensor(MultiObjSensor):
     """
-    This is the ground truth position
+    This is the ground truth object position sensor relative to the scene coordinate frame.
     """
 
-    cls_uuid: str = "abs_obj_cur_sensor"
+    cls_uuid: str = "abs_obj_goal_pos_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
@@ -68,6 +67,28 @@ class AbsTargetObjectSensor(MultiObjSensor):
         pos = scene_pos[idxs]
 
         return pos
+
+
+@registry.register_sensor
+class ObjectGoalPositionSensor(MultiObjSensor):
+    """
+    This is the ground truth object position sensor relative to the robot coordinate frame.
+    """
+
+    cls_uuid: str = "obj_goal_pos_sensor"
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        self._sim: RearrangeSim
+        T_inv = self._sim.robot.ee_transform.inverted()
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        pos = scene_pos[idxs]
+
+        for i in range(pos.shape[0]):
+            pos[i] = T_inv.transform_point(pos[i])
+
+        return pos[self._task.targ_idx]
 
 
 @registry.register_sensor
@@ -159,7 +180,7 @@ class LocalizationSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.sim_obj.transformation
+        trans = self._sim.robot.base_transformation
         forward = np.array([1.0, 0, 0])
         heading = np.array(trans.transform_vector(forward))
         forward = forward[[0, 2]]
@@ -184,9 +205,9 @@ class JointSensor(Sensor):
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
-    def _get_observation_space(self, *args, **kwargs):
+    def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(9,),
+            shape=(config.DIMENSIONALITY,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -231,13 +252,16 @@ class TrackMarkerSensor(Sensor):
 
 
 @registry.register_sensor
-class EeSensor(Sensor):
+class EEPositionSensor(Sensor):
+    cls_uuid: str = "ee_pos"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
-    def _get_uuid(self, *args, **kwargs):
-        return "ee_pos"
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EEPositionSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -251,11 +275,69 @@ class EeSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.sim_obj.transformation
+        trans = self._sim.robot.base_transformation
         ee_pos = self._sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         return np.array(local_ee_pos)
+
+
+@registry.register_sensor
+class RelativeRestingPositionSensor(Sensor):
+    cls_uuid: str = "relative_resting_position"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeRestingPositionSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        base_trans = self._sim.robot.base_transformation
+        ee_pos = self._sim.robot.ee_transform.translation
+        local_ee_pos = base_trans.inverted().transform_point(ee_pos)
+
+        relative_desired_resting = task.desired_resting - local_ee_pos
+
+        return np.array(relative_desired_resting)
+
+
+@registry.register_sensor
+class RestingPositionSensor(Sensor):
+    cls_uuid: str = "resting_position"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RestingPositionSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        return np.array(task.desired_resting)
 
 
 @registry.register_sensor
@@ -330,6 +412,33 @@ class EndEffectorToObjectDistance(Measure):
 
 
 @registry.register_measure
+class EndEffectorToRestDistance(Measure):
+    """
+    Distance between current end effector position and position where end effector rests within the robot body.
+    """
+
+    cls_uuid: str = "ee_to_rest_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EndEffectorToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
+        rest_dist = np.linalg.norm(to_resting)
+
+        self._metric = rest_dist
+
+
+@registry.register_measure
 class DummyMeasure(Measure):
     cls_uuid: str = "dummy_measure"
 
@@ -342,34 +451,6 @@ class DummyMeasure(Measure):
 
     def update_metric(self, *args, episode, **kwargs):
         self._metric = 0
-
-
-@registry.register_measure
-class EndEffectorToPosDistance(Measure):
-    cls_uuid: str = "ee_to_pos_distance"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        self._sim = sim
-        self._config = config
-        self._target_pos = np.zeros(3)
-        super().__init__(**kwargs)
-
-    def set_target_pos(self, target_pos):
-        self._target_pos = target_pos
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return EndEffectorToPosDistance.cls_uuid
-
-    def reset_metric(self, *args, episode, **kwargs):
-        self.update_metric(*args, episode=episode, **kwargs)
-
-    def update_metric(self, *args, episode, **kwargs):
-        ee_pos = self._sim.robot.ee_transform.translation
-
-        distance = np.linalg.norm(self._target_pos - ee_pos, ord=2)
-
-        self._metric = distance
 
 
 @registry.register_measure
@@ -387,7 +468,7 @@ class RobotCollisions(Measure):
         return RobotCollisions.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._accum_coll_info = CollDetails()
+        self._accum_coll_info = CollisionDetails()
         self.update_metric(
             *args,
             episode=episode,
@@ -400,8 +481,10 @@ class RobotCollisions(Measure):
         cur_coll_info = self._task.get_cur_collision_info()
         self._accum_coll_info += cur_coll_info
         self._metric = {
-            "total_colls": self._accum_coll_info.total_colls,
-            **attr.asdict(self._accum_coll_info),
+            "total_collisions": self._accum_coll_info.total_collisions,
+            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
         }
 
 
@@ -459,6 +542,85 @@ class RobotForce(Measure):
 
 
 @registry.register_measure
+class RearrangeReachReward(Measure):
+    cls_uuid: str = "rearrange_reach_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangeReachReward.cls_uuid
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._prev = None
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        cur_dist = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+        if self._config.DIFF_REWARD:
+            if self._prev is None:
+                self._metric = 0.0
+            else:
+                self._metric = self._prev - cur_dist
+        else:
+            self._metric = -1.0 * self._config.SCALE * cur_dist
+
+        self._prev = cur_dist
+
+
+@registry.register_measure
+class RearrangeReachSuccess(Measure):
+    cls_uuid: str = "rearrange_reach_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangeReachSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self._config = config
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = (
+            task.measurements.measures[
+                EndEffectorToRestDistance.cls_uuid
+            ].get_metric()
+            < self._config.SUCC_THRESH
+        )
+
+
+@registry.register_measure
 class RearrangePickReward(Measure):
     cls_uuid: str = "rearrangepick_reward"
 
@@ -494,17 +656,20 @@ class RearrangePickReward(Measure):
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
         success = task.measurements.measures[
             RearrangePickSuccess.cls_uuid
         ].get_metric()
+
         reward = 0
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
-        ee_pos = observations["ee_pos"]
 
         if cur_picked:
-            dist_to_goal = np.linalg.norm(ee_pos - task.desired_resting)
+            dist_to_goal = ee_to_rest_distance
         else:
             dist_to_goal = ee_to_object_distance[task.targ_idx]
 
@@ -610,20 +775,19 @@ class RearrangePickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = False
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
         # Check that we are holding the right object and the object is actually
         # being held.
-        if (
+        self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-        ):
-            rest_dist = np.linalg.norm(
-                self._prev_ee_pos - task.desired_resting
-            )
-            if rest_dist < self._config.SUCC_THRESH:
-                self._metric = True
+            and ee_to_rest_distance < self._config.SUCC_THRESH
+        )
 
         self._prev_ee_pos = observations["ee_pos"]

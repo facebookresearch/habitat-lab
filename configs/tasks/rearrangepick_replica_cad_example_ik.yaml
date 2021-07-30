@@ -10,6 +10,10 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
+    # Reach task config
+    RENDER_TARGET: True
+    EE_SAMPLE_FACTOR: 0.8
+
     # In radians
     #BASE_ANGLE_NOISE: 0.15
     #BASE_NOISE: 0.05
@@ -39,13 +43,16 @@ TASK:
         DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
-    EE_SENSOR:
-        TYPE: "EeSensor"
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
+        TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
     LOCAL_SENSOR:
         TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "EE_SENSOR", "LOCAL_SENSOR"]
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -55,6 +62,8 @@ TASK:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
     REARRANGE_PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -84,6 +93,7 @@ TASK:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
     ACTIONS:
@@ -91,9 +101,10 @@ TASK:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmEEAction"
             GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            VEL_CTRL_LIM: 0.0125
+            DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
@@ -161,9 +172,7 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    HIGH_RES_DIM: 512
     LAG_OBSERVATIONS: 1
-    SHOULD_RENDER_DEBUG: True
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100

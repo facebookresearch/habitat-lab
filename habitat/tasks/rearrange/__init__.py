@@ -17,6 +17,7 @@ def _try_register_rearrange_task():
 
     try:
         import habitat.tasks.rearrange.rearrange_pick_task
+        import habitat.tasks.rearrange.rearrange_reach_task
         import habitat.tasks.rearrange.rearrange_task
 
     except ImportError as e:
@@ -35,6 +36,10 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("ARM_ACTION")
     if not HabitatSimActions.has_action("ARM_VEL"):
         HabitatSimActions.extend_action_space("ARM_VEL")
+    if not HabitatSimActions.has_action("ARM_ABS_POS"):
+        HabitatSimActions.extend_action_space("ARM_ABS_POS")
+    if not HabitatSimActions.has_action("ARM_ABS_POS_KINEMATIC"):
+        HabitatSimActions.extend_action_space("ARM_ABS_POS_KINEMATIC")
     if not HabitatSimActions.has_action("MAGIC_GRASP"):
         HabitatSimActions.extend_action_space("MAGIC_GRASP")
     if not HabitatSimActions.has_action("BASE_VELOCITY"):

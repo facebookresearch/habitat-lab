@@ -6,6 +6,7 @@
 
 import json
 import time
+from glob import glob
 
 import pytest
 
@@ -132,12 +133,14 @@ def test_rearrange_habitat_env():
         env.reset()
 
 
-def test_rearrange_task():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
-    )
-    # if not RearrangeDatasetV0.check_config_paths_exist(config.TASK_CONFIG.DATASET):
-    #     pytest.skip("Test skipped as dataset files are missing.")
+@pytest.mark.parametrize(
+    "test_cfg_path",
+    list(
+        glob("habitat_baselines/config/rearrange/*"),
+    ),
+)
+def test_rearrange_task(test_cfg_path):
+    config = baselines_get_config(test_cfg_path)
 
     env_class = get_env_class(config.ENV_NAME)
 

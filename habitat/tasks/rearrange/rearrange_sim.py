@@ -26,6 +26,7 @@ from habitat.tasks.rearrange.utils import (
     IkHelper,
     convert_legacy_cfg,
     get_nav_mesh_settings,
+    make_render_only,
 )
 from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
@@ -152,6 +153,8 @@ class RearrangeSim(HabitatSim):
             self.art_objs = []
             self.scene_obj_ids = []
             self.robot = None
+            self.viz_ids = defaultdict(lambda: None)
+            self.viz_obj_ids = []
         self.grasp_mgr.desnap(force=True)
         self.prev_scene_id = ep_info["scene_id"]
 
@@ -186,7 +189,7 @@ class RearrangeSim(HabitatSim):
             if self.habitat_config.get("IK_ARM_URDF", None) is not None:
                 self.ik_helper = IkHelper(
                     self.habitat_config.IK_ARM_URDF,
-                    self.robot.params.arm_init_params,
+                    np.array(self.robot.params.arm_init_params),
                 )
             # Capture the starting art states
             self.start_art_states = {
@@ -286,14 +289,16 @@ class RearrangeSim(HabitatSim):
         art_pos = [ao.joint_positions for ao in self.art_objs]
         robot_js = self.robot.sim_obj.joint_positions
 
-        return {
+        ret = {
             "robot_T": robot_T,
-            "robot_js": robot_js,
             "art_T": art_T,
             "static_T": static_T,
             "art_pos": art_pos,
             "obj_hold": self.grasp_mgr.snap_idx,
         }
+        if with_robot_js:
+            ret["robot_js"] = robot_js
+        return ret
 
     def set_state(self, state, set_hold=False):
         """
@@ -303,7 +308,9 @@ class RearrangeSim(HabitatSim):
         """
         if state["robot_T"] is not None:
             self.robot.sim_obj.transformation = state["robot_T"]
-            self.robot.sim_obj.clear_joint_states()
+            n_dof = len(self.robot.sim_obj.joint_forces)
+            self.robot.sim_obj.joint_forces = np.zeros(n_dof)
+            self.robot.sim_obj.joint_velocities = np.zeros(n_dof)
 
         if "robot_js" in state:
             self.robot.sim_obj.joint_positions = state["robot_js"]
@@ -382,7 +389,7 @@ class RearrangeSim(HabitatSim):
             self.is_render_obs = True
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.viz_pos(pos)
+                self.viz_ids[k] = self.visualize_position(pos)
 
             # Also render debug information
             if self.habitat_config.get("RENDER_TARGS", True):
@@ -401,6 +408,24 @@ class RearrangeSim(HabitatSim):
             self.gfx_replay_manager.save_keyframe()
 
         return obs
+
+    def visualize_position(self, position, viz_id=None, r=0.05):
+        """Adds the sphere object to the specified position for visualization purpose."""
+
+        if viz_id is None:
+            obj_mgr = self.get_object_template_manager()
+            template = obj_mgr.get_template_by_handle(
+                obj_mgr.get_template_handles("sphere")[0]
+            )
+            template.scale = mn.Vector3(r, r, r)
+            new_template_handle = obj_mgr.register_template(
+                template, "ball_new_viz"
+            )
+            viz_id = self.add_object(new_template_handle)
+            make_render_only(viz_id, self)
+        self.set_translation(mn.Vector3(*position), viz_id)
+
+        return viz_id
 
     def draw_obs(self):
         """Synchronously gets the observation at the current step"""
@@ -439,3 +464,13 @@ class RearrangeSim(HabitatSim):
         return np.array(
             [self.get_translation(idx) for idx in self.scene_obj_ids]
         )
+
+    def draw_sphere(self, r, template_name="ball_new"):
+        obj_mgr = self.get_object_template_manager()
+        template_handle = obj_mgr.get_template_handles("sphere")[0]
+        template = obj_mgr.get_template_by_handle(template_handle)
+        template.scale = mn.Vector3(r, r, r)
+        new_template_handle = obj_mgr.register_template(template, "ball_new")
+        obj_id = self.add_object(new_template_handle)
+        self.set_object_motion_type(MotionType.KINEMATIC, obj_id)
+        return obj_id

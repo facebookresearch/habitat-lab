@@ -38,8 +38,9 @@ import cv2
 import numpy as np
 
 import habitat.tasks.rearrange.rearrange_task
-from habitat.tasks.rearrange.actions import ArmEEAction, ArmVelAction
+from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
 from habitat.utils.visualizations.utils import observations_to_image
+from habitat_baselines.utils.render_wrapper import overlay_frame
 
 try:
     import pygame
@@ -52,8 +53,7 @@ DEFAULT_RENDER_STEPS_LIMIT = 60
 
 def make_video_cv2(observations, prefix=""):
     output_path = "./data/vids/"
-    if not osp.exists(output_path):
-        os.makedirs(output_path)
+    os.makedirs(output_path, exist_ok=True)
     shp = observations[0].shape
     videodims = (shp[1], shp[0])
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
@@ -64,63 +64,6 @@ def make_video_cv2(observations, prefix=""):
         video.write(bgr_im_1st_person)
     video.release()
     print("Saved to", vid_name)
-
-
-def append_text_to_image(image: np.ndarray, text: str):
-    r"""Appends text underneath an image of size (height, width, channels).
-    The returned image has white text on a black background. Uses textwrap to
-    split long text into multiple lines.
-    Args:
-        image: the image to put text underneath
-        text: a string to display
-    Returns:
-        A new image with text inserted underneath the input image
-    """
-    h, w, c = image.shape
-    font_size = 0.5
-    font_thickness = 1
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    text_image = np.zeros_like(image, dtype=np.uint8)
-
-    y = 0
-    for line in text:
-        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
-        y += textsize[1] + 10
-        x = 10
-        cv2.putText(
-            text_image,
-            line,
-            (x, y),
-            font,
-            font_size,
-            (255, 255, 255),
-            font_thickness,
-            lineType=cv2.LINE_AA,
-        )
-    return np.clip(image + text_image, 0, 255)
-
-
-def overlay_frame(frame, info):
-    lines = []
-    if "object_to_goal_distance" in info:
-        lines.append("Obj to goal %.2f" % info["object_to_goal_distance"][0])
-    if "ee_to_object_distance" in info:
-        lines.append("EE to obj %.2f" % info["ee_to_object_distance"][0])
-    if "robot_force" in info:
-        lines.append("Force: %.2f" % info["robot_force"])
-    if "robot_collisions" in info:
-        coll_info = info["robot_collisions"]
-        lines.extend(
-            [
-                "Obj-Scene Coll: %.2f" % coll_info["obj_scene_colls"],
-                "Robo-Obj Coll: %.2f" % coll_info["robot_obj_colls"],
-                "Robo-Scene Coll: %.2f" % coll_info["robot_scene_colls"],
-            ]
-        )
-
-    frame = append_text_to_image(frame, lines)
-
-    return frame
 
 
 def step_env(env, action_name, action_args, args):
@@ -162,7 +105,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    if isinstance(arm_ctrlr, ArmVelAction):
+    if isinstance(arm_ctrlr, ArmRelPosAction):
         # Velocity control. A different key for each joint
         if keys[pygame.K_q]:
             arm_action[0] = 1.0
@@ -326,6 +269,7 @@ def play_env(env, args, config):
         if not args.no_render:
             pygame.event.pump()
         if env.episode_over:
+            total_reward = 0
             env.reset()
 
         curr_time = time.time()
@@ -338,8 +282,7 @@ def play_env(env, args, config):
         assert len(all_arm_actions) > 200
         all_arm_actions = np.array(all_arm_actions)[:200]
         save_dir = "orp/start_data/"
-        if not osp.exists(save_dir):
-            os.makedirs(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
         save_path = osp.join(save_dir, "bench_ac.txt")
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)

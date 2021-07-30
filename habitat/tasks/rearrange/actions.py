@@ -24,7 +24,16 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=-1, high=1, dtype=np.float32)
+        return spaces.Dict(
+            {
+                "empty_action": spaces.Box(
+                    shape=(1,),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
+                )
+            }
+        )
 
     def step(self, *args, **kwargs):
         return self._sim.step(HabitatSimActions.EMPTY)
@@ -37,33 +46,38 @@ class ArmAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         arm_controller_cls = eval(self._config.ARM_CONTROLLER)
-        grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
-        self.grip_ctrlr = grip_controller_cls(
-            *args, config=config, sim=sim, **kwargs
-        )
+
+        if self._config.GRIP_CONTROLLER is not None:
+            grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
+            self.grip_ctrlr = grip_controller_cls(
+                *args, config=config, sim=sim, **kwargs
+            )
+        else:
+            self.grip_ctrlr = None
         self.disable_grip = False
         if "DISABLE_GRIP" in config:
             self.disable_grip = config["DISABLE_GRIP"]
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
-        self.grip_ctrlr.reset(*args, **kwargs)
+        if self.grip_ctrlr is not None:
+            self.grip_ctrlr.reset(*args, **kwargs)
 
     @property
     def action_space(self):
-        return spaces.Dict(
-            {
-                "arm_action": self.arm_ctrlr.action_space,
-                "grip_action": self.grip_ctrlr.action_space,
-            }
-        )
+        action_spaces = {
+            "arm_action": self.arm_ctrlr.action_space,
+        }
+        if self.grip_ctrlr is not None:
+            action_spaces["grip_action"] = self.grip_ctrlr.action_space
+        return spaces.Dict(action_spaces)
 
-    def step(self, arm_action, grip_action, *args, **kwargs):
+    def step(self, arm_action, grip_action=None, *args, **kwargs):
         self.arm_ctrlr.step(arm_action, should_step=False)
-        if grip_action is not None and not self.disable_grip:
+        if self.grip_ctrlr is not None and not self.disable_grip:
             self.grip_ctrlr.step(grip_action, should_step=False)
         return self._sim.step(HabitatSimActions.ARM_ACTION)
 
@@ -100,7 +114,6 @@ class MagicGraspAction(SimulatorTaskAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
         if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
@@ -108,20 +121,117 @@ class MagicGraspAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmVelAction(SimulatorTaskAction):
+class ArmRelPosAction(SimulatorTaskAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
     @property
     def action_space(self):
-        return spaces.Box(shape=(7,), low=0, high=1, dtype=np.float32)
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
 
-    def step(self, vel, should_step=True, *args, **kwargs):
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
-        vel = np.clip(vel, -1, 1)
-        vel *= self._config.VEL_CTRL_LIM
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
         # The actual joint positions
         self._sim: RearrangeSim
-        self._sim.robot.arm_motor_pos = vel + self._sim.robot.arm_motor_pos
+        self._sim.robot.arm_motor_pos = (
+            delta_pos + self._sim.robot.arm_motor_pos
+        )
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
+        return None
+
+
+@registry.register_task_action
+class ArmRelPosKinematicAction(SimulatorTaskAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            print("CLIPPING!")
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self._sim.robot.arm_joint_pos = (
+            delta_pos + self._sim.robot.arm_joint_pos
+        )
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_VEL)
+        return None
+
+
+@registry.register_task_action
+class ArmAbsPosAction(SimulatorTaskAction):
+    """
+    The arm motor targets are directly set to the joint configuration specified by the
+    action.
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, set_pos, should_step=True, *args, **kwargs):
+        # No clipping because the arm is being set to exactly where it needs to
+        # go.
+        self._sim: RearrangeSim
+        self._sim.robot.arm_motor_pos = set_pos
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_ABS_POS)
+        else:
+            return None
+
+
+@registry.register_task_action
+class ArmAbsPosKinematicAction(SimulatorTaskAction):
+    """
+    The arm is kinematically directly set to the joint configuration specified
+    by the action.
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, set_pos, should_step=True, *args, **kwargs):
+        # No clipping because the arm is being set to exactly where it needs to
+        # go.
+        self._sim: RearrangeSim
+        self._sim.robot.arm_joint_pos = set_pos
+        if should_step:
+            return self._sim.step(HabitatSimActions.ARM_ABS_POS_KINEMATIC)
         else:
             return None
 
@@ -223,6 +333,7 @@ class BaseVelAction(SimulatorTaskAction):
 @registry.register_task_action
 class ArmEEAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        self.ee_target = None
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.robot_ee_constraints = np.array(
@@ -235,7 +346,7 @@ class ArmEEAction(SimulatorTaskAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
-        self.ee_targ = np.zeros((3,))
+        self.ee_target = np.zeros((3,))
 
         arm_pos = self.set_desired_ee_pos(np.array([0.5, 0.0, 1.0]))
 
@@ -247,14 +358,15 @@ class ArmEEAction(SimulatorTaskAction):
         return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
 
     def apply_ee_constraints(self):
-        self.ee_targ = np.clip(
-            self.ee_targ,
+        self.ee_target = np.clip(
+            self.ee_target,
             self.robot_ee_constraints[:, 0],
             self.robot_ee_constraints[:, 1],
         )
 
-    def set_desired_ee_pos(self, des_rel_pos):
-        self.ee_targ += np.array(des_rel_pos)
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> np.ndarray:
+        self.ee_target += np.array(ee_pos)
+
         self.apply_ee_constraints()
 
         ik = self._sim.ik_helper
@@ -264,16 +376,24 @@ class ArmEEAction(SimulatorTaskAction):
 
         ik.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = ik.calc_ik(self.ee_targ)
+        des_joint_pos = ik.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
         self._sim.robot.arm_motor_pos = des_joint_pos
 
         return des_joint_pos
 
-    def step(self, rel_ee_pos, should_step=True, **kwargs):
-        rel_ee_pos = np.clip(rel_ee_pos, -1, 1)
-        rel_ee_pos *= self._config.EE_CTRL_LIM
-        self.set_desired_ee_pos(rel_ee_pos)
+    def step(self, ee_pos, should_step=True, **kwargs):
+        ee_pos = np.clip(ee_pos, -1, 1)
+        ee_pos *= self._config.EE_CTRL_LIM
+        self.set_desired_ee_pos(ee_pos)
+
+        if self._config.get("RENDER_EE_TARGET", False):
+            global_pos = self._sim.robot.base_transformation.transform_point(
+                self.ee_target
+            )
+            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
+                global_pos, self._sim.viz_ids["ee_target"]
+            )
 
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_EE)
