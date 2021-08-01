@@ -1,8 +1,9 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual training
 
+VERBOSE: False
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
-TRAINER_NAME: "ppo"
+TRAINER_NAME: "vsf"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -21,7 +22,7 @@ LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 50
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+FORCE_TORCH_SINGLE_THREADED: False
 
 RL:
   PPO:

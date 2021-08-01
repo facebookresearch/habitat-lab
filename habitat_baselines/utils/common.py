@@ -162,15 +162,14 @@ class ObservationBatchingCache:
         a cuda tensor
         """
         key = (
-            num_obs,
             sensor_name,
             tuple(sensor.size()),
             sensor.type(),
             sensor.device.type,
             sensor.device.index,
         )
-        if key in self._pool:
-            return self._pool[key]
+        if key in self._pool and len(self._pool[key]) >= num_obs:
+            return self._pool[key][:num_obs]
 
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
@@ -182,7 +181,10 @@ class ObservationBatchingCache:
         ):
             # Pytorch indexing is slow,
             # so convert to numpy
-            cache = cache.pin_memory().numpy()
+            cache = cache.pin_memory()
+
+        if cache.device.type == "cpu":
+            cache = cache.numpy()
 
         self._pool[key] = cache
         return cache

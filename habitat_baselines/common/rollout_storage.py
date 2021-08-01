@@ -89,6 +89,7 @@ class RolloutStorage:
 
         self.numsteps = numsteps
         self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
+        self.device = torch.device("cpu")
 
     @property
     def current_rollout_step_idx(self) -> int:
@@ -99,7 +100,8 @@ class RolloutStorage:
         return self.current_rollout_step_idxs[0]
 
     def to(self, device):
-        self.buffers.map_in_place(lambda v: v.to(device))
+        self.buffers.map_in_place(lambda v: v.to(device=device))
+        self.device = device
 
     def insert(
         self,
