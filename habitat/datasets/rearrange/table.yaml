@@ -1,0 +1,86 @@
+BASE_CFG: "habitat/datasets/rearrange/configs/replica_cad_ycb.yaml"
+markers:
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_7
+  relative:
+  - 0
+  - 7
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_6
+  relative:
+  - 0
+  - 6
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_5
+  relative:
+  - 0
+  - 5
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_4
+  relative:
+  - 0
+  - 4
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_3
+  relative:
+  - 0
+  - 3
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_2
+  relative:
+  - 0
+  - 2
+- local:
+  - 0.3
+  - 0.0
+  - 0
+  name: cab_push_point_1
+  relative:
+  - 0
+  - 1
+- local:
+  - 0.1
+  - -0.62
+  - 0.2
+  name: fridge_push_point
+  relative:
+  - 1
+  - 2
+obj_gens:
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+    - - "tools"
+      - center_table
+target_gens:
+    - - "tools|0"
+      - tv_table

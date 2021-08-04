@@ -486,13 +486,21 @@ def main():
 
     config = get_config(args.task_cfg, args.opts)
 
+    def should_save(metrics):
+        was_success = metrics[config.RL.SUCCESS_MEASURE]
+        return (
+            was_success
+            and metrics["length"]
+            == config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS
+        )
+
     benchmark = BenchmarkGym(
         config,
         config.VIDEO_OPTIONS,
         config.VIDEO_DIR,
         {config.RL.SUCCESS_MEASURE},
         args.traj_save_path,
-        should_save_fn=lambda metrics: metrics[config.RL.SUCCESS_MEASURE],
+        should_save_fn=should_save,
     )
 
     ac_cfg = config.TASK_CONFIG.TASK.ACTIONS

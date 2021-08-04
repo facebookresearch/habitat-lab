@@ -24,9 +24,7 @@ class RearrangeEpisode(Episode):
     art_objs: List[List[Any]]
     static_objs: List[List[Any]]
     targets: List[List[Any]]
-    fixed_base: bool
     art_states: List[Any]
-    nav_mesh_path: str
     scene_config_path: str
     allowed_region: List[Any] = []
     markers: List[Dict[str, Any]] = []

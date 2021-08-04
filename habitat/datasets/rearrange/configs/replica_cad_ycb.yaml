@@ -1,0 +1,13 @@
+OBJ_SAMPLERS:
+  "any":
+    included:
+      - "002_master_chef_can",
+      - "003_cracker_box",
+      - "004_sugar_box",
+      - "005_tomato_soup_can",
+      - "007_tuna_fish_can",
+      - "008_pudding_box",
+      - "009_gelatin_box",
+      - "010_potted_meat_can",
+      - '024_bowl',
+    holdout: null

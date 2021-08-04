@@ -70,7 +70,9 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def get_done(self, observations):
         done = False
-        if self._env.episode_over or self._episode_success():
+        if self._env.episode_over:
+            done = True
+        if self._rl_config.END_ON_SUCCESS and self._episode_success():
             done = True
         return done
 
