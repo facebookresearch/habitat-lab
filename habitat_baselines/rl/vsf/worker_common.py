@@ -61,13 +61,18 @@ class WorkerBase:
     @staticmethod
     def _worker_fn(process_class: Type[ProcessBase], *process_args):
         #  signal.signal(signal.SIGINT, signal.SIG_IGN)
-        #  signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
         signal.signal(signal.SIGUSR1, signal.SIG_IGN)
         signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
+        torch.set_num_threads(1)
+
         with torch.no_grad():
-            process_class(*process_args).run()
+            try:
+                process_class(*process_args).run()
+            except KeyboardInterrupt:
+                pass
 
     def close(self):
         if self._proc is not None:

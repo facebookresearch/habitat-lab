@@ -3,22 +3,23 @@
 VERBOSE: False
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav_gibson.yaml"
-TRAINER_NAME: "ppo"
+TRAINER_NAME: "vsf"
 ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 # Can be uncommented to generate videos.
 # VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "tb"
+TENSORBOARD_DIR: "tb/vsf"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 6
+NUM_ENVIRONMENTS: 16
 SENSORS: ["DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-TOTAL_NUM_STEPS: 75e6
+NUM_UPDATES: -1
+TOTAL_NUM_STEPS: 2.5e9
 LOG_INTERVAL: 25
 NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
@@ -26,10 +27,12 @@ NUM_CHECKPOINTS: 100
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
+  preemption:
+    save_state_batch_only: True
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 4
+    ppo_epoch: 3
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01

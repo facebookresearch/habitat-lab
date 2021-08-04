@@ -152,7 +152,7 @@ _C.RL.PPO.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
 _C.RL.DDPPO = CN()
 _C.RL.DDPPO.sync_frac = 0.6
-_C.RL.DDPPO.distrib_backend = "GLOO"
+_C.RL.DDPPO.distrib_backend = "auto"
 _C.RL.DDPPO.rnn_type = "GRU"
 _C.RL.DDPPO.num_recurrent_layers = 1
 _C.RL.DDPPO.backbone = "resnet18"

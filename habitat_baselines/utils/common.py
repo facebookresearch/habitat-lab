@@ -45,8 +45,8 @@ cv2 = try_cv2_import()
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
-    ) -> Tensor:
+        self, sample_shape: Size = torch.Size()
+    ) -> Tensor:  # noqa: B008
         return super().sample(sample_shape).unsqueeze(-1)
 
     def log_probs(self, actions: Tensor) -> Tensor:
@@ -78,8 +78,8 @@ class CategoricalNet(nn.Module):
 
 class CustomNormal(torch.distributions.normal.Normal):
     def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
-    ) -> Tensor:
+        self, sample_shape: Size = torch.Size()
+    ) -> Tensor:  # noqa: B008
         return super().rsample(sample_shape)
 
     def log_probs(self, actions) -> Tensor:
@@ -170,6 +170,9 @@ class ObservationBatchingCache:
         )
         if key in self._pool and len(self._pool[key]) >= num_obs:
             return self._pool[key][:num_obs]
+
+        if key in self._pool:
+            del self._pool[key]
 
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device

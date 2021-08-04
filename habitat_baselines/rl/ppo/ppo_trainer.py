@@ -73,9 +73,6 @@ class PPOTrainer(BaseRLTrainer):
     actor_critic: Policy
 
     def __init__(self, config=None):
-        resume_state = load_resume_state(config)
-        if resume_state is not None:
-            config = resume_state["config"]
 
         super().__init__(config)
         self.actor_critic = None
@@ -686,14 +683,17 @@ class PPOTrainer(BaseRLTrainer):
                 )
             )
 
-    def should_end_early(self, rollout_step) -> bool:
+    def should_end_early(self, rollout_step=None) -> bool:
         if not self._is_distributed:
             return False
         # This is where the preemption of workers happens.  If a
         # worker detects it will be a straggler, it preempts itself!
         return (
-            rollout_step
-            >= self.config.RL.PPO.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+            rollout_step is None
+            or (
+                rollout_step
+                >= self.config.RL.PPO.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+            )
         ) and int(self.num_rollouts_done_store.get("num_done")) >= (
             self.config.RL.DDPPO.sync_frac * torch.distributed.get_world_size()
         )
@@ -705,6 +705,9 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.config = resume_state["config"]
 
         self._init_train()
 
@@ -742,7 +745,9 @@ class PPOTrainer(BaseRLTrainer):
 
         with (
             TensorboardWriter(
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+                self.config.TENSORBOARD_DIR,
+                flush_secs=self.flush_secs,
+                purge_step=int(self.num_steps_done),
             )
             if rank0_only()
             else contextlib.suppress()

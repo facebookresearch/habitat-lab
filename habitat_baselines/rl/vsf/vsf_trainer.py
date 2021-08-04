@@ -98,10 +98,10 @@ class VSFTrainer(PPOTrainer):
 
         self.mp_ctx = torch.multiprocessing.get_context("forkserver")
         self.report_queue = faster_fifo.Queue(
-            max_size_bytes=8 * 1024 * 1024 * self.config.NUM_ENVIRONMENTS
+            max_size_bytes=1024 * 1024 * self.config.NUM_ENVIRONMENTS
         )
         self.policy_worker_queue = faster_fifo.Queue(
-            max_size_bytes=1 * 1024 * self.config.NUM_ENVIRONMENTS
+            max_size_bytes=1024 * self.config.NUM_ENVIRONMENTS
         )
 
         self.actor_workers, self.actor_worker_queues = construct_actor_workers(
@@ -114,10 +114,10 @@ class VSFTrainer(PPOTrainer):
 
         init_reports = []
         while len(init_reports) < len(self.actor_workers):
-            init_reports += self.report_queue.get_many()
+            init_reports += self.report_queue.get_many(timeout=300)
 
         self.report_worker = ReportWorker(
-            self.mp_ctx, self.config, self.report_queue
+            self.mp_ctx, self.config, self.report_queue, self.num_steps_done
         )
 
         action_space = init_reports[0]["act_space"]
@@ -146,6 +146,17 @@ class VSFTrainer(PPOTrainer):
         if self._is_distributed:
             self.agent.init_distributed(find_unused_params=True)
 
+        policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
+        self._inference_ac = policy.from_config(
+            self.config, self.obs_space, self.policy_action_space
+        )
+        self._inference_ac.to(device=self.device)
+        self._inference_ac.eval()
+        for p in self._inference_ac.parameters():
+            p.requires_grad_(False)
+        with torch.no_grad():
+            self._inference_ac.load_state_dict(self.actor_critic.state_dict())
+
         logger.info(
             "agent number of parameters: {}".format(
                 sum(param.numel() for param in self.agent.parameters())
@@ -167,7 +178,7 @@ class VSFTrainer(PPOTrainer):
                 }
             )
 
-        n_policy_workers = 1
+        n_policy_workers = 2
         self.rollouts = VSFRolloutStorage(
             self.mp_ctx,
             n_policy_workers,
@@ -181,19 +192,21 @@ class VSFTrainer(PPOTrainer):
             discrete_actions=discrete_actions,
         )
 
-        transfer_buffers = self.rollouts.buffers[0]
-        (
-            transfer_buffers.map_in_place(lambda t: t.clone().contiguous())
-            .map_in_place(lambda t: t.share_memory_())
-            .map_in_place(lambda t: t.numpy())
+        transfer_buffers = (
+            self.rollouts.buffers[0]
+            .map(lambda t: t.to(device="cpu", copy=True).contiguous())
+            .map(lambda t: t.share_memory_())
         )
+        for k in list(transfer_buffers.keys()):
+            if k not in ("rewards", "masks", "observations"):
+                del transfer_buffers[k]
 
         [w.set_transfer_buffers(transfer_buffers) for w in self.actor_workers]
         [w.reset() for w in self.actor_workers]
 
         self.rollouts.to(self.device)
         self.rollouts.share_memory_()
-        self.actor_critic = self.actor_critic.share_memory()
+        self._inference_ac.share_memory()
 
         policy_worker_args = (
             self.policy_worker_queue,
@@ -201,7 +214,8 @@ class VSFTrainer(PPOTrainer):
             self.report_queue,
             self.rollouts,
             transfer_buffers,
-            self.actor_critic,
+            self._inference_ac,
+            self.device,
         )
 
         self.policy_workers = [
@@ -211,7 +225,6 @@ class VSFTrainer(PPOTrainer):
         self._policy_worker_impl = PolicyWorkerProcess(
             0,
             *policy_worker_args,
-            self.device,
         )
 
         self.timer = Timing()
@@ -226,8 +239,9 @@ class VSFTrainer(PPOTrainer):
                 ppo_cfg.use_gae,
                 ppo_cfg.gamma,
                 ppo_cfg.tau,
-                False,
-                self.actor_critic,
+                ppo_cfg.num_mini_batch,
+                True,
+                self._inference_ac,
             )
 
         with self.timer.avg_time("update agent"):
@@ -237,27 +251,14 @@ class VSFTrainer(PPOTrainer):
                 self.rollouts
             )
 
-        with self.timer.avg_time("after update"):
+        with self.timer.avg_time("after update"), torch.no_grad():
+            self._inference_ac.load_state_dict(self.actor_critic.state_dict())
             self.rollouts.after_update()
-
-        self.pth_time += time.time() - t_update_model
 
         return (
             value_loss,
             action_loss,
             dist_entropy,
-        )
-
-    def should_end_early(self, rollout_step) -> bool:
-        if not self._is_distributed:
-            return False
-        # This is where the preemption of workers happens.  If a
-        # worker detects it will be a straggler, it preempts itself!
-        return (
-            rollout_step
-            >= self.config.RL.PPO.num_steps * self.SHORT_ROLLOUT_THRESHOLD
-        ) and int(self.num_rollouts_done_store.get("num_done")) >= (
-            self.config.RL.DDPPO.sync_frac * torch.distributed.get_world_size()
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -267,18 +268,23 @@ class VSFTrainer(PPOTrainer):
         Returns:
             None
         """
+        self.num_steps_done = 0
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.confg = resume_state["config"]
+
+            requeue_stats = resume_state["requeue_stats"]
+            self.num_steps_done = requeue_stats["num_steps_done"]
 
         self._init_train()
 
         count_checkpoints = 0
-        prev_time = 0
 
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
             lr_lambda=lambda x: 1 - self.percent_done(),
         )
 
-        resume_state = load_resume_state(self.config)
         if resume_state is not None:
             self.agent.load_state_dict(resume_state["state_dict"])
             self.agent.optimizer.load_state_dict(resume_state["optim_state"])
@@ -310,17 +316,12 @@ class VSFTrainer(PPOTrainer):
                     1 - self.percent_done()
                 )
 
-            if False and rank0_only() and self._should_save_resume_state():
+            if rank0_only() and self._should_save_resume_state():
                 requeue_stats = dict(
-                    env_time=self.env_time,
-                    pth_time=self.pth_time,
                     count_checkpoints=count_checkpoints,
                     num_steps_done=self.num_steps_done,
                     num_updates_done=self.num_updates_done,
                     _last_checkpoint_percent=self._last_checkpoint_percent,
-                    prev_time=(time.time() - self.t_start) + prev_time,
-                    running_episode_stats=self.running_episode_stats,
-                    window_episode_stats=dict(self.window_episode_stats),
                 )
 
                 save_resume_state(
@@ -340,11 +341,13 @@ class VSFTrainer(PPOTrainer):
                 requeue_job()
                 break
 
-            self.agent.eval()
-
             with torch.no_grad():
-                self._policy_worker_impl.run_one_epoch()
-                self.rollouts.all_done.wait()
+                while not self.rollouts.rollout_done:
+                    stepped = self._policy_worker_impl.try_one_step()
+                    if stepped and self.should_end_early():
+                        self.rollouts.rollout_done[:] = True
+
+                self._policy_worker_impl.finish_rollout()
 
             (
                 value_loss,
@@ -365,11 +368,24 @@ class VSFTrainer(PPOTrainer):
                     (ReportWorkerTasks.learner_timing, self.timer),
                 ]
             )
+            self.timer = Timing()
 
             if ppo_cfg.use_linear_lr_decay:
                 lr_scheduler.step()  # type: ignore
 
+            self.num_steps_done = int(self.report_worker.num_steps_done)
+
             self.num_updates_done += 1
+            # checkpoint model
+            if rank0_only() and self.should_checkpoint():
+                self.save_checkpoint(
+                    f"ckpt.{count_checkpoints}.pth",
+                    dict(
+                        step=self.num_steps_done,
+                        #  wall_time=(time.time() - self.t_start) + prev_time,
+                    ),
+                )
+                count_checkpoints += 1
 
         [
             w.close()

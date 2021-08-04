@@ -58,27 +58,25 @@ class ActorWorkerProcess(ProcessBase):
 
     def reset(self):
         obs = self.env.reset()
-        self.transfer_buffers["observations"] = obs
+        self.transfer_buffers["observations"][:] = obs
 
         self.policy_worker_queue.put(self.actor_idx)
 
     def step(self, action):
-        with self.timer.avg_time("Process-Actions"):
+        with self.timer.avg_time("process actions"):
             action = self.action_plugin(action)
 
-        with self.timer.avg_time("Env-Step"):
+        with self.timer.avg_time("step env"):
             obs, reward, done, info = self.env.step(**action)
 
-        with self.timer.avg_time("Env-Reset"):
+        with self.timer.avg_time("reset env"):
             if done:
                 obs = self.env.reset()
 
-        with self.timer.avg_time("Env-Enqueue"):
-            self.transfer_buffers["observations"] = obs
-            self.transfer_buffers["rewards"] = np.array(
-                reward, dtype=np.float32
+        with self.timer.avg_time("enqueue env"):
+            self.transfer_buffers[:] = dict(
+                observations=obs, rewards=reward, masks=not done
             )
-            self.transfer_buffers["masks"] = np.array(not done, dtype=np.bool)
 
         self.policy_worker_queue.put(self.actor_idx)
 
@@ -100,6 +98,7 @@ class ActorWorkerProcess(ProcessBase):
                     (ReportWorkerTasks.actor_timing, self.timer),
                 ]
             )
+            self.timer = Timing()
             self.total_reward = 0.0
             self.episode_length = 0.0
 
@@ -117,7 +116,9 @@ class ActorWorkerProcess(ProcessBase):
             elif task == ActorWorkerTasks.reset:
                 self.reset()
             elif task == ActorWorkerTasks.set_transfer_buffers:
-                self.transfer_buffers = data[self.actor_idx]
+                self.transfer_buffers = data[self.actor_idx].map(
+                    lambda t: t.numpy()
+                )
             else:
                 raise RuntimeError(f"Unknown task {task}")
 
@@ -202,6 +203,9 @@ def construct_actor_workers(
         scene_splits[idx % len(scene_splits)].append(scene)
 
     assert sum(map(len, scene_splits)) == len(scenes)
+
+    #  for idx in range(num_environments):
+    #  scene_splits[idx] = scene_splits[idx][0:2]
 
     workers = []
     for i in range(num_environments):

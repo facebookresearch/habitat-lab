@@ -229,7 +229,7 @@ def get_distrib_size() -> Tuple[int, int, int]:
 
 
 def init_distrib_slurm(
-    backend: str = "nccl",
+    backend: str = "auto", port_offset: int = 0
 ) -> Tuple[int, torch.distributed.TCPStore]:  # type: ignore
     r"""Initializes torch.distributed by parsing environment variables set
         by SLURM when ``srun`` is used or by parsing environment variables set
@@ -240,6 +240,13 @@ def init_distrib_slurm(
     :returns: Tuple of the local_rank (aka which GPU to use for this process)
         and the TCPStore used for the rendezvous
     """
+
+    if backend == "auto":
+        if torch.cuda.is_available() and torch.distributed.is_nccl_available():
+            backend = torch.distributed.Backend.NCCL
+        else:
+            backend = torch.distributed.Backend.GLOO
+
     assert (
         torch.distributed.is_available()
     ), "torch.distributed must be available"
@@ -260,7 +267,7 @@ def init_distrib_slurm(
     master_addr = os.environ.get("MASTER_ADDR", DEFAULT_MASTER_ADDR)
 
     tcp_store = distrib.TCPStore(  # type: ignore
-        master_addr, master_port, world_size, world_rank == 0
+        master_addr, master_port + port_offset, world_size, world_rank == 0
     )
     distrib.init_process_group(
         backend, store=tcp_store, rank=world_rank, world_size=world_size

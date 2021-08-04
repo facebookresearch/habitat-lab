@@ -35,7 +35,7 @@ class AvgTime:
         else:
             avg_time = sum(self.values) / max(1, len(self.values))
 
-        return avg_time
+        return avg_time * 1e3
 
     def __str__(self):
         return f"{self.value():.4f}"
