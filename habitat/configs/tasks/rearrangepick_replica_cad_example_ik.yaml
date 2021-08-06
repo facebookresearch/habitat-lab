@@ -1,6 +1,5 @@
-# The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 0
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -8,18 +7,23 @@ DATASET:
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
+    # Reach task config
+    RENDER_TARGET: True
+    EE_SAMPLE_FACTOR: 0.8
+
     # In radians
-    BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
-    FORCE_RECACHE: False
+    #BASE_ANGLE_NOISE: 0.15
+    #BASE_NOISE: 0.05
+    BASE_ANGLE_NOISE: 0.0
+    BASE_NOISE: 0.0
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
+    FORCE_RECACHE: True
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
@@ -27,10 +31,6 @@ TASK:
         DIMENSIONALITY: 3
     GOAL_SENSOR:
         TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    TARGET_CUR_SENSOR:
-        TYPE: "ObjectGoalPositionSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     ABS_TARGET_START_SENSOR:
@@ -52,7 +52,7 @@ TASK:
         TYPE: "LocalizationSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR", "TARGET_CUR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -86,9 +86,10 @@ TASK:
 
     REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
-        SUCC_THRESH: 0.3
+        SUCC_THRESH: 0.15
 
     MEASUREMENTS:
+        - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
@@ -98,21 +99,34 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmAbsPosKinematicAction"
+            ARM_CONTROLLER: "ArmEEAction"
             GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: "BaseVelAction"
+            LIN_SPEED: 12.0
+            ANG_SPEED: 12.0
+            ALLOW_DYN_SLIDE: True
+            END_ON_STOP: False
+            ALLOW_BACK: True
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
         EMPTY:
             TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
+        - BASE_VELOCITY
         - EMPTY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.09
+    AC_FREQ_RATIO: 4
     AGENTS: ['AGENT_0']
     AGENT_0:
         ANGULAR_ACCELERATION: 12.56
@@ -130,6 +144,9 @@ SIMULATOR:
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
+    THIRD_RGB_SENSOR:
+        WIDTH: 512
+        HEIGHT: 512
     HEAD_DEPTH_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -145,30 +162,19 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    THIRD_RGB_SENSOR:
-        WIDTH: 512
-        HEIGHT: 512
-
-    # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
-    FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
-
-    # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
-
     DEFAULT_AGENT_ID: 0
+    FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
         ALLOW_SLIDING: True
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    LAG_OBSERVATIONS: 1
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480

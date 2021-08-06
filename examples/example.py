@@ -12,7 +12,7 @@ def example():
 
     with habitat.Env(
         config=habitat.get_config(
-            "configs/tasks/rearrangpick_replica_cad.yaml"
+            "configs/tasks/rearrangepick_replica_cad.yaml"
         )
     ) as env:
         print("Environment creation successful")

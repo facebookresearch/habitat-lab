@@ -418,7 +418,9 @@ class VectorEnv:
         self.async_step_at(index_env, action)
         return self.wait_step_at(index_env)
 
-    def async_step(self, data: List[Union[int, str, Dict[str, Any]]]) -> None:
+    def async_step(
+        self, data: Sequence[Union[int, str, Dict[str, Any]]]
+    ) -> None:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
@@ -436,7 +438,9 @@ class VectorEnv:
             self.wait_step_at(index_env) for index_env in range(self.num_envs)
         ]
 
-    def step(self, data: List[Union[int, str, Dict[str, Any]]]) -> List[Any]:
+    def step(
+        self, data: Sequence[Union[int, str, Dict[str, Any]]]
+    ) -> List[Any]:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to

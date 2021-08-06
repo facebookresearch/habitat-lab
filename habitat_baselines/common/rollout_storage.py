@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Iterator
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -24,7 +24,9 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
+        action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
+        discrete_actions: bool = True,
     ):
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
@@ -55,20 +57,25 @@ class RolloutStorage:
         self.buffers["action_log_probs"] = torch.zeros(
             numsteps + 1, num_envs, 1
         )
-        if action_space.__class__.__name__ == "ActionSpace":
-            action_shape = 1
-        else:
-            action_shape = action_space.shape[0]
+
+        if action_shape is None:
+            if action_space.__class__.__name__ == "ActionSpace":
+                action_shape = (1,)
+            else:
+                action_shape = action_space.shape
 
         self.buffers["actions"] = torch.zeros(
-            numsteps + 1, num_envs, action_shape
+            numsteps + 1, num_envs, *action_shape
         )
         self.buffers["prev_actions"] = torch.zeros(
-            numsteps + 1, num_envs, action_shape
+            numsteps + 1, num_envs, *action_shape
         )
-        if action_space.__class__.__name__ == "ActionSpace":
-            self.buffers["actions"] = self.buffers["actions"].long()  # type: ignore
-            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()  # type: ignore
+        if (
+            discrete_actions
+            and action_space.__class__.__name__ == "ActionSpace"
+        ):
+            self.buffers["actions"] = self.buffers["actions"].long()
+            self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
 
         self.buffers["masks"] = torch.zeros(
             numsteps + 1, num_envs, 1, dtype=torch.bool
@@ -171,8 +178,8 @@ class RolloutStorage:
                 gae = (
                     delta + gamma * tau * gae * self.buffers["masks"][step + 1]
                 )
-                self.buffers["returns"][step] = (  # type: ignore
-                    gae + self.buffers["value_preds"][step]  # type: ignore
+                self.buffers["returns"][step] = (
+                    gae + self.buffers["value_preds"][step]
                 )
         else:
             self.buffers["returns"][self.current_rollout_step_idx] = next_value
@@ -184,9 +191,7 @@ class RolloutStorage:
                     + self.buffers["rewards"][step]
                 )
 
-    def recurrent_generator(
-        self, advantages, num_mini_batch
-    ) -> Iterator[TensorDict]:
+    def recurrent_generator(self, advantages, num_mini_batch) -> TensorDict:
         num_environments = advantages.size(1)
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "

@@ -76,6 +76,13 @@ ACTIONS.LOOK_DOWN = CN()
 ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
 ACTIONS.TELEPORT = CN()
 ACTIONS.TELEPORT.TYPE = "TeleportAction"
+ACTIONS.VELOCITY_CONTROL = CN()
+ACTIONS.VELOCITY_CONTROL.TYPE = "VelocityAction"
+ACTIONS.VELOCITY_CONTROL.LIN_VEL_RANGE = [0.0, 0.25]  # meters per sec
+ACTIONS.VELOCITY_CONTROL.ANG_VEL_RANGE = [-10.0, 10.0]  # deg per sec
+ACTIONS.VELOCITY_CONTROL.MIN_ABS_LIN_SPEED = 0.025  # meters per sec
+ACTIONS.VELOCITY_CONTROL.MIN_ABS_ANG_SPEED = 1.0  # deg per sec
+ACTIONS.VELOCITY_CONTROL.TIME_STEP = 1.0  # seconds
 
 _C.TASK.ACTIONS = ACTIONS
 # -----------------------------------------------------------------------------
@@ -296,22 +303,22 @@ _C.SIMULATOR.HEAD_DEPTH_SENSOR.UUID = "robot_head_depth"
 # ARM RGB SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.ARM_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.ARM_RGB_SENSOR.UUID = "arm_rgb"
+_C.SIMULATOR.ARM_RGB_SENSOR.UUID = "robot_arm_rgb"
 # -----------------------------------------------------------------------------
 # ARM DEPTH SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "arm_depth"
+_C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
 # -----------------------------------------------------------------------------
 # 3rd RGB SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.THIRD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "3rd_rgb"
+_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
 # -----------------------------------------------------------------------------
 # 3rd DEPTH SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "3rd_rgb"
+_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere

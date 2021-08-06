@@ -6,6 +6,7 @@
 
 import json
 import time
+from glob import glob
 
 import pytest
 
@@ -21,7 +22,7 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
-CFG_TEST = "configs/tasks/rearrangpick_replica_cad.yaml"
+CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -132,12 +133,14 @@ def test_rearrange_habitat_env():
         env.reset()
 
 
-def test_rearrange_task():
-    config = baselines_get_config(
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml"
-    )
-    # if not RearrangeDatasetV0.check_config_paths_exist(config.TASK_CONFIG.DATASET):
-    #     pytest.skip("Test skipped as dataset files are missing.")
+@pytest.mark.parametrize(
+    "test_cfg_path",
+    list(
+        glob("habitat_baselines/config/rearrange/*"),
+    ),
+)
+def test_rearrange_task(test_cfg_path):
+    config = baselines_get_config(test_cfg_path)
 
     env_class = get_env_class(config.ENV_NAME)
 
