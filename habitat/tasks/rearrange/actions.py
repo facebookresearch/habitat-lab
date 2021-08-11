@@ -172,11 +172,11 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._config.DELTA_POS_LIMIT
-        # The actual joint positions
         self._sim: RearrangeSim
-        self._sim.robot.arm_joint_pos = (
-            delta_pos + self._sim.robot.arm_joint_pos
-        )
+
+        set_arm_pos = delta_pos + self._sim.robot.arm_joint_pos
+        self._sim.robot.arm_joint_pos = set_arm_pos
+        self._sim.robot.fix_joint_values = set_arm_pos
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
         return None
@@ -346,12 +346,16 @@ class ArmEEAction(SimulatorTaskAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
-        self.ee_target = np.zeros((3,))
+        # self.ee_target = np.zeros((3,))
+        cur_ee = self._sim.ik_helper.calc_fk(
+            np.array(self._sim.robot.arm_joint_pos)
+        )
 
-        arm_pos = self.set_desired_ee_pos(np.array([0.5, 0.0, 1.0]))
+        # arm_pos = self.set_desired_ee_pos(cur_ee)
 
-        self._sim.robot.arm_joint_pos = arm_pos
-        self._sim.settle_sim(0.1)
+        # self._sim.robot.arm_joint_pos = arm_pos
+        # self._sim.settle_sim(0.1)
+        self.ee_target = cur_ee
 
     @property
     def action_space(self):

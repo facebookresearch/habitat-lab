@@ -124,9 +124,9 @@ class BenchmarkGym:
 
             traj_dones[-1] = True
 
-            if self._should_save_fn is None or self._should_save_fn(
-                self._env.get_metrics()
-            ):
+            metrics = self._env.get_metrics()
+            metrics["length"] = len(traj_obs)
+            if self._should_save_fn is None or self._should_save_fn(metrics):
                 assert sum(traj_dones) == 1
                 all_obs.extend(traj_obs)
                 all_dones.extend(traj_dones)

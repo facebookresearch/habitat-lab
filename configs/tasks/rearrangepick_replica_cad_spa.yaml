@@ -1,6 +1,6 @@
 # The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 65
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
