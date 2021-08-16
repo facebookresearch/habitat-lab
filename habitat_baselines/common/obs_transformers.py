@@ -143,7 +143,7 @@ class CenterCropper(ObservationTransformer):
 
     def __init__(
         self,
-        size: Union[int, Tuple[int, int]],
+        size: Union[numbers.Integral, Tuple[int, int]],
         channels_last: bool = True,
         trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
     ):
@@ -154,7 +154,7 @@ class CenterCropper(ObservationTransformer):
         trans_keys: The list of sensors it will try to centercrop.
         """
         super().__init__()
-        if isinstance(size, (int, numbers.Number)):
+        if isinstance(size, numbers.Integral):
             size = (int(size), int(size))
         assert len(size) == 2, "forced input size must be len of 2 (h, w)"
         self._size = size
