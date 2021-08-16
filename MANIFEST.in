@@ -5,4 +5,31 @@ include habitat/py.typed
 include LICENSE
 
 include habitat_baselines/py.typed
-include habitat_baselines/config/*/*.yaml
+recursive-include habitat_baselines/config *.yaml
+
+exclude .circleci/config.yml
+exclude .editorconfig
+
+# added by check-manifest
+include *.md
+include *.txt
+include *.yaml
+include Dockerfile
+include mypy.ini
+recursive-include docs *.png
+recursive-include docs *.py
+recursive-include docs *.rst
+recursive-include docs *.sh
+recursive-include examples *.ipynb
+recursive-include examples *.py
+recursive-include habitat_baselines *.json
+recursive-include habitat_baselines *.md
+recursive-include habitat_baselines *.png
+recursive-include habitat_baselines *.py
+recursive-include habitat_baselines *.sh
+recursive-include habitat_baselines *.txt
+recursive-include habitat_baselines *.yaml
+recursive-include res *.gif
+recursive-include res *.png
+recursive-include scripts *.py
+recursive-include test *.json
