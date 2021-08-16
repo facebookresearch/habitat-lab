@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 import os.path as osp
 import warnings
 from typing import List, Optional, Union
@@ -15,7 +16,9 @@ from habitat.config import Config as CN
 from habitat.config.default import _get_full_config_path
 
 CONFIG_FILE_SEPARATOR = ","
-_HABITAT_BASELINES_ROOT = osp.dirname(osp.dirname(osp.abspath(__file__)))
+_HABITAT_BASELINES_ROOT = osp.dirname(
+    osp.dirname(inspect.getabsfile(inspect.currentframe()))
+)
 CONFIG_DIRS = [_HABITAT_BASELINES_ROOT, osp.dirname(_HABITAT_BASELINES_ROOT)]
 
 # -----------------------------------------------------------------------------

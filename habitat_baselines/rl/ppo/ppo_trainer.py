@@ -150,7 +150,7 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.config.RL.DDPPO.pretrained:
             self.actor_critic.load_state_dict(
-                {
+                {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }

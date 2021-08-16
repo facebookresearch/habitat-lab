@@ -12,7 +12,7 @@ from typing import Callable, Dict, Optional, Tuple, Union, overload
 import numpy as np
 import torch
 
-TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
+TensorLike = Union[torch.Tensor, np.ndarray, numbers.Integral]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
 TensorIndexType = Union[
     int, slice, torch.Tensor, Tuple[Union[int, slice, torch.Tensor], ...]
@@ -83,7 +83,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: TensorIndexType,
-        value: Union["TensorDict", DictTree],
+        value: Union["TensorDict", DictTree, TensorLike],
         strict: bool = True,
     ) -> None:
         ...
@@ -91,7 +91,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: Union[str, TensorIndexType],
-        value: Union[torch.Tensor, "TensorDict", DictTree],
+        value: Union[torch.Tensor, "TensorDict", DictTree, TensorLike],
         strict: bool = True,
     ) -> None:
         if isinstance(index, str):
@@ -138,14 +138,14 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def __setitem__(
         self,
         index: TensorIndexType,
-        value: Union["TensorDict", DictTree],
+        value: Union["TensorDict", DictTree, TensorLike],
     ) -> None:
         ...
 
     def __setitem__(
         self,
         index: Union[str, TensorIndexType],
-        value: Union[torch.Tensor, "TensorDict", DictTree],
+        value: Union[torch.Tensor, "TensorDict", DictTree, TensorLike],
     ) -> None:
         self.set(index, value)  # type: ignore
 

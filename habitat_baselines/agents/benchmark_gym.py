@@ -83,8 +83,8 @@ class BenchmarkGym:
 
         count_episodes = 0
         all_dones = []
-        all_obs = []
-        all_next_obs = []
+        all_obs_l = []
+        all_next_obs_l = []
         all_actions = []
         all_episode_ids = []
 
@@ -128,9 +128,9 @@ class BenchmarkGym:
                 self._env.get_metrics()
             ):
                 assert sum(traj_dones) == 1
-                all_obs.extend(traj_obs)
+                all_obs_l.extend(traj_obs)
                 all_dones.extend(traj_dones)
-                all_next_obs.extend(traj_next_obs)
+                all_next_obs_l.extend(traj_next_obs)
                 all_actions.extend(traj_actions)
                 all_episode_ids.extend(traj_episode_ids)
 
@@ -171,8 +171,8 @@ class BenchmarkGym:
             save_dir = osp.dirname(self._traj_save_path)
             os.makedirs(save_dir, exist_ok=True)
             if isinstance(self._gym_env.observation_space, spaces.Dict):
-                all_obs = batch_obs(all_obs)
-                all_next_obs = batch_obs(all_next_obs)
+                all_obs = batch_obs(all_obs_l)
+                all_next_obs = batch_obs(all_next_obs_l)
             torch.save(
                 {
                     "done": torch.FloatTensor(all_dones),

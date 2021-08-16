@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 import os.path as osp
 from typing import List, Optional, Union
 
@@ -19,7 +20,9 @@ class Config(yacs.config.CfgNode):
 CN = Config
 
 CONFIG_FILE_SEPARATOR = ","
-_HABITAT_ROOT = osp.dirname(osp.dirname(osp.abspath(__file__)))
+_HABITAT_ROOT = osp.dirname(
+    osp.dirname(inspect.getabsfile(inspect.currentframe()))
+)
 # Allows for config paths to be configs/... or habitat/configs/...
 CONFIG_DIRS = [_HABITAT_ROOT, osp.dirname(_HABITAT_ROOT)]
 
