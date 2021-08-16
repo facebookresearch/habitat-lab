@@ -204,6 +204,8 @@ class PointNavResNetNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
+    prev_action_embedding: nn.Module
+
     def __init__(
         self,
         observation_space: spaces.Dict,
