@@ -207,6 +207,8 @@ def convert_legacy_cfg(obj_list):
 
 def get_aabb(obj_id, sim, transformed=False):
     obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
     obj_node = obj.root_scene_node
     obj_bb = obj_node.cumulative_bb
     if transformed:

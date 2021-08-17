@@ -69,15 +69,16 @@ class RearrangeGraspManager:
 
         if self._snapped_obj_id is not None:
             obj_bb = get_aabb(self.snap_idx, self._sim)
-            if force:
-                self.snap_rigid_obj.override_collision_group(
-                    CollisionGroups.Default
-                )
-            else:
-                self._leave_info = (
-                    self._sim.get_translation(self._snapped_obj_id),
-                    max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                )
+            if obj_bb is not None:
+                if force:
+                    self.snap_rigid_obj.override_collision_group(
+                        CollisionGroups.Default
+                    )
+                else:
+                    self._leave_info = (
+                        self._sim.get_translation(self._snapped_obj_id),
+                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                    )
 
         for constraint_id in self._snap_constraints:
             self._sim.remove_rigid_constraint(constraint_id)
