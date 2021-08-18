@@ -271,11 +271,9 @@ def play_env(env, args, config):
             name = sim.robot.sim_obj.get_link_name(i)
             link_name_to_id[name] = i
 
-        link_name = "shoulder_pan_link"
-        # link_name = "base_link"
+        link_name = "gripper_link"
 
         ef_link_transform = sim.robot.sim_obj.get_link_scene_node(
-            # sim.robot.params.ee_link
             link_name_to_id[link_name]
             if link_name != "base_link"
             else -1
@@ -287,27 +285,35 @@ def play_env(env, args, config):
             # -1
         ).transformation
 
-        # ee_pos = sim.robot.ee_transform.translation
         local_ee_pos = ef_link_transform.translation
-        # local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         print("Habitat EE pos", local_ee_pos)
+
+        def get_T(link_name):
+            """
+            Gets the matrix transform of a link name from Differentiable robot
+            model.
+            """
+            ee_pos, rot = diff_robo.compute_forward_kinematics(
+                xdesired, "shoulder_pan_link"
+            )
+            ee_pos = np.array(ee_pos.numpy())[0]
+            rot = np.array(rot.numpy())[0]
+            pb_T = mn.Matrix4.from_(
+                mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
+                mn.Vector3(ee_pos),
+            )
+            return pb_T
 
         xdesired = torch.tensor(
             [*sim.robot.arm_joint_pos, *sim.robot.gripper_joint_pos]
         ).view(1, -1)
-        ee_pos, rot = diff_robo.compute_forward_kinematics(xdesired, link_name)
-        ee_pos = np.array(ee_pos.numpy())[0]
-        rot = np.array(rot.numpy())[0]
-        pb_T = mn.Matrix4.from_(
-            mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
-            mn.Vector3(ee_pos),
-        )
 
-        hab_base_T = pb_T.inverted()
+        shoulder_T = get_T("shoulder_pan_link")
 
-        # print("Hab base T", hab_base_T)
-        ee_pos = hab_base_T.transform_point(mn.Vector3(*ee_pos))
+        hab_base_T = hab_base_T @ shoulder_T.inverted()
+        ee_T = get_T(link_name)
+        ee_pos = (hab_base_T @ ee_T).translation
 
         print("PyBullet EE pos", ee_pos)
         print("Offset ", (np.array(local_ee_pos) - np.array(ee_pos)))
