@@ -35,7 +35,10 @@ import os.path as osp
 import time
 
 import cv2
+import magnum as mn
 import numpy as np
+import torch
+from differentiable_robot_model.robot_model import DifferentiableRobotModel
 
 import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
@@ -105,7 +108,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    if isinstance(arm_ctrlr, ArmRelPosAction):
+    if arm_action_space.shape[0] == 7:
         # Velocity control. A different key for each joint
         if keys[pygame.K_q]:
             arm_action[0] = 1.0
@@ -229,6 +232,11 @@ def play_env(env, args, config):
     total_reward = 0
     all_arm_actions = []
 
+    # Differentiable robot model setup
+    diff_robo = DifferentiableRobotModel(
+        "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    )
+
     while True:
         if render_steps_limit is not None and i > render_steps_limit:
             break
@@ -250,6 +258,60 @@ def play_env(env, args, config):
         obs = step_result
         reward = 0.0
         info = env.get_metrics()
+
+        sim = env._sim
+
+        # Computing the EE position from the differentiable robot wrapper and
+        # Habitat.
+        trans = sim.robot.base_transformation
+
+        link_name_to_id = {}
+
+        for i in sim.robot.sim_obj.get_link_ids():
+            name = sim.robot.sim_obj.get_link_name(i)
+            link_name_to_id[name] = i
+
+        link_name = "shoulder_pan_link"
+        # link_name = "base_link"
+
+        ef_link_transform = sim.robot.sim_obj.get_link_scene_node(
+            # sim.robot.params.ee_link
+            link_name_to_id[link_name]
+            if link_name != "base_link"
+            else -1
+            # -1
+        ).transformation
+
+        hab_base_T = sim.robot.sim_obj.get_link_scene_node(
+            link_name_to_id["shoulder_pan_link"]
+            # -1
+        ).transformation
+
+        # ee_pos = sim.robot.ee_transform.translation
+        local_ee_pos = ef_link_transform.translation
+        # local_ee_pos = trans.inverted().transform_point(ee_pos)
+
+        print("Habitat EE pos", local_ee_pos)
+
+        xdesired = torch.tensor(
+            [*sim.robot.arm_joint_pos, *sim.robot.gripper_joint_pos]
+        ).view(1, -1)
+        ee_pos, rot = diff_robo.compute_forward_kinematics(xdesired, link_name)
+        ee_pos = np.array(ee_pos.numpy())[0]
+        rot = np.array(rot.numpy())[0]
+        pb_T = mn.Matrix4.from_(
+            mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
+            mn.Vector3(ee_pos),
+        )
+
+        hab_base_T = pb_T.inverted()
+
+        # print("Hab base T", hab_base_T)
+        ee_pos = hab_base_T.transform_point(mn.Vector3(*ee_pos))
+
+        print("PyBullet EE pos", ee_pos)
+        print("Offset ", (np.array(local_ee_pos) - np.array(ee_pos)))
+        print("")
 
         total_reward += reward
 

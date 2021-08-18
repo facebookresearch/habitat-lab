@@ -168,7 +168,6 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         if self._config.get("SHOULD_CLIP", True):
-            print("CLIPPING!")
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._config.DELTA_POS_LIMIT

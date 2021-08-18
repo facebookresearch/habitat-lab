@@ -98,7 +98,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             # Uncomment to run with velocity control
-            ARM_CONTROLLER: "ArmRelPosAction"
+            ARM_CONTROLLER: "ArmRelPosKinematicAction"
 
             # Uncomment to run with end-effector control
             #ARM_CONTROLLER: "ArmEEAction"
