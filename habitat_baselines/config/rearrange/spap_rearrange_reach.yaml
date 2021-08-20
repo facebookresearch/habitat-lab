@@ -16,7 +16,7 @@ SENSE_PLAN_ACT:
   COUNT_OBJ_COLLISIONS: True
   GRASP_GEN_IS_VERBOSE: True
   IK_DIST_THRESH: 0.1
-  IK_SPEED_FACTOR: 10.0
+  IK_SPEED_FACTOR: 1.0
 RL:
     REWARD_MEASURE: "rearrange_reach_reward"
     SUCCESS_MEASURE: "rearrange_reach_success"

@@ -1,0 +1,243 @@
+<?xml version="1.0" ?>
+<robot name="fetch">
+  <link name="base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.0036 0.0 0.0014" />
+      <mass value="70.1294" />
+      <inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/base_link.dae" />
+      </geometry>
+      <material name="mat0">
+        <color rgba="0.356 0.361 0.376 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.4" />
+      <geometry>
+        <!--<mesh filename="../meshes/base_link_collision.stl" />-->
+        <cylinder length="0.8" radius="0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="shoulder_pan_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0927 -0.0056 0.0564" />
+      <mass value="2.5587" />
+      <inertia ixx="0.0043" ixy="-0.0001" ixz="0.001" iyy="0.0087" iyz="-0.0001" izz="0.0087" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/shoulder_pan_link.dae" />
+      </geometry>
+      <material name="6">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="shoulder_pan_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.119525 0 0.84858" />
+    <parent link="base_link" />
+    <child link="shoulder_pan_link" />
+    <axis xyz="0 0 1" />
+    <dynamics damping="1.0" />
+    <limit effort="33.82" lower="-1.6056" upper="1.6056" velocity="1.256" />
+  </joint>
+  <link name="shoulder_lift_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.1432 0.0072 -0.0001" />
+      <mass value="2.6615" />
+      <inertia ixx="0.0028" ixy="-0.0021" ixz="-0.0" iyy="0.0111" iyz="-0.0" izz="0.0112" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/shoulder_lift_link.dae" />
+      </geometry>
+      <material name="7">
+        <color rgba="0.086 0.506 0.767 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/shoulder_lift_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="shoulder_lift_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.117 0 0.0599999999999999" />
+    <parent link="shoulder_pan_link" />
+    <child link="shoulder_lift_link" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="1.0" />
+    <limit effort="131.76" lower="-1.221" upper="1.518" velocity="1.454" />
+  </joint>
+  <link name="upperarm_roll_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.1165 0.0014 0.0000" />
+      <mass value="2.3311" />
+      <inertia ixx="0.0019" ixy="-0.0001" ixz="0.0" iyy="0.0045" iyz="0.0" izz="0.0047" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/upperarm_roll_link.dae" />
+      </geometry>
+      <material name="8">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/upperarm_roll_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="upperarm_roll_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.219 0 0" />
+    <parent link="shoulder_lift_link" />
+    <child link="upperarm_roll_link" />
+    <axis xyz="1 0 0" />
+    <dynamics damping="5.0" />
+    <limit effort="76.94" velocity="1.571" />
+  </joint>
+  <link name="elbow_flex_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.1279 0.0073 0.0000" />
+      <mass value="2.1299" />
+      <inertia ixx="0.0024" ixy="-0.0016" ixz="0.0" iyy="0.0082" iyz="-0.0" izz="0.0084" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/elbow_flex_link.dae" />
+      </geometry>
+      <material name="9">
+        <color rgba="0.086 0.506 0.767 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/elbow_flex_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="elbow_flex_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.133 0 0" />
+    <parent link="upperarm_roll_link" />
+    <child link="elbow_flex_link" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="1.0" />
+    <limit effort="66.18" lower="-2.251" upper="2.251" velocity="1.521" />
+  </joint>
+  <link name="forearm_roll_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.1097 -0.0266 0.0000" />
+      <mass value="1.6563" />
+      <inertia ixx="0.0016" ixy="-0.0003" ixz="0.0" iyy="0.003" iyz="-0.0" izz="0.0035" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/forearm_roll_link.dae" />
+      </geometry>
+      <material name="10">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/forearm_roll_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="forearm_roll_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.197 0 0" />
+    <parent link="elbow_flex_link" />
+    <child link="forearm_roll_link" />
+    <axis xyz="1 0 0" />
+    <dynamics damping="5.0" />
+    <limit effort="29.35" velocity="1.571" />
+  </joint>
+  <link name="wrist_flex_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0882 0.0009 -0.0001" />
+      <mass value="1.725" />
+      <inertia ixx="0.0018" ixy="-0.0001" ixz="-0.0" iyy="0.0042" iyz="0.0" izz="0.0042" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/wrist_flex_link.dae" />
+      </geometry>
+      <material name="11">
+        <color rgba="0.086 0.506 0.767 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/wrist_flex_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wrist_flex_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.1245 0 0" />
+    <parent link="forearm_roll_link" />
+    <child link="wrist_flex_link" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="1.0" />
+    <limit effort="25.7" lower="-2.16" upper="2.16" velocity="2.268" />
+  </joint>
+  <link name="wrist_roll_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0095 0.0004 -0.0002" />
+      <mass value="0.1354" />
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/wrist_roll_link.dae" />
+      </geometry>
+      <material name="12">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/wrist_roll_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wrist_roll_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.1385 0 0" />
+    <parent link="wrist_flex_link" />
+    <child link="wrist_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit effort="7.36" velocity="2.268" />
+    <dynamics damping="5.0" />
+  </joint>
+  <!-- ee_link: virtual -->
+  <joint name="virtual_ee_joint" type="fixed">
+    <parent link="wrist_roll_link"/>
+    <child link="virtual_ee_link"/>
+    <origin rpy="0 0 0" xyz="0 0 0.045"/>
+  </joint>
+  <link name="virtual_ee_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+</robot>

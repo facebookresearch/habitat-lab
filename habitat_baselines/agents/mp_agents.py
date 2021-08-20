@@ -12,6 +12,7 @@ import numpy as np
 
 import habitat
 from habitat.core.simulator import Observations
+from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import EEPositionSensor
 from habitat_baselines.agents.benchmark_gym import BenchmarkGym
 from habitat_baselines.config.default import get_config
@@ -19,18 +20,28 @@ from habitat_baselines.motion_planning.motion_plan import MotionPlanner
 from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 
-def get_noop_arm_action(sim):
+def get_noop_arm_action(sim, task):
     if sim.robot.is_gripper_open:
         grip_state = 1.0
     else:
         grip_state = 0.0
-    return {
-        "action": "ARM_ACTION",
-        "action_args": {
-            "arm_action": sim.robot.arm_joint_pos,
-            "grip_action": grip_state,
-        },
-    }
+
+    if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
+        return {
+            "action": "ARM_ACTION",
+            "action_args": {
+                "arm_action": np.zeros(3),
+                "grip_action": grip_state,
+            },
+        }
+    else:
+        return {
+            "action": "ARM_ACTION",
+            "action_args": {
+                "arm_action": sim.robot.arm_joint_pos,
+                "grip_action": grip_state,
+            },
+        }
 
 
 class ParameterizedAgent(habitat.Agent):
@@ -132,7 +143,7 @@ class AgentComposition(ParameterizedAgent):
 
     def act(self, observations):
         if self.should_term(observations):
-            return get_noop_arm_action(self._sim)
+            return get_noop_arm_action(self._sim, self._task)
 
         action = self.skills[self.cur_skill].act(observations)
         return action
@@ -213,7 +224,7 @@ class ArmTargModule(ParameterizedAgent):
         cur_plan_ac = self._get_plan_ac(observations)
         if cur_plan_ac is None:
             self._term = True
-            return get_noop_arm_action(self._sim)
+            return get_noop_arm_action(self._sim, self._task)
 
         self._plan_idx += 1
         grip = self._get_gripper_ac(cur_plan_ac)
@@ -306,6 +317,8 @@ class ArmTargModule(ParameterizedAgent):
 
 class IkMoveArm(ArmTargModule):
     def _get_plan_ac(self, observations):
+        if self._internal_should_term(observations):
+            return None
         ee_pos = observations[EEPositionSensor.cls_uuid]
         to_target = self._robot_target - ee_pos
         to_target = self._config.IK_SPEED_FACTOR * (

@@ -345,15 +345,10 @@ class ArmEEAction(SimulatorTaskAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
-        # self.ee_target = np.zeros((3,))
         cur_ee = self._sim.ik_helper.calc_fk(
             np.array(self._sim.robot.arm_joint_pos)
         )
 
-        # arm_pos = self.set_desired_ee_pos(cur_ee)
-
-        # self._sim.robot.arm_joint_pos = arm_pos
-        # self._sim.settle_sim(0.1)
         self.ee_target = cur_ee
 
     @property

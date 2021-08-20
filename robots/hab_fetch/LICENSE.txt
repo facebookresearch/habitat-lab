@@ -1,0 +1,14 @@
+These assets represent derivative work of the following authors and are bound by the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
+
+Authors:
+Fetch Robotics: https://github.com/fetchrobotics
+
+Adapted from: 
+https://github.com/fetchrobotics/fetch_ros 
+branch melodic_devel
+June 2021
+commit: 9c38de60834e6e51e676a302337e9ca56436e94f
+
+Adaptations include:
+- modifications to URDF file
+- Addition of new collision meshes

@@ -33,6 +33,7 @@ import argparse
 import os
 import os.path as osp
 import time
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import magnum as mn
@@ -232,10 +233,20 @@ def play_env(env, args, config):
     total_reward = 0
     all_arm_actions = []
 
-    # Differentiable robot model setup
-    diff_robo = DifferentiableRobotModel(
-        "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    sim = env._sim
+    use_arm_urdf = "robots/hab_fetch/robots/fetch_onlyarm_franzi.urdf"
+    # use_arm_urdf = "robots/hab_fetch/robots/hab_fetch.urdf"
+
+    # Test arm
+    ao_mgr = sim.get_articulated_object_manager()
+    sim_obj = ao_mgr.add_articulated_object_from_urdf(
+        "robots/hab_fetch/robots/hab_fetch_test.urdf", fixed_base=True
     )
+    js = np.random.rand(len(sim_obj.joint_positions))
+    sim_obj.joint_positions = np.array(js)
+
+    # Differentiable robot model setup
+    diff_robo = DifferentiableRobotModel(use_arm_urdf)
 
     while True:
         if render_steps_limit is not None and i > render_steps_limit:
@@ -259,45 +270,32 @@ def play_env(env, args, config):
         reward = 0.0
         info = env.get_metrics()
 
-        sim = env._sim
-
         # Computing the EE position from the differentiable robot wrapper and
         # Habitat.
         trans = sim.robot.base_transformation
 
         link_name_to_id = {}
 
+        # Real arm
         for i in sim.robot.sim_obj.get_link_ids():
             name = sim.robot.sim_obj.get_link_name(i)
             link_name_to_id[name] = i
 
-        link_name = "gripper_link"
+        # Test arm
+        # for i in sim_obj.get_link_ids():
+        #    name = sim_obj.get_link_name(i)
+        #    link_name_to_id[name] = i
 
-        ef_link_transform = sim.robot.sim_obj.get_link_scene_node(
-            link_name_to_id[link_name]
-            if link_name != "base_link"
-            else -1
-            # -1
-        ).transformation
+        link_name = "virtual_ee_link"
 
-        hab_base_T = sim.robot.sim_obj.get_link_scene_node(
-            link_name_to_id["shoulder_pan_link"]
-            # -1
-        ).transformation
-
-        local_ee_pos = ef_link_transform.translation
-
-        print("Habitat EE pos", local_ee_pos)
-
-        def get_T(link_name):
-            """
-            Gets the matrix transform of a link name from Differentiable robot
-            model.
-            """
+        def get_T(diff_robo, xdesired, link_name):
+            """Gets the matrix transform of a link name from Differentiable robot model."""
             ee_pos, rot = diff_robo.compute_forward_kinematics(
-                xdesired, "shoulder_pan_link"
+                xdesired, link_name
             )
-            ee_pos = np.array(ee_pos.numpy())[0]
+            ee_pos = ee_pos.numpy()[0]
+            # ee_pos = ee_pos - np.array([-0.0036, 0.0, 0.0014])
+            # ee_pos = ee_pos - np.array([0.086875, 0, -0.377425])
             rot = np.array(rot.numpy())[0]
             pb_T = mn.Matrix4.from_(
                 mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
@@ -305,18 +303,54 @@ def play_env(env, args, config):
             )
             return pb_T
 
-        xdesired = torch.tensor(
-            [*sim.robot.arm_joint_pos, *sim.robot.gripper_joint_pos]
-        ).view(1, -1)
+        # Real arm
+        js = sim.robot.arm_joint_pos
+        js = torch.tensor(js).view(1, -1)
+        D1 = sim.robot.sim_obj.get_link_scene_node(
+            link_name_to_id[link_name]
+        ).transformation
+        robo_T = sim.robot.base_transformation
+        D1 = robo_T.inverted() @ D1
 
-        shoulder_T = get_T("shoulder_pan_link")
+        # Test arm
+        # arm_joints = [
+        #    "shoulder_pan_link",
+        #    "shoulder_lift_link",
+        #    "upperarm_roll_link",
+        #    "elbow_flex_link",
+        #    "forearm_roll_link",
+        #    "wrist_flex_link",
+        #    "wrist_roll_link",
+        # ]
 
-        hab_base_T = hab_base_T @ shoulder_T.inverted()
-        ee_T = get_T(link_name)
-        ee_pos = (hab_base_T @ ee_T).translation
+        # def get_arm_js(so):
+        #    js = []
+        #    for k in arm_joints:
+        #        jidx = so.get_link_joint_pos_offset(link_name_to_id[k])
+        #        js.append(so.joint_positions[jidx])
+        #    return np.array(js, dtype=np.float32)
 
-        print("PyBullet EE pos", ee_pos)
-        print("Offset ", (np.array(local_ee_pos) - np.array(ee_pos)))
+        # jidx = sim_obj.get_link_joint_pos_offset(
+        #    link_name_to_id["torso_lift_link"]
+        # )
+        # sim_obj.joint_positions[jidx] = 0.15
+
+        # js = get_arm_js(sim_obj)
+        # js = torch.tensor(js).view(1, -1)
+        # D1 = sim_obj.get_link_scene_node(
+        #    link_name_to_id[link_name]
+        # ).transformation
+
+        B = sim.robot.sim_obj.get_link_scene_node(
+            link_name_to_id["shoulder_pan_link"]
+        ).transformation
+        B = robo_T.inverted() @ B
+
+        D2 = get_T(diff_robo, js, link_name)
+        D2 = B @ D2
+
+        print("Rotation diff", D1.rotation() - D2.rotation())
+        print("Translation diff", D1.translation - D2.translation)
         print("")
 
         total_reward += reward

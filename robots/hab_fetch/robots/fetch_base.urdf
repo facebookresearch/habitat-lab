@@ -1,0 +1,82 @@
+<?xml version="1.0" ?>
+<robot name="fetch">
+  <link name="base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.0036 0.0 0.0014" />
+      <mass value="70.1294" />
+      <inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/base_link.dae" />
+      </geometry>
+      <material name="mat0">
+        <color rgba="0.356 0.361 0.376 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.4" />
+      <geometry>
+        <!--<mesh filename="../meshes/base_link_collision.STL" />-->
+        <cylinder length="0.8" radius="0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="r_wheel_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <mass value="4.3542" />
+      <inertia ixx="0.0045" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.0045" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/r_wheel_link.STL" />
+      </geometry>
+      <material name="mat1">
+        <color rgba="0.086 0.506 0.767 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/r_wheel_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_wheel_joint" type="continuous">
+    <origin rpy="-6.123E-17 0 0" xyz="0.0012914 -0.18738 0.055325" />
+    <parent link="base_link" />
+    <child link="r_wheel_link" />
+    <axis xyz="0 1 0" />
+  <limit effort="8.85" velocity="17.4" /></joint>
+  <link name="l_wheel_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <mass value="4.3542" />
+      <inertia ixx="0.0045" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.0045" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_wheel_link.STL" />
+      </geometry>
+      <material name="mat2">
+        <color rgba="0.086 0.506 0.767 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_wheel_link_collision.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_wheel_joint" type="continuous">
+    <origin rpy="-6.123E-17 0 0" xyz="0.0012914 0.18738 0.055325" />
+    <parent link="base_link" />
+    <child link="l_wheel_link" />
+    <axis xyz="0 1 0" />
+  <limit effort="8.85" velocity="17.4" /></joint>
+</robot>
