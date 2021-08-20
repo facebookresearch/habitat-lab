@@ -33,7 +33,6 @@ import argparse
 import os
 import os.path as osp
 import time
-from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import magnum as mn

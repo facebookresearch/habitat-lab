@@ -3,8 +3,8 @@ These assets represent derivative work of the following authors and are bound by
 Authors:
 Fetch Robotics: https://github.com/fetchrobotics
 
-Adapted from: 
-https://github.com/fetchrobotics/fetch_ros 
+Adapted from:
+https://github.com/fetchrobotics/fetch_ros
 branch melodic_devel
 June 2021
 commit: 9c38de60834e6e51e676a302337e9ca56436e94f
