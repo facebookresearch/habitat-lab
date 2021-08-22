@@ -76,9 +76,10 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    EE_LINK_NAME: null
+    IK_ARM_URDF: null
     FORWARD_STEP_SIZE: 0.25
     LAG_OBSERVATIONS: 0
-    IK_ARM_URDF: null
     LOAD_OBJS: False
 
     # Grasping

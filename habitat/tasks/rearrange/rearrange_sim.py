@@ -164,6 +164,17 @@ class RearrangeSim(HabitatSim):
         if self.robot is None:
             self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
             self.robot.reconfigure()
+            # IL Proj hack
+            ee_name = self.habitat_config.get("EE_LINK_NAME", None)
+            if ee_name is not None:
+                # Real arm
+                link_name_to_id = {}
+                for i in self.robot.sim_obj.get_link_ids():
+                    name = self.robot.sim_obj.get_link_name(i)
+                    link_name_to_id[name] = i
+                self.robot.params.ee_link = link_name_to_id[ee_name]
+                self.robot.params.ee_offset = mn.Vector3(0.0, 0.0, 0.0)
+            # done IL proj hack
         self.robot.reset()
         self.grasp_mgr.reset()
 

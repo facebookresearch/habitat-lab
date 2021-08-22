@@ -234,15 +234,6 @@ def play_env(env, args, config):
 
     sim = env._sim
     use_arm_urdf = "robots/hab_fetch/robots/fetch_onlyarm_franzi.urdf"
-    # use_arm_urdf = "robots/hab_fetch/robots/hab_fetch.urdf"
-
-    # Test arm
-    ao_mgr = sim.get_articulated_object_manager()
-    sim_obj = ao_mgr.add_articulated_object_from_urdf(
-        "robots/hab_fetch/robots/hab_fetch_test.urdf", fixed_base=True
-    )
-    js = np.random.rand(len(sim_obj.joint_positions))
-    sim_obj.joint_positions = np.array(js)
 
     # Differentiable robot model setup
     diff_robo = DifferentiableRobotModel(use_arm_urdf)
@@ -280,11 +271,6 @@ def play_env(env, args, config):
             name = sim.robot.sim_obj.get_link_name(i)
             link_name_to_id[name] = i
 
-        # Test arm
-        # for i in sim_obj.get_link_ids():
-        #    name = sim_obj.get_link_name(i)
-        #    link_name_to_id[name] = i
-
         link_name = "virtual_ee_link"
 
         def get_T(diff_robo, xdesired, link_name):
@@ -293,8 +279,6 @@ def play_env(env, args, config):
                 xdesired, link_name
             )
             ee_pos = ee_pos.numpy()[0]
-            # ee_pos = ee_pos - np.array([-0.0036, 0.0, 0.0014])
-            # ee_pos = ee_pos - np.array([0.086875, 0, -0.377425])
             rot = np.array(rot.numpy())[0]
             pb_T = mn.Matrix4.from_(
                 mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
@@ -303,47 +287,30 @@ def play_env(env, args, config):
             return pb_T
 
         # Real arm
-        js = sim.robot.arm_joint_pos
-        js = torch.tensor(js).view(1, -1)
-        D1 = sim.robot.sim_obj.get_link_scene_node(
-            link_name_to_id[link_name]
-        ).transformation
-        robo_T = sim.robot.base_transformation
-        D1 = robo_T.inverted() @ D1
-
-        # Test arm
-        # arm_joints = [
-        #    "shoulder_pan_link",
-        #    "shoulder_lift_link",
-        #    "upperarm_roll_link",
-        #    "elbow_flex_link",
-        #    "forearm_roll_link",
-        #    "wrist_flex_link",
-        #    "wrist_roll_link",
-        # ]
-
-        # def get_arm_js(so):
-        #    js = []
-        #    for k in arm_joints:
-        #        jidx = so.get_link_joint_pos_offset(link_name_to_id[k])
-        #        js.append(so.joint_positions[jidx])
-        #    return np.array(js, dtype=np.float32)
-
-        # jidx = sim_obj.get_link_joint_pos_offset(
-        #    link_name_to_id["torso_lift_link"]
-        # )
-        # sim_obj.joint_positions[jidx] = 0.15
-
-        # js = get_arm_js(sim_obj)
+        # js = sim.robot.arm_joint_pos
         # js = torch.tensor(js).view(1, -1)
-        # D1 = sim_obj.get_link_scene_node(
+        # D1 = sim.robot.sim_obj.get_link_scene_node(
         #    link_name_to_id[link_name]
         # ).transformation
+        robo_T = sim.robot.base_transformation
+        D1 = sim.robot.ee_transform
+        D1 = robo_T.inverted() @ D1
 
         B = sim.robot.sim_obj.get_link_scene_node(
-            link_name_to_id["shoulder_pan_link"]
+            link_name_to_id["torso_lift_link"]
         ).transformation
-        B = robo_T.inverted() @ B
+        T = mn.Matrix4.translation(
+            mn.Vector3(0.00130033, 0.0009006, -0.793444)
+        )
+        B = robo_T.inverted() @ B @ T
+        B = mn.Matrix4(
+            [
+                [1, 0, 1.6531e-08, -0.0832746],
+                [1.49012e-08, 0.999942, -0.0107959, -0.000281132],
+                [-7.45058e-09, 0.0107959, 0.999942, 0.0260844],
+                [0, 0, 0, 1],
+            ]
+        ).transposed()
 
         D2 = get_T(diff_robo, js, link_name)
         D2 = B @ D2

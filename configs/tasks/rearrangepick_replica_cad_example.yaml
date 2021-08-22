@@ -177,6 +177,7 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     LAG_OBSERVATIONS: 1
     ROBOT_URDF: ./robots/hab_fetch/robots/hab_fetch.urdf
+    EE_LINK_NAME: 'virtual_ee_link'
     IK_ARM_URDF: ./robots/hab_fetch/robots/fetch_onlyarm_franzi.urdf
     SEED: 100
     SEMANTIC_SENSOR:
