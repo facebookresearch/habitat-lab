@@ -166,8 +166,8 @@ def test_rearrange_task(test_cfg_path):
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
-@pytest.mark.parametrize("debug_visualization", [False])
-@pytest.mark.parametrize("num_episodes", [2])
+@pytest.mark.parametrize("debug_visualization", [True])
+@pytest.mark.parametrize("num_episodes", [1])
 def test_rearrange_episode_generator(debug_visualization, num_episodes):
     cfg = rr_gen.get_config_defaults()
     dataset = RearrangeDatasetV0()

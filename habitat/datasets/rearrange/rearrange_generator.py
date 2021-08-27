@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
-from typing import Any, Dict, List, Set, Tuple, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import magnum as mn
 import numpy as np
@@ -16,7 +16,8 @@ import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
-class RearrangeEpisodeGenerator():
+
+class RearrangeEpisodeGenerator:
     def __enter__(self) -> "RearrangeEpisodeGenerator":
         return self
 
@@ -25,7 +26,7 @@ class RearrangeEpisodeGenerator():
             self.sim.close(destroy=True)
             del self.sim
 
-    def __init__(self, cfg:CN, debug_visualization:bool=False)-> None:
+    def __init__(self, cfg: CN, debug_visualization: bool = False) -> None:
         """
         Initialize the generator object for a particular configuration.
         Loads yaml, sets up samplers and debug visualization settings.
@@ -36,7 +37,9 @@ class RearrangeEpisodeGenerator():
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.vdb: sutils.DebugVisualizer = None  # visual debugger initialized with sim
+        self.vdb: sutils.DebugVisualizer = (
+            None  # visual debugger initialized with sim
+        )
 
         # hold a habitat Simulator object for efficient re-use
         self.sim: habitat_sim.Simulator = None
@@ -50,10 +53,12 @@ class RearrangeEpisodeGenerator():
         self._get_ao_state_samplers()
 
         # cache objects sampled by this generator for the most recent episode
-        self.ep_sampled_objects: List[habitat_sim.physics.ManagedRigidObject] = []
+        self.ep_sampled_objects: List[
+            habitat_sim.physics.ManagedRigidObject
+        ] = []
         self.num_ep_generated = 0
 
-    def _get_resource_sets(self)->None:
+    def _get_resource_sets(self) -> None:
         """
         Extracts scene, object, and receptacle sets from the yaml config file and constructs dicts for later reference.
         """
@@ -74,7 +79,7 @@ class RearrangeEpisodeGenerator():
         print(f"self._obj_sets = {self._obj_sets}")
         print(f"self._receptacle_sets = {self._receptacle_sets}")
 
-    def _get_obj_samplers(self)->None:
+    def _get_obj_samplers(self) -> None:
         """
         Extracts object sampler parameters from the yaml config file and constructs the sampler objects.
         """
@@ -100,10 +105,12 @@ class RearrangeEpisodeGenerator():
                     objects, receptacles, (params[2], params[3]), params[4]
                 )
             else:
-                print(f"Requested object sampler '{obj_sampler_type}' is not implemented.")
+                print(
+                    f"Requested object sampler '{obj_sampler_type}' is not implemented."
+                )
                 raise (NotImplementedError)
 
-    def _get_object_target_samplers(self)->None:
+    def _get_object_target_samplers(self) -> None:
         """
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
@@ -137,19 +144,26 @@ class RearrangeEpisodeGenerator():
                     params[4],
                 )
             else:
-                print(f"Requested target sampler '{target_sampler_type}' is not implemented.")
+                print(
+                    f"Requested target sampler '{target_sampler_type}' is not implemented."
+                )
                 raise (NotImplementedError)
 
-    def _get_scene_sampler(self)->None:
+    def _get_scene_sampler(self) -> None:
         """
         Initialize the scene sampler.
         """
-        self._scene_sampler:Optional[samplers.SceneSampler] = None
+        self._scene_sampler: Optional[samplers.SceneSampler] = None
         if self.cfg.scene_sampler[0] == "single":
-            self._scene_sampler = samplers.SingleSceneSampler(self.cfg.scene_sampler[1][0])
+            self._scene_sampler = samplers.SingleSceneSampler(
+                self.cfg.scene_sampler[1][0]
+            )
         elif self.cfg.scene_sampler[0] == "subset":
             # Collect unique subset tags from config
-            scene_subsets: Tuple[Set, Set] = (set(), set())  # (included, excluded) subsets
+            scene_subsets: Tuple[Set, Set] = (
+                set(),
+                set(),
+            )  # (included, excluded) subsets
             for i in range(2):
                 for scene_set in self.cfg.scene_sampler[1][i]:
                     assert (
@@ -167,11 +181,13 @@ class RearrangeEpisodeGenerator():
             )
             raise (NotImplementedError)
 
-    def _get_ao_state_samplers(self)->None:
+    def _get_ao_state_samplers(self) -> None:
         """
         Initialize and cache all ArticulatedObject state samplers from configuration.
         """
-        self._ao_state_samplers: Dict[str, samplers.ArticulatedObjectStateSampler] = {}
+        self._ao_state_samplers: Dict[
+            str, samplers.ArticulatedObjectStateSampler
+        ] = {}
         for (
             ao_state_sampler_name,
             ao_state_sampler_type,
@@ -186,13 +202,39 @@ class RearrangeEpisodeGenerator():
                 ] = samplers.ArticulatedObjectStateSampler(
                     params[0], params[1], (params[2], params[3])
                 )
+            elif ao_state_sampler_type == "composite":
+                composite_ao_sampler_params: Dict[
+                    str, Dict[str, Tuple[float, float]]
+                ] = {}
+                for entry in params[0]:
+                    ao_handle = entry[0]
+                    link_sample_params = entry[1]
+                    assert (
+                        ao_handle not in composite_ao_sampler_params
+                    ), f"Duplicate handle '{ao_handle}' in composite AO sampler config."
+                    composite_ao_sampler_params[ao_handle] = {}
+                    for link_params in link_sample_params:
+                        link_name = link_params[0]
+                        assert (
+                            link_name
+                            not in composite_ao_sampler_params[ao_handle]
+                        ), f"Duplicate link name '{link_name}' for handle '{ao_handle} in composite AO sampler config."
+                        composite_ao_sampler_params[ao_handle][link_name] = (
+                            link_params[1],
+                            link_params[2],
+                        )
+                self._ao_state_samplers[
+                    ao_state_sampler_name
+                ] = samplers.CompositeArticulatedObjectStateSampler(
+                    composite_ao_sampler_params
+                )
             else:
                 print(
                     f"Requested AO state sampler type '{ao_state_sampler_type}' not implemented."
                 )
                 raise (NotImplementedError)
 
-    def _reset_samplers(self)->None:
+    def _reset_samplers(self) -> None:
         """
         Reset any sampler internal state related to a specific scene or episode.
         """
@@ -201,7 +243,7 @@ class RearrangeEpisodeGenerator():
         for sampler in self._obj_samplers.values():
             sampler.reset()
 
-    def generate_scene(self)->str:
+    def generate_scene(self) -> str:
         """
         Sample a new scene and re-initialize the Simulator.
         Return the generated scene's handle.
@@ -215,7 +257,7 @@ class RearrangeEpisodeGenerator():
 
         return cur_scene_name
 
-    def visualize_scene_receptacles(self)->None:
+    def visualize_scene_receptacles(self) -> None:
         """
         Generate a wireframe bounding box for each receptacle in the scene, aim the camera at it and record 1 observation.
         """
@@ -248,7 +290,9 @@ class RearrangeEpisodeGenerator():
             self.vdb.look_at(box_obj.root_scene_node.absolute_translation)
             self.vdb.get_observation()
 
-    def generate_episodes(self, num_episodes:int=1)-> List[RearrangeEpisode]:
+    def generate_episodes(
+        self, num_episodes: int = 1
+    ) -> List[RearrangeEpisode]:
         """
         Generate a fixed number of episodes.
         """
@@ -269,7 +313,7 @@ class RearrangeEpisodeGenerator():
 
         return generated_episodes
 
-    def generate_single_episode(self)->Optional[RearrangeEpisode]:
+    def generate_single_episode(self) -> Optional[RearrangeEpisode]:
         """
         Generate a single episode, sampling the scene.
         """
@@ -284,12 +328,22 @@ class RearrangeEpisodeGenerator():
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_name, state), ... ]
-        ao_states: Dict[str, List[Tuple[str, np.array]]] = {}
-        for ao_state_sampler in self._ao_state_samplers.values():
-            for sampled_state in ao_state_sampler.sample(self.sim):
-                if sampled_state[0] not in ao_states:
-                    ao_states[sampled_state[0]] = []
-                ao_states[sampled_state[0]].append(sampled_state[1:3])
+        ao_states: Dict[
+            habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]
+        ] = {}
+        for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
+            sampler_states = ao_state_sampler.sample(self.sim)
+            assert (
+                sampler_states is not None
+            ), f"AO sampler '{sampler_name}' failed"
+            for sampled_instance, link_states in sampler_states.items():
+                if sampled_instance not in ao_states:
+                    ao_states[sampled_instance] = {}
+                for link_ix, joint_state in link_states.items():
+                    ao_states[sampled_instance][link_ix] = joint_state
+
+                # TODO: debugging
+                self.vdb.peek_object(obj=sampled_instance)
 
         # sample object placements
         for sampler_name, obj_sampler in self._obj_samplers.items():
@@ -326,7 +380,7 @@ class RearrangeEpisodeGenerator():
         self._get_object_target_samplers()
 
         # sample targets
-        for sampler_name, target_sampler in self._target_samplers.items():
+        for _sampler_name, target_sampler in self._target_samplers.items():
             new_target_objects = target_sampler.sample(
                 self.sim, snap_down=True, vdb=self.vdb
             )
@@ -369,9 +423,14 @@ class RearrangeEpisodeGenerator():
         self.num_ep_generated += 1
         # TODO: should episode_id, start_position, start_rotation be set here?
         return RearrangeEpisode(
-            episode_id = str(self.num_ep_generated - 1),
+            episode_id=str(self.num_ep_generated - 1),
             start_position=np.zeros(3),
-            start_rotation=[0,0,0,1,],
+            start_rotation=[
+                0,
+                0,
+                0,
+                1,
+            ],
             scene_id=ep_scene_handle,
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
@@ -379,7 +438,7 @@ class RearrangeEpisodeGenerator():
             markers=self.cfg.markers,
         )
 
-    def initialize_sim(self, scene_name:str, dataset_path:str)->None:
+    def initialize_sim(self, scene_name: str, dataset_path: str) -> None:
         """
         Initialize a new Simulator object with a selected scene and dataset.
         """
@@ -402,8 +461,8 @@ class RearrangeEpisodeGenerator():
 
         sensor_specs = []
         for sensor_uuid, sensor_params in sensors.items():
-            sensor_spec = habitat_sim.EquirectangularSensorSpec()
-            # sensor_spec = habitat_sim.CameraSensorSpec()
+            # sensor_spec = habitat_sim.EquirectangularSensorSpec()
+            sensor_spec = habitat_sim.CameraSensorSpec()
             sensor_spec.uuid = sensor_uuid
             sensor_spec.sensor_type = sensor_params["sensor_type"]
             sensor_spec.resolution = sensor_params["resolution"]
@@ -412,7 +471,7 @@ class RearrangeEpisodeGenerator():
             sensor_spec.sensor_subtype = (
                 habitat_sim.SensorSubType.EQUIRECTANGULAR
             )
-            # sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
+            sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
             sensor_specs.append(sensor_spec)
 
         agent_cfg = habitat_sim.agent.AgentConfiguration()
@@ -445,7 +504,9 @@ class RearrangeEpisodeGenerator():
             self.sim, output_path="rearrange_ep_gen_output/"
         )
 
-    def settle_sim(self, duration:float=5.0, make_video:bool=True)->bool:
+    def settle_sim(
+        self, duration: float = 5.0, make_video: bool = True
+    ) -> bool:
         """
         Run dynamics for a few seconds to check for stability of newly placed objects and optionally produce a video.
         Returns whether or not the simulation was stable.
@@ -511,11 +572,11 @@ class RearrangeEpisodeGenerator():
 # ======================================
 
 
-def get_config_defaults()->CN:
+def get_config_defaults() -> CN:
     """
     Populates and resturns a default config for a RearrangeEpisode.
     """
-    #TODO: Most of these values are for demonstration/testing purposes and should be removed.
+    # TODO: Most of these values are for demonstration/testing purposes and should be removed.
     _C = CN()
 
     # ----- import/initialization parameters ------
@@ -564,15 +625,16 @@ def get_config_defaults()->CN:
                 "frl_apartment_chair_01",
             ],
         ),
+        ("fridge", ["fridge"]),
     ]
 
     # ----- sampler definitions ------
     # define the desired scene sampling (sampler type, (sampler parameters tuple))
     # NOTE: There must be exactly one scene sampler!
     # "single" scene sampler params ("scene name")
-    # _C.scene_sampler = ("single", ("v3_sc2_staging_00",))
+    _C.scene_sampler = ("single", ("v3_sc0_staging_00",))
     # "subset" scene sampler params ([included scene sets], [excluded scene sets])
-    _C.scene_sampler = ("subset", (["v3_sc"], []))
+    # _C.scene_sampler = ("subset", (["v3_sc"], []))
 
     # define the desired object sampling [(name, sampler type, (sampler parameters tuple))]
     _C.obj_samplers = [
@@ -581,26 +643,37 @@ def get_config_defaults()->CN:
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 3, "up"))
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 5, "up")),
         # ("any", "uniform", (["any"], ["any"], 3, 5, "up")),
-        ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
+        # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
+        ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [
         # (name, type, (params))
         # - uniform target sampler params: ([obj sampler name(s)], [receptacle sets], min targets, max targets, orientation_sampling)
-        ("any_targets", "uniform", (["any"], ["table"], 3, 3, "up"))
+        # ("any_targets", "uniform", (["any"], ["table"], 3, 3, "up"))
     ]
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
     _C.ao_state_samplers = [
         # (name, type, (params))
         # TODO: does not support spherical joints (3 dof joints)
         # - uniform continuous range for a single joint. params: ("ao_handle", "link name", min, max)
-        ("open_fridge_top_door", "uniform", ("fridge", "top_door", 1.5, 1.5)),
+        # ("open_fridge_top_door", "uniform", ("fridge", "top_door", 1.5, 1.5)),
+        # ("variable_fridge_bottom_door", "uniform", ("fridge", "bottom_door", 1.5, 1.5))
+        # composite sampler (rejection sampling of composite configuration)
+        # params: ([("ao handle", [("link name", min, max)])])
+        # NOTE: the trailing commas are necessary to define tuples of 1 object
         (
-            "variable_fridge_bottom_door",
-            "uniform",
-            ("fridge", "bottom_door", 0.0, 1.5),
+            "open_fridge_doors",
+            "composite",
+            (
+                [
+                    (
+                        "fridge",
+                        [("top_door", 1.5, 1.5), ("bottom_door", 1.5, 1.5)],
+                    ),
+                ],
+            ),
         )
-        # TODO: need a composite sampler for interdependant joint states (e.g. in some scenes opening some drawers and the fridge at the same time is invalid)
     ]
 
     # ----- marker definitions ------

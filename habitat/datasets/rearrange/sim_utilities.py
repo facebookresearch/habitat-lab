@@ -3,8 +3,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Optional, List, Any, Dict
 import os.path as osp
+from typing import Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -12,7 +12,7 @@ import numpy as np
 import habitat_sim
 
 
-class DebugVisualizer(object):
+class DebugVisualizer:
     """
     Support class for simple visual debugging of a utility simulator.
     Assumes the default agent (0) is a camera (i.e. there exists an RGB sensor coincident with agent 0 transformation).
@@ -21,9 +21,9 @@ class DebugVisualizer(object):
     def __init__(
         self,
         sim: habitat_sim.Simulator,
-        output_path: str ="visual_debug_output/",
-        default_sensor_uuid: str ="rgb",
-    )-> None:
+        output_path: str = "visual_debug_output/",
+        default_sensor_uuid: str = "rgb",
+    ) -> None:
         """
         Initialize the debugger provided a Simulator and the uuid of the debug sensor.
         NOTE: Expects the debug sensor attached to and coincident with agent 0's frame.
@@ -31,14 +31,21 @@ class DebugVisualizer(object):
         self.sim = sim
         self.output_path = output_path
         self.default_sensor_uuid = default_sensor_uuid
-        self._debug_obs:List[Any] = []
+        self._debug_obs: List[Any] = []
         # NOTE: visualizations from the DebugLinerRender utility will only be visible in PINHOLE RGB sensor views
         self.debug_line_render = sim.get_debug_line_render()
 
-    def look_at(self, look_at:mn.Vector3, look_from:Optional[mn.Vector3]=None, look_up:mn.Vector3=np.array([0, 1.0, 0]))-> None:
+    def look_at(
+        self,
+        look_at: mn.Vector3,
+        look_from: Optional[mn.Vector3] = None,
+        look_up: Optional[mn.Vector3] = None,
+    ) -> None:
         """
         Point the debug camera at a target.
         """
+        if look_up is None:
+            look_up = mn.Vector3(0, 1.0, 0)
         agent = self.sim.get_agent(0)
         camera_pos = (
             look_from
@@ -48,8 +55,14 @@ class DebugVisualizer(object):
         agent.scene_node.rotation = mn.Quaternion.from_matrix(
             mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
         )
+        agent.scene_node.translation = camera_pos
 
-    def get_observation(self, look_at:Optional[mn.Vector3]=None, look_from:Optional[mn.Vector3]=None, obs_cache:Optional[List[Any]]=None)-> None:
+    def get_observation(
+        self,
+        look_at: Optional[mn.Vector3] = None,
+        look_from: Optional[mn.Vector3] = None,
+        obs_cache: Optional[List[Any]] = None,
+    ) -> None:
         """
         Render a debug observation of the current state and cache it.
         Optionally configure the camera transform.
@@ -62,9 +75,72 @@ class DebugVisualizer(object):
         else:
             obs_cache.append(self.sim.get_sensor_observations())
 
+    def save_observation(
+        self,
+        output_path: Optional[str] = None,
+        prefix: str = "",
+        look_at: Optional[mn.Vector3] = None,
+        look_from: Optional[mn.Vector3] = None,
+        obs_cache: Optional[List[Any]] = None,
+        show: bool = True,
+    ) -> str:
+        """
+        Get an observation and save it to file.
+        Return the filepath.
+        """
+        obs_cache = []
+        self.get_observation(look_at, look_from, obs_cache)
+        # save the obs as an image
+        if output_path is None:
+            output_path = self.output_path
+        from habitat_sim.utils import viz_utils as vut
+
+        image = vut.observation_to_image(obs_cache[0]["rgb"], "color")
+        from datetime import datetime
+
+        date_time = datetime.now().strftime("%m_%d_%Y_%H%M%S")
+        file_path = output_path + prefix + date_time + ".png"
+        image.save(file_path)
+        if show:
+            image.show()
+        return file_path
+
+    def peek_object(
+        self, obj: habitat_sim.physics.ManagedArticulatedObject
+    ) -> str:
+        """
+        Compute a camera placement to view an object and show/save an observation.
+        Return the filepath.
+        """
+        look_at = obj.translation
+        bb_size = get_ao_global_bb(obj).size()
+        # TODO: query fov and aspect from the camera spec
+        fov = 90
+        aspect = 0.75
+        import math
+
+        # compute the optimal view distance from the camera specs and object size
+        distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
+            fov / (360 / math.pi)
+        )
+        look_from = (
+            obj.transformation.transform_vector(
+                mn.Vector3(1, 0, 0)
+            ).normalized()
+            * distance
+            + look_at
+        )
+        return self.save_observation(
+            prefix="peek_" + obj.handle, look_at=look_at, look_from=look_from
+        )
+
     def make_debug_video(
-        self, output_path:Optional[str]=None, prefix:str="", fps:int=4, obs_cache:Optional[List[Any]]=None
-    )-> None:
+        self,
+        output_path: Optional[str] = None,
+        prefix: str = "",
+        fps: int = 4,
+        obs_cache: Optional[List[Any]] = None,
+    ) -> None:
         """
         Produce a video from a set of debug observations.
         """
@@ -103,18 +179,18 @@ class DebugVisualizer(object):
         )
 
 
-class Receptacle(object):
+class Receptacle:
     """
     Stores parameters necessary to define a AABB Receptacle for object sampling.
     """
 
     def __init__(
         self,
-        name:str,
+        name: str,
         bounds: mn.Range3D,
-        parent_object_handle: str=None,
-        is_parent_object_articulated: bool=False,
-        parent_link: int=-1, #-1 is base
+        parent_object_handle: str = None,
+        is_parent_object_articulated: bool = False,
+        parent_link: int = -1,  # -1 is base
     ) -> None:
         self.name = name
         self.bounds = bounds
@@ -122,13 +198,13 @@ class Receptacle(object):
         self.is_parent_object_articulated = is_parent_object_articulated
         self.parent_link = parent_link
 
-    def sample_uniform_local(self)-> mn.Vector3:
+    def sample_uniform_local(self) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB.
         """
         return np.random.uniform(self.bounds.min, self.bounds.max)
 
-    def sample_uniform_global(self, sim:habitat_sim.Simulator)-> mn.Vector3:
+    def sample_uniform_global(self, sim: habitat_sim.Simulator) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB and then transform it into global space.
         """
@@ -153,15 +229,15 @@ class Receptacle(object):
             )
 
 
-def find_receptacles(sim)-> List[Receptacle]:
+def find_receptacles(sim) -> List[Receptacle]:
     """
     Return a list of all receptacles scraped from the scene's currently instanced objects.
     """
-    #TODO: Receptacles should be screened if the orientation will not support placement.
+    # TODO: Receptacles should be screened if the orientation will not support placement.
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
 
-    receptacles:List[Receptacle] = []
+    receptacles: List[Receptacle] = []
 
     # rigid objects
     for obj_handle in obj_mgr.get_object_handles():
@@ -233,8 +309,10 @@ def find_receptacles(sim)-> List[Receptacle]:
 
 
 def register_custom_wireframe_box_template(
-    sim:habitat_sim.Simulator, size:mn.Vector3, template_name:str="custom_wireframe_box"
-)-> str:
+    sim: habitat_sim.Simulator,
+    size: mn.Vector3,
+    template_name: str = "custom_wireframe_box",
+) -> str:
     """
     Generate and register a custom template for a wireframe box of given size.
     Return the new template's handle.
@@ -249,12 +327,18 @@ def register_custom_wireframe_box_template(
 
 
 def add_wire_box(
-    sim:habitat_sim.Simulator, size:mn.Vector3, center:mn.Vector3, attach_to:Optional[habitat_sim.scene.SceneNode]=None, orientation:mn.Quaternion=mn.Quaternion()
-)-> habitat_sim.physics.ManagedRigidObject:
+    sim: habitat_sim.Simulator,
+    size: mn.Vector3,
+    center: mn.Vector3,
+    attach_to: Optional[habitat_sim.scene.SceneNode] = None,
+    orientation: Optional[mn.Quaternion] = None,
+) -> habitat_sim.physics.ManagedRigidObject:
     """
     Generate a wire box object and optionally attach it to another existing object (automatically applies object scale).
     Returns the new object.
     """
+    if orientation is None:
+        orientation = mn.Quaternion()
     box_template_handle = register_custom_wireframe_box_template(sim, size)
     new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
         box_template_handle, attach_to
@@ -267,11 +351,17 @@ def add_wire_box(
     return new_object
 
 
-def add_transformed_wire_box(sim:habitat_sim.Simulator, size:mn.Vector3, transform:mn.Matrix4=mn.Matrix4())-> habitat_sim.physics.ManagedRigidObject:
+def add_transformed_wire_box(
+    sim: habitat_sim.Simulator,
+    size: mn.Vector3,
+    transform: Optional[mn.Matrix4] = None,
+) -> habitat_sim.physics.ManagedRigidObject:
     """
     Generate a transformed wire box in world space.
     Returns the new object.
     """
+    if transform is None:
+        transform = mn.Matrix4()
     box_template_handle = register_custom_wireframe_box_template(sim, size)
     new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
         box_template_handle
@@ -283,7 +373,9 @@ def add_transformed_wire_box(sim:habitat_sim.Simulator, size:mn.Vector3, transfo
     return new_object
 
 
-def add_viz_sphere(sim:habitat_sim.Simulator, radius:float, pos:mn.Vector3)-> habitat_sim.physics.ManagedRigidObject:
+def add_viz_sphere(
+    sim: habitat_sim.Simulator, radius: float, pos: mn.Vector3
+) -> habitat_sim.physics.ManagedRigidObject:
     """
     Add a visualization-only sphere to the world at a global position.
     Returns the new object.
@@ -303,7 +395,9 @@ def add_viz_sphere(sim:habitat_sim.Simulator, radius:float, pos:mn.Vector3)-> ha
     return new_object
 
 
-def get_bb_corners(obj:habitat_sim.physics.ManagedRigidObject)-> List[mn.Vector3]:
+def get_bb_corners(
+    obj: habitat_sim.physics.ManagedRigidObject,
+) -> List[mn.Vector3]:
     """
     Return a list of object bb corners in object local space.
     """
@@ -320,7 +414,28 @@ def get_bb_corners(obj:habitat_sim.physics.ManagedRigidObject)-> List[mn.Vector3
     ]
 
 
-def bb_ray_prescreen(sim:habitat_sim.Simulator, obj:habitat_sim.physics.ManagedRigidObject, support_obj:habitat_sim.physics.ManagedRigidObject)-> Dict[str, Any]:
+def get_ao_global_bb(
+    obj: habitat_sim.physics.ManagedArticulatedObject,
+) -> mn.Range3D:
+    """
+    Compute the cumulative bb of an ao by merging all link bbs.
+    """
+    cumulative_global_bb = mn.Range3D()
+    for link_ix in range(-1, obj.num_links):
+        link_node = obj.get_link_scene_node(link_ix)
+        bb = link_node.cumulative_bb
+        global_bb = habitat_sim.geo.get_transformed_bb(
+            bb, link_node.transformation
+        )
+        cumulative_global_bb = mn.math.join(cumulative_global_bb, global_bb)
+    return cumulative_global_bb
+
+
+def bb_ray_prescreen(
+    sim: habitat_sim.Simulator,
+    obj: habitat_sim.physics.ManagedRigidObject,
+    support_obj: habitat_sim.physics.ManagedRigidObject,
+) -> Dict[str, Any]:
     """
     Pre-screen a potential placement by casting rays in gravity direction from each bb corner checking for interferring objects below.
     """
@@ -394,7 +509,12 @@ def bb_ray_prescreen(sim:habitat_sim.Simulator, obj:habitat_sim.physics.ManagedR
     }
 
 
-def snap_down(sim:habitat_sim.Simulator, obj:habitat_sim.physics.ManagedRigidObject, support_obj:Optional[habitat_sim.physics.ManagedRigidObject]=None, vdb:Optional[DebugVisualizer]=None)-> bool:
+def snap_down(
+    sim: habitat_sim.Simulator,
+    obj: habitat_sim.physics.ManagedRigidObject,
+    support_obj: Optional[habitat_sim.physics.ManagedRigidObject] = None,
+    vdb: Optional[DebugVisualizer] = None,
+) -> bool:
     """
     Project an object in gravity direction onto the surface below it and then correct for penetration given a target supporting surface or the ground.
     Optionally provide a DebugVisualizer (vdb)
@@ -450,15 +570,14 @@ def snap_down(sim:habitat_sim.Simulator, obj:habitat_sim.physics.ManagedRigidObj
                     print(" Failure: contact in final position.")
                     print("-----------------")
                     return False
-                elif support_obj is not None:
-                    if not (
-                        cp.object_id_a == support_obj.object_id
-                        or cp.object_id_b == support_obj.object_id
-                    ):
-                        obj.translation = cached_position
-                        print(" Failure: contact in final position.")
-                        print("-----------------")
-                        return False
+                elif support_obj is not None and not (
+                    cp.object_id_a == support_obj.object_id
+                    or cp.object_id_b == support_obj.object_id
+                ):
+                    obj.translation = cached_position
+                    print(" Failure: contact in final position.")
+                    print("-----------------")
+                    return False
         return True
     else:
         # no valid position found, reset and return failure

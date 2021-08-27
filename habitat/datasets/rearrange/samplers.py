@@ -7,12 +7,9 @@
 import math
 import random
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional, Dict, Set
-from habitat_sim.simulator import Simulator
+from typing import Dict, List, Optional, Set, Tuple
 
 import magnum as mn
-import numpy as np
-from matplotlib.path import Path
 
 import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
@@ -23,7 +20,7 @@ class SceneSampler(ABC):
     def num_scenes(self):
         pass
 
-    def reset(self)-> None:
+    def reset(self) -> None:
         pass
 
     @abstractmethod
@@ -36,13 +33,13 @@ class SingleSceneSampler(SceneSampler):
     Returns a single provided scene using the sampler API
     """
 
-    def __init__(self, scene:str)-> None:
+    def __init__(self, scene: str) -> None:
         self.scene = scene
 
-    def sample(self)-> str:
+    def sample(self) -> str:
         return self.scene
 
-    def num_scenes(self)-> int:
+    def num_scenes(self) -> int:
         return 1
 
 
@@ -51,13 +48,13 @@ class MultiSceneSampler(SceneSampler):
     Uniform sampling from a set of scenes.
     """
 
-    def __init__(self, scenes:List[str])-> None:
+    def __init__(self, scenes: List[str]) -> None:
         self.scenes = scenes
 
-    def sample(self)-> str:
+    def sample(self) -> str:
         return self.scenes[random.randrange(0, len(self.scenes))]
 
-    def num_scenes(self)-> int:
+    def num_scenes(self) -> int:
         return len(self.scenes)
 
 
@@ -66,8 +63,13 @@ class SceneSubsetSampler(SceneSampler):
     Uniform sampling from a set of scenes. Requires an initialized Simulator with a loaded SceneDataset before first sample query to construct the
     """
 
-    def __init__(self, included_scene_subsets:Set[str], excluded_scene_subsets:Set[str], sim:habitat_sim.Simulator)-> None:
-        self.scenes:List[str] = []
+    def __init__(
+        self,
+        included_scene_subsets: Set[str],
+        excluded_scene_subsets: Set[str],
+        sim: habitat_sim.Simulator,
+    ) -> None:
+        self.scenes: List[str] = []
         # NOTE: each scene subset is a partial string handle, so use substring search to find all matches
         all_scene_handles = sim.metadata_mediator.get_scene_handles()
         for scene_handle in all_scene_handles:
@@ -84,13 +86,13 @@ class SceneSubsetSampler(SceneSampler):
         # remove any duplicates
         self.scenes = list(set(self.scenes))
 
-    def sample(self)-> str:
+    def sample(self) -> str:
         assert (
             len(self.scenes) > 0
         ), "SceneSubsetSampler.sample() Error: No scenes to sample."
         return self.scenes[random.randrange(0, len(self.scenes))]
 
-    def num_scenes(self)-> int:
+    def num_scenes(self) -> int:
         if len(self.scenes) == 0:
             print(
                 "SceneSubsetSampler: scene set is empty. Sampler may not be initialized."
@@ -105,14 +107,14 @@ class ObjectSampler:
 
     def __init__(
         self,
-        object_set:List[str],
-        receptacle_set:List[str],
-        num_objects:Tuple[int, int]=(1, 1),
-        orientation_sample:Optional[str]=None,
-    )-> None:
+        object_set: List[str],
+        receptacle_set: List[str],
+        num_objects: Tuple[int, int] = (1, 1),
+        orientation_sample: Optional[str] = None,
+    ) -> None:
         self.object_set = object_set
         self.receptacle_set = receptacle_set
-        self.receptacle_instances:Optional[List[sutils.Receptacle]] = None
+        self.receptacle_instances: Optional[List[sutils.Receptacle]] = None
         assert len(self.object_set) > 0
         assert len(self.receptacle_set) > 0
         self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
@@ -126,14 +128,16 @@ class ObjectSampler:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
 
-    def reset(self)-> None:
+    def reset(self) -> None:
         """
         Reset any per-scene variables.
         """
         # instances should be scraped for every new scene
         self.receptacle_instances = None
 
-    def sample_receptacle(self, sim:habitat_sim.Simulator)->sutils.Receptacle:
+    def sample_receptacle(
+        self, sim: habitat_sim.Simulator
+    ) -> sutils.Receptacle:
         """
         Sample a receptacle from the receptacle_set and return relevant information.
         """
@@ -167,15 +171,20 @@ class ObjectSampler:
         ]
         return target_receptacle
 
-    def sample_object(self)->str:
+    def sample_object(self) -> str:
         """
         Sample an object from the object_set and return its handle.
         """
         return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
-        self, sim:habitat_sim.Simulator, object_handle:str, receptacle:sutils.Receptacle, snap_down:bool=False, vdb:Optional[sutils.DebugVisualizer]=None
-    )->Optional[habitat_sim.physics.ManagedRigidObject]:
+        self,
+        sim: habitat_sim.Simulator,
+        object_handle: str,
+        receptacle: sutils.Receptacle,
+        snap_down: bool = False,
+        vdb: Optional[sutils.DebugVisualizer] = None,
+    ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         """
         Attempt to sample a valid placement of the object in/on a receptacle given an object handle and receptacle information.
         """
@@ -246,7 +255,12 @@ class ObjectSampler:
         )
         return None
 
-    def single_sample(self, sim:habitat_sim.Simulator, snap_down:bool=False, vdb:Optional[sutils.DebugVisualizer]=None)->Optional[habitat_sim.physics.ManagedRigidObject]:
+    def single_sample(
+        self,
+        sim: habitat_sim.Simulator,
+        snap_down: bool = False,
+        vdb: Optional[sutils.DebugVisualizer] = None,
+    ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
         object_handle = self.sample_object()
         target_receptacle = self.sample_receptacle(sim)
@@ -259,13 +273,18 @@ class ObjectSampler:
 
         return new_object
 
-    def sample(self, sim:habitat_sim.Simulator, snap_down:bool=False, vdb:Optional[sutils.DebugVisualizer]=None)-> List[habitat_sim.physics.ManagedRigidObject]:
+    def sample(
+        self,
+        sim: habitat_sim.Simulator,
+        snap_down: bool = False,
+        vdb: Optional[sutils.DebugVisualizer] = None,
+    ) -> List[habitat_sim.physics.ManagedRigidObject]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
         Optionally provide a debug visualizer (vdb)
         """
         num_pairing_tries = 0
-        new_objects: List[habitat_sim.physics.ManagedRigidObject] = [] 
+        new_objects: List[habitat_sim.physics.ManagedRigidObject] = []
 
         target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
@@ -310,11 +329,11 @@ class ObjectTargetSampler(ObjectSampler):
 
     def __init__(
         self,
-        object_instance_set:List[habitat_sim.physics.ManagedRigidObject],
-        receptacle_set:List[str],
-        num_targets:Tuple[int, int]=(1, 1),
-        orientation_sample:Optional[str]=None,
-    )-> None:
+        object_instance_set: List[habitat_sim.physics.ManagedRigidObject],
+        receptacle_set: List[str],
+        num_targets: Tuple[int, int] = (1, 1),
+        orientation_sample: Optional[str] = None,
+    ) -> None:
         """
         Initialize a standard ObjectSampler but construct the object_set to correspond with specific object instances provided.
         """
@@ -326,7 +345,12 @@ class ObjectTargetSampler(ObjectSampler):
             object_set, receptacle_set, num_targets, orientation_sample
         )
 
-    def sample(self, sim:habitat_sim.Simulator, snap_down:bool=False, vdb:Optional[sutils.DebugVisualizer]=None)-> Optional[Dict[str, habitat_sim.physics.ManagedRigidObject]]:
+    def sample(
+        self,
+        sim: habitat_sim.Simulator,
+        snap_down: bool = False,
+        vdb: Optional[sutils.DebugVisualizer] = None,
+    ) -> Optional[Dict[str, habitat_sim.physics.ManagedRigidObject]]:
         """
         Overridden sampler maps to instances without replacement.
         Returns None if failed, or a dict mapping object handles to new object instances in the sampled target location.
@@ -360,17 +384,15 @@ class ObjectTargetSampler(ObjectSampler):
                     if (
                         object_instance.creation_attributes.handle
                         == new_object.creation_attributes.handle
+                        and object_instance.handle not in new_target_objects
                     ):
-                        if not object_instance.handle in new_target_objects:
-                            new_target_objects[
-                                object_instance.handle
-                            ] = new_object
-                            found_match = True
-                            # remove this object instance match from future pairings
-                            self.object_set.remove(
-                                new_object.creation_attributes.handle
-                            )
-                            break
+                        new_target_objects[object_instance.handle] = new_object
+                        found_match = True
+                        # remove this object instance match from future pairings
+                        self.object_set.remove(
+                            new_object.creation_attributes.handle
+                        )
+                        break
                 assert (
                     found_match is True
                 ), "Failed to match instance to generated object. Shouldn't happen, must be a bug."
@@ -394,25 +416,33 @@ class ObjectTargetSampler(ObjectSampler):
 
 
 class ArticulatedObjectStateSampler:
-    def __init__(self, ao_handle:str, link_name:str, state_range:Tuple[float, float])-> None:
+    def __init__(
+        self, ao_handle: str, link_name: str, state_range: Tuple[float, float]
+    ) -> None:
         self.ao_handle = ao_handle
         self.link_name = link_name
         self.state_range = state_range
         assert self.state_range[1] >= self.state_range[0]
 
-    def sample(self, sim:habitat_sim.Simulator)-> List[Tuple[str, str, float]]:
+    def sample(
+        self, sim: habitat_sim.Simulator
+    ) -> Optional[
+        Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
+    ]:
         """
         For all matching AOs in the scene, sample and apply the joint state for this sampler.
         Return a list of tuples (instance_handle, link_name, state)
         """
-        ao_states = []
+        ao_states: Dict[
+            habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]
+        ] = {}
         # TODO: handle sampled invalid states (e.g. fridge open into wall in some scenes)
         aom = sim.get_articulated_object_manager()
         # get all AOs in the scene with the configured handle as a substring
         matching_ao_instances = aom.get_objects_by_handle_substring(
             self.ao_handle
-        )
-        for ao_handle, ao_instance in matching_ao_instances.items():
+        ).values()
+        for ao_instance in matching_ao_instances.values():
             # now find a matching link
             for link_ix in range(ao_instance.num_links):
                 if ao_instance.get_link_name(link_ix) == self.link_name:
@@ -426,6 +456,105 @@ class ArticulatedObjectStateSampler:
                         ao_instance.get_link_joint_pos_offset(link_ix)
                     ] = joint_state
                     ao_instance.joint_positions = pose
-                    ao_states.append((ao_handle, self.link_name, joint_state))
+                    if ao_instance not in ao_states:
+                        ao_states[ao_instance] = {}
+                    ao_states[ao_instance][link_ix] = joint_state
                     break
         return ao_states
+
+
+class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
+    """
+    Samples multiple articulated states simultaneously with rejection of invalid configurations.
+    """
+
+    def __init__(
+        self, ao_sampler_params: Dict[str, Dict[str, Tuple[float, float]]]
+    ) -> None:
+        """
+        ao_sampler_params : {ao_handle -> {link_name -> (min, max)}}
+        """
+        self.ao_sampler_params = ao_sampler_params
+        self.max_iterations = 50
+        # validate the ranges
+        for ao_handle in ao_sampler_params:
+            for link_name in ao_sampler_params[ao_handle]:
+                assert (
+                    ao_sampler_params[ao_handle][link_name][1]
+                    >= ao_sampler_params[ao_handle][link_name][0]
+                )
+
+    def sample(
+        self, sim: habitat_sim.Simulator
+    ) -> Optional[
+        Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
+    ]:
+        """
+        Iterative rejection sampling of all joint states specified in parameters.
+        Return a list of tuples (instance_handle, link_name, state)
+        On failure, return None.
+        """
+        # first collect all instances associated with requested samplers
+        aom = sim.get_articulated_object_manager()
+        matching_ao_instances: Dict[
+            str, List[habitat_sim.physics.ManagedArticulatedObject]
+        ] = {}
+        for ao_handle in self.ao_sampler_params:
+            matching_ao_instances[
+                ao_handle
+            ] = aom.get_objects_by_handle_substring(ao_handle).values()
+
+        # construct an efficiently iterable structure for reject sampling of link states
+        link_sample_params: Dict[
+            habitat_sim.physics.ManagedArticulatedObject,
+            Dict[int, Tuple[float, float]],
+        ] = {}
+        for ao_handle, ao_instances in matching_ao_instances.items():
+            for ao_instance in ao_instances:
+                for link_ix in range(ao_instance.num_links):
+                    link_name = ao_instance.get_link_name(link_ix)
+                    if link_name in self.ao_sampler_params[ao_handle]:
+                        if ao_instance not in link_sample_params:
+                            link_sample_params[ao_instance] = {}
+                        assert (
+                            link_ix not in link_sample_params[ao_instance]
+                        ), f"Joint sampler configuration creating duplicate sampler requests for object '{ao_handle}', instance '{ao_instance.handle}', link {link_name}."
+                        link_sample_params[ao_instance][
+                            link_ix
+                        ] = self.ao_sampler_params[ao_handle][link_name]
+
+        for _iteration in range(self.max_iterations):
+            ao_states: Dict[
+                habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]
+            ] = {}
+            # sample a composite joint configuration
+            for ao_instance, link_ranges in link_sample_params.items():
+                ao_states[ao_instance] = {}
+                # NOTE: only query and set pose once per instance for efficiency
+                pose = ao_instance.joint_positions
+                for link_ix, joint_range in link_ranges.items():
+                    joint_state = random.uniform(
+                        joint_range[0], joint_range[1]
+                    )
+                    pose[
+                        ao_instance.get_link_joint_pos_offset(link_ix)
+                    ] = joint_state
+                    ao_states[ao_instance][link_ix] = joint_state
+                ao_instance.joint_positions = pose
+
+            # validate the new configuration (contact check every instance)
+            valid_configuration = True
+            for ao_handle in matching_ao_instances:
+                for ao_instance in matching_ao_instances[ao_handle]:
+                    if ao_instance.contact_test():
+                        valid_configuration = False
+                        break
+                if not valid_configuration:
+                    break
+
+            if valid_configuration:
+                # success
+                return ao_states
+
+        # failed to find a valid configuration
+        return None
