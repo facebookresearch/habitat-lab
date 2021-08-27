@@ -61,7 +61,7 @@ class PPO(nn.Module):
 
     def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
         advantages = (
-            rollouts.buffers["returns"][:-1]
+            rollouts.buffers["returns"][:-1]  # type: ignore
             - rollouts.buffers["value_preds"][:-1]
         )
         if not self.use_normalized_advantage:

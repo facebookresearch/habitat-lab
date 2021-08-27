@@ -1,3 +1,32 @@
 graft habitat/utils/visualizations/assets
+graft habitat/configs
 include habitat/py.typed
+
+include LICENSE
+
 include habitat_baselines/py.typed
+recursive-include habitat_baselines/config *.yaml
+
+exclude .circleci/config.yml
+exclude .editorconfig
+
+prune docs
+prune examples
+prune test
+
+# added by check-manifest
+include *.md
+include *.txt
+include *.yaml
+include Dockerfile
+include mypy.ini
+recursive-include habitat_baselines *.json
+recursive-include habitat_baselines *.md
+recursive-include habitat_baselines *.png
+recursive-include habitat_baselines *.py
+recursive-include habitat_baselines *.sh
+recursive-include habitat_baselines *.txt
+recursive-include habitat_baselines *.yaml
+recursive-include res *.gif
+recursive-include res *.png
+recursive-include scripts *.py

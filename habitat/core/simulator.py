@@ -6,7 +6,16 @@
 import abc
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import attr
 import numpy as np
@@ -15,7 +24,10 @@ from gym import Space, spaces
 from habitat.config import Config
 from habitat.core.dataset import Episode
 
-VisualObservation = Union[np.ndarray]
+if TYPE_CHECKING:
+    from torch import Tensor
+
+VisualObservation = Union["Tensor", np.ndarray]
 
 
 @attr.s(auto_attribs=True)

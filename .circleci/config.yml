@@ -43,11 +43,11 @@ jobs:
       - run:
           name: Combine precommit config and python versions for caching
           command: |
-            cat .pre-commit-config.yaml > pre-commit-deps.txt
-            python -VV >> pre-commit-deps.txt
+            cat .pre-commit-config.yaml > ~/pre-commit-deps.txt
+            python -VV >> ~/pre-commit-deps.txt
       - restore_cache:
           keys:
-          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+          - v1-precommit-deps-{{ checksum "~/pre-commit-deps.txt" }}
 
       - run:
           name: Install Dependencies
@@ -59,7 +59,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.cache/pre-commit
-          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+          key: v1-precommit-deps-{{ checksum "~/pre-commit-deps.txt" }}
 
       - run:
           name: Check Code Style using pre-commit
