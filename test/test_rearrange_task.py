@@ -11,6 +11,7 @@ from glob import glob
 import pytest
 
 import habitat
+import habitat.datasets.rearrange.rearrange_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat_baselines.utils.env_utils
@@ -162,3 +163,19 @@ def test_rearrange_task(test_cfg_path):
                 _, _, done, info = env.step(action=action)
 
             logger.info(info)
+
+
+# NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
+@pytest.mark.parametrize("debug_visualization", [False])
+@pytest.mark.parametrize("num_episodes", [2])
+def test_rearrange_episode_generator(debug_visualization, num_episodes):
+    cfg = rr_gen.get_config_defaults()
+    dataset = RearrangeDatasetV0()
+    with rr_gen.RearrangeEpisodeGenerator(
+        cfg=cfg, debug_visualization=debug_visualization
+    ) as ep_gen:
+        start_time = time.time()
+        dataset.episodes += ep_gen.generate_episodes(num_episodes)
+    print(
+        f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
+    )
