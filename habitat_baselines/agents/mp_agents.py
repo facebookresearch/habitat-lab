@@ -27,21 +27,22 @@ def get_noop_arm_action(sim, task):
         grip_state = 0.0
 
     if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
-        return {
+        ret_val = {
             "action": "ARM_ACTION",
             "action_args": {
                 "arm_action": np.zeros(3),
-                "grip_action": grip_state,
             },
         }
     else:
-        return {
+        ret_val = {
             "action": "ARM_ACTION",
             "action_args": {
                 "arm_action": sim.robot.arm_joint_pos,
-                "grip_action": grip_state,
             },
         }
+    if "grip_action" in task.action_space.spaces["ARM_ACTION"]:
+        ret_val["action_args"]["grip_action"] = grip_state
+    return ret_val
 
 
 class ParameterizedAgent(habitat.Agent):
@@ -227,11 +228,21 @@ class ArmTargModule(ParameterizedAgent):
             return get_noop_arm_action(self._sim, self._task)
 
         self._plan_idx += 1
-        grip = self._get_gripper_ac(cur_plan_ac)
-        return {
-            "action": "ARM_ACTION",
-            "action_args": {"arm_action": cur_plan_ac, "grip_action": grip},
-        }
+
+        if "grip_action" in self._task.action_space.spaces["ARM_ACTION"]:
+            grip = self._get_gripper_ac(cur_plan_ac)
+            return {
+                "action": "ARM_ACTION",
+                "action_args": {
+                    "arm_action": cur_plan_ac,
+                    "grip_action": grip,
+                },
+            }
+        else:
+            return {
+                "action": "ARM_ACTION",
+                "action_args": {"arm_action": cur_plan_ac},
+            }
 
     def _get_plan_ac(self, observations) -> np.ndarray:
         r"""Get the plan action for the current timestep. By default return the

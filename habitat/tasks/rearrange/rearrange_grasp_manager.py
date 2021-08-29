@@ -102,6 +102,10 @@ class RearrangeGraspManager:
         :force: Will transform the object to be in the robot's grasp, even if
             the object is already in the grasped state.
         """
+        if snap_obj_id == self._snapped_obj_id:
+            # Already grasping this object.
+            return
+
         if len(self._snap_constraints) != 0:
             # We were already grabbing something else.
             raise ValueError(
@@ -113,10 +117,6 @@ class RearrangeGraspManager:
             self._sim.set_transformation(
                 self._sim.robot.ee_transform, snap_obj_id
             )
-
-        if snap_obj_id == self._snapped_obj_id:
-            # Already grasping this object.
-            return
 
         self._snapped_obj_id = snap_obj_id
 

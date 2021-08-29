@@ -22,15 +22,18 @@ from habitat_baselines.utils.gym_adapter import HabGymWrapper
 
 
 def compress_action(action):
-    return np.concatenate(
-        [
-            action["action_args"]["arm_action"],
-            np.array(
-                [action["action_args"]["grip_action"]],
-                dtype=np.float32,
-            ),
-        ]
-    )
+    if "grip_action" in action["action_args"]:
+        return np.concatenate(
+            [
+                action["action_args"]["arm_action"],
+                np.array(
+                    [action["action_args"]["grip_action"]],
+                    dtype=np.float32,
+                ),
+            ]
+        )
+    else:
+        return action["action_args"]["arm_action"]
 
 
 class BenchmarkGym:

@@ -46,16 +46,19 @@ class ArmAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         arm_controller_cls = eval(self._config.ARM_CONTROLLER)
+        self._sim: RearrangeSim = sim
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
+        self._use_oracle_grasp = self._config.get("ORACLE_GRASP", False)
 
         if self._config.GRIP_CONTROLLER is not None:
             grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
             self.grip_ctrlr = grip_controller_cls(
                 *args, config=config, sim=sim, **kwargs
             )
-        else:
+
+        elif not self._use_oracle_grasp:
             self.grip_ctrlr = None
         self.disable_grip = False
         if "DISABLE_GRIP" in config:
@@ -71,7 +74,7 @@ class ArmAction(SimulatorTaskAction):
         action_spaces = {
             "arm_action": self.arm_ctrlr.action_space,
         }
-        if self.grip_ctrlr is not None:
+        if not self._config.ORACLE_GRASP and self.grip_ctrlr is not None:
             action_spaces["grip_action"] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
@@ -79,6 +82,19 @@ class ArmAction(SimulatorTaskAction):
         self.arm_ctrlr.step(arm_action, should_step=False)
         if self.grip_ctrlr is not None and not self.disable_grip:
             self.grip_ctrlr.step(grip_action, should_step=False)
+        if self._use_oracle_grasp:
+            idxs, _ = self._sim.get_targets()
+            scene_pos = self._sim.get_scene_pos()
+            target_pos = scene_pos[idxs][0]
+            target_idx = idxs[0]
+
+            ee_pos = self._sim.robot.ee_transform.translation
+            to_target = np.linalg.norm(ee_pos - target_pos, ord=2)
+            sim_idx = self._sim.scene_obj_ids[target_idx]
+
+            if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.grasp_mgr.snap_to_obj(sim_idx)
+
         return self._sim.step(HabitatSimActions.ARM_ACTION)
 
 

@@ -233,10 +233,6 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     sim = env._sim
-    use_arm_urdf = "robots/hab_fetch/robots/fetch_onlyarm_franzi.urdf"
-
-    # Differentiable robot model setup
-    diff_robo = DifferentiableRobotModel(use_arm_urdf)
 
     while True:
         if render_steps_limit is not None and i > render_steps_limit:
@@ -259,65 +255,6 @@ def play_env(env, args, config):
         obs = step_result
         reward = 0.0
         info = env.get_metrics()
-
-        # Computing the EE position from the differentiable robot wrapper and
-        # Habitat.
-        trans = sim.robot.base_transformation
-
-        link_name_to_id = {}
-
-        # Real arm
-        for i in sim.robot.sim_obj.get_link_ids():
-            name = sim.robot.sim_obj.get_link_name(i)
-            link_name_to_id[name] = i
-
-        link_name = "virtual_ee_link"
-
-        def get_T(diff_robo, xdesired, link_name):
-            """Gets the matrix transform of a link name from Differentiable robot model."""
-            ee_pos, rot = diff_robo.compute_forward_kinematics(
-                xdesired, link_name
-            )
-            ee_pos = ee_pos.numpy()[0]
-            rot = np.array(rot.numpy())[0]
-            pb_T = mn.Matrix4.from_(
-                mn.Quaternion(mn.Vector3(rot[:3]), rot[3]).to_matrix(),
-                mn.Vector3(ee_pos),
-            )
-            return pb_T
-
-        # Real arm
-        # js = sim.robot.arm_joint_pos
-        # js = torch.tensor(js).view(1, -1)
-        # D1 = sim.robot.sim_obj.get_link_scene_node(
-        #    link_name_to_id[link_name]
-        # ).transformation
-        robo_T = sim.robot.base_transformation
-        D1 = sim.robot.ee_transform
-        D1 = robo_T.inverted() @ D1
-
-        B = sim.robot.sim_obj.get_link_scene_node(
-            link_name_to_id["torso_lift_link"]
-        ).transformation
-        T = mn.Matrix4.translation(
-            mn.Vector3(0.00130033, 0.0009006, -0.793444)
-        )
-        B = robo_T.inverted() @ B @ T
-        B = mn.Matrix4(
-            [
-                [1, 0, 1.6531e-08, -0.0832746],
-                [1.49012e-08, 0.999942, -0.0107959, -0.000281132],
-                [-7.45058e-09, 0.0107959, 0.999942, 0.0260844],
-                [0, 0, 0, 1],
-            ]
-        ).transposed()
-
-        D2 = get_T(diff_robo, js, link_name)
-        D2 = B @ D2
-
-        print("Rotation diff", D1.rotation() - D2.rotation())
-        print("Translation diff", D1.translation - D2.translation)
-        print("")
 
         total_reward += reward
 
