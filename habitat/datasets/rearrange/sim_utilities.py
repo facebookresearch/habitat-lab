@@ -173,14 +173,10 @@ class DebugVisualizer:
                     stitched_image = Image.new(
                         image.mode, (image.size[0] * 3, image.size[1] * 2)
                     )
-
-                print(f"ix = {ix}, %3 = {ix%3}")
-                print(f"image.size[0] = {image.size[0]}")
                 location = (
                     image.size[0] * (ix % 3),
                     image.size[1] * (0 if ix // 3 == 0 else 1),
                 )
-                print(f"location = {location}")
                 stitched_image.paste(image, location)
             stitched_image.show()
         return ""
