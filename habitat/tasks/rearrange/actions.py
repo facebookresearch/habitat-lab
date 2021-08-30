@@ -74,7 +74,7 @@ class ArmAction(SimulatorTaskAction):
         action_spaces = {
             "arm_action": self.arm_ctrlr.action_space,
         }
-        if not self._config.ORACLE_GRASP and self.grip_ctrlr is not None:
+        if not self._use_oracle_grasp and self.grip_ctrlr is not None:
             action_spaces["grip_action"] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
