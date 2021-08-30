@@ -93,12 +93,14 @@ class DebugVisualizer:
         # save the obs as an image
         if output_path is None:
             output_path = self.output_path
+        check_make_dir(output_path)
         from habitat_sim.utils import viz_utils as vut
 
         image = vut.observation_to_image(obs_cache[0]["rgb"], "color")
         from datetime import datetime
 
-        date_time = datetime.now().strftime("%m_%d_%Y_%H%M%S")
+        # filename format "prefixmonth_day_year_hourminutesecondmicrosecond.png"
+        date_time = datetime.now().strftime("%m_%d_%Y_%H%M%S%f")
         file_path = output_path + prefix + date_time + ".png"
         image.save(file_path)
         if show:
@@ -106,7 +108,9 @@ class DebugVisualizer:
         return file_path
 
     def peek_object(
-        self, obj: habitat_sim.physics.ManagedArticulatedObject
+        self,
+        obj: habitat_sim.physics.ManagedArticulatedObject,
+        cam_local_pos: Optional[mn.Vector3] = None,
     ) -> str:
         """
         Compute a camera placement to view an object and show/save an observation.
@@ -123,10 +127,11 @@ class DebugVisualizer:
         distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
             fov / (360 / math.pi)
         )
+        if cam_local_pos is None:
+            # default to -Z (forward) of the object
+            cam_local_pos = mn.Vector3(0, 0, -1)
         look_from = (
-            obj.transformation.transform_vector(
-                mn.Vector3(1, 0, 0)
-            ).normalized()
+            obj.transformation.transform_vector(cam_local_pos).normalized()
             * distance
             + look_at
         )
@@ -147,20 +152,7 @@ class DebugVisualizer:
         if output_path is None:
             output_path = self.output_path
 
-        # if output directory doesn't exist, create it
-        if not osp.exists(output_path):
-            import os
-
-            try:
-                os.makedirs(output_path)
-            except OSError:
-                print(
-                    f"DebugVisualizer: Aborting 'make_debug_video': Failed to create the output directory: {output_path}"
-                )
-                return
-            print(
-                f"DebugVisualizer: 'make_debug_video' output directory did not exist and was created: {output_path}"
-            )
+        check_make_dir(output_path)
 
         # get a timestamp tag with current date and time for video name
         from datetime import datetime
@@ -176,6 +168,26 @@ class DebugVisualizer:
         print(f"DebugVisualizer: Saving debug video to {file_path}")
         vut.make_video(
             obs_cache, self.default_sensor_uuid, "color", file_path, fps=fps
+        )
+
+
+def check_make_dir(output_path: str) -> None:
+    """
+    Check for the existence of the provided path and create it if not found.
+    """
+    # if output directory doesn't exist, create it
+    if not osp.exists(output_path):
+        import os
+
+        try:
+            os.makedirs(output_path)
+        except OSError:
+            print(
+                f"DebugVisualizer: Aborting 'make_debug_video': Failed to create the output directory: {output_path}"
+            )
+            return
+        print(
+            f"DebugVisualizer: 'make_debug_video' output directory did not exist and was created: {output_path}"
         )
 
 
@@ -434,26 +446,23 @@ def get_ao_global_bb(
 def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
-    support_obj: habitat_sim.physics.ManagedRigidObject,
+    support_obj_ids: Optional[List[int]] = None,
 ) -> Dict[str, Any]:
     """
     Pre-screen a potential placement by casting rays in gravity direction from each bb corner checking for interferring objects below.
     """
+    if support_obj_ids is None:
+        support_obj_ids = [-1]  # default ground
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
     highest_support_impact_height = None
     raycast_results = []
-    # we'll count rays which hit objects (obstructions) or the ground before the support surface
-    obstructed = []
-    grounded = []
-    sup_obj_id = -1  # default ground if None
-    if support_obj is not None:
-        sup_obj_id = support_obj.object_id
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
     bb_corners = get_bb_corners(obj)
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
+    support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
         world_point = object_local_to_global.transform_point(key_point)
         # NOTE: instead of explicit Y coordinate, we project onto any gravity vector
@@ -467,42 +476,41 @@ def bb_ray_prescreen(
             lowest_key_point = world_point
             lowest_key_point_height = world_point_height
         # cast a ray in gravity direction
-        ray = habitat_sim.geo.Ray(world_point, gravity_dir)
-        raycast_results.append(sim.cast_ray(ray))
-        # classify any obstructions before hitting the support surface
-        for hit in raycast_results[-1].hits:
-            if hit.object_id == obj.object_id:
-                continue
-            elif hit.object_id == sup_obj_id:
-                hit_point = ray.origin + ray.direction * hit.ray_distance
-                support_impact_height = hit_point.projected_onto_normalized(
-                    -gravity_dir
-                )
-                if (
-                    highest_support_impact is None
-                    or highest_support_impact_height < support_impact_height
-                ):
-                    highest_support_impact = hit_point
-                    highest_support_impact_height = support_impact_height
-            elif hit.object_id == -1:
-                grounded.append(ix)
-            else:
-                obstructed.append(ix)
-            break
+        if ix == 0:
+            ray = habitat_sim.geo.Ray(world_point, gravity_dir)
+            raycast_results.append(sim.cast_ray(ray))
+            # classify any obstructions before hitting the support surface
+            for hit in raycast_results[-1].hits:
+                if hit.object_id == obj.object_id:
+                    continue
+                elif hit.object_id in support_obj_ids:
+                    hit_point = ray.origin + ray.direction * hit.ray_distance
+                    support_impacts[ix] = hit_point
+                    support_impact_height = (
+                        hit_point.projected_onto_normalized(-gravity_dir)
+                    )
+                    if (
+                        highest_support_impact is None
+                        or highest_support_impact_height
+                        < support_impact_height
+                    ):
+                        highest_support_impact = hit_point
+                        highest_support_impact_height = support_impact_height
+                # terminates at the first non-self ray hit
+                break
     # compute the relative base height of the object from its lowest bb corner and COM
     base_rel_height = (
         lowest_key_point_height
         - obj.translation.projected_onto_normalized(-gravity_dir).length()
     )
+
     surface_snap_point = (
         None
-        if highest_support_impact is None
-        else highest_support_impact + gravity_dir * base_rel_height
+        if 0 not in support_impacts
+        else support_impacts[0] + gravity_dir * base_rel_height
     )
     # return list of obstructed and grounded rays, relative base height, distance to first surface impact, and ray results details
     return {
-        "obstructed": obstructed,
-        "grounded": grounded,
         "base_rel_height": base_rel_height,
         "surface_snap_point": surface_snap_point,
         "raycast_results": raycast_results,
@@ -512,7 +520,7 @@ def bb_ray_prescreen(
 def snap_down(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
-    support_obj: Optional[habitat_sim.physics.ManagedRigidObject] = None,
+    support_obj_ids: Optional[List[int]] = None,
     vdb: Optional[DebugVisualizer] = None,
 ) -> bool:
     """
@@ -520,42 +528,21 @@ def snap_down(
     Optionally provide a DebugVisualizer (vdb)
     Returns boolean success. If successful, the object state is updated to the snapped location.
     """
-    print("----------------------------")
-    print("Snap-down")
     cached_position = obj.translation
 
-    bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj)
+    if support_obj_ids is None:
+        support_obj_ids = [-1]  # default ground
 
-    if len(bb_ray_prescreen_results["obstructed"]) > 0:
-        # prescreen ray hit a non-support object first, reject
-        print(" Failure: obstruction (prescreen).")
-        print("----------------------------")
-        return False
+    bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj_ids)
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:
         # no support under this object, return failure
-        print(" Failure: no support hit (prescreen).")
-        print("----------------------------")
         return False
-
-    # TODO: perhaps we screen any ground hits to increase stability?
-    if len(bb_ray_prescreen_results["grounded"]) > 1:
-        # more than 1 prescreen ray(s) hit the ground, so probably not a stable placement
-        print(
-            " Failure: prescreen detected potentially unstable placement (hanging over ground)."
-        )
-        print("----------------------------")
-        return False
-
-    obj.translation = bb_ray_prescreen_results["surface_snap_point"]
-    best_valid_position = obj.translation
 
     # finish up
-    if best_valid_position is not None:
+    if bb_ray_prescreen_results["surface_snap_point"] is not None:
         # accept the final location if a valid location exists
-        print(" Success: valid position found.")
-        print("-----------------")
-        obj.translation = best_valid_position
+        obj.translation = bb_ray_prescreen_results["surface_snap_point"]
         if vdb is not None:
             vdb.get_observation(obj.translation)
         sim.perform_discrete_collision_detection()
@@ -567,21 +554,38 @@ def snap_down(
             ):
                 if cp.contact_distance < -0.01:
                     obj.translation = cached_position
-                    print(" Failure: contact in final position.")
-                    print("-----------------")
+                    # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
                     return False
-                elif support_obj is not None and not (
-                    cp.object_id_a == support_obj.object_id
-                    or cp.object_id_b == support_obj.object_id
+                elif not (
+                    cp.object_id_a in support_obj_ids
+                    or cp.object_id_b in support_obj_ids
                 ):
                     obj.translation = cached_position
-                    print(" Failure: contact in final position.")
-                    print("-----------------")
+                    # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
                     return False
         return True
     else:
         # no valid position found, reset and return failure
         obj.translation = cached_position
-        print(" Failure: no valid position found.")
-        print("-----------------")
         return False
+
+
+def get_all_object_ids(sim):
+    rom = sim.get_rigid_object_manager()
+    aom = sim.get_articulated_object_manager()
+
+    object_id_map = {}
+
+    for _object_handle, rigid_object in rom.get_objects_by_handle_substring(
+        ""
+    ).items():
+        object_id_map[rigid_object.object_id] = rigid_object.handle
+
+    for _object_handle, ao in aom.get_objects_by_handle_substring("").items():
+        object_id_map[ao.object_id] = ao.handle
+        for object_id, link_ix in ao.link_object_ids.items():
+            object_id_map[object_id] = (
+                ao.handle + " -- " + ao.get_link_name(link_ix)
+            )
+
+    return object_id_map

@@ -327,7 +327,7 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
 
         # sample AO states for objects in the scene
-        # ao_instance_handle -> [ (link_name, state), ... ]
+        # ao_instance -> [ (link_ix, state), ... ]
         ao_states: Dict[
             habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]
         ] = {}
@@ -341,9 +341,6 @@ class RearrangeEpisodeGenerator:
                     ao_states[sampled_instance] = {}
                 for link_ix, joint_state in link_states.items():
                     ao_states[sampled_instance][link_ix] = joint_state
-
-                # TODO: debugging
-                self.vdb.peek_object(obj=sampled_instance)
 
         # sample object placements
         for sampler_name, obj_sampler in self._obj_samplers.items():
@@ -643,8 +640,9 @@ def get_config_defaults() -> CN:
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 3, "up"))
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 5, "up")),
         # ("any", "uniform", (["any"], ["any"], 3, 5, "up")),
-        # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
-        ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
+        ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
+        # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
+        ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [

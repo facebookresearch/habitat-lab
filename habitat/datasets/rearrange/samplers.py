@@ -222,23 +222,38 @@ class ObjectSampler:
                         habitat_sim.utils.common.random_quaternion()
                     )
             if snap_down:
+                support_object_ids = [-1]
                 if receptacle.is_parent_object_articulated:
-                    # TODO: flesh this out
-                    pass
-                else:
-                    snap_success = sutils.snap_down(
-                        sim,
-                        new_object,
-                        sim.get_rigid_object_manager().get_object_by_handle(
-                            receptacle.parent_object_handle
-                        ),
-                        vdb=vdb,
+                    ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
+                        receptacle.parent_object_handle
                     )
-                    if snap_success:
-                        print(
-                            f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
-                        )
-                        return new_object
+                    for (
+                        object_id,
+                        link_ix,
+                    ) in ao_instance.link_object_ids.items():
+                        if receptacle.parent_link == link_ix:
+                            support_object_ids = [
+                                object_id,
+                                ao_instance.object_id,
+                            ]
+                            break
+                else:
+                    support_object_ids = [
+                        sim.get_rigid_object_manager()
+                        .get_object_by_handle(receptacle.parent_object_handle)
+                        .object_id
+                    ]
+                snap_success = sutils.snap_down(
+                    sim,
+                    new_object,
+                    support_object_ids,
+                    vdb=vdb,
+                )
+                if snap_success:
+                    print(
+                        f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
+                    )
+                    return new_object
 
             elif not new_object.contact_test():
                 print(
