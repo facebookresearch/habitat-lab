@@ -44,14 +44,20 @@ class DebugVisualizer:
         """
         Point the debug camera at a target.
         """
-        if look_up is None:
-            look_up = mn.Vector3(0, 1.0, 0)
         agent = self.sim.get_agent(0)
         camera_pos = (
             look_from
             if look_from is not None
             else agent.scene_node.translation
         )
+        if look_up is None:
+            # pick a valid "up" vector.
+            look_dir = look_at - camera_pos
+            look_up = (
+                mn.Vector3(0, 1.0, 0)
+                if look_dir[0] != 0 or look_dir[2] != 0
+                else mn.Vector3(1.0, 0, 0)
+            )
         agent.scene_node.rotation = mn.Quaternion.from_matrix(
             mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
         )
@@ -111,10 +117,12 @@ class DebugVisualizer:
         self,
         obj: habitat_sim.physics.ManagedArticulatedObject,
         cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
     ) -> str:
         """
-        Compute a camera placement to view an object and show/save an observation.
+        Compute a camera placement to view an ArticulatedObject and show/save an observation.
         Return the filepath.
+        If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
         """
         look_at = obj.translation
         bb_size = get_ao_global_bb(obj).size()
@@ -130,14 +138,52 @@ class DebugVisualizer:
         if cam_local_pos is None:
             # default to -Z (forward) of the object
             cam_local_pos = mn.Vector3(0, 0, -1)
-        look_from = (
-            obj.transformation.transform_vector(cam_local_pos).normalized()
-            * distance
-            + look_at
-        )
-        return self.save_observation(
-            prefix="peek_" + obj.handle, look_at=look_at, look_from=look_from
-        )
+        if not peek_all_axis:
+            look_from = (
+                obj.transformation.transform_vector(cam_local_pos).normalized()
+                * distance
+                + look_at
+            )
+            return self.save_observation(
+                prefix="peek_" + obj.handle,
+                look_at=look_at,
+                look_from=look_from,
+            )
+        else:
+            # collect axis observations
+            axis_obs: List[Any] = []
+            for axis in range(6):
+                axis_vec = mn.Vector3()
+                axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
+                look_from = (
+                    obj.transformation.transform_vector(axis_vec).normalized()
+                    * distance
+                    + look_at
+                )
+                self.get_observation(look_at, look_from, axis_obs)
+            # stitch images together
+            stitched_image = None
+            from PIL import Image
+
+            from habitat_sim.utils import viz_utils as vut
+
+            for ix, obs in enumerate(axis_obs):
+                image = vut.observation_to_image(obs["rgb"], "color")
+                if stitched_image is None:
+                    stitched_image = Image.new(
+                        image.mode, (image.size[0] * 3, image.size[1] * 2)
+                    )
+
+                print(f"ix = {ix}, %3 = {ix%3}")
+                print(f"image.size[0] = {image.size[0]}")
+                location = (
+                    image.size[0] * (ix % 3),
+                    image.size[1] * (0 if ix // 3 == 0 else 1),
+                )
+                print(f"location = {location}")
+                stitched_image.paste(image, location)
+            stitched_image.show()
+        return ""
 
     def make_debug_video(
         self,

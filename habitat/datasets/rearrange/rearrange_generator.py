@@ -373,6 +373,10 @@ class RearrangeEpisodeGenerator:
             print("Aborting episode generation due to unstable state.")
             return None
 
+        for ao in ao_states:
+            if "fridge" in ao.handle:
+                self.vdb.peek_object(ao, peek_all_axis=True)
+
         # generate the target samplers
         self._get_object_target_samplers()
 
