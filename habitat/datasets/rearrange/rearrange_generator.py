@@ -327,20 +327,18 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
 
         # sample AO states for objects in the scene
-        # ao_instance -> [ (link_ix, state), ... ]
-        ao_states: Dict[
-            habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]
-        ] = {}
+        # ao_instance_handle -> [ (link_ix, state), ... ]
+        ao_states: Dict[str, Dict[int, float]] = {}
         for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
             sampler_states = ao_state_sampler.sample(self.sim)
             assert (
                 sampler_states is not None
             ), f"AO sampler '{sampler_name}' failed"
             for sampled_instance, link_states in sampler_states.items():
-                if sampled_instance not in ao_states:
-                    ao_states[sampled_instance] = {}
+                if sampled_instance.handle not in ao_states:
+                    ao_states[sampled_instance.handle] = {}
                 for link_ix, joint_state in link_states.items():
-                    ao_states[sampled_instance][link_ix] = joint_state
+                    ao_states[sampled_instance.handle][link_ix] = joint_state
 
         # sample object placements
         for sampler_name, obj_sampler in self._obj_samplers.items():
@@ -373,11 +371,6 @@ class RearrangeEpisodeGenerator:
             print("Aborting episode generation due to unstable state.")
             return None
 
-        #DEBUG
-        # for ao in ao_states:
-        #     if "fridge" in ao.handle:
-        #         self.vdb.peek_object(ao, peek_all_axis=True)
-
         # generate the target samplers
         self._get_object_target_samplers()
 
@@ -398,7 +391,7 @@ class RearrangeEpisodeGenerator:
                 target_transform = target_object.transformation
                 self.episode_data["sampled_targets"][
                     instance_handle
-                ] = target_transform
+                ] = np.array(target_transform)
                 rom.remove_object_by_handle(target_object.handle)
                 if self._render_debug_obs:
                     sutils.add_transformed_wire_box(
@@ -628,6 +621,7 @@ def get_config_defaults() -> CN:
             ],
         ),
         ("fridge", ["fridge"]),
+        #TODO: receptacle sub-names
     ]
 
     # ----- sampler definitions ------
@@ -648,6 +642,7 @@ def get_config_defaults() -> CN:
         ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
         ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
+        #TODO: composite object sampling (e.g. apple in bowl)
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [

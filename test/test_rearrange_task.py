@@ -28,7 +28,7 @@ EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -60,7 +60,7 @@ def test_rearrange_dataset():
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "test"])
@@ -176,6 +176,13 @@ def test_rearrange_episode_generator(debug_visualization, num_episodes):
     ) as ep_gen:
         start_time = time.time()
         dataset.episodes += ep_gen.generate_episodes(num_episodes)
+        
+        #test export
+        #import os.path as osp
+        #ep_file = osp.join("rearrange_ep_gen_output/test_rearrange_ep_dataset.json.gz")
+        #import gzip
+        #with gzip.open(ep_file, 'wt') as f:
+        #    f.write(dataset.to_json())
     print(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )

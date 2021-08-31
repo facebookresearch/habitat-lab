@@ -17,17 +17,17 @@ from habitat.core.registry import registry
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
-
+import numpy as np
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
     ao_states: Dict[
-        str, Any
+        str, Tuple[int, float]
     ]  # articulated object states: instance_handle -> (link, state)
     rigid_objs: List[
-        Tuple[str, Any]
+        Tuple[str, np.array]
     ]  # list of objects, each with (handle, transform)
-    targets: Dict[str, Any]  # instance_name -> target_transform
+    targets: Dict[str, np.array]  # instance_name -> target_transform
     markers: Dict[str, Tuple[str, Tuple]] = {}  # marker name -> (type, params)
 
 
