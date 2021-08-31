@@ -1,6 +1,6 @@
 # The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 65
+    MAX_EPISODE_STEPS: 30
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -65,6 +65,8 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
+    RETURN_TO_REST_DISTANCE:
+        TYPE: "ReturnToRestDistance"
     REARRANGE_PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -96,6 +98,7 @@ TASK:
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_PICK_SUCCESS"
         - "REARRANGE_PICK_REWARD"
+        - "RETURN_TO_REST_DISTANCE"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
@@ -154,7 +157,7 @@ SIMULATOR:
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
+    AC_FREQ_RATIO: 8
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     FORWARD_STEP_SIZE: 0.25

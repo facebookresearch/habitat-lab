@@ -439,6 +439,37 @@ class EndEffectorToRestDistance(Measure):
 
 
 @registry.register_measure
+class ReturnToRestDistance(Measure):
+    """
+    Distance between end-effector and resting position if the robot is holding the object.
+    """
+
+    cls_uuid: str = "return_to_rest_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ReturnToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
+        rest_dist = np.linalg.norm(to_resting)
+
+        snapped_id = self._sim.grasp_mgr.snap_idx
+        abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+        picked_correct = snapped_id == abs_targ_obj_idx
+
+        self._metric = rest_dist * picked_correct
+
+
+@registry.register_measure
 class DummyMeasure(Measure):
     cls_uuid: str = "dummy_measure"
 

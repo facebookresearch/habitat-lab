@@ -2,7 +2,7 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrangepick_replica_cad_spa.yaml
 
 SENSE_PLAN_ACT:
   VERBOSE: True
-  RUN_FREQ: 4
+  RUN_FREQ: 2
   KINEMATIC_CTRL: True
   N_GRASPS: 100
   MP_OBJ: True
