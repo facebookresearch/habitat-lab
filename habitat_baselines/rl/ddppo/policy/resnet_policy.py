@@ -55,9 +55,13 @@ class PointNavResNetPolicy(Policy):
             discrete_actions = (
                 policy_config.action_distribution_type == "categorical"
             )
+            if not discrete_actions:
+                assert(len(action_space.shape) == 1)
+
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
+            dim_actions = action_space.n if discrete_actions else action_space.shape[0]
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
@@ -74,7 +78,7 @@ class PointNavResNetPolicy(Policy):
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
             ),
-            dim_actions=action_space.n,  # for action distribution
+            dim_actions=dim_actions,  # for action distribution
             policy_config=policy_config,
         )
 
@@ -175,8 +179,9 @@ class ResNetEncoder(nn.Module):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
+            assert(rgb_observations.shape[1] == 3)  # assert that we're already [BATCH x CHANNEL x HEIGHT X WIDTH]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
+            # rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
                 rgb_observations.float() / 255.0
             )  # normalize RGB
@@ -223,7 +228,8 @@ class PointNavResNetNet(Net):
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            self.prev_action_embedding = nn.Linear(action_space.n, 32)
+            assert(len(action_space.shape) == 1)
+            self.prev_action_embedding = nn.Linear(action_space.shape[0], 32)
 
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
