@@ -466,7 +466,16 @@ class ReturnToRestDistance(Measure):
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
         picked_correct = snapped_id == abs_targ_obj_idx
 
-        self._metric = rest_dist * picked_correct
+        if picked_correct:
+            self._metric = rest_dist
+        else:
+            T_inv = self._sim.robot.ee_transform.inverted()
+            idxs, _ = self._sim.get_targets()
+            scene_pos = self._sim.get_scene_pos()
+            pos = scene_pos[idxs][0]
+            pos = T_inv.transform_point(pos)
+
+            self._metric = np.linalg.norm(task.desired_resting - pos)
 
 
 @registry.register_measure
