@@ -331,7 +331,7 @@ def init_agent(sim):
 
 
 cfg.sim_cfg.default_agent_id = 0
-with habitat_sim.Simulator(cfg) as sim:
+if False:  # temp with habitat_sim.Simulator(cfg) as sim:
     init_agent(sim)
     if make_video:
         # Visualize the agent's initial position
@@ -407,7 +407,7 @@ def init_objects(sim):
     return object_id, goal_id
 
 
-with habitat_sim.Simulator(cfg) as sim:
+if False:  # temp with habitat_sim.Simulator(cfg) as sim:
     init_agent(sim)
     init_objects(sim)
 
@@ -513,7 +513,7 @@ def build_episode(sim, episode_num, object_id, goal_id):
     return episodes
 
 
-with habitat_sim.Simulator(cfg) as sim:
+if False:  # temp with habitat_sim.Simulator(cfg) as sim:
     init_agent(sim)
     object_id, goal_id = init_objects(sim)
 
@@ -716,7 +716,7 @@ def raycast(sim, sensor_name, crosshair_pos=(128, 128), max_distance=2.0):
 # %%
 # Test the raycast utility.
 
-with habitat_sim.Simulator(cfg) as sim:
+if False:  # temp disable with habitat_sim.Simulator(cfg) as sim:
     init_agent(sim)
     obj_attr_mgr = sim.get_object_template_manager()
     obj_attr_mgr.load_configs(
@@ -1335,7 +1335,7 @@ try:  # Got to make initialization idiot proof
 except NameError:
     pass
 
-with habitat.Env(config) as env:
+if False:  # temp with habitat.Env(config) as env:
     obs = env.reset()
     obs_list = []
     # Get closer to the object
@@ -1345,6 +1345,8 @@ with habitat.Env(config) as env:
         metrics = env.get_metrics()
         print_info(obs, metrics)
         if metrics["agent_to_object_distance"] < 2.0:
+            break
+        if env.episode_over:
             break
 
     # Grab the object
