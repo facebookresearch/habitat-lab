@@ -283,6 +283,37 @@ class Receptacle:
             )
 
 
+def get_all_scenedataset_receptacles(sim)-> Dict[str, Dict[str, List[str]]]:
+    """
+    Scrapes the active SceneDataset from a Simulator for all receptacles defined in rigid and articulated object templates.
+    TODO: Note this will not include scene-specific overwrites, only receptacles included in object_config.json and ao_config.json files.
+    """
+    #cache the rigid and articulated receptacles seperately
+    receptacles = {"rigid":{}, "articulated":{}}
+
+    #first scrape the rigid object configs:
+    rotm = sim.get_object_template_manager()
+    for template_handle in rotm.get_template_handles(""):
+        obj_template = rotm.get_template_by_handle(template_handle)
+        for item in obj_template.get_user_config().get_subconfig_keys():
+            if item.startswith("bb_"):
+                if template_handle not in receptacles["rigid"]:
+                    receptacles["rigid"][template_handle] = []
+                receptacles["rigid"][template_handle].append(item)
+
+    #TODO: we currently need to load every URDF to get at the configs. This should change once AO templates are better managed.
+    aom = sim.get_articulated_object_manager()
+    for urdf_handle, urdf_path in sim.metadata_mediator.urdf_paths.items():
+        ao = aom.add_articulated_object_from_urdf(urdf_path)
+        for item in ao.user_attributes.get_subconfig_keys():
+            if item.startswith("bb_"):
+                if urdf_handle not in receptacles["articulated"]:
+                    receptacles["articulated"][urdf_handle] = []
+                receptacles["articulated"][urdf_handle].append(item)
+        aom.remove_object_by_handle(ao.handle)
+
+    return receptacles
+
 def find_receptacles(sim) -> List[Receptacle]:
     """
     Return a list of all receptacles scraped from the scene's currently instanced objects.
