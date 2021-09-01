@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import attr
+import numpy as np
 
 import habitat_sim.utils.datasets_download as data_downloader
 from habitat.config import Config
@@ -17,18 +18,20 @@ from habitat.core.registry import registry
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
-import numpy as np
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
     ao_states: Dict[
-        str, Tuple[int, float]
-    ]  # articulated object states: instance_handle -> (link, state)
+        str, Dict[int, float]
+    ]  # articulated object states: {instance_handle -> {link, state}}
     rigid_objs: List[
         Tuple[str, np.array]
     ]  # list of objects, each with (handle, transform)
-    targets: Dict[str, np.array]  # instance_name -> target_transform
-    markers: Dict[str, Tuple[str, Tuple]] = {}  # marker name -> (type, params)
+    targets: Dict[str, np.array]  # {instance_name -> target_transform}
+    markers: Dict[
+        str, Tuple[str, Tuple]
+    ] = {}  # {marker name -> (type, (params))}
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")

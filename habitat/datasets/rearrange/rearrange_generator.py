@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os.path as osp
 import os
+import os.path as osp
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import magnum as mn
@@ -15,7 +15,10 @@ from yacs.config import CfgNode as CN
 import habitat.datasets.rearrange.samplers as samplers
 import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode, RearrangeDatasetV0
+from habitat.datasets.rearrange.rearrange_dataset import (
+    RearrangeDatasetV0,
+    RearrangeEpisode,
+)
 
 
 class RearrangeEpisodeGenerator:
@@ -622,7 +625,7 @@ def get_config_defaults() -> CN:
             ],
         ),
         ("fridge", ["fridge"]),
-        #TODO: receptacle sub-names
+        # TODO: receptacle sub-names
     ]
 
     # ----- sampler definitions ------
@@ -643,7 +646,7 @@ def get_config_defaults() -> CN:
         ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
         ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
-        #TODO: composite object sampling (e.g. apple in bowl)
+        # TODO: composite object sampling (e.g. apple in bowl)
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [
@@ -700,24 +703,58 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    #necessary arguments
-    parser.add_argument("--config", type=str, default=None, help="Relative path to RearrangeEpisode generator config.")
-    parser.add_argument("--out", type=str, default=None, help="Relative path to output generated RearrangeEpisodeDataset.")
-    
-    #mutually exclusive run and investigate options
-    arg_function_group = parser.add_mutually_exclusive_group()
-    arg_function_group.add_argument("--list", action="store_true", help="List available datasource from the configured SceneDataset to console. Use this to quickly investigate available handles for referencing scenes, rigid and articulated objects, and object instances.",)
-    arg_function_group.add_argument("--run", action="store_true", help="Run the episode generator and serialize the results.",)
+    # necessary arguments
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Relative path to RearrangeEpisode generator config.",
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="Relative path to output generated RearrangeEpisodeDataset.",
+    )
 
-    #optional arguments
-    parser.add_argument("--debug", action="store_true", help="Render debug frames and save images/videos during episode generation.")
-    parser.add_argument("--db-output", type=str, default="rearrange_ep_gen_output/", help="Relative path to output debug frames and videos.")
-    parser.add_argument("--num-episodes", type=int, default=1, help="The number of episodes to generate.")
+    # mutually exclusive run and investigate options
+    arg_function_group = parser.add_mutually_exclusive_group()
+    arg_function_group.add_argument(
+        "--list",
+        action="store_true",
+        help="List available datasource from the configured SceneDataset to console. Use this to quickly investigate available handles for referencing scenes, rigid and articulated objects, and object instances.",
+    )
+    arg_function_group.add_argument(
+        "--run",
+        action="store_true",
+        help="Run the episode generator and serialize the results.",
+    )
+
+    # optional arguments
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Render debug frames and save images/videos during episode generation.",
+    )
+    parser.add_argument(
+        "--db-output",
+        type=str,
+        default="rearrange_ep_gen_output/",
+        help="Relative path to output debug frames and videos.",
+    )
+    parser.add_argument(
+        "--num-episodes",
+        type=int,
+        default=1,
+        help="The number of episodes to generate.",
+    )
 
     args, _ = parser.parse_known_args()
 
     if args.config is not None:
-        assert osp.exists(args.config), f"Provided config, '{args.config}', does not exist."
+        assert osp.exists(
+            args.config
+        ), f"Provided config, '{args.config}', does not exist."
 
     cfg = get_config_defaults()
     dataset = RearrangeDatasetV0()
@@ -728,9 +765,9 @@ if __name__ == "__main__":
             os.makedirs(args.db_output)
         ep_gen.vdb.output_path = osp.abspath(args.db_output)
 
-        #Simulator has been initialized and SceneDataset is populated
+        # Simulator has been initialized and SceneDataset is populated
         if args.list:
-            #NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
+            # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
             mm = ep_gen.sim.metadata_mediator
             receptacles = sutils.get_all_scenedataset_receptacles(ep_gen.sim)
             print("==================================")
@@ -740,56 +777,72 @@ if __name__ == "__main__":
             print("--------")
             print(" Scenes:")
             print("--------\n    ", end="")
-            print(*mm.get_scene_handles(), sep = "\n    ")
+            print(*mm.get_scene_handles(), sep="\n    ")
             print("---------------")
             print(" Rigid Objects:")
             print("---------------\n    ", end="")
-            print(*mm.object_template_manager.get_template_handles(), sep = "\n    ")
+            print(
+                *mm.object_template_manager.get_template_handles(),
+                sep="\n    ",
+            )
             print("---------------------")
             print(" Articulated Objects:")
             print("---------------------\n    ", end="")
-            print(*mm.urdf_paths, sep = "\n    ")
+            print(*mm.urdf_paths, sep="\n    ")
 
             print("-------------------------")
             print("Rigid Object Receptacles:")
             print("-------------------------")
             for handle, r_list in receptacles["rigid"].items():
                 print(f"  - {handle}\n    ", end="")
-                print(*r_list, sep = "\n    ")
+                print(*r_list, sep="\n    ")
             print("-------------------------------")
             print("Articulated Object receptacles:")
             print("-------------------------------")
             for handle, r_list in receptacles["articulated"].items():
                 print(f"  - {handle}\n    ", end="")
-                print(*r_list, sep = "\n    ")
+                print(*r_list, sep="\n    ")
 
             print("==================================")
             print("Done listing SceneDataset summary")
             print("==================================")
         elif args.run:
             import time
+
             start_time = time.time()
             dataset.episodes += ep_gen.generate_episodes(args.num_episodes)
             output_path = args.out
             if output_path is None:
-                #default
+                # default
                 output_path = "rearrange_ep_dataset.json.gz"
             elif osp.isdir(output_path) or output_path.endswith("/"):
-                #append a default filename
-                output_path = osp.abspath(output_path) + "/rearrange_ep_dataset.json.gz"
+                # append a default filename
+                output_path = (
+                    osp.abspath(output_path) + "/rearrange_ep_dataset.json.gz"
+                )
             else:
-                #filename
+                # filename
                 if not output_path.endswith(".json.gz"):
                     output_path += ".json.gz"
 
-            if not osp.exists(osp.dirname(output_path)) and len(osp.dirname(output_path)) > 0:
+            if (
+                not osp.exists(osp.dirname(output_path))
+                and len(osp.dirname(output_path)) > 0
+            ):
                 os.makedirs(osp.dirname(output_path))
-            #serialize the dataset
+            # serialize the dataset
             import gzip
-            with gzip.open(output_path, 'wt') as f:
+
+            with gzip.open(output_path, "wt") as f:
                 f.write(dataset.to_json())
-            
-            print("==============================================================")
-            print(f"RearrangeEpisodeGenerator generated {args.num_episodes} episodes in {time.time()-start_time} seconds.")
+
+            print(
+                "=============================================================="
+            )
+            print(
+                f"RearrangeEpisodeGenerator generated {args.num_episodes} episodes in {time.time()-start_time} seconds."
+            )
             print(f"RearrangeDatasetV0 saved to '{osp.abspath(output_path)}'")
-            print("==============================================================")
+            print(
+                "=============================================================="
+            )

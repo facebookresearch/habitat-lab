@@ -177,7 +177,7 @@ def test_rearrange_episode_generator(debug_visualization, num_episodes):
         start_time = time.time()
         dataset.episodes += ep_gen.generate_episodes(num_episodes)
 
-    #test serialization of freshly generated dataset 
+    # test serialization of freshly generated dataset
     check_json_serialization(dataset)
 
     print(
