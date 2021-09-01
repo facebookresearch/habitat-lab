@@ -279,12 +279,18 @@ class Receptacle:
         self,
         name: str,
         bounds: mn.Range3D,
+        up: Optional[
+            mn.Vector3
+        ] = None,  # used for culling, optional in config
         parent_object_handle: str = None,
         is_parent_object_articulated: bool = False,
         parent_link: int = -1,  # -1 is base
     ) -> None:
         self.name = name
         self.bounds = bounds
+        self.up = (
+            up if up is not None else mn.Vector3.y_axis(1.0)
+        )  # default local Y up
         self.parent_object_handle = parent_object_handle
         self.is_parent_object_articulated = is_parent_object_articulated
         self.parent_link = parent_link
@@ -295,29 +301,28 @@ class Receptacle:
         """
         return np.random.uniform(self.bounds.min, self.bounds.max)
 
+    def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        """
+        Isolates boilerplate necessary to extract receptacle global transform from ROs and AOs.
+        """
+        if not self.is_parent_object_articulated:
+            obj_mgr = sim.get_rigid_object_manager()
+            obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
+            # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
+            return obj.visual_scene_nodes[1].absolute_transformation()
+        else:
+            ao_mgr = sim.get_articulated_object_manager()
+            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
+            return obj.get_link_scene_node(
+                self.parent_link
+            ).absolute_transformation()
+
     def sample_uniform_global(self, sim: habitat_sim.Simulator) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB and then transform it into global space.
         """
         local_sample = self.sample_uniform_local()
-        if not self.is_parent_object_articulated:
-            obj_mgr = sim.get_rigid_object_manager()
-            obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
-            # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
-            return (
-                obj.visual_scene_nodes[1]
-                .absolute_transformation()
-                .transform_point(local_sample)
-            )
-        else:
-            ao_mgr = sim.get_articulated_object_manager()
-            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
-            # TODO: AO link in inertial frame?
-            return (
-                obj.get_link_scene_node(self.parent_link)
-                .absolute_transformation()
-                .transform_point(local_sample)
-            )
+        return self.get_global_transform(sim).transform_point(local_sample)
 
 
 def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
@@ -376,6 +381,12 @@ def find_receptacles(sim) -> List[Receptacle]:
                 # this is a receptacle, parse it
                 assert sub_config.has_value("position")
                 assert sub_config.has_value("scale")
+                up = (
+                    None
+                    if not sub_config.has_value("up")
+                    else sub_config.get("up")
+                )
+
                 receptacle_name = (
                     sub_config.get("name")
                     if sub_config.has_value("name")
@@ -388,6 +399,7 @@ def find_receptacles(sim) -> List[Receptacle]:
                             sub_config.get("position"),
                             sub_config.get("scale"),
                         ),
+                        up,
                         obj_handle,
                     )
                 )
@@ -403,6 +415,11 @@ def find_receptacles(sim) -> List[Receptacle]:
                 # this is a receptacle, parse it
                 assert sub_config.has_value("position")
                 assert sub_config.has_value("scale")
+                up = (
+                    None
+                    if not sub_config.has_value("up")
+                    else sub_config.get("up")
+                )
                 assert sub_config.has_value("parent_link")
                 receptacle_name = (
                     sub_config.get("name")
@@ -425,6 +442,7 @@ def find_receptacles(sim) -> List[Receptacle]:
                             sub_config.get("position"),
                             sub_config.get("scale"),
                         ),
+                        up,
                         obj_handle,
                         is_parent_object_articulated=True,
                         parent_link=parent_link_ix,

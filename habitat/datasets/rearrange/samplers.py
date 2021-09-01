@@ -144,10 +144,14 @@ class ObjectSampler:
         self.receptacle_candidates = None
 
     def sample_receptacle(
-        self, sim: habitat_sim.Simulator
+        self,
+        sim: habitat_sim.Simulator,
+        cull_tilted_receptacles: bool = True,
+        tilt_tolerance: float = 0.9,
     ) -> sutils.Receptacle:
         """
         Sample a receptacle from the receptacle_set and return relevant information.
+        If cull_tilted_receptacles is True, receptacles are culled for objects with local "down" (-Y), not aligned with gravity (unit dot product compared to tilt_tolerance).
         """
         if self.receptacle_instances is None:
             self.receptacle_instances = sutils.find_receptacles(sim)
@@ -168,12 +172,26 @@ class ObjectSampler:
                                 if name_constraint not in receptacle.name:
                                     culled = True
                                     break
+                            if cull_tilted_receptacles and not culled:
+                                obj_down = (
+                                    receptacle.get_global_transform(sim)
+                                    .transform_vector(-receptacle.up)
+                                    .normalized()
+                                )
+                                gravity_alignment = mn.math.dot(
+                                    obj_down, sim.get_gravity().normalized()
+                                )
+                                if gravity_alignment < tilt_tolerance:
+                                    culled = True
+                                    print(
+                                        f"Culled by tilt: '{receptacle.name}', {gravity_alignment}"
+                                    )
                             if not culled:
                                 self.receptacle_candidates.append(receptacle)
 
         assert (
             len(self.receptacle_candidates) > 0
-        ), f"No receptacle instances found matching this sampler's requirements. Likely an EpisodeGenerator config problem. Cull this scene from your dataset? Scene='{sim.config.sim_config.scene_id}'. Receptacle constraints ='{self.receptacle_set}'"
+        ), f"No receptacle instances found matching this sampler's requirements. Likely a sampler config constraint is not feasible for all scenes in the dataset. Cull this scene from your dataset? Scene='{sim.config.sim_cfg.scene_id}'. Receptacle constraints ='{self.receptacle_set}'"
         target_receptacle = self.receptacle_candidates[
             random.randrange(0, len(self.receptacle_candidates))
         ]

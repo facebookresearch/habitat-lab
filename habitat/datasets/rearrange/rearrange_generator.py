@@ -662,7 +662,7 @@ def get_config_defaults() -> CN:
         # (name, type, (params))
         # - uniform sampler params: ([object sets], [receptacle sets], min samples, max samples, orientation_sampling)
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 3, "up"))
-        # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 5, "up")),
+        # ("cheezits", "uniform", (["cheezit"], ["table3"], 3, 5, "up")),
         # ("any", "uniform", (["any"], ["any"], 3, 5, "up")),
         # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
