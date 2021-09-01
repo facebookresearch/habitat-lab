@@ -66,9 +66,17 @@ class RearrangeEpisodeGenerator:
         """
         Extracts scene, object, and receptacle sets from the yaml config file and constructs dicts for later reference.
         """
-        self._scene_sets: Dict[str, List[str]] = {}
-        self._obj_sets: Dict[str, List[str]] = {}
-        self._receptacle_sets: Dict[str, List[str]] = {}
+        self._scene_sets: Dict[
+            str, List[str]
+        ] = {}  # {scene set name -> [scene handles]}
+        self._obj_sets: Dict[
+            str, List[str]
+        ] = {}  # {object set name -> [object handles]}
+        self._receptacle_sets: Dict[
+            str, Tuple[List[str], List[str]]
+        ] = (
+            {}
+        )  # {receptacle set name -> ([object handles], [name substrings])}
 
         for scene_set_name, scenes in self.cfg.scene_sets:
             self._scene_sets[scene_set_name] = scenes
@@ -76,8 +84,8 @@ class RearrangeEpisodeGenerator:
         for obj_set_name, objects in self.cfg.object_sets:
             self._obj_sets[obj_set_name] = objects
 
-        for receptacle_set_name, receptacles in self.cfg.receptacle_sets:
-            self._receptacle_sets[receptacle_set_name] = receptacles
+        for receptacle_set_name, receptacle_info in self.cfg.receptacle_sets:
+            self._receptacle_sets[receptacle_set_name] = receptacle_info
 
         print(f"self._scene_sets = {self._scene_sets}")
         print(f"self._obj_sets = {self._obj_sets}")
@@ -101,8 +109,10 @@ class RearrangeEpisodeGenerator:
                 # merge and flatten object and receptacle sets
                 objects = [x for y in params[0] for x in self._obj_sets[y]]
                 receptacles = [
-                    x for y in params[1] for x in self._receptacle_sets[y]
+                    (self._receptacle_sets[y][0], self._receptacle_sets[y][1])
+                    for y in params[1]
                 ]
+
                 print(f"objects = {objects}")
                 print(f"receptacles = {receptacles}")
                 self._obj_samplers[obj_sampler_name] = samplers.ObjectSampler(
@@ -135,7 +145,8 @@ class RearrangeEpisodeGenerator:
                     for x in self.episode_data["sampled_objects"][y]
                 ]
                 receptacles = [
-                    x for y in params[1] for x in self._receptacle_sets[y]
+                    (self._receptacle_sets[y][0], self._receptacle_sets[y][1])
+                    for y in params[1]
                 ]
                 print(f"object instances = {object_instances}")
                 print(f"receptacles = {receptacles}")
@@ -610,22 +621,29 @@ def get_config_defaults() -> CN:
         ),
         ("cheezit", ["003_cracker_box"]),
     ]
-    # define the sets of receptacles which can be sampled from. [(set_name, [receptacle object handle substrings])]
-    # TODO: allow "type" to be defined to further constrain the search (e.g. "surface" or "drawer").
+    # define the sets of receptacles which can be sampled from.
+    #  [(set_name, ([object handle substrings], [receptacle name substrings]))]
+    #  receptacle name substrings are used to constrain sets to receptacles with matching substrings in their names
     _C.receptacle_sets = [
-        ("table", ["frl_apartment_table_01"]),
-        ("table3", ["frl_apartment_table_03"]),
+        ("table", (["frl_apartment_table_01"], [])),
+        ("table3", (["frl_apartment_table_03"], [])),
         (
             "any",
-            [
-                "frl_apartment_table_01",
-                "frl_apartment_table_02",
-                "frl_apartment_table_03",
-                "frl_apartment_chair_01",
-            ],
+            (
+                [
+                    "frl_apartment_table_01",
+                    "frl_apartment_table_02",
+                    "frl_apartment_table_03",
+                    "frl_apartment_chair_01",
+                ],
+                [],
+            ),
         ),
-        ("fridge", ["fridge"]),
-        # TODO: receptacle sub-names
+        ("fridge", (["fridge"], [])),
+        (
+            "fridge_middle",
+            (["fridge"], ["middle"]),
+        ),  # only targets shelves with "middle" in the receptacle name.
     ]
 
     # ----- sampler definitions ------
@@ -643,9 +661,14 @@ def get_config_defaults() -> CN:
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 3, "up"))
         # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 5, "up")),
         # ("any", "uniform", (["any"], ["any"], 3, 5, "up")),
-        ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
+        # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
-        ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
+        # ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
+        (
+            "fridge_middle",
+            "uniform",
+            (["any"], ["fridge_middle"], 1, 30, "up"),
+        ),
         # TODO: composite object sampling (e.g. apple in bowl)
     ]
     # define the desired object target sampling (i.e., where should an existing object go)

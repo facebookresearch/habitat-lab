@@ -108,13 +108,20 @@ class ObjectSampler:
     def __init__(
         self,
         object_set: List[str],
-        receptacle_set: List[str],
+        receptacle_set: List[Tuple[List[str], List[str]]],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
     ) -> None:
         self.object_set = object_set
-        self.receptacle_set = receptacle_set
-        self.receptacle_instances: Optional[List[sutils.Receptacle]] = None
+        self.receptacle_set = (
+            receptacle_set  # the incoming substring parameters
+        )
+        self.receptacle_instances: Optional[
+            List[sutils.Receptacle]
+        ] = None  # all receptacles in the scene
+        self.receptacle_candidates: Optional[
+            List[sutils.Receptacle]
+        ] = None  # the specific receptacle instances relevant to this sampler
         assert len(self.object_set) > 0
         assert len(self.receptacle_set) > 0
         self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
@@ -132,8 +139,9 @@ class ObjectSampler:
         """
         Reset any per-scene variables.
         """
-        # instances should be scraped for every new scene
+        # receptacle instances should be scraped for every new scene
         self.receptacle_instances = None
+        self.receptacle_candidates = None
 
     def sample_receptacle(
         self, sim: habitat_sim.Simulator
@@ -144,30 +152,30 @@ class ObjectSampler:
         if self.receptacle_instances is None:
             self.receptacle_instances = sutils.find_receptacles(sim)
 
-        valid_receptacle_targets = []
-        receptacle_candidates = self.receptacle_set[:]  # copy
-
-        while len(receptacle_candidates) > 0:
-            # uniformly sample a receptacle handle
-            receptacle_handle = receptacle_candidates[
-                random.randrange(0, len(receptacle_candidates))
-            ]
-
-            # get all receptacles matching the handle and filter them by constraints
+        if self.receptacle_candidates is None:
+            self.receptacle_candidates = []
             for receptacle in self.receptacle_instances:
-                if receptacle_handle in receptacle.parent_object_handle:
-                    valid_receptacle_targets.append(receptacle)
+                for (
+                    r_key_tuple
+                ) in (
+                    self.receptacle_set
+                ):  # ([object names], [receptacle substrings])
+                    for object_handle in r_key_tuple[0]:
+                        if object_handle in receptacle.parent_object_handle:
+                            # matches the object, now check name constraints
+                            culled = False
+                            for name_constraint in r_key_tuple[1]:
+                                if name_constraint not in receptacle.name:
+                                    culled = True
+                                    break
+                            if not culled:
+                                self.receptacle_candidates.append(receptacle)
 
-            if len(valid_receptacle_targets) == 0:
-                # we didn't find any matching instances, so remove this receptacle from consideration
-                receptacle_candidates.remove(receptacle_handle)
-            else:
-                break
         assert (
-            len(valid_receptacle_targets) > 0
-        ), f"No receptacle instances found matching this sampler. Likely an EpisodeGenerator config problem. Cull this scene? Scene='{sim.config.sim_config.scene_id}'. Receptacles='{self.receptacle_set}'"
-        target_receptacle = valid_receptacle_targets[
-            random.randrange(0, len(valid_receptacle_targets))
+            len(self.receptacle_candidates) > 0
+        ), f"No receptacle instances found matching this sampler's requirements. Likely an EpisodeGenerator config problem. Cull this scene from your dataset? Scene='{sim.config.sim_config.scene_id}'. Receptacle constraints ='{self.receptacle_set}'"
+        target_receptacle = self.receptacle_candidates[
+            random.randrange(0, len(self.receptacle_candidates))
         ]
         return target_receptacle
 
@@ -345,7 +353,7 @@ class ObjectTargetSampler(ObjectSampler):
     def __init__(
         self,
         object_instance_set: List[habitat_sim.physics.ManagedRigidObject],
-        receptacle_set: List[str],
+        receptacle_set: List[Tuple[List[str], List[str]]],
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
     ) -> None:
