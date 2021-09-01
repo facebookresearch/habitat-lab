@@ -176,13 +176,10 @@ def test_rearrange_episode_generator(debug_visualization, num_episodes):
     ) as ep_gen:
         start_time = time.time()
         dataset.episodes += ep_gen.generate_episodes(num_episodes)
-        
-        #test export
-        #import os.path as osp
-        #ep_file = osp.join("rearrange_ep_gen_output/test_rearrange_ep_dataset.json.gz")
-        #import gzip
-        #with gzip.open(ep_file, 'wt') as f:
-        #    f.write(dataset.to_json())
+
+    #test serialization of freshly generated dataset 
+    check_json_serialization(dataset)
+
     print(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )
