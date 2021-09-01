@@ -620,6 +620,8 @@ def get_config_defaults() -> CN:
             ],
         ),
         ("cheezit", ["003_cracker_box"]),
+        ("basket", ["frl_apartment_basket"]),
+        ("apple", ["013_apple"]),
     ]
     # define the sets of receptacles which can be sampled from.
     #  [(set_name, ([object handle substrings], [receptacle name substrings]))]
@@ -644,6 +646,7 @@ def get_config_defaults() -> CN:
             "fridge_middle",
             (["fridge"], ["middle"]),
         ),  # only targets shelves with "middle" in the receptacle name.
+        ("basket", (["frl_apartment_basket"], [])),
     ]
 
     # ----- sampler definitions ------
@@ -669,7 +672,15 @@ def get_config_defaults() -> CN:
             "uniform",
             (["any"], ["fridge_middle"], 1, 30, "up"),
         ),
-        # TODO: composite object sampling (e.g. apple in bowl)
+        # Composite object sampling (e.g. apple in bowl)
+        #  - parameterized by object and receptacle sets, but inclusive of listed samplers BEFORE the composite sampler
+        # Example: sample a basket placement on a table and then place apples in the basket
+        ("basket_sampling", "uniform", (["basket"], ["table"], 1, 1, "up")),
+        (
+            "in_basket_sampling",
+            "uniform",
+            (["apple"], ["basket"], 1, 2, "any"),
+        ),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [

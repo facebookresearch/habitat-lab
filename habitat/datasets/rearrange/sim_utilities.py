@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import os.path as osp
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
@@ -113,9 +113,46 @@ class DebugVisualizer:
             image.show()
         return file_path
 
-    def peek_object(
+    def peek_rigid_object(
+        self,
+        obj: habitat_sim.physics.ManagedRigidObject,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+    ) -> str:
+        """
+        Specialization to peek a rigid object.
+        See _peek_object.
+        """
+
+        return self._peek_object(
+            obj,
+            obj.root_scene_node.cumulative_bb,
+            cam_local_pos,
+            peek_all_axis,
+        )
+
+    def peek_articulated_object(
         self,
         obj: habitat_sim.physics.ManagedArticulatedObject,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+    ) -> str:
+        """
+        Specialization to peek an articulated object.
+        See _peek_object.
+        """
+
+        obj_bb = get_ao_global_bb(obj).size()
+
+        return self._peek_object(obj, obj_bb, cam_local_pos, peek_all_axis)
+
+    def _peek_object(
+        self,
+        obj: Union[
+            habitat_sim.physics.ManagedArticulatedObject,
+            habitat_sim.physics.ManagedRigidObject,
+        ],
+        obj_bb: mn.Range3D,
         cam_local_pos: Optional[mn.Vector3] = None,
         peek_all_axis: bool = False,
     ) -> str:
@@ -125,7 +162,7 @@ class DebugVisualizer:
         If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
         """
         look_at = obj.translation
-        bb_size = get_ao_global_bb(obj).size()
+        bb_size = obj_bb.size()
         # TODO: query fov and aspect from the camera spec
         fov = 90
         aspect = 0.75
