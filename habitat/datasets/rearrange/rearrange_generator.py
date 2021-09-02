@@ -266,10 +266,6 @@ class RearrangeEpisodeGenerator:
         cur_scene_name = self._scene_sampler.sample()
         self.initialize_sim(cur_scene_name, self.cfg.dataset_path)
 
-        if self._render_debug_obs:
-            self.visualize_scene_receptacles()
-            self.vdb.make_debug_video(prefix="receptacles_")
-
         return cur_scene_name
 
     def visualize_scene_receptacles(self) -> None:
@@ -354,6 +350,11 @@ class RearrangeEpisodeGenerator:
                     ao_states[sampled_instance.handle] = {}
                 for link_ix, joint_state in link_states.items():
                     ao_states[sampled_instance.handle][link_ix] = joint_state
+
+        # visualize after setting AO states to correctly see scene state
+        if self._render_debug_obs:
+            self.visualize_scene_receptacles()
+            self.vdb.make_debug_video(prefix="receptacles_")
 
         # sample object placements
         for sampler_name, obj_sampler in self._obj_samplers.items():
@@ -647,13 +648,14 @@ def get_config_defaults() -> CN:
             (["fridge"], ["middle"]),
         ),  # only targets shelves with "middle" in the receptacle name.
         ("basket", (["frl_apartment_basket"], [])),
+        ("counter", (["kitchen_counter"], ["drawer_right"])),
     ]
 
     # ----- sampler definitions ------
     # define the desired scene sampling (sampler type, (sampler parameters tuple))
     # NOTE: There must be exactly one scene sampler!
     # "single" scene sampler params ("scene name")
-    _C.scene_sampler = ("single", ("v3_sc0_staging_00",))
+    _C.scene_sampler = ("single", ("v3_sc1_staging_00",))
     # "subset" scene sampler params ([included scene sets], [excluded scene sets])
     # _C.scene_sampler = ("subset", (["v3_sc"], []))
 
@@ -667,20 +669,21 @@ def get_config_defaults() -> CN:
         # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
         # ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
-        (
-            "fridge_middle",
-            "uniform",
-            (["any"], ["fridge_middle"], 1, 30, "up"),
-        ),
+        # (
+        #     "fridge_middle",
+        #     "uniform",
+        #     (["any"], ["fridge_middle"], 1, 30, "up"),
+        # ),
         # Composite object sampling (e.g. apple in bowl)
         #  - parameterized by object and receptacle sets, but inclusive of listed samplers BEFORE the composite sampler
         # Example: sample a basket placement on a table and then place apples in the basket
-        ("basket_sampling", "uniform", (["basket"], ["table"], 1, 1, "up")),
-        (
-            "in_basket_sampling",
-            "uniform",
-            (["apple"], ["basket"], 1, 2, "any"),
-        ),
+        # ("basket_sampling", "uniform", (["basket"], ["table"], 1, 1, "up")),
+        # (
+        #     "in_basket_sampling",
+        #     "uniform",
+        #     (["apple"], ["basket"], 1, 2, "any"),
+        # ),
+        ("counter", "uniform", (["any"], ["counter"], 1, 30, "up")),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [
@@ -706,6 +709,18 @@ def get_config_defaults() -> CN:
                     (
                         "fridge",
                         [("top_door", 1.5, 1.5), ("bottom_door", 1.5, 1.5)],
+                    ),
+                    (
+                        "counter",
+                        [
+                            ("drawer1_top", 0.25, 0.25),
+                            ("drawer1_bottom", 0.5, 0.5),
+                            ("drawer2_top", 0.5, 0.5),
+                            ("drawer2_middle", 0.35, 0.35),
+                            ("drawer2_bottom", 0.5, 0.5),
+                            ("drawer3", 0.25, 0.25),
+                            ("drawer4", 0.5, 0.5),
+                        ],
                     ),
                 ],
             ),

@@ -171,6 +171,9 @@ class ObjectSampler:
                             for name_constraint in r_key_tuple[1]:
                                 if name_constraint not in receptacle.name:
                                     culled = True
+                                    print(
+                                        f"     > Culled {receptacle.name} for no name constraint {name_constraint}"
+                                    )
                                     break
                             if cull_tilted_receptacles and not culled:
                                 obj_down = (

@@ -142,7 +142,7 @@ class DebugVisualizer:
         See _peek_object.
         """
 
-        obj_bb = get_ao_global_bb(obj).size()
+        obj_bb = get_ao_global_bb(obj)
 
         return self._peek_object(obj, obj_bb, cam_local_pos, peek_all_axis)
 
@@ -161,7 +161,8 @@ class DebugVisualizer:
         Return the filepath.
         If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
         """
-        look_at = obj.translation
+        obj_abs_transform = obj.root_scene_node.absolute_transformation()
+        look_at = obj_abs_transform.translation
         bb_size = obj_bb.size()
         # TODO: query fov and aspect from the camera spec
         fov = 90
@@ -177,7 +178,7 @@ class DebugVisualizer:
             cam_local_pos = mn.Vector3(0, 0, -1)
         if not peek_all_axis:
             look_from = (
-                obj.transformation.transform_vector(cam_local_pos).normalized()
+                obj_abs_transform.transform_vector(cam_local_pos).normalized()
                 * distance
                 + look_at
             )
@@ -193,7 +194,7 @@ class DebugVisualizer:
                 axis_vec = mn.Vector3()
                 axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
                 look_from = (
-                    obj.transformation.transform_vector(axis_vec).normalized()
+                    obj_abs_transform.transform_vector(axis_vec).normalized()
                     * distance
                     + look_at
                 )
@@ -341,7 +342,7 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     for template_handle in rotm.get_template_handles(""):
         obj_template = rotm.get_template_by_handle(template_handle)
         for item in obj_template.get_user_config().get_subconfig_keys():
-            if item.startswith("bb_"):
+            if item.startswith("receptacle_"):
                 if template_handle not in receptacles["rigid"]:
                     receptacles["rigid"][template_handle] = []
                 receptacles["rigid"][template_handle].append(item)
@@ -351,7 +352,7 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     for urdf_handle, urdf_path in sim.metadata_mediator.urdf_paths.items():
         ao = aom.add_articulated_object_from_urdf(urdf_path)
         for item in ao.user_attributes.get_subconfig_keys():
-            if item.startswith("bb_"):
+            if item.startswith("receptacle_"):
                 if urdf_handle not in receptacles["articulated"]:
                     receptacles["articulated"][urdf_handle] = []
                 receptacles["articulated"][urdf_handle].append(item)
@@ -376,7 +377,7 @@ def find_receptacles(sim) -> List[Receptacle]:
         user_attr = obj.user_attributes
 
         for sub_config_key in user_attr.get_subconfig_keys():
-            if sub_config_key.startswith("bb_"):
+            if sub_config_key.startswith("receptacle_"):
                 sub_config = user_attr.get_subconfig(sub_config_key)
                 # this is a receptacle, parse it
                 assert sub_config.has_value("position")
@@ -410,7 +411,7 @@ def find_receptacles(sim) -> List[Receptacle]:
         user_attr = obj.user_attributes
 
         for sub_config_key in user_attr.get_subconfig_keys():
-            if sub_config_key.startswith("bb_"):
+            if sub_config_key.startswith("receptacle_"):
                 sub_config = user_attr.get_subconfig(sub_config_key)
                 # this is a receptacle, parse it
                 assert sub_config.has_value("position")
