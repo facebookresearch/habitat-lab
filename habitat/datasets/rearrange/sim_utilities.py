@@ -440,8 +440,8 @@ def find_receptacles(sim) -> List[Receptacle]:
                     Receptacle(
                         receptacle_name,
                         mn.Range3D.from_center(
-                            sub_config.get("position"),
-                            sub_config.get("scale"),
+                            sub_config.get("position") * obj.global_scale,
+                            sub_config.get("scale") * obj.global_scale,
                         ),
                         up,
                         obj_handle,
@@ -619,9 +619,10 @@ def bb_ray_prescreen(
                 elif hit.object_id in support_obj_ids:
                     hit_point = ray.origin + ray.direction * hit.ray_distance
                     support_impacts[ix] = hit_point
-                    support_impact_height = (
-                        hit_point.projected_onto_normalized(-gravity_dir)
+                    support_impact_height = mn.math.dot(
+                        hit_point, -gravity_dir
                     )
+
                     if (
                         highest_support_impact is None
                         or highest_support_impact_height

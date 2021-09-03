@@ -648,7 +648,8 @@ def get_config_defaults() -> CN:
             (["fridge"], ["middle"]),
         ),  # only targets shelves with "middle" in the receptacle name.
         ("basket", (["frl_apartment_basket"], [])),
-        ("counter", (["kitchen_counter"], ["drawer_right"])),
+        ("counter", (["kitchen_counter"], [])),
+        ("cupboard", (["kitchenCupboard"], [])),
     ]
 
     # ----- sampler definitions ------
@@ -684,6 +685,7 @@ def get_config_defaults() -> CN:
         #     (["apple"], ["basket"], 1, 2, "any"),
         # ),
         ("counter", "uniform", (["any"], ["counter"], 1, 30, "up")),
+        # ("cupboard", "uniform", (["any"], ["cupboard"], 15, 30, "up")),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
     _C.obj_target_samplers = [
@@ -702,7 +704,7 @@ def get_config_defaults() -> CN:
         # params: ([("ao handle", [("link name", min, max)])])
         # NOTE: the trailing commas are necessary to define tuples of 1 object
         (
-            "open_fridge_doors",
+            "open_aos",
             "composite",
             (
                 [
@@ -722,6 +724,20 @@ def get_config_defaults() -> CN:
                             ("drawer4", 0.5, 0.5),
                         ],
                     ),
+                    # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
+                    # (
+                    #     "cupBoard",
+                    #     [
+                    #         ("kitchencupboard_doorWindow_1L", -1.5, -1.5),
+                    #         ("kitchencupboard_doorWindow_1R", 1.5, 1.5),
+                    #         ("kitchencupboard_doorWhole_1L", -1.5, -1.5),
+                    #         ("kitchencupboard_doorWhole_1R", 1.5, 1.5),
+                    #         ("kitchencupboard_doorWhole_2L", -1.5, -1.5),
+                    #         ("kitchencupboard_doorWhole_2R", 1.5, 1.5),
+                    #         ("kitchencupboard_doorWindow_2L", -1.5, -1.5),
+                    #         ("kitchencupboard_doorWindow_2R", 1.5, 1.5),
+                    #     ],
+                    # ),
                 ],
             ),
         )

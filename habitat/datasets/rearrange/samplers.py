@@ -538,6 +538,9 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
         Return a list of tuples (instance_handle, link_name, state)
         On failure, return None.
         """
+        ids_to_names = sutils.get_all_object_ids(sim)
+        ids_to_names[-1] = "_stage"
+        print(ids_to_names)
         # first collect all instances associated with requested samplers
         aom = sim.get_articulated_object_manager()
         matching_ao_instances: Dict[
@@ -591,6 +594,20 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
             for ao_handle in matching_ao_instances:
                 for ao_instance in matching_ao_instances[ao_handle]:
                     if ao_instance.contact_test():
+                        print(f"ao_handle = {ao_handle} failed contact test.")
+                        sim.perform_discrete_collision_detection()
+                        cps = sim.get_physics_contact_points()
+                        print(ao_instance.handle)
+                        for cp in cps:
+                            if (
+                                ao_instance.handle
+                                in ids_to_names[cp.object_id_a]
+                                or ao_instance.handle
+                                in ids_to_names[cp.object_id_b]
+                            ):
+                                print(
+                                    f" contact between ({cp.object_id_a})'{ids_to_names[cp.object_id_a]}' and ({cp.object_id_b})'{ids_to_names[cp.object_id_b]}'"
+                                )
                         valid_configuration = False
                         break
                 if not valid_configuration:
