@@ -91,7 +91,7 @@ class MotionPlanner:
         if pic.shape[-1] > 3:
             pic = pic[:, :, :3]
         im = Image.fromarray(pic)
-        save_name = "%s/%s%s_%s.jpeg" % (
+        save_name = "{}/{}{}_{}.jpeg".format(
             self._config.DEBUG_DIR,
             before_txt,
             str(uuid.uuid4())[:4],

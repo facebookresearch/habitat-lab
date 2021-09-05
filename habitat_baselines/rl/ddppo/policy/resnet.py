@@ -47,7 +47,7 @@ class BasicBlock(nn.Module):
         downsample=None,
         cardinality=1,
     ):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.convs = nn.Sequential(
             conv3x3(inplanes, planes, stride, groups=cardinality),
             nn.GroupNorm(ngroups, planes),
@@ -203,7 +203,7 @@ class ResNet(nn.Module):
         layers: List[int],
         cardinality: int = 1,
     ) -> None:
-        super(ResNet, self).__init__()
+        super().__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels,

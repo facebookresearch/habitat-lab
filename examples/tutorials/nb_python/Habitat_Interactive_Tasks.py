@@ -14,7 +14,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.11.5
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -1940,9 +1940,9 @@ class RearrangementTrainer(PPOTrainer):
 
                 outputs = envs.step([a[0].item() for a in actions])
 
-                observations, rewards, dones, infos = [
+                observations, rewards, dones, infos = (
                     list(x) for x in zip(*outputs)
-                ]
+                )
                 batch = batch_obs(observations, device=self.device)
 
                 not_done_masks = torch.tensor(
@@ -1971,9 +1971,7 @@ class RearrangementTrainer(PPOTrainer):
 
                     print("Evaluation Finished.")
                     print("Success: {}".format(infos[0]["episode_success"]))
-                    print(
-                        "Reward: {}".format(current_episode_reward[0].item())
-                    )
+                    print(f"Reward: {current_episode_reward[0].item()}")
                     print(
                         "Distance To Goal: {}".format(
                             infos[0]["object_to_goal_distance"]

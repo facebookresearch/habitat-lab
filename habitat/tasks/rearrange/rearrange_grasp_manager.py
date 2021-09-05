@@ -145,5 +145,5 @@ class RearrangeGraspManager:
             ),
         ]
 
-        if any((x == -1 for x in self._snap_constraints)):
+        if any(x == -1 for x in self._snap_constraints):
             raise ValueError("Created bad constraint")

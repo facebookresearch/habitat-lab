@@ -30,9 +30,7 @@ PARTIAL_LOAD_SCENES = 3
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
-    logger.info(
-        "JSON conversion finished. {} sec".format((time.time() - start_time))
-    )
+    logger.info(f"JSON conversion finished. {time.time() - start_time} sec")
     decoded_dataset = RearrangeDatasetV0()
     decoded_dataset.from_json(json_str)
     decoded_dataset.config = dataset.config

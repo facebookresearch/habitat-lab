@@ -40,7 +40,7 @@ class MultiObjSensor(PointGoalSensor):
     def __init__(self, *args, task, **kwargs):
         self._task = task
         self._sim: RearrangeSim
-        super(MultiObjSensor, self).__init__(*args, task=task, **kwargs)
+        super().__init__(*args, task=task, **kwargs)
 
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()

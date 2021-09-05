@@ -485,9 +485,9 @@ class PPOTrainer(BaseRLTrainer):
             for index_env in range(env_slice.start, env_slice.stop)
         ]
 
-        observations, rewards_l, dones, infos = [
+        observations, rewards_l, dones, infos = (
             list(x) for x in zip(*outputs)
-        ]
+        )
 
         self.env_time += time.time() - t_step_env
 
@@ -1011,9 +1011,9 @@ class PPOTrainer(BaseRLTrainer):
 
             outputs = self.envs.step(step_data)
 
-            observations, rewards_l, dones, infos = [
+            observations, rewards_l, dones, infos = (
                 list(x) for x in zip(*outputs)
-            ]
+            )
             batch = batch_obs(
                 observations,
                 device=self.device,

@@ -176,7 +176,7 @@ class VocabFromText(VocabDict):
         if only_unk_extra:
             extras = [self.UNK_TOKEN]
 
-        super(VocabFromText, self).__init__(word_list=extras + token_list)
+        super().__init__(word_list=extras + token_list)
 
 
 def get_action_shortest_path(

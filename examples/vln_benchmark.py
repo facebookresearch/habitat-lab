@@ -70,7 +70,7 @@ def main():
 
     print("Benchmark for Reference Path Follower agent:")
     for k, v in metrics.items():
-        print("{}: {:.3f}".format(k, v))
+        print(f"{k}: {v:.3f}")
 
 
 if __name__ == "__main__":

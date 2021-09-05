@@ -86,16 +86,16 @@ class VQATrainer(BaseILTrainer):
         pred_answer = sorted(ans_vocab_dict.word2idx_dict.keys())[index]
         gt_answer = sorted(ans_vocab_dict.word2idx_dict.keys())[gt_answer]
 
-        logger.info("Question: {}".format(q_string))
-        logger.info("Predicted answer: {}".format(pred_answer))
-        logger.info("Ground-truth answer: {}".format(gt_answer))
+        logger.info(f"Question: {q_string}")
+        logger.info(f"Predicted answer: {pred_answer}")
+        logger.info(f"Ground-truth answer: {gt_answer}")
 
         result_path = self.config.RESULTS_DIR.format(
             split=self.config.TASK_CONFIG.DATASET.SPLIT
         )
 
         result_path = os.path.join(
-            result_path, "ckpt_{}_{}_image.jpg".format(ckpt_idx, episode_id)
+            result_path, f"ckpt_{ckpt_idx}_{episode_id}_image.jpg"
         )
 
         save_vqa_image_results(
@@ -123,7 +123,7 @@ class VQATrainer(BaseILTrainer):
                 "episode_id",
                 "question",
                 "answer",
-                *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
+                *(f"{x:0=3d}.jpg" for x in range(0, 5)),
             )
             .map(img_bytes_2_np_array)
         )
@@ -132,7 +132,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size
         )
 
-        logger.info("train_loader has {} samples".format(len(vqa_dataset)))
+        logger.info(f"train_loader has {len(vqa_dataset)} samples")
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
@@ -215,7 +215,7 @@ class VQATrainer(BaseILTrainer):
                     avg_mean_reciprocal_rank += mean_reciprocal_rank
 
                     if t % config.LOG_INTERVAL == 0:
-                        logger.info("Epoch: {}".format(epoch))
+                        logger.info(f"Epoch: {epoch}")
                         logger.info(metrics.get_stat_string())
 
                         writer.add_scalar("loss", metrics_loss, t)
@@ -239,7 +239,7 @@ class VQATrainer(BaseILTrainer):
                 avg_mean_reciprocal_rank /= num_batches
 
                 end_time = time.time()
-                time_taken = "{:.1f}".format((end_time - start_time) / 60)
+                time_taken = f"{(end_time - start_time) / 60:.1f}"
 
                 logger.info(
                     "Epoch {} completed. Time taken: {} minutes.".format(
@@ -247,9 +247,9 @@ class VQATrainer(BaseILTrainer):
                     )
                 )
 
-                logger.info("Average loss: {:.2f}".format(avg_loss))
-                logger.info("Average accuracy: {:.2f}".format(avg_accuracy))
-                logger.info("Average mean rank: {:.2f}".format(avg_mean_rank))
+                logger.info(f"Average loss: {avg_loss:.2f}")
+                logger.info(f"Average accuracy: {avg_accuracy:.2f}")
+                logger.info(f"Average mean rank: {avg_mean_rank:.2f}")
                 logger.info(
                     "Average mean reciprocal rank: {:.2f}".format(
                         avg_mean_reciprocal_rank
@@ -258,9 +258,7 @@ class VQATrainer(BaseILTrainer):
 
                 print("-----------------------------------------")
 
-                self.save_checkpoint(
-                    model.state_dict(), "epoch_{}.ckpt".format(epoch)
-                )
+                self.save_checkpoint(model.state_dict(), f"epoch_{epoch}.ckpt")
 
                 epoch += 1
 
@@ -297,7 +295,7 @@ class VQATrainer(BaseILTrainer):
                 "episode_id",
                 "question",
                 "answer",
-                *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
+                *(f"{x:0=3d}.jpg" for x in range(0, 5)),
             )
             .map(img_bytes_2_np_array)
         )
@@ -306,7 +304,7 @@ class VQATrainer(BaseILTrainer):
             vqa_dataset, batch_size=config.IL.VQA.batch_size
         )
 
-        logger.info("eval_loader has {} samples".format(len(vqa_dataset)))
+        logger.info(f"eval_loader has {len(vqa_dataset)} samples")
 
         q_vocab_dict, ans_vocab_dict = vqa_dataset.get_vocab_dicts()
 
@@ -410,9 +408,9 @@ class VQATrainer(BaseILTrainer):
             checkpoint_index,
         )
 
-        logger.info("Average loss: {:.2f}".format(avg_loss))
-        logger.info("Average accuracy: {:.2f}".format(avg_accuracy))
-        logger.info("Average mean rank: {:.2f}".format(avg_mean_rank))
+        logger.info(f"Average loss: {avg_loss:.2f}")
+        logger.info(f"Average accuracy: {avg_accuracy:.2f}")
+        logger.info(f"Average mean rank: {avg_mean_rank:.2f}")
         logger.info(
             "Average mean reciprocal rank: {:.2f}".format(
                 avg_mean_reciprocal_rank

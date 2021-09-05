@@ -79,9 +79,7 @@ def get_minos_for_sim_eqa_config():
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
-    logger.info(
-        "JSON conversion finished. {} sec".format((time.time() - start_time))
-    )
+    logger.info(f"JSON conversion finished. {time.time() - start_time} sec")
     decoded_dataset = dataset.__class__()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) > 0

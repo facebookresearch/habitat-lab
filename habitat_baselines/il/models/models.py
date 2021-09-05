@@ -48,7 +48,7 @@ class MultitaskCNN(nn.Module):
         checkpoint_path: str = "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt",
         freeze_encoder: bool = False,
     ) -> None:
-        super(MultitaskCNN, self).__init__()
+        super().__init__()
 
         self.num_classes = num_classes
         self.only_encoder = only_encoder
@@ -103,9 +103,7 @@ class MultitaskCNN(nn.Module):
 
         if self.only_encoder:
             if pretrained:
-                logger.info(
-                    "Loading CNN weights from {}".format(checkpoint_path)
-                )
+                logger.info(f"Loading CNN weights from {checkpoint_path}")
                 checkpoint = torch.load(
                     checkpoint_path, map_location={"cuda:0": "cpu"}
                 )
@@ -221,7 +219,7 @@ class QuestionLstmEncoder(nn.Module):
         rnn_num_layers: int = 2,
         rnn_dropout: float = 0,
     ) -> None:
-        super(QuestionLstmEncoder, self).__init__()
+        super().__init__()
 
         self.token_to_idx = token_to_idx
         self.NULL = token_to_idx["<pad>"]
@@ -275,7 +273,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
         fc_dropout: float = 0.5,
         fc_dims: Iterable[int] = (64,),
     ) -> None:
-        super(VqaLstmCnnAttentionModel, self).__init__()
+        super().__init__()
 
         cnn_kwargs = {
             "num_classes": 41,
@@ -356,7 +354,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
 
 class MaskedNLLCriterion(nn.Module):
     def __init__(self) -> None:
-        super(MaskedNLLCriterion, self).__init__()
+        super().__init__()
 
     def forward(self, inp: Tensor, target: Tensor, mask: Tensor) -> Tensor:
         logprob_select = torch.gather(inp, 1, target.long())
@@ -382,7 +380,7 @@ class NavPlannerControllerModel(nn.Module):
         planner_rnn_dropout: float = 0,
         controller_fc_dims: Iterable[int] = (256,),
     ) -> None:
-        super(NavPlannerControllerModel, self).__init__()
+        super().__init__()
 
         self.cnn_fc_layer = nn.Sequential(
             nn.Linear(32 * 12 * 12, planner_rnn_image_feat_dim),
@@ -553,7 +551,7 @@ class NavRnn(nn.Module):
         rnn_dropout: float = 0,
         return_states: bool = False,
     ) -> None:
-        super(NavRnn, self).__init__()
+        super().__init__()
 
         self.image_input = image_input
         self.image_feat_dim = image_feat_dim

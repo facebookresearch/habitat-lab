@@ -236,7 +236,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         len(render_obs_images) > 0
     ), "Expected at least one visual sensor enabled."
 
-    shapes_are_equal = len(set(x.shape for x in render_obs_images)) == 1
+    shapes_are_equal = len({x.shape for x in render_obs_images}) == 1
     if not shapes_are_equal:
         render_frame = tile_images(render_obs_images)
     else:

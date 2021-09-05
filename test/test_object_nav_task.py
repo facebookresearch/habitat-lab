@@ -25,9 +25,7 @@ PARTIAL_LOAD_SCENES = 3
 def check_json_serializaiton(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
-    logger.info(
-        "JSON conversion finished. {} sec".format((time.time() - start_time))
-    )
+    logger.info(f"JSON conversion finished. {time.time() - start_time} sec")
     decoded_dataset = ObjectNavDatasetV1()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) == len(dataset.episodes)

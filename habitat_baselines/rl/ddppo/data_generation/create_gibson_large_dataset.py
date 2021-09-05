@@ -67,7 +67,7 @@ def _generate_fn(scene):
 def generate_gibson_large_dataset():
     # Load train / val statistics
     with open(
-        osp.join(osp.dirname(__file__), "gibson_dset_with_qual.json"), "r"
+        osp.join(osp.dirname(__file__), "gibson_dset_with_qual.json")
     ) as f:
         dataset_statistics = json.load(f)
 

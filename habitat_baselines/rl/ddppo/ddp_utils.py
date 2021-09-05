@@ -54,7 +54,7 @@ def resume_state_filename(config: Config) -> str:
     fname = RESUME_STATE_BASE_NAME
 
     if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
-        fname += "-{}".format(SLURM_JOBID)
+        fname += f"-{SLURM_JOBID}"
 
     return osp.join(config.CHECKPOINT_FOLDER, fname + ".pth")
 

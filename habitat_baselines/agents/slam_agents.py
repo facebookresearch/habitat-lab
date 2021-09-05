@@ -97,7 +97,7 @@ class RandomAgent:
     """
 
     def __init__(self, config):
-        super(RandomAgent, self).__init__()
+        super().__init__()
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.reset()
@@ -129,7 +129,7 @@ class RandomAgent:
 
 class BlindAgent(RandomAgent):
     def __init__(self, config):
-        super(BlindAgent, self).__init__(config)
+        super().__init__(config)
         self.pos_th = config.DIST_TO_STOP
         self.angle_th = config.ANGLE_TH
         self.reset()
@@ -172,7 +172,7 @@ class BlindAgent(RandomAgent):
 
 class ORBSLAM2Agent(RandomAgent):
     def __init__(self, config, device=torch.device("cuda:0")):  # noqa: B008
-        super(ORBSLAM2Agent, self).__init__(config)
+        super().__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.slam_vocab_path = config.SLAM_VOCAB_PATH
@@ -216,7 +216,7 @@ class ORBSLAM2Agent(RandomAgent):
         return
 
     def reset(self):
-        super(ORBSLAM2Agent, self).reset()
+        super().reset()
         self.offset_to_goal = None
         self.tracking_is_OK = False
         self.waypointPose6D = None
@@ -232,7 +232,7 @@ class ORBSLAM2Agent(RandomAgent):
         self.action_history = []
         self.pose6D_history = []
         self.position_history = []
-        self.planned2Dpath = torch.zeros((0))
+        self.planned2Dpath = torch.zeros(0)
         self.slam.reset()
         self.cur_time = 0
         self.toDoList = []
@@ -242,7 +242,7 @@ class ORBSLAM2Agent(RandomAgent):
         return
 
     def update_internal_state(self, habitat_observation):
-        super(ORBSLAM2Agent, self).update_internal_state(habitat_observation)
+        super().update_internal_state(habitat_observation)
         self.cur_time += self.timestep
         rgb, depth = self.rgb_d_from_observation(habitat_observation)
         t = time.time()
@@ -533,7 +533,7 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         device=torch.device("cuda:0"),  # noqa: B008
         monocheckpoint="habitat_baselines/slambased/data/mp3d_resnet50.pth",
     ):
-        super(ORBSLAM2MonodepthAgent, self).__init__(config)
+        super().__init__(config)
         self.num_actions = config.NUM_ACTIONS
         self.dist_threshold_to_stop = config.DIST_TO_STOP
         self.slam_vocab_path = config.SLAM_VOCAB_PATH
@@ -627,7 +627,7 @@ def main():
     benchmark = habitat.Benchmark(args.task_config)
     metrics = benchmark.evaluate(agent)
     for k, v in metrics.items():
-        habitat.logger.info("{}: {:.3f}".format(k, v))
+        habitat.logger.info(f"{k}: {v:.3f}")
 
 
 if __name__ == "__main__":

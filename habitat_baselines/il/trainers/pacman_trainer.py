@@ -150,7 +150,7 @@ class PACMANTrainer(BaseILTrainer):
                 nav_dataset, batch_size=config.IL.NAV.batch_size
             )
 
-            logger.info("train_loader has {} samples".format(len(nav_dataset)))
+            logger.info(f"train_loader has {len(nav_dataset)} samples")
 
             q_vocab_dict, _ = nav_dataset.get_vocab_dicts()
 
@@ -288,7 +288,7 @@ class PACMANTrainer(BaseILTrainer):
                         avg_c_loss += controller_loss
 
                         if t % config.LOG_INTERVAL == 0:
-                            logger.info("Epoch: {}".format(epoch))
+                            logger.info(f"Epoch: {epoch}")
                             logger.info(metrics.get_stat_string())
 
                             writer.add_scalar("planner loss", planner_loss, t)
@@ -308,7 +308,7 @@ class PACMANTrainer(BaseILTrainer):
                     avg_c_loss /= num_batches
 
                     end_time = time.time()
-                    time_taken = "{:.1f}".format((end_time - start_time) / 60)
+                    time_taken = f"{(end_time - start_time) / 60:.1f}"
 
                     logger.info(
                         "Epoch {} completed. Time taken: {} minutes.".format(
@@ -316,18 +316,14 @@ class PACMANTrainer(BaseILTrainer):
                         )
                     )
 
-                    logger.info(
-                        "Average planner loss: {:.2f}".format(avg_p_loss)
-                    )
-                    logger.info(
-                        "Average controller loss: {:.2f}".format(avg_c_loss)
-                    )
+                    logger.info(f"Average planner loss: {avg_p_loss:.2f}")
+                    logger.info(f"Average controller loss: {avg_c_loss:.2f}")
 
                     print("-----------------------------------------")
 
                     if epoch % config.CHECKPOINT_INTERVAL == 0:
                         self.save_checkpoint(
-                            model.state_dict(), "epoch_{}.ckpt".format(epoch)
+                            model.state_dict(), f"epoch_{epoch}.ckpt"
                         )
 
                     epoch += 1
@@ -365,7 +361,7 @@ class PACMANTrainer(BaseILTrainer):
 
             eval_loader = DataLoader(nav_dataset)
 
-            logger.info("eval_loader has {} samples".format(len(nav_dataset)))
+            logger.info(f"eval_loader has {len(nav_dataset)} samples")
 
             q_vocab_dict, ans_vocab_dict = nav_dataset.get_vocab_dicts()
 
@@ -384,12 +380,12 @@ class PACMANTrainer(BaseILTrainer):
             metrics = NavMetric(
                 info={"split": "val"},
                 metric_names=[
-                    "{}_{}".format(y, x)
+                    f"{y}_{x}"
                     for x in [10, 30, 50, "rand_init"]
                     for z in ["", "_f"]
                     for y in [
-                        *["d_{}{}".format(k, z) for k in [0, "T", "D", "min"]],
-                        *[w for w in ["stop", "ep_len"] if z == ""],
+                        *(f"d_{k}{z}" for k in [0, "T", "D", "min"]),
+                        *(w for w in ["stop", "ep_len"] if z == ""),
                     ]
                 ],
                 log_json=os.path.join(config.OUTPUT_LOG_DIR, "eval.json"),
@@ -592,28 +588,22 @@ class PACMANTrainer(BaseILTrainer):
 
                         # compute stats
                         m = "" if j == "pred" else "_f"
-                        metrics_slug[
-                            "d_T{}_{}".format(m, i)
-                        ] = dists_to_target[-1]
-                        metrics_slug["d_D{}_{}".format(m, i)] = (
+                        metrics_slug[f"d_T{m}_{i}"] = dists_to_target[-1]
+                        metrics_slug[f"d_D{m}_{i}"] = (
                             dists_to_target[0] - dists_to_target[-1]
                         )
-                        metrics_slug["d_min{}_{}".format(m, i)] = np.array(
+                        metrics_slug[f"d_min{m}_{i}"] = np.array(
                             dists_to_target
                         ).min()
 
                         if j != "fwd-only":
-                            metrics_slug[
-                                "ep_len_{}".format(i)
-                            ] = episode_length
+                            metrics_slug[f"ep_len_{i}"] = episode_length
                             if action == 3:
-                                metrics_slug["stop_{}".format(i)] = 1
+                                metrics_slug[f"stop_{i}"] = 1
                             else:
-                                metrics_slug["stop_{}".format(i)] = 0
+                                metrics_slug[f"stop_{i}"] = 0
 
-                            metrics_slug["d_0_{}".format(i)] = dists_to_target[
-                                0
-                            ]
+                            metrics_slug[f"d_0_{i}"] = dists_to_target[0]
 
                 # collate and update metrics
                 metrics_list = []
@@ -646,7 +636,7 @@ class PACMANTrainer(BaseILTrainer):
                     and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
                 ):
                     q_string = q_vocab_dict.token_idx_2_string(question[0])
-                    logger.info("Question: {}".format(q_string))
+                    logger.info(f"Question: {q_string}")
 
                     self._save_nav_results(
                         checkpoint_path,

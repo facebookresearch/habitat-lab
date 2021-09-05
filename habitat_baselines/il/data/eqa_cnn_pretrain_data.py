@@ -36,9 +36,7 @@ class EQACNNPretrainDataset(Dataset):
             logger.info(
                 "Dataset cache not found. Saving rgb, seg, depth scene images"
             )
-            logger.info(
-                "Number of {} episodes: {}".format(mode, len(self.episodes))
-            )
+            logger.info(f"Number of {mode} episodes: {len(self.episodes)}")
 
             self.scene_ids = []
             self.scene_episode_dict = {}
@@ -115,7 +113,7 @@ class EQACNNPretrainDataset(Dataset):
             seg[seg == -1] = 0
             seg = seg.astype("uint8")
 
-            sample_key = "{0:0=6d}".format(self.count)
+            sample_key = f"{self.count:0=6d}"
             with self.lmdb_env.begin(write=True) as txn:
                 txn.put((sample_key + "_rgb").encode(), rgb.tobytes())
                 txn.put((sample_key + "_depth").encode(), depth.tobytes())
@@ -155,18 +153,18 @@ class EQACNNPretrainDataset(Dataset):
             self.lmdb_txn = self.lmdb_env.begin()
             self.lmdb_cursor = self.lmdb_txn.cursor()
 
-        rgb_idx = "{0:0=6d}_rgb".format(idx)
+        rgb_idx = f"{idx:0=6d}_rgb"
         rgb_binary = self.lmdb_cursor.get(rgb_idx.encode())
         rgb_np = np.frombuffer(rgb_binary, dtype="uint8")
         rgb = rgb_np.reshape(256, 256, 3) / 255.0
         rgb = rgb.transpose(2, 0, 1).astype(np.float32)
 
-        depth_idx = "{0:0=6d}_depth".format(idx)
+        depth_idx = f"{idx:0=6d}_depth"
         depth_binary = self.lmdb_cursor.get(depth_idx.encode())
         depth_np = np.frombuffer(depth_binary, dtype="float32")
         depth = depth_np.reshape(1, 256, 256)
 
-        seg_idx = "{0:0=6d}_seg".format(idx)
+        seg_idx = f"{idx:0=6d}_seg"
         seg_binary = self.lmdb_cursor.get(seg_idx.encode())
         seg_np = np.frombuffer(seg_binary, dtype="uint8")
         seg = seg_np.reshape(256, 256)

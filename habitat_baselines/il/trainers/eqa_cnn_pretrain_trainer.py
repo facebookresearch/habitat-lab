@@ -159,7 +159,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                     optim.step()
 
                 end_time = time.time()
-                time_taken = "{:.1f}".format((end_time - start_time) / 60)
+                time_taken = f"{(end_time - start_time) / 60:.1f}"
                 avg_loss = avg_loss / len(train_loader)
 
                 logger.info(
@@ -167,13 +167,11 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                         epoch, time_taken
                     )
                 )
-                logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
+                logger.info(f"[ Average loss: {avg_loss:.3f} ]")
 
                 print("-----------------------------------------")
 
-                self.save_checkpoint(
-                    model.state_dict(), "epoch_{}.ckpt".format(epoch)
-                )
+                self.save_checkpoint(model.state_dict(), f"epoch_{epoch}.ckpt")
 
                 epoch += 1
 
@@ -253,7 +251,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
                 if t % config.LOG_INTERVAL == 0:
                     logger.info(
-                        "[ Iter: {}; loss: {:.3f} ]".format(t, loss.item()),
+                        f"[ Iter: {t}; loss: {loss.item():.3f} ]",
                     )
 
                 if (
@@ -290,7 +288,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
             checkpoint_index,
         )
 
-        logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
-        logger.info("[ Average seg loss: {:.3f} ]".format(avg_l1))
-        logger.info("[ Average autoencoder loss: {:.4f} ]".format(avg_l2))
-        logger.info("[ Average depthloss: {:.4f} ]".format(avg_l3))
+        logger.info(f"[ Average loss: {avg_loss:.3f} ]")
+        logger.info(f"[ Average seg loss: {avg_l1:.3f} ]")
+        logger.info(f"[ Average autoencoder loss: {avg_l2:.4f} ]")
+        logger.info(f"[ Average depthloss: {avg_l3:.4f} ]")

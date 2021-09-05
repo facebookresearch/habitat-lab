@@ -24,7 +24,7 @@ NUM_ENVS = 4
 
 class DummyRLEnv(habitat.RLEnv):
     def __init__(self, config, dataset=None, env_ind=0):
-        super(DummyRLEnv, self).__init__(config, dataset)
+        super().__init__(config, dataset)
         self._env_ind = env_ind
 
     def get_reward_range(self):
@@ -245,9 +245,9 @@ def test_rl_vectorized_envs(gpu2gpu):
             outputs = envs.step(
                 sample_non_stop_action(envs.action_spaces[0], num_envs)
             )
-            observations, rewards, dones, infos = [
+            observations, rewards, dones, infos = (
                 list(x) for x in zip(*outputs)
-            ]
+            )
             assert len(observations) == num_envs
             assert len(rewards) == num_envs
             assert len(dones) == num_envs

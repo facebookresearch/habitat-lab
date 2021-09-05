@@ -11,7 +11,7 @@ from habitat.sims.pyrobot import _try_register_pyrobot
 
 
 def make_sim(id_sim, **kwargs):
-    logger.info("initializing sim {}".format(id_sim))
+    logger.info(f"initializing sim {id_sim}")
     _sim = registry.get_simulator(id_sim)
     assert _sim is not None, "Could not find simulator with name {}".format(
         id_sim

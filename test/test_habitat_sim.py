@@ -23,7 +23,7 @@ def init_sim():
 
 
 def test_sim_trajectory():
-    with open("test/data/habitat-sim_trajectory_data.json", "r") as f:
+    with open("test/data/habitat-sim_trajectory_data.json") as f:
         test_trajectory = json.load(f)
     with init_sim() as sim:
 
@@ -94,7 +94,6 @@ def test_sim_geodesic_distance():
                 "data",
                 "test-sim-geodesic-distance-test-golden.json",
             ),
-            "r",
         ) as f:
             test_data = json.load(f)
 

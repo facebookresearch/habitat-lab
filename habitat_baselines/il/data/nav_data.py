@@ -397,10 +397,10 @@ class NavDataset(wds.Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            idx = "{0:0=3d}".format(idx)
-            episode_id = "{0:0=4d}".format(int(episode_id))
+            idx = f"{idx:0=3d}"
+            episode_id = f"{int(episode_id):0=4d}"
             new_path = os.path.join(
-                self.frame_dataset_path, "{}.{}".format(episode_id, idx)
+                self.frame_dataset_path, f"{episode_id}.{idx}"
             )
             cv2.imwrite(new_path + ".jpg", img[..., ::-1])
 
@@ -445,7 +445,7 @@ class NavDataset(wds.Dataset):
             action_length = self.episodes[idx].action_length
             scene = self.episodes[idx].scene_id
             if scene != self.config.SIMULATOR.SCENE:
-                logger.info("[ Loading scene - {}]".format(scene))
+                logger.info(f"[ Loading scene - {scene}]")
                 self.config.defrost()
                 self.config.SIMULATOR.SCENE = scene
                 self.config.freeze()

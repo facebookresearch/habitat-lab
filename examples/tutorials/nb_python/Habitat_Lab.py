@@ -13,7 +13,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.11.5
 #   kernelspec:
 #     display_name: Python 3
 #     name: python3
@@ -257,9 +257,7 @@ class NewNavigationTask(NavigationTask):
         super().__init__(config=config, sim=sim, dataset=dataset)
 
     def _check_episode_is_active(self, *args, **kwargs):
-        logger.info(
-            "Current agent position: {}".format(self._sim.get_agent_state())
-        )
+        logger.info(f"Current agent position: {self._sim.get_agent_state()}")
         collision = self._sim.previous_step_collided
         stop_called = not getattr(self, "is_stop_called", False)
         return collision or stop_called

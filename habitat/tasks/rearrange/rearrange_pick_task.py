@@ -161,4 +161,4 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cur_dist = -1.0
         self.prev_picked = self._sim.grasp_mgr.is_grasped
 
-        return super(RearrangePickTaskV1, self).reset(episode)
+        return super().reset(episode)

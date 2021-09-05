@@ -36,7 +36,7 @@ def init_neights_to_channels(ks=3):
 
 class SoftArgMin(nn.Module):
     def __init__(self, beta=5):
-        super(SoftArgMin, self).__init__()
+        super().__init__()
         self.beta = beta
         return
 
@@ -52,7 +52,7 @@ class SoftArgMin(nn.Module):
 
 class HardArgMin(nn.Module):
     def __init__(self):
-        super(HardArgMin, self).__init__()
+        super().__init__()
         return
 
     def forward(self, x, coords2d=None):
@@ -74,7 +74,7 @@ class DifferentiableStarPlanner(nn.Module):
         device=torch.device("cpu"),  # noqa: B008
         **kwargs
     ):
-        super(DifferentiableStarPlanner, self).__init__()
+        super().__init__()
         self.eps = 1e-12
         self.max_steps = max_steps
         self.visualize = visualize

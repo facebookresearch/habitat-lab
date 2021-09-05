@@ -154,7 +154,7 @@ class Measurements:
         for measure in measures:
             assert (
                 measure.uuid not in self.measures
-            ), "'{}' is duplicated measure uuid".format(measure.uuid)
+            ), f"'{measure.uuid}' is duplicated measure uuid"
             self.measures[measure.uuid] = measure
 
     def reset_measures(self, *args: Any, **kwargs: Any) -> None:

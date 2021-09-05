@@ -31,7 +31,7 @@ def main():
     metrics = benchmark.evaluate(agent, num_episodes=10)
 
     for k, v in metrics.items():
-        print("{}: {:.3f}".format(k, v))
+        print(f"{k}: {v:.3f}")
 
 
 if __name__ == "__main__":

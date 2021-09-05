@@ -75,7 +75,7 @@ class ParameterizedAgent(habitat.Agent):
 
     def _log(self, txt):
         if self._config.VERBOSE:
-            print("%s: %s" % (str(self), txt))
+            print(f"{str(self)}: {txt}")
 
     def act(self, observations: Observations) -> Dict[str, Any]:
         if self._should_auto_end:
@@ -533,7 +533,7 @@ def main():
 
     metrics = benchmark.evaluate(use_skill, args.num_eval)
     for k, v in metrics.items():
-        habitat.logger.info("{}: {:.3f}".format(k, v))
+        habitat.logger.info(f"{k}: {v:.3f}")
 
 
 if __name__ == "__main__":

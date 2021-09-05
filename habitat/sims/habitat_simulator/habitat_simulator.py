@@ -395,7 +395,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         observations = self._sensor_suite.get_observations(sim_obs)
 
         output = observations.get(mode)
-        assert output is not None, "mode {} sensor is not active".format(mode)
+        assert output is not None, f"mode {mode} sensor is not active"
         if not isinstance(output, np.ndarray):
             # If it is not a numpy array, it is a torch tensor
             # The function expects the result to be a numpy array

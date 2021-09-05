@@ -69,7 +69,7 @@ def test_rnn_state_encoder():
 
                 assert (
                     torch.norm(reference_ouputs - outputs).item() < 1e-3
-                ), "Failed on (T={}, N={})".format(T, N)
+                ), f"Failed on (T={T}, N={N})"
                 assert (
                     torch.norm(reference_hiddens - out_hiddens).item() < 1e-3
-                ), "Failed on (T={}, N={})".format(T, N)
+                ), f"Failed on (T={T}, N={N})"

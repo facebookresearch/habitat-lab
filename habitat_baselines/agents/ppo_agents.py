@@ -66,7 +66,7 @@ class PPOAgent(Agent):
         action_spaces = Discrete(4)
 
         self.device = (
-            torch.device("cuda:{}".format(config.PTH_GPU_ID))
+            torch.device(f"cuda:{config.PTH_GPU_ID}")
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -164,7 +164,7 @@ def main():
     metrics = benchmark.evaluate(agent)
 
     for k, v in metrics.items():
-        habitat.logger.info("{}: {:.3f}".format(k, v))
+        habitat.logger.info(f"{k}: {v:.3f}")
 
 
 if __name__ == "__main__":

@@ -188,7 +188,7 @@ class PyRobot(Simulator):
 
         assert (
             self._config.ROBOT in self._config.ROBOTS
-        ), "Invalid robot type {}".format(self._config.ROBOT)
+        ), f"Invalid robot type {self._config.ROBOT}"
         self._robot_config = getattr(self._config, self._config.ROBOT.upper())
 
         self._action_space = self._robot_action_space(
@@ -251,7 +251,7 @@ class PyRobot(Simulator):
         elif action in self._robot_config.CAMERA_ACTIONS:
             getattr(self._robot.camera, action)(**action_params)
         else:
-            raise ValueError("Invalid action {}".format(action))
+            raise ValueError(f"Invalid action {action}")
 
         observations = self._sensor_suite.get_observations(
             robot_obs=self.get_robot_observations()
@@ -265,7 +265,7 @@ class PyRobot(Simulator):
         )
 
         output = observations.get(mode)
-        assert output is not None, "mode {} sensor is not active".format(mode)
+        assert output is not None, f"mode {mode} sensor is not active"
 
         return output
 

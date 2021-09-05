@@ -198,7 +198,7 @@ class SensorSuite:
         for sensor in sensors:
             assert (
                 sensor.uuid not in self.sensors
-            ), "'{}' is duplicated sensor uuid".format(sensor.uuid)
+            ), f"'{sensor.uuid}' is duplicated sensor uuid"
             self.sensors[sensor.uuid] = sensor
             ordered_spaces[sensor.uuid] = sensor.observation_space
         self.observation_spaces = spaces.Dict(spaces=ordered_spaces)

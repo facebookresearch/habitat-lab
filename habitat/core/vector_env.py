@@ -302,10 +302,10 @@ class VectorEnv:
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         parent_connections, worker_connections = zip(
-            *[
+            *(
                 [ConnectionWrapper(c) for c in self._mp_ctx.Pipe(duplex=True)]
                 for _ in range(self._num_envs)
-            ]
+            )
         )
         self._workers = []
         for worker_conn, parent_conn, env_args in zip(
@@ -615,7 +615,7 @@ class ThreadedVectorEnv(VectorEnv):
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
         queues: Iterator[Tuple[Any, ...]] = zip(
-            *[(Queue(), Queue()) for _ in range(self._num_envs)]
+            *((Queue(), Queue()) for _ in range(self._num_envs))
         )
         parent_read_queues, parent_write_queues = queues
         self._workers = []

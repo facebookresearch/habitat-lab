@@ -80,7 +80,7 @@ class DirectDepthMapper(nn.Module):
         device=torch.device("cpu"),  # noqa: B008
         **kwargs
     ):
-        super(DirectDepthMapper, self).__init__()
+        super().__init__()
         self.device = device
         self.near_th = near_th
         self.far_th = far_th

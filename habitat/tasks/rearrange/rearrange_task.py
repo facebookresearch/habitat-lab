@@ -105,7 +105,7 @@ class RearrangeTask(NavigationTask):
 
             max_force = 0
             if len(match_contacts) > 0:
-                max_force = max([abs(x.normal_force) for x in match_contacts])
+                max_force = max(abs(x.normal_force) for x in match_contacts)
 
             return max_force
 

@@ -64,7 +64,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
@@ -96,7 +96,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(
@@ -135,7 +135,7 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
-        super(ResNet, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(
             3, 64, kernel_size=7, stride=2, padding=3, bias=False
         )
@@ -259,7 +259,7 @@ def resnet152(pretrained=False, **kwargs):
 class model(nn.Module):
     def __init__(self, Encoder, num_features, block_channel):
 
-        super(model, self).__init__()
+        super().__init__()
 
         self.E = Encoder
         self.D = D(num_features)
@@ -283,7 +283,7 @@ class model(nn.Module):
 
 class _UpProjection(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
-        super(_UpProjection, self).__init__()
+        super().__init__()
 
         self.conv1 = nn.Conv2d(
             num_input_features,
@@ -328,7 +328,7 @@ class _UpProjection(nn.Sequential):
 
 class E_resnet(nn.Module):
     def __init__(self, original_model, num_features=2048):
-        super(E_resnet, self).__init__()
+        super().__init__()
         self.conv1 = original_model.conv1
         self.bn1 = original_model.bn1
         self.relu = original_model.relu
@@ -355,7 +355,7 @@ class E_resnet(nn.Module):
 
 class D(nn.Module):
     def __init__(self, num_features=2048):
-        super(D, self).__init__()
+        super().__init__()
         self.conv = nn.Conv2d(
             num_features,
             num_features // 2,
@@ -403,7 +403,7 @@ class D(nn.Module):
 class MFF(nn.Module):
     def __init__(self, block_channel, num_features=64):
 
-        super(MFF, self).__init__()
+        super().__init__()
 
         self.up1 = _UpProjection(
             num_input_features=block_channel[0], num_output_features=16
@@ -446,7 +446,7 @@ class MFF(nn.Module):
 class R(nn.Module):
     def __init__(self, block_channel):
 
-        super(R, self).__init__()
+        super().__init__()
 
         num_features = 64 + block_channel[3] // 32
         self.conv0 = nn.Conv2d(
@@ -548,7 +548,7 @@ class ToTensor:
     def to_tensor(self, pic):
         if not (_is_pil_image(pic) or _is_numpy_image(pic)):
             raise TypeError(
-                "pic should be PIL Image or ndarray. Got {}".format(type(pic))
+                f"pic should be PIL Image or ndarray. Got {type(pic)}"
             )
 
         if isinstance(pic, np.ndarray):

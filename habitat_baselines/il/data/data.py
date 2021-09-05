@@ -219,10 +219,10 @@ class EQADataset(wds.Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            idx = "{0:0=3d}".format(idx)
-            episode_id = "{0:0=4d}".format(int(episode_id))
+            idx = f"{idx:0=3d}"
+            episode_id = f"{int(episode_id):0=4d}"
             new_path = os.path.join(
-                self.frame_dataset_path, "{}.{}".format(episode_id, idx)
+                self.frame_dataset_path, f"{episode_id}.{idx}"
             )
             cv2.imwrite(new_path + ".jpg", img[..., ::-1])
 

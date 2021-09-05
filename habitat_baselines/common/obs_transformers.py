@@ -80,7 +80,7 @@ class ResizeShortestEdge(ObservationTransformer):
         size: The size you want to resize the shortest edge to
         channels_last: indicates if channels is the last dimension
         """
-        super(ResizeShortestEdge, self).__init__()
+        super().__init__()
         self._size: int = size
         self.channels_last: bool = channels_last
         self.trans_keys: Tuple[str] = trans_keys
@@ -345,9 +345,7 @@ class PerspectiveProjection(CameraProjection):
         f: (float) the focal length of camera
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(PerspectiveProjection, self).__init__(
-            img_h, img_w, R, _DepthFrom.Z_VAL
-        )
+        super().__init__(img_h, img_w, R, _DepthFrom.Z_VAL)
         if f is None:
             self.f = max(img_h, img_w) / 2
         else:
@@ -409,7 +407,7 @@ class EquirectProjection(CameraProjection):
         img_w: (int) the width of equirectanglar camera image
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(EquirectProjection, self).__init__(img_h, img_w, R)
+        super().__init__(img_h, img_w, R)
 
     def projection(
         self, world_pts: torch.Tensor
@@ -496,7 +494,7 @@ class FisheyeProjection(CameraProjection):
         fx, fy, xi, alpha: (float) the fisheye camera model parameters
         R: (torch.Tensor) 3x3 rotation matrix of camera
         """
-        super(FisheyeProjection, self).__init__(img_h, img_w, R)
+        super().__init__(img_h, img_w, R)
 
         self.fish_fov = fish_fov  # FoV in degrees
         fov_rad = self.fish_fov / 180 * np.pi  # FoV in radians
@@ -600,7 +598,7 @@ class ProjectionConverter(nn.Module):
         input_projections: input images of projection models
         output_projections: generated image of projection models
         """
-        super(ProjectionConverter, self).__init__()
+        super().__init__()
         # Convert to list
         if not isinstance(input_projections, list):
             input_projections = [input_projections]
@@ -844,9 +842,7 @@ class Cube2Equirect(ProjectionConverter):
 
         # Equirectangular output
         output_projection = EquirectProjection(equ_h, equ_w)
-        super(Cube2Equirect, self).__init__(
-            input_projections, output_projection
-        )
+        super().__init__(input_projections, output_projection)
 
 
 class ProjectionTransformer(ObservationTransformer):
@@ -871,7 +867,7 @@ class ProjectionTransformer(ObservationTransformer):
         :param target_uuids: Optional List of which of the sensor_uuids to overwrite
         :param depth_key: If sensor_uuids has depth_key substring, they are processed as depth
         """
-        super(ProjectionTransformer, self).__init__()
+        super().__init__()
         num_sensors = len(sensor_uuids)
         assert (
             num_sensors % converter.input_len == 0 and num_sensors != 0
@@ -979,7 +975,7 @@ class CubeMap2Equirect(ProjectionTransformer):
         """
 
         converter = Cube2Equirect(eq_shape[0], eq_shape[1])
-        super(CubeMap2Equirect, self).__init__(
+        super().__init__(
             converter,
             sensor_uuids,
             eq_shape,
@@ -1039,9 +1035,7 @@ class Cube2Fisheye(ProjectionConverter):
         output_projection = FisheyeProjection(
             fish_h, fish_w, fish_fov, cx, cy, fx, fy, xi, alpha
         )
-        super(Cube2Fisheye, self).__init__(
-            input_projections, output_projection
-        )
+        super().__init__(input_projections, output_projection)
 
 
 @baseline_registry.register_obs_transformer()
@@ -1090,7 +1084,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
             fish_shape[0], fish_shape[1], fish_fov, cx, cy, fx, fy, xi, alpha
         )
 
-        super(CubeMap2Fisheye, self).__init__(
+        super().__init__(
             converter,
             sensor_uuids,
             fish_shape,
@@ -1134,9 +1128,7 @@ class Equirect2Cube(ProjectionConverter):
 
         #  Cubemap output
         output_projections = get_cubemap_projections(img_h, img_w)
-        super(Equirect2Cube, self).__init__(
-            input_projection, output_projections
-        )
+        super().__init__(input_projection, output_projections)
 
 
 @baseline_registry.register_obs_transformer()
@@ -1163,7 +1155,7 @@ class Equirect2CubeMap(ProjectionTransformer):
         """
 
         converter = Equirect2Cube(img_shape[0], img_shape[1])
-        super(Equirect2CubeMap, self).__init__(
+        super().__init__(
             converter,
             sensor_uuids,
             img_shape,
