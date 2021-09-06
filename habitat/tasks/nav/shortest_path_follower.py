@@ -7,9 +7,9 @@
 import warnings
 from typing import Optional, Union
 
+import habitat_sim
 import numpy as np
 
-import habitat_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 

@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import habitat_sim
 import magnum as mn
 import numpy as np
 from gym import spaces
 
-import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions

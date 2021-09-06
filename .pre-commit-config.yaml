@@ -31,14 +31,14 @@ repos:
         args: [--autofix]
 
 -   repo: https://github.com/timothycrosley/isort
-    rev: 5.8.0
+    rev: 5.9.3
     hooks:
     -   id: isort
         exclude: docs/
         additional_dependencies: [toml]
 
 -   repo: https://github.com/ambv/black
-    rev: 21.6b0
+    rev: 21.8b0
     hooks:
     - id: black
       exclude: ^examples/tutorials/(nb_python|colabs)
@@ -63,7 +63,7 @@ repos:
         - flake8-simplify==0.14.1
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.902
+    rev: v0.910
     hooks:
     -   id: mypy
         pass_filenames: false
@@ -71,13 +71,13 @@ repos:
         - attrs
 
 -   repo: https://github.com/kynan/nbstripout
-    rev: 0.4.0
+    rev: 0.5.0
     hooks:
     -   id: nbstripout
         files: ".ipynb"
 
 -   repo: https://github.com/mwouts/jupytext
-    rev: v1.11.3
+    rev: v1.11.5
     hooks:
     -   id: jupytext
         files: '^examples/tutorials/(colabs|nb_python)/(.*\.py|.*\.ipynb)$'
@@ -94,6 +94,6 @@ repos:
         exclude: ^habitat_baselines/slambased/
 
 -   repo: https://github.com/AleksaC/circleci-cli-py
-    rev: v0.1.15338
+    rev: v0.1.15932
     hooks:
     -   id: circle-ci-validator

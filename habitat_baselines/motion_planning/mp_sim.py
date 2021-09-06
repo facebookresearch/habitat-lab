@@ -7,10 +7,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
+from habitat_sim.physics import CollisionGroups, MotionType
+
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import get_aabb, rearrange_collision
 from habitat_baselines.motion_planning.robot_target import ObjectGraspTarget
-from habitat_sim.physics import CollisionGroups, MotionType
 
 
 class MpSim(ABC):

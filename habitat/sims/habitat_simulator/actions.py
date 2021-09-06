@@ -8,8 +8,8 @@ from enum import Enum
 from typing import Dict
 
 import attr
-
 import habitat_sim
+
 from habitat.core.registry import registry
 from habitat.core.simulator import ActionSpaceConfiguration
 from habitat.core.utils import Singleton

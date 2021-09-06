@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from torch import Tensor
 
 import habitat_sim
+
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (

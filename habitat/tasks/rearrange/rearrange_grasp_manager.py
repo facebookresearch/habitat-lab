@@ -7,13 +7,13 @@
 
 import magnum as mn
 import numpy as np
-
-from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
     CollisionGroups,
     RigidConstraintSettings,
 )
+
+from habitat.tasks.rearrange.utils import get_aabb
 
 
 class RearrangeGraspManager:

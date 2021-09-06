@@ -11,6 +11,9 @@ from typing import Any, Dict
 
 import magnum as mn
 import numpy as np
+from habitat_sim.gfx import LightInfo, LightPositionModel
+from habitat_sim.physics import MotionType
+from habitat_sim.robots import FetchRobot
 
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -28,9 +31,6 @@ from habitat.tasks.rearrange.utils import (
     get_nav_mesh_settings,
     make_render_only,
 )
-from habitat_sim.gfx import LightInfo, LightPositionModel
-from habitat_sim.physics import MotionType
-from habitat_sim.robots import FetchRobot
 
 
 # temp workflow for loading lights into Habitat scene

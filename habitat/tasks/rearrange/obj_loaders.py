@@ -4,12 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import habitat_sim
 import magnum as mn
 import numpy as np
-
-import habitat_sim
-from habitat.tasks.rearrange.utils import get_aabb, make_render_only
 from habitat_sim.physics import MotionType
+
+from habitat.tasks.rearrange.utils import get_aabb, make_render_only
 
 
 def add_obj(name, sim):

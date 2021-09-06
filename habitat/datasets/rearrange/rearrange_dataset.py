@@ -8,8 +8,8 @@ import json
 from typing import Any, Dict, List, Optional
 
 import attr
-
 import habitat_sim.utils.datasets_download as data_downloader
+
 from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger

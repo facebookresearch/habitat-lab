@@ -13,9 +13,8 @@ from typing import Callable, List, Optional
 
 import numpy as np
 from gym import spaces
-from PIL import Image
-
 from habitat_sim.utils.viz_utils import save_video
+from PIL import Image
 
 matched_dir = glob.glob(
     osp.join(osp.expanduser("~"), "ompl-1.5.*/py-bindings")

@@ -40,9 +40,10 @@ from habitat.utils.geometry_utils import (
 from habitat.utils.visualizations import fog_of_war, maps
 
 try:
-    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
     from habitat_sim import RigidState
     from habitat_sim.physics import VelocityControl
+
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 except ImportError:
     pass
 
