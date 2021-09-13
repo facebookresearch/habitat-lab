@@ -78,14 +78,45 @@ class RearrangeEpisodeGenerator:
             {}
         )  # {receptacle set name -> ([object handles], [name substrings])}
 
-        for scene_set_name, scenes in self.cfg.scene_sets:
-            self._scene_sets[scene_set_name] = scenes
+        for scene_set in self.cfg.scene_sets:
+            assert "name" in scene_set
+            assert "substrings" in scene_set
+            assert (
+                scene_set["name"] not in self._scene_sets
+            ), f"cfg.scene_sets - Duplicate name ('{scene_set['name']}') detected."
+            assert (
+                type(scene_set["substrings"]) is list
+            ), f"cfg.scene_sets - '{scene_set['name']}' 'substrings' must be a list of strings."
+            self._scene_sets[scene_set["name"]] = scene_set["substrings"]
 
-        for obj_set_name, objects in self.cfg.object_sets:
-            self._obj_sets[obj_set_name] = objects
+        for object_set in self.cfg.object_sets:
+            assert "name" in object_set
+            assert "substrings" in object_set
+            assert (
+                object_set["name"] not in self._obj_sets
+            ), f"cfg.object_sets - Duplicate name ('{object_set['name']}') detected."
+            assert (
+                type(object_set["substrings"]) is list
+            ), f"cfg.object_sets - '{object_set['name']}' 'substrings' must be a list of strings."
+            self._obj_sets[object_set["name"]] = object_set["substrings"]
 
-        for receptacle_set_name, receptacle_info in self.cfg.receptacle_sets:
-            self._receptacle_sets[receptacle_set_name] = receptacle_info
+        for receptacle_set in self.cfg.receptacle_sets:
+            assert "name" in receptacle_set
+            assert "object_substrings" in receptacle_set
+            assert "receptacle_substrings" in receptacle_set
+            assert (
+                receptacle_set["name"] not in self._receptacle_sets
+            ), f"cfg.receptacle_sets - Duplicate name ('{receptacle_set['name']}') detected."
+            assert (
+                type(receptacle_set["object_substrings"]) is list
+            ), f"cfg.receptacle_sets - '{receptacle_set['name']}' 'object_substrings' must be a list of strings."
+            assert (
+                type(receptacle_set["receptacle_substrings"]) is list
+            ), f"cfg.receptacle_sets - '{receptacle_set['name']}' 'receptacle_substrings' must be a list of strings."
+            self._receptacle_sets[receptacle_set["name"]] = (
+                receptacle_set["object_substrings"],
+                receptacle_set["receptacle_substrings"],
+            )
 
         print(f"self._scene_sets = {self._scene_sets}")
         print(f"self._obj_sets = {self._obj_sets}")
@@ -597,68 +628,51 @@ def get_config_defaults() -> CN:
     _C.additional_object_paths = ["data/objects/ycb/"]
 
     # ----- resource set definitions ------
-    # define the sets of scenes which can be sampled from. [(set_name, [scene handle substrings])]
+    # Define the sets of scenes which can be sampled from.
+    # List of dicts containing a unique name and a list of substrings for each set.
+    # The SceneDataset will be searched for scenes with handles containing any of the substrings.
     _C.scene_sets = [
-        ("default", ["v3_sc0_staging_00"]),
-        ("any", [""]),
-        ("v3_sc", ["v3_sc"]),
-        ("original", ["apt_"]),
+        {
+            "name": "any",
+            "substrings": [""],
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substring acts like a wildcard, selecting all scenes.",
+        },
     ]
-    # define the sets of objects which can be sampled from. [(set_name, [object handle substrings])]
+    # Define the sets of objects which can be sampled from.
+    # List of dicts containing a unique name and a list of substrings for each set.
+    # The SceneDataset will be searched for objects with handles containing any of the substrings.
     _C.object_sets = [
-        (
-            "any",
-            [
-                "002_master_chef_can",
-                "003_cracker_box",
-                "004_sugar_box",
-                "005_tomato_soup_can",
-                "007_tuna_fish_can",
-                "008_pudding_box",
-                "009_gelatin_box",
-                "010_potted_meat_can",
-                "024_bowl",
+        {
+            "name": "any",
+            "substrings": [
+                "",
             ],
-        ),
-        ("cheezit", ["003_cracker_box"]),
-        ("basket", ["frl_apartment_basket"]),
-        ("apple", ["013_apple"]),
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substring acts like a wildcard, selecting all objects.",
+        },
     ]
-    # define the sets of receptacles which can be sampled from.
-    #  [(set_name, ([object handle substrings], [receptacle name substrings]))]
-    #  receptacle name substrings are used to constrain sets to receptacles with matching substrings in their names
+    # Define the sets of receptacles which can be sampled from.
+    # List of dicts containing a unique name and a list of substrings for both object handles and receptacle names.
+    # The SceneDataset will be searched for objects with handles containing any of the object substrings.
+    # Receptacle name substrings are used to further constrain sets to receptacles with matching substrings in their names.
     _C.receptacle_sets = [
-        ("table", (["frl_apartment_table_01"], [])),
-        ("table3", (["frl_apartment_table_03"], [])),
-        (
-            "any",
-            (
-                [
-                    "frl_apartment_table_01",
-                    "frl_apartment_table_02",
-                    "frl_apartment_table_03",
-                    "frl_apartment_chair_01",
-                ],
-                [],
-            ),
-        ),
-        ("fridge", (["fridge"], [])),
-        (
-            "fridge_middle",
-            (["fridge"], ["middle"]),
-        ),  # only targets shelves with "middle" in the receptacle name.
-        ("basket", (["frl_apartment_basket"], [])),
-        ("counter", (["kitchen_counter"], [])),
-        ("cupboard", (["kitchenCupboard"], [])),
+        {
+            "name": "any",
+            "object_substrings": [""],
+            "receptacle_substrings": [""],
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
+        },
     ]
 
     # ----- sampler definitions ------
     # define the desired scene sampling (sampler type, (sampler parameters tuple))
     # NOTE: There must be exactly one scene sampler!
     # "single" scene sampler params ("scene name")
-    _C.scene_sampler = ("single", ("v3_sc1_staging_00",))
+    # _C.scene_sampler = ("single", ("v3_sc1_staging_00",))
     # "subset" scene sampler params ([included scene sets], [excluded scene sets])
-    # _C.scene_sampler = ("subset", (["v3_sc"], []))
+    _C.scene_sampler = ("subset", (["v3_sc"], []))
 
     # define the desired object sampling [(name, sampler type, (sampler parameters tuple))]
     _C.obj_samplers = [
@@ -816,12 +830,17 @@ if __name__ == "__main__":
 
     args, _ = parser.parse_known_args()
 
+    # merge the configuration from file with the default
+    cfg = get_config_defaults()
+    print(f"\n\nOriginal Config:\n{cfg}")
     if args.config is not None:
         assert osp.exists(
             args.config
         ), f"Provided config, '{args.config}', does not exist."
+        cfg.merge_from_file(args.config)
 
-    cfg = get_config_defaults()
+    print(f"\n\nModified Config:\n{cfg}\n\n")
+
     dataset = RearrangeDatasetV0()
     with RearrangeEpisodeGenerator(
         cfg=cfg, debug_visualization=args.debug

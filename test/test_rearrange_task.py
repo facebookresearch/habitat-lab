@@ -24,6 +24,7 @@ from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
+GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -168,8 +169,12 @@ def test_rearrange_task(test_cfg_path):
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
 @pytest.mark.parametrize("debug_visualization", [False])
 @pytest.mark.parametrize("num_episodes", [2])
-def test_rearrange_episode_generator(debug_visualization, num_episodes):
+@pytest.mark.parametrize("config", [GEN_TEST_CFG])
+def test_rearrange_episode_generator(
+    debug_visualization, num_episodes, config
+):
     cfg = rr_gen.get_config_defaults()
+    cfg.merge_from_file(config)
     dataset = RearrangeDatasetV0()
     with rr_gen.RearrangeEpisodeGenerator(
         cfg=cfg, debug_visualization=debug_visualization

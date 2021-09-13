@@ -1,0 +1,94 @@
+---
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/"
+scene_sets:
+  -
+    "name": "any"
+    "substrings":
+      - ""
+    "comment": "The empty substring acts like a wildcard, selecting all scenes."
+  -
+    "name": "default"
+    "substrings":
+      - "v3_sc0_staging_00"
+    "comment": "The first macro variation from the 105 ReplicaCAD variations."
+  -
+    "name": "v3_sc"
+    "substrings":
+      - "v3_sc"
+    "comment": "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
+  -
+    "name": "original"
+    "substrings":
+      - "apt_"
+    "comment": "The original 6 Replica scene layouts with small clutter objects."
+object_sets:
+  -
+    "name": "any"
+    "substrings":
+      - ""
+    "comment": "The empty substring acts like a wildcard, selecting all objects."
+  -
+    "name": "kitchen"
+    "substrings":
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "024_bowl"
+  -
+    "name": "cheezit"
+    "substrings":
+      - "003_cracker_box"
+  -
+    "name": "basket"
+    "substrings":
+      - "frl_apartment_basket"
+  -
+    "name": "apple"
+    "substrings":
+      - "013_apple"
+receptacle_sets:
+  -
+    "name": "table"
+    "object_substrings":
+      - "frl_apartment_table_01"
+    "receptacle_substrings":
+      - ""
+    "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects."
+  -
+    "name": "table3"
+    "object_substrings":
+      - "frl_apartment_table_03"
+    "receptacle_substrings":
+      - ""
+  -
+    "name": "any"
+    "object_substrings":
+      - ""
+    "receptacle_substrings":
+      - ""
+  -
+    "name": "fridge"
+    "object_substrings":
+      - "fridge"
+    "receptacle_substrings":
+      - ""
+  -
+    "name": "fridge_middle"
+    "object_substrings":
+      - "fridge"
+    "receptacle_substrings":
+      - "middle"
+    "comment": "Selects only receptacles from the 'fridge' with 'middle' in their name."
+  -
+    "name": "counter"
+    "object_substrings":
+      - "kitchen_counter"
+    "receptacle_substrings":
+      - ""

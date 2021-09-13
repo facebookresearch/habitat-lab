@@ -202,14 +202,14 @@ class ObjectSampler:
 
     def sample_object(self) -> str:
         """
-        Sample an object from the object_set and return its handle.
+        Sample an object substring from the object_set and return it.
         """
         return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
         self,
         sim: habitat_sim.Simulator,
-        object_handle: str,
+        object_handle_substring: str,
         receptacle: sutils.Receptacle,
         snap_down: bool = False,
         vdb: Optional[sutils.DebugVisualizer] = None,
@@ -230,12 +230,18 @@ class ObjectSampler:
                 # find the full object handle and ensure uniqueness
                 matching_object_handles = (
                     sim.get_object_template_manager().get_template_handles(
-                        object_handle
+                        object_handle_substring
                     )
                 )
-                assert len(matching_object_handles) == 1
+                assert (
+                    len(matching_object_handles) > 0
+                ), f"Found no object templates containing '{object_handle_substring}' in the SceneDataset."
+                # sample from matching object templates
+                object_handle = matching_object_handles[
+                    random.randrange(0, len(matching_object_handles))
+                ]
                 new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-                    matching_object_handles[0]
+                    object_handle
                 )
             new_object.translation = target_object_position
             if self.orientation_sample is not None:
@@ -306,13 +312,14 @@ class ObjectSampler:
         vdb: Optional[sutils.DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
-        object_handle = self.sample_object()
+        object_handle_substring = self.sample_object()
         target_receptacle = self.sample_receptacle(sim)
-        print(f" target_receptacle = {target_receptacle}")
-        print(f"Sampling {object_handle} from {target_receptacle.name}")
+        print(
+            f"Sampling '{object_handle_substring}' from '{target_receptacle.name}'"
+        )
 
         new_object = self.sample_placement(
-            sim, object_handle, target_receptacle, snap_down, vdb
+            sim, object_handle_substring, target_receptacle, snap_down, vdb
         )
 
         return new_object
