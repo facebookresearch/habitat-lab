@@ -92,3 +92,18 @@ receptacle_sets:
       - "kitchen_counter"
     "receptacle_substrings":
       - ""
+
+markers:
+  -
+    "name": "fridge_push_point"
+    "type": "articulated_object"
+    "params":
+      "object": "fridge"
+      "link": "bottom_door"
+      "offset": [0.1, -0.62, -0.2]
+  -
+    "name": "chair"
+    "type": "rigid_object"
+    "params":
+      "object": "frl_apartment_chair_01"
+      "offset": [0.1, -0.62, -0.2]

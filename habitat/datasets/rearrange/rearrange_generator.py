@@ -759,21 +759,17 @@ def get_config_defaults() -> CN:
 
     # ----- marker definitions ------
     # a marker defines a point in the local space of a rigid object or articulated link which can be registered to instances in a scene and tracked
-    _C.markers = [
-        # (name, type, (params))
-        # articulated_object type params: ("ao_handle", "link_name", (vec3 local offset)))
-        (
-            "fridge_push_point",
-            "articulated_object",
-            ("fridge", "bottom_door", (0.1, -0.62, -0.2)),
-        ),
-        # rigid_object type params: ("object_handle", (vec3 local offset)))
-        (
-            "chair",
-            "rigid_object",
-            ("frl_apartment_chair_01", (0.1, -0.62, -0.2)),
-        ),
-    ]
+    # Format for each marker is a dict containing
+    # {
+    # "name": str
+    # "type": str ("articulated_object" or "rigid_object")
+    # "params": {
+    #   "object": str
+    #   "link": str (if "articulated_object")
+    #   "offset": vec3 []
+    #  }
+    # }
+    _C.markers = []
 
     return _C.clone()
 
