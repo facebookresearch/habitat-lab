@@ -16,6 +16,7 @@ def _try_register_rearrange_task():
         print(e)
 
     try:
+        import habitat.tasks.rearrange.rearrange_composite_task
         import habitat.tasks.rearrange.rearrange_pick_task
         import habitat.tasks.rearrange.rearrange_reach_task
         import habitat.tasks.rearrange.rearrange_task
