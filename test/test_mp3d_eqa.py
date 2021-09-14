@@ -66,12 +66,6 @@ def get_minos_for_sim_eqa_config():
     agent_c = _sim_eqa_c.agents[0]
     agent_c.height = 1.5
     agent_c.radius = 0.1
-    agent_c.mass = 32.0
-    agent_c.linear_acceleration = 10.0
-    agent_c.angular_acceleration = 5 * 3.14
-    agent_c.linear_friction = 1.0
-    agent_c.angular_friction = 1.0
-    agent_c.coefficient_of_restitution = 0.15707963267
 
     return _sim_eqa_c
 
