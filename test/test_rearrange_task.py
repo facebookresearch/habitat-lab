@@ -22,7 +22,7 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
-CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
+CFG_TEST = "configs/tasks/rearrange_composite_replica_cad.yaml" #"configs/tasks/rearrangepick_replica_cad.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
