@@ -155,30 +155,44 @@ class RearrangeEpisodeGenerator:
         """
         self._obj_samplers: Dict[str, samplers.ObjectSampler] = {}
 
-        for (
-            obj_sampler_name,
-            obj_sampler_type,
-            params,
-        ) in self.cfg.obj_samplers:
+        for obj_sampler_info in self.cfg.object_samplers:
+            assert "name" in obj_sampler_info
+            assert "type" in obj_sampler_info
+            assert "params" in obj_sampler_info
             assert (
-                obj_sampler_name not in self._obj_samplers
-            ), f"Duplicate object sampler name '{obj_sampler_name}' in config."
-            if obj_sampler_type == "uniform":
+                obj_sampler_info["name"] not in self._obj_samplers
+            ), f"Duplicate object sampler name '{obj_sampler_info['name']}' in config."
+            if obj_sampler_info["type"] == "uniform":
+                assert "object_sets" in obj_sampler_info["params"]
+                assert "receptacle_sets" in obj_sampler_info["params"]
+                assert "num_samples" in obj_sampler_info["params"]
+                assert "orientation_sampling" in obj_sampler_info["params"]
                 # merge and flatten object and receptacle sets
                 object_handles = [
-                    x for y in params[0] for x in self._obj_sets[y]
+                    x
+                    for y in obj_sampler_info["params"]["object_sets"]
+                    for x in self._obj_sets[y]
                 ]
-                receptacle_info = [self._receptacle_sets[y] for y in params[1]]
+                object_handles = list(set(object_handles))
+                receptacle_info = [
+                    self._receptacle_sets[y]
+                    for y in obj_sampler_info["params"]["receptacle_sets"]
+                ]
 
-                self._obj_samplers[obj_sampler_name] = samplers.ObjectSampler(
+                self._obj_samplers[
+                    obj_sampler_info["name"]
+                ] = samplers.ObjectSampler(
                     object_handles,
                     receptacle_info,
-                    (params[2], params[3]),
-                    params[4],
+                    (
+                        obj_sampler_info["params"]["num_samples"][0],
+                        obj_sampler_info["params"]["num_samples"][1],
+                    ),
+                    obj_sampler_info["params"]["orientation_sampling"],
                 )
             else:
                 print(
-                    f"Requested object sampler '{obj_sampler_type}' is not implemented."
+                    f"Requested object sampler '{obj_sampler_info['type']}' is not implemented."
                 )
                 raise (NotImplementedError)
 
@@ -187,34 +201,39 @@ class RearrangeEpisodeGenerator:
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
         self._target_samplers: Dict[str, samplers.ObjectTargetSampler] = {}
-        for (
-            target_sampler_name,
-            target_sampler_type,
-            params,
-        ) in self.cfg.obj_target_samplers:
+        for target_sampler_info in self.cfg.object_target_samplers:
+            assert "name" in target_sampler_info
+            assert "type" in target_sampler_info
+            assert "params" in target_sampler_info
             assert (
-                target_sampler_name not in self._target_samplers
-            ), f"Duplicate target sampler name '{target_sampler_name}' in config."
-            if target_sampler_type == "uniform":
+                target_sampler_info["name"] not in self._target_samplers
+            ), f"Duplicate target sampler name '{target_sampler_info['name']}' in config."
+            if target_sampler_info["type"] == "uniform":
                 # merge and flatten object and receptacle sets
                 object_instances = [
                     x
-                    for y in params[0]
+                    for y in target_sampler_info["params"]["object_samplers"]
                     for x in self.episode_data["sampled_objects"][y]
                 ]
-                receptacle_info = [self._receptacle_sets[y] for y in params[1]]
+                receptacle_info = [
+                    self._receptacle_sets[y]
+                    for y in target_sampler_info["params"]["receptacle_sets"]
+                ]
 
                 self._target_samplers[
-                    target_sampler_name
+                    target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
                     object_instances,
                     receptacle_info,
-                    (params[2], params[3]),
-                    params[4],
+                    (
+                        target_sampler_info["params"]["num_samples"][0],
+                        target_sampler_info["params"]["num_samples"][1],
+                    ),
+                    target_sampler_info["params"]["orientation_sampling"],
                 )
             else:
                 print(
-                    f"Requested target sampler '{target_sampler_type}' is not implemented."
+                    f"Requested target sampler '{target_sampler_info['type']}' is not implemented."
                 )
                 raise (NotImplementedError)
 
@@ -707,16 +726,12 @@ def get_config_defaults() -> CN:
     _C.scene_sampler.params.scene_sets = []
     _C.scene_sampler.comment = ""
 
-    # define the desired object sampling [(name, sampler type, (sampler parameters tuple))]
-    _C.obj_samplers = [
-        # (name, type, (params))
-        # - uniform sampler params: ([object sets], [receptacle sets], min samples, max samples, orientation_sampling)
-        # ("cheezits", "uniform", (["cheezit"], ["table"], 3, 3, "up"))
-        # ("cheezits", "uniform", (["cheezit"], ["table3"], 3, 5, "up")),
-        # ("any", "uniform", (["any"], ["any"], 3, 5, "up")),
-        # ("any", "uniform", (["any"], ["any"], 20, 50, "up")),
-        # ("fridge", "uniform", (["any"], ["fridge"], 20, 50, "up")),
-        # ("fridge", "uniform", (["any"], ["fridge"], 1, 30, "up")),
+    # Define the object sampling configuration
+    _C.object_samplers = [
+        # {"name":str, "type:str", "params":{})
+        # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+        # NOTE: "orientation_sampling" options: "none", "up", "all"
+        # TODO: convert some special examples to yaml:
         # (
         #     "fridge_middle",
         #     "uniform",
@@ -731,14 +746,37 @@ def get_config_defaults() -> CN:
         #     "uniform",
         #     (["apple"], ["basket"], 1, 2, "any"),
         # ),
-        ("counter", "uniform", (["kitchen"], ["counter"], 5, 30, "up")),
-        # ("cupboard", "uniform", (["any"], ["cupboard"], 15, 30, "up")),
+        {
+            "name": "any_one",
+            "type": "uniform",
+            "params": {
+                "object_sets": ["any"],
+                "receptacle_sets": ["any"],
+                "num_samples": [1, 1],
+                "orientation_sampling": "up",
+            },
+            "comment": "Sample any one object from any receptacle.",
+        }
     ]
-    # define the desired object target sampling (i.e., where should an existing object go)
-    _C.obj_target_samplers = [
-        # (name, type, (params))
-        # - uniform target sampler params: ([obj sampler name(s)], [receptacle sets], min targets, max targets, orientation_sampling)
-        # ("any_targets", "uniform", (["any"], ["table"], 3, 3, "up"))
+
+    # Define the desired object target sampling (i.e., where should an existing object be moved to)
+    _C.object_target_samplers = [
+        # {"name":str, "type:str", "params":{})
+        # - uniform target sampler params:
+        # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+        # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
+        # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
+        {
+            "name": "any_one_target",
+            "type": "uniform",
+            "params": {
+                "object_samplers": ["any_one"],
+                "receptacle_sets": ["any"],
+                "num_samples": [1, 1],
+                "orientation_sampling": "up",
+            },
+            "comment": "Sample a target for the object instanced by the 'any_one' object sampler from any receptacle.",
+        }
     ]
 
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
