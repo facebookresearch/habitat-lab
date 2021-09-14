@@ -252,27 +252,29 @@ class RearrangeEpisodeGenerator:
         self._ao_state_samplers: Dict[
             str, samplers.ArticulatedObjectStateSampler
         ] = {}
-        for (
-            ao_state_sampler_name,
-            ao_state_sampler_type,
-            params,
-        ) in self.cfg.ao_state_samplers:
+        for ao_info in self.cfg.ao_state_samplers:
+            assert "name" in ao_info
+            assert "type" in ao_info
+            assert "params" in ao_info
             assert (
-                ao_state_sampler_name not in self._ao_state_samplers
-            ), f"Duplicate AO state sampler name {ao_state_sampler_name} in config."
-            if ao_state_sampler_type == "uniform":
+                ao_info["name"] not in self._ao_state_samplers
+            ), f"Duplicate AO state sampler name {ao_info['name']} in config."
+
+            if ao_info["type"] == "uniform":
                 self._ao_state_samplers[
-                    ao_state_sampler_name
+                    ao_info["name"]
                 ] = samplers.ArticulatedObjectStateSampler(
-                    params[0], params[1], (params[2], params[3])
+                    ao_info["params"][0],
+                    ao_info["params"][1],
+                    (ao_info["params"][2], ao_info["params"][3]),
                 )
-            elif ao_state_sampler_type == "composite":
+            elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
                     str, Dict[str, Tuple[float, float]]
                 ] = {}
-                for entry in params[0]:
-                    ao_handle = entry[0]
-                    link_sample_params = entry[1]
+                for entry in ao_info["params"]:
+                    ao_handle = entry["ao_handle"]
+                    link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
                     ), f"Duplicate handle '{ao_handle}' in composite AO sampler config."
@@ -288,13 +290,13 @@ class RearrangeEpisodeGenerator:
                             link_params[2],
                         )
                 self._ao_state_samplers[
-                    ao_state_sampler_name
+                    ao_info["name"]
                 ] = samplers.CompositeArticulatedObjectStateSampler(
                     composite_ao_sampler_params
                 )
             else:
                 print(
-                    f"Requested AO state sampler type '{ao_state_sampler_type}' not implemented."
+                    f"Requested AO state sampler type '{ao_info['type']}' not implemented."
                 )
                 raise (NotImplementedError)
 
@@ -738,54 +740,18 @@ def get_config_defaults() -> CN:
         # - uniform target sampler params: ([obj sampler name(s)], [receptacle sets], min targets, max targets, orientation_sampling)
         # ("any_targets", "uniform", (["any"], ["table"], 3, 3, "up"))
     ]
+
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
     _C.ao_state_samplers = [
-        # (name, type, (params))
+        # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
         # TODO: does not support spherical joints (3 dof joints)
         # - uniform continuous range for a single joint. params: ("ao_handle", "link name", min, max)
-        # ("open_fridge_top_door", "uniform", ("fridge", "top_door", 1.5, 1.5)),
-        # ("variable_fridge_bottom_door", "uniform", ("fridge", "bottom_door", 1.5, 1.5))
-        # composite sampler (rejection sampling of composite configuration)
-        # params: ([("ao handle", [("link name", min, max)])])
-        # NOTE: the trailing commas are necessary to define tuples of 1 object
-        (
-            "open_aos",
-            "composite",
-            (
-                [
-                    (
-                        "fridge",
-                        [("top_door", 1.5, 1.5), ("bottom_door", 1.5, 1.5)],
-                    ),
-                    (
-                        "counter",
-                        [
-                            ("drawer1_top", 0.25, 0.25),
-                            ("drawer1_bottom", 0.5, 0.5),
-                            ("drawer2_top", 0.5, 0.5),
-                            ("drawer2_middle", 0.35, 0.35),
-                            ("drawer2_bottom", 0.5, 0.5),
-                            ("drawer3", 0.25, 0.25),
-                            ("drawer4", 0.5, 0.5),
-                        ],
-                    ),
-                    # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
-                    # (
-                    #     "cupBoard",
-                    #     [
-                    #         ("kitchencupboard_doorWindow_1L", -1.5, -1.5),
-                    #         ("kitchencupboard_doorWindow_1R", 1.5, 1.5),
-                    #         ("kitchencupboard_doorWhole_1L", -1.5, -1.5),
-                    #         ("kitchencupboard_doorWhole_1R", 1.5, 1.5),
-                    #         ("kitchencupboard_doorWhole_2L", -1.5, -1.5),
-                    #         ("kitchencupboard_doorWhole_2R", 1.5, 1.5),
-                    #         ("kitchencupboard_doorWindow_2L", -1.5, -1.5),
-                    #         ("kitchencupboard_doorWindow_2R", 1.5, 1.5),
-                    #     ],
-                    # ),
-                ],
-            ),
-        )
+        # Example:
+        #     {"name": "open_fridge_top_door",
+        #     "type": "uniform",
+        #     "params": ["fridge", "top_door", 1.5, 1.5]}
+        # - "composite" type sampler (rejection sampling of composite configuration)
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
     ]
 
     # ----- marker definitions ------

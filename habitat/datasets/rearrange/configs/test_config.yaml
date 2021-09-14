@@ -122,6 +122,27 @@ scene_sampler:
     scene_sets: ["v3_sc"]
   comment: "Samples from ReplicaCAD 105 variations with static furniture."
 
+ao_state_samplers:
+  -
+    name: "open_aos"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.25, 0.25]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.35, 0.35]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.25, 0.25]
+          - ["drawer4", 0.5, 0.5]
+    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
+
 markers:
   -
     name: "fridge_push_point"
