@@ -7,7 +7,7 @@
 import math
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 
@@ -58,48 +58,6 @@ class MultiSceneSampler(SceneSampler):
         return len(self.scenes)
 
 
-class SceneSubsetSampler(SceneSampler):
-    """
-    Uniform sampling from a set of scenes. Requires an initialized Simulator with a loaded SceneDataset before first sample query to construct the
-    """
-
-    def __init__(
-        self,
-        included_scene_subsets: Set[str],
-        excluded_scene_subsets: Set[str],
-        sim: habitat_sim.Simulator,
-    ) -> None:
-        self.scenes: List[str] = []
-        # NOTE: each scene subset is a partial string handle, so use substring search to find all matches
-        all_scene_handles = sim.metadata_mediator.get_scene_handles()
-        for scene_handle in all_scene_handles:
-            excluded = False
-            for excluded_substring in excluded_scene_subsets:
-                if excluded_substring in scene_handle:
-                    excluded = True
-                    break
-            if not excluded:
-                for included_substring in included_scene_subsets:
-                    if included_substring in scene_handle:
-                        self.scenes.append(scene_handle)
-                        break
-        # remove any duplicates
-        self.scenes = list(set(self.scenes))
-
-    def sample(self) -> str:
-        assert (
-            len(self.scenes) > 0
-        ), "SceneSubsetSampler.sample() Error: No scenes to sample."
-        return self.scenes[random.randrange(0, len(self.scenes))]
-
-    def num_scenes(self) -> int:
-        if len(self.scenes) == 0:
-            print(
-                "SceneSubsetSampler: scene set is empty. Sampler may not be initialized."
-            )
-        return len(self.scenes)
-
-
 class ObjectSampler:
     """
     Sample an object from a set and try to place it in the scene from some receptacle set.
@@ -108,14 +66,14 @@ class ObjectSampler:
     def __init__(
         self,
         object_set: List[str],
-        receptacle_set: List[Tuple[List[str], List[str]]],
+        receptacle_sets: List[
+            Tuple[List[str], List[str], List[str], List[str]]
+        ],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
     ) -> None:
         self.object_set = object_set
-        self.receptacle_set = (
-            receptacle_set  # the incoming substring parameters
-        )
+        self.receptacle_sets = receptacle_sets
         self.receptacle_instances: Optional[
             List[sutils.Receptacle]
         ] = None  # all receptacles in the scene
@@ -123,7 +81,7 @@ class ObjectSampler:
             List[sutils.Receptacle]
         ] = None  # the specific receptacle instances relevant to this sampler
         assert len(self.object_set) > 0
-        assert len(self.receptacle_set) > 0
+        assert len(self.receptacle_sets) > 0
         self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
         self.num_objects = num_objects  # tuple of [min,max] objects to sample
@@ -159,42 +117,60 @@ class ObjectSampler:
         if self.receptacle_candidates is None:
             self.receptacle_candidates = []
             for receptacle in self.receptacle_instances:
-                for (
-                    r_key_tuple
-                ) in (
-                    self.receptacle_set
-                ):  # ([object names], [receptacle substrings])
-                    for object_handle in r_key_tuple[0]:
-                        if object_handle in receptacle.parent_object_handle:
-                            # matches the object, now check name constraints
-                            culled = False
-                            for name_constraint in r_key_tuple[1]:
-                                if name_constraint not in receptacle.name:
-                                    culled = True
-                                    print(
-                                        f"     > Culled {receptacle.name} for no name constraint {name_constraint}"
-                                    )
+                found_match = False
+                for r_set_tuple in self.receptacle_sets:
+                    # r_set_tuple = (included_obj_substrs, excluded_obj_substrs, included_receptacle_substrs, excluded_receptacle_substrs)
+                    culled = False
+                    # first try to cull by exclusion
+                    for ex_object_substr in r_set_tuple[1]:
+                        if ex_object_substr in receptacle.parent_object_handle:
+                            culled = True
+                            break
+                    for ex_receptacle_substr in r_set_tuple[3]:
+                        if ex_receptacle_substr in receptacle.name:
+                            culled = True
+                            break
+                    if culled:
+                        break
+
+                    # then search for inclusion
+                    for object_substr in r_set_tuple[0]:
+                        if object_substr in receptacle.parent_object_handle:
+                            # object substring is valid, try receptacle name constraint
+                            for name_constraint in r_set_tuple[2]:
+                                if name_constraint in receptacle.name:
+                                    # found a valid substring match for this receptacle, stop the search
+                                    found_match = True
                                     break
-                            if cull_tilted_receptacles and not culled:
-                                obj_down = (
-                                    receptacle.get_global_transform(sim)
-                                    .transform_vector(-receptacle.up)
-                                    .normalized()
-                                )
-                                gravity_alignment = mn.math.dot(
-                                    obj_down, sim.get_gravity().normalized()
-                                )
-                                if gravity_alignment < tilt_tolerance:
-                                    culled = True
-                                    print(
-                                        f"Culled by tilt: '{receptacle.name}', {gravity_alignment}"
-                                    )
-                            if not culled:
-                                self.receptacle_candidates.append(receptacle)
+                        if found_match:
+                            # break object substr search
+                            break
+                    if found_match:
+                        # break receptacle set search
+                        break
+                if found_match:
+                    # substring match was found, check orientation constraint
+                    if cull_tilted_receptacles:
+                        obj_down = (
+                            receptacle.get_global_transform(sim)
+                            .transform_vector(-receptacle.up)
+                            .normalized()
+                        )
+                        gravity_alignment = mn.math.dot(
+                            obj_down, sim.get_gravity().normalized()
+                        )
+                        if gravity_alignment < tilt_tolerance:
+                            culled = True
+                            print(
+                                f"Culled by tilt: '{receptacle.name}', {gravity_alignment}"
+                            )
+                    if not culled:
+                        # found a valid receptacle
+                        self.receptacle_candidates.append(receptacle)
 
         assert (
             len(self.receptacle_candidates) > 0
-        ), f"No receptacle instances found matching this sampler's requirements. Likely a sampler config constraint is not feasible for all scenes in the dataset. Cull this scene from your dataset? Scene='{sim.config.sim_cfg.scene_id}'. Receptacle constraints ='{self.receptacle_set}'"
+        ), f"No receptacle instances found matching this sampler's requirements. Likely a sampler config constraint is not feasible for all scenes in the dataset. Cull this scene from your dataset? Scene='{sim.config.sim_cfg.scene_id}'. Receptacle constraints ='{self.receptacle_sets}'"
         target_receptacle = self.receptacle_candidates[
             random.randrange(0, len(self.receptacle_candidates))
         ]
@@ -202,14 +178,14 @@ class ObjectSampler:
 
     def sample_object(self) -> str:
         """
-        Sample an object substring from the object_set and return it.
+        Sample an object handle from the object_set and return it.
         """
         return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
         self,
         sim: habitat_sim.Simulator,
-        object_handle_substring: str,
+        object_handle: str,
         receptacle: sutils.Receptacle,
         snap_down: bool = False,
         vdb: Optional[sutils.DebugVisualizer] = None,
@@ -225,24 +201,16 @@ class ObjectSampler:
             # sample the object location
             target_object_position = receptacle.sample_uniform_global(sim)
 
-            # try to place the object
+            # instance the new potential object from the handle
             if new_object == None:
-                # find the full object handle and ensure uniqueness
-                matching_object_handles = (
-                    sim.get_object_template_manager().get_template_handles(
-                        object_handle_substring
-                    )
-                )
-                assert (
-                    len(matching_object_handles) > 0
-                ), f"Found no object templates containing '{object_handle_substring}' in the SceneDataset."
-                # sample from matching object templates
-                object_handle = matching_object_handles[
-                    random.randrange(0, len(matching_object_handles))
-                ]
+                assert sim.get_object_template_manager().get_library_has_handle(
+                    object_handle
+                ), f"Found no object in the SceneDataset with handle '{object_handle}'."
                 new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
                     object_handle
                 )
+
+            # try to place the object
             new_object.translation = target_object_position
             if self.orientation_sample is not None:
                 if self.orientation_sample == "up":
@@ -312,14 +280,12 @@ class ObjectSampler:
         vdb: Optional[sutils.DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
-        object_handle_substring = self.sample_object()
+        object_handle = self.sample_object()
         target_receptacle = self.sample_receptacle(sim)
-        print(
-            f"Sampling '{object_handle_substring}' from '{target_receptacle.name}'"
-        )
+        print(f"Sampling '{object_handle}' from '{target_receptacle.name}'")
 
         new_object = self.sample_placement(
-            sim, object_handle_substring, target_receptacle, snap_down, vdb
+            sim, object_handle, target_receptacle, snap_down, vdb
         )
 
         return new_object
@@ -381,7 +347,9 @@ class ObjectTargetSampler(ObjectSampler):
     def __init__(
         self,
         object_instance_set: List[habitat_sim.physics.ManagedRigidObject],
-        receptacle_set: List[Tuple[List[str], List[str]]],
+        receptacle_sets: List[
+            Tuple[List[str], List[str], List[str], List[str]]
+        ],
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
     ) -> None:
@@ -393,7 +361,7 @@ class ObjectTargetSampler(ObjectSampler):
             x.creation_attributes.handle for x in self.object_instance_set
         ]
         super().__init__(
-            object_set, receptacle_set, num_targets, orientation_sample
+            object_set, receptacle_sets, num_targets, orientation_sample
         )
 
     def sample(

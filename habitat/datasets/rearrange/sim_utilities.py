@@ -723,3 +723,27 @@ def get_all_object_ids(sim):
             )
 
     return object_id_map
+
+
+def cull_string_list_by_substrings(
+    full_list: List[str],
+    included_substrings: List[str],
+    excluded_substrings: List[str],
+):
+    """
+    Cull a list of strings to the subset including any of the "included_substrings" and none of the excluded substrings.
+    Returns the culled list, does not modify the input list.
+    """
+    culled_list: List[str] = []
+    for string in full_list:
+        excluded = False
+        for excluded_substring in excluded_substrings:
+            if excluded_substring in string:
+                excluded = True
+                break
+        if not excluded:
+            for included_substring in included_substrings:
+                if included_substring in string:
+                    culled_list.append(string)
+                    break
+    return culled_list

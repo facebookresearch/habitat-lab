@@ -6,7 +6,7 @@
 
 import os
 import os.path as osp
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -64,63 +64,90 @@ class RearrangeEpisodeGenerator:
 
     def _get_resource_sets(self) -> None:
         """
-        Extracts scene, object, and receptacle sets from the yaml config file and constructs dicts for later reference.
+        Extracts and validates scene, object, and receptacle sets from the config and fills internal datastructures for later reference.
+        Assumes the Simulator (self.sim) is already initialized.
         """
-        self._scene_sets: Dict[
-            str, List[str]
-        ] = {}  # {scene set name -> [scene handles]}
-        self._obj_sets: Dict[
-            str, List[str]
-        ] = {}  # {object set name -> [object handles]}
-        self._receptacle_sets: Dict[
-            str, Tuple[List[str], List[str]]
-        ] = (
-            {}
-        )  # {receptacle set name -> ([object handles], [name substrings])}
+        # {scene set name -> [scene handles]}
+        self._scene_sets: Dict[str, List[str]] = {}
 
+        # {object set name -> [object handles]}
+        self._obj_sets: Dict[str, List[str]] = {}
+
+        # {receptacle set name -> ([included object handles], [excluded object handles], [included receptacle name substrings], [excluded receptacle name substrings])}
+        self._receptacle_sets: Dict[
+            str, Tuple[List[str], List[str], List[str], List[str]]
+        ] = {}
+
+        expected_list_keys = ["included_substrings", "excluded_substrings"]
+        # scene sets
         for scene_set in self.cfg.scene_sets:
             assert "name" in scene_set
-            assert "substrings" in scene_set
             assert (
                 scene_set["name"] not in self._scene_sets
             ), f"cfg.scene_sets - Duplicate name ('{scene_set['name']}') detected."
-            assert (
-                type(scene_set["substrings"]) is list
-            ), f"cfg.scene_sets - '{scene_set['name']}' 'substrings' must be a list of strings."
-            self._scene_sets[scene_set["name"]] = scene_set["substrings"]
+            for list_key in expected_list_keys:
+                assert (
+                    list_key in scene_set
+                ), f"Expected list key '{list_key}'."
+                assert (
+                    type(scene_set[list_key]) is list
+                ), f"cfg.scene_sets - '{scene_set['name']}' '{list_key}' must be a list of strings."
+            self._scene_sets[
+                scene_set["name"]
+            ] = sutils.cull_string_list_by_substrings(
+                self.sim.metadata_mediator.get_scene_handles(),
+                scene_set["included_substrings"],
+                scene_set["excluded_substrings"],
+            )
 
+        # object sets
         for object_set in self.cfg.object_sets:
             assert "name" in object_set
-            assert "substrings" in object_set
             assert (
                 object_set["name"] not in self._obj_sets
             ), f"cfg.object_sets - Duplicate name ('{object_set['name']}') detected."
-            assert (
-                type(object_set["substrings"]) is list
-            ), f"cfg.object_sets - '{object_set['name']}' 'substrings' must be a list of strings."
-            self._obj_sets[object_set["name"]] = object_set["substrings"]
+            for list_key in expected_list_keys:
+                assert (
+                    list_key in object_set
+                ), f"Expected list key '{list_key}'."
+                assert (
+                    type(object_set[list_key]) is list
+                ), f"cfg.object_sets - '{object_set['name']}' '{list_key}' must be a list of strings."
+            self._obj_sets[
+                object_set["name"]
+            ] = sutils.cull_string_list_by_substrings(
+                self.sim.get_object_template_manager().get_template_handles(),
+                object_set["included_substrings"],
+                object_set["excluded_substrings"],
+            )
 
+        # receptacle sets
+        expected_list_keys = [
+            "included_object_substrings",
+            "excluded_object_substrings",
+            "included_receptacle_substrings",
+            "excluded_receptacle_substrings",
+        ]
         for receptacle_set in self.cfg.receptacle_sets:
             assert "name" in receptacle_set
-            assert "object_substrings" in receptacle_set
-            assert "receptacle_substrings" in receptacle_set
             assert (
                 receptacle_set["name"] not in self._receptacle_sets
             ), f"cfg.receptacle_sets - Duplicate name ('{receptacle_set['name']}') detected."
-            assert (
-                type(receptacle_set["object_substrings"]) is list
-            ), f"cfg.receptacle_sets - '{receptacle_set['name']}' 'object_substrings' must be a list of strings."
-            assert (
-                type(receptacle_set["receptacle_substrings"]) is list
-            ), f"cfg.receptacle_sets - '{receptacle_set['name']}' 'receptacle_substrings' must be a list of strings."
-            self._receptacle_sets[receptacle_set["name"]] = (
-                receptacle_set["object_substrings"],
-                receptacle_set["receptacle_substrings"],
-            )
+            for list_key in expected_list_keys:
+                assert (
+                    list_key in receptacle_set
+                ), f"Expected list key '{list_key}'."
+                assert (
+                    type(receptacle_set[list_key]) is list
+                ), f"cfg.receptacle_sets - '{receptacle_set['name']}' '{list_key}' must be a list of strings."
 
-        print(f"self._scene_sets = {self._scene_sets}")
-        print(f"self._obj_sets = {self._obj_sets}")
-        print(f"self._receptacle_sets = {self._receptacle_sets}")
+            # NOTE: we can't finalize this list until sampling time when objects are instanced and receptacle metadata is scraped from the scene
+            self._receptacle_sets[receptacle_set["name"]] = (
+                receptacle_set["included_object_substrings"],
+                receptacle_set["excluded_object_substrings"],
+                receptacle_set["included_receptacle_substrings"],
+                receptacle_set["excluded_receptacle_substrings"],
+            )
 
     def _get_obj_samplers(self) -> None:
         """
@@ -138,16 +165,16 @@ class RearrangeEpisodeGenerator:
             ), f"Duplicate object sampler name '{obj_sampler_name}' in config."
             if obj_sampler_type == "uniform":
                 # merge and flatten object and receptacle sets
-                objects = [x for y in params[0] for x in self._obj_sets[y]]
-                receptacles = [
-                    (self._receptacle_sets[y][0], self._receptacle_sets[y][1])
-                    for y in params[1]
+                object_handles = [
+                    x for y in params[0] for x in self._obj_sets[y]
                 ]
+                receptacle_info = [self._receptacle_sets[y] for y in params[1]]
 
-                print(f"objects = {objects}")
-                print(f"receptacles = {receptacles}")
                 self._obj_samplers[obj_sampler_name] = samplers.ObjectSampler(
-                    objects, receptacles, (params[2], params[3]), params[4]
+                    object_handles,
+                    receptacle_info,
+                    (params[2], params[3]),
+                    params[4],
                 )
             else:
                 print(
@@ -175,17 +202,13 @@ class RearrangeEpisodeGenerator:
                     for y in params[0]
                     for x in self.episode_data["sampled_objects"][y]
                 ]
-                receptacles = [
-                    (self._receptacle_sets[y][0], self._receptacle_sets[y][1])
-                    for y in params[1]
-                ]
-                print(f"object instances = {object_instances}")
-                print(f"receptacles = {receptacles}")
+                receptacle_info = [self._receptacle_sets[y] for y in params[1]]
+
                 self._target_samplers[
                     target_sampler_name
                 ] = samplers.ObjectTargetSampler(
                     object_instances,
-                    receptacles,
+                    receptacle_info,
                     (params[2], params[3]),
                     params[4],
                 )
@@ -200,30 +223,25 @@ class RearrangeEpisodeGenerator:
         Initialize the scene sampler.
         """
         self._scene_sampler: Optional[samplers.SceneSampler] = None
-        if self.cfg.scene_sampler[0] == "single":
+        if self.cfg.scene_sampler.type == "single":
             self._scene_sampler = samplers.SingleSceneSampler(
-                self.cfg.scene_sampler[1][0]
+                self.cfg.scene_sampler.params.scene
             )
-        elif self.cfg.scene_sampler[0] == "subset":
-            # Collect unique subset tags from config
-            scene_subsets: Tuple[Set, Set] = (
-                set(),
-                set(),
-            )  # (included, excluded) subsets
-            for i in range(2):
-                for scene_set in self.cfg.scene_sampler[1][i]:
-                    assert (
-                        scene_set in self._scene_sets
-                    ), f"SubsetSceneSampler requested scene_set {scene_set} not found."
-                    for scene_subset in self._scene_sets[scene_set]:
-                        scene_subsets[i].add(scene_subset)
+        elif self.cfg.scene_sampler.type == "subset":
+            unified_scene_set: List[str] = []
+            # concatenate all requested scene sets
+            for set_name in self.cfg.scene_sampler.params.scene_sets:
+                assert (
+                    set_name in self._scene_sets
+                ), f"'subset' SceneSampler requested scene_set name, '{set_name}', not found."
+                unified_scene_set += self._scene_sets[set_name]
 
-            self._scene_sampler = samplers.SceneSubsetSampler(
-                scene_subsets[0], scene_subsets[1], self.sim
-            )
+            # cull duplicates
+            unified_scene_set = list(set(unified_scene_set))
+            self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
             print(
-                f"Requested scene sampler '{self.cfg.scene_sampler[0]}' is not implemented."
+                f"Requested scene sampler '{self.cfg.scene_sampler.type}' is not implemented."
             )
             raise (NotImplementedError)
 
@@ -618,7 +636,6 @@ def get_config_defaults() -> CN:
     """
     Populates and resturns a default config for a RearrangeEpisode.
     """
-    # TODO: Most of these values are for demonstration/testing purposes and should be removed.
     _C = CN()
 
     # ----- import/initialization parameters ------
@@ -628,51 +645,65 @@ def get_config_defaults() -> CN:
     _C.additional_object_paths = ["data/objects/ycb/"]
 
     # ----- resource set definitions ------
-    # Define the sets of scenes which can be sampled from.
-    # List of dicts containing a unique name and a list of substrings for each set.
-    # The SceneDataset will be searched for scenes with handles containing any of the substrings.
+    # Define the sets of scenes, objects, and receptacles which can be sampled from.
+    # The SceneDataset will be searched for resources of each type with handles containing ANY "included" substrings and NO "excluded" substrings.
+
+    # Define sets of scene instance handles which can be sampled from for initialization:
     _C.scene_sets = [
         {
             "name": "any",
-            "substrings": [""],
+            "included_substrings": [""],
+            "excluded_substrings": [],
             # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
             "comment": "The empty substring acts like a wildcard, selecting all scenes.",
         },
     ]
-    # Define the sets of objects which can be sampled from.
-    # List of dicts containing a unique name and a list of substrings for each set.
-    # The SceneDataset will be searched for objects with handles containing any of the substrings.
+
+    # Define the sets of object handles which can be sampled from for placement and target sampling:
+    # NOTE: Each set must have a unique name.
     _C.object_sets = [
         {
             "name": "any",
-            "substrings": [
-                "",
-            ],
+            "included_substrings": [""],
+            "excluded_substrings": [],
             # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
             "comment": "The empty substring acts like a wildcard, selecting all objects.",
         },
     ]
-    # Define the sets of receptacles which can be sampled from.
-    # List of dicts containing a unique name and a list of substrings for both object handles and receptacle names.
-    # The SceneDataset will be searched for objects with handles containing any of the object substrings.
-    # Receptacle name substrings are used to further constrain sets to receptacles with matching substrings in their names.
+
+    # Define the sets of receptacles which can be sampled from for placing objects and targets:
+    # The SceneDataset will be searched for objects containing receptacle metadata.
+    # Receptacle name substrings are used to further constrain sets.
+    # NOTE: Each set must have a unique name.
     _C.receptacle_sets = [
         {
             "name": "any",
-            "object_substrings": [""],
-            "receptacle_substrings": [""],
+            "included_object_substrings": [""],
+            "excluded_object_substrings": [],
+            "included_receptacle_substrings": [""],
+            "excluded_receptacle_substrings": [],
             # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
             "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
         },
     ]
 
     # ----- sampler definitions ------
-    # define the desired scene sampling (sampler type, (sampler parameters tuple))
+    # Define the scene sampling configuration
     # NOTE: There must be exactly one scene sampler!
-    # "single" scene sampler params ("scene name")
-    # _C.scene_sampler = ("single", ("v3_sc1_staging_00",))
-    # "subset" scene sampler params ([included scene sets], [excluded scene sets])
-    _C.scene_sampler = ("subset", (["v3_sc"], []))
+    # "type": str ("single" or "subset")
+    # "params": {
+    #   "scene_sets": [str] (if type "subset")
+    #   "scene": str (if type "single")
+    #  },
+    # NOTE: "single" scene sampler asserts that only a single scene contains the "scene" name substring
+    # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
+    # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
+    _C.scene_sampler = CN()
+    _C.scene_sampler.type = "single"
+    _C.scene_sampler.params = CN()
+    _C.scene_sampler.params.scene = "v3_sc1_staging_00"
+    _C.scene_sampler.params.scene_sets = []
+    _C.scene_sampler.comment = ""
 
     # define the desired object sampling [(name, sampler type, (sampler parameters tuple))]
     _C.obj_samplers = [
@@ -698,7 +729,7 @@ def get_config_defaults() -> CN:
         #     "uniform",
         #     (["apple"], ["basket"], 1, 2, "any"),
         # ),
-        ("counter", "uniform", (["any"], ["counter"], 1, 30, "up")),
+        ("counter", "uniform", (["kitchen"], ["counter"], 5, 30, "up")),
         # ("cupboard", "uniform", (["any"], ["cupboard"], 15, 30, "up")),
     ]
     # define the desired object target sampling (i.e., where should an existing object go)
@@ -758,9 +789,8 @@ def get_config_defaults() -> CN:
     ]
 
     # ----- marker definitions ------
-    # a marker defines a point in the local space of a rigid object or articulated link which can be registered to instances in a scene and tracked
-    # Format for each marker is a dict containing
-    # {
+    # A marker defines a point in the local space of a rigid object or articulated link which can be registered to instances in a scene and tracked
+    # Format for each marker is a dict containing:
     # "name": str
     # "type": str ("articulated_object" or "rigid_object")
     # "params": {
@@ -768,7 +798,6 @@ def get_config_defaults() -> CN:
     #   "link": str (if "articulated_object")
     #   "offset": vec3 []
     #  }
-    # }
     _C.markers = []
 
     return _C.clone()
