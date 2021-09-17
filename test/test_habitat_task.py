@@ -13,8 +13,10 @@ import habitat
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
-TELEPORT_POSITION = np.array([-3.2890449, 0.15067159, 11.124366])
-TELEPORT_ROTATION = np.array([0.92035, 0, -0.39109465, 0])
+TELEPORT_POSITION = np.array(
+    [-3.2890449, 0.15067159, 11.124366], dtype=np.float32
+)
+TELEPORT_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
 
 
 def test_task_actions():
