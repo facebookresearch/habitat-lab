@@ -1,0 +1,73 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 500
+SIMULATOR:
+  AGENT_0:
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+  HABITAT_SIM_V0:
+    GPU_DEVICE_ID: 0
+  RGB_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+  DEPTH_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+# TASK:
+#   TYPE: Nav-v0
+#   SUCCESS_DISTANCE: 0.2
+
+#   SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+#   POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+#     GOAL_FORMAT: "POLAR"
+#     DIMENSIONALITY: 2
+#   GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+#   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+#   SUCCESS:
+#     SUCCESS_DISTANCE: 0.2
+
+MULTI_TASK:
+  TASKS:
+    - TYPE: Nav-v0
+      SUCCESS_DISTANCE: 0.169
+      TASK_LABEL: MyTask
+      SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+      POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+        GOAL_FORMAT: "POLAR"
+        DIMENSIONALITY: 2
+      GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+      MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+      SUCCESS:
+        SUCCESS_DISTANCE: 0.2
+      DATASET:  # you can specify your own dataset per task
+        TYPE: PointNav-v1
+        SPLIT: test
+        DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
+    - TYPE: Nav-v0
+      SUCCESS_DISTANCE: 0.2
+      # define custom actions for this task only
+      POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_RIGHT"]
+
+      SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+      POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+        GOAL_FORMAT: "POLAR"
+        DIMENSIONALITY: 2
+      GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+      MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+      SUCCESS:
+        SUCCESS_DISTANCE: 0.2
+      # "global' dataset is used if unspecified
+    - TYPE: Nav-v0
+      SUCCESS_DISTANCE: 1.53
+  TASK_ITERATOR:
+    TASK_SAMPLING: SEQUENTIAL # RANDOM for sampling a different task with uniform probability
+    TASK_CHANGE_TIMESTEP: FIXED # or NON_FIXED
+    CHANGE_TASK_PROB: 0.1 # for RANDOM, how likely it is to change task at defined threshold
+    # MAX_TASK_REPEAT_EPISODES: 1   # After how many episodes we want to change task
+    MAX_TASK_REPEAT_STEPS: 10 # After how many cumulative steps we want to change task
+
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: val
+  DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz

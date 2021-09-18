@@ -433,6 +433,27 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+# -----------------------------------------------------------------------------
+# MULTI_TASK
+# -----------------------------------------------------------------------------
+_C.MULTI_TASK = CN()
+_C.MULTI_TASK.TASKS = []
+# MULTI_TASK -- Task iterator options (how and when to cycle through tasks)
+_C.MULTI_TASK.TASK_ITERATOR = CN()
+# how to sample next task
+_C.MULTI_TASK.TASK_ITERATOR.TASK_SAMPLING = "SEQUENTIAL"  # or RANDOM
+
+# when to change task: after X episodes or after X steps; you can set one of the two or both
+# _C.MULTI_TASK.TASK_ITERATOR.MAX_TASK_REPEAT_EPISODES = 10
+# _C.MULTI_TASK.TASK_ITERATOR.MAX_TASK_REPEAT_STEPS = 20
+_C.MULTI_TASK.TASK_ITERATOR.DEFAULT_MAX_TASK_REPEAT_EPISODES = 10
+
+# when to sample next task; NON_FIXED allows to change task every
+# `MAX_TASK_REPEAT_EPISODES/STEPS` episodes/steps with some `CHANGE_TASK_PROB` probability
+_C.MULTI_TASK.TASK_ITERATOR.TASK_CHANGE_TIMESTEP = "FIXED"
+# only used when `TASK_CHANGE_TIMESTEP` is `NON_FIXED`; probability of changing task
+# after each episode/step after `MAX_TASK_REPEAT_EPISODES/STEPS`
+_C.MULTI_TASK.TASK_ITERATOR.CHANGE_TASK_PROB = 0.5
 
 # -----------------------------------------------------------------------------
 
@@ -464,6 +485,22 @@ def get_config(
 
     if opts:
         config.merge_from_list(opts)
+    # multi-task handling
+    # list of tasks to list of config nodes, levaraging `TASK` default values
+    tasks = []
+    for task in config.MULTI_TASK.TASKS:
+        # get default values
+        t = _C.TASK.clone()
+        task = CN(init_dict=task)
 
+        # each task can now have a different dataset, if unspecified the global one is used
+        t.DATASET = config.DATASET.clone()
+        # same thing for the episode iterator
+        t.EPISODE_ITERATOR_OPTIONS = (
+            config.ENVIRONMENT.ITERATOR_OPTIONS.clone()
+        )
+        t.merge_from_other_cfg(task)
+        tasks.append(t)
+    config.MULTI_TASK.TASKS = tasks
     config.freeze()
     return config

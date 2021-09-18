@@ -151,7 +151,9 @@ class Dataset(Generic[T]):
         """
         return [self.episodes[episode_id] for episode_id in indexes]
 
-    def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
+    def get_episode_iterator(
+        self, *args: Any, **kwargs: Any
+    ) -> "EpisodeIterator":
         r"""Gets episode iterator with options. Options are specified in
         :ref:`EpisodeIterator` documentation.
 
