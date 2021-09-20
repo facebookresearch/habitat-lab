@@ -27,7 +27,7 @@ def add_obj(name, sim):
         template_handle = obj_mgr.get_template_handles("cube")[0]
         template = obj_mgr.get_template_by_handle(template_handle)
         template.scale = mn.Vector3(size_x, size_y, size_z)
-        template.requires_lighting = True
+        template.force_flat_shading = False
         new_template_handle = obj_mgr.register_template(template, "box_new")
         obj_id = sim.add_object(new_template_handle)
         sim.set_object_motion_type(MotionType.DYNAMIC, obj_id)
