@@ -146,9 +146,9 @@ class BlindAgent(RandomAgent):
         else:
             if (angle_to_goal > 0) and (angle_to_goal < pi):
                 command = HabitatSimActions.TURN_LEFT
-            elif angle_to_goal > pi:
-                command = HabitatSimActions.TURN_RIGHT
-            elif (angle_to_goal < 0) and (angle_to_goal > -pi):
+            elif (angle_to_goal > pi) or (
+                angle_to_goal < 0 and angle_to_goal > -pi
+            ):
                 command = HabitatSimActions.TURN_RIGHT
             else:
                 command = HabitatSimActions.TURN_LEFT
@@ -505,9 +505,7 @@ class ORBSLAM2Agent(RandomAgent):
         else:
             if (d_angle > 0) and (d_angle < pi):
                 command = HabitatSimActions.TURN_LEFT
-            elif d_angle > pi:
-                command = HabitatSimActions.TURN_RIGHT
-            elif (d_angle < 0) and (d_angle > -pi):
+            elif (d_angle > pi) or (d_angle < 0 and d_angle > -pi):
                 command = HabitatSimActions.TURN_RIGHT
             else:
                 command = HabitatSimActions.TURN_LEFT
