@@ -32,6 +32,8 @@ from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot
 
+import habitat.core.timer_utils as t_utils
+
 
 # temp workflow for loading lights into Habitat scene
 def load_light_setup_for_glb(json_filepath):
@@ -67,6 +69,7 @@ class RearrangeSim(HabitatSim):
         self.ep_info = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
+        self.timer = t_utils.TimeProfilee()
 
         # Number of physics updates per action
         self.ac_freq_ratio = agent_config.AC_FREQ_RATIO
@@ -136,6 +139,7 @@ class RearrangeSim(HabitatSim):
             )
         return ep_info
 
+    @t_utils.TimeProfiler("sim.reset.reconfigure")
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
         ep_info = self._update_config(ep_info)
@@ -218,6 +222,7 @@ class RearrangeSim(HabitatSim):
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
+    @t_utils.TimeProfiler("sim.reset")
     def reset(self):
         ret = super().reset()
         if self._light_setup:
@@ -237,6 +242,7 @@ class RearrangeSim(HabitatSim):
             ao_mgr.remove_all_objects()
             self.art_objs = []
 
+    @t_utils.TimeProfiler("sim.add_objs")
     def _add_objs(self, ep_info):
         art_names = [x[0] for x in ep_info["art_objs"]]
         self.clear_objs(art_names)
@@ -348,6 +354,7 @@ class RearrangeSim(HabitatSim):
         for _ in range(steps):
             self.step_world(-1)
 
+    @t_utils.TimeProfiler("sim.step")
     def step(self, action):
         if self.is_render_obs:
             self._try_acquire_context()
@@ -369,38 +376,42 @@ class RearrangeSim(HabitatSim):
 
         if not self.concur_render:
             if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
-
-            self._prev_sim_obs = self.get_sensor_observations()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+                with t_utils.TimeProfiler("sim.step.phys_step", self):
+                    for _ in range(self.ac_freq_ratio):
+                        self.internal_step(-1)
+            with t_utils.TimeProfiler("sim.step.sensors", self):
+                self._prev_sim_obs = self.get_sensor_observations()
+                obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         else:
-            self._prev_sim_obs = self.get_sensor_observations_async_start()
+            with t_utils.TimeProfiler("sim.step.sensors_async_start", self):
+                self._prev_sim_obs = self.get_sensor_observations_async_start()
 
             if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
-
-            self._prev_sim_obs = self.get_sensor_observations_async_finish()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+                with t_utils.TimeProfiler("sim.step.phys_step", self):
+                    for _ in range(self.ac_freq_ratio):
+                        self.internal_step(-1)
+            with t_utils.TimeProfiler("sim.step.sensors_async_finish", self):
+                self._prev_sim_obs = self.get_sensor_observations_async_finish()
+                obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         if "robot_third_rgb" in obs:
             self.is_render_obs = True
             self._try_acquire_context()
-            for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.visualize_position(pos)
+            with t_utils.TimeProfiler("sim.step.high_render", self):
+                for k, pos in add_back_viz_objs.items():
+                    self.viz_ids[k] = self.visualize_position(pos)
 
-            # Also render debug information
-            if self.habitat_config.get("RENDER_TARGS", True):
-                self._create_obj_viz(self.ep_info)
+                # Also render debug information
+                if self.habitat_config.get("RENDER_TARGS", True):
+                    self._create_obj_viz(self.ep_info)
 
-            # Always draw the target
-            for obj_idx, _ in self.ep_info["targets"]:
-                self.set_object_bb_draw(True, self.scene_obj_ids[obj_idx])
+                # Always draw the target
+                for obj_idx, _ in self.ep_info["targets"]:
+                    self.set_object_bb_draw(True, self.scene_obj_ids[obj_idx])
 
-            debug_obs = self.get_sensor_observations()
-            obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
+                debug_obs = self.get_sensor_observations()
+                obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
 
         if self.habitat_config.HABITAT_SIM_V0.get(
             "ENABLE_GFX_REPLAY_SAVE", False

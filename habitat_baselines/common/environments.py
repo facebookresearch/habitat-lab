@@ -17,6 +17,7 @@ import numpy as np
 import habitat
 from habitat import Config, Dataset
 from habitat_baselines.common.baseline_registry import baseline_registry
+import habitat.core.timer_utils as t_utils
 
 
 def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
@@ -44,9 +45,12 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def reset(self):
         self._previous_action = None
+        self._env._sim.timer.clear()
         observations = super().reset()
         return observations
 
+    #TODO: this is failing with NoneType TimeProfilee ... is this the wrong scope?
+    #@t_utils.TimeProfiler("sim.step.rearrang_env", timer_prop='_env._sim')
     def step(self, *args, **kwargs):
         self._previous_action = kwargs["action"]
         return super().step(*args, **kwargs)
