@@ -185,17 +185,13 @@ class Env:
         return self._task.measurements.get_metrics()
 
     def _past_limit(self) -> bool:
-        if (
+        return (
             self._max_episode_steps != 0
             and self._max_episode_steps <= self._elapsed_steps
-        ):
-            return True
-        elif (
+        ) or (
             self._max_episode_seconds != 0
             and self._max_episode_seconds <= self._elapsed_seconds
-        ):
-            return True
-        return False
+        )
 
     def _reset_stats(self) -> None:
         self._episode_start_time = time.time()
