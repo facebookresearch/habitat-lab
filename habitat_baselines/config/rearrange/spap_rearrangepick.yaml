@@ -26,7 +26,7 @@ RL:
     #GYM_OBS_KEYS: ['joint', 'is_holding', 'ee_pos']
     #GYM_DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
 
-    GYM_OBS_KEYS: ['obj_goal_pos_sensor', 'joint', 'is_holding', 'ee_pos']
+    GYM_OBS_KEYS: ['joint', 'ee_pos']
     GYM_DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
 
     GYM_ACHIEVED_GOAL_KEYS: []

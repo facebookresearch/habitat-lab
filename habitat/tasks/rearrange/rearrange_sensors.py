@@ -599,6 +599,7 @@ class RearrangeReachReward(Measure):
             self.uuid,
             [
                 EndEffectorToRestDistance.cls_uuid,
+                RearrangeReachSuccess.cls_uuid,
             ],
         )
         self.update_metric(
@@ -613,13 +614,19 @@ class RearrangeReachReward(Measure):
         cur_dist = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
-        if self._config.DIFF_REWARD:
-            if self._prev is None:
-                self._metric = 0.0
-            else:
-                self._metric = self._prev - cur_dist
+        if self._config.SPARSE_REWARD:
+            is_succ = task.measurements.measures[
+                RearrangeReachSuccess.cls_uuid
+            ].get_metric()
+            self._metric = self._config.SCALE * float(is_succ)
         else:
-            self._metric = -1.0 * self._config.SCALE * cur_dist
+            if self._config.DIFF_REWARD:
+                if self._prev is None:
+                    self._metric = 0.0
+                else:
+                    self._metric = self._prev - cur_dist
+            else:
+                self._metric = -1.0 * self._config.SCALE * cur_dist
 
         self._prev = cur_dist
 

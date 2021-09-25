@@ -27,13 +27,14 @@ TASK:
         TYPE: "RearrangeReachReward"
         SCALE: 1.0
         DIFF_REWARD: True
+        SPARSE_REWARD: False
     REARRANGE_REACH_SUCCESS:
         TYPE: "RearrangeReachSuccess"
         SUCC_THRESH: 0.1
     MEASUREMENTS:
         - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "REARRANGE_REACH_REWARD"
         - "REARRANGE_REACH_SUCCESS"
+        - "REARRANGE_REACH_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"

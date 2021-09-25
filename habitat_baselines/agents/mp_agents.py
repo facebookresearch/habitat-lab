@@ -26,11 +26,17 @@ def get_noop_arm_action(sim, task):
     else:
         grip_state = 0.0
 
+    if "grip_action" in task.action_space.spaces["ARM_ACTION"]:
+        grip_ac_dict = {"grip_action": grip_state}
+    else:
+        grip_ac_dict = {}
+
     if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
         ret_val = {
             "action": "ARM_ACTION",
             "action_args": {
                 "arm_action": np.zeros(3),
+                **grip_ac_dict,
             },
         }
     else:
@@ -38,10 +44,9 @@ def get_noop_arm_action(sim, task):
             "action": "ARM_ACTION",
             "action_args": {
                 "arm_action": sim.robot.arm_joint_pos,
+                **grip_ac_dict,
             },
         }
-    if "grip_action" in task.action_space.spaces["ARM_ACTION"]:
-        ret_val["action_args"]["grip_action"] = grip_state
     return ret_val
 
 
