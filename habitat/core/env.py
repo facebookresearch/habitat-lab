@@ -99,7 +99,9 @@ class Env:
                 len(self._dataset.episodes) > 0
             ), "dataset should have non-empty episodes list"
             self._config.defrost()
+            self._config.SIMULATOR.SCENE_DATASET = self._dataset.episodes[0].scene_dataset_path
             self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
+            self._config.SIMULATOR.ADDITIONAL_OBJECT_PATHS = self._dataset.episodes[0].additional_obj_config_paths
             self._config.freeze()
 
             self.number_of_episodes = len(self._dataset.episodes)
@@ -109,6 +111,12 @@ class Env:
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )
+        #load additional object paths specified by the dataset
+        #TODO: Should this be moved into the make_sim, the base HabitatSim, or elsewhere?
+        obj_attr_mgr = self._sim.get_object_template_manager()
+        for path in self._config.SIMULATOR.ADDITIONAL_OBJECT_PATHS:
+            obj_attr_mgr.load_configs(path)
+
         self._task = make_task(
             self._config.TASK.TYPE,
             config=self._config.TASK,
