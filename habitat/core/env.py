@@ -40,7 +40,7 @@ class Env:
     observation_space: spaces.Dict
     action_space: spaces.Dict
     _config: Config
-    _dataset: Optional[Dataset]
+    _dataset: Optional[Dataset[Episode]]
     number_of_episodes: Optional[int]
     _current_episode: Optional[Episode]
     _episode_iterator: Optional[Iterator[Episode]]
@@ -55,7 +55,7 @@ class Env:
     _episode_force_changed: bool
 
     def __init__(
-        self, config: Config, dataset: Optional[Dataset] = None
+        self, config: Config, dataset: Optional[Dataset[Episode]] = None
     ) -> None:
         """Constructor
 
@@ -88,7 +88,7 @@ class Env:
             assert (
                 len(self._dataset.episodes) > 0
             ), "dataset should have non-empty episodes list"
-            self._episode_iterator = self._setup_episode_iterator()
+            self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
             self._config.defrost()
             self._config.SIMULATOR.SCENE = self.current_episode.scene_id
@@ -122,14 +122,16 @@ class Env:
         self._episode_start_time: Optional[float] = None
         self._episode_over = False
 
-    def _setup_episode_iterator(self) -> Iterator[Episode]:
+    def _setup_episode_iterator(self):
         assert self._dataset is not None
         iter_option_dict = {
             k.lower(): v
             for k, v in self._config.ENVIRONMENT.ITERATOR_OPTIONS.items()
         }
         iter_option_dict["seed"] = self._config.SEED
-        return self._dataset.get_episode_iterator(**iter_option_dict)
+        self._episode_iterator = self._dataset.get_episode_iterator(
+            **iter_option_dict
+        )
 
     @property
     def current_episode(self) -> Episode:
@@ -171,7 +173,7 @@ class Env:
             self._dataset is not None
         ), "Environment must have a dataset to set episodes"
         self._dataset.episodes = episodes
-        self._episode_iterator = self._setup_episode_iterator()
+        self._setup_episode_iterator()
         self._current_episode = None
         self._episode_force_changed = True
         self._episode_from_iter_on_reset = True

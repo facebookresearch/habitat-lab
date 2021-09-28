@@ -432,3 +432,28 @@ def test_action_space_shortest_path():
     shortest_path2 = env.action_space_shortest_path(source, targets)
     assert shortest_path2 == []
     env.close()
+
+
+@pytest.mark.parametrize("set_method", ["current", "list", "iter"])
+def test_set_episodes(set_method):
+    config = get_config()
+    if not os.path.exists(config.SIMULATOR.SCENE):
+        pytest.skip("Please download Habitat test data to data folder.")
+
+    with habitat.Env(config=config, dataset=None) as env:
+        all_episodes = list(env.episodes)
+        target_episode = all_episodes[10]
+
+        if set_method == "current":
+            env.current_episode = target_episode
+        elif set_method == "list":
+            env.episodes = [target_episode]
+        elif set_method == "iter":
+            env.episode_iterator = iter([target_episode] + all_episodes)
+        else:
+            raise RuntimeError(
+                f"Test does not support setting episodes with {set_method}"
+            )
+
+        env.reset()
+        assert env.current_episode is target_episode
