@@ -329,7 +329,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         if self.is_render_obs:
             self._try_acquire_context()
-            for obj_handle, _ in self.ep_info["targets"]:
+            for obj_handle, _ in self.ep_info["targets"].items():
                 self.set_object_bb_draw(False, rom.get_object_by_handle(obj_handle).object_id)
         for viz_obj in self.viz_obj_ids:
             self.remove_object(viz_obj)
@@ -374,7 +374,7 @@ class RearrangeSim(HabitatSim):
                 self._create_obj_viz(self.ep_info)
 
             # Always draw the target
-            for obj_handle, _ in self.ep_info["targets"]:
+            for obj_handle, _ in self.ep_info["targets"].items():
                 self.set_object_bb_draw(True, rom.get_object_by_handle(obj_handle).object_id)
 
             debug_obs = self.get_sensor_observations()
