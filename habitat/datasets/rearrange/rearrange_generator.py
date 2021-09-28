@@ -496,9 +496,14 @@ class RearrangeEpisodeGenerator:
                     self.vdb.get_observation()
 
         # collect final object states and serialize the episode
-        #TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
+        # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
         sampled_rigid_object_states = [
-            (x.creation_attributes.handle.split(x.creation_attributes.file_directory)[-1].split("/")[-1], np.array(x.transformation))
+            (
+                x.creation_attributes.handle.split(
+                    x.creation_attributes.file_directory
+                )[-1].split("/")[-1],
+                np.array(x.transformation),
+            )
             for x in self.ep_sampled_objects
         ]
         # sampled_rigid_object_states = [
@@ -509,7 +514,7 @@ class RearrangeEpisodeGenerator:
         self.num_ep_generated += 1
         return RearrangeEpisode(
             scene_dataset_path=self.cfg.dataset_path,
-            additional_obj_config_paths = self.cfg.additional_object_paths,
+            additional_obj_config_paths=self.cfg.additional_object_paths,
             episode_id=str(self.num_ep_generated - 1),
             start_position=np.zeros(3),
             start_rotation=[

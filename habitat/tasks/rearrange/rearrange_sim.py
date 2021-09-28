@@ -4,8 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import json
-import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict
 
@@ -14,21 +12,14 @@ import numpy as np
 
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.obj_loaders import (
-    load_articulated_objs,
-    load_objs,
-    place_viz_objs,
-)
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import (
     IkHelper,
-    convert_legacy_cfg,
     get_nav_mesh_settings,
     make_render_only,
 )
-from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot
 
@@ -72,7 +63,7 @@ class RearrangeSim(HabitatSim):
             "CONCUR_RENDER", True
         ) and hasattr(self, "get_sensor_observations_async_start")
 
-        #TODO: convert this to new format and API
+        # TODO: convert this to new format and API
         self.grasp_mgr = RearrangeGraspManager(self, self.habitat_config)
 
     def _get_target_trans(self):
@@ -82,9 +73,11 @@ class RearrangeSim(HabitatSim):
         """
         # Preprocess the ep_info making necessary datatype conversions.
         target_trans = []
-        rom  = self.get_rigid_object_manager()
+        rom = self.get_rigid_object_manager()
         for target_handle, trans in self.ep_info["targets"].items():
-            targ_idx = self.scene_obj_ids.index(rom.get_object_by_handle(target_handle).object_id)
+            targ_idx = self.scene_obj_ids.index(
+                rom.get_object_by_handle(target_handle).object_id
+            )
             target_trans.append((targ_idx, mn.Matrix4(trans)))
         return target_trans
 
@@ -99,7 +92,7 @@ class RearrangeSim(HabitatSim):
         super().reconfigure(config)
 
         self.ep_info = ep_info
-        #self.target_obj_ids = []
+        # self.target_obj_ids = []
 
         if ep_info["scene_id"] != self.prev_scene_id:
             # Object instances are not valid between scenes.
@@ -113,25 +106,24 @@ class RearrangeSim(HabitatSim):
 
         self._try_acquire_context()
 
-        #recompute the NavMesh once the scene is loaded 
+        # recompute the NavMesh once the scene is loaded
         # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
         self._recompute_navmesh()
 
-        #load articulated object states from episode config
+        # load articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
 
-        #add episode clutter objects additional to base scene objects
+        # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
 
-        #add and initialize the robot
+        # add and initialize the robot
         if self.robot is None:
             self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
             self.robot.reconfigure()
         self.robot.reset()
         self.grasp_mgr.reset()
 
-
-        #TODO: this seems to be unused, remove?
+        # TODO: this seems to be unused, remove?
         # set_pos = {}
         # # Set articulated object joint states from episode config
         # if self.habitat_config.get("LOAD_ART_OBJS", True):
@@ -140,15 +132,22 @@ class RearrangeSim(HabitatSim):
         #     for i, art_state in ep_info["art_states"]:
         #         set_pos[self.art_objs[i]] = art_state
 
-        #TODO: still necessary?
+        # TODO: still necessary?
         # Get the positions after things have settled down.
-        #self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
+        # self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
-            [scene_pos[self.scene_obj_ids.index(rom.get_object_by_handle(t_handle).object_id)] for t_handle, _ in self.ep_info["targets"].items()]
+            [
+                scene_pos[
+                    self.scene_obj_ids.index(
+                        rom.get_object_by_handle(t_handle).object_id
+                    )
+                ]
+                for t_handle, _ in self.ep_info["targets"].items()
+            ]
         )
 
         if self.first_setup:
@@ -168,29 +167,29 @@ class RearrangeSim(HabitatSim):
         AFTER adding articulated objects to the scene.
         """
 
-        #cache current motiontype and set to STATIC for inclusion in the NavMesh computation
+        # cache current motiontype and set to STATIC for inclusion in the NavMesh computation
         motion_types = []
         for art_obj in self.art_objs:
             motion_types.append(art_obj.motion_type)
             art_obj.motion_type = MotionType.STATIC
-        #compute new NavMesh
+        # compute new NavMesh
         self.recompute_navmesh(
             self.pathfinder,
             self.navmesh_settings,
             include_static_objects=True,
         )
-        #optionally save the new NavMesh
+        # optionally save the new NavMesh
         if self.habitat_config.get("SAVE_NAVMESH", False):
             scene_name = self.ep_info["scene_id"]
             inferred_path = scene_name.split(".glb")[0] + ".navmesh"
             self.pathfinder.save_nav_mesh(inferred_path)
             print("Cached navmesh to ", inferred_path)
-        #reset cached MotionTypes
+        # reset cached MotionTypes
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
     def reset(self):
-        #TODO: doesn't do anything now, remove this overwrite function?
+        # TODO: doesn't do anything now, remove this overwrite function?
         ret = super().reset()
         return ret
 
@@ -210,15 +209,16 @@ class RearrangeSim(HabitatSim):
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
         """
         aom = self.get_articulated_object_manager()
-        #NOTE: ep_info["ao_states"]: Dict[str, Dict[int, float]] : {instance_handle -> {link_ix, state}}
-        for aoi_handle,joint_states in ep_info["ao_states"].items():
+        # NOTE: ep_info["ao_states"]: Dict[str, Dict[int, float]] : {instance_handle -> {link_ix, state}}
+        for aoi_handle, joint_states in ep_info["ao_states"].items():
             ao = aom.get_object_by_handle(aoi_handle)
             ao_pose = ao.joint_positions
             for link_ix, joint_state in joint_states.items():
-                joint_position_index = ao.get_link_joint_pos_offset(int(link_ix))
+                joint_position_index = ao.get_link_joint_pos_offset(
+                    int(link_ix)
+                )
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
-        
 
     def _add_objs(self, ep_info):
         # if self.habitat_config.get("LOAD_OBJS", True):
@@ -233,22 +233,28 @@ class RearrangeSim(HabitatSim):
         #         self.target_obj_ids.append(self.scene_obj_ids[idx])
         # else:
         #     self.ep_info["targets"] = []
-        
+
         # Load clutter objects:
-        #NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
+        # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
         for obj_handle, transform in ep_info["rigid_objs"]:
             obj_attr_mgr = self.get_object_template_manager()
-            matching_templates = obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-            assert len(matching_templates.values()) == 1, "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
-            ro = rom.add_object_by_template_handle(list(matching_templates.keys())[0])
+            matching_templates = (
+                obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
+            )
+            assert (
+                len(matching_templates.values()) == 1
+            ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+            ro = rom.add_object_by_template_handle(
+                list(matching_templates.keys())[0]
+            )
             ro.transformation = mn.Matrix4(transform)
             self.scene_obj_ids.append(ro.object_id)
-            #TODO: handle the auto sleep here?
+            # TODO: handle the auto sleep here?
 
     def _create_obj_viz(self, ep_info):
         self.viz_obj_ids = []
-        #TODO: refactor this
+        # TODO: refactor this
         # target_name_pos = [
         #     (ep_info["static_objs"][idx][0], self.scene_objs[idx], pos)
         #     for idx, pos in self._get_target_trans()
@@ -330,7 +336,9 @@ class RearrangeSim(HabitatSim):
         if self.is_render_obs:
             self._try_acquire_context()
             for obj_handle, _ in self.ep_info["targets"].items():
-                self.set_object_bb_draw(False, rom.get_object_by_handle(obj_handle).object_id)
+                self.set_object_bb_draw(
+                    False, rom.get_object_by_handle(obj_handle).object_id
+                )
         for viz_obj in self.viz_obj_ids:
             self.remove_object(viz_obj)
 
@@ -375,7 +383,9 @@ class RearrangeSim(HabitatSim):
 
             # Always draw the target
             for obj_handle, _ in self.ep_info["targets"].items():
-                self.set_object_bb_draw(True, rom.get_object_by_handle(obj_handle).object_id)
+                self.set_object_bb_draw(
+                    True, rom.get_object_by_handle(obj_handle).object_id
+                )
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
