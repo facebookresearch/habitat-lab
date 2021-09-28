@@ -115,7 +115,6 @@ class Env:
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )
-        
 
         self._task = make_task(
             self._config.TASK.TYPE,
