@@ -145,12 +145,14 @@ class Env:
         self._episode_force_changed = True
 
     @property
-    def episode_iterator(self) -> Iterator:
+    def episode_iterator(self) -> Iterator[Episode]:
         return self._episode_iterator
 
     @episode_iterator.setter
-    def episode_iterator(self, new_iter: Iterator) -> None:
+    def episode_iterator(self, new_iter: Iterator[Episode]) -> None:
         self._episode_iterator = new_iter
+        self._episode_force_changed = True
+        self._episode_from_iter_on_reset = True
 
     @property
     def episodes(self) -> List[Episode]:
