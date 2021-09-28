@@ -685,18 +685,17 @@ def snap_down(
             if (
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
-            ):
-                if cp.contact_distance < -0.01:
-                    obj.translation = cached_position
-                    # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
-                    return False
-                elif not (
+            ) and (
+                (cp.contact_distance < -0.01)
+                or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
-                ):
-                    obj.translation = cached_position
-                    # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
-                    return False
+                )
+            ):
+                obj.translation = cached_position
+                # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
+                # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
+                return False
         return True
     else:
         # no valid position found, reset and return failure
