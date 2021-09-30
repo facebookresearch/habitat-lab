@@ -151,7 +151,7 @@ class Dataset(Generic[T]):
         """
         return [self.episodes[episode_id] for episode_id in indexes]
 
-    def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator:
+    def get_episode_iterator(self, *args: Any, **kwargs: Any) -> Iterator[T]:
         r"""Gets episode iterator with options. Options are specified in
         :ref:`EpisodeIterator` documentation.
 
@@ -307,7 +307,7 @@ class Dataset(Generic[T]):
         return new_datasets
 
 
-class EpisodeIterator(Iterator):
+class EpisodeIterator(Iterator[T]):
     r"""Episode Iterator class that gives options for how a list of episodes
     should be iterated.
 
