@@ -63,9 +63,9 @@ All model weights are subject to [Matterport3D Terms-of-Use](http://dovahkiin.st
 
 If you use DD-PPO or the model-weights in your research, please cite the following [paper](https://arxiv.org/abs/1911.00357):
 
-    @article{wijmans2020ddppo,
+    @inproceedings{wijmans2020ddppo,
       title = {{DD-PPO}: {L}earning Near-Perfect PointGoal Navigators from 2.5 Billion Frames},
       author =  {Erik Wijmans and Abhishek Kadian and Ari Morcos and Stefan Lee and Irfan Essa and Devi Parikh and Manolis Savva and Dhruv Batra},
-      journal = {International Conference on Learning Representations (ICLR)},
+      booktitle = {International Conference on Learning Representations (ICLR)},
       year =    {2020}
     }
