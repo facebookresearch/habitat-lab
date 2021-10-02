@@ -11,6 +11,7 @@ from glob import glob
 import pytest
 
 import habitat
+import habitat.datasets.rearrange.rearrange_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat_baselines.utils.env_utils
@@ -22,12 +23,13 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
-CFG_TEST = "configs/tasks/rearrange_composite_replica_cad.yaml" #"configs/tasks/rearrangepick_replica_cad.yaml"
+CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
+GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -59,7 +61,7 @@ def test_rearrange_dataset():
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "test"])
@@ -162,3 +164,27 @@ def test_rearrange_task(test_cfg_path):
                 _, _, done, info = env.step(action=action)
 
             logger.info(info)
+
+
+# NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
+@pytest.mark.parametrize("debug_visualization", [False])
+@pytest.mark.parametrize("num_episodes", [2])
+@pytest.mark.parametrize("config", [GEN_TEST_CFG])
+def test_rearrange_episode_generator(
+    debug_visualization, num_episodes, config
+):
+    cfg = rr_gen.get_config_defaults()
+    cfg.merge_from_file(config)
+    dataset = RearrangeDatasetV0()
+    with rr_gen.RearrangeEpisodeGenerator(
+        cfg=cfg, debug_visualization=debug_visualization
+    ) as ep_gen:
+        start_time = time.time()
+        dataset.episodes += ep_gen.generate_episodes(num_episodes)
+
+    # test serialization of freshly generated dataset
+    check_json_serialization(dataset)
+
+    print(
+        f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
+    )

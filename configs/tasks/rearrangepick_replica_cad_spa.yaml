@@ -4,7 +4,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_dataset_test.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
