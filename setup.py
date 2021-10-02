@@ -99,6 +99,7 @@ if __name__ == "__main__":
             "pytest-mock",
             "pytest",
             "pybullet==3.0.4",
+            "mock",
         ],
         include_package_data=True,
         cmdclass={"install": InstallCommand, "develop": DevelopCommand},
