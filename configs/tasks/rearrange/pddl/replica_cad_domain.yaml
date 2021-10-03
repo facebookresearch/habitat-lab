@@ -1,0 +1,48 @@
+types:
+    - robot
+    - fridge
+art_objs:
+    cab: 0
+    fridge: 1
+markers:
+    cab_top_left: cab_push_point_7
+actions: 
+    - name: nav
+      parameters: [obj_to]
+      task: DynNavRLEnv
+      task_def: "dyn_nav_task"
+      precondition: []
+      effect: ["at(robot,obj_to)"]
+    - name: pick
+      parameters: [obj]
+      task: RearrangPickRLEnv
+      task_def: "rearrang_pick_task"
+      precondition: 
+          - "at(robot,obj)"
+      if_then_preconds:
+          - ["in(obj,cab_top_left)", "opened_cab(cab_top_left)"]
+          - ["in(obj,fridge)", "opened_fridge()"]
+      effect: ["holding(obj)"]
+predicates:
+    - name: in
+      args: [X, Y]
+
+    - name: holding
+      args: [X]
+      state: 
+        robo:
+            holding: "X"
+    - name: not_holding
+      state: 
+        robo:
+            holding: 'NONE'
+    - name: at
+      args: [robot,Y]
+      state: 
+        robo:
+            pos: Y
+    - name: at
+      args: [X,Y]
+      state:
+          obj_states:
+              X: Y

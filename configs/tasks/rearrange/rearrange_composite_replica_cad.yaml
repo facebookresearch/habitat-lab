@@ -19,6 +19,12 @@ TASK:
     # robot
     EASY_INIT: False
 
+    # Composite task config
+    TASK_SPEC_BASE_PATH: "configs/tasks/rearrange/pddl/"
+    TASK_SPEC: "nav_pick_place"
+    # -1 means no forcing any node evaluation.
+    SINGLE_NODE_EVAL: -1
+
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
         GOAL_FORMAT: "CARTESIAN"

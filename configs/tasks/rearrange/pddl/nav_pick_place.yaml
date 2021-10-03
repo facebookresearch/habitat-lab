@@ -1,0 +1,17 @@
+domain: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+start: 
+    precondition: []
+    state:
+        art_states:
+            cab: [0,0,0,0,0,0,0]
+            fridge: [0,0]
+        robo:
+            pos: 'rnd'
+
+goal:
+  precondition:
+    - "holding(kitchen_counter_targets|0)"
+
+solution: 
+    - "nav(kitchen_counter_targets|0)"
+    - "pick(kitchen_counter_targets|0)"

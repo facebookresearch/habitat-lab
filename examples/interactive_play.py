@@ -38,7 +38,6 @@ import cv2
 import magnum as mn
 import numpy as np
 import torch
-from differentiable_robot_model.robot_model import DifferentiableRobotModel
 
 import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
@@ -312,13 +311,19 @@ if __name__ == "__main__":
     parser.add_argument("--save-actions", action="store_true", default=False)
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    parser.add_argument(
+        "opts",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="Modify config options from command line",
+    )
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
         raise ImportError(
             "Need to install PyGame (run `pip install pygame==2.0.1`)"
         )
 
-    config = habitat.get_config(args.cfg)
+    config = habitat.get_config(args.cfg, args.opts)
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

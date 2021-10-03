@@ -87,17 +87,19 @@ class RearrangeSim(HabitatSim):
 
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
+        self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
         config["SCENE"] = ep_info["scene_id"]
+
         super().reconfigure(config)
+        self._ref_handle_to_obj_id = {}
+
+        self.clear_rigid_body_objects()
 
         self.ep_info = ep_info
-        # self.target_obj_ids = []
 
         if ep_info["scene_id"] != self.prev_scene_id:
             # Object instances are not valid between scenes.
-            self.art_objs = []
-            self.scene_obj_ids = []
             self.robot = None
             self.viz_ids = defaultdict(lambda: None)
             self.viz_obj_ids = []
@@ -133,19 +135,6 @@ class RearrangeSim(HabitatSim):
             # done IL proj hack
         self.robot.reset()
         self.grasp_mgr.reset()
-
-        # TODO: this seems to be unused, remove?
-        # set_pos = {}
-        # # Set articulated object joint states from episode config
-        # if self.habitat_config.get("LOAD_ART_OBJS", True):
-        #     for i, art_state in self.start_art_states.items():
-        #         set_pos[i] = art_state
-        #     for i, art_state in ep_info["art_states"]:
-        #         set_pos[self.art_objs[i]] = art_state
-
-        # TODO: still necessary?
-        # Get the positions after things have settled down.
-        # self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
@@ -199,21 +188,11 @@ class RearrangeSim(HabitatSim):
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
-    def reset(self):
-        # TODO: doesn't do anything now, remove this overwrite function?
-        ret = super().reset()
-        return ret
-
-    def clear_objs(self, art_names=None):
+    def clear_rigid_body_objects(self):
         rom = self.get_rigid_object_manager()
         for scene_obj_id in self.scene_obj_ids:
-            rom.remove_object_by_id(scene_obj_id.handle)
-        self.scene_objs = []
-
-        if art_names is None or self.cached_art_obj_ids != art_names:
-            ao_mgr = self.get_articulated_object_manager()
-            ao_mgr.remove_all_objects()
-            self.art_objs = []
+            rom.remove_object_by_id(scene_obj_id)
+        self.scene_obj_ids = []
 
     def _set_ao_states_from_ep(self, ep_info):
         """
@@ -231,20 +210,10 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
+    def get_obj_id_for_ref_handle(self, ref_handle):
+        return self._ref_handle_to_obj_id[ref_handle]
+
     def _add_objs(self, ep_info):
-        # if self.habitat_config.get("LOAD_OBJS", True):
-        #     self.scene_obj_ids = load_objs(
-        #         convert_legacy_cfg(ep_info["static_objs"]),
-        #         self,
-        #         obj_ids=self.scene_obj_ids,
-        #         auto_sleep=self.habitat_config.get("AUTO_SLEEP", True),
-        #     )
-
-        #     for idx, _ in ep_info["targets"]:
-        #         self.target_obj_ids.append(self.scene_obj_ids[idx])
-        # else:
-        #     self.ep_info["targets"] = []
-
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
@@ -259,7 +228,15 @@ class RearrangeSim(HabitatSim):
             ro = rom.add_object_by_template_handle(
                 list(matching_templates.keys())[0]
             )
-            ro.transformation = mn.Matrix4(transform)
+
+            # The saved matrices need to be flipped when reloading.
+            ro.transformation = mn.Matrix4(
+                [[transform[j][i] for j in range(4)] for i in range(4)]
+            )
+
+            ref_handle = self.instance_handle_to_ref_handle[obj_handle]
+            self._ref_handle_to_obj_id[ref_handle] = ro.object_id
+
             self.scene_obj_ids.append(ro.object_id)
             # TODO: handle the auto sleep here?
 
@@ -344,6 +321,8 @@ class RearrangeSim(HabitatSim):
 
     def step(self, action):
         rom = self.get_rigid_object_manager()
+        roid = self.scene_obj_ids[0]
+
         if self.is_render_obs:
             self._try_acquire_context()
             for obj_handle, _ in self.ep_info["targets"].items():
@@ -382,6 +361,7 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
+        # TODO: Make debug cameras more flexible.
         if "robot_third_rgb" in obs:
             self.is_render_obs = True
             self._try_acquire_context()

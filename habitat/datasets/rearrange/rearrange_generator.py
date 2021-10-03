@@ -460,8 +460,12 @@ class RearrangeEpisodeGenerator:
         # generate the target samplers
         self._get_object_target_samplers()
 
+        target_refs = {}
+
         # sample targets
-        for _sampler_name, target_sampler in self._target_samplers.items():
+        for target_idx, (sampler_name, target_sampler) in enumerate(
+            self._target_samplers.items()
+        ):
             new_target_objects = target_sampler.sample(
                 self.sim, snap_down=True, vdb=self.vdb
             )
@@ -478,6 +482,7 @@ class RearrangeEpisodeGenerator:
                 self.episode_data["sampled_targets"][
                     instance_handle
                 ] = np.array(target_transform)
+                target_refs[instance_handle] = f"{sampler_name}|{target_idx}"
                 rom.remove_object_by_handle(target_object.handle)
                 if self._render_debug_obs:
                     sutils.add_transformed_wire_box(
@@ -528,6 +533,7 @@ class RearrangeEpisodeGenerator:
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
             markers=self.cfg.markers,
+            info={"object_labels": target_refs},
         )
 
     def initialize_sim(self, scene_name: str, dataset_path: str) -> None:

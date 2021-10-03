@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from habitat.core.dataset import Episode
+from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollisionDetails, rearrange_collision
@@ -22,9 +23,11 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
+# TODO: Change from a hardcoded constant
 DESIRED_FETCH_ARM_RESTING_REL_LOCATION = np.array([0.5, 0.0, 1.0])
 
 
+@registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping shared between
