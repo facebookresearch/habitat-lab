@@ -10,26 +10,24 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def _try_register_rearrange_task():
-    try:
-        import habitat.tasks.rearrange.rearrange_sensors
-    except ImportError as e:
-        print(e)
+    import habitat.tasks.rearrange.actions
+    import habitat.tasks.rearrange.multi_task.rearrange_composite_task
+    import habitat.tasks.rearrange.rearrange_sensors
+    import habitat.tasks.rearrange.rearrange_task
+    import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
+    import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
+    import habitat.tasks.rearrange.sub_tasks.pick_sensors
+    import habitat.tasks.rearrange.sub_tasks.pick_task
+    import habitat.tasks.rearrange.sub_tasks.reach_sensors
+    import habitat.tasks.rearrange.sub_tasks.reach_task
 
-    try:
-        import habitat.tasks.rearrange.actions
-        import habitat.tasks.rearrange.rearrange_composite_task
-        import habitat.tasks.rearrange.rearrange_pick_task
-        import habitat.tasks.rearrange.rearrange_reach_task
-        import habitat.tasks.rearrange.rearrange_task
-    except ImportError as e:
-        print(e)
-        rearrangetask_import_error = e
-
-        @registry.register_task(name="Rearrange-v0")
-        class RearrangeTaskImportError(EmbodiedTask):
-            def __init__(self, *args, **kwargs):
-                raise rearrangetask_import_error
-
+    # except ImportError as e:
+    #    print(e)
+    #    rearrangetask_import_error = e
+    #    @registry.register_task(name="Rearrange-v0")
+    #    class RearrangeTaskImportError(EmbodiedTask):
+    #        def __init__(self, *args, **kwargs):
+    #            raise rearrangetask_import_error
     # Register actions
     if not HabitatSimActions.has_action("ARM_ACTION"):
         HabitatSimActions.extend_action_space("ARM_ACTION")

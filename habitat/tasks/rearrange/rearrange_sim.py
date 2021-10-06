@@ -92,7 +92,7 @@ class RearrangeSim(HabitatSim):
         config["SCENE"] = ep_info["scene_id"]
 
         super().reconfigure(config)
-        self._ref_handle_to_obj_id = {}
+        self.ref_handle_to_rigid_obj_id = {}
 
         self.clear_rigid_body_objects()
 
@@ -162,6 +162,23 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
+    def get_nav_pos(self, pos):
+        pos = mn.Vector3(*pos)
+        height_thresh = 0.15
+        z_min = -0.2
+        use_vs = np.array(self.pathfinder.build_navmesh_vertices())
+
+        if height_thresh is not None:
+            use_vs = use_vs[use_vs[:, 1] < height_thresh]
+        if z_min is not None:
+            use_vs = use_vs[use_vs[:, 2] > z_min]
+        dists = np.linalg.norm(
+            use_vs[:, [0, 2]] - np.array(pos)[[0, 2]], axis=-1
+        )
+
+        closest_idx = np.argmin(dists)
+        return use_vs[closest_idx]
+
     def _recompute_navmesh(self):
         """Generates the navmesh on the fly. This must be called
         AFTER adding articulated objects to the scene.
@@ -210,13 +227,11 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
-    def get_obj_id_for_ref_handle(self, ref_handle):
-        return self._ref_handle_to_obj_id[ref_handle]
-
     def _add_objs(self, ep_info):
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
+        obj_counts = defaultdict(int)
         for obj_handle, transform in ep_info["rigid_objs"]:
             obj_attr_mgr = self.get_object_template_manager()
             matching_templates = (
@@ -234,8 +249,18 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-            ref_handle = self.instance_handle_to_ref_handle[obj_handle]
-            self._ref_handle_to_obj_id[ref_handle] = ro.object_id
+            other_obj_handle = (
+                obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
+            )
+
+            if other_obj_handle in self.instance_handle_to_ref_handle:
+                ref_handle = self.instance_handle_to_ref_handle[
+                    other_obj_handle
+                ]
+                # self.ref_handle_to_rigid_obj_id[ref_handle] = ro.object_id
+                rel_idx = len(self.scene_obj_ids)
+                self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
+            obj_counts[obj_handle] += 1
 
             self.scene_obj_ids.append(ro.object_id)
             # TODO: handle the auto sleep here?
@@ -435,6 +460,9 @@ class RearrangeSim(HabitatSim):
             np.array(x.translation) for x in targ_trans
         ]
         return a, np.array(b)
+
+    def get_n_targets(self):
+        return len(self.ep_info["targets"])
 
     def get_target_objs_start(self):
         return np.array(self.target_start_pos)

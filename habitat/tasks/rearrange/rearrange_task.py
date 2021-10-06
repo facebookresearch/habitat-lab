@@ -45,18 +45,34 @@ class RearrangeTask(NavigationTask):
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
         self._desired_resting = DESIRED_FETCH_ARM_RESTING_REL_LOCATION
+        self._sim_reset = True
 
     @property
     def desired_resting(self):
         return self._desired_resting
 
+    def set_args(self, **kwargs):
+        raise NotImplementedError("Task cannot dynamically set arguments")
+
+    def set_sim_reset(self, sim_reset):
+        self._sim_reset = sim_reset
+
     def reset(self, episode: Episode):
-        super_reset = True
         self._ignore_collisions = []
-        if super_reset:
+        if self._sim_reset:
             observations = super().reset(episode)
         else:
             observations = None
+            self._sim._try_acquire_context()
+            prev_sim_obs = self._sim.get_sensor_observations()
+            observations = self._sim._sensor_suite.get_observations(
+                prev_sim_obs
+            )
+            task_obs = self._env.task.sensor_suite.get_observations(
+                observations, episode=0
+            )
+            observations.update(task_obs)
+
         self.prev_measures = self.measurements.get_metrics()
         self.prev_picked = False
         self.n_succ_picks = 0

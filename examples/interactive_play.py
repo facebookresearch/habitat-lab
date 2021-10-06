@@ -76,13 +76,18 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     if skip_pygame:
         return step_env(env, "EMPTY", {}, g_args), None
 
-    arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
-        "arm_action"
-    ]
-    arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
-
+    if "ARM_ACTION" in env.action_space.spaces:
+        arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
+            "arm_action"
+        ]
+        arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
+        base_action = None
+    else:
+        arm_action_space = np.zeros(7)
+        arm_ctrlr = None
+        base_action = [0, 0]
     arm_action = np.zeros(arm_action_space.shape[0])
-    base_action = None
+
     end_ep = False
     magic_grasp = None
 
@@ -217,7 +222,8 @@ def play_env(env, args, config):
     obs = env.reset()
 
     if not args.no_render:
-        obs = env.step({"action": "EMPTY", "action_args": {}})
+        # obs = env.step({"action": "EMPTY", "action_args": {}})
+        # obs = env.step(
         draw_obs = observations_to_image(obs, {})
         pygame.init()
         screen = pygame.display.set_mode(

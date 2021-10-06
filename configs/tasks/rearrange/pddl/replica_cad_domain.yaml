@@ -1,3 +1,10 @@
+#types:
+#  - name: art_obj
+#    entity_list: ArtObjEntityList
+#  - name: robot
+#    entity_list: RobotEntityList
+#  - name: object
+#    entity_list: ObjEntityList
 types:
     - robot
     - fridge
@@ -6,39 +13,40 @@ art_objs:
     fridge: 1
 markers:
     cab_top_left: cab_push_point_7
-actions: 
+actions:
     - name: nav
       parameters: [obj_to]
       task: DynNavRLEnv
       task_def: "dyn_nav_task"
       precondition: []
-      effect: ["at(robot,obj_to)"]
+      postcondition:
+        - "at(robot,obj_to)"
     - name: pick
       parameters: [obj]
-      task: RearrangPickRLEnv
-      task_def: "rearrang_pick_task"
-      precondition: 
+      task: RearrangePickTask-v0
+      task_def: "pick"
+      precondition:
           - "at(robot,obj)"
-      if_then_preconds:
-          - ["in(obj,cab_top_left)", "opened_cab(cab_top_left)"]
-          - ["in(obj,fridge)", "opened_fridge()"]
-      effect: ["holding(obj)"]
+          #- "!in(obj,cab_top_left) OR opened_cab(cab_top_left)"
+          #- "!in(obj,fridge) OR opened_fridge()"
+      postcondition:
+        - "holding(obj)"
 predicates:
     - name: in
       args: [X, Y]
 
     - name: holding
       args: [X]
-      state: 
+      state:
         robo:
             holding: "X"
     - name: not_holding
-      state: 
+      state:
         robo:
             holding: 'NONE'
     - name: at
       args: [robot,Y]
-      state: 
+      state:
         robo:
             pos: Y
     - name: at

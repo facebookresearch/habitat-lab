@@ -41,13 +41,20 @@ class RearrangePickTaskV1(RearrangeTask):
         self.abs_targ_idx = None
         self.cur_dist = -1.0
         self.prev_picked = False
+        self.force_set_idx = None
+
+    def set_args(self, obj, **kwargs):
+        self.force_set_idx = obj
 
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
     def _gen_start_pos(self, sim, is_easy_init):
         target_positions = self._get_targ_pos(sim)
-        sel_idx = np.random.randint(0, len(target_positions))
+        if self.force_set_idx is not None:
+            sel_idx = self.force_set_idx
+        else:
+            sel_idx = np.random.randint(0, len(target_positions))
         targ_pos = target_positions[sel_idx]
 
         orig_start_pos = sim.pathfinder.snap_point(targ_pos)

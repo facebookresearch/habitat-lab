@@ -253,6 +253,8 @@ class ArmAbsPosKinematicAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class BaseVelAction(SimulatorTaskAction):
+    """ """
+
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
@@ -262,7 +264,7 @@ class BaseVelAction(SimulatorTaskAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
 
-        self.end_on_stop = self._config.get("END_ON_STOP", False)
+        self.end_on_stop = self._config.END_ON_STOP
 
     @property
     def action_space(self):

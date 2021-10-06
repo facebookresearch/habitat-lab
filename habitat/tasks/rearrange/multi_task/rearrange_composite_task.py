@@ -1,8 +1,6 @@
 import copy
 import os.path as osp
-import time
 from collections import defaultdict
-from functools import partial
 
 import numpy as np
 import yacs.config
@@ -11,31 +9,13 @@ import yaml
 import habitat
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.rearrange_pddl import Action, Predicate, SetState
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    Action,
+    Predicate,
+    SetState,
+)
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
-from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.environments import NavRLEnv
-
-
-class DummyRLEnv(object):
-    def __init__(self, config, dataset=None):
-        self.config = config
-        self._env = config.tmp_env
-        self.observation_space = self._env.observation_space
-        self.action_space = self._env.action_space
-        self.number_of_episodes = self._env.number_of_episodes
-        self.reward_range = self.get_reward_range()
-
-    def set_args(self, **kwargs):
-        pass
-
-    def reset(self):
-        sim = self._env._sim
-        sim._try_acquire_context()
-        prev_sim_obs = sim._sim.get_sensor_observations()
-        obs = sim._sensor_suite.get_observations(prev_sim_obs)
-        return obs
 
 
 @registry.register_task(name="RearrangeCompositeTask-v0")
@@ -55,25 +35,8 @@ class RearrangeCompositeTaskV0(RearrangeTask):
         with open(self.task_def["domain"], "r") as f:
             domain_def = yaml.safe_load(f)
 
-        self.name_to_id = self.get_name_id_conversions(domain_def)
+        self.name_to_id = self.domain.get_name_to_id_mapping()
 
-        self.predicates = []
-        for pred_d in domain_def["predicates"]:
-            pred = Predicate(pred_d)
-            self.predicates.append(pred)
-        self.types = domain_def["types"]
-
-        self.actions = {}
-        for action_d in domain_def["actions"]:
-            action = Action(
-                action_d,
-                config,
-                dataset,
-                self.name_to_id,
-                self,
-                self.predicate_lookup,
-            )
-            self.actions[action.name] = action
         self.load_solution(task_def["solution"])
 
         self.cur_node = -1
@@ -161,54 +124,6 @@ class RearrangeCompositeTaskV0(RearrangeTask):
                 args, self.task_def.get("add_args", {}).get(i, {})
             )
             self.solution.append(ac_instance)
-
-    def predicate_lookup(self, pred_key):
-        pred_name, pred_args = pred_key.split("(")
-        pred_args = pred_args.split(")")[0].split(",")
-        if pred_args[0] == "":
-            pred_args = []
-        # We take the first match
-        for pred in self.predicates:
-            if pred.name != pred_name:
-                continue
-
-            if len(pred_args) != len(pred.args):
-                continue
-            is_match = True
-            for q_arg, k_arg in zip(pred_args, pred.args):
-                if k_arg in self.types and q_arg not in self.types:
-                    is_match = False
-                    break
-            if is_match:
-                return pred
-        return None
-
-    def get_name_id_conversions(self, domain_def):
-        name_to_id = {}
-        sim = self._env._sim
-
-        # sim.
-
-        for i, x in enumerate(scene_def["obj_inits"]):
-            if not isinstance(x, str):
-                obj_name = x[0]
-            else:
-                # This must be a clutter
-                continue
-            real_obj_name = f"{obj_name}|{counts[obj_name]}"
-            name_to_id[real_obj_name] = i
-            counts[obj_name] += 1
-
-        for i, x in enumerate(scene_def["target_gens"]):
-            obj_name = x[0]
-            name_to_id["TARGET_" + obj_name] = i
-
-        for name, idx in domain_def["art_objs"].items():
-            name_to_id["ART_" + name] = idx
-
-        for name, marker_name in domain_def["markers"].items():
-            name_to_id[name] = marker_name
-        return name_to_id
 
     def _jump_to_node(self, node_idx, is_full_task=False):
         # We don't want to reset to this node if we are in full task mode.

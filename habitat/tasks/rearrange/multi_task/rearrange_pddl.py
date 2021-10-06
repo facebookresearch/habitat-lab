@@ -1,3 +1,14 @@
+import copy
+from functools import partial
+
+import numpy as np
+import yaml
+
+from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
+    load_task_object,
+)
+
+
 def parse_func(x):
     name = x.split("(")[0]
     args = x.split("(")[1].split(")")[0]
@@ -13,46 +24,6 @@ def search_for_id(k, name_to_id):
     return k
 
 
-def load_task_object(
-    task,
-    task_def,
-    cur_config,
-    cur_env,
-    cur_dataset,
-    should_super_reset,
-    task_kwargs,
-):
-    prev_base = NavRLEnv.__bases__[0]
-    NavRLEnv.__bases__ = (DummyRLEnv,)
-    task_cls = baseline_registry.get_env(task)
-
-    yacs.config._VALID_TYPES.add(type(cur_env._env))
-    task_config_name = task_def
-
-    config = copy.copy(cur_config)
-    config.defrost()
-    if task_config_name is not None:
-        task_config = habitat.get_config(
-            osp.join(TASK_CONFIGS_DIR, task_config_name + ".yaml")
-        )
-        config.merge_from_other_cfg(task_config)
-    config.TASK_CONFIG.tmp_env = cur_env._env
-    config.freeze()
-    task = task_cls(config, cur_dataset)
-    config.defrost()
-    del config.TASK_CONFIG["tmp_env"]
-    config.freeze()
-    yacs.config._VALID_TYPES.remove(type(cur_env._env))
-
-    task.set_args(**task_kwargs)
-    task.set_sim_reset(False)
-
-    # THIS COULD SET THE SIMULATOR STATE
-    task.reset(super_reset=should_super_reset)
-    NavRLEnv.__bases__ = (prev_base,)
-    return task
-
-
 class Action:
     def __init__(
         self, load_d, config, dataset, name_to_id, env, predicate_lookup_fn
@@ -60,6 +31,8 @@ class Action:
         self.name = load_d["name"]
         self.parameters = load_d["parameters"]
         self.name_to_id = name_to_id
+        self.task = load_d["task"]
+        self.task_def = load_d["task_def"]
 
         self.load_task_fn = partial(
             self._load_task, load_d, config, dataset, name_to_id
@@ -72,33 +45,20 @@ class Action:
             self.precond.append(precond)
             self.precond_strs.append(parse_func(precond_str)[1])
 
-        self.itpreconds = []
-        self.itprecond_strs = []
-        for itprecond in load_d.get("if_then_preconds", []):
-            self.itprecond_strs.append(
-                [parse_func(itprecond[0])[1], parse_func(itprecond[1])[1]]
-            )
-            self.itpreconds.append(
-                [
-                    copy.deepcopy(predicate_lookup_fn(itprecond[0])),
-                    copy.deepcopy(predicate_lookup_fn(itprecond[1])),
-                ]
-            )
-
-        self.effect = []
-        self.effect_args = []
-        for effect_s in load_d["effect"]:
+        self.postcond = []
+        self.postcond_args = []
+        for effect_s in load_d["postcondition"]:
             _, effect_arg = parse_func(effect_s)
-            self.effect_args.append(effect_arg)
-            effect = predicate_lookup_fn(effect_s)
-            if effect is None:
-                raise ValueError(f"Could not find effect for {effect_s}")
+            self.postcond_args.append(effect_arg)
+            postcond = predicate_lookup_fn(effect_s)
+            if postcond is None:
+                raise ValueError(f"Could not find postcond for {effect_s}")
 
-            self.effect.append(effect)
+            self.postcond.append(postcond)
         self.is_bound = False
 
     def __repr__(self):
-        return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.effect}>"
+        return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
 
     def bind(self, args, add_args={}):
         """
@@ -125,8 +85,8 @@ class Action:
                 effect_arg = []
             return effect_arg
 
-        for i in range(len(self.effect_args)):
-            self.effect[i].bind(convert_arg_str(self.effect_args[i]))
+        for i in range(len(self.postcond_args)):
+            self.postcond[i].bind(convert_arg_str(self.postcond_args[i]))
 
         for i in range(len(self.precond_strs)):
             self.precond[i].bind(convert_arg_str(self.precond_strs[i]))
@@ -174,22 +134,18 @@ class Action:
     def init_task(self, env, should_reset=True):
         return self.load_task_fn(env, should_reset=should_reset)
 
-    def can_apply(self, preds):
+    def are_preconditions_true(self, preds):
         def has_match(pred):
             return any([other_pred.is_equal(pred) for other_pred in preds])
 
         for precond_pred in self.precond:
             if not has_match(precond_pred):
                 return False
-        for pred1, pred2 in self.itpreconds:
-            # X -> Y is same as not X or Y
-            if not (not has_match(pred1) or has_match(pred2)):
-                return False
         return True
 
-    def update_predicates(self, preds):
+    def apply_postconditions(self, preds):
         new_preds = copy.deepcopy(preds)
-        for pred in self.effect:
+        for pred in self.postcond:
             if (
                 pred.name.startswith("open")
                 or pred.name.startswith("closed")
@@ -222,11 +178,11 @@ class Action:
         return new_preds
 
     def apply(self, name_to_id, sim):
-        for effect in self.effect:
-            self._apply_effect(effect, name_to_id, sim)
+        for postcond in self.postcond:
+            self._apply_effect(postcond, name_to_id, sim)
 
-    def _apply_effect(self, effect, name_to_id, sim):
-        set_state = effect.set_state
+    def _apply_effect(self, postcond, name_to_id, sim):
+        set_state = postcond.set_state
         set_state.set_state(name_to_id, sim)
 
 
@@ -239,6 +195,9 @@ class Predicate:
             self.set_state = None
         self.args = load_d.get("args", [])
         self.set_args = None
+
+    def get_n_args(self):
+        return len(self.args)
 
     def is_equal(self, b):
         return (
@@ -308,7 +267,7 @@ class SetState:
         for obj_name, target in self.obj_states.items():
             obj_idx = name_to_id[obj_name]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
-            cur_pos = sim._sim.get_translation(abs_obj_id)
+            cur_pos = sim.get_translation(abs_obj_id)
 
             targ_idx = name_to_id[target]
             _, pos_targs = sim.get_targets()
@@ -320,7 +279,7 @@ class SetState:
 
         for art_obj_id, set_art in self.art_states.items():
             abs_id = sim.art_obj_ids[art_obj_id]
-            prev_art_pos = sim._sim.get_articulated_object_positions(abs_id)
+            prev_art_pos = sim.get_articulated_object_positions(abs_id)
             if isinstance(set_art, str):
                 art_sampler = eval(set_art)
                 did_sat = art_sampler.is_satisfied(prev_art_pos)
@@ -339,11 +298,11 @@ class SetState:
             # Robot must be holding right object.
             obj_idx = name_to_id[self.robo_state.holding]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
-            if sim.snapped_obj_id != abs_obj_id:
+            if sim.grasp_mgr.snap_idx != abs_obj_id:
                 return False
         elif self.robo_state.holding == "NONE":
             # Robot must be holding nothing
-            if sim.snapped_obj_id != None:
+            if sim.grasp_mgr.snap_idx != None:
                 return False
 
         return True
