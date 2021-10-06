@@ -129,13 +129,13 @@ def example():
         observations.append(sim.get_sensor_observations())
 
 
-        if count_steps == 60:
+        if count_steps == 120:
             ant.leg_joint_pos = [0, 0, 0, 0, -0.3, 0.3, 0.3, -0.3]
 
-        if count_steps == 90:
+        if count_steps == 180:
             ant.leg_joint_pos = [1, 1, 1, 1, -1, 1, 1, -1]
         
-        if count_steps == 120:
+        if count_steps == 210:
             ant.leg_joint_pos = [0, 0, 0, 0, -1, 1, 1, -1]
 
         print(type(observations))
@@ -147,6 +147,14 @@ def example():
         cv2.imshow("RGB", transform_rgb_bgr(observations[-1]["rgba_camera_1stperson"]))
         count_steps += 1
     print("Episode finished after {} steps.".format(count_steps))
+
+    vut.make_video(
+        observations,
+        "rgba_camera_1stperson",
+        "color",
+        "test_ant_wrapper",
+        open_vid=True,
+    )
     
 
 if __name__ == "__main__":
