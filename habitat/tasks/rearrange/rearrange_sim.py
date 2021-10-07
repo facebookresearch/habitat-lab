@@ -231,7 +231,7 @@ class RearrangeSim(HabitatSim):
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
-        obj_counts = defaultdict(int)
+        obj_counts: Dict[str, int] = defaultdict(int)
         for obj_handle, transform in ep_info["rigid_objs"]:
             obj_attr_mgr = self.get_object_template_manager()
             matching_templates = (
@@ -346,7 +346,7 @@ class RearrangeSim(HabitatSim):
 
     def step(self, action):
         rom = self.get_rigid_object_manager()
-        roid = self.scene_obj_ids[0]
+        # roid = self.scene_obj_ids[0]
 
         if self.is_render_obs:
             self._try_acquire_context()

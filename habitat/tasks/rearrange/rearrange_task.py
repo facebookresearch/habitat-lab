@@ -68,7 +68,7 @@ class RearrangeTask(NavigationTask):
             observations = self._sim._sensor_suite.get_observations(
                 prev_sim_obs
             )
-            task_obs = self._env.task.sensor_suite.get_observations(
+            task_obs = self.sensor_suite.get_observations(
                 observations, episode=0
             )
             observations.update(task_obs)
