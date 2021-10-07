@@ -516,7 +516,7 @@ class NavDataset(wds.Dataset):
                 and (
                     self.max_controller_actions == 1
                     or controller_out[
-                        i - self.max_controller_actions + 1 : i  # noqa
+                        i - self.max_controller_actions + 1 : i
                     ].sum()
                     == self.max_controller_actions - 1
                 )

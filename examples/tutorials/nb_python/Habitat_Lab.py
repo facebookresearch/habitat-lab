@@ -75,7 +75,7 @@ from habitat_baselines.config.default import get_config as get_baselines_config
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
 def display_sample(
     rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])
-):  # noqa B006
+):  # noqa: B006
     from habitat_sim.utils.common import d3_40_colors_rgb
 
     rgb_img = Image.fromarray(rgb_obs, mode="RGB")
