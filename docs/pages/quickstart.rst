@@ -132,7 +132,7 @@ Below is a demo of what the example output will look like:
 
 For more examples refer to
 :gh:`Habitat Lab examples <facebookresearch/habitat-lab/tree/master/examples>`
-and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/master/examples>`.
+and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/main/examples>`.
 
 
 
