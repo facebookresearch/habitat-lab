@@ -1,20 +1,9 @@
 import copy
 import itertools
 
-import numpy as np
-import yacs.config
 import yaml
 
-import habitat
-from habitat.core.dataset import Episode
-from habitat.core.registry import registry
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    Action,
-    Predicate,
-    SetState,
-)
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import Action, Predicate
 
 
 class PddlDomain:

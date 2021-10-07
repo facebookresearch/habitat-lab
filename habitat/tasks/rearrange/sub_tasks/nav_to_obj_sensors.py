@@ -5,15 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from gym import spaces
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.nav.nav import PointGoalSensor
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails
-from habitat.tasks.utils import get_angle
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 

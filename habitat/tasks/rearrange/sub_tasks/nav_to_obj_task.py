@@ -3,7 +3,6 @@ import random
 
 import magnum as mn
 import numpy as np
-from gym.spaces import Box
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -37,7 +36,6 @@ class DynNavRLEnv(RearrangeTask):
         self.domain = None
 
     def set_args(self, obj_to, orig_applied_args, **kwargs):
-        sim = self._env._sim
         self.force_obj_idx = obj_to
 
         self.nav_obj_name = orig_applied_args.get("obj_to", None)
@@ -257,7 +255,8 @@ def get_robo_start_pos(sim, nav_targ_pos, tcfg):
     orig_state = sim.capture_state()
 
     # Find a valid navigable point between the start and goal.
-    for i in range(timeout_len):
+    i = 0
+    while i < timeout_len:
         start_pos = sim.pathfinder.get_random_navigable_point()
         start_rot = np.random.uniform(0, 2 * np.pi)
         sim.robot.base_pos = start_pos
@@ -288,6 +287,7 @@ def get_robo_start_pos(sim, nav_targ_pos, tcfg):
             )
         if not did_collide:
             break
+        i += 1
     if i == timeout_len - 1:
         if not is_valid_nav:
             print("Goal and start position are not navigable.")

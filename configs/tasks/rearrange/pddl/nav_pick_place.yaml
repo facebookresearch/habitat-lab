@@ -1,5 +1,5 @@
 domain: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
-start: 
+start:
     precondition: []
     state:
         art_states:
@@ -12,6 +12,6 @@ goal:
   precondition:
     - "holding(kitchen_counter_targets|0)"
 
-solution: 
+solution:
     - "nav(kitchen_counter_targets|0)"
     - "pick(kitchen_counter_targets|0)"

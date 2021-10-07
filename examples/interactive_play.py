@@ -35,12 +35,10 @@ import os.path as osp
 import time
 
 import cv2
-import magnum as mn
 import numpy as np
-import torch
 
 import habitat.tasks.rearrange.rearrange_task
-from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
+from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 
@@ -236,8 +234,6 @@ def play_env(env, args, config):
     all_obs = []
     total_reward = 0
     all_arm_actions = []
-
-    sim = env._sim
 
     while True:
         if render_steps_limit is not None and i > render_steps_limit:

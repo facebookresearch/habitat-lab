@@ -1,8 +1,8 @@
 import copy
 from functools import partial
 
+import magnum as mn
 import numpy as np
-import yaml
 
 from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
     load_task_object,
@@ -60,13 +60,14 @@ class Action:
     def __repr__(self):
         return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
 
-    def bind(self, args, add_args={}):
+    def bind(self, args, add_args=None):
         """
         - args list[str]
         """
+        if add_args is None:
+            add_args = {}
         assert not self.is_bound
         self.add_args = add_args
-        action_args = {}
         self.orig_applied_func_args = args[:]
         self.applied_func_args = args[:]
         if self.applied_func_args[0] == "":
@@ -138,10 +139,7 @@ class Action:
         def has_match(pred):
             return any([other_pred.is_equal(pred) for other_pred in preds])
 
-        for precond_pred in self.precond:
-            if not has_match(precond_pred):
-                return False
-        return True
+        return all(has_match(precond_pred) for precond_pred in self.precond)
 
     def apply_postconditions(self, preds):
         new_preds = copy.deepcopy(preds)
@@ -274,7 +272,7 @@ class SetState:
             targ_pos = pos_targs[targ_idx]
 
             dist = np.linalg.norm(cur_pos - targ_pos)
-            if not dist < obj_thresh:
+            if dist >= obj_thresh:
                 return False
 
         for art_obj_id, set_art in self.art_states.items():
@@ -300,10 +298,12 @@ class SetState:
             abs_obj_id = sim.scene_obj_ids[obj_idx]
             if sim.grasp_mgr.snap_idx != abs_obj_id:
                 return False
-        elif self.robo_state.holding == "NONE":
+        elif (
+            self.robo_state.holding == "NONE"
+            and sim.grasp_mgr.snap_idx != None
+        ):
             # Robot must be holding nothing
-            if sim.grasp_mgr.snap_idx != None:
-                return False
+            return False
 
         return True
 
@@ -312,7 +312,6 @@ class SetState:
             obj_idx = name_to_id[obj_name]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
 
-            T = sim._sim.get_transformation(abs_obj_id)
             if target in name_to_id:
                 targ_idx = name_to_id[target]
                 _, pos_targs = sim.get_targets()
@@ -324,12 +323,6 @@ class SetState:
             # Get the object id corresponding to this name
             sim.reset_obj_T(abs_obj_id, set_T)
             obj_name = sim.ep_info["static_objs"][obj_idx][0]
-            if obj_name in SET_ROTATIONS:
-                sim.set_rotation(SET_ROTATIONS[obj_name], abs_obj_id)
-            # Freeze the object at that position.
-            # This causes some issues with later picking. I don't think there
-            # is any need for this anymore?
-            # make_render_only(abs_obj_id, sim)
 
         for art_obj_id, set_art in self.art_states.items():
             art_obj_id = search_for_id(art_obj_id, name_to_id)
@@ -355,29 +348,6 @@ class SetState:
             sim.set_articulated_object_sleep(abs_id, prev_sleep)
 
         robo_state = self.robo_state
-        # if robo_state.pos is not None:
-        #    if robo_state.pos == 'rnd':
-        #        start_pos = sim.pathfinder.get_random_navigable_point()
-        #    else:
-        #        start_pos = robo_state.pos
-        #    if isinstance(start_pos, str):
-        #        name = start_pos
-        #        if name in name_to_id:
-        #            obj_id = name_to_id[name]
-        #            if isinstance(obj_id, str):
-        #                # marker id.
-        #                pos = sim.get_marker_nav_pos(obj_id)
-        #            else:
-        #                abs_id = sim.scene_obj_ids[obj_id]
-        #                pos = sim.get_translation(abs_id)
-        #        else:
-        #            # This must be an articulated object
-        #            art_id = name_to_id['ART_' + name]
-        #            abs_id = sim.art_obj_ids[art_id]
-        #            pos = sim.get_articulated_object_root_state(abs_id).translation
-        #        start_pos = sim.get_nav_pos(pos)
-
-        #    sim.set_robot_pos(start_pos)
         if robo_state.holding == "NONE" and sim.snapped_obj_id is not None:
             sim.desnap_object(force=True)
         elif robo_state.holding is not None:
