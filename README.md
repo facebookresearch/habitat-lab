@@ -225,6 +225,11 @@ Habitat Lab includes reinforcement learning (via PPO) and classical SLAM based b
 ## Habitat-PyRobot
 Habitat Lab supports deployment of models on a physical robot through PyRobot (https://github.com/facebookresearch/pyrobot). Please install the python3 version of PyRobot and refer to `habitat.sims.pyrobot.pyrobot` for instructions. This functionality allows deployment of models across simulation and reality.
 
+## ROS-X-Habitat
+ROS-X-Habitat (https://github.com/ericchen321/ros_x_habitat) is a framework that bridges the AI Habitat platform (Habitat Lab + Habitat Sim) with other robotics resources via ROS. Compared with Habitat-PyRobot, ROS-X-Habitat places emphasis on 1) leveraging Habitat Sim v2's physics-based simulation capability and 2) allowing roboticists to access simulation assets from ROS. The work has also been made public as a [paper](https://arxiv.org/abs/2109.07703).
+
+Note that ROS-X-Habitat was developed, and is maintained by the Lab for Computational Intelligence at UBC; it has not yet been officially supported by the Habitat Lab team. Please refer to the framework's repository for docs and discussions.
+
 ## Acknowledgments
 The Habitat project would not have been possible without the support and contributions of many individuals. We would like to thank Dmytro Mishkin, Xinlei Chen, Georgia Gkioxari, Daniel Gordon, Leonidas Guibas, Saurabh Gupta, Or Litany, Marcus Rohrbach, Amanpreet Singh, Devendra Singh Chaplot, Yuandong Tian, and Yuxin Wu for many helpful conversations and guidance on the design and development of the Habitat platform.
 
