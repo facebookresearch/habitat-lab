@@ -21,7 +21,7 @@ followed by fine-tuning the NAV model.
 ## Pre-requisites:
 
 - Habitat-sim and Habitat-api installation.
-- Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](https://github.com/facebookresearch/habitat-api/blob/master/README.md)).
+- Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](https://github.com/facebookresearch/habitat-api/blob/main/README.md)).
 
 ---
 
