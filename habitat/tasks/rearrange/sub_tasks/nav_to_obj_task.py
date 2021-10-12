@@ -111,6 +111,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
     def reset(self, episode: Episode):
+        sim = self._sim
+        super().reset(episode)
+
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
@@ -118,10 +121,6 @@ class DynNavRLEnv(RearrangeTask):
                 self._config,
                 self._sim,
             )
-
-        observations = super().reset(episode)
-
-        sim = self._sim
 
         episode_id = sim.ep_info["episode_id"]
 
@@ -152,7 +151,10 @@ class DynNavRLEnv(RearrangeTask):
                 sim, self.nav_targ_pos, self.tcfg
             )
         else:
-            if episode_id in self.start_states:
+            if (
+                episode_id in self.start_states
+                and not self._config.FORCE_REGENERATE
+            ):
                 (
                     self.nav_targ_pos,
                     self.nav_targ_angle,
@@ -182,10 +184,6 @@ class DynNavRLEnv(RearrangeTask):
                 self.cache.save(self.start_states)
 
             targ_idxs, goal_pos = sim.get_targets()
-            if len(targ_idxs) > 0:
-                # This MUST be the place task since the open and close tasks
-                # are trained with object starting, not goal positions
-                sim.grasp_mgr.snap_to_obj(targ_idxs[0], force=True)
 
         observations = super().reset(episode)
 
@@ -194,7 +192,9 @@ class DynNavRLEnv(RearrangeTask):
 
         if self._config.DEBUG_GOAL_POINT:
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
-                self.nav_targ_pos, sim.viz_ids["nav_targ_pos"]
+                self.nav_targ_pos,
+                sim.viz_ids["nav_targ_pos"],
+                r=10.0,
             )
 
         return observations

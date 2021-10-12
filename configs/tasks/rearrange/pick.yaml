@@ -15,6 +15,7 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     CONSTRAINT_VIOLATE_SHOULD_END: True
+    FORCE_REGENERATE: False
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -100,6 +101,7 @@ TASK:
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
         - ARM_ACTION
 

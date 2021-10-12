@@ -11,6 +11,8 @@ TASK:
     MUST_LOOK_AT_TARG: True
     DEBUG_GOAL_POINT: True
     CONSTRAINT_VIOLATE_SHOULD_END: False
+    # If true, will always regenerate the cache
+    FORCE_REGENERATE: False
 
     # Collision related
     COUNT_OBJ_COLLISIONS: True

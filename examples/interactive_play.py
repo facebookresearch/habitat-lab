@@ -311,6 +311,24 @@ if __name__ == "__main__":
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument(
+        "--play-task",
+        action="store_true",
+        default=False,
+        help="If true, then change the config settings to make it easier to play and visualize the task.",
+    )
+    parser.add_argument(
+        "--never-end",
+        action="store_true",
+        default=False,
+        help="If true, make the task never end due to reaching max number of steps",
+    )
+    parser.add_argument(
+        "--add-ik",
+        action="store_true",
+        default=False,
+        help="If true, changes arm control to IK",
+    )
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
@@ -326,6 +344,19 @@ if __name__ == "__main__":
         )
 
     config = habitat.get_config(args.cfg, args.opts)
+    config.defrost()
+    if args.play_task:
+        config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
+        config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
+        config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
+    if args.never_end:
+        config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
+    if args.add_ik:
+        config.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmEEAction"
+        config.SIMULATOR.IK_ARM_URDF = (
+            "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+        )
+    config.freeze()
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

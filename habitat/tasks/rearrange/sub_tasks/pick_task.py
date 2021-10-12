@@ -148,9 +148,11 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = 0
         episode_id = sim.ep_info["episode_id"]
-        use_force_recache = self._config.get("FORCE_RECACHE", False)
 
-        if episode_id in self.start_states and not use_force_recache:
+        if (
+            episode_id in self.start_states
+            and not self._config.FORCE_REGENERATE
+        ):
             start_pos, start_rot, sel_idx = self.start_states[episode_id]
         else:
             start_pos, start_rot, sel_idx = self._gen_start_pos(

@@ -108,15 +108,15 @@ class RearrangeSim(HabitatSim):
 
         self._try_acquire_context()
 
-        # recompute the NavMesh once the scene is loaded
-        # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
-        self._recompute_navmesh()
-
         # load articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
+
+        # recompute the NavMesh once the scene is loaded
+        # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
+        self._recompute_navmesh()
 
         # add and initialize the robot
         if self.robot is None:
@@ -265,6 +265,10 @@ class RearrangeSim(HabitatSim):
             self.scene_obj_ids.append(ro.object_id)
             # TODO: handle the auto sleep here?
 
+        ao_mgr = self.get_articulated_object_manager()
+        for aoi_handle in ep_info["ao_states"]:
+            self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
+
     def _create_obj_viz(self, ep_info):
         self.viz_obj_ids = []
         # TODO: refactor this
@@ -346,7 +350,6 @@ class RearrangeSim(HabitatSim):
 
     def step(self, action):
         rom = self.get_rigid_object_manager()
-        # roid = self.scene_obj_ids[0]
 
         if self.is_render_obs:
             self._try_acquire_context()
