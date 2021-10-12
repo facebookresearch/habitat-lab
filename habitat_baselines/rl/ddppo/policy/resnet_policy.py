@@ -137,6 +137,7 @@ class ResNetEncoder(nn.Module):
             final_spatial = int(
                 spatial_size * self.backbone.final_spatial_compress
             )
+            assert int(final_spatial / self.backbone.final_spatial_compress) == spatial_size
             after_compression_flat_size = 2048
             num_compression_channels = int(
                 round(after_compression_flat_size / (final_spatial ** 2))
@@ -179,12 +180,13 @@ class ResNetEncoder(nn.Module):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
-            assert(rgb_observations.shape[1] == 3)  # assert that we're already [BATCH x CHANNEL x HEIGHT X WIDTH]
+            # perf todo: verify this doesn't have overhead
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            # rgb_observations = rgb_observations.permute(0, 3, 1, 2)
+            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
                 rgb_observations.float() / 255.0
             )  # normalize RGB
+            assert(rgb_observations.shape[1] == 3)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
             cnn_input.append(rgb_observations)
 
         if self._n_input_depth > 0:
@@ -196,7 +198,7 @@ class ResNetEncoder(nn.Module):
             cnn_input.append(depth_observations)
 
         x = torch.cat(cnn_input, dim=1)
-        x = F.avg_pool2d(x, 2)
+        x = F.avg_pool2d(x, 2)  # perf todo: understand this
 
         x = self.running_mean_and_var(x)
         x = self.backbone(x)

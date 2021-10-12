@@ -8,7 +8,7 @@ import random
 from typing import List, Type, Union
 
 import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
+from habitat import Config, Env, RLEnv, VectorEnv, make_dataset, BatchedEnv
 
 
 def make_env_fn(
@@ -31,6 +31,21 @@ def make_env_fn(
     env = env_class(config=config, dataset=dataset)
     env.seed(config.TASK_CONFIG.SEED)
     return env
+
+
+
+def construct_batched_envs(config: Config):
+
+    # num_environments = config.NUM_ENVIRONMENTS
+    # configs = []
+    # dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
+    # scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
+    # if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
+    #     scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+
+    envs = BatchedEnv(config)
+
+    return envs    
 
 
 def construct_envs(

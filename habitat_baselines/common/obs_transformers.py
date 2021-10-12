@@ -1210,6 +1210,7 @@ def apply_obs_transforms_batch(
     batch: Dict[str, torch.Tensor],
     obs_transforms: Iterable[ObservationTransformer],
 ) -> Dict[str, torch.Tensor]:
+    assert len(obs_transforms) == 0  # don't let this code run yet b/c I haven't vetted it
     for obs_transform in obs_transforms:
         batch = obs_transform(batch)
     return batch

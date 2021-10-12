@@ -15,12 +15,14 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry  # noqa : F401
 from habitat.core.simulator import Sensor, SensorSuite, SensorTypes, Simulator
 from habitat.core.vector_env import ThreadedVectorEnv, VectorEnv
+from habitat.core.batched_env import BatchedEnv
 from habitat.datasets import make_dataset
 from habitat.version import VERSION as __version__  # noqa
 
 __all__ = [
     "Agent",
     "Benchmark",
+    "BatchedEnv",
     "Challenge",
     "Config",
     "Dataset",

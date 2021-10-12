@@ -54,7 +54,9 @@ from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
 )
-from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.utils.env_utils import construct_envs, construct_batched_envs
+
+from habitat_sim.utils import viz_utils as vut
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -86,7 +88,8 @@ class PPOTrainer(BaseRLTrainer):
         # Distributed if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
-        self._obs_batching_cache = ObservationBatchingCache()
+        if not self.config.BATCHED_ENV:
+            self._obs_batching_cache = ObservationBatchingCache()
 
         self.using_velocity_ctrl = (
             self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
@@ -191,10 +194,13 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(
-            config,
-            get_env_class(config.ENV_NAME),
-            workers_ignore_signals=is_slurm_batch_job(),
+        if config.BATCHED_ENV:
+            self.envs = construct_batched_envs(config)
+        else:
+            self.envs = construct_envs(
+                config,
+                get_env_class(config.ENV_NAME),
+                workers_ignore_signals=is_slurm_batch_job(),
         )
 
     def _init_train(self):
@@ -249,16 +255,21 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
-            action_shape = (2,)
+        if self.config.BATCHED_ENV:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = self.policy_action_space.shape
             discrete_actions = False
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = None
-            discrete_actions = True
+            if self.using_velocity_ctrl:
+                self.policy_action_space = self.envs.action_spaces[0][
+                    "VELOCITY_CONTROL"
+                ]
+                action_shape = (2,)
+                discrete_actions = False
+            else:
+                self.policy_action_space = self.envs.action_spaces[0]
+                action_shape = None
+                discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -311,9 +322,13 @@ class PPOTrainer(BaseRLTrainer):
         self.rollouts.to(self.device)
 
         observations = self.envs.reset()
-        batch = batch_obs(
-            observations, device=self.device, cache=self._obs_batching_cache
-        )
+        if self.config.BATCHED_ENV:
+            batch = observations
+        else:
+            batch = batch_obs(
+                observations, device=self.device, cache=self._obs_batching_cache
+            )
+            print("batch['rgb'].shape: ", batch['rgb'].shape)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         if self._static_encoder:
@@ -439,28 +454,33 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                deterministic = False  # temp force determinism?
             )
 
-        # NB: Move actions to CPU.  If CUDA tensors are
-        # sent in to env.step(), that will create CUDA contexts
-        # in the subprocesses.
-        # For backwards compatibility, we also call .item() to convert to
-        # an int
-        actions = actions.to(device="cpu")
+        if not self.config.BATCHED_ENV:
+            # NB: Move actions to CPU.  If CUDA tensors are
+            # sent in to env.step(), that will create CUDA contexts
+            # in the subprocesses.
+            # For backwards compatibility, we also call .item() to convert to
+            # an int
+            actions = actions.to(device="cpu")
         self.pth_time += time.time() - t_sample_action
 
         profiling_wrapper.range_pop()  # compute actions
 
         t_step_env = time.time()
 
-        for index_env, act in zip(
-            range(env_slice.start, env_slice.stop), actions.unbind(0)
-        ):
-            if self.using_velocity_ctrl:
-                step_action = action_to_velocity_control(act)
-            else:
-                step_action = act.item()
-            self.envs.async_step_at(index_env, step_action)
+        if self.config.BATCHED_ENV:
+            self.envs.async_step(actions)
+        else:
+            for index_env, act in zip(
+                range(env_slice.start, env_slice.stop), actions.unbind(0)
+            ):
+                if self.using_velocity_ctrl:
+                    step_action = action_to_velocity_control(act)
+                else:
+                    step_action = act.item()
+                self.envs.async_step_at(index_env, step_action)
 
         self.env_time += time.time() - t_step_env
 
@@ -480,21 +500,28 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         t_step_env = time.time()
-        outputs = [
-            self.envs.wait_step_at(index_env)
-            for index_env in range(env_slice.start, env_slice.stop)
-        ]
-
-        observations, rewards_l, dones, infos = [
-            list(x) for x in zip(*outputs)
-        ]
+        if self.config.BATCHED_ENV:
+            outputs = self.envs.wait_step()
+            batched_observations, rewards_l, dones, infos = outputs
+        else:
+            outputs = [
+                self.envs.wait_step_at(index_env)
+                for index_env in range(env_slice.start, env_slice.stop)
+            ]
+            observations, rewards_l, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
 
         self.env_time += time.time() - t_step_env
 
         t_update_stats = time.time()
-        batch = batch_obs(
-            observations, device=self.device, cache=self._obs_batching_cache
-        )
+
+        if self.config.BATCHED_ENV:
+            batch = batched_observations
+        else:
+            batch = batch_obs(
+                observations, device=self.device, cache=self._obs_batching_cache
+            )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         rewards = torch.tensor(
@@ -858,6 +885,51 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     count_checkpoints += 1
 
+                # save episodes periodically
+                num_updates_to_save = 5
+                num_updates_minus_one = self.num_updates_done - 1
+                if self.config.SAVE_VIDEOS_INTERVAL != -1 and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL < num_updates_to_save:
+                    is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
+                    if_last_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == num_updates_to_save - 1
+
+                    envs_to_save = [0, 1, 10, 120, 126, 127]
+
+                    primary_obs_name = "rgba_camera"
+
+                    if is_first_update_of_save:
+                        self.debug_video_observations = []
+                        for env_index in range(self.envs.num_envs):
+                            self.debug_video_observations.append([])
+
+                    for rgb_obs in self.rollouts.buffers["observations"]["rgb"]:
+
+                        assert len(rgb_obs) == self.envs.num_envs
+                        if not isinstance(rgb_obs, np.ndarray):
+                            rgb_obs = rgb_obs.cpu().numpy()
+                        for env_index in envs_to_save:
+                            env_rgb = rgb_obs[env_index, ...]
+                            # [3, width, height] => [width, height, 3]
+                            # env_rgb = np.swapaxes(env_rgb, 0, 2)
+                            # env_rgb = np.swapaxes(env_rgb, 0, 1)
+                            env_saved_observations = self.debug_video_observations[env_index]
+                            env_saved_observations.append({primary_obs_name: env_rgb})
+
+                    if if_last_update_of_save:
+                        video_folder = self.config.VIDEO_DIR
+                        print("saving videos to ", video_folder)
+                        for env_index in envs_to_save:
+                            env_saved_observations = self.debug_video_observations[env_index]
+                            vut.make_video(
+                                env_saved_observations,
+                                primary_obs_name,
+                                "color",
+                                video_folder + "/update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
+                                fps=10,  # very slow fps
+                                open_vid=False,
+                            )
+                        print("done saving videos!")
+                                
+
                 profiling_wrapper.range_pop()  # train update
 
             self.envs.close()
@@ -922,6 +994,7 @@ class PPOTrainer(BaseRLTrainer):
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
+        assert not self.config.BATCHED_ENV  # todo: eval for batched env
         observations = self.envs.reset()
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
