@@ -54,3 +54,31 @@ predicates:
       state:
           obj_states:
               X: Y
+    - name: closed_fridge
+      state:
+          art_states:
+              1: [0,0]
+    - name: opened_fridge
+      state:
+          art_states:
+              1: "ArtLinkBetween(1, 2.0, 2.1, 0.6)"
+    - name: opened_cab
+      args: [cab_id]
+      state:
+        art_states:
+          # The final number is the success distance threshold, not used for sampling
+          0: "ArtLinkFromMarkerBetween('cab_id', 0.5, 0.5001, 1.0, sim, name_to_id, 0.15)"
+    - name: opened_cab
+      # Open cab, but move some objects with it. This is not an ideal solution,
+      # but currently there is no way to tell which objects are inside of a
+      # receptacle.
+      args: [cab_id,catch_ids]
+      state:
+        art_states:
+          0: "ArtLinkFromMarkerBetween('cab_id', 0.5, 0.5001, 1.0, sim, name_to_id, 0.15)"
+        catch_ids: catch_ids
+    - name: closed_cab
+      args: [cab_id]
+      state:
+        art_states:
+          0: "ArtLinkFromMarkerBetween('cab_id', 0.0, 0.01, 1.0, sim, name_to_id, 0.1)"

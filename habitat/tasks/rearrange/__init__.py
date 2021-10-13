@@ -11,8 +11,8 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 def _try_register_rearrange_task():
     import habitat.tasks.rearrange.actions
-
-    # import habitat.tasks.rearrange.multi_task.rearrange_composite_task
+    import habitat.tasks.rearrange.multi_task.composite_sensors
+    import habitat.tasks.rearrange.multi_task.composite_task
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
@@ -38,6 +38,8 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("ARM_ABS_POS")
     if not HabitatSimActions.has_action("ARM_ABS_POS_KINEMATIC"):
         HabitatSimActions.extend_action_space("ARM_ABS_POS_KINEMATIC")
+    if not HabitatSimActions.has_action("SUCTION_GRASP"):
+        HabitatSimActions.extend_action_space("SUCTION_GRASP")
     if not HabitatSimActions.has_action("MAGIC_GRASP"):
         HabitatSimActions.extend_action_space("MAGIC_GRASP")
     if not HabitatSimActions.has_action("BASE_VELOCITY"):

@@ -52,6 +52,7 @@ class RearrangeSim(HabitatSim):
         self.track_markers = []
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
+        self.ref_handle_to_rigid_obj_id = None
 
         self.ik_helper = None
 

@@ -17,10 +17,6 @@ TASK:
     CONSTRAINT_VIOLATE_SHOULD_END: True
     FORCE_REGENERATE: False
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: PICK_REWARD
-    SUCCESS_MEASUREMENT: PICK_SUCCESS
-
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
@@ -64,7 +60,7 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    PICK_REWARD:
+    REARRANGE_PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
@@ -84,7 +80,7 @@ TASK:
         DROP_OBJ_SHOULD_END: False
         WRONG_PICK_SHOULD_END: False
 
-    PICK_SUCCESS:
+    REARRANGE_PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
 
@@ -94,18 +90,20 @@ TASK:
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
-        - "PICK_SUCCESS"
-        - "PICK_REWARD"
+        - "REARRANGE_PICK_SUCCESS"
+        - "REARRANGE_PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
+            GRIP_CONTROLLER: "SuctionGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+            # Grasp parameters
+            SUCTION_THRESH_DIST: 0.05
+            SUCTION_OFFSET: [0.0, 0.0, 0.0]
     POSSIBLE_ACTIONS:
         - ARM_ACTION
 

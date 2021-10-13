@@ -103,7 +103,14 @@ class Action:
         self.is_bound = True
 
     def _load_task(
-        self, load_d, config, dataset, name_to_id, env, should_reset=True
+        self,
+        load_d,
+        config,
+        dataset,
+        name_to_id,
+        env,
+        episode,
+        should_reset=True,
     ):
         if "task" not in load_d:
             return None
@@ -130,10 +137,11 @@ class Action:
             dataset,
             should_reset,
             task_kwargs,
+            episode,
         )
 
-    def init_task(self, env, should_reset=True):
-        return self.load_task_fn(env, should_reset=should_reset)
+    def init_task(self, env, episode, should_reset=True):
+        return self.load_task_fn(env, episode, should_reset=should_reset)
 
     def are_preconditions_true(self, preds):
         def has_match(pred):

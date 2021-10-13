@@ -19,11 +19,17 @@ TASK:
     # robot
     EASY_INIT: False
 
+    ########################
     # Composite task config
     TASK_SPEC_BASE_PATH: "configs/tasks/rearrange/pddl/"
     TASK_SPEC: "nav_pick_place"
+    PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
     # -1 means no forcing any node evaluation.
-    SINGLE_NODE_EVAL: -1
+    SINGLE_EVAL_NODE: -1
+    LIMIT_TASK_NODE: -1
+    LIMIT_TASK_LEN_SCALING: 0.0
+    DEBUG_SKIP_TO_NODE: -1
+    ########################
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
@@ -64,7 +70,9 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    REARRANGE_PICK_REWARD:
+
+    # Pick specific measurements
+    PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
@@ -83,19 +91,35 @@ TASK:
 
         DROP_OBJ_SHOULD_END: False
         WRONG_PICK_SHOULD_END: False
-
-    REARRANGE_PICK_SUCCESS:
+    PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
 
+    # Composite task measurements
+    COMPOSITE_NODE_IDX:
+        TYPE: "CompositeNodeIdx"
+        SKIP_NODES: ["move_obj"]
+    COMPOSITE_SUCCESS:
+        TYPE: "CompositeSuccess"
+    COMPOSITE_REWARD:
+        TYPE: "CompositeReward"
+        STAGE_COMPLETE_REWARD: 10.0
+        SUCCESS_REWARD: 10.0
+
     MEASUREMENTS:
+        # General measure
         - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
-        - "REARRANGE_PICK_SUCCESS"
-        - "REARRANGE_PICK_REWARD"
+        # Pick measure
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
+        # Composite measure
+        - "COMPOSITE_NODE_IDX"
+        - "COMPOSITE_SUCCESS"
+        - "COMPOSITE_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
@@ -105,21 +129,31 @@ TASK:
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: "BaseVelAction"
+            LIN_SPEED: 12.0
+            ANG_SPEED: 12.0
+            ALLOW_DYN_SLIDE: True
+            END_ON_STOP: False
+            ALLOW_BACK: True
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+        EMPTY:
+            TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
+        - BASE_VELOCITY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.09
+    AC_FREQ_RATIO: 4
     AGENTS: ['AGENT_0']
     AGENT_0:
-        ANGULAR_ACCELERATION: 12.56
-        ANGULAR_FRICTION: 1.0
-        COEFFICIENT_OF_RESTITUTION: 0.0
         HEIGHT: 1.5
         IS_SET_START_STATE: False
-        LINEAR_ACCELERATION: 20.0
-        LINEAR_FRICTION: 0.5
-        MASS: 32.0
         RADIUS: 0.1
         SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
         START_POSITION: [0, 0, 0]
@@ -142,26 +176,18 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-
-    # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
-
-    # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
-
     DEFAULT_AGENT_ID: 0
+    FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
         ALLOW_SLIDING: True
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    LAG_OBSERVATIONS: 1
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480

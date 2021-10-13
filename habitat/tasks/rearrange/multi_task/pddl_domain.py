@@ -64,19 +64,20 @@ class PddlDomain:
                 return pred
         return None
 
-    def is_pred_true(self, pred, input_args):
+    def is_pred_true(self, bound_pred):
+        return bound_pred.set_state.is_satisfied(
+            self._name_to_id,
+            self.sim,
+            self._config.OBJ_SUCC_THRESH,
+            self._config.ART_SUCC_THRESH,
+        )
+
+    def is_pred_true_args(self, pred, input_args):
         if pred.set_state is not None:
             bound_pred = copy.deepcopy(pred)
-            print("Binding args", input_args)
             bound_pred.bind(input_args)
-            print("predicate is now", bound_pred)
+            return self.is_pred_true(bound_pred)
 
-            return bound_pred.set_state.is_satisfied(
-                self._name_to_id,
-                self.sim,
-                self._config.OBJ_SUCC_THRESH,
-                self._config.ART_SUCC_THRESH,
-            )
         return False
 
     def get_true_predicates(self):
@@ -86,7 +87,7 @@ class PddlDomain:
             for entity_input in itertools.combinations(
                 all_entities, pred.get_n_args()
             ):
-                if self.is_pred_true(pred, entity_input):
+                if self.is_pred_true_args(pred, entity_input):
                     true_preds.append(pred)
         return true_preds
 
