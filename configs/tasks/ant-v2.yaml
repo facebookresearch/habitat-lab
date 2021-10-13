@@ -1,0 +1,34 @@
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 200
+
+SIMULATOR:
+  TYPE: Ant-v2-sim
+  AGENTS: ['AGENT_0']
+  AGENT_0:  
+    # Agent setup
+    START_POSITION: [2.50, 1.0, 0.2]
+    START_ROTATION: 1.57
+    LEG_REST: [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0, -1.0]
+    ROBOT_URDF: ./data/robots/ant.urdf
+
+TASK:
+  TYPE: Ant-v2-task
+  ANT_OBSERVATION_SPACE_SENSOR:
+        TYPE: "AntObservationalSpaceSensor"
+        DIMENSIONALITY: 27
+  SENSORS: ["ANT_OBSERVATION_SPACE_SENSOR"]
+
+  X_LOCATION:
+    TYPE: "XLocation"
+  MEASUREMENTS: 
+    - "X_LOCATION"
+
+  ACTIONS:
+    LEG_ACTION:
+      TYPE: "LegAction"
+      LEG_CONTROLLER: "LegRelPosAction"
+      LEG_JOINT_DIMENSIONALITY: 8
+  POSSIBLE_ACTIONS:
+    - LEG_ACTION
+
+  TIME_LIMIT: 5.0

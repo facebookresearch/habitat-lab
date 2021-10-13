@@ -68,18 +68,37 @@ class AntV2Robot(quadruped_wrapper.QuadrupedRobot):
     @property
     def observational_space(self) -> np.ndarray:
         """
-        111 dim obs space
+        27 dim obs space
         z (height) of the Torso -> 1
         orientation (quarternion x,y,z,w) of the Torso -> 4
-        8 Joiint angles -> 8
+        8 Joint angles -> 8
         3-dim directional velocity and 3-dim angular velocity -> 3+3=6
         8 Joint velocity -> 8
-        External forces (force x,y,z + torque x,y,z) applied to the CoM of each link (Ant has 14 links: ground+torso+12(3links for 4legs) for legs -> (3+3)*(14)=84 
         """
-        obs_space = np.zeros(111)
+        # May expand to make use of external forces in the future (once this is exposed in habitat_sim & if joint torques are used in the future)
+        obs_space = np.zeros(27)
         pos = super().base_pos
         obs_space[0] = pos[1]
-        orientation = super.base_rot
+
+        # ant orientation
+        orientation = super().base_rot
+        obs_space[1] = orientation.vector.x
+        obs_space[2] = orientation.vector.y
+        obs_space[3] = orientation.vector.z
+        obs_space[4] = orientation.scalar
+
+        # ant joint angles (Radians)
+        obs_space[5:13] = super().leg_joint_pos
+
+        # ant directional velocity
+        obs_space[13:16] = super().base_velocity
+
+        # ant angular velocity
+        obs_space[16:19] = super().base_angular_velocity
+
+        # ant joint velocity
+        obs_space[19:27] = super().joint_velocities
+
         
         return obs_space
 

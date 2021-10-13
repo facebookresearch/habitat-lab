@@ -268,8 +268,8 @@ class QuadrupedRobot(RobotInterface):
         )
 
     @property
-    def base_rot(self) -> float:
-        return self.sim_obj.rotation.angle()
+    def base_rot(self) -> mn.Quaternion:
+        return self.sim_obj.rotation
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
@@ -284,6 +284,17 @@ class QuadrupedRobot(RobotInterface):
     def is_base_link(self, link_id: int) -> bool:
         return self.sim_obj.get_link_name(link_id) in self.params.base_link_names
 
+    @property
+    def base_velocity(self):
+        return self.sim_obj.root_linear_velocity
+    
+    @property
+    def base_angular_velocity(self):
+        return self.sim_obj.root_angular_velocity
+
+    @property
+    def joint_velocities(self):
+        return self.sim_obj.joint_velocities
 
     def _update_motor_settings_cache(self):
         """Updates the JointMotorSettings cache for cheaper future updates"""

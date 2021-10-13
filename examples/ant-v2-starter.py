@@ -128,7 +128,6 @@ def example():
         sim.step_physics(1.0 / 60.0)
         observations.append(sim.get_sensor_observations())
 
-
         if count_steps == 120:
             ant.leg_joint_pos = [0, 0, 0, 0, -0.3, 0.3, 0.3, -0.3]
 
@@ -138,7 +137,7 @@ def example():
         if count_steps == 210:
             ant.leg_joint_pos = [0, 0, 0, 0, -1, 1, 1, -1]
 
-        print(type(observations))
+        print(ant.observational_space)
         print(count_steps)
         print(keystroke)
         print("_____")
