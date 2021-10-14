@@ -18,8 +18,7 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 @pytest.mark.parametrize(
     "config_file",
     [
-        # "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
-        "habitat_baselines/config/rearrange/ddppo_rearrangepick.yaml",
+        "habitat_baselines/config/rearrange/rl_pick.yaml",
     ],
 )
 def test_gym_wrapper_contract(config_file):

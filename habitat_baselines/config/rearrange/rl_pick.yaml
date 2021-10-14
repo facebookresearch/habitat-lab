@@ -1,0 +1,11 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
+
+RL:
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    GYM_OBS_KEYS: ['obj_start_sensor', 'joint', 'is_holding', 'ee_pos']
+    GYM_FIX_INFO_DICT: True
+
+ENV_NAME: "RearrangeRLEnv"
