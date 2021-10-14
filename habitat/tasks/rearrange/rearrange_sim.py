@@ -92,8 +92,6 @@ class RearrangeSim(HabitatSim):
         super().reconfigure(config)
         self.ref_handle_to_rigid_obj_id = {}
 
-        self.clear_rigid_body_objects()
-
         self.ep_info = ep_info
 
         if ep_info["scene_id"] != self.prev_scene_id:
@@ -101,6 +99,8 @@ class RearrangeSim(HabitatSim):
             self.robot = None
             self.viz_ids = defaultdict(lambda: None)
             self.viz_obj_ids = []
+        self.clear_rigid_body_objects()
+
         self.grasp_mgr.desnap(force=True)
         self.prev_scene_id = ep_info["scene_id"]
         self._viz_templates = {}
@@ -207,7 +207,8 @@ class RearrangeSim(HabitatSim):
     def clear_rigid_body_objects(self):
         rom = self.get_rigid_object_manager()
         for scene_obj_id in self.scene_obj_ids:
-            rom.remove_object_by_id(scene_obj_id)
+            if rom.get_library_has_id(scene_obj_id):
+                rom.remove_object_by_id(scene_obj_id)
         self.scene_obj_ids = []
 
     def _set_ao_states_from_ep(self, ep_info):

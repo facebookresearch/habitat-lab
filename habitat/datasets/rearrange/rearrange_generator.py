@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
+from tqdm import tqdm
 from yacs.config import CfgNode as CN
 
 import habitat.datasets.rearrange.samplers as samplers
@@ -372,19 +373,23 @@ class RearrangeEpisodeGenerator:
             self.vdb.get_observation()
 
     def generate_episodes(
-        self, num_episodes: int = 1
+        self, num_episodes: int = 1, verbose: bool = False
     ) -> List[RearrangeEpisode]:
         """
         Generate a fixed number of episodes.
         """
         generated_episodes: List[RearrangeEpisode] = []
         failed_episodes = 0
+        if verbose:
+            pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
             new_episode = self.generate_single_episode()
             if new_episode is None:
                 failed_episodes += 1
                 continue
             generated_episodes.append(new_episode)
+            pbar.update(1)
+        pbar.close()
 
         print("==========================")
         print(
@@ -862,6 +867,11 @@ if __name__ == "__main__":
         help="Render debug frames and save images/videos during episode generation.",
     )
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Display progress bar",
+    )
+    parser.add_argument(
         "--db-output",
         type=str,
         default="rearrange_ep_gen_output/",
@@ -940,7 +950,9 @@ if __name__ == "__main__":
             import time
 
             start_time = time.time()
-            dataset.episodes += ep_gen.generate_episodes(args.num_episodes)
+            dataset.episodes += ep_gen.generate_episodes(
+                args.num_episodes, args.verbose
+            )
             output_path = args.out
             if output_path is None:
                 # default
