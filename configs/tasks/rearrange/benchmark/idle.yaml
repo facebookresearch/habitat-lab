@@ -30,6 +30,13 @@ TASK:
         - ARM_ACTION
 
 SIMULATOR:
+    ############################
+    # Benchmark relevant settings
+    ############################
+    CONCUR_RENDER: True
+    STEP_PHYSICS: True
+    ############################
+
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
     AGENT_0:
@@ -64,7 +71,6 @@ SIMULATOR:
     AC_FREQ_RATIO: 4
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
 
     # Grasping
     HOLD_THRESH: 0.09

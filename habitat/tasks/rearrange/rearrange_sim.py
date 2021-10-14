@@ -42,6 +42,7 @@ class RearrangeSim(HabitatSim):
         # The physics update time step.
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
+        self._concur_render = self.habitat_config.get("CONCUR_RENDER", False)
 
         self.art_objs = []
         self.start_art_states = {}
@@ -59,10 +60,6 @@ class RearrangeSim(HabitatSim):
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
         self.ctrl_arm = True
-
-        self.concur_render = self.habitat_config.get(
-            "CONCUR_RENDER", True
-        ) and hasattr(self, "get_sensor_observations_async_start")
 
         # TODO: convert this to new format and API
         self.grasp_mgr = RearrangeGraspManager(self, self.habitat_config)
@@ -83,7 +80,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.concur_render:
+        if self._concur_render:
             self.renderer.acquire_gl_context()
 
     def reconfigure(self, config):
@@ -367,22 +364,21 @@ class RearrangeSim(HabitatSim):
         self.viz_obj_ids = []
         self.viz_ids = defaultdict(lambda: None)
 
-        if not self.concur_render:
-            if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
-
-            self._prev_sim_obs = self.get_sensor_observations()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
-
-        else:
-            self._prev_sim_obs = self.get_sensor_observations_async_start()
+        if self._concur_render:
+            self._prev_sim_obs = self.start_async_render()
 
             if self.habitat_config.get("STEP_PHYSICS", True):
                 for _ in range(self.ac_freq_ratio):
                     self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+        else:
+            if self.habitat_config.get("STEP_PHYSICS", True):
+                for _ in range(self.ac_freq_ratio):
+                    self.internal_step(-1)
+
+            self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         # TODO: Make debug cameras more flexible.

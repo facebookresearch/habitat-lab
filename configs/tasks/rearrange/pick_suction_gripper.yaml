@@ -140,7 +140,6 @@ SIMULATOR:
     AC_FREQ_RATIO: 4
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
 
     # Grasping
     HOLD_THRESH: 0.09

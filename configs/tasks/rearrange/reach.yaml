@@ -74,7 +74,6 @@ SIMULATOR:
     EE_LINK_NAME: null
     IK_ARM_URDF: null
     FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 0
     LOAD_OBJS: False
 
     # Grasping

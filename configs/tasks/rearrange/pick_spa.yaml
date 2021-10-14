@@ -153,7 +153,6 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
 
     # Grasping
     HOLD_THRESH: 0.09
