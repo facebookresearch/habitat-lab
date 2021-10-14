@@ -13,7 +13,6 @@ from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollisionDetails
-from habitat.tasks.utils import get_angle
 
 
 @registry.register_sensor
@@ -157,40 +156,6 @@ class AbsGoalSensor(MultiObjSensor):
     def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
         return pos
-
-
-@registry.register_sensor
-class LocalizationSensor(Sensor):
-    def __init__(self, *args, sim, config, **kwargs):
-        super().__init__(config=config)
-        self._sim = sim
-
-    def _get_uuid(self, *args, **kwargs):
-        return "localization"
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(4,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.base_transformation
-        forward = np.array([1.0, 0, 0])
-        heading = np.array(trans.transform_vector(forward))
-        forward = forward[[0, 2]]
-        heading = heading[[0, 2]]
-
-        heading_angle = get_angle(forward, heading)
-        c = np.cross(forward, heading) < 0
-        if not c:
-            heading_angle = -1.0 * heading_angle
-        return np.array([*trans.translation, heading_angle])
 
 
 @registry.register_sensor

@@ -92,14 +92,6 @@ class Action:
         for i in range(len(self.precond_strs)):
             self.precond[i].bind(convert_arg_str(self.precond_strs[i]))
 
-        for i in range(len(self.itprecond_strs)):
-            self.itpreconds[i][0].bind(
-                convert_arg_str(self.itprecond_strs[i][0])
-            )
-            self.itpreconds[i][1].bind(
-                convert_arg_str(self.itprecond_strs[i][1])
-            )
-
         self.is_bound = True
 
     def _load_task(
@@ -269,11 +261,25 @@ class SetState:
 
         self.robo_state.bind(arg_k, arg_v)
 
+    def _is_id_rigid_object(self, id_str):
+        """
+        Used to check if an identifier can be used to look up the object ID in the scene_ojbs_id list of the simulator.
+        """
+        return not id_str.startswith("ART_")
+
     def is_satisfied(self, name_to_id, sim, obj_thresh, art_thresh):
         for obj_name, target in self.obj_states.items():
+            if not self._is_id_rigid_object(obj_name):
+                # Invalid predicate
+                return False
+
             obj_idx = name_to_id[obj_name]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
             cur_pos = sim.get_translation(abs_obj_id)
+
+            if not self._is_id_rigid_object(target):
+                # Invalid predicate
+                return False
 
             targ_idx = name_to_id[target]
             _, pos_targs = sim.get_targets()
@@ -300,6 +306,7 @@ class SetState:
         if (
             self.robo_state.holding != "NONE"
             and self.robo_state.holding is not None
+            and self._is_id_rigid_object(self.robo_state.holding)
         ):
             # Robot must be holding right object.
             obj_idx = name_to_id[self.robo_state.holding]
@@ -334,26 +341,12 @@ class SetState:
 
         for art_obj_id, set_art in self.art_states.items():
             art_obj_id = search_for_id(art_obj_id, name_to_id)
+            art_obj = sim.art_objs[art_obj_id]
 
-            abs_id = sim.art_obj_ids[art_obj_id]
-            prev_sleep = sim.get_articulated_object_sleep(abs_id)
-            sim.set_articulated_object_sleep(abs_id, False)
-
-            if isinstance(set_art, str):
-                prev_art_pos = sim._sim.get_articulated_object_positions(
-                    abs_id
-                )
-                # This is some sampling object we need to instantiate
-                art_sampler = eval(set_art)
-                set_art = art_sampler.sample(prev_art_pos, abs_id)
-                art_sampler.catch(
-                    self.load_d.get("catch_ids", None), name_to_id, sim
-                )
-
-            sim.reset_art_obj_pos(abs_id, set_art)
+            art_obj.clear_joint_states()
+            art_obj.joint_positions = set_art
 
             sim.internal_step(-1)
-            sim.set_articulated_object_sleep(abs_id, prev_sleep)
 
         robo_state = self.robo_state
         if robo_state.holding == "NONE" and sim.snapped_obj_id is not None:

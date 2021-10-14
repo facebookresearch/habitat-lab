@@ -46,6 +46,17 @@ class RearrangeTask(NavigationTask):
         self._ignore_collisions: List[Any] = []
         self._desired_resting = DESIRED_FETCH_ARM_RESTING_REL_LOCATION
         self._sim_reset = True
+        self._targ_idx: int = 0
+
+    @property
+    def targ_idx(self):
+        return self._targ_idx
+
+    @property
+    def abs_targ_idx(self):
+        if self._targ_idx is None:
+            return None
+        return self._sim.get_targets()[0][self._targ_idx]
 
     @property
     def desired_resting(self):
@@ -69,13 +80,14 @@ class RearrangeTask(NavigationTask):
                 prev_sim_obs
             )
             task_obs = self.sensor_suite.get_observations(
-                observations, episode=0
+                observations=observations, episode=episode, task=self
             )
             observations.update(task_obs)
 
         self.prev_measures = self.measurements.get_metrics()
         self.prev_picked = False
         self.n_succ_picks = 0
+        self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
         self.should_end = False

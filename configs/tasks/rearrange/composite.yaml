@@ -21,14 +21,21 @@ TASK:
 
     ########################
     # Composite task config
+    ########################
     TASK_SPEC_BASE_PATH: "configs/tasks/rearrange/pddl/"
-    TASK_SPEC: "nav_pick_place"
+    TASK_SPEC: "nav_pick"
+
+    # PDDL domain params
     PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    OBJ_SUCC_THRESH: 0.3
+    ART_SUCC_THRESH: 0.15
+
     # -1 means no forcing any node evaluation.
     SINGLE_EVAL_NODE: -1
     LIMIT_TASK_NODE: -1
     LIMIT_TASK_LEN_SCALING: 0.0
     DEBUG_SKIP_TO_NODE: -1
+    SKIP_NODES: ["move_obj"]
     ########################
 
     TARGET_START_SENSOR:
@@ -56,9 +63,7 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    LOCAL_SENSOR:
-        TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -71,6 +76,39 @@ TASK:
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
 
+    ########################
+    # Navigation measures
+    ROT_DIST_TO_GOAL:
+      TYPE: "RotDistToGoal"
+    DIST_TO_GOAL:
+      TYPE: "DistToGoal"
+    BAD_CALLED_TERMINATE:
+      TYPE: "BadCalledTerminate"
+      BAD_TERM_PEN: 0.0
+      DECAY_BAD_TERM: False
+    NAV_TO_POS_SUCC:
+      TYPE: "NavToPosSucc"
+      SUCCESS_DISTANCE: 0.2
+    REARRANGE_NAV_TO_OBJ_REWARD:
+        TYPE: "NavToObjReward"
+        # Negative means a penalty
+        SLACK: 0.0
+        SUCCESS_REWARD: 10.0
+        # Reward the agent for facing the object?
+        SHOULD_REWARD_TURN: True
+        # What distance do we start giving the reward for facing the object?
+        TURN_REWARD_DIST: 0.1
+        # Multiplier on the angle distance to the goal.
+        ANGLE_DIST_REWARD: 1.0
+        SLACK_REWARD: 0.0
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: "NavToObjSuccess"
+        MUST_LOOK_AT_TARG: True
+        # Distance in radians.
+        SUCCESS_ANGLE_DIST: 0.15
+        HEURISTIC_STOP: False
+
+    ########################
     # Pick specific measurements
     PICK_REWARD:
         TYPE: "RearrangePickReward"
@@ -94,17 +132,19 @@ TASK:
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
+    ########################
 
+    ########################
     # Composite task measurements
     COMPOSITE_NODE_IDX:
         TYPE: "CompositeNodeIdx"
-        SKIP_NODES: ["move_obj"]
     COMPOSITE_SUCCESS:
         TYPE: "CompositeSuccess"
     COMPOSITE_REWARD:
         TYPE: "CompositeReward"
         STAGE_COMPLETE_REWARD: 10.0
         SUCCESS_REWARD: 10.0
+    ########################
 
     MEASUREMENTS:
         # General measure
@@ -113,6 +153,13 @@ TASK:
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        # Navigate measure
+        - "ROT_DIST_TO_GOAL"
+        - "DIST_TO_GOAL"
+        - "BAD_CALLED_TERMINATE"
+        - "NAV_TO_POS_SUCC"
+        - "REARRANGE_NAV_TO_OBJ_SUCCESS"
+        - "REARRANGE_NAV_TO_OBJ_REWARD"
         # Pick measure
         - "PICK_SUCCESS"
         - "PICK_REWARD"

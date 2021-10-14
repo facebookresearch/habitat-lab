@@ -179,7 +179,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         print(pos)
 
     args = {}
-    if base_action is not None:
+    if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
         name = "BASE_VELOCITY"
         args = {"base_vel": base_action}
     else:
@@ -311,6 +311,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument("--play-cam-res", type=int, default=512)
     parser.add_argument(
         "--play-task",
         action="store_true",
@@ -346,8 +347,8 @@ if __name__ == "__main__":
     config = habitat.get_config(args.cfg, args.opts)
     config.defrost()
     if args.play_task:
-        config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
-        config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
+        config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = args.play_cam_res
+        config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
         config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0

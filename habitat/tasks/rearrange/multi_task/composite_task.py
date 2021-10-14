@@ -8,6 +8,7 @@ import copy
 import os.path as osp
 from typing import Dict
 
+import magnum as mn
 import yaml
 
 from habitat.core.dataset import Episode
@@ -37,13 +38,16 @@ class CompositeTask(RearrangeTask):
         self.start_state = SetState(start_d["state"])
 
         self._cur_node: int = -1
-        self._inf_cur_node: int = 0
         self._cur_task: RearrangeTask = None
         self.cached_tasks: Dict[str, RearrangeTask] = {}
         self.domain = None
         self._cur_state = None
         self._stage_goals = {}
         self._goal_state = None
+        self._solution = None
+
+        self._inf_cur_node = -1
+        self._inf_cur_task = None
 
         assert isinstance(self._config.SINGLE_EVAL_NODE, int)
         if self._config.SINGLE_EVAL_NODE >= 0:
@@ -115,7 +119,9 @@ class CompositeTask(RearrangeTask):
             self._cur_node = node_idx
 
         for i in range(node_idx):
-            self._solution[i].apply(self.name_to_id, self._sim)
+            self._solution[i].apply(
+                self.domain.get_name_to_id_mapping(), self._sim
+            )
 
         if node_idx in self.cached_tasks:
             self._cur_task = self.cached_tasks[node_idx]
@@ -124,32 +130,6 @@ class CompositeTask(RearrangeTask):
             task = self._solution[node_idx].init_task(self, episode)
             self.cached_tasks[node_idx] = task
             self._cur_task = task
-        self._set_force_limit()
-
-    def __getattr__(self, attr):
-        pass
-
-    def _set_force_limit(self):
-        if self._cur_task is not None:
-            self.use_max_accum_force = self._cur_task._config.MAX_ACCUM_FORCE
-        is_subtask = self._config.SINGLE_EVAL_NODE >= 0
-        if not is_subtask:
-            if self.tcfg.MAX_ACCUM_FORCE != -1.0:
-                self.use_max_accum_force = (
-                    len(self._solution) * self.cur_task._config.MAX_ACCUM_FORCE
-                )
-            else:
-                self.use_max_accum_force = -1.0
-            if self._config.LIMIT_TASK_NODE != -1:
-                self._max_episode_steps = (
-                    self._config.LIMIT_TASK_LEN_SCALING
-                    * (self.tcfg.LIMIT_TASK_NODE + 1)
-                )
-
-            self._cur_task = None
-        else:
-            self._max_episode_steps = self._cur_task._max_episode_steps
-            self.use_max_accum_force = self._cur_task.use_max_accum_force
 
     def reset(self, episode: Episode):
         super().reset(episode)
@@ -162,16 +142,16 @@ class CompositeTask(RearrangeTask):
                 self._sim,
             )
 
-            self.load_solution(self.task_def["solution"])
-            self._goal_state = self._parse_precond_list(
-                self._config["GOAL_PRECOND"]
-            )
+            self._solution = self.load_solution(self.task_def["solution"])
+            self._goal_state = self._parse_precond_list(self.task_def["goal"])
             self._cur_state = self._parse_precond_list(start_d["precondition"])
 
             for k, preconds in self.task_def["stage_goals"].items():
                 self._stage_goals[k] = self._parse_precond_list(preconds)
 
-        self.start_state.set_state(self.name_to_id, self._sim)
+        self.start_state.set_state(
+            self.domain.get_name_to_id_mapping(), self._sim
+        )
 
         if self._config.DEBUG_SKIP_TO_NODE != -1:
             self._jump_to_node(
@@ -181,12 +161,49 @@ class CompositeTask(RearrangeTask):
         if self._cur_node >= 0:
             self._jump_to_node(self._cur_node, episode)
 
-        self._set_force_limit()
-
-        self._get_next_inf_sol()
+        self._inf_cur_node = 0
+        self._inf_cur_task = None
+        self._get_next_inf_sol(episode)
         return super().reset(episode)
 
-        return self.get_task_obs()
+    def get_inf_cur_node(self):
+        return self._inf_cur_node
+
+    def get_inf_cur_task(self):
+        return self._inf_cur_task
+
+    def increment_inf_sol(self, episode):
+        prev_inf_cur_node = self._inf_cur_node
+        self._inf_cur_node += 1
+        if not self._get_next_inf_sol(episode):
+            self._inf_cur_node = prev_inf_cur_node
+
+    def _get_next_inf_sol(self, episode):
+        # Never give reward from these nodes, skip to the next node instead.
+        # Returns False if there is no next subtask in the solution
+        task_solution = self.get_solution()
+        if self._inf_cur_node >= len(task_solution):
+            return False
+        while (
+            task_solution[self._inf_cur_node].name in self._config.SKIP_NODES
+        ):
+            self._inf_cur_node += 1
+            if self._inf_cur_node >= len(task_solution):
+                return False
+
+        prev_state = self._sim.capture_state(with_robot_js=True)
+        if self._inf_cur_node in self.cached_tasks:
+            self._inf_cur_task = self.cached_tasks[self._inf_cur_node]
+            self._inf_cur_task.reset(episode)
+        else:
+            task = task_solution[self._inf_cur_node].init_task(
+                self, episode, should_reset=False
+            )
+            self.cached_tasks[self._inf_cur_node] = task
+            self._inf_cur_task = task
+        self._sim.set_state(prev_state)
+
+        return True
 
     def get_cur_task(self):
         return self._cur_task
@@ -205,3 +222,29 @@ class CompositeTask(RearrangeTask):
 
     def is_goal_state_satisfied(self):
         return self.is_pred_list_sat(self._goal_state)
+
+    def _try_get_subtask_prop(self, prop_name, def_val):
+        if self._cur_task is not None and hasattr(self._cur_node, prop_name):
+            return getattr(self._cur_node, prop_name)
+        elif self._inf_cur_task is not None and hasattr(
+            self._inf_cur_task, prop_name
+        ):
+            return getattr(self._inf_cur_task, prop_name)
+        return def_val
+
+    ###############################
+    # Sub-task property overrides
+    ###############################
+    @property
+    def targ_idx(self):
+        return self._try_get_subtask_prop("targ_idx", self._targ_idx)
+
+    @property
+    def nav_target_pos(self):
+        return self._try_get_subtask_prop(
+            "nav_target_pos", mn.Vector3(0.0, 0.0, 0.0)
+        )
+
+    @property
+    def nav_target_angle(self):
+        return self._try_get_subtask_prop("nav_target_angle", 0.0)

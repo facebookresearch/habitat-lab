@@ -22,6 +22,7 @@ class RearrangePickReward(Measure):
         self._sim = sim
         self._config = config
         self._task = task
+        self.cur_dist = -1.0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -29,6 +30,7 @@ class RearrangePickReward(Measure):
         return RearrangePickReward.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self.cur_dist = -1.0
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
@@ -76,7 +78,7 @@ class RearrangePickReward(Measure):
                 reward += self._config.PICK_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
-                self._task.cur_dist = -1
+                self.cur_dist = -1
             else:
                 # picked the wrong object
                 reward -= self._config.WRONG_PICK_PEN
@@ -86,17 +88,17 @@ class RearrangePickReward(Measure):
                 return
 
         if self._config.USE_DIFF:
-            if self._task.cur_dist < 0:
+            if self.cur_dist < 0:
                 dist_diff = 0.0
             else:
-                dist_diff = self._task.cur_dist - dist_to_goal
+                dist_diff = self.cur_dist - dist_to_goal
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
             reward += self._config.DIST_REWARD * dist_diff
         else:
             reward -= self._config.DIST_REWARD * dist_to_goal
-        self._task.cur_dist = dist_to_goal
+        self.cur_dist = dist_to_goal
 
         if not cur_picked and self._task.prev_picked:
             # Dropped the object

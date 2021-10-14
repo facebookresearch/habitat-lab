@@ -16,9 +16,11 @@ class GeoMeasure(Measure):
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
         self._sim = sim
+        self._prev_dist = None
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._prev_dist = self._get_cur_geo_dist(task)
         self.update_metric(
             *args,
             episode=episode,
@@ -34,8 +36,7 @@ class GeoMeasure(Measure):
     def _get_cur_geo_dist(self, task):
         distance_to_target = self._sim.geodesic_distance(
             self._get_agent_pos(),
-            [task.nav_targ_pos],
-            None,
+            task.nav_target_pos,
         )
 
         if distance_to_target == np.inf:
@@ -62,7 +63,6 @@ class NavToObjReward(GeoMeasure):
                 RotDistToGoal.cls_uuid,
             ],
         )
-        self._prev_dist = self._get_cur_geo_dist(task)
         self._cur_angle_dist = -1.0
         super().reset_metric(
             *args,
@@ -165,10 +165,10 @@ class RotDistToGoal(GeoMeasure):
         return RotDistToGoal.cls_uuid
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        heading_angle = observations["localization"][-1]
+        heading_angle = float(self._sim.robot.base_rot)
         angle_dist = np.arctan2(
-            np.sin(heading_angle - task.nav_targ_angle),
-            np.cos(heading_angle - task.nav_targ_angle),
+            np.sin(heading_angle - task.nav_target_angle),
+            np.cos(heading_angle - task.nav_target_angle),
         )
         self._metric = np.abs(angle_dist)
 

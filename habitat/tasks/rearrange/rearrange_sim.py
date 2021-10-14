@@ -106,6 +106,7 @@ class RearrangeSim(HabitatSim):
             self.viz_obj_ids = []
         self.grasp_mgr.desnap(force=True)
         self.prev_scene_id = ep_info["scene_id"]
+        self._viz_templates = {}
 
         self._try_acquire_context()
 
@@ -233,6 +234,7 @@ class RearrangeSim(HabitatSim):
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
+
         for obj_handle, transform in ep_info["rigid_objs"]:
             obj_attr_mgr = self.get_object_template_manager()
             matching_templates = (
@@ -267,7 +269,7 @@ class RearrangeSim(HabitatSim):
             # TODO: handle the auto sleep here?
 
         ao_mgr = self.get_articulated_object_manager()
-        for aoi_handle in ep_info["ao_states"]:
+        for aoi_handle in ao_mgr.get_object_handles():
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
     def _create_obj_viz(self, ep_info):
@@ -336,13 +338,6 @@ class RearrangeSim(HabitatSim):
         self.set_transformation(T, i)
         self.set_linear_velocity(mn.Vector3(0, 0, 0), i)
         self.set_angular_velocity(mn.Vector3(0, 0, 0), i)
-
-    def reset_art_obj_pos(self, i, p):
-        self.set_articulated_object_positions(i, p)
-        vel = self.get_articulated_object_velocities(i)
-        forces = self.get_articulated_object_forces(i)
-        self.set_articulated_object_velocities(i, np.zeros((len(vel),)))
-        self.set_articulated_object_forces(i, np.zeros((len(forces),)))
 
     def settle_sim(self, seconds):
         steps = int(seconds * self.ctrl_freq)
@@ -421,15 +416,16 @@ class RearrangeSim(HabitatSim):
         """Adds the sphere object to the specified position for visualization purpose."""
 
         if viz_id is None:
-            obj_mgr = self.get_object_template_manager()
-            template = obj_mgr.get_template_by_handle(
-                obj_mgr.get_template_handles("sphere")[0]
-            )
-            template.scale = mn.Vector3(r, r, r)
-            new_template_handle = obj_mgr.register_template(
-                template, "ball_new_viz"
-            )
-            viz_id = self.add_object(new_template_handle)
+            if r not in self._viz_templates:
+                obj_mgr = self.get_object_template_manager()
+                template = obj_mgr.get_template_by_handle(
+                    obj_mgr.get_template_handles("sphere")[0]
+                )
+                template.scale = mn.Vector3(r, r, r)
+                self._viz_templates[r] = obj_mgr.register_template(
+                    template, "ball_new_viz"
+                )
+            viz_id = self.add_object(self._viz_templates[r])
             make_render_only(viz_id, self)
         self.set_translation(mn.Vector3(*position), viz_id)
 

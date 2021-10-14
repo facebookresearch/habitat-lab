@@ -151,7 +151,7 @@ object_samplers:
     params:
       object_sets: ["kitchen"]
       receptacle_sets: ["counter"]
-      num_samples: [2, 2]
+      num_samples: [1, 1]
       orientation_sampling: "up"
 
 object_target_samplers:

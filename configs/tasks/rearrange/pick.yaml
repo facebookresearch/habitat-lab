@@ -18,8 +18,8 @@ TASK:
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
-    REWARD_MEASUREMENT: PICK_REWARD
-    SUCCESS_MEASUREMENT: PICK_SUCCESS
+    REWARD_MEASUREMENT: "rearrangepick_reward"
+    SUCCESS_MEASUREMENT: "rearrangepick_success"
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -50,9 +50,7 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    LOCAL_SENSOR:
-        TYPE: "LocalizationSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0

@@ -1,11 +1,10 @@
-domain: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
 stage_goals: {}
 start:
     precondition: []
     state:
         art_states:
-            cab: [0,0,0,0,0,0,0]
-            fridge: [0,0]
+            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
+            "fridge_:0000": [0,0]
         robo:
             pos: 'rnd'
 

@@ -36,10 +36,7 @@ class RearrangePickTaskV1(RearrangeTask):
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
         self.start_states = self.cache.load()
-        self.targ_idx = None
         self.prev_colls = None
-        self.abs_targ_idx = None
-        self.cur_dist = -1.0
         self.prev_picked = False
         self.force_set_idx = None
 
@@ -164,10 +161,8 @@ class RearrangePickTaskV1(RearrangeTask):
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot
 
-        self.targ_idx = sel_idx
-        self.abs_targ_idx = sim.get_targets()[0][sel_idx]
+        self._targ_idx = sel_idx
         # Value < 0 will not be used
-        self.cur_dist = -1.0
         self.prev_picked = self._sim.grasp_mgr.is_grasped
 
         return super(RearrangePickTaskV1, self).reset(episode)

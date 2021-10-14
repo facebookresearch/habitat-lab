@@ -34,6 +34,16 @@ class DynNavRLEnv(RearrangeTask):
         )
         self.start_states = self.cache.load()
         self.domain = None
+        self._nav_target_pos = mn.Vector3(0.0, 0.0, 0.0)
+        self._nav_target_angle = 0.0
+
+    @property
+    def nav_target_pos(self):
+        return self._nav_target_pos
+
+    @property
+    def nav_target_angle(self):
+        return self._nav_target_angle
 
     def set_args(self, obj_to, orig_applied_args, **kwargs):
         self.force_obj_idx = obj_to
@@ -49,7 +59,7 @@ class DynNavRLEnv(RearrangeTask):
         sim = self._env._sim
         distance_to_target = sim.geodesic_distance(
             self._get_agent_pos(),
-            [self.nav_targ_pos],
+            [self._nav_target_pos],
             None,
         )
         return distance_to_target
@@ -95,16 +105,16 @@ class DynNavRLEnv(RearrangeTask):
     def _generate_nav_start_goal(self, episode):
         targ_pos, targ_angle, _ = self._determine_nav_pos(episode)
         orig_nav_targ_pos = self._sim.get_nav_pos(targ_pos)
-        self.nav_targ_pos = np.array(
+        self._nav_target_pos = np.array(
             self._sim.pathfinder.snap_point(orig_nav_targ_pos)
         )
 
         start_pos, start_rot = get_robo_start_pos(
-            self._sim, self.nav_targ_pos, self._config
+            self._sim, self._nav_target_pos
         )
 
         return (
-            self.nav_targ_pos,
+            self._nav_target_pos,
             float(targ_angle),
             start_pos,
             float(start_rot),
@@ -127,28 +137,30 @@ class DynNavRLEnv(RearrangeTask):
         if self.force_obj_idx is not None:
             full_key = f"{episode_id}_{self.force_obj_idx}"
             if full_key in self.start_states:
-                self.nav_targ_pos, self.nav_targ_angle = self.start_states[
-                    full_key
-                ]
+                (
+                    self._nav_target_pos,
+                    self._nav_target_angle,
+                ) = self.start_states[full_key]
             else:
                 abs_true_point, task_cls_name, task_args = get_nav_from_obj_to(
                     self.nav_obj_name, self.force_obj_idx, sim
                 )
-                targ_pos, self.nav_targ_angle = self._get_nav_targ(
+                targ_pos, self._nav_target_angle = self._get_nav_targ(
                     task_cls_name, task_args, episode
                 )
-                orig_nav_targ_pos = sim.get_nav_pos(targ_pos, True)
-                self.nav_targ_pos = np.array(
+                orig_nav_targ_pos = sim.get_nav_pos(targ_pos)
+                self._nav_target_pos = np.array(
                     sim.pathfinder.snap_point(orig_nav_targ_pos)
                 )
+                self._nav_target_angle = float(self._nav_target_angle)
 
                 self.start_states[full_key] = (
-                    self.nav_targ_pos,
-                    self.nav_targ_angle,
+                    self._nav_target_pos,
+                    self._nav_target_angle,
                 )
                 self.cache.save(self.start_states)
             start_pos, start_rot = get_robo_start_pos(
-                sim, self.nav_targ_pos, self.tcfg
+                sim, self._nav_target_pos
             )
         else:
             if (
@@ -156,8 +168,8 @@ class DynNavRLEnv(RearrangeTask):
                 and not self._config.FORCE_REGENERATE
             ):
                 (
-                    self.nav_targ_pos,
-                    self.nav_targ_angle,
+                    self._nav_target_pos,
+                    self._nav_target_angle,
                     start_pos,
                     start_rot,
                 ) = self.start_states[episode_id]
@@ -170,14 +182,14 @@ class DynNavRLEnv(RearrangeTask):
                 sim.robot.base_rot = start_rot
             else:
                 (
-                    self.nav_targ_pos,
-                    self.nav_targ_angle,
+                    self._nav_target_pos,
+                    self._nav_target_angle,
                     start_pos,
                     start_rot,
                 ) = self._generate_nav_start_goal(episode)
                 self.start_states[episode_id] = (
-                    self.nav_targ_pos,
-                    self.nav_targ_angle,
+                    self._nav_target_pos,
+                    self._nav_target_angle,
                     start_pos,
                     start_rot,
                 )
@@ -187,12 +199,12 @@ class DynNavRLEnv(RearrangeTask):
 
         observations = super().reset(episode)
 
-        if not sim.pathfinder.is_navigable(self.nav_targ_pos):
+        if not sim.pathfinder.is_navigable(self._nav_target_pos):
             print("Goal is not navigable")
 
         if self._config.DEBUG_GOAL_POINT:
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
-                self.nav_targ_pos,
+                self._nav_target_pos,
                 sim.viz_ids["nav_targ_pos"],
                 r=10.0,
             )
@@ -233,14 +245,7 @@ def get_nav_from_obj_to(nav_name, obj_to, sim):
     task_args = {}
 
     if nav_name.startswith("TARG"):
-        # _, goal_pos = sim.get_targets()
-        # task_cls_name = "RearrangPlaceRLEnv"
-        # task_args = {"obj": obj_to}
-        # abs_true_point = goal_pos[obj_to]
         raise ValueError("Place task not supported yet")
-    elif obj_to in sim.markers:
-        # TODO: Navigating to markers should be considered "interacting" with some articulated object and should be calculated as some distance away from the object.
-        raise ValueError("Do not yet support navigating to markers")
     else:
         task_cls_name = "RearrangePickTask-v0"
         task_args = {"obj": obj_to}
@@ -250,7 +255,7 @@ def get_nav_from_obj_to(nav_name, obj_to, sim):
     return abs_true_point, task_cls_name, task_args
 
 
-def get_robo_start_pos(sim, nav_targ_pos, tcfg):
+def get_robo_start_pos(sim, nav_targ_pos):
     timeout_len = 1000
     orig_state = sim.capture_state()
 

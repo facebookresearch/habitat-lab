@@ -111,8 +111,8 @@ class PddlDomain:
             ref_id = id_to_name[targ_idx]
             name_to_id[f"TARGET_{ref_id}"] = targ_idx
 
-        # for name, idx in domain_def["art_objs"].items():
-        #    name_to_id["ART_" + name] = idx
+        for i, art_obj in enumerate(self.sim.art_objs):
+            name_to_id["ART_" + art_obj.handle] = i
 
         # for name, marker_name in domain_def["markers"].items():
         #    name_to_id[name] = marker_name

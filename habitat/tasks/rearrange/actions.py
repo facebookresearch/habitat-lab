@@ -170,7 +170,6 @@ class SuctionGraspAction(SimulatorTaskAction):
 
             closest_obj_pos = scene_obj_pos[closest_obj_idx]
             to_target = np.linalg.norm(suction_pos - closest_obj_pos, ord=2)
-            print("Distance to closest object", to_target)
 
             if to_target < self._config.SUCTION_THRESH_DIST:
                 attempt_snap_idx = self._sim.scene_obj_ids[closest_obj_idx]

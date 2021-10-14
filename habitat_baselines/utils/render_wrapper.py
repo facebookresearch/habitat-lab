@@ -30,7 +30,7 @@ def append_text_to_image(image: np.ndarray, text: List[str]):
             (x, y),
             font,
             font_size,
-            (255, 255, 255),
+            (255, 255, 255, 255),
             font_thickness,
             lineType=cv2.LINE_AA,
         )
