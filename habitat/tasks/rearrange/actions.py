@@ -14,7 +14,13 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.grip_actions import GripSimulatorTaskAction
+
+# flake8: noqa
+from habitat.tasks.rearrange.grip_actions import (
+    GripSimulatorTaskAction,
+    MagicGraspAction,
+    SuctionGraspAction,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision
 
