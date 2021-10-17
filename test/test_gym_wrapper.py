@@ -16,13 +16,22 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 
 @pytest.mark.parametrize(
-    "config_file",
+    "config_file,overrides,expected_action_dim",
     [
-        "habitat_baselines/config/rearrange/rl_pick.yaml",
+        ("habitat_baselines/config/rearrange/rl_pick.yaml", [], 8),
+        (
+            "habitat_baselines/config/rearrange/rl_pick.yaml",
+            [
+                "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "SuctionGraspAction",
+            ],
+            7,
+        ),
     ],
 )
-def test_gym_wrapper_contract(config_file):
-    config = baselines_get_config(config_file)
+def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
+    # print("Called iwth ", config_file, overrides, expected_action_dim)
+    config = baselines_get_config(config_file, overrides)
     env_class = get_env_class(config.ENV_NAME)
 
     env = habitat_baselines.utils.env_utils.make_env_fn(
@@ -31,6 +40,9 @@ def test_gym_wrapper_contract(config_file):
     env = HabGymWrapper(env)
     env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Box)
+    assert (
+        env.action_space.shape[0] == expected_action_dim
+    ), f"Has {env.action_space.shape[0]} action dim but expected {expected_action_dim}"
     obs = env.reset()
     assert isinstance(obs, np.ndarray), f"Obs {obs}"
     assert obs.shape == env.observation_space.shape
@@ -44,3 +56,4 @@ def test_gym_wrapper_contract(config_file):
 
     for _, v in info.items():
         assert not isinstance(v, dict)
+    env.close()

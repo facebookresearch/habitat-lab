@@ -11,6 +11,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 def _try_register_rearrange_task():
     import habitat.tasks.rearrange.actions
+    import habitat.tasks.rearrange.grip_actions
     import habitat.tasks.rearrange.multi_task.composite_sensors
     import habitat.tasks.rearrange.multi_task.composite_task
     import habitat.tasks.rearrange.rearrange_sensors

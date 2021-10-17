@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Optional
+
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -12,6 +14,7 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.grip_actions import GripSimulatorTaskAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision
 
@@ -50,16 +53,15 @@ class ArmAction(SimulatorTaskAction):
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
-        self._use_oracle_grasp = self._config.get("ORACLE_GRASP", False)
 
         if self._config.GRIP_CONTROLLER is not None:
             grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
-            self.grip_ctrlr = grip_controller_cls(
-                *args, config=config, sim=sim, **kwargs
-            )
-
-        elif not self._use_oracle_grasp:
+            self.grip_ctrlr: Optional[
+                GripSimulatorTaskAction
+            ] = grip_controller_cls(*args, config=config, sim=sim, **kwargs)
+        else:
             self.grip_ctrlr = None
+
         self.disable_grip = False
         if "DISABLE_GRIP" in config:
             self.disable_grip = config["DISABLE_GRIP"]
@@ -74,7 +76,7 @@ class ArmAction(SimulatorTaskAction):
         action_spaces = {
             "arm_action": self.arm_ctrlr.action_space,
         }
-        if not self._use_oracle_grasp and self.grip_ctrlr is not None:
+        if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
             action_spaces["grip_action"] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
@@ -82,100 +84,8 @@ class ArmAction(SimulatorTaskAction):
         self.arm_ctrlr.step(arm_action, should_step=False)
         if self.grip_ctrlr is not None and not self.disable_grip:
             self.grip_ctrlr.step(grip_action, should_step=False)
-        if self._use_oracle_grasp:
-            idxs, _ = self._sim.get_targets()
-            scene_pos = self._sim.get_scene_pos()
-            target_pos = scene_pos[idxs][0]
-            target_idx = idxs[0]
-
-            ee_pos = self._sim.robot.ee_transform.translation
-            to_target = np.linalg.norm(ee_pos - target_pos, ord=2)
-            sim_idx = self._sim.scene_obj_ids[target_idx]
-
-            if to_target < self._config.GRASP_THRESH_DIST:
-                self._sim.grasp_mgr.snap_to_obj(sim_idx)
 
         return self._sim.step(HabitatSimActions.ARM_ACTION)
-
-
-@registry.register_task_action
-class MagicGraspAction(SimulatorTaskAction):
-    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
-        super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._sim: RearrangeSim = sim
-
-    @property
-    def action_space(self):
-        return spaces.Box(shape=(1,), high=1.0, low=-1.0)
-
-    def _grasp(self):
-        scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self._sim.robot.ee_transform.translation
-        if len(scene_obj_pos) != 0:
-            # Get the target the EE is closest to.
-            closest_obj_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
-            )
-
-            closest_obj_pos = scene_obj_pos[closest_obj_idx]
-            to_target = np.linalg.norm(ee_pos - closest_obj_pos, ord=2)
-            sim_idx = self._sim.scene_obj_ids[closest_obj_idx]
-
-            if to_target < self._config.GRASP_THRESH_DIST:
-                self._sim.grasp_mgr.snap_to_obj(sim_idx)
-
-    def _ungrasp(self):
-        self._sim.grasp_mgr.desnap()
-
-    def step(self, grip_action, should_step=True, *args, **kwargs):
-        if grip_action is None:
-            return
-        if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
-            self._grasp()
-        elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
-            self._ungrasp()
-
-
-@registry.register_task_action
-class SuctionGraspAction(SimulatorTaskAction):
-    """
-    Action to automatically grasp when the gripper makes contact with an object. Does not allow for ungrasping.
-    """
-
-    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
-        super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._sim: RearrangeSim = sim
-        self._suction_offset = mn.Vector3(*config.SUCTION_OFFSET)
-
-    @property
-    def action_space(self):
-        return spaces.Box(shape=(0,), high=1.0, low=-1.0)
-
-    def _ungrasp(self):
-        self._sim.grasp_mgr.desnap()
-
-    def step(self, _, should_step=True, *args, **kwargs):
-        scene_obj_pos = self._sim.get_scene_pos()
-
-        suction_pos = self._sim.robot.ee_transform.transform_point(
-            self._suction_offset
-        )
-
-        attempt_snap_idx = None
-        if len(scene_obj_pos) != 0:
-            # Get the target the EE is closest to.
-            closest_obj_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - suction_pos, ord=2, axis=-1)
-            )
-
-            closest_obj_pos = scene_obj_pos[closest_obj_idx]
-            to_target = np.linalg.norm(suction_pos - closest_obj_pos, ord=2)
-
-            if to_target < self._config.SUCTION_THRESH_DIST:
-                attempt_snap_idx = self._sim.scene_obj_ids[closest_obj_idx]
-
-        if attempt_snap_idx is not None and not self._sim.grasp_mgr.is_grasped:
-            self._sim.grasp_mgr.snap_to_obj(attempt_snap_idx)
 
 
 @registry.register_task_action
@@ -195,14 +105,17 @@ class ArmRelPosAction(SimulatorTaskAction):
         )
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
+        print("Pre clip actions", delta_pos)
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._config.DELTA_POS_LIMIT
+        print("Post actions", delta_pos)
         # The actual joint positions
         self._sim: RearrangeSim
         self._sim.robot.arm_motor_pos = (
             delta_pos + self._sim.robot.arm_motor_pos
         )
+        print("Current target joint state", self._sim.robot.arm_motor_pos)
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
         return None

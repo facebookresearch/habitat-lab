@@ -129,6 +129,7 @@ class HabGymWrapper(gym.Env):
         for name, sub_space in action_space.spaces.items():
             end_i = start_i + sub_space.shape[0]
             self.action_mapping[name] = (start_i, end_i)
+            start_i = end_i
 
         self.action_space = spaces.Box(
             shape=(end_i,), low=-1.0, high=1.0, dtype=np.float32
@@ -220,3 +221,6 @@ class HabGymWrapper(gym.Env):
             raise ValueError(f"Render mode {mode} not currently supported.")
 
         return frame
+
+    def close(self):
+        self._env.close()
