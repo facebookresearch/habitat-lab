@@ -43,6 +43,7 @@ class RearrangeSim(HabitatSim):
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
         self._concur_render = self.habitat_config.get("CONCUR_RENDER", False)
+        self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
 
         self.art_objs = []
         self.start_art_states = {}
@@ -84,6 +85,17 @@ class RearrangeSim(HabitatSim):
         if self._concur_render:
             self.renderer.acquire_gl_context()
 
+    def sleep_all_objects(self):
+        """
+        De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
+        """
+        rom = self.get_rigid_object_manager()
+        for handle,ro in rom.get_objects_by_handle_substring().items():
+            ro.awake = False
+        aom = self.get_articulated_object_manager()
+        for handle,ao in aom.get_objects_by_handle_substring().items():
+            ao.awake = False
+
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
@@ -114,6 +126,10 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
+
+        #auto-sleep rigid objects as optimization
+        if self._auto_sleep:
+            self.sleep_all_objects()
 
         # recompute the NavMesh once the scene is loaded
         # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files

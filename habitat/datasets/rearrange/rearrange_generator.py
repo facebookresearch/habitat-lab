@@ -388,8 +388,10 @@ class RearrangeEpisodeGenerator:
                 failed_episodes += 1
                 continue
             generated_episodes.append(new_episode)
-            pbar.update(1)
-        pbar.close()
+            if verbose:
+                pbar.update(1)
+        if verbose:
+            pbar.close()
 
         print("==========================")
         print(
@@ -614,7 +616,9 @@ class RearrangeEpisodeGenerator:
         Run dynamics for a few seconds to check for stability of newly placed objects and optionally produce a video.
         Returns whether or not the simulation was stable.
         """
-        assert len(self.ep_sampled_objects) > 0
+        if len(self.ep_sampled_objects) == 0:
+            return True
+        #assert len(self.ep_sampled_objects) > 0
 
         scene_bb = (
             self.sim.get_active_scene_graph().get_root_node().cumulative_bb
@@ -768,17 +772,17 @@ def get_config_defaults() -> CN:
         #     "uniform",
         #     (["apple"], ["basket"], 1, 2, "any"),
         # ),
-        {
-            "name": "any_one",
-            "type": "uniform",
-            "params": {
-                "object_sets": ["any"],
-                "receptacle_sets": ["any"],
-                "num_samples": [1, 1],
-                "orientation_sampling": "up",
-            },
-            "comment": "Sample any one object from any receptacle.",
-        }
+        # {
+        #     "name": "any_one",
+        #     "type": "uniform",
+        #     "params": {
+        #         "object_sets": ["any"],
+        #         "receptacle_sets": ["any"],
+        #         "num_samples": [1, 1],
+        #         "orientation_sampling": "up",
+        #     },
+        #     "comment": "Sample any one object from any receptacle.",
+        # }
     ]
 
     # Define the desired object target sampling (i.e., where should an existing object be moved to)
@@ -788,17 +792,17 @@ def get_config_defaults() -> CN:
         # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
         # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
         # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
-        {
-            "name": "any_one_target",
-            "type": "uniform",
-            "params": {
-                "object_samplers": ["any_one"],
-                "receptacle_sets": ["any"],
-                "num_samples": [1, 1],
-                "orientation_sampling": "up",
-            },
-            "comment": "Sample a target for the object instanced by the 'any_one' object sampler from any receptacle.",
-        }
+        # {
+        #     "name": "any_one_target",
+        #     "type": "uniform",
+        #     "params": {
+        #         "object_samplers": ["any_one"],
+        #         "receptacle_sets": ["any"],
+        #         "num_samples": [1, 1],
+        #         "orientation_sampling": "up",
+        #     },
+        #     "comment": "Sample a target for the object instanced by the 'any_one' object sampler from any receptacle.",
+        # }
     ]
 
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
