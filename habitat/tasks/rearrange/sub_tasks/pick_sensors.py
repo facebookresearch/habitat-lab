@@ -10,6 +10,7 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
+    ForceTerminate,
     RobotForce,
 )
 
@@ -37,6 +38,7 @@ class RearrangePickReward(Measure):
                 EndEffectorToObjectDistance.cls_uuid,
                 RearrangePickSuccess.cls_uuid,
                 RobotForce.cls_uuid,
+                ForceTerminate.cls_uuid,
             ],
         )
 
@@ -116,15 +118,11 @@ class RearrangePickReward(Measure):
         if self._sim.grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.CONSTRAINT_VIOLATE_PEN
 
-        accum_force = task.measurements.measures[
-            RobotForce.cls_uuid
+        force_terminate = task.measurements.measures[
+            ForceTerminate.cls_uuid
         ].get_metric()
-        if (
-            self._config.MAX_ACCUM_FORCE is not None
-            and accum_force > self._config.MAX_ACCUM_FORCE
-        ):
+        if force_terminate:
             reward -= self._config.FORCE_END_PEN
-            self._task.should_end = True
 
         self._task.prev_picked = cur_picked
 

@@ -54,6 +54,7 @@ class RearrangeSim(HabitatSim):
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self.ref_handle_to_rigid_obj_id = None
+        self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
 
         self.ik_helper = None
 
@@ -93,12 +94,14 @@ class RearrangeSim(HabitatSim):
         self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
+        print("Simulating reconfiguring")
 
-        if ep_info["scene_id"] != self.prev_scene_id:
-            # Object instances are not valid between scenes.
-            self.robot = None
-            self.viz_ids = defaultdict(lambda: None)
-            self.viz_obj_ids = []
+        # if ep_info["scene_id"] != self.prev_scene_id:
+        #    print("Scene ID has changed, no more robot")
+        #    # Object instances are not valid between scenes.
+        #    # self.robot = None
+        #    self.viz_ids = defaultdict(lambda: None)
+        #    self.viz_obj_ids = []
         self.clear_rigid_body_objects()
 
         self.grasp_mgr.desnap(force=True)
@@ -118,20 +121,14 @@ class RearrangeSim(HabitatSim):
         self._recompute_navmesh()
 
         # add and initialize the robot
-        if self.robot is None:
-            self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
+
+        # if self.robot.sim_obj is None or not self.robot.sim_obj.is_alive:
+        ao_mgr = self.get_articulated_object_manager()
+        if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
+            ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
+        if True:
+            print("Reinitializing robot")
             self.robot.reconfigure()
-            # IL Proj hack
-            ee_name = self.habitat_config.get("EE_LINK_NAME", None)
-            if ee_name is not None:
-                # Real arm
-                link_name_to_id = {}
-                for i in self.robot.sim_obj.get_link_ids():
-                    name = self.robot.sim_obj.get_link_name(i)
-                    link_name_to_id[name] = i
-                self.robot.params.ee_link = link_name_to_id[ee_name]
-                self.robot.params.ee_offset = mn.Vector3(0.0, 0.0, 0.0)
-            # done IL proj hack
         self.robot.reset()
         self.grasp_mgr.reset()
 
@@ -160,6 +157,7 @@ class RearrangeSim(HabitatSim):
             self.start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
+        print("End of reconfigure")
 
     def get_nav_pos(self, pos):
         pos = mn.Vector3(*pos)

@@ -16,6 +16,8 @@ from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 # flake8: noqa
+# These actions need to be imported since there is a Python evaluation
+# statement which dynamically creates the desired grip controller.
 from habitat.tasks.rearrange.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
@@ -111,17 +113,18 @@ class ArmRelPosAction(SimulatorTaskAction):
         )
 
     def step(self, delta_pos, should_step=True, *args, **kwargs):
-        print("Pre clip actions", delta_pos)
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._config.DELTA_POS_LIMIT
-        print("Post actions", delta_pos)
         # The actual joint positions
         self._sim: RearrangeSim
         self._sim.robot.arm_motor_pos = (
             delta_pos + self._sim.robot.arm_motor_pos
         )
-        print("Current target joint state", self._sim.robot.arm_motor_pos)
+
+        self._sim.robot.arm_motor_pos = np.clip(
+            self._sim.robot.arm_motor_pos, *self._sim.robot.arm_joint_limits
+        )
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
         return None
