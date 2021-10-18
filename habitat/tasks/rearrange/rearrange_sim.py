@@ -94,7 +94,6 @@ class RearrangeSim(HabitatSim):
         self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
-        print("Simulating reconfiguring")
 
         # if ep_info["scene_id"] != self.prev_scene_id:
         #    print("Scene ID has changed, no more robot")
@@ -127,7 +126,6 @@ class RearrangeSim(HabitatSim):
         if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
             ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
         if True:
-            print("Reinitializing robot")
             self.robot.reconfigure()
         self.robot.reset()
         self.grasp_mgr.reset()
@@ -157,7 +155,6 @@ class RearrangeSim(HabitatSim):
             self.start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
-        print("End of reconfigure")
 
     def get_nav_pos(self, pos):
         pos = mn.Vector3(*pos)
