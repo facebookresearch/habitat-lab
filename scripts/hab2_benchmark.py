@@ -133,7 +133,7 @@ class HabDemoRunner:
             )
 
     def benchmark(self):
-        if self.args.n_procs == 1 or self.args.vector_env:
+        if self.args.n_procs == 1:# or self.args.vector_env:
             return self._bench_target()
         else:
             barrier = multiprocessing.Barrier(self.args.n_procs)
