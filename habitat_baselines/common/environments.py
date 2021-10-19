@@ -57,8 +57,9 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def get_reward(self, observations):
         current_measure = self._env.get_metrics()[self._reward_measure_name]
+        reward = self._rl_config.SLACK_REWARD
 
-        reward = current_measure
+        reward += current_measure
 
         if self._episode_success():
             reward += self._rl_config.SUCCESS_REWARD

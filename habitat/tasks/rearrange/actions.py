@@ -107,7 +107,7 @@ class ArmRelPosAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Box(
             shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
-            low=0,
+            low=-1,
             high=1,
             dtype=np.float32,
         )
@@ -122,9 +122,6 @@ class ArmRelPosAction(SimulatorTaskAction):
             delta_pos + self._sim.robot.arm_motor_pos
         )
 
-        self._sim.robot.arm_motor_pos = np.clip(
-            self._sim.robot.arm_motor_pos, *self._sim.robot.arm_joint_limits
-        )
         if should_step:
             return self._sim.step(HabitatSimActions.ARM_VEL)
         return None

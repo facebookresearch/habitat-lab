@@ -350,6 +350,10 @@ class ObjectToGoalDistance(Measure):
 
 @registry.register_measure
 class EndEffectorToObjectDistance(Measure):
+    """
+    Gets the distance between the end-effector and all current target object COMs.
+    """
+
     cls_uuid: str = "ee_to_object_distance"
 
     def __init__(self, sim, config, *args, **kwargs):
