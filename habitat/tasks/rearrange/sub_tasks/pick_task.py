@@ -72,6 +72,12 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
+
+            rel_targ = targ_pos - start_pos
+            angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
+            if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
+                angle_to_obj *= -1.0
+
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
 
             is_navigable = is_easy_init or sim.pathfinder.is_navigable(
@@ -86,11 +92,6 @@ class RearrangePickTaskV1(RearrangeTask):
             sim.robot.base_pos = start_pos
 
             # Face the robot towards the object.
-            rel_targ = targ_pos - start_pos
-            angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
-            if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
-                angle_to_obj *= -1.0
-
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             sim.robot.base_rot = angle_to_obj + rot_noise
 
