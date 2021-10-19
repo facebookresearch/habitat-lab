@@ -37,6 +37,7 @@ import time
 import cv2
 import numpy as np
 
+import habitat
 import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.utils.visualizations.utils import observations_to_image
