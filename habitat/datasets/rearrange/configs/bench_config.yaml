@@ -61,7 +61,7 @@ receptacle_sets:
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["v3_sc"]
+    scene_sets: ["v3_sc0_staging_00_bench"]
   comment: "Samples from ReplicaCAD 105 variations with static furniture."
 
 ao_state_samplers:

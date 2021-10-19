@@ -83,15 +83,18 @@ class HabDemoRunner:
 
             if self.args.render:
                 for i in range(self.args.n_procs):
-                    final_vid.append(obs[i]["rgb"])
+                    final_vid.append(obs)
 
         if self.args.render and len(final_vid) > 0:
-            if final_vid[0].dtype == np.float32:
-                for i in range(len(final_vid)):
-                    final_vid[i] *= 255.0
-                    final_vid[i] = final_vid[i].astype(np.uint8)
-            save_mp4(final_vid, "./data/vids", "bench")
-            print("Saved video to data/vids/bench.mp4")
+            from habitat_sim.utils import viz_utils as vut
+            #TODO: setup an optional 3rd person render camera for debugging
+            vut.make_video(
+                final_vid,
+                "robot_head_rgb",
+                "color",
+                "benchmark_render_output",
+                open_vid=True,
+            )
 
         return dict(profile_sums)
 
