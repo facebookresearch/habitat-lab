@@ -275,7 +275,6 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
             self.scene_obj_ids.append(ro.object_id)
-            # TODO: handle the auto sleep here?
 
         ao_mgr = self.get_articulated_object_manager()
         for aoi_handle in ao_mgr.get_object_handles():
