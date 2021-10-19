@@ -147,6 +147,7 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
 
     # Grasping

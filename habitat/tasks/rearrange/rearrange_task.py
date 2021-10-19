@@ -85,7 +85,6 @@ class RearrangeTask(NavigationTask):
             observations.update(task_obs)
 
         self.prev_measures = self.measurements.get_metrics()
-        self.prev_picked = False
         self.n_succ_picks = 0
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()

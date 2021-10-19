@@ -37,7 +37,6 @@ class RearrangePickTaskV1(RearrangeTask):
         )
         self.start_states = self.cache.load()
         self.prev_colls = None
-        self.prev_picked = False
         self.force_set_idx = None
 
     def set_args(self, obj, **kwargs):
@@ -163,7 +162,5 @@ class RearrangePickTaskV1(RearrangeTask):
         sim.robot.base_rot = start_rot
 
         self._targ_idx = sel_idx
-        # Value < 0 will not be used
-        self.prev_picked = self._sim.grasp_mgr.is_grasped
 
         return super(RearrangePickTaskV1, self).reset(episode)

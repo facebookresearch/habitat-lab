@@ -24,6 +24,8 @@ class RearrangePickReward(Measure):
         self._config = config
         self._task = task
         self.cur_dist = -1.0
+        self._prev_picked = False
+
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -31,16 +33,16 @@ class RearrangePickReward(Measure):
         return RearrangePickReward.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.cur_dist = -1.0
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
                 EndEffectorToObjectDistance.cls_uuid,
-                RearrangePickSuccess.cls_uuid,
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
             ],
         )
+        self.cur_dist = -1.0
+        self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
         self.update_metric(
             *args,
@@ -57,9 +59,6 @@ class RearrangePickReward(Measure):
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
-        success = task.measurements.measures[
-            RearrangePickSuccess.cls_uuid
-        ].get_metric()
 
         reward = 0
 
@@ -73,7 +72,7 @@ class RearrangePickReward(Measure):
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
-        did_pick = cur_picked and (not self._task)
+        did_pick = cur_picked and (not self._task.prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 task.n_succ_picks += 1
@@ -102,16 +101,13 @@ class RearrangePickReward(Measure):
             reward -= self._config.DIST_REWARD * dist_to_goal
         self.cur_dist = dist_to_goal
 
-        if not cur_picked and self._task.prev_picked:
+        if not cur_picked and self._prev_picked:
             # Dropped the object
             reward -= self._config.DROP_PEN
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
             self._metric = reward
             return
-
-        if success:
-            reward += self._config.SUCC_REWARD
 
         reward += self._get_coll_reward()
 
@@ -125,6 +121,7 @@ class RearrangePickReward(Measure):
             reward -= self._config.FORCE_END_PEN
 
         self._task.prev_picked = cur_picked
+        self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
         self._metric = reward
 

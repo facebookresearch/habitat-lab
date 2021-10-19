@@ -21,7 +21,9 @@ from habitat.tasks.rearrange.utils import (
     make_render_only,
 )
 from habitat_sim.physics import MotionType
-from habitat_sim.robots import FetchRobot
+
+# flake8: noqa
+from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
@@ -55,7 +57,8 @@ class RearrangeSim(HabitatSim):
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self.ref_handle_to_rigid_obj_id = None
-        self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
+        robot_cls = eval(self.habitat_config.ROBOT_TYPE)
+        self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
 
         self.ik_helper = None
 
@@ -90,10 +93,10 @@ class RearrangeSim(HabitatSim):
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
         """
         rom = self.get_rigid_object_manager()
-        for handle,ro in rom.get_objects_by_handle_substring().items():
+        for _, ro in rom.get_objects_by_handle_substring().items():
             ro.awake = False
         aom = self.get_articulated_object_manager()
-        for handle,ao in aom.get_objects_by_handle_substring().items():
+        for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
     def reconfigure(self, config):
@@ -127,7 +130,7 @@ class RearrangeSim(HabitatSim):
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
 
-        #auto-sleep rigid objects as optimization
+        # auto-sleep rigid objects as optimization
         if self._auto_sleep:
             self.sleep_all_objects()
 
