@@ -129,6 +129,15 @@ class RearrangeSim(HabitatSim):
         if True:
             self.robot.reconfigure()
         self.robot.reset()
+        # consume a fixed position from SIMUALTOR.AGENT_0 if configured
+        if self.habitat_config.AGENT_0.IS_SET_START_STATE:
+            self.robot.base_pos = mn.Vector3(
+                self.habitat_config.AGENT_0.START_POSITION
+            )
+            agent_rot = self.habitat_config.AGENT_0.START_ROTATION
+            self.robot.sim_obj.rotation = mn.Quaternion(
+                mn.Vector3(agent_rot[:3]), agent_rot[3]
+            )
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
