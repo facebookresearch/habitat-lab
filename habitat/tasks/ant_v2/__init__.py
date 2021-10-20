@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_ant_v2_task():
     try:
-        from habitat.tasks.ant_v2.ant_v2 import AntTask  # noqa
+        from habitat.tasks.ant_v2.ant_v2 import AntV2Task  # noqa
     except ImportError as e:
         anttask_import_error = e
 

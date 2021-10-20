@@ -6,6 +6,7 @@
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
+from habitat.tasks.ant_v2 import _try_register_ant_v2_task
 from habitat.tasks.eqa import _try_register_eqa_task
 from habitat.tasks.nav import _try_register_nav_task
 from habitat.tasks.rearrange import _try_register_rearrange_task
@@ -21,7 +22,7 @@ def make_task(id_task, **kwargs):
 
     return _task(**kwargs)
 
-
+_try_register_ant_v2_task()
 _try_register_eqa_task()
 _try_register_nav_task()
 _try_register_vln_task()
