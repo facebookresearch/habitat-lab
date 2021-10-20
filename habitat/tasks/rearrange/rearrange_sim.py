@@ -66,8 +66,9 @@ class RearrangeSim(HabitatSim):
         # some scene sensing.
         self.ctrl_arm = True
 
-        # TODO: convert this to new format and API
-        self.grasp_mgr = RearrangeGraspManager(self, self.habitat_config)
+        self.grasp_mgr: RearrangeGraspManager = RearrangeGraspManager(
+            self, self.habitat_config
+        )
 
     def _get_target_trans(self):
         """
@@ -109,23 +110,25 @@ class RearrangeSim(HabitatSim):
         self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
+        self._try_acquire_context()
 
-        # if ep_info["scene_id"] != self.prev_scene_id:
-        #    print("Scene ID has changed, no more robot")
-        #    # Object instances are not valid between scenes.
-        #    # self.robot = None
-        #    self.viz_ids = defaultdict(lambda: None)
-        #    self.viz_obj_ids = []
-        self.clear_rigid_body_objects()
+        self.grasp_mgr.reset()
 
-        self.grasp_mgr.desnap(force=True)
+        self._clear_objects()
+
         self.prev_scene_id = ep_info["scene_id"]
         self._viz_templates = {}
 
-        self._try_acquire_context()
-
         # load articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
+
+        # add and initialize the robot
+        ao_mgr = self.get_articulated_object_manager()
+        if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
+            ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
+        if True:
+            self.robot.reconfigure()
+        self.robot.reset()
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info)
@@ -137,17 +140,6 @@ class RearrangeSim(HabitatSim):
         # recompute the NavMesh once the scene is loaded
         # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
         self._recompute_navmesh()
-
-        # add and initialize the robot
-
-        # if self.robot.sim_obj is None or not self.robot.sim_obj.is_alive:
-        ao_mgr = self.get_articulated_object_manager()
-        if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
-            ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
-        if True:
-            self.robot.reconfigure()
-        self.robot.reset()
-        self.grasp_mgr.reset()
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
@@ -213,17 +205,21 @@ class RearrangeSim(HabitatSim):
             scene_name = self.ep_info["scene_id"]
             inferred_path = scene_name.split(".glb")[0] + ".navmesh"
             self.pathfinder.save_nav_mesh(inferred_path)
-            print("Cached navmesh to ", inferred_path)
         # reset cached MotionTypes
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
-    def clear_rigid_body_objects(self):
+    def _clear_objects(self):
         rom = self.get_rigid_object_manager()
         for scene_obj_id in self.scene_obj_ids:
             if rom.get_library_has_id(scene_obj_id):
                 rom.remove_object_by_id(scene_obj_id)
         self.scene_obj_ids = []
+
+        # Do not remove the articulated objects from the scene, these are
+        # managed by the underlying sim.
+        ao_mgr = self.get_articulated_object_manager()
+        self.art_objs = []
 
     def _set_ao_states_from_ep(self, ep_info):
         """
@@ -377,6 +373,7 @@ class RearrangeSim(HabitatSim):
             add_back_viz_objs[name] = before_pos
         self.viz_obj_ids = []
         self.viz_ids = defaultdict(lambda: None)
+        self.grasp_mgr.update()
 
         if self._concur_render:
             self._prev_sim_obs = self.start_async_render()

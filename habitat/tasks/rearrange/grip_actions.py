@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -67,7 +66,6 @@ class SuctionGraspAction(GripSimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self._suction_offset = mn.Vector3(*config.SUCTION_OFFSET)
 
     @property
     def action_space(self):

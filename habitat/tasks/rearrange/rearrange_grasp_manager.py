@@ -25,8 +25,6 @@ class RearrangeGraspManager:
         self._config = config
 
     def reset(self):
-        self._leave_info = None
-
         # Setup the collision groups. UserGroup7 is the held object group, it
         # can interact with anything except for the robot.
         CollisionGroupHelper.set_mask_for_group(
@@ -34,10 +32,9 @@ class RearrangeGraspManager:
         )
 
         self.desnap()
+        self._leave_info = None
 
     def is_violating_hold_constraint(self):
-        if self._config.get("IGNORE_HOLD_VIOLATE", False):
-            return False
         # Is the object firmly in the grasp of the robot?
         ee_pos = self._sim.robot.ee_transform.translation
         if self.is_grasped:
@@ -56,9 +53,13 @@ class RearrangeGraspManager:
             ee_pos = self._sim.robot.ee_transform.translation
             dist = np.linalg.norm(ee_pos - self._leave_info[0])
             if dist >= self._leave_info[1]:
-                self.snap_rigid_obj.override_collision_group(
-                    CollisionGroups.Default
+                rigid_obj = (
+                    self._sim.get_rigid_object_manager().get_object_by_id(
+                        self._leave_info[2]
+                    )
                 )
+                rigid_obj.override_collision_group(CollisionGroups.Default)
+            self._leave_info = None
 
     def desnap(self, force=False):
         """Removes any hold constraints currently active."""
@@ -78,6 +79,7 @@ class RearrangeGraspManager:
                     self._leave_info = (
                         self._sim.get_translation(self._snapped_obj_id),
                         max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                        self._snapped_obj_id,
                     )
 
         for constraint_id in self._snap_constraints:
