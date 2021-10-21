@@ -24,6 +24,9 @@ class RearrangeGraspManager:
         self._leave_info = None
         self._config = config
 
+    def reconfigure(self):
+        self._snap_constraints = []
+
     def reset(self):
         # Setup the collision groups. UserGroup7 is the held object group, it
         # can interact with anything except for the robot.

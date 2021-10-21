@@ -112,6 +112,9 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
+        if self.prev_scene_id != ep_info["scene_id"]:
+            self.grasp_mgr.reconfigure()
+            self.scene_obj_ids = []
         self.grasp_mgr.reset()
 
         self._clear_objects()
@@ -218,7 +221,6 @@ class RearrangeSim(HabitatSim):
 
         # Do not remove the articulated objects from the scene, these are
         # managed by the underlying sim.
-        ao_mgr = self.get_articulated_object_manager()
         self.art_objs = []
 
     def _set_ao_states_from_ep(self, ep_info):
