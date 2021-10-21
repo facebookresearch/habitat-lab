@@ -42,11 +42,11 @@ SIMULATOR:
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: False
+        IS_SET_START_STATE: True
         RADIUS: 0.1
         SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
-        START_POSITION: [0, 0, 0]
-        START_ROTATION: [0, 0, 0, 1]
+        START_POSITION: [3.66997,0.0,3.5041]
+        START_ROTATION: [0.0, 0.594823, 0.0, 0.803857]
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -70,7 +70,8 @@ SIMULATOR:
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: FetchRobotNoWheels
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
     FORWARD_STEP_SIZE: 0.25
 
     # Grasping
