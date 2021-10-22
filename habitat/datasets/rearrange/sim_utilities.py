@@ -296,11 +296,18 @@ class Receptacle:
         self.is_parent_object_articulated = is_parent_object_articulated
         self.parent_link = parent_link
 
-    def sample_uniform_local(self) -> mn.Vector3:
+    def sample_uniform_local(self, sample_region_ratio: float) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB.
         """
-        return np.random.uniform(self.bounds.min, self.bounds.max)
+        # only scale the X and Z ranges
+        scaled_bounds_min = sample_region_ratio * self.bounds.min
+        scaled_bounds_max = sample_region_ratio * self.bounds.max
+
+        return np.random.uniform(
+            [scaled_bounds_min[0], self.bounds.min[1], scaled_bounds_min[2]],
+            [scaled_bounds_max[0], self.bounds.max[1], scaled_bounds_max[2]],
+        )
 
     def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
         """
@@ -318,11 +325,13 @@ class Receptacle:
                 self.parent_link
             ).absolute_transformation()
 
-    def sample_uniform_global(self, sim: habitat_sim.Simulator) -> mn.Vector3:
+    def sample_uniform_global(
+        self, sim: habitat_sim.Simulator, sample_region_ratio: float
+    ) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB and then transform it into global space.
         """
-        local_sample = self.sample_uniform_local()
+        local_sample = self.sample_uniform_local(sample_region_ratio)
         return self.get_global_transform(sim).transform_point(local_sample)
 
 

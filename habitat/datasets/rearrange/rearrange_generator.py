@@ -190,6 +190,7 @@ class RearrangeEpisodeGenerator:
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
                     obj_sampler_info["params"]["orientation_sampling"],
+                    obj_sampler_info["params"].get("sample_region_ratio", 1.0),
                 )
             else:
                 print(
@@ -618,7 +619,7 @@ class RearrangeEpisodeGenerator:
         """
         if len(self.ep_sampled_objects) == 0:
             return True
-        #assert len(self.ep_sampled_objects) > 0
+        # assert len(self.ep_sampled_objects) > 0
 
         scene_bb = (
             self.sim.get_active_scene_graph().get_root_node().cumulative_bb

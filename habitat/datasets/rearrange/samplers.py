@@ -71,6 +71,7 @@ class ObjectSampler:
         ],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
+        sample_region_ratio: float = 1.0,
     ) -> None:
         self.object_set = object_set
         self.receptacle_sets = receptacle_sets
@@ -89,6 +90,7 @@ class ObjectSampler:
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
+        self.sample_region_ratio = sample_region_ratio
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -199,7 +201,9 @@ class ObjectSampler:
             num_placement_tries += 1
 
             # sample the object location
-            target_object_position = receptacle.sample_uniform_global(sim)
+            target_object_position = receptacle.sample_uniform_global(
+                sim, self.sample_region_ratio
+            )
 
             # instance the new potential object from the handle
             if new_object == None:
