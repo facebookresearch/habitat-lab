@@ -48,7 +48,7 @@ class RearrangeSim(HabitatSim):
         self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
 
         self.art_objs = []
-        self.start_art_states = {}
+        self._start_art_states = {}
         self.cached_art_obj_ids = []
         self.scene_obj_ids = []
         self.viz_obj_ids = []
@@ -115,6 +115,12 @@ class RearrangeSim(HabitatSim):
         if self.prev_scene_id != ep_info["scene_id"]:
             self.grasp_mgr.reconfigure()
             self.scene_obj_ids = []
+            # add and initialize the robot
+            ao_mgr = self.get_articulated_object_manager()
+            if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
+                ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
+            self.robot.reconfigure()
+
         self.grasp_mgr.reset()
 
         self._clear_objects()
@@ -122,15 +128,13 @@ class RearrangeSim(HabitatSim):
         self.prev_scene_id = ep_info["scene_id"]
         self._viz_templates = {}
 
-        # load articulated object states from episode config
+        # Set the default articulated object joint state.
+        for ao, set_joint_state in self._start_art_states.items():
+            ao.joint_positions = set_joint_state
+
+        # Load specified articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
 
-        # add and initialize the robot
-        ao_mgr = self.get_articulated_object_manager()
-        if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
-            ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
-        if True:
-            self.robot.reconfigure()
         self.robot.reset()
         # consume a fixed position from SIMUALTOR.AGENT_0 if configured
         if self.habitat_config.AGENT_0.IS_SET_START_STATE:
@@ -175,7 +179,7 @@ class RearrangeSim(HabitatSim):
                     np.array(self.robot.params.arm_init_params),
                 )
             # Capture the starting art states
-            self.start_art_states = {
+            self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
