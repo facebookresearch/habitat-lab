@@ -149,6 +149,7 @@ if __name__ == "__main__":
             Number of GPUs to evenly spread --n-procs between.
             """,
     )
+    parser.add_argument("--n-trials", type=int, default=1)
     parser.add_argument("--n-steps", type=int, default=10000)
     parser.add_argument("--n-pre-step", type=int, default=1)
     parser.add_argument("--reset-interval", type=int, default=-1)
@@ -164,30 +165,44 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    final_vid = []
-    bench = HabDemoRunner(args)
-    profile_sums = bench.benchmark()
+    fps_accumulator = []
+    avg_fps = 0
 
-    total_steps = (args.n_steps - args.n_pre_step) * args.n_procs
+    for _trial in range(args.n_trials):
+        final_vid = []
+        bench = HabDemoRunner(args)
+        profile_sums = bench.benchmark()
 
-    fps = total_steps / profile_sums["time"]
+        total_steps = (args.n_steps - args.n_pre_step) * args.n_procs
 
-    profile_k = sorted(profile_sums.keys())
-    profile_avgs = {k: profile_sums[k] / total_steps for k in profile_k}
+        fps = total_steps / profile_sums["time"]
 
-    save_str = ""
-    save_str += f"hab2: {args.n_procs} processes, {args.n_steps} steps with resets every {args.reset_interval} steps\n"
-    save_str += f"FPS: {fps}\n"
-    save_str += "Average time per function call (in seconds):\n"
-    for k, v in profile_avgs.items():
-        save_str += f"  - {k}: {v}s\n"
+        fps_accumulator.append(fps)
+        avg_fps += fps
 
-    print(save_str)
-    scene_id = args.cfg.split("/")[-1].split(".")[0]
-    save_dir = "data/profile"
-    os.makedirs(save_dir, exist_ok=True)
-    fname = f"{save_dir}/{args.n_procs}_{args.n_steps}_{args.reset_interval}_{scene_id}_{args.out_name}.txt"
-    with open(fname, "w") as f:
-        f.write(save_str)
+        profile_k = sorted(profile_sums.keys())
+        profile_avgs = {k: profile_sums[k] / total_steps for k in profile_k}
 
-    print("Wrote result to ", fname)
+        save_str = ""
+        save_str += f"hab2: {args.n_procs} processes, {args.n_steps} steps with resets every {args.reset_interval} steps\n"
+        save_str += f"FPS: {fps}\n"
+        save_str += "Average time per function call (in seconds):\n"
+        for k, v in profile_avgs.items():
+            save_str += f"  - {k}: {v}s\n"
+
+        print(save_str)
+        scene_id = args.cfg.split("/")[-1].split(".")[0]
+        save_dir = "data/profile"
+        os.makedirs(save_dir, exist_ok=True)
+        fname = f"{save_dir}/{args.n_procs}_{args.n_steps}_{args.reset_interval}_{scene_id}_{args.out_name}.txt"
+        with open(fname, "w") as f:
+            f.write(save_str)
+
+        print("Wrote result to ", fname)
+
+    avg_fps /= args.n_trials
+    print("================================================================")
+    print(
+        f"Ran {args.n_trials} trial(s) with average FPS of {avg_fps} from {fps_accumulator}."
+    )
+    print("================================================================")
