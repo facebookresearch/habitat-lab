@@ -210,6 +210,8 @@ class BaseRLTrainer(BaseTrainer):
     def should_checkpoint(self) -> bool:
         needs_checkpoint = False
         if self.config.NUM_CHECKPOINTS != -1:
+            if self.config.NUM_CHECKPOINTS == 0:
+                return False
             checkpoint_every = 1 / self.config.NUM_CHECKPOINTS
             if (
                 self._last_checkpoint_percent + checkpoint_every
