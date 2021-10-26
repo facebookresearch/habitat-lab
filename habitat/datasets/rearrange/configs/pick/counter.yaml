@@ -133,6 +133,7 @@ object_samplers:
       receptacle_sets: ["counter"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+      sample_region_ratio: 0.5
 
 object_target_samplers:
   -

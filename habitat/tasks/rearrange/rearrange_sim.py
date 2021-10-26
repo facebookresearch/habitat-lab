@@ -49,6 +49,7 @@ class RearrangeSim(HabitatSim):
 
         self.art_objs = []
         self._start_art_states = {}
+        self._prev_obj_names = None
         self.cached_art_obj_ids = []
         self.scene_obj_ids = []
         self.viz_obj_ids = []
@@ -123,7 +124,13 @@ class RearrangeSim(HabitatSim):
 
         self.grasp_mgr.reset()
 
-        self._clear_objects()
+        # Only remove and re-add objects if we have a new set of objects.
+        obj_names = [x[0] for x in ep_info["rigid_objs"]]
+        should_add_objects = (self._prev_obj_names != obj_names) or len(
+            self.scene_obj_ids
+        ) == 0
+        self._prev_obj_names = obj_names
+        self._clear_objects(should_add_objects)
 
         self.prev_scene_id = ep_info["scene_id"]
         self._viz_templates = {}
@@ -147,7 +154,7 @@ class RearrangeSim(HabitatSim):
             )
 
         # add episode clutter objects additional to base scene objects
-        self._add_objs(ep_info)
+        self._add_objs(ep_info, should_add_objects)
 
         # auto-sleep rigid objects as optimization
         if self._auto_sleep:
@@ -225,12 +232,13 @@ class RearrangeSim(HabitatSim):
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
-    def _clear_objects(self):
-        rom = self.get_rigid_object_manager()
-        for scene_obj_id in self.scene_obj_ids:
-            if rom.get_library_has_id(scene_obj_id):
-                rom.remove_object_by_id(scene_obj_id)
-        self.scene_obj_ids = []
+    def _clear_objects(self, should_add_objects):
+        if should_add_objects:
+            rom = self.get_rigid_object_manager()
+            for scene_obj_id in self.scene_obj_ids:
+                if rom.get_library_has_id(scene_obj_id):
+                    rom.remove_object_by_id(scene_obj_id)
+            self.scene_obj_ids = []
 
         # Do not remove the articulated objects from the scene, these are
         # managed by the underlying sim.
@@ -252,23 +260,26 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
-    def _add_objs(self, ep_info):
+    def _add_objs(self, ep_info, should_add_objects):
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
 
-        for obj_handle, transform in ep_info["rigid_objs"]:
-            obj_attr_mgr = self.get_object_template_manager()
-            matching_templates = (
-                obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-            )
-            assert (
-                len(matching_templates.values()) == 1
-            ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
-            ro = rom.add_object_by_template_handle(
-                list(matching_templates.keys())[0]
-            )
+        for i, (obj_handle, transform) in enumerate(ep_info["rigid_objs"]):
+            if should_add_objects:
+                obj_attr_mgr = self.get_object_template_manager()
+                matching_templates = (
+                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
+                )
+                assert (
+                    len(matching_templates.values()) == 1
+                ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+                ro = rom.add_object_by_template_handle(
+                    list(matching_templates.keys())[0]
+                )
+            else:
+                ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
             # The saved matrices need to be flipped when reloading.
             ro.transformation = mn.Matrix4(
@@ -288,7 +299,8 @@ class RearrangeSim(HabitatSim):
                 self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
             obj_counts[obj_handle] += 1
 
-            self.scene_obj_ids.append(ro.object_id)
+            if should_add_objects:
+                self.scene_obj_ids.append(ro.object_id)
 
         ao_mgr = self.get_articulated_object_manager()
         for aoi_handle in ao_mgr.get_object_handles():
