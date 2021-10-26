@@ -89,14 +89,19 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
         )
         return self.critic(features)
 
+    @profiling_wrapper.RangeContext("Policy.evaluate_actions")
     def evaluate_actions(
         self, observations, rnn_hidden_states, prev_actions, masks, action
     ):
+        profiling_wrapper.range_push("Policy net")
         features, rnn_hidden_states = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
+        profiling_wrapper.range_pop("Policy net")
         distribution = self.action_distribution(features)
+        profiling_wrapper.range_push("Policy critic")
         value = self.critic(features)
+        profiling_wrapper.range_pop("Policy critic")
 
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
