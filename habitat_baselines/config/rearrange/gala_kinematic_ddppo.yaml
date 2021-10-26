@@ -1,0 +1,27 @@
+TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
+CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
+VIDEO_DIR: "../videos"
+REWARD_SCALE: 0.01
+NUM_CHECKPOINTS: 0
+BATCHED_ENV: True
+SAVE_VIDEOS_INTERVAL: 10000
+NUM_UPDATES: 4000
+NUM_ENVIRONMENTS: 128
+SIMULATOR:
+  AGENTS: ['AGENT_0']
+  AGENT_0:
+    SENSORS: ['HEAD_RGB_SENSOR']
+  HEAD_RGB_SENSOR:
+    WIDTH: 128
+    HEIGHT: 128
+RL:
+  PPO:
+    ppo_epoch: 2
+    num_steps: 20
+    max_grad_norm: 1.0
+    entropy_coef: 0.0025
+    lr: 2.5e-4
+    use_linear_lr_decay: False
+  POLICY:
+    action_distribution_type: "gaussian"
+FORCE_BLIND_POLICY: False
