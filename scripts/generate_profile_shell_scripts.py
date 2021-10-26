@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # The Habitat-lab program to be profiled (the command you usually use to
     # invoke it).
-    program_str = "python -u -m habitat_baselines.run --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml --run-type train"
+    program_str = "python habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/gala_kinematic_ddppo.yaml --run-type train"
 
     # Path to Nsight Systems nsys command-line tool. This hard-coded path is
     # for the FAIR cluster.
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         #   FPS settled at ~190 steps
         # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
         #   FPS settled at ~1200 steps
-        capture_start_step = 1200
+        capture_start_step = 30
 
         # If you're focusing on optimizing the train loop body (work that
         # happens consistently every update), you don't need a large number
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         #   qdrep: 3.3 MB per 100 steps
         #   sqlite: 12 MB per 100 steps
         # These figures are for a single task (see capture_all_tasks below).
-        num_steps_to_capture = 100
+        num_steps_to_capture = 10
     else:
         nsys_capture_delay_seconds = 120
         nsys_capture_duration_seconds = 120
@@ -89,8 +89,8 @@ if __name__ == "__main__":
         #   startup time is 2 minutes and 100 steps takes 12 minutes
         # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
         #   startup time is 2 minutes and 100 steps takes 5.9 minutes
-        buffered_start_minutes = 10
-        buffered_minutes_per_100_steps = 8
+        buffered_start_minutes = 2
+        buffered_minutes_per_100_steps = 2
         if do_capture_step_range:
             slurm_job_termination_minutes = buffered_start_minutes + int(
                 (capture_start_step + num_steps_to_capture)
@@ -205,7 +205,7 @@ fi
 #SBATCH --cpus-per-task 10
 #SBATCH --ntasks-per-node 8
 #SBATCH --mem-per-cpu=5GB
-#SBATCH --partition=dev
+#SBATCH --partition=devlab
 #SBATCH --time="""
             + str(slurm_job_termination_minutes)
             + """:00
