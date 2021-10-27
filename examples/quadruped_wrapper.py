@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
+from os.path import exists
+
 import attr
 import magnum as mn
 import numpy as np
@@ -95,9 +97,12 @@ class QuadrupedRobot(RobotInterface):
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         ao_mgr = self._sim.get_articulated_object_manager()
+        print(self.urdf_path)
+        print(exists(self.urdf_path))
         self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-            self.urdf_path, fixed_base=self._fixed_base
+            filepath=self.urdf_path, fixed_base=self._fixed_base
         )
+        print("SIM OBJ:", self.sim_obj)
         for link_id in self.sim_obj.get_link_ids():
             self.joint_pos_indices[link_id] = self.sim_obj.get_link_joint_pos_offset(
                 link_id

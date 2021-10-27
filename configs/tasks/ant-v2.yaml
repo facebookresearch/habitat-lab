@@ -9,14 +9,14 @@ SIMULATOR:
     START_POSITION: [2.50, 1.0, 0.2]
     START_ROTATION: [0, 0, 0, 1]
   LEG_REST: [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0, -1.0]
-  ROBOT_URDF: ./data/robots/ant.urdf
+  ROBOT_URDF: data/robots/ant.urdf
   CTRL_FREQ: 120.0
   AC_FREQ_RATIO: 4
 
 TASK:
   TYPE: Ant-v2-task
   ANT_OBSERVATION_SPACE_SENSOR:
-        TYPE: "AntObservationalSpaceSensor"
+        TYPE: "AntObservationSpaceSensor"
         DIMENSIONALITY: 27
   SENSORS: ["ANT_OBSERVATION_SPACE_SENSOR"]
 
@@ -34,7 +34,4 @@ TASK:
     - LEG_ACTION
 
 DATASET:
-  TYPE: RearrangeDataset-v0
-  SPLIT: train
-  DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
-  SCENES_DIR: "data/replica_cad/"
+  TYPE: AntV2Dataset-v0

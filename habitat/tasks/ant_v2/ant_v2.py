@@ -11,6 +11,7 @@ import attr
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
@@ -18,6 +19,7 @@ from habitat.core.embodied_task import (
     Measure,
     SimulatorTaskAction,
 )
+from habitat.tasks.nav.nav import NavigationTask
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -50,11 +52,20 @@ try:
 except ImportError:
     pass
 
+# import quadruped_wrapper
+from ant_robot import AntV2Robot
+
+def merge_sim_episode_with_object_config(sim_config, episode):
+    sim_config.defrost()
+    sim_config.ep_info = [episode.__dict__]
+    sim_config.freeze()
+    return sim_config
+
 
 @registry.register_simulator(name="Ant-v2-sim")
 class AntV2Sim(HabitatSim):
     def __init__(self, config):
-        print("Sim loaded..")
+        print("Sim loading..")
         super().__init__(config)
 
         agent_config = self.habitat_config
@@ -79,49 +90,57 @@ class AntV2Sim(HabitatSim):
         self.track_markers = []
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
+        self.concur_render = self.habitat_config.get(
+            "CONCUR_RENDER", True
+        ) and hasattr(self, "get_sensor_observations_async_start")
 
+    def _try_acquire_context(self):
+        # Is this relevant?
+        if self.concur_render:
+            self.renderer.acquire_gl_context()
+    
     def reconfigure(self, config):
-            ep_info = config["ep_info"][0]
-            ep_info = self._update_config(ep_info)
+        print("Sim reconfiguring..")
+        ep_info = config["ep_info"][0]
+        # ep_info = self._update_config(ep_info)
 
-            config["SCENE"] = ep_info["scene_id"]
-            super().reconfigure(config)
+        config["SCENE"] = ep_info["scene_id"]
+        super().reconfigure(config)
 
-            self.ep_info = ep_info
-            self.fixed_base = ep_info["fixed_base"]
+        self.ep_info = ep_info
 
-            self.target_obj_ids = []
+        self.target_obj_ids = []
 
-            if ep_info["scene_id"] != self.prev_scene_id:
-                # Object instances are not valid between scenes.
-                self.art_objs = []
-                self.scene_obj_ids = []
-                self.robot = None
-                self.viz_ids = defaultdict(lambda: None)
-                self.viz_obj_ids = []
-            self.grasp_mgr.desnap(force=True)
-            self.prev_scene_id = ep_info["scene_id"]
+        self.scene_id = ep_info["scene_id"]
 
-            self._try_acquire_context()
+        self._try_acquire_context()
 
-            # add ant
-            self._add_objs(ep_info)
-            if self.robot is None:
-                self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
-                self.robot.reconfigure()
-            self.robot.reset()
+        # # get the primitive assets attributes manager
+        prim_templates_mgr = self.get_asset_template_manager()
 
-            # add floor
-            cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
-            floor = obj_templates_mgr.get_template_by_handle(cube_handle)
-            floor.scale = np.array([2.0, 0.05, 2.0])
+        # get the physics object attributes manager
+        obj_templates_mgr = self.get_object_template_manager()
 
-            obj_templates_mgr.register_template(floor, "floor")
-            floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
-            floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+        # get the rigid object manager
+        rigid_obj_mgr = self.get_rigid_object_manager()
 
-            floor_obj.translation = np.array([2.50, -1, 0.5])
-            floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        # add ant
+        self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
+        self.robot.reconfigure()
+
+
+        # add floor
+        cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
+        floor = obj_templates_mgr.get_template_by_handle(cube_handle)
+        floor.scale = np.array([2.0, 0.05, 2.0])
+
+        obj_templates_mgr.register_template(floor, "floor")
+        floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
+        floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+
+        floor_obj.translation = np.array([2.50, -1, 0.5])
+        floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
     
     def step(self, action):
         # what to do with action?
@@ -136,10 +155,10 @@ class AntV2Sim(HabitatSim):
     # Also need to figure out how to define rewards based on measurements/observations
 
 
-@registry.register_sensor(name="ANT_OBSERVATION_SPACE_SENSOR")
-class AntObservationalSpaceSensor(Sensor):
+@registry.register_sensor
+class AntObservationSpaceSensor(Sensor):
 
-    cls_uuid: str = "ANT_OBSERVATION_SPACE_SENSOR"
+    cls_uuid: str = "ant_observation_space_sensor"
 
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
@@ -152,6 +171,9 @@ class AntObservationalSpaceSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.NORMAL
 
     def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
@@ -242,15 +264,6 @@ class LegAction(SimulatorTaskAction):
 
 
 @registry.register_task(name="Ant-v2-task")
-class AntV2Task(EmbodiedTask):
-    def __init__(
-        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
-    ) -> None:
-        print("Task loaded!!!")
-        super().__init__(config=config, sim=sim, dataset=dataset)
-
-    def overwrite_sim_config(self, sim_config: Any, episode: Episode) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
-
-    def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
-        return not getattr(self, "is_stop_called", False)
+class AntV2Task(NavigationTask):
+    def overwrite_sim_config(self, sim_config, episode):
+        return merge_sim_episode_with_object_config(sim_config, episode)

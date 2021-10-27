@@ -21,7 +21,7 @@ def make_dataset(id_dataset, **kwargs):
     assert _dataset is not None, "Could not find dataset {}".format(id_dataset)
 
     return _dataset(**kwargs)  # type: ignore
-
+    
 
 _try_register_antv2datasetv0()
 _try_register_objectnavdatasetv1()
