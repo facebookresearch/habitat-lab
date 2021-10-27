@@ -25,6 +25,8 @@ class RearrangeGraspManager:
         self._config = config
 
     def reconfigure(self):
+        for constraint_id in self._snap_constraints:
+            self._sim.remove_rigid_constraint(constraint_id)
         self._snap_constraints = []
 
     def reset(self):
@@ -34,7 +36,7 @@ class RearrangeGraspManager:
             CollisionGroups.UserGroup7, ~CollisionGroups.Robot
         )
 
-        self.desnap()
+        self.desnap(True)
         self._leave_info = None
 
     def is_violating_hold_constraint(self):

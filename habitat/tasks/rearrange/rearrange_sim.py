@@ -115,21 +115,20 @@ class RearrangeSim(HabitatSim):
 
         if self.prev_scene_id != ep_info["scene_id"]:
             self.grasp_mgr.reconfigure()
-            self.scene_obj_ids = []
             # add and initialize the robot
             ao_mgr = self.get_articulated_object_manager()
             if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
                 ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
             self.robot.reconfigure()
+            self._prev_obj_names = None
 
         self.grasp_mgr.reset()
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info["rigid_objs"]]
-        should_add_objects = (self._prev_obj_names != obj_names) or len(
-            self.scene_obj_ids
-        ) == 0
+        should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
+
         self._clear_objects(should_add_objects)
 
         self.prev_scene_id = ep_info["scene_id"]
