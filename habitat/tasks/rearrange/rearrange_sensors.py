@@ -184,39 +184,6 @@ class JointSensor(Sensor):
 
 
 @registry.register_sensor
-class TrackMarkerSensor(Sensor):
-    """
-    Will track the first marker from the simulator's track markers array
-    relative to the robot's EE position
-    """
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(config=config)
-        self._sim = sim
-
-    def _get_uuid(self, *args, **kwargs):
-        return "track_marker"
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        pos = self._sim.get_track_markers_pos()[0]
-
-        trans = self._sim.get_robot_transform()
-        pos = trans.inverted().transform_point(pos)
-        return np.array(pos).astype(np.float32)
-
-
-@registry.register_sensor
 class EEPositionSensor(Sensor):
     cls_uuid: str = "ee_pos"
 
@@ -593,3 +560,57 @@ class ForceTerminate(Measure):
             self._metric = True
         else:
             self._metric = False
+
+
+class RearrangeReward(Measure):
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._task = task
+
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotForce.cls_uuid,
+                ForceTerminate.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        reward = 0.0
+
+        reward += self._get_coll_reward()
+
+        if self._sim.grasp_mgr.is_violating_hold_constraint():
+            reward -= self._config.CONSTRAINT_VIOLATE_PEN
+
+        force_terminate = task.measurements.measures[
+            ForceTerminate.cls_uuid
+        ].get_metric()
+        if force_terminate:
+            reward -= self._config.FORCE_END_PEN
+
+        self._metric = reward
+
+    def _get_coll_reward(self):
+        reward = 0
+
+        force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
+        # Penalize the force that was added to the accumulated force at the
+        # last time step.
+        reward -= min(
+            self._config.FORCE_PEN * force_metric.add_force,
+            self._config.MAX_FORCE_PEN,
+        )
+        return reward

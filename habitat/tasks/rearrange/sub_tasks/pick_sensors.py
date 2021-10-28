@@ -11,20 +11,19 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
+    RearrangeReward,
     RobotForce,
 )
 
 
 @registry.register_measure
-class RearrangePickReward(Measure):
+class RearrangePickReward(RearrangeReward):
     cls_uuid: str = "rearrangepick_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
-        self._sim = sim
-        self._config = config
-        self._task = task
         self.cur_dist = -1.0
         self._prev_picked = False
+        self._metric = None
 
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
@@ -44,7 +43,7 @@ class RearrangePickReward(Measure):
         self.cur_dist = -1.0
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
-        self.update_metric(
+        super().reset_metric(
             *args,
             episode=episode,
             task=task,
@@ -53,14 +52,20 @@ class RearrangePickReward(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+        reward = self._metric
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
-
-        reward = 0
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
@@ -108,17 +113,6 @@ class RearrangePickReward(Measure):
                 self._task.should_end = True
             self._metric = reward
             return
-
-        reward += self._get_coll_reward()
-
-        if self._sim.grasp_mgr.is_violating_hold_constraint():
-            reward -= self._config.CONSTRAINT_VIOLATE_PEN
-
-        force_terminate = task.measurements.measures[
-            ForceTerminate.cls_uuid
-        ].get_metric()
-        if force_terminate:
-            reward -= self._config.FORCE_END_PEN
 
         self._task.prev_picked = cur_picked
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None

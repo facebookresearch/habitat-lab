@@ -16,6 +16,8 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.multi_task.composite_task
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
+    import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors
+    import habitat.tasks.rearrange.sub_tasks.articulated_object_task
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.pick_sensors
@@ -23,14 +25,6 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.sub_tasks.reach_sensors
     import habitat.tasks.rearrange.sub_tasks.reach_task
 
-    # except ImportError as e:
-    #    print(e)
-    #    rearrangetask_import_error = e
-    #    @registry.register_task(name="Rearrange-v0")
-    #    class RearrangeTaskImportError(EmbodiedTask):
-    #        def __init__(self, *args, **kwargs):
-    #            raise rearrangetask_import_error
-    # Register actions
     if not HabitatSimActions.has_action("ARM_ACTION"):
         HabitatSimActions.extend_action_space("ARM_ACTION")
     if not HabitatSimActions.has_action("ARM_VEL"):

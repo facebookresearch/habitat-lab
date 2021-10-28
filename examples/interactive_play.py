@@ -19,14 +19,18 @@ python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_ca
 ```
 
 Controls:
-    - For velocity control
-        - 1-7 to increase the motor target for the robot arm joints
-        - Q-U to decrease the motor target for the robot arm joints
-    - For IK control
-        - W,S,A,D to move side to side
-        - E,Q to move up and down
-    - I,J,K,L to move the robot base around
-    - PERIOD to print the current world coordinates of the robot base.
+- For velocity control
+    - 1-7 to increase the motor target for the robot arm joints
+    - Q-U to decrease the motor target for the robot arm joints
+- For IK control
+    - W,S,A,D to move side to side
+    - E,Q to move up and down
+- I,J,K,L to move the robot base around
+- PERIOD to print the current world coordinates of the robot base.
+
+Change the grip type:
+- Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
+
 """
 
 import argparse

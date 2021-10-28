@@ -44,6 +44,10 @@ def coll_name_matches(coll, name):
     return name in [coll.object_id_a, coll.object_id_b]
 
 
+def coll_link_name_matches(coll, name):
+    return name in [coll.link_id_a, coll.link_id_b]
+
+
 def get_match_link(coll, name):
     if name == coll.object_id_a:
         return coll.link_id_a

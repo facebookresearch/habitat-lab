@@ -26,6 +26,35 @@ from habitat_sim.physics import MotionType
 from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 
+class MarkerInfo:
+    def __init__(self, offset_position, link_node, ao_parent, link_id):
+        self.offset_position = offset_position
+        self.link_node = link_node
+        self.link_id = link_id
+        self.current_transform = None
+        self.ao_parent = ao_parent
+
+        self.joint_idx = ao_parent.get_link_joint_pos_offset(link_id)
+
+        self.update()
+
+    def set_targ_js(self, js):
+        self.ao_parent.joint_positions[self.joint_idx] = js
+
+    def get_targ_js(self):
+        return self.ao_parent.joint_positions[self.joint_idx]
+
+    def update(self):
+        offset_T = mn.Matrix4.translation(mn.Vector3(self.offset_position))
+        self.current_transform = self.link_node.transformation @ offset_T
+
+    def get_current_position(self) -> np.ndarray:
+        return np.array(self.current_transform.translation)
+
+    def get_current_transform(self) -> mn.Matrix4:
+        return self.current_transform
+
+
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
     def __init__(self, config):
@@ -34,7 +63,7 @@ class RearrangeSim(HabitatSim):
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
         self.first_setup = True
-        self.is_render_obs = False
+        self._should_render_debug = False
         self.ep_info = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
@@ -46,20 +75,20 @@ class RearrangeSim(HabitatSim):
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
         self._concur_render = self.habitat_config.get("CONCUR_RENDER", False)
         self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
+        self._debug_render = self.habitat_config.get("DEBUG_RENDER", False)
 
         self.art_objs = []
         self._start_art_states = {}
         self._prev_obj_names = None
         self.cached_art_obj_ids = []
         self.scene_obj_ids = []
-        self.viz_obj_ids = []
         # Used to get data from the RL environment class to sensors.
-        self.track_markers = []
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self.ref_handle_to_rigid_obj_id = None
         robot_cls = eval(self.habitat_config.ROBOT_TYPE)
         self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
+        self._markers = {}
 
         self.ik_helper = None
 
@@ -101,6 +130,37 @@ class RearrangeSim(HabitatSim):
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
+    def add_markers(self, ep_info):
+        self._markers = {}
+        aom = self.get_articulated_object_manager()
+        for marker in ep_info["markers"]:
+            p = marker["params"]
+            ao = aom.get_object_by_handle(p["object"])
+            name_to_link = {}
+            name_to_link_id = {}
+            for i in range(ao.num_links):
+                name = ao.get_link_name(i)
+                link = ao.get_link_scene_node(i)
+                name_to_link[name] = link
+                name_to_link_id[name] = i
+
+            self._markers[marker["name"]] = MarkerInfo(
+                p["offset"],
+                name_to_link[p["link"]],
+                ao,
+                name_to_link_id[p["link"]],
+            )
+
+    def get_marker(self, name: str) -> MarkerInfo:
+        return self._markers[name]
+
+    def get_all_markers(self):
+        return self._markers
+
+    def _update_markers(self) -> None:
+        for m in self._markers.values():
+            m.update()
+
     def reconfigure(self, config):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
@@ -136,6 +196,7 @@ class RearrangeSim(HabitatSim):
 
         # Set the default articulated object joint state.
         for ao, set_joint_state in self._start_art_states.items():
+            ao.clear_joint_states()
             ao.joint_positions = set_joint_state
 
         # Load specified articulated object states from episode config
@@ -154,6 +215,8 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
+
+        self.add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
         if self._auto_sleep:
@@ -306,7 +369,13 @@ class RearrangeSim(HabitatSim):
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
     def _create_obj_viz(self, ep_info):
-        self.viz_obj_ids = []
+        if self._debug_render:
+            for marker_name, m in self._markers.items():
+                m_T = m.get_current_transform()
+                self.viz_ids[marker_name] = self.visualize_position(
+                    m_T.translation, self.viz_ids[marker_name]
+                )
+
         # TODO: refactor this
         # target_name_pos = [
         #     (ep_info["static_objs"][idx][0], self.scene_objs[idx], pos)
@@ -380,14 +449,14 @@ class RearrangeSim(HabitatSim):
     def step(self, action):
         rom = self.get_rigid_object_manager()
 
-        if self.is_render_obs:
+        self._update_markers()
+
+        if self._should_render_debug:
             self._try_acquire_context()
             for obj_handle, _ in self.ep_info["targets"].items():
                 self.set_object_bb_draw(
                     False, rom.get_object_by_handle(obj_handle).object_id
                 )
-        for viz_obj in self.viz_obj_ids:
-            self.remove_object(viz_obj)
 
         add_back_viz_objs = {}
         for name, viz_id in self.viz_ids.items():
@@ -397,7 +466,6 @@ class RearrangeSim(HabitatSim):
             before_pos = self.get_translation(viz_id)
             self.remove_object(viz_id)
             add_back_viz_objs[name] = before_pos
-        self.viz_obj_ids = []
         self.viz_ids = defaultdict(lambda: None)
         self.grasp_mgr.update()
 
@@ -420,14 +488,13 @@ class RearrangeSim(HabitatSim):
 
         # TODO: Make debug cameras more flexible.
         if "robot_third_rgb" in obs:
-            self.is_render_obs = True
+            self._should_render_debug = True
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.visualize_position(pos)
+                self.viz_ids[k] = self.visualize_position(pos, self.viz_ids[k])
 
             # Also render debug information
-            if self.habitat_config.get("RENDER_TARGS", True):
-                self._create_obj_viz(self.ep_info)
+            self._create_obj_viz(self.ep_info)
 
             # Always draw the target
             for obj_handle, _ in self.ep_info["targets"].items():

@@ -144,3 +144,35 @@ object_target_samplers:
       receptacle_sets: ["counter"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+markers:
+  - name: "cab_push_point_7"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer1_top"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_6"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer2_top"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_5"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer3"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_4"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer4"
+      object: "kitchen_counter_:0000"
+  - name: "fridge_push_point"
+    type: "articulated_object"
+    params:
+      offset: [0.10,-0.62,0.2]
+      link: "bottom_door"
+      object: "fridge_:0000"
+    relative: [1,2]
