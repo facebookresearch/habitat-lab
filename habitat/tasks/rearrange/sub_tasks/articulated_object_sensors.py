@@ -5,9 +5,71 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import numpy as np
+from gym import spaces
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+
+
+@registry.register_sensor
+class MarkerRelPosSensor(Sensor):
+    cls_uuid: str = "marker_rel_pos"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return MarkerRelPosSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        marker = self._sim.get_marker(self._task.use_marker_name)
+        trans = self._sim.robot.base_transformation
+        local_ee_pos = trans.inverted().transform_point(
+            marker.get_current_position()
+        )
+
+        return np.array(local_ee_pos)
+
+
+@registry.register_sensor
+class ArtJointSensor(Sensor):
+    cls_uuid: str = "marker_js"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArtJointSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        return np.array(self._task.get_use_marker().get_targ_js()).reshape(
+            (1,)
+        )
 
 
 @registry.register_measure

@@ -27,22 +27,6 @@ TASK:
     # robot
     EASY_INIT: False
 
-    TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_TARGET_START_SENSOR:
-        TYPE: "AbsTargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_GOAL_SENSOR:
-        TYPE: "AbsGoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -52,7 +36,12 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR"]
+    ART_JOINT_SENSOR:
+        TYPE: "ArtJointSensor"
+    MARKER_REL_POS_SENSOR:
+        TYPE: "MarkerRelPosSensor"
+
+    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "MARKER_REL_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
