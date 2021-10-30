@@ -134,19 +134,19 @@ class PPO(nn.Module):
                 self.before_backward(total_loss)
                 profiling_wrapper.range_push("backward")
                 total_loss.backward()
-                profiling_wrapper.range_pop("backward")
+                profiling_wrapper.range_pop()
                 self.after_backward(total_loss)
 
                 self.before_step()
                 profiling_wrapper.range_push("optimizer.step")
                 self.optimizer.step()
-                profiling_wrapper.range_pop("optimizer.step")
+                profiling_wrapper.range_pop()
                 self.after_step()
 
                 value_loss_epoch += value_loss.item()
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
-                profiling_wrapper.range_pop("mini batch")
+                profiling_wrapper.range_pop()
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 
