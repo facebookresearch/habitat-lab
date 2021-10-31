@@ -13,7 +13,7 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 GYM_AUTO_NAME_KEY = "GYM_AUTO_NAME"
 
-base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+base_dir = os.environ["HABLAB_INSTALL"]
 
 
 def make_habitat_gym_env(
