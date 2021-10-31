@@ -73,12 +73,11 @@ TASK:
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
         DIST_REWARD: 1.0
-        SUCCESS_REWARD: 10.0
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
 
         # General Rearrange Reward config
-        CONSTRAINT_VIOLATE_PEN: 10.0
+        CONSTRAINT_VIOLATE_PEN: 0.0
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0

@@ -4,11 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gym
 import gym.spaces as spaces
 import numpy as np
 import pytest
 
 import habitat_baselines.utils.env_utils
+import habitat_baselines.utils.gym_definitions
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
@@ -57,3 +59,42 @@ def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
     for _, v in info.items():
         assert not isinstance(v, dict)
     env.close()
+
+
+@pytest.mark.parametrize(
+    "config_file", ["habitat_baselines/config/rearrange/rl_pick.yaml"]
+)
+def test_full_gym_wrapper(config_file):
+    hab_gym = gym.make(
+        "HabitatGym-v0",
+        cfg_file_path=config_file,
+        override_options=[],
+        use_render_mode=True,
+    )
+    hab_gym.reset()
+    hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.close()
+
+    hab_gym = gym.make(
+        "HabitatGymRender-v0",
+        cfg_file_path=config_file,
+    )
+    hab_gym.reset()
+    hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.close()
+
+
+@pytest.mark.parametrize(
+    "env_name",
+    [
+        "HabitatGymReachEasy-v0",
+        "HabitatGymPick-v0",
+        "HabitatGymRenderPick-v0",
+        "HabitatGymReach-v0",
+    ],
+)
+def test_auto_gym_wrapper(env_name):
+    hab_gym = gym.make(env_name)
+    hab_gym.reset()
+    hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.close()

@@ -8,7 +8,7 @@ DATASET:
 TASK:
     TYPE: RearrangeReachTask-v0
     RENDER_TARGET: True
-    EE_SAMPLE_FACTOR: 0.5
+    EE_SAMPLE_FACTOR: 0.0
 
     JOINT_SENSOR:
         TYPE: "JointSensor"

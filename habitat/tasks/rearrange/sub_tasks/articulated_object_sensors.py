@@ -120,6 +120,8 @@ class ArtObjSuccess(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.success_js_state - task.get_use_marker().get_targ_js()
+        # If not absolute distance, we can have a joint state greater than the
+        # target.
         if self._config.USE_ABSOLUTE_DISTANCE:
             self._metric = abs(dist) < self._config.SUCCESS_DIST_THRESHOLD
         else:
@@ -169,17 +171,13 @@ class ArtObjReward(RearrangeReward):
             ArtObjState.cls_uuid
         ].get_metric()
 
-        is_succ = task.measurements.measures[
-            ArtObjSuccess.cls_uuid
-        ].get_metric()
-
         cur_dist = abs(link_state - task.success_js_state)
         prev_dist = abs(self._prev_art_state - task.success_js_state)
 
         dist_diff = prev_dist - cur_dist
         reward += self._config.DIST_REWARD * dist_diff
-        if is_succ:
-            reward += self._config.SUCCESS_REWARD
+
+        self._prev_art_state = link_state
 
         if (
             task._sim.grasp_mgr.is_grasped

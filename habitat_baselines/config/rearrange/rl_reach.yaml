@@ -1,4 +1,5 @@
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange_reach_replica_cad.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach.yaml
+GYM_AUTO_NAME: "Reach"
 
 RL:
     REWARD_MEASURE: "rearrange_reach_reward"

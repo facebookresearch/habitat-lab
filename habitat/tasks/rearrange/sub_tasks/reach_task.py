@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 
 from habitat.core.registry import registry
@@ -15,9 +16,6 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 class RearrangeReachTaskV1(RearrangeTask):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
-        self.targ_idx = 0
-        self.abs_targ_idx = 0
-        self.cur_dist = 0
 
     def step(self, action, episode):
         obs = super().step(action=action, episode=episode)
@@ -28,13 +26,20 @@ class RearrangeReachTaskV1(RearrangeTask):
         super().reset(episode)
 
         # Pick a random goal in the robot's workspace
-        allowed_space = (
-            self._config.EE_SAMPLE_FACTOR
-            * self._sim.robot.params.ee_constraint
+
+        ee_region = self._sim.robot.params.ee_constraint
+        full_range = mn.Range3D.from_size(
+            mn.Vector3(ee_region[:, 0]),
+            mn.Vector3(ee_region[:, 1] - ee_region[:, 0]),
+        )
+
+        allowed_space = mn.Range3D.from_center(
+            full_range.center(),
+            0.5 * full_range.size() * self._config.EE_SAMPLE_FACTOR,
         )
 
         self._desired_resting = np.random.uniform(
-            low=allowed_space[:, 0], high=allowed_space[:, 1]
+            low=allowed_space.min, high=allowed_space.max
         )
 
         if self._config.RENDER_TARGET:

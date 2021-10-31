@@ -213,6 +213,19 @@ class RearrangeSim(HabitatSim):
                 mn.Vector3(agent_rot[:3]), agent_rot[3]
             )
 
+            if "RENDER_CAMERA_OFFSET" in self.habitat_config:
+                self.robot.params.cameras[
+                    "robot_third"
+                ].cam_offset_pos = mn.Vector3(
+                    self.habitat_config.RENDER_CAMERA_OFFSET
+                )
+            if "RENDER_CAMERA_LOOKAT" in self.habitat_config:
+                self.robot.params.cameras[
+                    "robot_third"
+                ].cam_look_at_pos = mn.Vector3(
+                    self.habitat_config.RENDER_CAMERA_LOOKAT
+                )
+
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
 

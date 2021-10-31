@@ -301,12 +301,14 @@ class Receptacle:
         Sample a uniform random point in the local AABB.
         """
         # only scale the X and Z ranges
-        scaled_bounds_min = sample_region_ratio * self.bounds.min
-        scaled_bounds_max = sample_region_ratio * self.bounds.max
+
+        scaled_region = mn.Range3D.from_center(
+            self.bounds.center(), sample_region_ratio * self.bounds.size() / 2
+        )
 
         return np.random.uniform(
-            [scaled_bounds_min[0], self.bounds.min[1], scaled_bounds_min[2]],
-            [scaled_bounds_max[0], self.bounds.max[1], scaled_bounds_max[2]],
+            [scaled_region.min[0], self.bounds.min[1], scaled_region.min[2]],
+            [scaled_region.max[0], self.bounds.max[1], scaled_region.max[2]],
         )
 
     def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:

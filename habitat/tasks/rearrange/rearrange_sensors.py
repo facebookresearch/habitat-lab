@@ -243,7 +243,7 @@ class RelativeRestingPositionSensor(Sensor):
 
         relative_desired_resting = task.desired_resting - local_ee_pos
 
-        return np.array(relative_desired_resting)
+        return np.array(relative_desired_resting).astype(np.float32)
 
 
 @registry.register_sensor

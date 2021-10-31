@@ -1,4 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
+GYM_AUTO_NAME: "Pick"
 
 RL:
     REWARD_MEASURE: "rearrangepick_reward"

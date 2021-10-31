@@ -62,7 +62,6 @@ TASK:
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
         DIST_REWARD: 1.0
-        SUCCESS_REWARD: 10.0
 
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
