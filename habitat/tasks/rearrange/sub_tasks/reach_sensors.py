@@ -93,3 +93,38 @@ class RearrangeReachSuccess(Measure):
             ].get_metric()
             < self._config.SUCC_THRESH
         )
+
+
+@registry.register_measure
+class AnyReachSuccess(Measure):
+    cls_uuid: str = "any_reach_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return AnyReachSuccess.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RearrangeReachSuccess.cls_uuid,
+            ],
+        )
+        self._did_succ = False
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._did_succ = (
+            self._did_succ
+            or task.measurements.measures[
+                RearrangeReachSuccess.cls_uuid
+            ].get_metric()
+        )
+
+        self._metric = self._did_succ
