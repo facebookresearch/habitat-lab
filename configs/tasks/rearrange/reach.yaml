@@ -31,10 +31,13 @@ TASK:
     REARRANGE_REACH_SUCCESS:
         TYPE: "RearrangeReachSuccess"
         SUCC_THRESH: 0.1
+    ANY_REACH_SUCCESS:
+        TYPE: "AnyReachSuccess"
     MEASUREMENTS:
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_REACH_SUCCESS"
         - "REARRANGE_REACH_REWARD"
+        - "ANY_REACH_SUCCESS"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
