@@ -12,8 +12,12 @@ from habitat_baselines.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 GYM_AUTO_NAME_KEY = "GYM_AUTO_NAME"
+HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
 
-base_dir = os.environ["HABLAB_INSTALL"]
+if HABLAB_INSTALL_PATH in os.environ:
+    base_dir = os.environ[HABLAB_INSTALL_PATH]
+else:
+    base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
 
 def make_habitat_gym_env(
