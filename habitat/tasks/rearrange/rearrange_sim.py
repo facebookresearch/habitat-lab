@@ -484,17 +484,15 @@ class RearrangeSim(HabitatSim):
 
         if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
-
-            if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
+            
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
-            if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1)
 
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
@@ -556,8 +554,12 @@ class RearrangeSim(HabitatSim):
     def internal_step(self, dt):
         """Never call sim.step_world directly."""
 
-        self.step_world(dt)
-        if self.robot is not None:
+        #optionally step physics and update the robot for benchmarking purposes
+        if self.habitat_config.get("STEP_PHYSICS", True):
+            self.step_world(dt)
+        if self.robot is not None and self.habitat_config.get(
+            "UPDATE_ROBOT", True
+        ):
             self.robot.update()
 
     def get_targets(self):

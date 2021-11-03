@@ -36,6 +36,7 @@ SIMULATOR:
     CONCUR_RENDER: True
     AUTO_SLEEP: True
     STEP_PHYSICS: True
+    UPDATE_ROBOT: True
     ############################
 
     ACTION_SPACE_CONFIG: v0
