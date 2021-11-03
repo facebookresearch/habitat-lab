@@ -85,6 +85,7 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+        LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER: True
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480
