@@ -65,7 +65,7 @@ class HabDemoRunner:
                 final_vid,
                 "robot_head_rgb",
                 "color",
-                "benchmark_render_output",
+                "data/profile/benchmark_render_output",
                 open_vid=True,
             )
 
