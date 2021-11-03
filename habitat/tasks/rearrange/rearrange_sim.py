@@ -23,7 +23,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.physics import MotionType
 
 # flake8: noqa
-from habitat_sim.robots import FetchRobot
+from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 
 class MarkerInfo:
