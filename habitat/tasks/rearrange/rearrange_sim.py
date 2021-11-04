@@ -557,10 +557,10 @@ class RearrangeSim(HabitatSim):
         #optionally step physics and update the robot for benchmarking purposes
         if self.habitat_config.get("STEP_PHYSICS", True):
             self.step_world(dt)
-        if self.robot is not None and self.habitat_config.get(
-            "UPDATE_ROBOT", True
-        ):
-            self.robot.update()
+            if self.robot is not None and self.habitat_config.get(
+                "UPDATE_ROBOT", True
+            ):
+                self.robot.update()
 
     def get_targets(self):
         """
