@@ -33,5 +33,11 @@ TASK:
   POSSIBLE_ACTIONS:
     - LEG_ACTION
 
+  ALLOW_SLIDING: True
+  ENABLE_PHYSICS: True
+  GPU_DEVICE_ID: 0
+  GPU_GPU: False
+  PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+
 DATASET:
   TYPE: AntV2Dataset-v0

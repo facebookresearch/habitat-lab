@@ -74,6 +74,7 @@ class AntV2Sim(HabitatSim):
         self.ep_info = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
+        self.enable_physics = True
 
         # Number of physics updates per action
         self.ac_freq_ratio = agent_config.AC_FREQ_RATIO
@@ -265,5 +266,10 @@ class LegAction(SimulatorTaskAction):
 
 @registry.register_task(name="Ant-v2-task")
 class AntV2Task(NavigationTask):
+    def __init__(
+        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
+    ) -> None:
+        #config.enable_physics = True
+        super().__init__(config=config, sim=sim, dataset=dataset)
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
