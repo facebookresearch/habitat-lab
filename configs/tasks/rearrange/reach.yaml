@@ -3,7 +3,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: default.json.gz
+    DATA_PATH: data/ep_datasets/default.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeReachTask-v0
