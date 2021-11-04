@@ -11,7 +11,7 @@ export HABITAT_SIM_LOG=quiet
 
 NO_SLEEP=("SIMULATOR.AUTO_SLEEP" False)
 NO_CONCUR=("SIMULATOR.CONCUR_RENDER" False)
-NO_PHYSICS=("SIMULATOR.STEP_PHYSICS" False)
+NO_PHYSICS=("SIMULATOR.STEP_PHYSICS" False) #also disables robot update
 NO_ROBOT_UPDATE=("SIMULATOR.UPDATE_ROBOT" False)
 #NO_OBJS=("SIMULATOR.LOAD_ART_OBJS" False "SIMULATOR.LOAD_OBJS" False)
 
@@ -22,6 +22,9 @@ do
   #number of trials
   for i in {0..10}
   do
+    ##################################
+    # IDLE 4 sensors (arm + head, RGBD)
+    ##################################
     # # Ours
     python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
@@ -31,16 +34,32 @@ do
     # # Ours (-Auto sleep)
     python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
 
-    # # Ours (NO_PHYSICS)
-    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nophys_$i" "${NO_PHYSICS[@]}"
-
-    # # Ours (NO_ROBOT_UPDATE)
-    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "norobupdate_$i" "${NO_ROBOT_UPDATE[@]}"
-
     # # Ours (RENDER_ONLY)
     python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
 
-    # # Ours (no rigid or articulated objects)
-    #python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noobjs_$i" "${NO_OBJS[@]}"
+    ##################################
+    # IDLE 1 sensor (head RGB)
+    ##################################
+
+    # # Ours
+    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+
+    # # Ours (-Concur Render)
+    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+
+    # # Ours (-Auto sleep)
+    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+
+    # # Ours (RENDER_ONLY)
+    python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
+
+    ##################################
+    # INTERACT 4 sensors (arm + head, RGBD)
+    ##################################
+    #TODO:
+
+    # # Ours
+    #python scripts/hab2_benchmark.py --cfg configs/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+
   done
 done
