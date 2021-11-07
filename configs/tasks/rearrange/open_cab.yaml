@@ -65,6 +65,9 @@ TASK:
     ART_OBJ_STATE:
         TYPE: "ArtObjState"
 
+    EE_DIST_TO_MARKER:
+        TYPE: "EndEffectorDistToMarker"
+
     ART_OBJ_SUCCESS:
         TYPE: "ArtObjSuccess"
         USE_ABSOLUTE_DISTANCE: False
@@ -75,6 +78,8 @@ TASK:
         DIST_REWARD: 1.0
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
+        MARKER_DIST_REWARD: 0.0
+        GRASP_REWARD: 5.0
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 0.0
@@ -86,6 +91,7 @@ TASK:
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
+        - "EE_DIST_TO_MARKER"
         - "ART_OBJ_STATE"
         - "ART_OBJ_SUCCESS"
         - "ART_OBJ_REWARD"

@@ -12,6 +12,7 @@ import numpy as np
 
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -24,35 +25,6 @@ from habitat_sim.physics import MotionType
 
 # flake8: noqa
 from habitat_sim.robots import FetchRobot
-
-
-class MarkerInfo:
-    def __init__(self, offset_position, link_node, ao_parent, link_id):
-        self.offset_position = offset_position
-        self.link_node = link_node
-        self.link_id = link_id
-        self.current_transform = None
-        self.ao_parent = ao_parent
-
-        self.joint_idx = ao_parent.get_link_joint_pos_offset(link_id)
-
-        self.update()
-
-    def set_targ_js(self, js):
-        self.ao_parent.joint_positions[self.joint_idx] = js
-
-    def get_targ_js(self):
-        return self.ao_parent.joint_positions[self.joint_idx]
-
-    def update(self):
-        offset_T = mn.Matrix4.translation(mn.Vector3(self.offset_position))
-        self.current_transform = self.link_node.transformation @ offset_T
-
-    def get_current_position(self) -> np.ndarray:
-        return np.array(self.current_transform.translation)
-
-    def get_current_transform(self) -> mn.Matrix4:
-        return self.current_transform
 
 
 @registry.register_simulator(name="RearrangeSim-v0")

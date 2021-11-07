@@ -29,18 +29,6 @@ TASK:
         TYPE: "TargetStartSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_TARGET_START_SENSOR:
-        TYPE: "AbsTargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_GOAL_SENSOR:
-        TYPE: "AbsGoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -50,7 +38,9 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    EE_POS_SENSOR:
+        TYPE: "EEPositionSensor"
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "EE_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0

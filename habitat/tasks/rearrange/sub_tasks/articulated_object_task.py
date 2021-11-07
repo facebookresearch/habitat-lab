@@ -47,13 +47,18 @@ class SetArticulatedObjectTask(RearrangeTask):
         return False
 
     @abstractmethod
-    def _sample_pos(self) -> np.ndarray:
-        """
-        Returns a 2D vector for the robot start position
-        """
+    def _get_spawn_region(self) -> mn.Range2D:
+        pass
 
     def _sample_robot_start(self, T):
-        start_pos = self._sample_pos()
+        spawn_region = self._get_spawn_region()
+        spawn_region = mn.Range2D.from_center(
+            spawn_region.center(),
+            self._config.SPAWN_REGION_SCALE * spawn_region.size() / 2,
+        )
+
+        start_pos = np.random.uniform(spawn_region.min, spawn_region.max)
+
         start_pos = np.array([start_pos[0], 0.0, start_pos[1]])
         targ_pos = np.array(self._get_look_pos())
 
@@ -145,9 +150,8 @@ class SetArticulatedObjectTask(RearrangeTask):
 
 @registry.register_task(name="RearrangeOpenDrawerTask-v0")
 class RearrangeOpenDrawerTaskV1(SetArticulatedObjectTask):
-    def _sample_pos(self):
-        # How far back the robot should be from the drawer.
-        return np.random.uniform([0.80, -0.35], [0.95, 0.35])
+    def _get_spawn_region(self):
+        return mn.Range2D([0.80, -0.35], [0.95, 0.35])
 
     def _get_look_pos(self):
         return [0.0, 0.0, 0.0]
@@ -171,10 +175,10 @@ class RearrangeOpenDrawerTaskV1(SetArticulatedObjectTask):
 
 @registry.register_task(name="RearrangeCloseDrawerTask-v0")
 class RearrangeCloseDrawerTaskV1(SetArticulatedObjectTask):
-    def _sample_pos(self):
+    def _get_spawn_region(self):
         back_x = 0.8
         # How far back the robot should be from the drawer.
-        return np.random.uniform([back_x, -0.35], [back_x + 0.05, 0.35])
+        return mn.Range2D([back_x, -0.35], [back_x + 0.05, 0.35])
 
     def _get_look_pos(self):
         return [0.0, 0.0, 0.0]

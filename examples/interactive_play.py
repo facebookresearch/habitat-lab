@@ -259,10 +259,15 @@ def play_env(env, args, config):
 
         # obs, reward, done, info = step_result
         obs = step_result
-        reward = 0.0
         info = env.get_metrics()
+        reward_key = [k for k in info if "reward" in k]
+        if len(reward_key) > 0:
+            reward = info[reward_key[0]]
+        else:
+            reward = 0.0
 
         total_reward += reward
+        info["Total Reward"] = total_reward
 
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)

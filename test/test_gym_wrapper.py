@@ -87,9 +87,9 @@ def test_full_gym_wrapper(config_file):
 @pytest.mark.parametrize(
     "env_name",
     [
+        "HabitatGymRenderPickState-v0",
+        "HabitatGymPickState-v0",
         "HabitatGymReachEasy-v0",
-        "HabitatGymPick-v0",
-        "HabitatGymRenderPick-v0",
         "HabitatGymReach-v0",
     ],
 )

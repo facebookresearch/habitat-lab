@@ -71,7 +71,7 @@ class AbsObjectGoalPositionSensor(MultiObjSensor):
 @registry.register_sensor
 class ObjectGoalPositionSensor(MultiObjSensor):
     """
-    This is the ground truth object position sensor relative to the robot coordinate frame.
+    This is the ground truth object position sensor relative to the robot end-effector coordinate frame.
     """
 
     cls_uuid: str = "obj_goal_pos_sensor"
@@ -180,6 +180,31 @@ class JointSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.robot.arm_joint_pos
+        return np.array(joints_pos).astype(np.float32)
+
+
+@registry.register_sensor
+class JointVelSensor(Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "joint_vel"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(config.DIMENSIONALITY,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        joints_pos = self._sim.robot.arm_velocity
         return np.array(joints_pos).astype(np.float32)
 
 
