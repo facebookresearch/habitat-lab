@@ -6,6 +6,7 @@
 
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def _try_register_ant_v2_task():
@@ -18,3 +19,8 @@ def _try_register_ant_v2_task():
         class AntTaskImportError(EmbodiedTask):
             def __init__(self, *args, **kwargs):
                 raise anttask_import_error
+    # Register actions
+    import habitat.tasks.ant_v2.ant_v2
+
+    if not HabitatSimActions.has_action("LEG_ACTION"):
+        HabitatSimActions.extend_action_space("LEG_ACTION")

@@ -6,6 +6,7 @@
 
 from typing import Any, List, Optional, Tuple
 from collections import defaultdict
+import math
 
 import attr
 import numpy as np
@@ -129,25 +130,28 @@ class AntV2Sim(HabitatSim):
         # add ant
         self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
         self.robot.reconfigure()
+        self.robot.base_pos = mn.Vector3(0.50, 1.0, -4.2)
+        self.robot.base_rot = math.pi / 2
+        print("POS:", self.robot.base_pos)
 
 
         # add floor
         cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
         floor = obj_templates_mgr.get_template_by_handle(cube_handle)
-        floor.scale = np.array([2.0, 0.05, 2.0])
+        floor.scale = np.array([20.0, 0.05, 20.0])
 
         obj_templates_mgr.register_template(floor, "floor")
         floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
         floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
 
-        floor_obj.translation = np.array([2.50, -1, 0.5])
+        floor_obj.translation = np.array([2.50, -2, 0.5])
         floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
     
     def step(self, action):
         # what to do with action?
 
         # returns new observation after step
-        sim.step_physics(1.0 / 60.0)
+        self.step_physics(1.0 / 60.0)
         obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         return obs
 
@@ -155,6 +159,32 @@ class AntV2Sim(HabitatSim):
     # Need to figure out MVP for the simulator + how to set up a camera which isn't part of the obs space.
     # Also need to figure out how to define rewards based on measurements/observations
 
+
+@registry.register_sensor
+class AntObservationSpaceSensor(Sensor):
+
+    cls_uuid: str = "ant_observation_space_sensor"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.NORMAL
+
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ):
+        obs = self._sim.robot.observational_space
+        return obs
 
 @registry.register_sensor
 class AntObservationSpaceSensor(Sensor):
@@ -206,6 +236,9 @@ class XLocation(Measure):
     def update_metric(
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
+        if self._metric is None:
+            self._metric = {"x_location": None}
+
         current_position = self._sim.robot.base_pos
         self._metric["x_location"] = current_position.x
 

@@ -116,12 +116,13 @@ def example():
 
     ant = ant_robot.AntV2Robot(robot_path, sim)
     ant.reconfigure()
-    ant.base_pos = mn.Vector3(2.50, 1.0, 0.2)
+    ant.base_pos = mn.Vector3(-3, 1.0, 0.2)
     ant.base_rot = math.pi / 2
     print(ant.ankle_joint_pos)
 
     while True:
         keystroke = cv2.waitKey(0)
+        
         if keystroke == 27:
             break
         
@@ -143,6 +144,7 @@ def example():
         print("_____")
 
         #observations = env.step(env.action_space.sample())  # noqa: F841
+        print(observations[-1].keys())
         cv2.imshow("RGB", transform_rgb_bgr(observations[-1]["rgba_camera_1stperson"]))
         count_steps += 1
     print("Episode finished after {} steps.".format(count_steps))
