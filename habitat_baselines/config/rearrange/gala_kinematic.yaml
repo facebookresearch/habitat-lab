@@ -12,8 +12,8 @@ SIMULATOR:
   AGENT_0:
     SENSORS: ['HEAD_RGB_SENSOR']
   HEAD_RGB_SENSOR:
-    WIDTH: 128
-    HEIGHT: 128
+    WIDTH: 64
+    HEIGHT: 64
 RL:
   PPO:
     num_steps: 20
@@ -22,4 +22,6 @@ RL:
     use_linear_lr_decay: False
   POLICY:
     action_distribution_type: "gaussian"
+  DDPPO:
+    backbone: "se_resnet9_fixup"
 FORCE_BLIND_POLICY: False

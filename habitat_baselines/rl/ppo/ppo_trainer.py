@@ -43,9 +43,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
-from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
-    PointNavResNetPolicy,
-)
+from habitat_baselines.rl.ddppo.policy.resnet_policy_bpsnav import PointNavResNetPolicy
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
