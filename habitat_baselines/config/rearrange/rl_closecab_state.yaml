@@ -1,5 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/closecab_state.yaml
-GYM_AUTO_NAME: "CloseCab"
+GYM_AUTO_NAME: "CloseCabState"
 
 RL:
     REWARD_MEASURE: "art_obj_reward"

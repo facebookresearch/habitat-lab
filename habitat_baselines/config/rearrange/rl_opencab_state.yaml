@@ -1,5 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/opencab_state.yaml
-GYM_AUTO_NAME: "OpenCab"
+GYM_AUTO_NAME: "OpenCabState"
 
 RL:
     REWARD_MEASURE: "art_obj_reward"
