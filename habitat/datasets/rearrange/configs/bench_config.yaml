@@ -24,7 +24,7 @@ scene_sets:
 
 object_sets:
   -
-    name: "kitchen"
+    name: "food"
     included_substrings:
       - "002_master_chef_can"
       - "003_cracker_box"
@@ -34,7 +34,6 @@ object_sets:
       - "008_pudding_box"
       - "009_gelatin_box"
       - "010_potted_meat_can"
-      - "024_bowl"
     excluded_substrings: []
 
 receptacle_sets:
@@ -87,15 +86,15 @@ object_samplers:
     name: "kitchen_counter"
     type: "uniform"
     params:
-      object_sets: ["kitchen"]
+      object_sets: ["food"]
       receptacle_sets: ["counter"]
-      num_samples: [7, 7]
+      num_samples: [20, 20]
       orientation_sampling: "up"
   -
     name: "kitchen_fridge"
     type: "uniform"
     params:
-      object_sets: ["kitchen"]
+      object_sets: ["food"]
       receptacle_sets: ["fridge"]
       num_samples: [8, 8]
       orientation_sampling: "up"

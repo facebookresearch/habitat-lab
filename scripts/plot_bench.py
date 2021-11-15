@@ -28,7 +28,7 @@ def plot(name_map, savename, set_title, base_name):
                 raise ValueError()
             run_fps.append(found_fps)
             i += 1
-        assert len(run_fps) == 10, f"For {name}"
+        # assert len(run_fps) == 10, f"For {name}"
         mean.append(np.mean(run_fps))
         std.append(2.228 * np.std(run_fps) / np.sqrt(len(run_fps)))
     N = len(names)
@@ -65,11 +65,11 @@ for i in [1, 16]:
             "idle_all": "[Idle]",
             "idle_noconcur": "[Idle No Concurrent Rendering]",
             "idle_nosleep": "[Idle No Auto-sleep]",
-            "idle_render": "[Idle Render Only]",
+            # "idle_render": "[Idle Render Only]",
             "idle_single_camera_all": "[Idle (head-RGB)]",
             "idle_single_camera_noconcur": "[Idle (head-RGB) No Concurrent Rendering]",
             "idle_single_camera_nosleep": "[Idle (head-RGB) No Auto-sleep]",
-            "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
+            # "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
         },
         "opts_%i" % i,
         "ReplicaCAD: 200 Steps %i Processes" % i,

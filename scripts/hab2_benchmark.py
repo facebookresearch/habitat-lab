@@ -85,6 +85,25 @@ class HabDemoRunner:
         return profile_sums
 
     def init_common(self, proc_idx):
+        if self.args.n_gpus == 8:
+            cores_per_proc = 8
+        else:
+            cores_per_proc = 16
+        import psutil
+
+        procs_per_gpu = args.n_procs // args.n_gpus
+        gpu_idx = proc_idx // procs_per_gpu
+        current_process = psutil.Process()
+        orig_cpus = current_process.cpu_affinity()
+        cpus = []
+        for idx in range(len(orig_cpus) // 2):
+            cpus.append(orig_cpus[idx])
+            cpus.append(orig_cpus[idx + len(orig_cpus) // 2])
+
+        current_process.cpu_affinity(
+            cpus[gpu_idx * cores_per_proc : (gpu_idx + 1) * cores_per_proc]
+        )
+
         self.envs = create_env(self.args, proc_idx)
         self.envs.reset()
         if hasattr(self.envs, "action_space"):
