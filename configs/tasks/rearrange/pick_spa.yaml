@@ -4,7 +4,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_dataset_test.json.gz
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_datasets/pick.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
@@ -16,7 +16,7 @@ TASK:
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    FORCE_RECACHE: False
+    FORCE_REGENERATE: False
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -63,40 +63,37 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    RETURN_TO_REST_DISTANCE:
-        TYPE: "ReturnToRestDistance"
-    REARRANGE_PICK_REWARD:
+    FORCE_TERMINATE:
+        TYPE: "ForceTerminate"
+        MAX_ACCUM_FORCE: 0.0
+    PICK_REWARD:
         TYPE: "RearrangePickReward"
-        DIST_REWARD: 20.0
-        SUCC_REWARD: 10.0
-        PICK_REWARD: 20.0
+        DIST_REWARD: 10.0
+        PICK_REWARD: 5.0
         CONSTRAINT_VIOLATE_PEN: 10.0
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
-        COLL_PEN: 1.0
+        COLL_PEN: 0.0
         ROBOT_OBJ_COLL_PEN: 0.0
-        MAX_ACCUM_FORCE: null
 
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
+        FORCE_PEN: 0.0
+        MAX_FORCE_PEN: 0.0
+        FORCE_END_PEN: 0.0
         USE_DIFF: True
 
         DROP_OBJ_SHOULD_END: False
         WRONG_PICK_SHOULD_END: False
-
-    REARRANGE_PICK_SUCCESS:
+    PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
-        SUCC_THRESH: 0.3
-
+        SUCC_THRESH: 0.15
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "FORCE_TERMINATE"
         - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "REARRANGE_PICK_SUCCESS"
-        - "REARRANGE_PICK_REWARD"
-        - "RETURN_TO_REST_DISTANCE"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
@@ -117,6 +114,7 @@ TASK:
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
+    ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False
@@ -151,6 +149,7 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 8
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     FORWARD_STEP_SIZE: 0.25
 

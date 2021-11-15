@@ -37,10 +37,21 @@ class RearrangeReachTaskV1(RearrangeTask):
             full_range.center(),
             0.5 * full_range.size() * self._config.EE_SAMPLE_FACTOR,
         )
-
-        self._desired_resting = np.random.uniform(
-            low=allowed_space.min, high=allowed_space.max
-        )
+        if self._config.EE_EXCLUDE_REGION != 0.0:
+            not_allowed_space = mn.Range3D.from_center(
+                full_range.center(),
+                0.5 * full_range.size() * self._config.EE_EXCLUDE_REGION,
+            )
+            while True:
+                self._desired_resting = np.random.uniform(
+                    low=allowed_space.min, high=allowed_space.max
+                )
+                if not not_allowed_space.contains(self._desired_resting):
+                    break
+        else:
+            self._desired_resting = np.random.uniform(
+                low=allowed_space.min, high=allowed_space.max
+            )
 
         if self._config.RENDER_TARGET:
             global_pos = self._sim.robot.base_transformation.transform_point(

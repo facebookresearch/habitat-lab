@@ -1,0 +1,13 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/opencab_state.yaml
+GYM_AUTO_NAME: "OpenCab"
+
+RL:
+    REWARD_MEASURE: "art_obj_reward"
+    SUCCESS_MEASURE: "art_obj_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: 0.0
+
+    GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js']
+    END_ON_SUCCESS: True
+
+ENV_NAME: "RearrangeRLEnv"

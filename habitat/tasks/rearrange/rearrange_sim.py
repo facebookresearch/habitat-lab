@@ -60,6 +60,7 @@ class RearrangeSim(HabitatSim):
         self.ref_handle_to_rigid_obj_id = None
         robot_cls = eval(self.habitat_config.ROBOT_TYPE)
         self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
+        self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)
         self._markers = {}
 
         self.ik_helper = None
@@ -151,6 +152,7 @@ class RearrangeSim(HabitatSim):
             ao_mgr = self.get_articulated_object_manager()
             if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
                 ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
+
             self.robot.reconfigure()
             self._prev_obj_names = None
 
@@ -174,7 +176,13 @@ class RearrangeSim(HabitatSim):
         # Load specified articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
 
+        use_arm_start = self._orig_robot_js_start + (
+            self.habitat_config.get("ROBOT_JOINT_START_NOISE", 0.0)
+            * np.random.randn(self._orig_robot_js_start.shape[0])
+        )
+        self.robot.params.arm_init_params = use_arm_start
         self.robot.reset()
+
         # consume a fixed position from SIMUALTOR.AGENT_0 if configured
         if self.habitat_config.AGENT_0.IS_SET_START_STATE:
             self.robot.base_pos = mn.Vector3(

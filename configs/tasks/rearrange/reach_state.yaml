@@ -3,18 +3,18 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/ep_datasets/default.json.gz
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_datasets/empty.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
+    BASE_ANGLE_NOISE: 0.0
+    BASE_NOISE: 0.0
     TYPE: RearrangeReachTask-v0
     RENDER_TARGET: True
-    EE_SAMPLE_FACTOR: 0.5
+    EE_SAMPLE_FACTOR: 0.2
+    EE_EXCLUDE_REGION: 0.0
 
     JOINT_SENSOR:
         TYPE: "JointSensor"
-        DIMENSIONALITY: 7
-    JOINT_VEL_SENSOR:
-        TYPE: "JointVelSensor"
         DIMENSIONALITY: 7
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
@@ -22,6 +22,9 @@ TASK:
         TYPE: "RestingPositionSensor"
     END_EFFECTOR_SENSOR:
         TYPE: "EEPositionSensor"
+    JOINT_VEL_SENSOR:
+        TYPE: "JointVelSensor"
+        DIMENSIONALITY: 7
     SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "RELATIVE_RESTING_POS_SENSOR", 'END_EFFECTOR_SENSOR', "RESTING_POS_SENSOR"]
 
     END_EFFECTOR_TO_REST_DISTANCE:
@@ -33,22 +36,19 @@ TASK:
         SPARSE_REWARD: False
     REARRANGE_REACH_SUCCESS:
         TYPE: "RearrangeReachSuccess"
-        SUCC_THRESH: 0.1
-    ANY_REACH_SUCCESS:
-        TYPE: "AnyReachSuccess"
+        SUCC_THRESH: 0.2
     MEASUREMENTS:
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "REARRANGE_REACH_SUCCESS"
         - "REARRANGE_REACH_REWARD"
-        - "ANY_REACH_SUCCESS"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRIP_CONTROLLER: null
-            EE_CTRL_LIM: 0.06
             GRASP_THRESH_DIST: 0.15
+            SHOULD_CLIP: True
             DELTA_POS_LIMIT: 0.025
             RENDER_EE_TARGET: True
     POSSIBLE_ACTIONS:
@@ -56,22 +56,21 @@ TASK:
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
-    RENDER_CAMERA_OFFSET: [1.3, 1.3, -0.0]
-    RENDER_CAMERA_LOOKAT: [0, 0.4, 0]
     AGENTS: ['AGENT_0']
+    ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: True
         RADIUS: 0.1
-        SENSORS: ['HEAD_RGB_SENSOR']
+        SENSORS: [HEAD_DEPTH_SENSOR]
         START_POSITION: [0.0, 0.0, 2.0]
         START_ROTATION: [0.0, 0.0, 0.0, 1.0]
-    HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
-    THIRD_RGB_SENSOR:
-        WIDTH: 512
-        HEIGHT: 512
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 32
+        HEIGHT: 32
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
 
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
@@ -80,9 +79,10 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
     EE_LINK_NAME: null
-    IK_ARM_URDF: null
     FORWARD_STEP_SIZE: 0.25
+    LAG_OBSERVATIONS: 0
     LOAD_OBJS: False
+    IK_ARM_URDF: null
 
     # Grasping
     HOLD_THRESH: 0.09

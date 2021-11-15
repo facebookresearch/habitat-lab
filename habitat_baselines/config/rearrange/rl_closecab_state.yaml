@@ -1,0 +1,15 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/closecab_state.yaml
+GYM_AUTO_NAME: "CloseCab"
+
+RL:
+    REWARD_MEASURE: "art_obj_reward"
+    SUCCESS_MEASURE: "art_obj_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: -0.01
+
+    GYM_OBS_KEYS: ['joint', 'ee_pos', 'marker_rel_pos', 'marker_js_no_vel']
+
+    GYM_ACTION_KEYS: ['ARM_ACTION']
+    END_ON_SUCCESS: True
+
+ENV_NAME: "RearrangeRLEnv"
