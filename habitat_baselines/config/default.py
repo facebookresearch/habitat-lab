@@ -68,6 +68,7 @@ _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
 _C.RL.SUCCESS_REWARD = 2.5
 _C.RL.SLACK_REWARD = -0.01
+_C.RL.BLACKLIST_OBS_KEYS = []  # observations explicitly ignored by policy
 # -----------------------------------------------------------------------------
 # preemption CONFIG
 # -----------------------------------------------------------------------------
