@@ -76,6 +76,14 @@ class ObjectGoalPositionSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_goal_pos_sensor"
 
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
         T_inv = self._sim.robot.ee_transform.inverted()
@@ -97,6 +105,14 @@ class TargetStartSensor(MultiObjSensor):
     """
 
     cls_uuid: str = "obj_start_sensor"
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
 
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
