@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from glob import glob
+
 import gym
 import gym.spaces as spaces
 import numpy as np
@@ -32,7 +34,9 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
     ],
 )
 def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
-    # print("Called iwth ", config_file, overrides, expected_action_dim)
+    """
+    Test the Gym wrapper returns the right things and works with overrides.
+    """
     config = baselines_get_config(config_file, overrides)
     env_class = get_env_class(config.ENV_NAME)
 
@@ -65,6 +69,9 @@ def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
     "config_file", ["habitat_baselines/config/rearrange/rl_pick.yaml"]
 )
 def test_full_gym_wrapper(config_file):
+    """
+    Test the Gym wrapper and its Render wrapper work
+    """
     hab_gym = gym.make(
         "HabitatGym-v0",
         cfg_file_path=config_file,
@@ -85,16 +92,21 @@ def test_full_gym_wrapper(config_file):
 
 
 @pytest.mark.parametrize(
-    "env_name",
-    [
-        "HabitatGymRenderPickState-v0",
-        "HabitatGymPickState-v0",
-        "HabitatGymReachEasy-v0",
-        "HabitatGymReach-v0",
-    ],
+    "test_cfg_path",
+    list(
+        glob("habitat_baselines/config/rearrange/*"),
+    ),
 )
-def test_auto_gym_wrapper(env_name):
-    hab_gym = gym.make(env_name)
+def test_auto_gym_wrapper(test_cfg_path):
+    """
+    Test all defined automatic Gym wrappers work
+    """
+    config = baselines_get_config(test_cfg_path)
+    if "GYM_AUTO_NAME" not in config:
+        return
+    full_gym_name = f"HabitatGym{config['GYM_AUTO_NAME']}-v0"
+
+    hab_gym = gym.make(full_gym_name)
     hab_gym.reset()
     hab_gym.step(hab_gym.action_space.sample())
     hab_gym.close()

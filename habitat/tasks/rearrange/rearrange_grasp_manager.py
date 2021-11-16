@@ -135,13 +135,14 @@ class RearrangeGraspManager:
             )
 
         marker = self._sim.get_marker(marker_name)
-        new_constraint = self.create_hold_constraint(
-            mn.Vector3(0.0, 0.0, 0.0),
-            mn.Vector3(*marker.offset_position),
-            marker.ao_parent.object_id,
-            marker.link_id,
-        )
-        self._snap_constraints.append(new_constraint)
+        self._snap_constraints = [
+            self.create_hold_constraint(
+                mn.Vector3(0.0, 0.0, 0.0),
+                mn.Vector3(*marker.offset_position),
+                marker.ao_parent.object_id,
+                marker.link_id,
+            ),
+        ]
         self._snapped_marker_id = marker_name
 
     def create_hold_constraint(

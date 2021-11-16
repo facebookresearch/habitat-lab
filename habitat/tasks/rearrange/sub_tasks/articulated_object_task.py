@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Any, Dict
 
 import magnum as mn
 import numpy as np
@@ -77,6 +78,9 @@ class SetArticulatedObjectTask(RearrangeTask):
             angle_to_obj *= -1.0
         return angle_to_obj, start_pos
 
+    def step(self, action: Dict[str, Any], episode: Episode):
+        return super().step(action, episode)
+
     def reset(self, episode: Episode):
         super().reset(episode)
         if self._force_use_marker is not None:
@@ -88,6 +92,13 @@ class SetArticulatedObjectTask(RearrangeTask):
         else:
             ao = marker.ao_parent
             T = ao.transformation
+
+        jms = marker.ao_parent.get_joint_motor_settings(marker.joint_idx)
+
+        if self._config.JOINT_MAX_IMPULSE > 0:
+            jms.velocity_target = 0.0
+            jms.max_impulse = self._config.JOINT_MAX_IMPULSE
+        marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
 
         num_timeout = 100
         num_pos_timeout = 100

@@ -52,7 +52,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 
 

@@ -1,12 +1,12 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 100
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_dataset.json.gz
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_datasets/empty.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
-    TYPE: RearrangeOpenDrawerTask-v0
+    TYPE: RearrangeCloseDrawerTask-v0
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
@@ -14,10 +14,12 @@ TASK:
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
+    SPAWN_REGION_SCALE: 0.2
+    JOINT_MAX_IMPULSE: -1.0
     CONSTRAINT_VIOLATE_SHOULD_END: False
 
     USE_MARKER_T: True
-    SUCCESS_STATE: 0.45
+    SUCCESS_STATE: 0.0
 
     # Measurements for composite tasks.
     REWARD_MEASUREMENT: "art_obj_reward"
@@ -27,24 +29,11 @@ TASK:
     # robot
     EASY_INIT: False
 
-    TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_TARGET_START_SENSOR:
-        TYPE: "AbsTargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_GOAL_SENSOR:
-        TYPE: "AbsGoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
+        DIMENSIONALITY: 7
+    JOINT_VEL_SENSOR:
+        TYPE: "JointVelSensor"
         DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
         TYPE: "EEPositionSensor"
@@ -52,38 +41,48 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR"]
+    ART_JOINT_SENSOR:
+        TYPE: "ArtJointSensor"
+    ART_JOINT_SENSOR_NO_VEL:
+        TYPE: "ArtJointSensorNoVel"
+    MARKER_REL_POS_SENSOR:
+        TYPE: "MarkerRelPosSensor"
+
+    SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "ART_JOINT_SENSOR_NO_VEL", "MARKER_REL_POS_SENSOR"]
+
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
+
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
-
-    ART_OBJ_STATE:
-        TYPE: "ArtObjState"
 
     EE_DIST_TO_MARKER:
         TYPE: "EndEffectorDistToMarker"
 
+    ART_OBJ_STATE:
+        TYPE: "ArtObjState"
+
     ART_OBJ_SUCCESS:
         TYPE: "ArtObjSuccess"
-        USE_ABSOLUTE_DISTANCE: False
+        USE_ABSOLUTE_DISTANCE: True
         SUCCESS_DIST_THRESHOLD: 0.05
 
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
         DIST_REWARD: 1.0
+
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
         MARKER_DIST_REWARD: 0.0
-        GRASP_REWARD: 5.0
+        GRASP_REWARD: 0.0
 
         # General Rearrange Reward config
-        CONSTRAINT_VIOLATE_PEN: 0.0
-        FORCE_PEN: 0.001
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
@@ -100,11 +99,11 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
+            GRIP_CONTROLLER: null
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            DELTA_POS_LIMIT: 0.0125
+            DELTA_POS_LIMIT: 0.025
             EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
         - ARM_ACTION
@@ -113,6 +112,7 @@ SIMULATOR:
     DEBUG_RENDER: False
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
+    ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

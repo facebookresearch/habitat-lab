@@ -1,5 +1,5 @@
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach.yaml
-GYM_AUTO_NAME: "Reach"
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
+GYM_AUTO_NAME: "ReachState"
 
 RL:
     REWARD_MEASURE: "rearrange_reach_reward"
