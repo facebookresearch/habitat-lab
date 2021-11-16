@@ -13,6 +13,7 @@ from gym import spaces
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
+from habitat.core.spaces import ActionSpace
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 # flake8: noqa
@@ -35,7 +36,7 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return spaces.Dict(
+        return ActionSpace(
             {
                 "empty_action": spaces.Box(
                     shape=(1,),
@@ -86,7 +87,7 @@ class ArmAction(SimulatorTaskAction):
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
             action_spaces["grip_action"] = self.grip_ctrlr.action_space
-        return spaces.Dict(action_spaces)
+        return ActionSpace(action_spaces)
 
     def step(self, arm_action, grip_action=None, *args, **kwargs):
         self.arm_ctrlr.step(arm_action, should_step=False)
@@ -161,8 +162,8 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
 @registry.register_task_action
 class ArmAbsPosAction(SimulatorTaskAction):
     """
-    The arm motor targets are directly set to the joint configuration specified by the
-    action.
+    The arm motor targets are directly set to the joint configuration specified
+    by the action.
     """
 
     @property
@@ -271,8 +272,8 @@ class BaseVelAction(SimulatorTaskAction):
         self._sim.robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
-            # Check if in the new robot state the arm collides with anything. If so
-            # we have to revert back to the previous transform
+            # Check if in the new robot state the arm collides with anything.
+            # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
             colls = self._sim.get_collisions()
             did_coll, _ = rearrange_collision(
