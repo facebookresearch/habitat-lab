@@ -593,13 +593,12 @@ def action_to_velocity_control(
 
 
 def is_continuous_action_space(action_space) -> bool:
-    for v in action_space.values():
-        if v.__class__.__name__ == "Box":
-            return True
-        elif v.__class__.__name__ in ["Dict", "ActionSpace"]:
-            return is_continuous_action_space(v)
-
-    return False
+    return any(
+        v.__class__.__name__ == "Box"
+        or v.__class__.__name__ in ["Dict", "ActionSpace"]
+        and is_continuous_action_space(v)
+        for v in action_space.values()
+    )
 
 
 def get_num_actions(action_space) -> int:
@@ -621,7 +620,9 @@ def get_num_actions(action_space) -> int:
     return num_actions
 
 
-def action_array_to_dict(action_space, action: torch.Tensor, clip: bool = True):
+def action_array_to_dict(
+    action_space, action: torch.Tensor, clip: bool = True
+):
     """We naively assume that all actions are 1D (len(shape) == 1)"""
 
     # Assume that the action space only has one root SimulatorTaskAction
