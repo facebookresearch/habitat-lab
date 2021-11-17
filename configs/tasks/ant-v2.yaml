@@ -10,7 +10,7 @@ SIMULATOR:
     IS_SET_START_STATE: False
     RADIUS: 0.1
     SENSORS: ['HEAD_RGB_SENSOR', 'THIRD_RGB_SENSOR']
-    START_POSITION: [0, 4, 0]
+    START_POSITION: [0, 0, 0]
     START_ROTATION: [0, 0, 1.6, 1]
   HEAD_RGB_SENSOR:
         WIDTH: 128
@@ -18,6 +18,9 @@ SIMULATOR:
   THIRD_RGB_SENSOR:
         WIDTH: 512
         HEIGHT: 512
+        POSITION: [-2,2,0]
+        HFOV: 90
+        ORIENTATION: [-0.5, -1.57,0.0]
   LEG_REST: [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0, -1.0]
   ROBOT_URDF: data/robots/ant.urdf
   CTRL_FREQ: 120.0

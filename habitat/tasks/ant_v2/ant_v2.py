@@ -54,7 +54,7 @@ except ImportError:
     pass
 
 # import quadruped_wrapper
-from ant_robot import AntV2Robot
+from habitat_sim.robots import AntV2Robot
 
 def merge_sim_episode_with_object_config(sim_config, episode):
     sim_config.defrost()
@@ -130,10 +130,8 @@ class AntV2Sim(HabitatSim):
         # add ant
         self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
         self.robot.reconfigure()
-        self.robot.base_pos = mn.Vector3(0.50, 1.0, -4.2)
+        self.robot.base_pos = mn.Vector3(self.habitat_config.AGENT_0.START_POSITION)
         self.robot.base_rot = math.pi / 2
-        print("POS:", self.robot.base_pos)
-
 
         # add floor
         cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
@@ -152,6 +150,7 @@ class AntV2Sim(HabitatSim):
 
         # returns new observation after step
         self.step_physics(1.0 / 60.0)
+        self._prev_sim_obs = self.get_sensor_observations()
         obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         return obs
 

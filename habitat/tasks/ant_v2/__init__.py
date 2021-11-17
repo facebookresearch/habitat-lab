@@ -7,6 +7,9 @@
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+#from habitat.tasks.ant_v2.ant_v2 import (
+#    AntV2Robot
+#)
 
 
 def _try_register_ant_v2_task():

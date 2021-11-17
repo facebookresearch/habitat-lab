@@ -14,7 +14,7 @@ import habitat_sim
 from habitat_sim.utils import viz_utils as vut
 
 # import quadruped_wrapper
-import ant_robot
+from habitat_sim.robots import AntV2Robot
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
@@ -114,17 +114,15 @@ def example():
     # Add ant robot
     robot_path = "data/robots/ant.urdf"
 
-    ant = ant_robot.AntV2Robot(robot_path, sim)
+    ant = AntV2Robot(robot_path, sim)
     ant.reconfigure()
     ant.base_pos = mn.Vector3(-3, 1.0, 0.2)
     ant.base_rot = math.pi / 2
-    print(ant.ankle_joint_pos)
 
     while True:
-        keystroke = cv2.waitKey(0)
-        
-        if keystroke == 27:
-            break
+        #keystroke = cv2.waitKey(0)
+        #if keystroke == 27:
+        #    break
         
         sim.step_physics(1.0 / 60.0)
         observations.append(sim.get_sensor_observations())
@@ -138,10 +136,10 @@ def example():
         if count_steps == 210:
             ant.leg_joint_pos = [0, 0, 0, 0, -1, 1, 1, -1]
 
-        print(ant.observational_space)
-        print(count_steps)
-        print(keystroke)
+        #print(ant.observational_space)
         print("_____")
+        print(count_steps)
+        #print(keystroke)
 
         #observations = env.step(env.action_space.sample())  # noqa: F841
         print(observations[-1].keys())
