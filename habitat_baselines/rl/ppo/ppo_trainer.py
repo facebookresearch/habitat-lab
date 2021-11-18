@@ -349,6 +349,7 @@ class PPOTrainer(BaseRLTrainer):
         self.env_time = 0.0
         self.pth_time = 0.0
         self.t_start = time.time()
+        self.t_recent = self.t_start
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -687,13 +688,16 @@ class PPOTrainer(BaseRLTrainer):
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
+            t_curr = time.time()
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
-                    self.num_steps_done
-                    / ((time.time() - self.t_start) + prev_time),
+                    (self.num_steps_done - self.recent_num_steps_done)
+                    / ((t_curr - self.t_recent)),
                 )
             )
+            self.recent_num_steps_done = self.num_steps_done
+            self.t_recent = t_curr
 
             logger.info(
                 "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
@@ -767,6 +771,8 @@ class PPOTrainer(BaseRLTrainer):
             self.window_episode_stats.update(
                 requeue_stats["window_episode_stats"]
             )
+
+        self.recent_num_steps_done = self.num_steps_done
 
         ppo_cfg = self.config.RL.PPO
 
