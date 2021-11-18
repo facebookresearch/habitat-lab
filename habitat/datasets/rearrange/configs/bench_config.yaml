@@ -52,7 +52,7 @@ receptacle_sets:
     excluded_object_substrings: []
     included_receptacle_substrings:
       - ""
-    excluded_receptacle_substrings: []
+    excluded_receptacle_substrings: ["drawer", "sink"]
 
 scene_sampler:
   type: "subset"
@@ -88,7 +88,7 @@ object_samplers:
     params:
       object_sets: ["food"]
       receptacle_sets: ["counter"]
-      num_samples: [20, 20]
+      num_samples: [9, 9]
       orientation_sampling: "up"
   -
     name: "kitchen_fridge"

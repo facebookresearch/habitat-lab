@@ -356,7 +356,7 @@ class RearrangeEpisodeGenerator:
                     .get_link_scene_node(receptacle.parent_link)
                     .create_child()
                 )
-            else:
+            elif receptacle.parent_object_handle is not None:
                 # attach to the 1st visual scene node so any COM shift is automatically applied
                 attachment_scene_node = (
                     self.sim.get_rigid_object_manager()
@@ -370,6 +370,19 @@ class RearrangeEpisodeGenerator:
                 receptacle.bounds.center(),
                 attach_to=attachment_scene_node,
             )
+            # TODO: enable rotation for object local receptacles
+
+            # handle local frame and rotation for global receptacles
+            if receptacle.parent_object_handle is None:
+                box_obj.transformation = receptacle.get_global_transform(
+                    self.sim
+                ).__matmul__(box_obj.transformation)
+
+            # sample points in the receptacles to display
+            # for sample in range(25):
+            #     sample_point = receptacle.sample_uniform_global(self.sim, 1.0)
+            #     sutils.add_viz_sphere(self.sim, 0.025, sample_point)
+
             self.vdb.look_at(box_obj.root_scene_node.absolute_translation)
             self.vdb.get_observation()
 
@@ -934,6 +947,13 @@ if __name__ == "__main__":
             print(" Articulated Objects:")
             print("---------------------\n    ", end="")
             print(*mm.urdf_paths, sep="\n    ")
+
+            print("-------------------------")
+            print("Stage Global Receptacles:")
+            print("-------------------------")
+            for handle, r_list in receptacles["stage"].items():
+                print(f"  - {handle}\n    ", end="")
+                print(*r_list, sep="\n    ")
 
             print("-------------------------")
             print("Rigid Object Receptacles:")

@@ -280,6 +280,7 @@ class Receptacle:
         self,
         name: str,
         bounds: mn.Range3D,
+        rotation: Optional[mn.Quaternion] = None,
         up: Optional[
             mn.Vector3
         ] = None,  # used for culling, optional in config
@@ -295,6 +296,7 @@ class Receptacle:
         self.parent_object_handle = parent_object_handle
         self.is_parent_object_articulated = is_parent_object_articulated
         self.parent_link = parent_link
+        self.rotation = rotation if rotation is not None else mn.Quaternion()
 
     def sample_uniform_local(self, sample_region_ratio: float) -> mn.Vector3:
         """
@@ -315,7 +317,37 @@ class Receptacle:
         """
         Isolates boilerplate necessary to extract receptacle global transform from ROs and AOs.
         """
-        if not self.is_parent_object_articulated:
+        if self.parent_object_handle is None:
+            # this is a global stage receptacle
+            from habitat_sim.utils.common import quat_from_two_vectors as qf2v
+            from habitat_sim.utils.common import quat_to_magnum as qtm
+
+            # TODO: add an API query or other method to avoid reconstructing the stage frame here
+            stage_config = sim.get_stage_initialization_template()
+            r_frameup_worldup = qf2v(
+                habitat_sim.geo.UP, stage_config.orient_up
+            )
+            v_prime = qtm(r_frameup_worldup).transform_vector(
+                mn.Vector3(habitat_sim.geo.FRONT)
+            )
+            world_to_local = (
+                qf2v(np.array(v_prime), np.array(stage_config.orient_front))
+                * r_frameup_worldup
+            )
+            world_to_local = habitat_sim.utils.common.quat_to_magnum(
+                world_to_local
+            )
+            local_to_world = world_to_local.inverted()
+            l2w4 = mn.Matrix4.from_(local_to_world.to_matrix(), mn.Vector3())
+
+            # apply the receptacle rotation from the bb center
+            T = mn.Matrix4.from_(mn.Matrix3(), self.bounds.center())
+            R = mn.Matrix4.from_(self.rotation.to_matrix(), mn.Vector3())
+            # translate frame to center, rotate, translate back
+            l2w4 = l2w4.__matmul__(T.__matmul__(R).__matmul__(T.inverted()))
+            return l2w4
+
+        elif not self.is_parent_object_articulated:
             obj_mgr = sim.get_rigid_object_manager()
             obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
             # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
@@ -344,11 +376,22 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     """
     # cache the rigid and articulated receptacles seperately
     receptacles: Dict[str, Dict[str, List[str]]] = {
+        "stage": {},
         "rigid": {},
         "articulated": {},
     }
 
-    # first scrape the rigid object configs:
+    # scrape stage configs:
+    stm = sim.get_stage_template_manager()
+    for template_handle in stm.get_template_handles(""):
+        stage_template = stm.get_template_by_handle(template_handle)
+        for item in stage_template.get_user_config().get_subconfig_keys():
+            if item.startswith("receptacle_"):
+                if template_handle not in receptacles["stage"]:
+                    receptacles["stage"][template_handle] = []
+                receptacles["stage"][template_handle].append(item)
+
+    # scrape the rigid object configs:
     rotm = sim.get_object_template_manager()
     for template_handle in rotm.get_template_handles(""):
         obj_template = rotm.get_template_by_handle(template_handle)
@@ -382,6 +425,41 @@ def find_receptacles(sim) -> List[Receptacle]:
 
     receptacles: List[Receptacle] = []
 
+    # search for global receptacles included with the stage
+    stage_config = sim.get_stage_initialization_template()
+    if stage_config is not None:
+        stage_user_attr = stage_config.get_user_config()
+        for sub_config_key in stage_user_attr.get_subconfig_keys():
+            if sub_config_key.startswith("receptacle_"):
+                sub_config = stage_user_attr.get_subconfig(sub_config_key)
+                # this is a receptacle, parse it
+                assert sub_config.has_value("position")
+                assert sub_config.has_value("scale")
+                up = (
+                    None
+                    if not sub_config.has_value("up")
+                    else sub_config.get("up")
+                )
+
+                receptacle_name = (
+                    sub_config.get("name")
+                    if sub_config.has_value("name")
+                    else sub_config_key
+                )
+                rotation = sub_config.get("rotation")
+
+                receptacles.append(
+                    Receptacle(
+                        name=receptacle_name,
+                        bounds=mn.Range3D.from_center(
+                            sub_config.get("position"),
+                            sub_config.get("scale"),
+                        ),
+                        rotation=rotation,
+                        up=up,
+                    )
+                )
+
     # rigid objects
     for obj_handle in obj_mgr.get_object_handles():
         obj = obj_mgr.get_object_by_handle(obj_handle)
@@ -406,13 +484,13 @@ def find_receptacles(sim) -> List[Receptacle]:
                 )
                 receptacles.append(
                     Receptacle(
-                        receptacle_name,
-                        mn.Range3D.from_center(
+                        name=receptacle_name,
+                        bounds=mn.Range3D.from_center(
                             sub_config.get("position"),
                             sub_config.get("scale"),
                         ),
-                        up,
-                        obj_handle,
+                        up=up,
+                        parent_object_handle=obj_handle,
                     )
                 )
 
@@ -449,13 +527,13 @@ def find_receptacles(sim) -> List[Receptacle]:
                 ), f"('parent_link' = '{parent_link_name}') in receptacle configuration does not match any model links."
                 receptacles.append(
                     Receptacle(
-                        receptacle_name,
-                        mn.Range3D.from_center(
+                        name=receptacle_name,
+                        bounds=mn.Range3D.from_center(
                             sub_config.get("position") * obj.global_scale,
                             sub_config.get("scale") * obj.global_scale,
                         ),
-                        up,
-                        obj_handle,
+                        up=up,
+                        parent_object_handle=obj_handle,
                         is_parent_object_articulated=True,
                         parent_link=parent_link_ix,
                     )

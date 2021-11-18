@@ -50,6 +50,7 @@ class MultiSceneSampler(SceneSampler):
 
     def __init__(self, scenes: List[str]) -> None:
         self.scenes = scenes
+        assert len(scenes) > 0, "No scenes provided to MultiSceneSampler."
 
     def sample(self) -> str:
         return self.scenes[random.randrange(0, len(self.scenes))]
@@ -124,7 +125,9 @@ class ObjectSampler:
                     # r_set_tuple = (included_obj_substrs, excluded_obj_substrs, included_receptacle_substrs, excluded_receptacle_substrs)
                     culled = False
                     # first try to cull by exclusion
-                    for ex_object_substr in r_set_tuple[1]:
+                    for ex_object_substr in (
+                        r_set_tuple[1] and receptacle.parent_object_handle
+                    ):
                         if ex_object_substr in receptacle.parent_object_handle:
                             culled = True
                             break
@@ -133,6 +136,15 @@ class ObjectSampler:
                             culled = True
                             break
                     if culled:
+                        break
+
+                    # if the receptacle is stage/global (no object handle) then always a match
+                    if receptacle.parent_object_handle is None:
+                        # check the inclusion name constraints
+                        for name_constraint in r_set_tuple[2]:
+                            if name_constraint in receptacle.name:
+                                found_match = True
+                                break
                         break
 
                     # then search for inclusion
@@ -230,6 +242,7 @@ class ObjectSampler:
                     )
             if snap_down:
                 support_object_ids = [-1]
+                # add support object ids for non-stage receptacles
                 if receptacle.is_parent_object_articulated:
                     ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
                         receptacle.parent_object_handle
@@ -244,7 +257,7 @@ class ObjectSampler:
                                 ao_instance.object_id,
                             ]
                             break
-                else:
+                elif receptacle.parent_object_handle is not None:
                     support_object_ids = [
                         sim.get_rigid_object_manager()
                         .get_object_by_handle(receptacle.parent_object_handle)
