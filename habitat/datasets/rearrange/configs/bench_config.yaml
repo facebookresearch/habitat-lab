@@ -97,7 +97,7 @@ object_samplers:
     params:
       object_sets: ["food"]
       receptacle_sets: ["counter"]
-      num_samples: [9, 9]
+      num_samples: [10, 10]
       orientation_sampling: "up"
   -
     name: "kitchen_fridge"
