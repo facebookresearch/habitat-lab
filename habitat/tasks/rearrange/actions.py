@@ -13,7 +13,6 @@ from gym import spaces
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
-from habitat.core.spaces import ActionSpace
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 # flake8: noqa
@@ -36,7 +35,7 @@ class EmptyAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return ActionSpace(
+        return spaces.Dict(
             {
                 "empty_action": spaces.Box(
                     shape=(1,),
@@ -87,7 +86,7 @@ class ArmAction(SimulatorTaskAction):
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
             action_spaces["grip_action"] = self.grip_ctrlr.action_space
-        return ActionSpace(action_spaces)
+        return spaces.Dict(action_spaces)
 
     def step(self, arm_action, grip_action=None, *args, **kwargs):
         self.arm_ctrlr.step(arm_action, should_step=False)
