@@ -775,7 +775,7 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.01)
+                (cp.contact_distance < -0.05)
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
