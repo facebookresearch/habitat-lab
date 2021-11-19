@@ -54,7 +54,7 @@ except ImportError:
     pass
 
 # import quadruped_wrapper
-from habitat_sim.robots import AntV2Robot
+from habitat.tasks.ant_v2.ant_robot import AntV2Robot
 
 def merge_sim_episode_with_object_config(sim_config, episode):
     sim_config.defrost()

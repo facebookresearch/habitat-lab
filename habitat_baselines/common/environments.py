@@ -82,6 +82,7 @@ class RearrangeRLEnv(habitat.RLEnv):
 class NavRLEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         self._rl_config = config.RL
+        print(self._rl_config)
         self._core_env_config = config.TASK_CONFIG
         self._reward_measure_name = self._rl_config.REWARD_MEASURE
         self._success_measure_name = self._rl_config.SUCCESS_MEASURE
@@ -93,6 +94,8 @@ class NavRLEnv(habitat.RLEnv):
     def reset(self):
         self._previous_action = None
         observations = super().reset()
+        print(observations)
+        print(self._reward_measure_name)
         self._previous_measure = self._env.get_metrics()[
             self._reward_measure_name
         ]
