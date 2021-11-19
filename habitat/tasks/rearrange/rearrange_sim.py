@@ -465,16 +465,16 @@ class RearrangeSim(HabitatSim):
         if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
-            for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1)
-            # self.internal_step(0.008 * self.ac_freq_ratio)
+            # for _ in range(self.ac_freq_ratio):
+            #    self.internal_step(-1)
+            self.internal_step(0.008 * self.ac_freq_ratio)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
-            for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1)
-            # self.internal_step(0.008 * self.ac_freq_ratio)
+            # for _ in range(self.ac_freq_ratio):
+            #    self.internal_step(-1)
+            self.internal_step(0.008 * self.ac_freq_ratio)
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
