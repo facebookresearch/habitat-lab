@@ -242,6 +242,10 @@ def batch_obs(
                 # np.asarray as this is quickier for the more common
                 # path of sensor being an np.ndarray
                 # np.asarray is ~3x slower than checking
+                print("YO")
+                print(sensor)
+                print(batch_t[sensor_name][i])
+                print("HMMM?")
                 if isinstance(sensor, np.ndarray):
                     batch_t[sensor_name][i] = sensor
                 elif torch.is_tensor(sensor):
