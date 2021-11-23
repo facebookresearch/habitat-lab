@@ -56,6 +56,10 @@ def execute_exp(config: Config, run_type: str) -> None:
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
     trainer = trainer_init(config)
 
+    print("PyTorch version: ", torch.__version__)
+    print("CUDA version: ", torch.version.cuda)
+    print("GPU: ", torch.cuda.get_device_name(0))
+
     if run_type == "train":
         trainer.train()
     elif run_type == "eval":
