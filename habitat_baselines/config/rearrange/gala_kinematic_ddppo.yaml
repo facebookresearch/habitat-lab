@@ -4,24 +4,26 @@ VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
 NUM_CHECKPOINTS: 0
 BATCHED_ENV: True
-SAVE_VIDEOS_INTERVAL: 10000
-NUM_UPDATES: 4000
-NUM_ENVIRONMENTS: 128
+SAVE_VIDEOS_INTERVAL: 500
+NUM_UPDATES: 61
+NUM_ENVIRONMENTS: 512
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
     SENSORS: ['HEAD_RGB_SENSOR']
   HEAD_RGB_SENSOR:
-    WIDTH: 128
-    HEIGHT: 128
+    WIDTH: 64
+    HEIGHT: 64
 RL:
   PPO:
-    ppo_epoch: 2
-    num_steps: 20
-    max_grad_norm: 1.0
+    ppo_epoch: 1
+    num_steps: 32
     entropy_coef: 0.0025
     lr: 2.5e-4
     use_linear_lr_decay: False
+    max_grad_norm: 1.0
   POLICY:
     action_distribution_type: "gaussian"
+  DDPPO:
+    backbone: "se_resnet9_fixup"
 FORCE_BLIND_POLICY: False
