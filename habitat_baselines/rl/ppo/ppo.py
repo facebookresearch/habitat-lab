@@ -15,6 +15,18 @@ from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import Policy
 
+use_mixed_precision = True
+
+if use_mixed_precision:
+    from torch.cuda.amp import autocast
+    from torch.cuda.amp import GradScaler 
+else:
+    class dummy_context_mgr():
+        def __enter__(self):
+            return None
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
 EPS_PPO = 1e-5
 
 
@@ -56,6 +68,9 @@ class PPO(nn.Module):
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
 
+        if use_mixed_precision:
+            self.grad_scaler = GradScaler()
+
     def forward(self, *x):
         raise NotImplementedError
 
@@ -83,63 +98,72 @@ class PPO(nn.Module):
             )
 
             for batch in data_generator:
-                profiling_wrapper.range_push("mini batch")
-                (
-                    values,
-                    action_log_probs,
-                    dist_entropy,
-                    _,
-                ) = self._evaluate_actions(
-                    batch["observations"],
-                    batch["recurrent_hidden_states"],
-                    batch["prev_actions"],
-                    batch["masks"],
-                    batch["actions"],
-                )
-
-                ratio = torch.exp(action_log_probs - batch["action_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
+                precision_context = autocast if use_mixed_precision else dummy_context_mgr
+                with precision_context():
+                    profiling_wrapper.range_push("mini batch")
+                    (
+                        values,
+                        action_log_probs,
+                        dist_entropy,
+                        _,
+                    ) = self._evaluate_actions(
+                        batch["observations"],
+                        batch["recurrent_hidden_states"],
+                        batch["prev_actions"],
+                        batch["masks"],
+                        batch["actions"],
                     )
-                    * batch["advantages"]
-                )
-                action_loss = -(torch.min(surr1, surr2).mean())
 
-                if self.use_clipped_value_loss:
-                    value_pred_clipped = batch["value_preds"] + (
-                        values - batch["value_preds"]
-                    ).clamp(-self.clip_param, self.clip_param)
-                    value_losses = (values - batch["returns"]).pow(2)
-                    value_losses_clipped = (
-                        value_pred_clipped - batch["returns"]
-                    ).pow(2)
-                    value_loss = 0.5 * torch.max(
-                        value_losses, value_losses_clipped
+                    ratio = torch.exp(action_log_probs - batch["action_log_probs"])
+                    surr1 = ratio * batch["advantages"]
+                    surr2 = (
+                        torch.clamp(
+                            ratio, 1.0 - self.clip_param, 1.0 + self.clip_param
+                        )
+                        * batch["advantages"]
                     )
-                else:
-                    value_loss = 0.5 * (batch["returns"] - values).pow(2)
+                    action_loss = -(torch.min(surr1, surr2).mean())
 
-                value_loss = value_loss.mean()
-                dist_entropy = dist_entropy.mean()
+                    if self.use_clipped_value_loss:
+                        value_pred_clipped = batch["value_preds"] + (
+                            values - batch["value_preds"]
+                        ).clamp(-self.clip_param, self.clip_param)
+                        value_losses = (values - batch["returns"]).pow(2)
+                        value_losses_clipped = (
+                            value_pred_clipped - batch["returns"]
+                        ).pow(2)
+                        value_loss = 0.5 * torch.max(
+                            value_losses, value_losses_clipped
+                        )
+                    else:
+                        value_loss = 0.5 * (batch["returns"] - values).pow(2)
 
-                self.optimizer.zero_grad()
-                total_loss = (
-                    value_loss * self.value_loss_coef
-                    + action_loss
-                    - dist_entropy * self.entropy_coef
-                )
+                    value_loss = value_loss.mean()
+                    dist_entropy = dist_entropy.mean()
+
+                    self.optimizer.zero_grad()
+                    total_loss = (
+                        value_loss * self.value_loss_coef
+                        + action_loss
+                        - dist_entropy * self.entropy_coef
+                    )
 
                 self.before_backward(total_loss)
                 profiling_wrapper.range_push("backward")
-                total_loss.backward()
+                if use_mixed_precision:
+                    self.grad_scaler.scale(total_loss).backward()
+                else:
+                    total_loss.backward()
                 profiling_wrapper.range_pop()
                 self.after_backward(total_loss)
 
                 self.before_step()
                 profiling_wrapper.range_push("optimizer.step")
-                self.optimizer.step()
+                if use_mixed_precision:
+                    self.grad_scaler.step(self.optimizer)
+                    self.grad_scaler.update()
+                else:
+                    self.optimizer.step()
                 profiling_wrapper.range_pop()
                 self.after_step()
 
