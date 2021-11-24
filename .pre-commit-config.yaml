@@ -69,7 +69,6 @@ repos:
         pass_filenames: false
         additional_dependencies:
         - attrs
-        - types-pyyaml
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.4.0
