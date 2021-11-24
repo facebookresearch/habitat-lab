@@ -263,9 +263,14 @@ class ResNetEncoder(nn.Module):
             # perf todo: verify this doesn't have overhead
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
-            rgb_observations = (
-                rgb_observations.float() / 255.0
-            )  # normalize RGB
+
+            # convert to desired float format
+            autocast_type = torch.float16 if torch.is_autocast_enabled() else torch.float32
+            rgb_observations = rgb_observations.to(dtype=autocast_type)
+
+            # normalize RGB
+            rgb_observations = rgb_observations / 255.0
+
             assert(rgb_observations.shape[1] == 3)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
             cnn_input.append(rgb_observations)
 

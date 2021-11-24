@@ -17,15 +17,13 @@ from habitat_baselines.rl.ppo.policy import Policy
 
 use_mixed_precision = True
 
-if use_mixed_precision:
-    from torch.cuda.amp import autocast
-    from torch.cuda.amp import GradScaler 
-else:
-    class dummy_context_mgr():
-        def __enter__(self):
-            return None
-        def __exit__(self, exc_type, exc_value, traceback):
-            return False
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler 
+class dummy_context_mgr():
+    def __enter__(self):
+        return None
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
 
 EPS_PPO = 1e-5
 

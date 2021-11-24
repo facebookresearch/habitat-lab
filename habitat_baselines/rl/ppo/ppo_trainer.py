@@ -59,6 +59,13 @@ try:
 except ImportError:
     vut = None
 
+from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler 
+class dummy_context_mgr():
+    def __enter__(self):
+        return None
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
 
 @baseline_registry.register_trainer(name="ddppo")
 @baseline_registry.register_trainer(name="ppo")
@@ -445,19 +452,22 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice,
             ]
 
-            profiling_wrapper.range_push("compute actions")
-            (
-                values,
-                actions,
-                actions_log_probs,
-                recurrent_hidden_states,
-            ) = self.actor_critic.act(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
-                deterministic = False  # temp force determinism?
-            )
+            use_mixed_precision = True if hasattr(self.agent, "grad_scaler") else False
+            precision_context = autocast if use_mixed_precision else dummy_context_mgr
+            with precision_context():
+                profiling_wrapper.range_push("compute actions")
+                (
+                    values,
+                    actions,
+                    actions_log_probs,
+                    recurrent_hidden_states,
+                ) = self.actor_critic.act(
+                    step_batch["observations"],
+                    step_batch["recurrent_hidden_states"],
+                    step_batch["prev_actions"],
+                    step_batch["masks"],
+                    deterministic = False  # temp force determinism?
+                )
 
         if not self.config.BATCHED_ENV:
             # NB: Move actions to CPU.  If CUDA tensors are
@@ -586,21 +596,24 @@ class PPOTrainer(BaseRLTrainer):
     def _update_agent(self):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()
-        with torch.no_grad():
-            step_batch = self.rollouts.buffers[
-                self.rollouts.current_rollout_step_idx
-            ]
+        use_mixed_precision = True if hasattr(self.agent, "grad_scaler") else False
+        precision_context = autocast if use_mixed_precision else dummy_context_mgr
+        with precision_context():
+            with torch.no_grad():
+                step_batch = self.rollouts.buffers[
+                    self.rollouts.current_rollout_step_idx
+                ]
 
-            next_value = self.actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
+                next_value = self.actor_critic.get_value(
+                    step_batch["observations"],
+                    step_batch["recurrent_hidden_states"],
+                    step_batch["prev_actions"],
+                    step_batch["masks"],
+                )
+
+            self.rollouts.compute_returns(
+                next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
             )
-
-        self.rollouts.compute_returns(
-            next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
-        )
 
         self.agent.train()
 
