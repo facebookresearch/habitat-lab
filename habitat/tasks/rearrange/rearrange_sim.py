@@ -19,6 +19,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 from habitat.tasks.rearrange.utils import (
     IkHelper,
     get_nav_mesh_settings,
+    is_pb_installed,
     make_render_only,
 )
 from habitat_sim.physics import MotionType
@@ -235,7 +236,8 @@ class RearrangeSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
-            if self.habitat_config.get("IK_ARM_URDF", None) is not None:
+            ik_arm_urdf = self.habitat_config.get("IK_ARM_URDF", None)
+            if ik_arm_urdf is not None and is_pb_installed():
                 self.ik_helper = IkHelper(
                     self.habitat_config.IK_ARM_URDF,
                     np.array(self.robot.params.arm_init_params),
