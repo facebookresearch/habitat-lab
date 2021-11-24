@@ -1,8 +1,20 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import magnum as mn
 import numpy as np
 
 
 class MarkerInfo:
+    """
+    A data structure to track information about markers in the scene. These are
+    automatically updated based on the position of the articulated link the
+    marker is pinned to.
+    """
+
     def __init__(self, offset_position, link_node, ao_parent, link_id):
         self.offset_position = offset_position
         self.link_node = link_node
