@@ -3,11 +3,11 @@ import os.path as osp
 from typing import Any, List
 
 from gym.envs.registration import register
-from yacs.config import CfgNode as CN
 
 import habitat
 import habitat_baselines.utils.env_utils
 from habitat_baselines.common.environments import get_env_class
+from habitat_baselines.config.default import _C
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.utils.render_wrapper import HabRenderWrapper
@@ -22,7 +22,10 @@ else:
 
 
 def get_config_no_base_task_load(cfg_file_path):
-    cfg_data = CN()
+    """
+    Load in a Habitat Baselines config file without loading the BASE_TASK_CONFIG_PATH file. The purpose of this is to load the config even if the BASE_TASK_CONFIG_PATH does not exist.
+    """
+    cfg_data = _C.clone()
     cfg_data.merge_from_file(cfg_file_path)
     return cfg_data
 
