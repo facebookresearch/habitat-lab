@@ -541,18 +541,19 @@ class PPOTrainer(BaseRLTrainer):
         current_ep_reward = self.current_episode_reward[env_slice]
         self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
         self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        for k, v_k in self._extract_scalars_from_infos(infos).items():
-            v = torch.tensor(
-                v_k,
-                dtype=torch.float,
-                device=self.current_episode_reward.device,
-            ).unsqueeze(1)
-            if k not in self.running_episode_stats:
-                self.running_episode_stats[k] = torch.zeros_like(
-                    self.running_episode_stats["count"]
-                )
+        if False:
+            for k, v_k in self._extract_scalars_from_infos(infos).items():
+                v = torch.tensor(
+                    v_k,
+                    dtype=torch.float,
+                    device=self.current_episode_reward.device,
+                ).unsqueeze(1)
+                if k not in self.running_episode_stats:
+                    self.running_episode_stats[k] = torch.zeros_like(
+                        self.running_episode_stats["count"]
+                    )
 
-            self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
+                self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
 
