@@ -107,14 +107,14 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
 ## Example
 <!--- Please, update `examples/example.py` if you update example. -->
 
-🆕Example code-snippet which uses [`tasks/rearrangepick_replica_cad.yaml`](configs/tasks/rearrangepick_replica_cad.yaml) for configuration of task and agent.
+🆕Example code-snippet which uses [`configs/tasks/rearrange/pick.yaml`](configs/tasks/rearrange/pick.yaml) for configuration of task and agent.
 
 ```python
 import habitat
 
 # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
 env = habitat.Env(
-    config=habitat.get_config("configs/tasks/rearrangepick_replica_cad.yaml")
+    config=habitat.get_config("configs/tasks/rearrange/pick.yaml")
 )
 
 observations = env.reset()
