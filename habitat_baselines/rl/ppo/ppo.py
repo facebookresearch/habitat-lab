@@ -65,6 +65,12 @@ class PPO(nn.Module):
             lr=lr,
             eps=eps,
         )
+        
+        for p in actor_critic.parameters():
+            if not p.is_cuda:
+                print("error: param with shape ", p.shape, " is not cuda")
+                exit(0)
+
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
 
