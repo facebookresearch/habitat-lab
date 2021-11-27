@@ -16,6 +16,7 @@ from yacs.config import CfgNode as CN
 import habitat.datasets.rearrange.samplers as samplers
 import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
+from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import (
     RearrangeDatasetV0,
     RearrangeEpisode,
@@ -193,7 +194,7 @@ class RearrangeEpisodeGenerator:
                     obj_sampler_info["params"].get("sample_region_ratio", 1.0),
                 )
             else:
-                print(
+                logger.info(
                     f"Requested object sampler '{obj_sampler_info['type']}' is not implemented."
                 )
                 raise (NotImplementedError)
@@ -234,7 +235,7 @@ class RearrangeEpisodeGenerator:
                     target_sampler_info["params"]["orientation_sampling"],
                 )
             else:
-                print(
+                logger.info(
                     f"Requested target sampler '{target_sampler_info['type']}' is not implemented."
                 )
                 raise (NotImplementedError)
@@ -261,7 +262,7 @@ class RearrangeEpisodeGenerator:
             unified_scene_set = list(set(unified_scene_set))
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
-            print(
+            logger.error(
                 f"Requested scene sampler '{self.cfg.scene_sampler.type}' is not implemented."
             )
             raise (NotImplementedError)
@@ -316,7 +317,7 @@ class RearrangeEpisodeGenerator:
                     composite_ao_sampler_params
                 )
             else:
-                print(
+                logger.error(
                     f"Requested AO state sampler type '{ao_info['type']}' not implemented."
                 )
                 raise (NotImplementedError)
@@ -344,10 +345,10 @@ class RearrangeEpisodeGenerator:
         """
         Generate a wireframe bounding box for each receptacle in the scene, aim the camera at it and record 1 observation.
         """
-        print("visualize_scene_receptacles processing")
+        logger.info("visualize_scene_receptacles processing")
         receptacles = sutils.find_receptacles(self.sim)
         for receptacle in receptacles:
-            print("receptacle processing")
+            logger.info("receptacle processing")
             attachment_scene_node = None
             if receptacle.is_parent_object_articulated:
                 attachment_scene_node = (
@@ -407,11 +408,9 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar.close()
 
-        print("==========================")
-        print(
+        logger.info(
             f"Generated {num_episodes} episodes in {num_episodes+failed_episodes} tries."
         )
-        print("==========================")
 
         return generated_episodes
 
@@ -464,7 +463,7 @@ class RearrangeEpisodeGenerator:
                     sampler_name
                 ] += new_objects
             self.ep_sampled_objects += new_objects
-            print(
+            logger.info(
                 f"Sampler {sampler_name} generated {len(new_objects)} new object placements."
             )
             # debug visualization showing each newly added object
@@ -475,7 +474,9 @@ class RearrangeEpisodeGenerator:
 
         # simulate the world for a few seconds to validate the placements
         if not self.settle_sim():
-            print("Aborting episode generation due to unstable state.")
+            logger.warning(
+                "Aborting episode generation due to unstable state."
+            )
             return None
 
         # generate the target samplers
@@ -657,7 +658,7 @@ class RearrangeEpisodeGenerator:
                 self.vdb.get_observation(obs_cache=settle_db_obs)
 
         # check stability of placements
-        print("Computing placement stability report:")
+        logger.info("Computing placement stability report:")
         max_settle_displacement = 0
         error_eps = 0.1
         unstable_placements = []
@@ -668,13 +669,13 @@ class RearrangeEpisodeGenerator:
             max_settle_displacement = max(max_settle_displacement, error)
             if error > error_eps:
                 unstable_placements.append(new_object.handle)
-                print(
+                logger.info(
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
-        print(
+        logger.info(
             f" : unstable={len(unstable_placements)}|{len(self.ep_sampled_objects)} ({len(unstable_placements)/len(self.ep_sampled_objects)*100}%) : {unstable_placements}."
         )
-        print(
+        logger.info(
             f" : Maximum displacement from settling = {max_settle_displacement}"
         )
         # TODO: maybe draw/display trajectory tubes for the displacements?
@@ -906,14 +907,14 @@ if __name__ == "__main__":
 
     # merge the configuration from file with the default
     cfg = get_config_defaults()
-    print(f"\n\nOriginal Config:\n{cfg}")
+    logger.info(f"\n\nOriginal Config:\n{cfg}")
     if args.config is not None:
         assert osp.exists(
             args.config
         ), f"Provided config, '{args.config}', does not exist."
         cfg.merge_from_file(args.config)
 
-    print(f"\n\nModified Config:\n{cfg}\n\n")
+    logger.info(f"\n\nModified Config:\n{cfg}\n\n")
 
     dataset = RearrangeDatasetV0()
     with RearrangeEpisodeGenerator(
@@ -928,49 +929,49 @@ if __name__ == "__main__":
             # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
             mm = ep_gen.sim.metadata_mediator
             receptacles = sutils.get_all_scenedataset_receptacles(ep_gen.sim)
-            print("==================================")
-            print("Listing SceneDataset Summary")
-            print("==================================")
-            print(f" SceneDataset: {mm.active_dataset}\n")
-            print("--------")
-            print(" Scenes:")
-            print("--------\n    ", end="")
-            print(*mm.get_scene_handles(), sep="\n    ")
-            print("---------------")
-            print(" Rigid Objects:")
-            print("---------------\n    ", end="")
-            print(
+            logger.info("==================================")
+            logger.info("Listing SceneDataset Summary")
+            logger.info("==================================")
+            logger.info(f" SceneDataset: {mm.active_dataset}\n")
+            logger.info("--------")
+            logger.info(" Scenes:")
+            logger.info("--------\n    ", end="")
+            logger.info(*mm.get_scene_handles(), sep="\n    ")
+            logger.info("---------------")
+            logger.info(" Rigid Objects:")
+            logger.info("---------------\n    ", end="")
+            logger.info(
                 *mm.object_template_manager.get_template_handles(),
                 sep="\n    ",
             )
-            print("---------------------")
-            print(" Articulated Objects:")
-            print("---------------------\n    ", end="")
-            print(*mm.urdf_paths, sep="\n    ")
+            logger.info("---------------------")
+            logger.info(" Articulated Objects:")
+            logger.info("---------------------\n    ", end="")
+            logger.info(*mm.urdf_paths, sep="\n    ")
 
-            print("-------------------------")
-            print("Stage Global Receptacles:")
-            print("-------------------------")
+            logger.info("-------------------------")
+            logger.info("Stage Global Receptacles:")
+            logger.info("-------------------------")
             for handle, r_list in receptacles["stage"].items():
-                print(f"  - {handle}\n    ", end="")
-                print(*r_list, sep="\n    ")
+                logger.info(f"  - {handle}\n    ", end="")
+                logger.info(*r_list, sep="\n    ")
 
-            print("-------------------------")
-            print("Rigid Object Receptacles:")
-            print("-------------------------")
+            logger.info("-------------------------")
+            logger.info("Rigid Object Receptacles:")
+            logger.info("-------------------------")
             for handle, r_list in receptacles["rigid"].items():
-                print(f"  - {handle}\n    ", end="")
-                print(*r_list, sep="\n    ")
-            print("-------------------------------")
-            print("Articulated Object receptacles:")
-            print("-------------------------------")
+                logger.info(f"  - {handle}\n    ", end="")
+                logger.info(*r_list, sep="\n    ")
+            logger.info("-------------------------------")
+            logger.info("Articulated Object receptacles:")
+            logger.info("-------------------------------")
             for handle, r_list in receptacles["articulated"].items():
-                print(f"  - {handle}\n    ", end="")
-                print(*r_list, sep="\n    ")
+                logger.info(f"  - {handle}\n    ", end="")
+                logger.info(*r_list, sep="\n    ")
 
-            print("==================================")
-            print("Done listing SceneDataset summary")
-            print("==================================")
+            logger.info("==================================")
+            logger.info("Done listing SceneDataset summary")
+            logger.info("==================================")
         elif args.run:
             import time
 
@@ -1003,13 +1004,15 @@ if __name__ == "__main__":
             with gzip.open(output_path, "wt") as f:
                 f.write(dataset.to_json())
 
-            print(
+            logger.info(
                 "=============================================================="
             )
-            print(
+            logger.info(
                 f"RearrangeEpisodeGenerator generated {args.num_episodes} episodes in {time.time()-start_time} seconds."
             )
-            print(f"RearrangeDatasetV0 saved to '{osp.abspath(output_path)}'")
-            print(
+            logger.info(
+                f"RearrangeDatasetV0 saved to '{osp.abspath(output_path)}'"
+            )
+            logger.info(
                 "=============================================================="
             )

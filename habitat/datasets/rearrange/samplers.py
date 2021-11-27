@@ -13,6 +13,7 @@ import magnum as mn
 
 import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
+from habitat.core.logging import logger
 
 
 class SceneSampler(ABC):
@@ -175,7 +176,7 @@ class ObjectSampler:
                         )
                         if gravity_alignment < tilt_tolerance:
                             culled = True
-                            print(
+                            logger.info(
                                 f"Culled by tilt: '{receptacle.name}', {gravity_alignment}"
                             )
                     if not culled:
@@ -270,13 +271,13 @@ class ObjectSampler:
                     vdb=vdb,
                 )
                 if snap_success:
-                    print(
+                    logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     return new_object
 
             elif not new_object.contact_test():
-                print(
+                logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
                 return new_object
@@ -285,7 +286,7 @@ class ObjectSampler:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )
-        print(
+        logger.info(
             f"Failed to sample object placement in {self.max_placement_attempts} tries."
         )
         return None
@@ -299,7 +300,9 @@ class ObjectSampler:
         # draw a new pairing
         object_handle = self.sample_object()
         target_receptacle = self.sample_receptacle(sim)
-        print(f"Sampling '{object_handle}' from '{target_receptacle.name}'")
+        logger.info(
+            f"Sampling '{object_handle}' from '{target_receptacle.name}'"
+        )
 
         new_object = self.sample_placement(
             sim, object_handle, target_receptacle, snap_down, vdb
@@ -325,7 +328,7 @@ class ObjectSampler:
             if self.num_objects[1] > self.num_objects[0]
             else self.num_objects[0]
         )
-        print(
+        logger.info(
             f"    Trying to sample {target_objects_number} from range {self.num_objects}"
         )
 
@@ -342,10 +345,10 @@ class ObjectSampler:
             return new_objects
 
         # we didn't find the minimum number of placements, so remove all new objects and return
-        print(
+        logger.info(
             f"Failed to sample the minimum number of placements in {self.max_sample_attempts} tries."
         )
-        print(
+        logger.info(
             f"    Only able to sample {len(new_objects)} out of {self.num_objects}..."
         )
         # cleanup
@@ -402,7 +405,7 @@ class ObjectTargetSampler(ObjectSampler):
             else self.num_objects[0]
         )
         target_number = min(target_number, len(self.object_instance_set))
-        print(
+        logger.info(
             f"    Trying to sample {target_number} targets from range {self.num_objects}"
         )
 
@@ -437,10 +440,10 @@ class ObjectTargetSampler(ObjectSampler):
             return new_target_objects
 
         # we didn't find all placements, so remove all new objects and return
-        print(
+        logger.info(
             f"Failed to sample all target placements in {self.max_sample_attempts} tries."
         )
-        print(
+        logger.info(
             f"    Only able to sample {len(new_target_objects)} targets out of {len(self.object_instance_set)}..."
         )
         # cleanup
@@ -532,7 +535,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
         """
         ids_to_names = sutils.get_all_object_ids(sim)
         ids_to_names[-1] = "_stage"
-        print(ids_to_names)
+        logger.info(ids_to_names)
         # first collect all instances associated with requested samplers
         aom = sim.get_articulated_object_manager()
         matching_ao_instances: Dict[
@@ -586,10 +589,12 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
             for ao_handle in matching_ao_instances:
                 for ao_instance in matching_ao_instances[ao_handle]:
                     if ao_instance.contact_test():
-                        print(f"ao_handle = {ao_handle} failed contact test.")
+                        logger.info(
+                            f"ao_handle = {ao_handle} failed contact test."
+                        )
                         sim.perform_discrete_collision_detection()
                         cps = sim.get_physics_contact_points()
-                        print(ao_instance.handle)
+                        logger.info(ao_instance.handle)
                         for cp in cps:
                             if (
                                 ao_instance.handle
@@ -597,7 +602,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                                 or ao_instance.handle
                                 in ids_to_names[cp.object_id_b]
                             ):
-                                print(
+                                logger.info(
                                     f" contact between ({cp.object_id_a})'{ids_to_names[cp.object_id_a]}' and ({cp.object_id_b})'{ids_to_names[cp.object_id_b]}'"
                                 )
                         valid_configuration = False

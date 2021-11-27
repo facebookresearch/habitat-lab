@@ -26,7 +26,6 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 CFG_TEST = "configs/tasks/rearrange/pick.yaml"
 GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
 EPISODES_LIMIT = 6
-PARTIAL_LOAD_SCENES = 3
 
 
 def check_json_serialization(dataset: habitat.Dataset):
