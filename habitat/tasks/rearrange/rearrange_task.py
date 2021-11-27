@@ -23,10 +23,6 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
-# TODO: Change from a hardcoded constant
-DESIRED_FETCH_ARM_RESTING_REL_LOCATION = np.array([0.5, 0.0, 1.0])
-
-
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """
@@ -44,7 +40,7 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
-        self._desired_resting = DESIRED_FETCH_ARM_RESTING_REL_LOCATION
+        self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
         self._sim_reset = True
         self._targ_idx: int = 0
 
