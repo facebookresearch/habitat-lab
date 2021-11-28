@@ -18,7 +18,6 @@ from habitat.utils import profiling_wrapper
 from collections import OrderedDict
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
-import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
 
 
 class BatchedEnv:
@@ -73,6 +72,7 @@ class BatchedEnv:
         
         observations = OrderedDict()
         if self._bsim:
+            import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
             observations["rgb"] = bps_pytorch.make_color_tensor(
                 self._bsim.rgba(buffer_index),
                 SIMULATOR_GPU_ID,
