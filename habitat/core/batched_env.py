@@ -15,7 +15,6 @@ from gym.spaces import Box
 import numpy as np
 from gym import spaces
 from habitat.utils import profiling_wrapper
-from habitat_sim._ext.habitat_sim_bindings import BatchedSimulator, BatchedSimulatorConfig
 from collections import OrderedDict
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
@@ -40,6 +39,7 @@ class BatchedEnv:
         """Todo
         """
         self._is_closed = True
+        assert config.BATCHED_ENV
 
         assert (
             config.NUM_ENVIRONMENTS > 0
@@ -56,24 +56,31 @@ class BatchedEnv:
         agent_0_sensor_0_config = getattr(config.SIMULATOR, sensor_0_name)
         sensor_width, sensor_height = agent_0_sensor_0_config.WIDTH, agent_0_sensor_0_config.HEIGHT
 
-        bsim_config = BatchedSimulatorConfig()
-        bsim_config.num_envs = self._num_envs
-        bsim_config.sensor0.width = sensor_width
-        bsim_config.sensor0.height = sensor_height
-        bsim_config.sensor0.hfov = 45.0
-        self._bsim = BatchedSimulator(bsim_config)
+        if not config.STUB_BATCH_SIMULATOR:
+            from habitat_sim._ext.habitat_sim_bindings import BatchedSimulator, BatchedSimulatorConfig
+            bsim_config = BatchedSimulatorConfig()
+            bsim_config.num_envs = self._num_envs
+            bsim_config.sensor0.width = sensor_width
+            bsim_config.sensor0.height = sensor_height
+            bsim_config.sensor0.hfov = 45.0
+            self._bsim = BatchedSimulator(bsim_config)
+        else:
+            self._bsim = None
 
         double_buffered = False
         buffer_index = 0
         SIMULATOR_GPU_ID = 0
         
         observations = OrderedDict()
-        observations["rgb"] = bps_pytorch.make_color_tensor(
-            self._bsim.rgba(buffer_index),
-            SIMULATOR_GPU_ID,
-            self._num_envs // (2 if double_buffered else 1),
-            [sensor_height, sensor_width],
-        )[..., 0:3].permute(0, 1, 2, 3)  # todo: get rid of no-op permute
+        if self._bsim:
+            observations["rgb"] = bps_pytorch.make_color_tensor(
+                self._bsim.rgba(buffer_index),
+                SIMULATOR_GPU_ID,
+                self._num_envs // (2 if double_buffered else 1),
+                [sensor_height, sensor_width],
+            )[..., 0:3].permute(0, 1, 2, 3)  # todo: get rid of no-op permute
+        else:
+            observations["rgb"] = torch.rand([self._num_envs, sensor_height, sensor_width, 3], dtype=torch.float32) * 255
         self._observations = observations
 
         # print('observations["rgb"].shape: ', observations["rgb"].shape)
@@ -140,9 +147,10 @@ class BatchedEnv:
 
         :return: list of outputs from the reset method of envs.
         """
-        self._bsim.auto_reset_or_step_physics()  # sloppy: do explicit reset here
-        self._bsim.start_render()
-        self._bsim.wait_for_frame()
+        if self._bsim:
+            self._bsim.auto_reset_or_step_physics()  # sloppy: do explicit reset here
+            self._bsim.start_render()
+            self._bsim.wait_for_frame()
         return self._observations
         
 
@@ -153,28 +161,39 @@ class BatchedEnv:
         """
         actions_flat_list = actions.flatten().tolist()
         assert len(actions_flat_list) == self.num_envs * self.action_dim
-        self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
-        self._bsim.auto_reset_or_step_physics()
-        self._bsim.start_render()
+        if self._bsim:
+            self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
+            self._bsim.auto_reset_or_step_physics()
+            self._bsim.start_render()
 
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Any]:
         r"""Todo"""
-        rewards = self._bsim.get_rewards()
-        assert len(rewards) == self._num_envs
-        dones = self._bsim.get_dones()
-        assert len(dones) == self._num_envs
 
-        if self._config.REWARD_SCALE != 1.0:
-            # perf todo: avoid dynamic list construction
-            rewards = [r * self._config.REWARD_SCALE for r in rewards]
+        if self._bsim:
+            rewards = self._bsim.get_rewards()
+            assert len(rewards) == self._num_envs
+            dones = self._bsim.get_dones()
+            assert len(dones) == self._num_envs
 
-        # this updates self._observations tensor
-        self._bsim.wait_for_frame()
+            if self._config.REWARD_SCALE != 1.0:
+                # perf todo: avoid dynamic list construction
+                rewards = [r * self._config.REWARD_SCALE for r in rewards]
+
+            # this updates self._observations tensor
+            self._bsim.wait_for_frame()
+        else:
+            # rgb_observations = self._observations["rgb"]
+            # torch.rand(rgb_observations.shape, dtype=torch.float32, out=rgb_observations)
+            # torch.mul(rgb_observations, 255, out=rgb_observations)
+            rewards = [0.0] * self._num_envs
+            dones = [False] * self._num_envs
+
         observations = self._observations
         
         # temp stub for infos
-        infos = [{"distance_to_goal": 0.0, "success":0.0, "spl":0.0}] * self._num_envs
+        # infos = [{"distance_to_goal": 0.0, "success":0.0, "spl":0.0}] * self._num_envs
+        infos = [{}] * self._num_envs
         return (observations, rewards, dones, infos)
 
     def step(
