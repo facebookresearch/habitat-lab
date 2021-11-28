@@ -54,7 +54,10 @@ from habitat_baselines.utils.common import (
 )
 from habitat_baselines.utils.env_utils import construct_envs, construct_batched_envs
 
-from habitat_sim.utils import viz_utils as vut
+try:
+    from habitat_sim.utils import viz_utils as vut
+except ImportError:
+    vut = None
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -920,19 +923,22 @@ class PPOTrainer(BaseRLTrainer):
                             env_saved_observations.append({primary_obs_name: env_rgb})
 
                     if if_last_update_of_save:
-                        video_folder = self.config.VIDEO_DIR
-                        print("saving videos to ", video_folder)
-                        for env_index in envs_to_save:
-                            env_saved_observations = self.debug_video_observations[env_index]
-                            vut.make_video(
-                                env_saved_observations,
-                                primary_obs_name,
-                                "color",
-                                video_folder + "/update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
-                                fps=10,  # very slow fps
-                                open_vid=False,
-                            )
-                        print("done saving videos!")
+                        if not vut:
+                            print("vut (viz utils) unavailable, so we can't save videos")
+                        else:
+                            video_folder = self.config.VIDEO_DIR
+                            print("saving videos to ", video_folder)
+                            for env_index in envs_to_save:
+                                env_saved_observations = self.debug_video_observations[env_index]
+                                vut.make_video(
+                                    env_saved_observations,
+                                    primary_obs_name,
+                                    "color",
+                                    video_folder + "/update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
+                                    fps=10,  # very slow fps
+                                    open_vid=False,
+                                )
+                            print("done saving videos!")
                                 
 
                 profiling_wrapper.range_pop()  # train update
