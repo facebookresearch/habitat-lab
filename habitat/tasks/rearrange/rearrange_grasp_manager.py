@@ -17,6 +17,10 @@ from habitat_sim.physics import (
 
 
 class RearrangeGraspManager:
+    """
+    Manages the agent grasping onto rigid objects and the links of articulated objects.
+    """
+
     def __init__(self, sim, config):
         self._sim = sim
         self._snapped_obj_id = None
@@ -28,7 +32,7 @@ class RearrangeGraspManager:
     def reconfigure(self):
         for constraint_id in self._snap_constraints:
             self._sim.remove_rigid_constraint(constraint_id)
-        self._snap_constraints = []
+        self._snap_constraints.clear()
 
     def reset(self):
         # Setup the collision groups. UserGroup7 is the held object group, it
@@ -41,7 +45,10 @@ class RearrangeGraspManager:
         self._leave_info = None
 
     def is_violating_hold_constraint(self):
-        # Is the object firmly in the grasp of the robot?
+        """
+        Returns true if the object is too far away from the gripper, meaning
+        the agent violated the hold constraint.
+        """
         ee_pos = self._sim.robot.ee_transform.translation
         if self._snapped_obj_id is not None:
             obj_pos = self._sim.get_translation(self._snapped_obj_id)
@@ -162,7 +169,7 @@ class RearrangeGraspManager:
     def snap_to_obj(self, snap_obj_id: int, force: bool = True):
         """
         :param snap_obj_id: Simulator object index.
-        :force: Will transform the object to be in the robot's grasp, even if
+        :param force: Will transform the object to be in the robot's grasp, even if
             the object is already in the grasped state.
         """
         if snap_obj_id == self._snapped_obj_id:

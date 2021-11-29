@@ -180,12 +180,9 @@ class ObservationBatchingCache:
             and device.type == "cuda"
             and cache.device.type == "cpu"
         ):
-            cache = cache.pin_memory()
-
-        if cache.device.type == "cpu":
             # Pytorch indexing is slow,
             # so convert to numpy
-            cache = cache.numpy()
+            cache = cache.pin_memory().numpy()
 
         self._pool[key] = cache
         return cache

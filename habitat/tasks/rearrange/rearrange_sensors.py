@@ -196,7 +196,7 @@ class JointSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.robot.arm_joint_pos
-        return np.array(joints_pos).astype(np.float32)
+        return np.array(joints_pos, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -221,7 +221,7 @@ class JointVelSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.robot.arm_velocity
-        return np.array(joints_pos).astype(np.float32)
+        return np.array(joints_pos, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -284,7 +284,7 @@ class RelativeRestingPositionSensor(Sensor):
 
         relative_desired_resting = task.desired_resting - local_ee_pos
 
-        return np.array(relative_desired_resting).astype(np.float32)
+        return np.array(relative_desired_resting, dtype=np.float32)
 
 
 @registry.register_sensor
