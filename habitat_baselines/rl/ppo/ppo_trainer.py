@@ -900,7 +900,7 @@ class PPOTrainer(BaseRLTrainer):
                     is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
                     if_last_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == num_updates_to_save - 1
 
-                    envs_to_save = [0, 1, 10, 120, 126, 127]
+                    envs_to_save = [0, 1, 10, self.envs.num_envs - 8, self.envs.num_envs - 2, self.envs.num_envs - 1]
 
                     primary_obs_name = "rgba_camera"
 
