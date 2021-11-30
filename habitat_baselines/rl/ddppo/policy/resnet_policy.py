@@ -219,14 +219,6 @@ class PointNavResNetNet(Net):
     ):
         super().__init__()
 
-        policy_obs_space = spaces.Dict(
-            {
-                k: v
-                for k, v in observation_space.spaces.items()
-                if k not in rl_config.BLACKLIST_OBS_KEYS
-            }
-        )
-
         self.discrete_actions = discrete_actions
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
@@ -322,46 +314,6 @@ class PointNavResNetNet(Net):
             )
 
             rnn_input_size += hidden_size
-
-        # Add sensors from rl_config.GYM_OBS_KEYS, which represents
-        # observation keys that will used by the policy; assume they are all
-        # 1D observations (e.g., not images)
-        if rl_config is not None:
-            additional_cls_uuids = [
-                uuid
-                for uuid in rl_config.GYM_OBS_KEYS
-                if uuid in policy_obs_space.spaces
-                and uuid
-                not in [
-                    sensor.cls_uuid
-                    for sensor in [
-                        IntegratedPointGoalGPSAndCompassSensor,
-                        ObjectGoalSensor,
-                        EpisodicGPSSensor,
-                        PointGoalSensor,
-                        HeadingSensor,
-                        ProximitySensor,
-                        EpisodicCompassSensor,
-                        ImageGoalSensor,
-                    ]
-                ]
-            ]
-
-            if additional_cls_uuids:
-                input_size = 0
-                for uuid in additional_cls_uuids:
-                    input_size += policy_obs_space.spaces[uuid].shape[0]
-                self.additional_embedding = nn.Sequential(
-                    nn.Linear(input_size, 256),
-                    nn.ReLU(),
-                    nn.Linear(256, 256),
-                    nn.ReLU(),
-                )
-                rnn_input_size += 256
-
-            self.additional_uuids = additional_cls_uuids
-        else:
-            self.additional_uuids = []
 
         self._hidden_size = hidden_size
 
