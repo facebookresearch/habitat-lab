@@ -231,8 +231,6 @@ class PointNavResNetNet(Net):
     ):
         super().__init__()
 
-        # Observations that are only being used for evaluation can be filtered
-        # out here
         policy_obs_space = spaces.Dict(
             {
                 k: v
@@ -240,7 +238,6 @@ class PointNavResNetNet(Net):
                 if k not in rl_config.BLACKLIST_OBS_KEYS
             }
         )
-        used_observation_keys = []
 
         self.discrete_actions = discrete_actions
         if discrete_actions:
@@ -264,9 +261,6 @@ class PointNavResNetNet(Net):
             )
             self.tgt_embeding = nn.Linear(n_input_goal, 32)
             rnn_input_size += 32
-            used_observation_keys.append(
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            )
 
         if ObjectGoalSensor.cls_uuid in policy_obs_space.spaces:
             self._n_object_categories = (
@@ -277,7 +271,6 @@ class PointNavResNetNet(Net):
                 self._n_object_categories, 32
             )
             rnn_input_size += 32
-            used_observation_keys.append(ObjectGoalSensor.cls_uuid)
 
         if EpisodicGPSSensor.cls_uuid in policy_obs_space.spaces:
             input_gps_dim = policy_obs_space.spaces[
@@ -285,7 +278,6 @@ class PointNavResNetNet(Net):
             ].shape[0]
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(EpisodicGPSSensor.cls_uuid)
 
         if PointGoalSensor.cls_uuid in policy_obs_space.spaces:
             input_pointgoal_dim = policy_obs_space.spaces[
@@ -293,7 +285,6 @@ class PointNavResNetNet(Net):
             ].shape[0]
             self.pointgoal_embedding = nn.Linear(input_pointgoal_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(PointGoalSensor.cls_uuid)
 
         if HeadingSensor.cls_uuid in policy_obs_space.spaces:
             input_heading_dim = (
@@ -302,7 +293,6 @@ class PointNavResNetNet(Net):
             assert input_heading_dim == 2, "Expected heading with 2D rotation."
             self.heading_embedding = nn.Linear(input_heading_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(HeadingSensor.cls_uuid)
 
         if ProximitySensor.cls_uuid in policy_obs_space.spaces:
             input_proximity_dim = policy_obs_space.spaces[
@@ -310,7 +300,6 @@ class PointNavResNetNet(Net):
             ].shape[0]
             self.proximity_embedding = nn.Linear(input_proximity_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(ProximitySensor.cls_uuid)
 
         if EpisodicCompassSensor.cls_uuid in policy_obs_space.spaces:
             assert (
@@ -322,7 +311,6 @@ class PointNavResNetNet(Net):
             input_compass_dim = 2  # cos and sin of the angle
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(EpisodicCompassSensor.cls_uuid)
 
         if ImageGoalSensor.cls_uuid in policy_obs_space.spaces:
             goal_policy_obs_space = spaces.Dict(
@@ -345,7 +333,6 @@ class PointNavResNetNet(Net):
             )
 
             rnn_input_size += hidden_size
-            used_observation_keys.append(ImageGoalSensor.cls_uuid)
 
         # Add sensors from rl_config.GYM_OBS_KEYS, which represents
         # observation keys that will used by the policy; assume they are all
@@ -355,7 +342,20 @@ class PointNavResNetNet(Net):
                 uuid
                 for uuid in rl_config.GYM_OBS_KEYS
                 if uuid in policy_obs_space.spaces
-                and uuid not in used_observation_keys
+                and uuid
+                not in [
+                    sensor.cls_uuid
+                    for sensor in [
+                        IntegratedPointGoalGPSAndCompassSensor,
+                        ObjectGoalSensor,
+                        EpisodicGPSSensor,
+                        PointGoalSensor,
+                        HeadingSensor,
+                        ProximitySensor,
+                        EpisodicCompassSensor,
+                        ImageGoalSensor,
+                    ]
+                ]
             ]
 
             if additional_cls_uuids:
