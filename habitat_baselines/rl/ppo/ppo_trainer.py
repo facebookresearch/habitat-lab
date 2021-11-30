@@ -50,6 +50,7 @@ from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
+    action_array_to_dict,
     action_to_velocity_control,
     batch_obs,
     generate_video,
