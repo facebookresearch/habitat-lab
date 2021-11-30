@@ -31,6 +31,11 @@ Controls:
 Change the grip type:
 - Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
 
+Record and play back trajectories:
+- To record a trajectory add `--save-actions --save-actions-count 200` to
+  record a truncated episode length of 200.
+- By default the trajectories are saved to data/interactive_play_replays/play_actions.txt
+- Play the trajectories back with `--load-actions data/interactive_play_replays/play_actions.txt`
 """
 
 import argparse
@@ -89,7 +94,12 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
         base_action = [0, 0]
-    arm_action = np.zeros(arm_action_space.shape[0])
+
+    if arm_action is None:
+        arm_action = np.zeros(arm_action_space.shape[0])
+        given_arm_action = False
+    else:
+        given_arm_action = True
 
     end_ep = False
     magic_grasp = None
@@ -189,10 +199,18 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         args = {"base_vel": base_action}
     else:
         name = "ARM_ACTION"
-        args = {"arm_action": arm_action, "grip_action": magic_grasp}
+        if given_arm_action:
+            # The grip is also contained in the provided action
+            args = {
+                "arm_action": arm_action[:-1],
+                "grip_action": arm_action[-1],
+            }
+        else:
+            args = {"arm_action": arm_action, "grip_action": magic_grasp}
 
     if end_ep:
         env.reset()
+
     if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
     else:
@@ -221,6 +239,7 @@ def play_env(env, args, config):
     if args.load_actions is not None:
         with open(args.load_actions, "rb") as f:
             use_arm_actions = np.load(f)
+            print("Loaded arm actions")
 
     obs = env.reset()
 
@@ -257,7 +276,6 @@ def play_env(env, args, config):
         if use_arm_actions is not None and i >= len(use_arm_actions):
             break
 
-        # obs, reward, done, info = step_result
         obs = step_result
         info = env.get_metrics()
         reward_key = [k for k in info if "reward" in k]
@@ -295,14 +313,19 @@ def play_env(env, args, config):
         prev_time = curr_time
 
     if args.save_actions:
-        assert len(all_arm_actions) > 200
-        all_arm_actions = np.array(all_arm_actions)[:200]
-        save_dir = "orp/start_data/"
+        if len(all_arm_actions) < args.save_actions_count:
+            raise ValueError(
+                f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
+            )
+        all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
+        save_dir = "data/interactive_play_replays"
         os.makedirs(save_dir, exist_ok=True)
-        save_path = osp.join(save_dir, "bench_ac.txt")
+        save_path = osp.join(save_dir, "play_actions.txt")
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)
-        raise ValueError("done")
+        print(f"Saved actions to {save_path}")
+        pygame.quit()
+        return
 
     if args.save_obs:
         all_obs = np.array(all_obs)
@@ -321,6 +344,16 @@ if __name__ == "__main__":
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument(
+        "--save-actions-count",
+        type=int,
+        default=200,
+        help="""
+            The number of steps the saved action trajectory is clipped to. NOTE
+            the episode must be at least this long or it will terminate with
+            error.
+            """,
+    )
     parser.add_argument("--play-cam-res", type=int, default=512)
     parser.add_argument(
         "--play-task",
