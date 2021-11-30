@@ -161,8 +161,8 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
 @registry.register_task_action
 class ArmAbsPosAction(SimulatorTaskAction):
     """
-    The arm motor targets are directly set to the joint configuration specified
-    by the action.
+    The arm motor targets are directly set to the joint configuration specified by the
+    action.
     """
 
     @property
@@ -271,8 +271,8 @@ class BaseVelAction(SimulatorTaskAction):
         self._sim.robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
-            # Check if in the new robot state the arm collides with anything.
-            # If so we have to revert back to the previous transform
+            # Check if in the new robot state the arm collides with anything. If so
+            # we have to revert back to the previous transform
             self._sim.internal_step(-1)
             colls = self._sim.get_collisions()
             did_coll, _ = rearrange_collision(
