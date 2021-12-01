@@ -230,7 +230,6 @@ class PointNavBaselineNet(Net):
             target_encoding = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ]
-
         elif PointGoalSensor.cls_uuid in observations:
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:
