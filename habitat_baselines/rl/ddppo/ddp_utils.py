@@ -182,6 +182,9 @@ def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
     if not osp.exists(filename):
         return None
 
+    print("error: attempt to load resume state from ", filename)
+    exit(0)
+
     if rank0_only():
         logger.info(f"Loading resume state: {filename}")
 
