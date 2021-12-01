@@ -44,7 +44,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         return spaces.Box(
-            shape=(n_targets, 3),
+            shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -116,15 +116,6 @@ class AbsTargetStartSensor(MultiObjSensor):
     """
 
     cls_uuid: str = "abs_obj_start_sensor"
-
-    def _get_observation_space(self, *args, **kwargs):
-        n_targets = self._task.get_n_targets()
-        return spaces.Box(
-            shape=(n_targets, 3),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
