@@ -34,7 +34,6 @@ from torch import nn as nn
 from habitat import logger
 from habitat.config import Config
 from habitat.core.dataset import Episode
-from habitat.core.spaces import EmptySpace
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
@@ -615,14 +614,10 @@ def get_num_actions(action_space) -> int:
         if isinstance(v, spaces.Dict):
             for v in v.spaces.values():
                 queue.append(v)
-        elif isinstance(v, spaces.Discrete):
-            num_actions += 1
         elif isinstance(v, spaces.Box):
             num_actions += v.shape[0]
-        elif isinstance(v, EmptySpace):
-            num_actions += 1
         else:
-            raise RuntimeError(f"Action type {v} not supported!")
+            num_actions += 1
 
     return num_actions
 
