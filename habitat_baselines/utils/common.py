@@ -26,7 +26,7 @@ from typing import (
 import attr
 import numpy as np
 import torch
-from gym.spaces import Box
+from gym import spaces
 from PIL import Image
 from torch import Size, Tensor
 from torch import nn as nn
@@ -34,6 +34,7 @@ from torch import nn as nn
 from habitat import logger
 from habitat.config import Config
 from habitat.core.dataset import Episode
+from habitat.core.spaces import EmptySpace
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
@@ -477,7 +478,8 @@ def center_crop(
 
 
 def get_image_height_width(
-    img: Union[Box, np.ndarray, torch.Tensor], channels_last: bool = False
+    img: Union[spaces.Box, np.ndarray, torch.Tensor],
+    channels_last: bool = False,
 ) -> Tuple[int, int]:
     if img.shape is None or len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
@@ -490,13 +492,13 @@ def get_image_height_width(
     return h, w
 
 
-def overwrite_gym_box_shape(box: Box, shape) -> Box:
+def overwrite_gym_box_shape(box: spaces.Box, shape) -> spaces.Box:
     if box.shape == shape:
         return box
     shape = list(shape) + list(box.shape[len(shape) :])
     low = box.low if np.isscalar(box.low) else np.min(box.low)
     high = box.high if np.isscalar(box.high) else np.max(box.high)
-    return Box(low=low, high=high, shape=shape, dtype=box.dtype)
+    return spaces.Box(low=low, high=high, shape=shape, dtype=box.dtype)
 
 
 def get_scene_episode_dict(episodes: List[Episode]) -> Dict:
@@ -593,10 +595,13 @@ def action_to_velocity_control(
 
 
 def is_continuous_action_space(action_space) -> bool:
+    if not isinstance(action_space, spaces.Dict):
+        return False
+
     for v in action_space.spaces.values():
-        if v.__class__.__name__ in ["Dict", "ActionSpace"]:
+        if isinstance(v, spaces.Dict):
             return is_continuous_action_space(v)
-        elif v.__class__.__name__ == "Box":
+        elif isinstance(v, spaces.Box):
             return True
 
     return False
@@ -606,17 +611,18 @@ def get_num_actions(action_space) -> int:
     queue = [action_space]
     num_actions = 0
     while queue:
-        action_space_ = queue.pop()
-        action_type = action_space_.__class__.__name__
-        if action_type in ["Dict", "ActionSpace"]:
-            for v in action_space_.spaces.values():
+        v = queue.pop()
+        if isinstance(v, spaces.Dict):
+            for v in v.spaces.values():
                 queue.append(v)
-        elif action_type == "Discrete":
+        elif isinstance(v, spaces.Discrete):
             num_actions += 1
-        elif action_type == "Box":
-            num_actions += action_space_.shape[0]
+        elif isinstance(v, spaces.Box):
+            num_actions += v.shape[0]
+        elif isinstance(v, EmptySpace):
+            num_actions += 1
         else:
-            raise RuntimeError(f"Action type {action_type} not supported!")
+            raise RuntimeError(f"Action type {v} not supported!")
 
     return num_actions
 
