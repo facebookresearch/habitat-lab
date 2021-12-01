@@ -6,15 +6,15 @@ NUM_CHECKPOINTS: 0
 BATCHED_ENV: True
 STUB_BATCH_SIMULATOR: False
 SAVE_VIDEOS_INTERVAL: 500
-NUM_UPDATES: 41
-NUM_ENVIRONMENTS: 512
+NUM_UPDATES: 61
+NUM_ENVIRONMENTS: 256
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
     SENSORS: ['HEAD_RGB_SENSOR']
   HEAD_RGB_SENSOR:
-    WIDTH: 64
-    HEIGHT: 64
+    WIDTH: 128
+    HEIGHT: 128
 RL:
   PPO:
     ppo_epoch: 1
@@ -24,6 +24,7 @@ RL:
     use_linear_lr_decay: False
     max_grad_norm: 0.5
   POLICY:
+    name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
   DDPPO:
     backbone: "se_resnet9_fixup"
