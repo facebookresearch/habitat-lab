@@ -132,8 +132,9 @@ class PointNavBaselinePolicy(Policy):
     def __init__(
         self,
         observation_space: spaces.Dict,
-        action_space,
+        dim_actions,
         hidden_size: int = 512,
+        policy_config: Config = None,
         **kwargs,
     ):
         super().__init__(
@@ -142,17 +143,29 @@ class PointNavBaselinePolicy(Policy):
                 hidden_size=hidden_size,
                 **kwargs,
             ),
-            action_space.n,
+            dim_actions,
+            policy_config=policy_config
         )
 
     @classmethod
     def from_config(
         cls, config: Config, observation_space: spaces.Dict, action_space
     ):
+
+        policy_config = config.RL.POLICY
+        discrete_actions = (
+            policy_config.action_distribution_type == "categorical"
+        )
+        if not discrete_actions:
+            assert(len(action_space.shape) == 1)
+
+        dim_actions = action_space.n if discrete_actions else action_space.shape[0]
+
         return cls(
             observation_space=observation_space,
-            action_space=action_space,
+            dim_actions=dim_actions,
             hidden_size=config.RL.PPO.hidden_size,
+            policy_config=policy_config
         )
 
 
@@ -208,6 +221,8 @@ class PointNavBaselineNet(Net):
                 goal_observation_space, hidden_size
             )
             self._n_input_goal = hidden_size
+        else:
+            self._n_input_goal = 0
 
         self._hidden_size = hidden_size
 
@@ -243,12 +258,14 @@ class PointNavBaselineNet(Net):
         elif ImageGoalSensor.cls_uuid in observations:
             image_goal = observations[ImageGoalSensor.cls_uuid]
             target_encoding = self.goal_visual_encoder({"rgb": image_goal})
-
-        x = [target_encoding]
+        else:
+            target_encoding = None
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
-            x = [perception_embed] + x
+            x = [perception_embed]
+            if target_encoding:
+                x += [target_encoding]
 
         x_out = torch.cat(x, dim=1)
         x_out, rnn_hidden_states = self.state_encoder(
