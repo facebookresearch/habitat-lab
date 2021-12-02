@@ -941,13 +941,14 @@ class PPOTrainer(BaseRLTrainer):
                         else:
                             video_folder = self.config.VIDEO_DIR
                             print("saving videos to ", video_folder)
+                            rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
                             for env_index in envs_to_save:
                                 env_saved_observations = self.debug_video_observations[env_index]
                                 vut.make_video(
                                     env_saved_observations,
                                     primary_obs_name,
                                     "color",
-                                    video_folder + "/update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
+                                    video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
                                     fps=10,  # very slow fps
                                     open_vid=False,
                                 )
