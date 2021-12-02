@@ -50,10 +50,11 @@ class RearrangeGraspManager:
         the agent violated the hold constraint.
         """
         ee_pos = self._sim.robot.ee_transform.translation
-        if self._snapped_obj_id is not None:
-            obj_pos = self._sim.get_translation(self._snapped_obj_id)
-            if np.linalg.norm(ee_pos - obj_pos) >= self._config.HOLD_THRESH:
-                return True
+        if self._snapped_obj_id is not None and (
+            np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
+            >= self._config.HOLD_THRESH
+        ):
+            return True
         if self._snapped_marker_id is not None:
             marker = self._sim.get_marker(self._snapped_marker_id)
             if (
@@ -101,7 +102,7 @@ class RearrangeGraspManager:
                     )
                 else:
                     self._leave_info = (
-                        self._sim.get_translation(self._snapped_obj_id),
+                        self.snap_rigid_obj.translation,
                         max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
                         self._snapped_obj_id,
                     )
@@ -184,9 +185,7 @@ class RearrangeGraspManager:
 
         if force:
             # Set the transformation to be in the robot's hand already.
-            self._sim.set_transformation(
-                self._sim.robot.ee_transform, snap_obj_id
-            )
+            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
 
         self._snapped_obj_id = snap_obj_id
 

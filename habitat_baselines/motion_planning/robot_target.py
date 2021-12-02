@@ -30,4 +30,4 @@ class ObjectGraspTarget:
 
     # Bounding Box
     bb: mn.Range3D
-    translation: mn.Matrix4
+    transformation: mn.Matrix4

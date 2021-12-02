@@ -385,7 +385,10 @@ class RearrangeSim(HabitatSim):
         # automatically be set to 0 in `set_state`.
         robot_T = self.robot.sim_obj.transformation
         art_T = [ao.transformation for ao in self.art_objs]
-        static_T = [self.get_transformation(i) for i in self.scene_obj_ids]
+        rom = self.get_rigid_object_manager()
+        static_T = [
+            rom.get_object_by_id(i).transformation for i in self.scene_obj_ids
+        ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
         robot_js = self.robot.sim_obj.joint_positions
 
@@ -406,6 +409,7 @@ class RearrangeSim(HabitatSim):
           This should probably be True by default, but I am not sure the effect
           it will have.
         """
+        rom = self.get_rigid_object_manager()
         if state["robot_T"] is not None:
             self.robot.sim_obj.transformation = state["robot_T"]
             n_dof = len(self.robot.sim_obj.joint_forces)
@@ -419,6 +423,11 @@ class RearrangeSim(HabitatSim):
             ao.transformation = T
 
         for T, i in zip(state["static_T"], self.scene_obj_ids):
+            # reset object transform
+            obj = rom.get_object_by_id(i)
+            obj.transformation = T
+            obj.linear_velocity = mn.Vector3()
+            obj.angular_velocity = mn.Vector3()
             self.reset_obj_T(i, T)
 
         for p, ao in zip(state["art_pos"], self.art_objs):
@@ -430,16 +439,6 @@ class RearrangeSim(HabitatSim):
                 self.grasp_mgr.snap_to_obj(state["obj_hold"])
             else:
                 self.grasp_mgr.desnap(True)
-
-    def reset_obj_T(self, i, T):
-        self.set_transformation(T, i)
-        self.set_linear_velocity(mn.Vector3(0, 0, 0), i)
-        self.set_angular_velocity(mn.Vector3(0, 0, 0), i)
-
-    def settle_sim(self, seconds):
-        steps = int(seconds * self.ctrl_freq)
-        for _ in range(steps):
-            self.step_world(-1)
 
     def step(self, action):
         rom = self.get_rigid_object_manager()
@@ -457,9 +456,10 @@ class RearrangeSim(HabitatSim):
         for name, viz_id in self.viz_ids.items():
             if viz_id is None:
                 continue
-
-            before_pos = self.get_translation(viz_id)
-            self.remove_object(viz_id)
+            rom = self.get_rigid_object_manager()
+            viz_obj = rom.get_object_by_id(viz_id)
+            before_pos = viz_obj.translation
+            rom.remove_object_by_id(viz_id)
             add_back_viz_objs[name] = before_pos
         self.viz_ids = defaultdict(lambda: None)
         self.grasp_mgr.update()
@@ -509,21 +509,24 @@ class RearrangeSim(HabitatSim):
     def visualize_position(self, position, viz_id=None, r=0.05):
         """Adds the sphere object to the specified position for visualization purpose."""
 
+        rom = self.get_object_template_manager()
+        viz_obj = None
         if viz_id is None:
             if r not in self._viz_templates:
-                obj_mgr = self.get_object_template_manager()
-                template = obj_mgr.get_template_by_handle(
-                    obj_mgr.get_template_handles("sphere")[0]
+                template = rom.get_template_by_handle(
+                    rom.get_template_handles("sphere")[0]
                 )
                 template.scale = mn.Vector3(r, r, r)
-                self._viz_templates[r] = obj_mgr.register_template(
+                self._viz_templates[r] = rom.register_template(
                     template, "ball_new_viz"
                 )
-            viz_id = self.add_object(self._viz_templates[r])
-            make_render_only(viz_id, self)
-        self.set_translation(mn.Vector3(*position), viz_id)
+            viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
+            make_render_only(viz_obj, self)
+        else:
+            viz_obj = rom.get_object_by_id(viz_id)
 
-        return viz_id
+        viz_obj.translation = mn.Vector3(*position)
+        return viz_obj.object_id
 
     def draw_obs(self):
         """Synchronously gets the observation at the current step"""
@@ -566,6 +569,10 @@ class RearrangeSim(HabitatSim):
         return np.array(self.target_start_pos)
 
     def get_scene_pos(self):
+        rom = self.get_rigid_object_manager()
         return np.array(
-            [self.get_translation(idx) for idx in self.scene_obj_ids]
+            [
+                rom.get_object_by_id(idx).translation
+                for idx in self.scene_obj_ids
+            ]
         )

@@ -136,7 +136,7 @@ class GraspGenerator:
     def _bounding_sphere_sample(
         self, obj_idx: int, obj_dat: ObjectGraspTarget
     ) -> RobotTarget:
-        obj_pos = np.array(obj_dat.translation.translation)
+        obj_pos = np.array(obj_dat.transformation.translation)
 
         inv_robo_T = self._mp_sim.get_robot_transform().inverted()
 
@@ -241,13 +241,14 @@ class GraspGenerator:
 
     def _clean_grasp_debug_points(self):
         sim = self._mp_sim._sim
+        rom = sim.get_rigid_object_manager()
         if self._should_render:
             # Cleanup any debug render objects.
             if sim.viz_ids["ee"] is not None:
-                sim.remove_object(sim.viz_ids["ee"])
+                rom.remove_object_by_id(sim.viz_ids["ee"])
             if sim.viz_ids["obj"] is not None:
-                sim.remove_object(sim.viz_ids["obj"])
-                sim.remove_object(sim.viz_ids["grasp"])
+                rom.remove_object_by_id(sim.viz_ids["obj"])
+                rom.remove_object_by_id(sim.viz_ids["grasp"])
 
             sim.viz_ids["obj"] = None
             sim.viz_ids["grasp"] = None

@@ -298,10 +298,11 @@ class ArmTargModule(ParameterizedAgent):
     def _clean_viz_points(self):
         if not self._config.VERBOSE:
             return
+        rom = self._sim.get_rigid_object_manager()
         for viz_point_name in self._viz_points:
             if self._sim.viz_ids[viz_point_name] is None:
                 continue
-            self._sim.remove_object(self._sim.viz_ids[viz_point_name])
+            rom.remove_object_by_id(self._sim.viz_ids[viz_point_name])
             del self._sim.viz_ids[viz_point_name]
         self._viz_points = []
 
@@ -408,10 +409,11 @@ class SpaManipPick(ArmTargModule):
     def _on_done(self):
         super()._on_done()
         cur_ee = self._sim.robot.ee_transform.translation
-        obj_pos = np.array(self._sim.get_translation(self._targ_obj_idx))
+        rom = self._sim.get_rigid_object_manager()
+        obj = rom.get_object_by_id(self._targ_obj_idx)
 
         ee_dist = np.linalg.norm(self._robo_targ.ee_target_pos - cur_ee)
-        ee_dist_to_obj = np.linalg.norm(obj_pos - cur_ee)
+        ee_dist_to_obj = np.linalg.norm(obj.translation - cur_ee)
         if (
             ee_dist_to_obj < self._grasp_thresh
             and ee_dist < self._config.EXEC_EE_THRESH
