@@ -49,6 +49,7 @@ class BatchedEnv:
         self._auto_reset_done = auto_reset_done
         self._config = config
 
+        SIMULATOR_GPU_ID = self._config.SIMULATOR_GPU_ID
         agent_0_name = config.SIMULATOR.AGENTS[0]
         agent_0_config = getattr(config.SIMULATOR, agent_0_name)
         sensor_0_name = agent_0_config.SENSORS[0]
@@ -58,6 +59,8 @@ class BatchedEnv:
         if not config.STUB_BATCH_SIMULATOR:
             from habitat_sim._ext.habitat_sim_bindings import BatchedSimulator, BatchedSimulatorConfig
             bsim_config = BatchedSimulatorConfig()
+            bsim_config.gpu_id = SIMULATOR_GPU_ID
+            print("bsim_config.gpu_id: ", bsim_config.gpu_id)
             bsim_config.num_envs = self._num_envs
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
@@ -68,7 +71,6 @@ class BatchedEnv:
 
         double_buffered = False
         buffer_index = 0
-        SIMULATOR_GPU_ID = 0
         
         observations = OrderedDict()
         if self._bsim:
