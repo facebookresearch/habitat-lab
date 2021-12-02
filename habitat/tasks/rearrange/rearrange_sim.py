@@ -428,7 +428,6 @@ class RearrangeSim(HabitatSim):
             obj.transformation = T
             obj.linear_velocity = mn.Vector3()
             obj.angular_velocity = mn.Vector3()
-            self.reset_obj_T(i, T)
 
         for p, ao in zip(state["art_pos"], self.art_objs):
             ao.joint_positions = p
