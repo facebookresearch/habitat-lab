@@ -22,16 +22,17 @@ from habitat.datasets.utils import check_and_gen_physics_config
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
-    ao_states: Dict[
-        str, Dict[int, float]
-    ]  # articulated object states: {instance_handle -> {link, state}}
-    rigid_objs: List[
-        Tuple[str, np.array]
-    ]  # list of objects, each with (handle, transform)
-    targets: Dict[str, np.array]  # {instance_name -> target_transform}
-    markers: Dict[
-        str, Tuple[str, Tuple]
-    ] = {}  # {marker name -> (type, (params))}
+    r"""Specifies additional objects, targets, markers, and ArticulatedObject states for a particular instance of an object rearrangement task.
+
+    :property ao_states: Lists modified ArticulatedObject states for the scene: {instance_handle -> {link, state}}
+    :property rigid_objs: A list of objects to add to the scene, each with: (handle, transform)
+    :property targets: Maps an object instance to a new target location for placement in the task. {instance_name -> target_transform}
+    :property markers: Indicate points of interest in the scene such as grasp points like handles. {marker name -> (type, (params))}
+    """
+    ao_states: Dict[str, Dict[int, float]]
+    rigid_objs: List[Tuple[str, np.array]]
+    targets: Dict[str, np.array]
+    markers: Dict[str, Tuple[str, Tuple]] = {}
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")

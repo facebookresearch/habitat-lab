@@ -21,13 +21,17 @@ from habitat.datasets.rearrange.rearrange_dataset import (
     RearrangeDatasetV0,
     RearrangeEpisode,
 )
+from habitat.datasets.rearrange.receptacle import (
+    find_receptacles,
+    get_all_scenedataset_receptacles,
+)
 
 
 class RearrangeEpisodeGenerator:
     def __enter__(self) -> "RearrangeEpisodeGenerator":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self.sim != None:
             self.sim.close(destroy=True)
             del self.sim
@@ -346,7 +350,7 @@ class RearrangeEpisodeGenerator:
         Generate a wireframe bounding box for each receptacle in the scene, aim the camera at it and record 1 observation.
         """
         logger.info("visualize_scene_receptacles processing")
-        receptacles = sutils.find_receptacles(self.sim)
+        receptacles = find_receptacles(self.sim)
         for receptacle in receptacles:
             logger.info("receptacle processing")
             attachment_scene_node = None
@@ -578,6 +582,9 @@ class RearrangeEpisodeGenerator:
         backend_cfg.scene_dataset_config_file = dataset_path
         backend_cfg.scene_id = scene_name
         backend_cfg.enable_physics = True
+        if not self._render_debug_obs:
+            # don't bother loading textures if not intending to visualize the generation process
+            backend_cfg.create_renderer = False
 
         sensor_specs = []
         for sensor_uuid, sensor_params in sensors.items():
@@ -928,7 +935,7 @@ if __name__ == "__main__":
         if args.list:
             # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
             mm = ep_gen.sim.metadata_mediator
-            receptacles = sutils.get_all_scenedataset_receptacles(ep_gen.sim)
+            receptacles = get_all_scenedataset_receptacles(ep_gen.sim)
             logger.info("==================================")
             logger.info("Listing SceneDataset Summary")
             logger.info("==================================")

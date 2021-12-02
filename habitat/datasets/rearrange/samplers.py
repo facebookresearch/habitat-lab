@@ -14,6 +14,7 @@ import magnum as mn
 import habitat.datasets.rearrange.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.receptacle import Receptacle, find_receptacles
 
 
 class SceneSampler(ABC):
@@ -78,10 +79,10 @@ class ObjectSampler:
         self.object_set = object_set
         self.receptacle_sets = receptacle_sets
         self.receptacle_instances: Optional[
-            List[sutils.Receptacle]
+            List[Receptacle]
         ] = None  # all receptacles in the scene
         self.receptacle_candidates: Optional[
-            List[sutils.Receptacle]
+            List[Receptacle]
         ] = None  # the specific receptacle instances relevant to this sampler
         assert len(self.object_set) > 0
         assert len(self.receptacle_sets) > 0
@@ -110,13 +111,13 @@ class ObjectSampler:
         sim: habitat_sim.Simulator,
         cull_tilted_receptacles: bool = True,
         tilt_tolerance: float = 0.9,
-    ) -> sutils.Receptacle:
+    ) -> Receptacle:
         """
         Sample a receptacle from the receptacle_set and return relevant information.
         If cull_tilted_receptacles is True, receptacles are culled for objects with local "down" (-Y), not aligned with gravity (unit dot product compared to tilt_tolerance).
         """
         if self.receptacle_instances is None:
-            self.receptacle_instances = sutils.find_receptacles(sim)
+            self.receptacle_instances = find_receptacles(sim)
 
         if self.receptacle_candidates is None:
             self.receptacle_candidates = []
@@ -201,7 +202,7 @@ class ObjectSampler:
         self,
         sim: habitat_sim.Simulator,
         object_handle: str,
-        receptacle: sutils.Receptacle,
+        receptacle: Receptacle,
         snap_down: bool = False,
         vdb: Optional[sutils.DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
