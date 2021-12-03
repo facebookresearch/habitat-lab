@@ -11,7 +11,7 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.datasets.rearrange.sim_utilities import add_wire_box
+from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 
 
 class Receptacle(ABC):

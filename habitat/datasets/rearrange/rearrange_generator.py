@@ -14,7 +14,7 @@ from tqdm import tqdm
 from yacs.config import CfgNode as CN
 
 import habitat.datasets.rearrange.samplers as samplers
-import habitat.datasets.rearrange.sim_utilities as sutils
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import (
@@ -25,6 +25,8 @@ from habitat.datasets.rearrange.receptacle import (
     find_receptacles,
     get_all_scenedataset_receptacles,
 )
+from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+from habitat.utils.common import cull_string_list_by_substrings
 
 
 class RearrangeEpisodeGenerator:
@@ -47,7 +49,7 @@ class RearrangeEpisodeGenerator:
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.vdb: sutils.DebugVisualizer = (
+        self.vdb: DebugVisualizer = (
             None  # visual debugger initialized with sim
         )
 
@@ -100,7 +102,7 @@ class RearrangeEpisodeGenerator:
                 ), f"cfg.scene_sets - '{scene_set['name']}' '{list_key}' must be a list of strings."
             self._scene_sets[
                 scene_set["name"]
-            ] = sutils.cull_string_list_by_substrings(
+            ] = cull_string_list_by_substrings(
                 self.sim.metadata_mediator.get_scene_handles(),
                 scene_set["included_substrings"],
                 scene_set["excluded_substrings"],
@@ -121,7 +123,7 @@ class RearrangeEpisodeGenerator:
                 ), f"cfg.object_sets - '{object_set['name']}' '{list_key}' must be a list of strings."
             self._obj_sets[
                 object_set["name"]
-            ] = sutils.cull_string_list_by_substrings(
+            ] = cull_string_list_by_substrings(
                 self.sim.get_object_template_manager().get_template_handles(),
                 object_set["included_substrings"],
                 object_set["excluded_substrings"],
@@ -607,7 +609,7 @@ class RearrangeEpisodeGenerator:
         self.sim.agents[0].scene_node.translation = scene_bb.center()
 
         # initialize the debug visualizer
-        self.vdb = sutils.DebugVisualizer(
+        self.vdb = DebugVisualizer(
             self.sim, output_path="rearrange_ep_gen_output/"
         )
 

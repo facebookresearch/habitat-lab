@@ -11,10 +11,11 @@ from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 
-import habitat.datasets.rearrange.sim_utilities as sutils
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.receptacle import Receptacle, find_receptacles
+from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
 class SceneSampler(ABC):
@@ -204,7 +205,7 @@ class ObjectSampler:
         object_handle: str,
         receptacle: Receptacle,
         snap_down: bool = False,
-        vdb: Optional[sutils.DebugVisualizer] = None,
+        vdb: Optional[DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         """
         Attempt to sample a valid placement of the object in/on a receptacle given an object handle and receptacle information.
@@ -296,7 +297,7 @@ class ObjectSampler:
         self,
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
-        vdb: Optional[sutils.DebugVisualizer] = None,
+        vdb: Optional[DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
         object_handle = self.sample_object()
@@ -315,7 +316,7 @@ class ObjectSampler:
         self,
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
-        vdb: Optional[sutils.DebugVisualizer] = None,
+        vdb: Optional[DebugVisualizer] = None,
     ) -> List[habitat_sim.physics.ManagedRigidObject]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
@@ -389,7 +390,7 @@ class ObjectTargetSampler(ObjectSampler):
         self,
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
-        vdb: Optional[sutils.DebugVisualizer] = None,
+        vdb: Optional[DebugVisualizer] = None,
     ) -> Optional[Dict[str, habitat_sim.physics.ManagedRigidObject]]:
         """
         Overridden sampler maps to instances without replacement.
