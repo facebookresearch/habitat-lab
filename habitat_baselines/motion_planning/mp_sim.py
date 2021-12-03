@@ -181,7 +181,6 @@ class HabMpSim(MpSim):
         return sphere_id
 
     def remove_object(self, obj_id):
-
         self._sim.get_rigid_object_manager().remove_object_by_id(obj_id)
 
     def set_targ_obj_idx(self, targ_obj_idx):

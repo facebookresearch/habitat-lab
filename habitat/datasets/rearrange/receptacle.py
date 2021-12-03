@@ -9,9 +9,9 @@ from typing import Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
-from sim_utilities import add_wire_box
 
 import habitat_sim
+from habitat.datasets.rearrange.sim_utilities import add_wire_box
 
 
 class Receptacle(ABC):
