@@ -353,43 +353,23 @@ class RearrangeEpisodeGenerator:
         receptacles = find_receptacles(self.sim)
         for receptacle in receptacles:
             logger.info("receptacle processing")
-            attachment_scene_node = None
-            if receptacle.is_parent_object_articulated:
-                attachment_scene_node = (
-                    self.sim.get_articulated_object_manager()
-                    .get_object_by_handle(receptacle.parent_object_handle)
-                    .get_link_scene_node(receptacle.parent_link)
-                    .create_child()
-                )
-            elif receptacle.parent_object_handle is not None:
-                # attach to the 1st visual scene node so any COM shift is automatically applied
-                attachment_scene_node = (
-                    self.sim.get_rigid_object_manager()
-                    .get_object_by_handle(receptacle.parent_object_handle)
-                    .visual_scene_nodes[1]
-                    .create_child()
-                )
-            box_obj = sutils.add_wire_box(
-                self.sim,
-                receptacle.bounds.size() / 2.0,
-                receptacle.bounds.center(),
-                attach_to=attachment_scene_node,
-            )
-            # TODO: enable rotation for object local receptacles
-
-            # handle local frame and rotation for global receptacles
-            if receptacle.parent_object_handle is None:
-                box_obj.transformation = receptacle.get_global_transform(
-                    self.sim
-                ).__matmul__(box_obj.transformation)
+            viz_objects = receptacle.add_receptacle_visualization(self.sim)
 
             # sample points in the receptacles to display
             # for sample in range(25):
             #     sample_point = receptacle.sample_uniform_global(self.sim, 1.0)
             #     sutils.add_viz_sphere(self.sim, 0.025, sample_point)
 
-            self.vdb.look_at(box_obj.root_scene_node.absolute_translation)
-            self.vdb.get_observation()
+            if viz_objects:
+                # point the camera at the 1st viz_object for the Receptacle
+                self.vdb.look_at(
+                    viz_objects[0].root_scene_node.absolute_translation
+                )
+                self.vdb.get_observation()
+            else:
+                logger.warning(
+                    f"visualize_scene_receptacles: no visualization object generated for Receptacle '{receptacle.name}'."
+                )
 
     def generate_episodes(
         self, num_episodes: int = 1, verbose: bool = False

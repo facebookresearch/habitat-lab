@@ -4,33 +4,38 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
+from sim_utilities import add_wire_box
 
 import habitat_sim
 
 
-class Receptacle:
+class Receptacle(ABC):
     """
-    Stores parameters necessary to define an AABB Receptacle for object sampling.
+    Defines a volume or surface for sampling object placements within a scene.
+    Receptacles can be attached to rigid and articulated objects or defined in the global space of a stage or scene.
+    Receptacle metadata should be defined in the SceneDataset in object_config.json, ao_config.json, and stage_config.json, and scene_config.json files or added programmatically to associated Attributes objects.
+    To define a Receptacle within a JSON metadata file, add a new subgroup with a key beginning with "receptacle_" to the "user_defined" JSON subgroup. See ReplicaCAD v1.2+ for examples.
     """
 
     def __init__(
         self,
         name: str,
-        bounds: mn.Range3D,
-        rotation: Optional[mn.Quaternion] = None,
-        up: Optional[
-            mn.Vector3
-        ] = None,  # used for culling, optional in config
         parent_object_handle: str = None,
-        is_parent_object_articulated: bool = False,
-        parent_link: int = -1,  # -1 is base
-    ) -> None:
+        parent_link: Optional[int] = None,
+        up: Optional[mn.Vector3] = None,
+    ):
+        """
+        :property name: The name of the Receptacle. Should be unique and descriptive for any one object.
+        :property parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
+        :property parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :property up: The "up" direction of the receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        """
         self.name = name
-        self.bounds = bounds
         self.up = (
             up if up is not None else mn.Vector3.y_axis(1.0)
         )  # default local Y up
@@ -40,8 +45,75 @@ class Receptacle:
         ), "The 'up' vector must be aligned with a primary axis for an AABB."
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
-        self.is_parent_object_articulated = is_parent_object_articulated
         self.parent_link = parent_link
+
+    @property
+    def is_parent_object_articulated(self):
+        """
+        Convenience query for articulated vs. rigid object check.
+        """
+        return self.parent_link is not None
+
+    @abstractmethod
+    def sample_uniform_local(
+        self, sample_region_scale: float = 1.0
+    ) -> mn.Vector3:
+        """
+        Sample a uniform random point within Receptacle in local space.
+
+        :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
+        """
+
+    @abstractmethod
+    def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        """
+        Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
+        """
+
+    def sample_uniform_global(
+        self, sim: habitat_sim.Simulator, sample_region_scale: float
+    ) -> mn.Vector3:
+        """
+        Sample a uniform random point in the local Receptacle volume and then transform it into global space.
+
+        :param sample_region_scale: defines a XZ scaling of the sample region around its center.
+        """
+        local_sample = self.sample_uniform_local(sample_region_scale)
+        return self.get_global_transform(sim).transform_point(local_sample)
+
+    def add_receptacle_visualization(
+        self, sim: habitat_sim.Simulator
+    ) -> List[habitat_sim.physics.ManagedRigidObject]:
+        """
+        Add one or more visualization objects to the simulation to represent the Receptacle. Return and forget the added objects for external management.
+        """
+        return []
+
+
+class AABBReceptacle(Receptacle):
+    """
+    Defines an AABB Receptacle volume above a surface for sampling object placements within a scene.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        bounds: mn.Range3D,
+        parent_object_handle: str = None,
+        parent_link: Optional[int] = None,
+        up: Optional[mn.Vector3] = None,
+        rotation: Optional[mn.Quaternion] = None,
+    ) -> None:
+        """
+        :property name: The name of the Receptacle. Should be unique and descriptive for any one object.
+        :property bounds: The AABB of the Receptacle.
+        :property up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :property parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
+        :property parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :property rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
+        """
+        super().__init__(name, parent_object_handle, parent_link, up)
+        self.bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
 
     def sample_uniform_local(
@@ -65,7 +137,7 @@ class Receptacle:
 
     def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
         """
-        Isolates boilerplate necessary to extract receptacle global transform from ROs and AOs.
+        Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
         """
         if self.parent_object_handle is None:
             # this is a global stage receptacle
@@ -109,20 +181,50 @@ class Receptacle:
                 self.parent_link
             ).absolute_transformation()
 
-    def sample_uniform_global(
-        self, sim: habitat_sim.Simulator, sample_region_ratio: float
-    ) -> mn.Vector3:
+    def add_receptacle_visualization(
+        self, sim: habitat_sim.Simulator
+    ) -> List[habitat_sim.physics.ManagedRigidObject]:
         """
-        Sample a uniform random point in the local AABB and then transform it into global space.
+        Add a wireframe box object to the simulation to represent the AABBReceptacle and return it for external management.
         """
-        local_sample = self.sample_uniform_local(sample_region_ratio)
-        return self.get_global_transform(sim).transform_point(local_sample)
+        attachment_scene_node = None
+        if self.is_parent_object_articulated:
+            attachment_scene_node = (
+                sim.get_articulated_object_manager()
+                .get_object_by_handle(self.parent_object_handle)
+                .get_link_scene_node(self.parent_link)
+                .create_child()
+            )
+        elif self.parent_object_handle is not None:
+            # attach to the 1st visual scene node so any COM shift is automatically applied
+            attachment_scene_node = (
+                sim.get_rigid_object_manager()
+                .get_object_by_handle(self.parent_object_handle)
+                .visual_scene_nodes[1]
+                .create_child()
+            )
+        box_obj = add_wire_box(
+            sim,
+            self.bounds.size() / 2.0,
+            self.bounds.center(),
+            attach_to=attachment_scene_node,
+        )
+        # TODO: enable rotation for object local receptacles
+
+        # handle local frame and rotation for global receptacles
+        if self.parent_object_handle is None:
+            box_obj.transformation = self.get_global_transform(sim).__matmul__(
+                box_obj.transformation
+            )
+        return [box_obj]
 
 
 def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     """
-    Scrapes the active SceneDataset from a Simulator for all receptacles defined in rigid and articulated object templates.
-    TODO: Note this will not include scene-specific overwrites, only receptacles included in object_config.json and ao_config.json files.
+    Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
+    Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
+
+    Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
     """
     # cache the rigid and articulated receptacles seperately
     receptacles: Dict[str, Dict[str, List[str]]] = {
@@ -165,128 +267,129 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     return receptacles
 
 
-def find_receptacles(sim) -> List[Receptacle]:
+def parse_receptacles_from_user_config(
+    user_subconfig: habitat_sim._ext.habitat_sim_bindings.Configuration,
+    parent_object_handle: Optional[str] = None,
+    valid_link_names: Optional[List[str]] = None,
+) -> List[Union[Receptacle, AABBReceptacle]]:
     """
-    Return a list of all receptacles scraped from the scene's currently instanced objects.
+    Parse receptacle metadata from the provided user subconfig object.
+
+    :property user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
+    :property parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
+    :property valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
+
+    Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
-    # TODO: Receptacles should be screened if the orientation will not support placement.
+    receptacles: List[Union[Receptacle, AABBReceptacle]] = []
+
+    # search the generic user subconfig metadata looking for receptacles
+    for sub_config_key in user_subconfig.get_subconfig_keys():
+        if sub_config_key.startswith("receptacle_"):
+            sub_config = user_subconfig.get_subconfig(sub_config_key)
+            # this is a receptacle, parse it
+            assert sub_config.has_value("position")
+            assert sub_config.has_value("scale")
+            up = (
+                None
+                if not sub_config.has_value("up")
+                else sub_config.get("up")
+            )
+
+            receptacle_name = (
+                sub_config.get("name")
+                if sub_config.has_value("name")
+                else sub_config_key
+            )
+
+            # optional rotation for global receptacles, defaults to identity
+            rotation = (
+                mn.Quaternion()
+                if not sub_config.has_value("rotation")
+                else sub_config.get("rotation")
+            )
+
+            # setup parent specific metadata for ArticulatedObjects
+            parent_link_ix = None
+            if valid_link_names is not None:
+                assert sub_config.has_value(
+                    "parent_link"
+                ), "ArticulatedObject Receptacles must define a parent link name."
+                parent_link_name = sub_config.get("parent_link")
+                # search for a matching link
+                for link_ix, link_name in enumerate(valid_link_names):
+                    if link_name == parent_link_name:
+                        parent_link_ix = (
+                            link_ix - 1
+                        )  # starting from -1 (base link)
+                        break
+                assert (
+                    parent_link_ix is not None
+                ), f"('parent_link' = '{parent_link_name}') in Receptacle configuration does not match any provided link names: {valid_link_names}."
+            else:
+                assert not sub_config.has_value(
+                    "parent_link"
+                ), "ArticulatedObject parent link name defined in config, but no valid_link_names provided. Mistake?"
+
+            # TODO: adding more receptacle types will require additional logic here
+            receptacles.append(
+                AABBReceptacle(
+                    name=receptacle_name,
+                    bounds=mn.Range3D.from_center(
+                        sub_config.get("position"),
+                        sub_config.get("scale"),
+                    ),
+                    rotation=rotation,
+                    up=up,
+                    parent_object_handle=parent_object_handle,
+                    parent_link=parent_link_ix,
+                )
+            )
+
+    return receptacles
+
+
+def find_receptacles(
+    sim: habitat_sim.Simulator,
+) -> List[Union[Receptacle, AABBReceptacle]]:
+    """
+    Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
+    """
+
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
 
-    receptacles: List[Receptacle] = []
+    receptacles: List[Union[Receptacle, AABBReceptacle]] = []
 
     # search for global receptacles included with the stage
     stage_config = sim.get_stage_initialization_template()
     if stage_config is not None:
         stage_user_attr = stage_config.get_user_config()
-        for sub_config_key in stage_user_attr.get_subconfig_keys():
-            if sub_config_key.startswith("receptacle_"):
-                sub_config = stage_user_attr.get_subconfig(sub_config_key)
-                # this is a receptacle, parse it
-                assert sub_config.has_value("position")
-                assert sub_config.has_value("scale")
-                up = (
-                    None
-                    if not sub_config.has_value("up")
-                    else sub_config.get("up")
-                )
+        receptacles.extend(parse_receptacles_from_user_config(stage_user_attr))
 
-                receptacle_name = (
-                    sub_config.get("name")
-                    if sub_config.has_value("name")
-                    else sub_config_key
-                )
-                rotation = sub_config.get("rotation")
-
-                receptacles.append(
-                    Receptacle(
-                        name=receptacle_name,
-                        bounds=mn.Range3D.from_center(
-                            sub_config.get("position"),
-                            sub_config.get("scale"),
-                        ),
-                        rotation=rotation,
-                        up=up,
-                    )
-                )
-
-    # rigid objects
+    # rigid object receptacles
     for obj_handle in obj_mgr.get_object_handles():
         obj = obj_mgr.get_object_by_handle(obj_handle)
         user_attr = obj.user_attributes
+        receptacles.extend(
+            parse_receptacles_from_user_config(
+                user_attr, parent_object_handle=obj_handle
+            )
+        )
 
-        for sub_config_key in user_attr.get_subconfig_keys():
-            if sub_config_key.startswith("receptacle_"):
-                sub_config = user_attr.get_subconfig(sub_config_key)
-                # this is a receptacle, parse it
-                assert sub_config.has_value("position")
-                assert sub_config.has_value("scale")
-                up = (
-                    None
-                    if not sub_config.has_value("up")
-                    else sub_config.get("up")
-                )
-
-                receptacle_name = (
-                    sub_config.get("name")
-                    if sub_config.has_value("name")
-                    else sub_config_key
-                )
-                receptacles.append(
-                    Receptacle(
-                        name=receptacle_name,
-                        bounds=mn.Range3D.from_center(
-                            sub_config.get("position"),
-                            sub_config.get("scale"),
-                        ),
-                        up=up,
-                        parent_object_handle=obj_handle,
-                    )
-                )
-
-    # articulated objects #TODO: merge with above
+    # articulated object receptacles
     for obj_handle in ao_mgr.get_object_handles():
         obj = ao_mgr.get_object_by_handle(obj_handle)
         user_attr = obj.user_attributes
-
-        for sub_config_key in user_attr.get_subconfig_keys():
-            if sub_config_key.startswith("receptacle_"):
-                sub_config = user_attr.get_subconfig(sub_config_key)
-                # this is a receptacle, parse it
-                assert sub_config.has_value("position")
-                assert sub_config.has_value("scale")
-                up = (
-                    None
-                    if not sub_config.has_value("up")
-                    else sub_config.get("up")
-                )
-                assert sub_config.has_value("parent_link")
-                receptacle_name = (
-                    sub_config.get("name")
-                    if sub_config.has_value("name")
-                    else sub_config_key
-                )
-                parent_link_name = sub_config.get("parent_link")
-                parent_link_ix = None
-                for link in range(obj.num_links):
-                    if obj.get_link_name(link) == parent_link_name:
-                        parent_link_ix = link
-                        break
-                assert (
-                    parent_link_ix is not None
-                ), f"('parent_link' = '{parent_link_name}') in receptacle configuration does not match any model links."
-                receptacles.append(
-                    Receptacle(
-                        name=receptacle_name,
-                        bounds=mn.Range3D.from_center(
-                            sub_config.get("position") * obj.global_scale,
-                            sub_config.get("scale") * obj.global_scale,
-                        ),
-                        up=up,
-                        parent_object_handle=obj_handle,
-                        is_parent_object_articulated=True,
-                        parent_link=parent_link_ix,
-                    )
-                )
+        receptacles.extend(
+            parse_receptacles_from_user_config(
+                user_attr,
+                parent_object_handle=obj_handle,
+                valid_link_names=[
+                    obj.get_link_name(link)
+                    for link in range(-1, obj.num_links)
+                ],
+            )
+        )
 
     return receptacles
