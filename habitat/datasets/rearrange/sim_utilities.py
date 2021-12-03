@@ -363,7 +363,7 @@ def get_bb_corners(
     obj: habitat_sim.physics.ManagedRigidObject,
 ) -> List[mn.Vector3]:
     """
-    Return a list of object bb corners in object local space.
+    Return a list of object bounding box corners in object local space.
     """
     bb = obj.root_scene_node.cumulative_bb
     return [
@@ -382,7 +382,7 @@ def get_ao_global_bb(
     obj: habitat_sim.physics.ManagedArticulatedObject,
 ) -> mn.Range3D:
     """
-    Compute the cumulative bb of an ao by merging all link bbs.
+    Compute the cumulative bounding box of an ArticulatedObject by merging all link bounding boxes.
     """
     cumulative_global_bb = mn.Range3D()
     for link_ix in range(-1, obj.num_links):
@@ -399,12 +399,19 @@ def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
+    check_all_corners: bool = False,
 ) -> Dict[str, Any]:
     """
-    Pre-screen a potential placement by casting rays in gravity direction from each bb corner checking for interferring objects below.
+    Pre-screen a potential placement by casting rays in the gravity direction from the object center of mass (and optionally each corner of its bounding box) checking for interferring objects below.
+
+    :param sim: The Simulator instance.
+    :param obj: The RigidObject instance.
+    :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection.
+    :param check_all_corners: Optionally cast rays from all bounding box corners instead of only casting a ray from the center of mass.
     """
     if support_obj_ids is None:
-        support_obj_ids = [-1]  # default ground
+        # set default support surface to stage/ground mesh
+        support_obj_ids = [-1]
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
@@ -429,7 +436,7 @@ def bb_ray_prescreen(
             lowest_key_point = world_point
             lowest_key_point_height = world_point_height
         # cast a ray in gravity direction
-        if ix == 0:
+        if ix == 0 or check_all_corners:
             ray = habitat_sim.geo.Ray(world_point, gravity_dir)
             raycast_results.append(sim.cast_ray(ray))
             # classify any obstructions before hitting the support surface
@@ -488,14 +495,25 @@ def snap_down(
     vdb: Optional[DebugVisualizer] = None,
 ) -> bool:
     """
-    Project an object in gravity direction onto the surface below it and then correct for penetration given a target supporting surface or the ground.
-    Optionally provide a DebugVisualizer (vdb)
-    Returns boolean success. If successful, the object state is updated to the snapped location.
+    Attempt to project an object in the gravity direction onto the surface below it.
+
+    :param sim: The Simulator instance.
+    :param obj: The RigidObject instance.
+    :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (-1).
+    :param vdb: Optionally provide a DebugVisualizer (vdb) to render debug images of each object's computed snap position before collision culling.
+
+    Reject invalid placements by checking for penetration with other existing objects.
+    Returns boolean success.
+    If placement is successful, the object state is updated to the snapped location.
+    If placement is rejected, object position is not modified and False is returned.
+
+    To use this utility, generate an initial placement for any object above any of the designated support surfaces and call this function to attempt to snap it onto the nearest surface in the gravity direction.
     """
     cached_position = obj.translation
 
     if support_obj_ids is None:
-        support_obj_ids = [-1]  # default ground
+        # set default support surface to stage/ground mesh
+        support_obj_ids = [-1]
 
     bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj_ids)
 
@@ -533,7 +551,10 @@ def snap_down(
         return False
 
 
-def get_all_object_ids(sim):
+def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
+    """
+    Generate a dict mapping all active object ids to a descriptive string containing the object instance handle and, for ArticulatedLinks, the link name.
+    """
     rom = sim.get_rigid_object_manager()
     aom = sim.get_articulated_object_manager()
 
@@ -558,9 +579,9 @@ def cull_string_list_by_substrings(
     full_list: List[str],
     included_substrings: List[str],
     excluded_substrings: List[str],
-):
+) -> List[str]:
     """
-    Cull a list of strings to the subset including any of the "included_substrings" and none of the excluded substrings.
+    Cull a list of strings to the subset of strings containing any of the "included_substrings" and none of the "excluded_substrings".
     Returns the culled list, does not modify the input list.
     """
     culled_list: List[str] = []

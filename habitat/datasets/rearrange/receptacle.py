@@ -30,10 +30,10 @@ class Receptacle(ABC):
         up: Optional[mn.Vector3] = None,
     ):
         """
-        :property name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :property parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
-        :property parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
-        :property up: The "up" direction of the receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
+        :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :param up: The "up" direction of the receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         """
         self.name = name
         self.up = (
@@ -105,12 +105,12 @@ class AABBReceptacle(Receptacle):
         rotation: Optional[mn.Quaternion] = None,
     ) -> None:
         """
-        :property name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :property bounds: The AABB of the Receptacle.
-        :property up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
-        :property parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
-        :property parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
-        :property rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
+        :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
+        :param bounds: The AABB of the Receptacle.
+        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self.bounds = bounds
@@ -275,9 +275,9 @@ def parse_receptacles_from_user_config(
     """
     Parse receptacle metadata from the provided user subconfig object.
 
-    :property user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
-    :property parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
-    :property valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
+    :param user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
+    :param parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
+    :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
 
     Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
