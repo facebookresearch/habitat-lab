@@ -91,12 +91,12 @@ class Env:
             self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
             self._config.defrost()
-            self._config.SIMULATOR.SCENE_DATASET = self._dataset.episodes[
-                0
-            ].scene_dataset_path
-            self._config.SIMULATOR.SCENE = self._dataset.episodes[0].scene_id
+            self._config.SIMULATOR.SCENE_DATASET = (
+                self.current_episode.scene_dataset_path
+            )
+            self._config.SIMULATOR.SCENE = self.current_episode.scene_id
             self._config.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
-                self._dataset.episodes[0].additional_obj_config_paths
+                self.current_episode.additional_obj_config_paths
             )
             self._config.freeze()
 
