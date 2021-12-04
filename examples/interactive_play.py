@@ -244,6 +244,8 @@ def play_env(env, args, config):
     obs = env.reset()
 
     if not args.no_render:
+        # obs = env.step({"action": "EMPTY", "action_args": {}})
+        # obs = env.step(
         draw_obs = observations_to_image(obs, {})
         pygame.init()
         screen = pygame.display.set_mode(

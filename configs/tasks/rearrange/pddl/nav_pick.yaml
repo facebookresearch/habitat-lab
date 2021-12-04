@@ -1,0 +1,16 @@
+stage_goals: {}
+start:
+    precondition: []
+    state:
+        art_states:
+            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
+            "fridge_:0000": [0,0]
+        robo:
+            pos: 'rnd'
+
+goal:
+  - "holding(kitchen_counter_targets|0)"
+
+solution:
+    - "nav(kitchen_counter_targets|0)"
+    - "pick(kitchen_counter_targets|0)"
