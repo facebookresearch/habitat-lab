@@ -12,12 +12,12 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
     CONSTRAINT_VIOLATE_SHOULD_END: True
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     FORCE_REGENERATE: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot

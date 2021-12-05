@@ -512,15 +512,16 @@ class RearrangeSim(HabitatSim):
     def visualize_position(self, position, viz_id=None, r=0.05):
         """Adds the sphere object to the specified position for visualization purpose."""
 
-        rom = self.get_object_template_manager()
+        template_mgr = self.get_object_template_manager()
+        rom = self.get_rigid_object_manager()
         viz_obj = None
         if viz_id is None:
             if r not in self._viz_templates:
-                template = rom.get_template_by_handle(
-                    rom.get_template_handles("sphere")[0]
+                template = template_mgr.get_template_by_handle(
+                    template_mgr.get_template_handles("sphere")[0]
                 )
                 template.scale = mn.Vector3(r, r, r)
-                self._viz_templates[r] = rom.register_template(
+                self._viz_templates[r] = template_mgr.register_template(
                     template, "ball_new_viz"
                 )
             viz_obj = rom.add_object_by_template_id(self._viz_templates[r])

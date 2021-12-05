@@ -22,9 +22,9 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 @pytest.mark.parametrize(
     "config_file,overrides,expected_action_dim",
     [
-        ("habitat_baselines/config/rearrange/rl_pick.yaml", [], 8),
+        ("habitat_baselines/config/rearrange/ddppo_pick_state.yaml", [], 7),
         (
-            "habitat_baselines/config/rearrange/rl_pick.yaml",
+            "habitat_baselines/config/rearrange/ddppo_pick_state.yaml",
             [
                 "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
@@ -66,7 +66,7 @@ def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
 
 
 @pytest.mark.parametrize(
-    "config_file", ["habitat_baselines/config/rearrange/rl_pick.yaml"]
+    "config_file", ["habitat_baselines/config/rearrange/ddppo_pick_state.yaml"]
 )
 def test_full_gym_wrapper(config_file):
     """
