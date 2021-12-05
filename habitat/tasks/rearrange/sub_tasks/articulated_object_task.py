@@ -43,10 +43,6 @@ class SetArticulatedObjectTask(RearrangeTask):
         episode.
         """
 
-    @property
-    def _is_start_global(self):
-        return False
-
     @abstractmethod
     def _get_spawn_region(self) -> mn.Range2D:
         pass
@@ -63,10 +59,9 @@ class SetArticulatedObjectTask(RearrangeTask):
         start_pos = np.array([start_pos[0], 0.0, start_pos[1]])
         targ_pos = np.array(self._get_look_pos())
 
-        if not self._is_start_global:
-            # Transform to global coordinates
-            start_pos = np.array(T.transform_point(mn.Vector3(*start_pos)))
-            start_pos = np.array([start_pos[0], 0, start_pos[2]])
+        # Transform to global coordinates
+        start_pos = np.array(T.transform_point(mn.Vector3(*start_pos)))
+        start_pos = np.array([start_pos[0], 0, start_pos[2]])
 
         targ_pos = np.array(T.transform_point(mn.Vector3(*targ_pos)))
 
@@ -116,7 +111,7 @@ class SetArticulatedObjectTask(RearrangeTask):
             base_pos = mn.Vector3(
                 start_pos[0],
                 self._sim.robot.base_pos[1],
-                start_pos[1],
+                start_pos[2],
             )
             self._sim.robot.base_pos = base_pos
 
@@ -169,18 +164,26 @@ class RearrangeOpenDrawerTaskV1(SetArticulatedObjectTask):
 
     def _gen_start_state(self):
         drawers = np.zeros((8,))
-        # num_open = np.random.randint(0,6)
-        # poss_idxs = list(range(7))
-        # del poss_idxs[poss_idxs.index(self.targ_art_idx)]
-        # random.shuffle(poss_idxs)
-        # open_idxs = poss_idxs[:num_open]
-
-        # drawers[open_idxs] = np.random.uniform(0.0, 0.3, size=(7,))[open_idxs]
-        # drawers[self.targ_art_idx] = 0.0
         return drawers
 
     def reset(self, episode: Episode):
         self._use_marker = "cab_push_point_5"
+        return super().reset(episode)
+
+
+@registry.register_task(name="RearrangeOpenFridgeTask-v0")
+class RearrangeOpenFridgeTaskV1(SetArticulatedObjectTask):
+    def _get_spawn_region(self):
+        return mn.Range2D([0.833, -0.6], [1.25, 0.6])
+
+    def _get_look_pos(self):
+        return [0.0, 0.0, 0.0]
+
+    def _gen_start_state(self):
+        return np.zeros((2,))
+
+    def reset(self, episode: Episode):
+        self._use_marker = "fridge_push_point"
         return super().reset(episode)
 
 
@@ -198,16 +201,25 @@ class RearrangeCloseDrawerTaskV1(SetArticulatedObjectTask):
         targ_link = self.get_use_marker().joint_idx
 
         drawers = np.zeros((8,))
-        # num_open = np.random.randint(0, 7)
-        # poss_idxs = list(range(8))
-        # del poss_idxs[poss_idxs.index(targ_link)]
-        # random.shuffle(poss_idxs)
-        # open_idxs = poss_idxs[:num_open]
-
-        # drawers[open_idxs] = np.random.uniform(0.0, 0.1, size=(7,))[open_idxs]
         drawers[targ_link] = np.random.uniform(0.4, 0.5)
         return drawers
 
     def reset(self, episode: Episode):
         self._use_marker = "cab_push_point_5"
+        return super().reset(episode)
+
+
+@registry.register_task(name="RearrangeCloseFridgeTask-v0")
+class RearrangeCloseFridgeTaskV1(SetArticulatedObjectTask):
+    def _get_spawn_region(self):
+        return mn.Range2D([0.833, -0.6], [1.25, 0.6])
+
+    def _get_look_pos(self):
+        return [0.0, 0.0, 0.0]
+
+    def _gen_start_state(self):
+        return np.array([0, np.random.uniform(np.pi / 4, 2 * np.pi / 3)])
+
+    def reset(self, episode: Episode):
+        self._use_marker = "fridge_push_point"
         return super().reset(episode)

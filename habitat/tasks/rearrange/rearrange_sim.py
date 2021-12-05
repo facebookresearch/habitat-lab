@@ -147,7 +147,9 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
-        if self.prev_scene_id != ep_info["scene_id"]:
+        new_scene = self.prev_scene_id != ep_info["scene_id"]
+
+        if new_scene:
             self.grasp_mgr.reconfigure()
             # add and initialize the robot
             ao_mgr = self.get_articulated_object_manager()
@@ -216,9 +218,11 @@ class RearrangeSim(HabitatSim):
         if self._auto_sleep:
             self.sleep_all_objects()
 
-        # recompute the NavMesh once the scene is loaded
-        # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
-        self._recompute_navmesh()
+        if new_scene:
+            # Recompute the NavMesh once the scene is loaded. Only recompute
+            # the navmesh if the scene is different.
+            # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
+            self._recompute_navmesh()
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()

@@ -44,7 +44,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         return spaces.Box(
-            shape=(n_targets, 3),
+            shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -76,14 +76,6 @@ class ObjectGoalPositionSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_goal_pos_sensor"
 
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
         T_inv = self._sim.robot.ee_transform.inverted()
@@ -106,14 +98,6 @@ class TargetStartSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_start_sensor"
 
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
@@ -132,15 +116,6 @@ class AbsTargetStartSensor(MultiObjSensor):
     """
 
     cls_uuid: str = "abs_obj_start_sensor"
-
-    def _get_observation_space(self, *args, **kwargs):
-        n_targets = self._task.get_n_targets()
-        return spaces.Box(
-            shape=(n_targets, 3),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()

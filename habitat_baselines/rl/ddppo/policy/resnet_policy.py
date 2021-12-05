@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -35,9 +35,6 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 from habitat_baselines.rl.ppo import Net, Policy
 from habitat_baselines.utils.common import get_num_actions
 
-RGB_KEYS = ["rgb", "robot_arm_rgb", "robot_head_rgb"]
-DEPTH_KEYS = ["depth", "robot_arm_depth", "robot_head_depth"]
-
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(Policy):
@@ -53,6 +50,7 @@ class PointNavResNetPolicy(Policy):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
+        fuse_keys: Optional[List[str]] = None,
         **kwargs
     ):
         if policy_config is not None:
@@ -65,6 +63,7 @@ class PointNavResNetPolicy(Policy):
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
+
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -77,7 +76,7 @@ class PointNavResNetPolicy(Policy):
                 normalize_visual_inputs=normalize_visual_inputs,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
-                **kwargs
+                fuse_keys=fuse_keys,
             ),
             dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
@@ -100,7 +99,7 @@ class PointNavResNetPolicy(Policy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            rl_config=config.RL,
+            fuse_keys=config.RL.get("GYM_OBS_KEYS", None),
         )
 
 
@@ -117,10 +116,8 @@ class ResNetEncoder(nn.Module):
         super().__init__()
 
         # Determine which visual observations are present
-        self.rgb_keys, self.depth_keys = [
-            [k for k in keys if k in observation_space.spaces]
-            for keys in [RGB_KEYS, DEPTH_KEYS]
-        ]
+        self.rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
+        self.depth_keys = [k for k in observation_space.spaces if "depth" in k]
 
         # Count total # of channels for rgb and for depth
         self._n_input_rgb, self._n_input_depth = [
@@ -228,6 +225,7 @@ class PointNavResNetNet(Net):
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
         rl_config: Config = None,
+        fuse_keys: Optional[List[str]] = None,
     ):
         super().__init__()
 
@@ -251,6 +249,12 @@ class PointNavResNetNet(Net):
 
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
+
+        self._fuse_keys = fuse_keys
+        if self._fuse_keys is not None:
+            rnn_input_size += sum(
+                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+            )
 
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -430,6 +434,12 @@ class PointNavResNetNet(Net):
 
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
+
+        if self._fuse_keys is not None:
+            fuse_states = torch.cat(
+                [observations[k] for k in self._fuse_keys], dim=-1
+            )
+            x.append(fuse_states)
 
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             goal_observations = observations[
