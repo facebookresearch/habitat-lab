@@ -310,11 +310,11 @@ class PointNavResNetNet(Net):
             rnn_input_size += 32
 
         if ImageGoalSensor.cls_uuid in observation_space.spaces:
-            goal_policy_obs_space = spaces.Dict(
+            goal_observation_space = spaces.Dict(
                 {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
             self.goal_visual_encoder = ResNetEncoder(
-                goal_policy_obs_space,
+                goal_observation_space,
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
@@ -487,7 +487,6 @@ class PointNavResNetNet(Net):
             )
 
         x.append(prev_actions)
-        print([a.shape for a in x])
 
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(

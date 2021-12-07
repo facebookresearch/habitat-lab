@@ -94,14 +94,6 @@ class PPOTrainer(BaseRLTrainer):
             self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         ) == ["VELOCITY_CONTROL"]
 
-        # If no override sensors were provided, use agent sensors
-        if not self.config.SENSORS:
-            self.config.defrost()
-            self.config.SENSORS = (
-                self.config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS
-            )
-            self.config.freeze()
-
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
@@ -913,20 +905,13 @@ class PPOTrainer(BaseRLTrainer):
 
         config.defrost()
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.freeze()
 
         if len(self.config.VIDEO_OPTION) > 0:
-            if "Nav" in config.ENV_NAME:
-                config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-                config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
-            elif "Rearrange" in config.ENV_NAME:
-                config.TASK_CONFIG.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
-                config.TASK_CONFIG.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
-                config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS.append(
-                    "THIRD_RGB_SENSOR"
-                )
-                config.SENSORS.append("THIRD_RGB_SENSOR")
-
-        config.freeze()
+            config.defrost()
+            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+            config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
+            config.freeze()
 
         if config.VERBOSE:
             logger.info(f"env config: {config}")
@@ -942,12 +927,13 @@ class PPOTrainer(BaseRLTrainer):
             discrete_actions = False
         else:
             self.policy_action_space = action_space
-            action_shape = (get_num_actions(action_space),)
             if is_continuous_action_space(action_space):
                 # Assume NONE of the actions are discrete
+                action_shape = (get_num_actions(action_space),)
                 discrete_actions = False
             else:
                 # For discrete pointnav
+                action_shape = (1,)
                 discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
