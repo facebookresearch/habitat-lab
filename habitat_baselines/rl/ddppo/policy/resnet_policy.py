@@ -224,21 +224,9 @@ class PointNavResNetNet(Net):
         normalize_visual_inputs: bool,
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
-        rl_config: Config = None,
         fuse_keys: Optional[List[str]] = None,
     ):
         super().__init__()
-
-        # Observations that are only being used for evaluation can be filtered
-        # out here
-        policy_obs_space = spaces.Dict(
-            {
-                k: v
-                for k, v in observation_space.spaces.items()
-                if k not in rl_config.BLACKLIST_OBS_KEYS
-            }
-        )
-        used_observation_keys = []
 
         self.discrete_actions = discrete_actions
         if discrete_actions:
@@ -258,67 +246,61 @@ class PointNavResNetNet(Net):
 
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            in policy_obs_space.spaces
+            in observation_space.spaces
         ):
             n_input_goal = (
-                policy_obs_space.spaces[
+                observation_space.spaces[
                     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
                 ].shape[0]
                 + 1
             )
             self.tgt_embeding = nn.Linear(n_input_goal, 32)
             rnn_input_size += 32
-            used_observation_keys.append(
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            )
 
-        if ObjectGoalSensor.cls_uuid in policy_obs_space.spaces:
+        if ObjectGoalSensor.cls_uuid in observation_space.spaces:
             self._n_object_categories = (
-                int(policy_obs_space.spaces[ObjectGoalSensor.cls_uuid].high[0])
+                int(
+                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
+                )
                 + 1
             )
             self.obj_categories_embedding = nn.Embedding(
                 self._n_object_categories, 32
             )
             rnn_input_size += 32
-            used_observation_keys.append(ObjectGoalSensor.cls_uuid)
 
-        if EpisodicGPSSensor.cls_uuid in policy_obs_space.spaces:
-            input_gps_dim = policy_obs_space.spaces[
+        if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
+            input_gps_dim = observation_space.spaces[
                 EpisodicGPSSensor.cls_uuid
             ].shape[0]
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(EpisodicGPSSensor.cls_uuid)
 
-        if PointGoalSensor.cls_uuid in policy_obs_space.spaces:
-            input_pointgoal_dim = policy_obs_space.spaces[
+        if PointGoalSensor.cls_uuid in observation_space.spaces:
+            input_pointgoal_dim = observation_space.spaces[
                 PointGoalSensor.cls_uuid
             ].shape[0]
             self.pointgoal_embedding = nn.Linear(input_pointgoal_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(PointGoalSensor.cls_uuid)
 
-        if HeadingSensor.cls_uuid in policy_obs_space.spaces:
+        if HeadingSensor.cls_uuid in observation_space.spaces:
             input_heading_dim = (
-                policy_obs_space.spaces[HeadingSensor.cls_uuid].shape[0] + 1
+                observation_space.spaces[HeadingSensor.cls_uuid].shape[0] + 1
             )
             assert input_heading_dim == 2, "Expected heading with 2D rotation."
             self.heading_embedding = nn.Linear(input_heading_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(HeadingSensor.cls_uuid)
 
-        if ProximitySensor.cls_uuid in policy_obs_space.spaces:
-            input_proximity_dim = policy_obs_space.spaces[
+        if ProximitySensor.cls_uuid in observation_space.spaces:
+            input_proximity_dim = observation_space.spaces[
                 ProximitySensor.cls_uuid
             ].shape[0]
             self.proximity_embedding = nn.Linear(input_proximity_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(ProximitySensor.cls_uuid)
 
-        if EpisodicCompassSensor.cls_uuid in policy_obs_space.spaces:
+        if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
             assert (
-                policy_obs_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
+                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
                     0
                 ]
                 == 1
@@ -326,11 +308,10 @@ class PointNavResNetNet(Net):
             input_compass_dim = 2  # cos and sin of the angle
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
-            used_observation_keys.append(EpisodicCompassSensor.cls_uuid)
 
-        if ImageGoalSensor.cls_uuid in policy_obs_space.spaces:
+        if ImageGoalSensor.cls_uuid in observation_space.spaces:
             goal_policy_obs_space = spaces.Dict(
-                {"rgb": policy_obs_space.spaces[ImageGoalSensor.cls_uuid]}
+                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
             )
             self.goal_visual_encoder = ResNetEncoder(
                 goal_policy_obs_space,
@@ -349,39 +330,11 @@ class PointNavResNetNet(Net):
             )
 
             rnn_input_size += hidden_size
-            used_observation_keys.append(ImageGoalSensor.cls_uuid)
-
-        # Add sensors from rl_config.GYM_OBS_KEYS, which represents
-        # observation keys that will used by the policy; assume they are all
-        # 1D observations (e.g., not images)
-        if rl_config is not None:
-            additional_cls_uuids = [
-                uuid
-                for uuid in rl_config.GYM_OBS_KEYS
-                if uuid in policy_obs_space.spaces
-                and uuid not in used_observation_keys
-            ]
-
-            if additional_cls_uuids:
-                input_size = 0
-                for uuid in additional_cls_uuids:
-                    input_size += policy_obs_space.spaces[uuid].shape[0]
-                self.additional_embedding = nn.Sequential(
-                    nn.Linear(input_size, 256),
-                    nn.ReLU(),
-                    nn.Linear(256, 256),
-                    nn.ReLU(),
-                )
-                rnn_input_size += 256
-
-            self.additional_uuids = additional_cls_uuids
-        else:
-            self.additional_uuids = []
 
         self._hidden_size = hidden_size
 
         self.visual_encoder = ResNetEncoder(
-            policy_obs_space if not force_blind_policy else spaces.Dict({}),
+            observation_space if not force_blind_policy else spaces.Dict({}),
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
@@ -534,15 +487,7 @@ class PointNavResNetNet(Net):
             )
 
         x.append(prev_actions)
-
-        if self.additional_uuids:
-            additional_embedding = self.additional_embedding(
-                torch.cat(
-                    [observations[uuid] for uuid in self.additional_uuids],
-                    dim=1,
-                )
-            )
-            x.append(additional_embedding)
+        print([a.shape for a in x])
 
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(

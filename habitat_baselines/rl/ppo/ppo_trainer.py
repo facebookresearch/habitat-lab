@@ -925,7 +925,6 @@ class PPOTrainer(BaseRLTrainer):
                     "THIRD_RGB_SENSOR"
                 )
                 config.SENSORS.append("THIRD_RGB_SENSOR")
-                config.RL.BLACKLIST_OBS_KEYS.append("THIRD_RGB_SENSOR")
 
         config.freeze()
 
@@ -943,13 +942,12 @@ class PPOTrainer(BaseRLTrainer):
             discrete_actions = False
         else:
             self.policy_action_space = action_space
+            action_shape = (get_num_actions(action_space),)
             if is_continuous_action_space(action_space):
                 # Assume NONE of the actions are discrete
-                action_shape = (get_num_actions(action_space),)
                 discrete_actions = False
             else:
                 # For discrete pointnav
-                action_shape = None
                 discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
