@@ -268,6 +268,7 @@ class SetState:
         return not id_str.startswith("ART_")
 
     def is_satisfied(self, name_to_id, sim, obj_thresh, art_thresh):
+        rom = sim.get_rigid_object_manager()
         for obj_name, target in self.obj_states.items():
             if not self._is_id_rigid_object(obj_name):
                 # Invalid predicate
@@ -275,7 +276,9 @@ class SetState:
 
             obj_idx = name_to_id[obj_name]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
-            cur_pos = sim.get_translation(abs_obj_id)
+            cur_pos = rom.get_object_by_id(
+                abs_obj_id
+            ).transformation.translation
 
             if not self._is_id_rigid_object(target):
                 # Invalid predicate

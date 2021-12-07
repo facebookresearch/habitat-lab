@@ -250,7 +250,10 @@ def get_nav_from_obj_to(nav_name, obj_to, sim):
         task_cls_name = "RearrangePickTask-v0"
         task_args = {"obj": obj_to}
         obj_id = sim.scene_obj_ids[obj_to]
-        abs_true_point = sim.get_translation(obj_id)
+        rom = sim.get_rigid_object_manager()
+        abs_true_point = rom.get_object_by_id(
+            obj_id
+        ).transformation.translation
 
     return abs_true_point, task_cls_name, task_args
 
