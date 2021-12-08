@@ -36,9 +36,7 @@ class RearrangeSim(HabitatSim):
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
         self.first_setup = True
-        self._should_render_debug = False
         self.ep_info = None
-        self.prev_loaded_navmesh = None
         self.prev_scene_id = None
 
         # Number of physics updates per action
@@ -63,6 +61,7 @@ class RearrangeSim(HabitatSim):
         self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
         self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)
         self._markers = {}
+        self._viz_objs = {}
 
         self.ik_helper = None
 
@@ -82,11 +81,11 @@ class RearrangeSim(HabitatSim):
         # Preprocess the ep_info making necessary datatype conversions.
         target_trans = []
         rom = self.get_rigid_object_manager()
-        for target_handle, trans in self.ep_info["targets"].items():
+        for target_handle, trans in self._targets.items():
             targ_idx = self.scene_obj_ids.index(
                 rom.get_object_by_handle(target_handle).object_id
             )
-            target_trans.append((targ_idx, mn.Matrix4(trans)))
+            target_trans.append((targ_idx, trans))
         return target_trans
 
     def _try_acquire_context(self):
@@ -147,6 +146,12 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
+        self._targets = {}
+        for target_handle, transform in self.ep_info["targets"].items():
+            self._targets[target_handle] = mn.Matrix4(
+                [[transform[j][i] for j in range(4)] for i in range(4)]
+            )
+
         new_scene = self.prev_scene_id != ep_info["scene_id"]
 
         if new_scene:
@@ -158,6 +163,10 @@ class RearrangeSim(HabitatSim):
 
             self.robot.reconfigure()
             self._prev_obj_names = None
+
+            # Reset all vis info
+            self.viz_ids = defaultdict(lambda: None)
+            self._viz_objs = {}
 
         self.grasp_mgr.reset()
 
@@ -234,7 +243,7 @@ class RearrangeSim(HabitatSim):
                         rom.get_object_by_handle(t_handle).object_id
                     )
                 ]
-                for t_handle, _ in self.ep_info["targets"].items()
+                for t_handle, _ in self._targets.items()
             ]
         )
 
@@ -355,7 +364,6 @@ class RearrangeSim(HabitatSim):
                 ref_handle = self.instance_handle_to_ref_handle[
                     other_obj_handle
                 ]
-                # self.ref_handle_to_rigid_obj_id[ref_handle] = ro.object_id
                 rel_idx = len(self.scene_obj_ids)
                 self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
             obj_counts[obj_handle] += 1
@@ -368,21 +376,29 @@ class RearrangeSim(HabitatSim):
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
     def _create_obj_viz(self, ep_info):
-        if self._debug_render:
-            for marker_name, m in self._markers.items():
-                m_T = m.get_current_transform()
-                self.viz_ids[marker_name] = self.visualize_position(
-                    m_T.translation, self.viz_ids[marker_name]
-                )
+        for marker_name, m in self._markers.items():
+            m_T = m.get_current_transform()
+            self.viz_ids[marker_name] = self.visualize_position(
+                m_T.translation, self.viz_ids[marker_name]
+            )
 
-        # TODO: refactor this
-        # target_name_pos = [
-        #     (ep_info["static_objs"][idx][0], self.scene_objs[idx], pos)
-        #     for idx, pos in self._get_target_trans()
-        # ]
-        # self.viz_obj_ids = place_viz_objs(
-        #     target_name_pos, self, self.viz_obj_ids
-        # )
+        rom = self.get_rigid_object_manager()
+        obj_attr_mgr = self.get_object_template_manager()
+        for target_handle, transform in self._targets.items():
+            new_target_handle = (
+                target_handle.split("_:")[0] + ".object_config.json"
+            )
+            matching_templates = (
+                obj_attr_mgr.get_templates_by_handle_substring(
+                    new_target_handle
+                )
+            )
+            ro = rom.add_object_by_template_handle(
+                list(matching_templates.keys())[0]
+            )
+            ro.transformation = transform
+            make_render_only(ro, self)
+            self._viz_objs[target_handle] = ro
 
     def capture_state(self, with_robot_js=False):
         # Don't need to capture any velocity information because this will
@@ -448,23 +464,32 @@ class RearrangeSim(HabitatSim):
 
         self._update_markers()
 
-        if self._should_render_debug:
+        if self._debug_render:
+            rom = self.get_rigid_object_manager()
             self._try_acquire_context()
-            for obj_handle, _ in self.ep_info["targets"].items():
+            # Don't draw bounding boxes over target objects.
+            for obj_handle, _ in self._targets.items():
                 self.set_object_bb_draw(
                     False, rom.get_object_by_handle(obj_handle).object_id
                 )
 
-        add_back_viz_objs = {}
-        for name, viz_id in self.viz_ids.items():
-            if viz_id is None:
-                continue
-            rom = self.get_rigid_object_manager()
-            viz_obj = rom.get_object_by_id(viz_id)
-            before_pos = viz_obj.translation
-            rom.remove_object_by_id(viz_id)
-            add_back_viz_objs[name] = before_pos
-        self.viz_ids = defaultdict(lambda: None)
+            # Remove viz objects
+            for obj in self._viz_objs.values():
+                if obj is not None and rom.get_library_has_id(obj.object_id):
+                    rom.remove_object_by_id(obj.object_id)
+            self._viz_objs = {}
+
+            # Remove all visualized positions
+            add_back_viz_objs = {}
+            for name, viz_id in self.viz_ids.items():
+                if viz_id is None:
+                    continue
+                viz_obj = rom.get_object_by_id(viz_id)
+                before_pos = viz_obj.translation
+                rom.remove_object_by_id(viz_id)
+                add_back_viz_objs[name] = before_pos
+            self.viz_ids = defaultdict(lambda: None)
+
         self.grasp_mgr.update()
 
         if self._concur_render:
@@ -484,8 +509,7 @@ class RearrangeSim(HabitatSim):
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs:
-            self._should_render_debug = True
+        if "robot_third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
                 self.viz_ids[k] = self.visualize_position(pos, self.viz_ids[k])
@@ -494,7 +518,7 @@ class RearrangeSim(HabitatSim):
             self._create_obj_viz(self.ep_info)
 
             # Always draw the target
-            for obj_handle, _ in self.ep_info["targets"].items():
+            for obj_handle, _ in self._targets.items():
                 self.set_object_bb_draw(
                     True, rom.get_object_by_handle(obj_handle).object_id
                 )
@@ -509,7 +533,7 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05):
+    def visualize_position(self, position, viz_id=None, r=0.05) -> int:
         """Adds the sphere object to the specified position for visualization purpose."""
 
         template_mgr = self.get_object_template_manager()
@@ -528,6 +552,7 @@ class RearrangeSim(HabitatSim):
             make_render_only(viz_obj, self)
         else:
             viz_obj = rom.get_object_by_id(viz_id)
+            return self.visualize_position(position, viz_id=None, r=r)
 
         viz_obj.translation = mn.Vector3(*position)
         return viz_obj.object_id
@@ -567,7 +592,7 @@ class RearrangeSim(HabitatSim):
         return a, np.array(b)
 
     def get_n_targets(self):
-        return len(self.ep_info["targets"])
+        return len(self._targets)
 
     def get_target_objs_start(self):
         return np.array(self.target_start_pos)

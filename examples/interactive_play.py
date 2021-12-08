@@ -393,6 +393,7 @@ if __name__ == "__main__":
         config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = args.play_cam_res
         config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
         config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
+        config.SIMULATOR.DEBUG_RENDER = True
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
     if args.add_ik:

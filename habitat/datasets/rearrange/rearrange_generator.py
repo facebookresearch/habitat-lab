@@ -468,12 +468,10 @@ class RearrangeEpisodeGenerator:
         # generate the target samplers
         self._get_object_target_samplers()
 
-        target_refs = {}
+        target_refs: Dict[str, str] = {}
 
         # sample targets
-        for target_idx, (sampler_name, target_sampler) in enumerate(
-            self._target_samplers.items()
-        ):
+        for sampler_name, target_sampler in self._target_samplers.items():
             new_target_objects = target_sampler.sample(
                 self.sim, snap_down=True, vdb=self.vdb
             )
@@ -490,7 +488,9 @@ class RearrangeEpisodeGenerator:
                 self.episode_data["sampled_targets"][
                     instance_handle
                 ] = np.array(target_transform)
-                target_refs[instance_handle] = f"{sampler_name}|{target_idx}"
+                target_refs[
+                    instance_handle
+                ] = f"{sampler_name}|{len(target_refs)}"
                 rom.remove_object_by_handle(target_object.handle)
                 if self._render_debug_obs:
                     sutils.add_transformed_wire_box(

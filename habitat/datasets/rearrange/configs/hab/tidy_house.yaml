@@ -32,7 +32,8 @@ object_sets:
   -
     name: "any"
     included_substrings:
-      - ""
+      - "ycb"
+      - "frl_apartment"
     excluded_substrings: []
     comment: "The empty substring acts like a wildcard, selecting all objects."
   -
@@ -48,40 +49,7 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
-  -
-    name: "cheezit"
-    included_substrings:
-      - "003_cracker_box"
-    excluded_substrings: []
-  -
-    name: "basket"
-    included_substrings:
-      - "frl_apartment_basket"
-    excluded_substrings: []
-  -
-    name: "apple"
-    included_substrings:
-      - "013_apple"
-    excluded_substrings: []
-
 receptacle_sets:
-  -
-    name: "table"
-    included_object_substrings:
-      - "frl_apartment_table_01"
-    excluded_object_substrings: []
-    included_receptacle_substrings:
-      - ""
-    excluded_receptacle_substrings: []
-    comment: "The empty substrings act like wildcards, selecting all receptacles for all objects."
-  -
-    name: "table3"
-    included_object_substrings:
-      - "frl_apartment_table_03"
-    excluded_object_substrings: []
-    included_receptacle_substrings:
-      - ""
-    excluded_receptacle_substrings: []
   -
     name: "any"
     included_object_substrings:
@@ -89,32 +57,6 @@ receptacle_sets:
     excluded_object_substrings: []
     included_receptacle_substrings:
       - ""
-    excluded_receptacle_substrings: []
-  -
-    name: "fridge"
-    included_object_substrings:
-      - "fridge"
-    excluded_object_substrings: []
-    included_receptacle_substrings:
-      - ""
-    excluded_receptacle_substrings: []
-  -
-    name: "fridge_middle"
-    included_object_substrings:
-      - "fridge"
-    excluded_object_substrings: []
-    included_receptacle_substrings:
-      - "middle"
-    excluded_receptacle_substrings: []
-    comment: "Selects only receptacles from the 'fridge' with 'middle' in their name."
-  -
-    name: "counter"
-    included_object_substrings:
-      - "kitchen_counter"
-    excluded_object_substrings: []
-    included_receptacle_substrings:
-      - "receptacle_aabb_counter_left_kitchen_counter"
-      - "receptacle_aabb_counter_right_kitchen_counter"
     excluded_receptacle_substrings: []
 
 scene_sampler:
@@ -126,23 +68,22 @@ scene_sampler:
 
 object_samplers:
   -
-    name: "kitchen_counter"
+    name: "any"
     type: "uniform"
     params:
-      object_sets: ["kitchen"]
-      receptacle_sets: ["counter"]
-      num_samples: [1, 1]
+      object_sets: ["any"]
+      receptacle_sets: ["any"]
+      num_samples: [5, 5]
       orientation_sampling: "up"
-      sample_region_ratio: 0.5
 
 object_target_samplers:
   -
-    name: "kitchen_counter_targets"
+    name: "any_targets"
     type: "uniform"
     params:
-      object_samplers: ["kitchen_counter"]
-      receptacle_sets: ["counter"]
-      num_samples: [1, 1]
+      object_samplers: ["any"]
+      receptacle_sets: ["any"]
+      num_samples: [5, 5]
       orientation_sampling: "up"
 markers:
   - name: "cab_push_point_7"

@@ -332,6 +332,44 @@ class ObjectToGoalDistance(Measure):
 
 
 @registry.register_measure
+class ObjAtGoal(Measure):
+    cls_uuid: str = "obj_at_goal"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjAtGoal.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                ObjectToGoalDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        obj_to_goal_dists = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+
+        self._metric = {
+            idx: dist < self._config.SUCC_THRESH
+            for idx, dist in obj_to_goal_dists.items()
+        }
+
+
+@registry.register_measure
 class EndEffectorToObjectDistance(Measure):
     """
     Gets the distance between the end-effector and all current target object COMs.

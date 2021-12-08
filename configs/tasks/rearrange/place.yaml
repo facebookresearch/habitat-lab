@@ -6,29 +6,42 @@ DATASET:
     DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0/pick.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
-    TYPE: RearrangeNavToObjTask-v0
-
-    MUST_LOOK_AT_TARG: True
-    DEBUG_GOAL_POINT: True
-    CONSTRAINT_VIOLATE_SHOULD_END: False
-    # If true, will always regenerate the cache
-    FORCE_REGENERATE: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
-
-    # Collision related
+    TYPE: RearrangePickTask-v0
+    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    MAX_COLLISIONS: -1.0
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
-    # PDDL related parameters
-    PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
+    # In radians
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 0.05
+    CONSTRAINT_VIOLATE_SHOULD_END: True
+    FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "nav_to_obj_reward"
-    SUCCESS_MEASUREMENT: "nav_to_obj_success"
+    REWARD_MEASUREMENT: "place_reward"
+    SUCCESS_MEASUREMENT: "place_success"
 
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+
+    TARGET_START_SENSOR:
+        TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    GOAL_SENSOR:
+        TYPE: "GoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_TARGET_START_SENSOR:
+        TYPE: "AbsTargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_GOAL_SENSOR:
+        TYPE: "AbsGoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -38,9 +51,7 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-
-    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
-
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -51,68 +62,56 @@ TASK:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
-    END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    ROT_DIST_TO_GOAL:
-      TYPE: "RotDistToGoal"
-    DIST_TO_GOAL:
-      TYPE: "DistToGoal"
-    BAD_CALLED_TERMINATE:
-      TYPE: "BadCalledTerminate"
-      BAD_TERM_PEN: 0.0
-      DECAY_BAD_TERM: False
-    NAV_TO_POS_SUCC:
-      TYPE: "NavToPosSucc"
-      SUCCESS_DISTANCE: 0.2
-    REARRANGE_NAV_TO_OBJ_REWARD:
-        TYPE: "NavToObjReward"
-        # Negative means a penalty
-        SLACK: 0.0
-        SUCCESS_REWARD: 10.0
-        # Reward the agent for facing the object?
-        SHOULD_REWARD_TURN: True
-        # What distance do we start giving the reward for facing the object?
-        TURN_REWARD_DIST: 0.1
-        # Multiplier on the angle distance to the goal.
-        ANGLE_DIST_REWARD: 1.0
-        SLACK_REWARD: 0.0
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: "NavToObjSuccess"
-        MUST_LOOK_AT_TARG: True
-        # Distance in radians.
-        SUCCESS_ANGLE_DIST: 0.15
-        HEURISTIC_STOP: False
+    OBJ_AT_GOAL:
+        TYPE: "ObjAtGoal"
+        SUCC_THRESH: 0.15
+    PLACE_REWARD:
+        TYPE: "PlaceReward"
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PLACE_REWARD: 20.0
+        DROP_PEN: 5.0
+        USE_DIFF: True
+        WRONG_DROP_SHOULD_END: False
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+    PLACE_SUCCESS:
+        TYPE: "PlaceSuccess"
+        SUCC_THRESH: 0.15
+
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
-        - "ROT_DIST_TO_GOAL"
-        - "DIST_TO_GOAL"
-        - "BAD_CALLED_TERMINATE"
-        - "NAV_TO_POS_SUCC"
-        - "REARRANGE_NAV_TO_OBJ_SUCCESS"
-        - "REARRANGE_NAV_TO_OBJ_REWARD"
+        - "OBJ_AT_GOAL"
+        - "PLACE_SUCCESS"
+        - "PLACE_REWARD"
     ACTIONS:
-      BASE_VELOCITY:
-        TYPE: "BaseVelAction"
-        LIN_SPEED: 10.0
-        ANG_SPEED: 10.0
-        ALLOW_DYN_SLIDE: True
-        ALLOW_BACK: True
-        END_ON_STOP: True
-        MIN_ABS_LIN_SPEED: 1.0
-        MIN_ABS_ANG_SPEED: 1.0
-    POSSIBLE_ACTIONS: ['BASE_VELOCITY', 'STOP']
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
 
 SIMULATOR:
-    ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
+    ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
+    ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

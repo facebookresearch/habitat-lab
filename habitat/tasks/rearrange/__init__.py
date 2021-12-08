@@ -22,6 +22,8 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.pick_sensors
     import habitat.tasks.rearrange.sub_tasks.pick_task
+    import habitat.tasks.rearrange.sub_tasks.place_sensors
+    import habitat.tasks.rearrange.sub_tasks.place_task
     import habitat.tasks.rearrange.sub_tasks.reach_sensors
     import habitat.tasks.rearrange.sub_tasks.reach_task
 

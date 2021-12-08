@@ -114,7 +114,6 @@ receptacle_sets:
     excluded_object_substrings: []
     included_receptacle_substrings:
       - "receptacle_aabb_counter_left_kitchen_counter"
-      - "receptacle_aabb_counter_right_kitchen_counter"
     excluded_receptacle_substrings: []
 
 scene_sampler:
