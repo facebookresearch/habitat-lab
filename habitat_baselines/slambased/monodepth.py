@@ -11,7 +11,7 @@ Junjie Hu and Mete Ozay and Yan Zhang and Takayuki Okatani
 WACV 2019
 
 ResNet code gently borrowed from
-https://github.com/pytorch/vision/blob/master/torchvision/models/py
+https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
 """
 
 

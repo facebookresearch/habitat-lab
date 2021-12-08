@@ -180,7 +180,7 @@ class VectorEnv:
         (
             self._connection_read_fns,
             self._connection_write_fns,
-        ) = self._spawn_workers(  # noqa
+        ) = self._spawn_workers(
             env_fn_args,
             make_env_fn,
             workers_ignore_signals=workers_ignore_signals,

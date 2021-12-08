@@ -131,8 +131,8 @@ Below is a demo of what the example output will look like:
 .. image:: quickstart.png
 
 For more examples refer to
-:gh:`Habitat Lab examples <facebookresearch/habitat-lab/tree/master/examples>`
-and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/master/examples>`.
+:gh:`Habitat Lab examples <facebookresearch/habitat-lab/tree/main/examples>`
+and :gh:`Habitat-Sim examples <facebookresearch/habitat-sim/tree/main/examples>`.
 
 
 
