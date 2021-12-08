@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
 from gym import spaces
 
@@ -118,6 +119,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
             self._sim.grasp_mgr.snap_to_obj(attempt_snap_idx)
             return
 
+        attempt_marker_snap_name = None
         # Contacted any markers?
         markers = self._sim.get_all_markers()
         for marker_name, marker in markers.items():
@@ -128,7 +130,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 and coll_link_name_matches(c, marker.link_id)
             )
             if has_match:
-                attempt_snap_idx = marker_name
+                attempt_marker_snap_name = marker_name
 
-        if attempt_snap_idx is not None:
-            self._sim.grasp_mgr.snap_to_marker(attempt_snap_idx)
+        if attempt_marker_snap_name is not None:
+            self._sim.grasp_mgr.snap_to_marker(attempt_marker_snap_name)
