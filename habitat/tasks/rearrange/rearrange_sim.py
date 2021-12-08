@@ -5,12 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
 
+import habitat_sim
+from habitat.config.default import Config
 from habitat.core.registry import registry
+from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -30,14 +33,14 @@ from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
-    def __init__(self, config):
+    def __init__(self, config: Config):
         super().__init__(config)
 
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
         self.first_setup = True
         self._should_render_debug = False
-        self.ep_info = None
+        self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
 
@@ -50,21 +53,22 @@ class RearrangeSim(HabitatSim):
         self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
         self._debug_render = self.habitat_config.get("DEBUG_RENDER", False)
 
-        self.art_objs = []
-        self._start_art_states = {}
-        self._prev_obj_names = None
-        self.cached_art_obj_ids = []
-        self.scene_obj_ids = []
+        self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []
+        self._start_art_states: Dict[
+            habitat_sim.physics.ManagedArticulatedObject, List[float]
+        ] = {}
+        self._prev_obj_names: Optional[List[str]] = None
+        self.scene_obj_ids: List[int] = []
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
-        self.ref_handle_to_rigid_obj_id = None
+        self.ref_handle_to_rigid_obj_id: Optional[Dict[str, int]] = None
         robot_cls = eval(self.habitat_config.ROBOT_TYPE)
         self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
         self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)
-        self._markers = {}
+        self._markers: Dict[str, MarkerInfo] = {}
 
-        self.ik_helper = None
+        self.ik_helper: Optional[IkHelper] = None
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
@@ -104,7 +108,7 @@ class RearrangeSim(HabitatSim):
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
-    def add_markers(self, ep_info):
+    def add_markers(self, ep_info: Config):
         self._markers = {}
         aom = self.get_articulated_object_manager()
         for marker in ep_info["markers"]:
@@ -135,7 +139,7 @@ class RearrangeSim(HabitatSim):
         for m in self._markers.values():
             m.update()
 
-    def reconfigure(self, config):
+    def reconfigure(self, config: Config):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
@@ -167,7 +171,7 @@ class RearrangeSim(HabitatSim):
         self._clear_objects(should_add_objects)
 
         self.prev_scene_id = ep_info["scene_id"]
-        self._viz_templates = {}
+        self._viz_templates: Dict[float, int] = {}
 
         # Set the default articulated object joint state.
         for ao, set_joint_state in self._start_art_states.items():
@@ -247,23 +251,6 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def get_nav_pos(self, pos):
-        pos = mn.Vector3(*pos)
-        height_thresh = 0.15
-        z_min = -0.2
-        use_vs = np.array(self.pathfinder.build_navmesh_vertices())
-
-        if height_thresh is not None:
-            use_vs = use_vs[use_vs[:, 1] < height_thresh]
-        if z_min is not None:
-            use_vs = use_vs[use_vs[:, 2] > z_min]
-        dists = np.linalg.norm(
-            use_vs[:, [0, 2]] - np.array(pos)[[0, 2]], axis=-1
-        )
-
-        closest_idx = np.argmin(dists)
-        return use_vs[closest_idx]
-
     def _recompute_navmesh(self):
         """Generates the navmesh on the fly. This must be called
         AFTER adding articulated objects to the scene.
@@ -289,7 +276,7 @@ class RearrangeSim(HabitatSim):
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
-    def _clear_objects(self, should_add_objects):
+    def _clear_objects(self, should_add_objects: bool) -> None:
         if should_add_objects:
             rom = self.get_rigid_object_manager()
             for scene_obj_id in self.scene_obj_ids:
@@ -301,7 +288,7 @@ class RearrangeSim(HabitatSim):
         # managed by the underlying sim.
         self.art_objs = []
 
-    def _set_ao_states_from_ep(self, ep_info):
+    def _set_ao_states_from_ep(self, ep_info: Config) -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
         """
@@ -317,7 +304,7 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
-    def _add_objs(self, ep_info, should_add_objects):
+    def _add_objs(self, ep_info: Config, should_add_objects: bool) -> None:
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
@@ -363,7 +350,7 @@ class RearrangeSim(HabitatSim):
         for aoi_handle in ao_mgr.get_object_handles():
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
-    def _create_obj_viz(self, ep_info):
+    def _create_obj_viz(self, ep_info: Config) -> None:
         if self._debug_render:
             for marker_name, m in self._markers.items():
                 m_T = m.get_current_transform()
@@ -380,7 +367,20 @@ class RearrangeSim(HabitatSim):
         #     target_name_pos, self, self.viz_obj_ids
         # )
 
-    def capture_state(self, with_robot_js=False):
+    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
+        """
+        Record and return a dict of state info.
+
+        :param with_robot_js: If true, state dict includes robot joint positions in addition.
+
+        State info dict includes:
+         - Robot transform
+         - a list of ArticulatedObject transforms
+         - a list of RigidObject transforms
+         - a list of ArticulatedObject joint states
+         - the object id of currently grasped object (or None)
+         - (optionally) the robot's joint positions
+        """
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
         robot_T = self.robot.sim_obj.transformation
@@ -403,10 +403,12 @@ class RearrangeSim(HabitatSim):
             ret["robot_js"] = robot_js
         return ret
 
-    def set_state(self, state, set_hold=False):
+    def set_state(self, state: Dict[str, Any], set_hold=False) -> None:
         """
-        - set_hold: If true this will set the snapped object from the `state`.
-          This should probably be True by default, but I am not sure the effect
+        Sets the simulation state from a cached state info dict. See capture_state().
+
+          :param set_hold: If true this will set the snapped object from the `state`.
+          TODO: This should probably be True by default, but I am not sure the effect
           it will have.
         """
         rom = self.get_rigid_object_manager()
@@ -439,7 +441,7 @@ class RearrangeSim(HabitatSim):
             else:
                 self.grasp_mgr.desnap(True)
 
-    def step(self, action):
+    def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
         self._update_markers()
@@ -505,19 +507,32 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05):
-        """Adds the sphere object to the specified position for visualization purpose."""
+    def visualize_position(
+        self,
+        position: np.ndarray,
+        viz_id: Optional[int] = None,
+        r: float = 0.05,
+    ) -> int:
+        """Adds the sphere object to the specified position for visualization purpose.
+
+        :param position: global position of the visual sphere
+        :param viz_id: provided if moving an existing visual sphere instead of creating a new one
+        :param r: radius of the visual sphere
+
+        :return: Object id of the newly added sphere. -1 if failed.
+        """
 
         rom = self.get_object_template_manager()
         viz_obj = None
         if viz_id is None:
             if r not in self._viz_templates:
+                # create and register a new template for this novel sphere scaling
                 template = rom.get_template_by_handle(
                     rom.get_template_handles("sphere")[0]
                 )
                 template.scale = mn.Vector3(r, r, r)
                 self._viz_templates[r] = rom.register_template(
-                    template, "ball_new_viz"
+                    template, "ball_new_viz" + str(r)
                 )
             viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
             make_render_only(viz_obj, self)
@@ -527,17 +542,13 @@ class RearrangeSim(HabitatSim):
         viz_obj.translation = mn.Vector3(*position)
         return viz_obj.object_id
 
-    def draw_obs(self):
-        """Synchronously gets the observation at the current step"""
-        # Update the world state to get most recent render
-        self.internal_step(-1)
+    def internal_step(self, dt: Union[int, float]) -> None:
+        """Step the world and update the robot.
 
-        prev_sim_obs = self.get_sensor_observations()
-        obs = self._sensor_suite.get_observations(prev_sim_obs)
-        return obs
+        :param dt: Timestep by which to advance the world. Multiple physics substeps can be excecuted within a single timestep. -1 indicates a single physics substep.
 
-    def internal_step(self, dt):
-        """Never call sim.step_world directly."""
+        Never call sim.step_world directly or miss updating the robot.
+        """
 
         # optionally step physics and update the robot for benchmarking purposes
         if self.habitat_config.get("STEP_PHYSICS", True):
@@ -547,9 +558,10 @@ class RearrangeSim(HabitatSim):
             ):
                 self.robot.update()
 
-    def get_targets(self):
-        """
-        - Returns: ([idx: int], [goal_pos: list]) The index of the target object
+    def get_targets(self) -> Tuple[List[int], np.ndarray]:
+        """Get a mapping of object ids to goal positions for rearrange targets.
+
+        :return: ([idx: int], [goal_pos: list]) The index of the target object
           in self.scene_obj_ids and the 3D goal POSITION, rotation is IGNORED.
           Note that goal_pos is the desired position of the object, not the
           starting position.
@@ -561,13 +573,16 @@ class RearrangeSim(HabitatSim):
         ]
         return a, np.array(b)
 
-    def get_n_targets(self):
+    def get_n_targets(self) -> int:
+        """Get the number of rearrange targets."""
         return len(self.ep_info["targets"])
 
-    def get_target_objs_start(self):
+    def get_target_objs_start(self) -> np.ndarray:
+        """Get the initial positions of all objects targeted for rearrangement as a numpy array."""
         return np.array(self.target_start_pos)
 
-    def get_scene_pos(self):
+    def get_scene_pos(self) -> np.ndarray:
+        """Get the positions of all clutter RigidObjects in the scene as a numpy array."""
         rom = self.get_rigid_object_manager()
         return np.array(
             [
