@@ -16,9 +16,6 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.rearrange_grasp_manager import (
-    RearrangeGraspManager,
-)
 from habitat.tasks.rearrange.utils import (
     IkHelper,
     get_nav_mesh_settings,
@@ -73,6 +70,10 @@ class RearrangeSim(HabitatSim):
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
         self.ctrl_arm = True
+
+        from habitat.tasks.rearrange.rearrange_grasp_manager import (
+            RearrangeGraspManager,
+        )
 
         self.grasp_mgr: RearrangeGraspManager = RearrangeGraspManager(
             self, self.habitat_config
