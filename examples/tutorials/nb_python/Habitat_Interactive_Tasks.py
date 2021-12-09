@@ -28,7 +28,7 @@
 #     name: python
 #     nbconvert_exporter: python
 #     pygments_lexer: ipython3
-#     version: 3.7.3
+#     version: 3.6.13
 # ---
 
 # %% [markdown]
