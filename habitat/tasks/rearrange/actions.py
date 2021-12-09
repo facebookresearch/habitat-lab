@@ -230,7 +230,13 @@ class BaseVelAction(SimulatorTaskAction):
     @property
     def action_space(self):
         lim = 20
-        return spaces.Box(shape=(2,), low=-lim, high=lim, dtype=np.float32)
+        return spaces.Dict(
+            {
+                "base_vel": spaces.Box(
+                    shape=(2,), low=-lim, high=lim, dtype=np.float32
+                )
+            }
+        )
 
     def _capture_robot_state(self, sim):
         return {

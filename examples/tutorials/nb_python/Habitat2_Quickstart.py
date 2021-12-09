@@ -158,8 +158,11 @@ if vut.is_notebook():
 class NavPickTaskV1(RearrangeTask):
     def reset(self, episode):
         self.target_object_index = np.random.randint(
-            0, len(self._sim.get_n_targets())
+            0, self._sim.get_n_targets()
         )
+        start_pos = self._sim.pathfinder.get_random_navigable_point()
+        self._sim.robot.base_pos = start_pos
+
         # Put any task reset logic here.
         return super().reset(episode)
 
@@ -178,6 +181,9 @@ class TargetStartSensor(Sensor):
         self._config = config
         super().__init__(**kwargs)
 
+    def _get_uuid(self, *args, **kwargs):
+        return TargetStartSensor.cls_uuid
+
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
@@ -189,7 +195,7 @@ class TargetStartSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, *args, observations, episode, **kwargs):
+    def get_observation(self, observations, episode, *args, **kwargs):
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         start_pos = self._sim.get_target_objs_start()[
@@ -455,7 +461,8 @@ with habitat.Env(
     video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 
     while not env.episode_over:
-        observations = env.step(env.action_space.sample())  # noqa: F841
+        action = env.action_space.sample()
+        observations = env.step(action)  # noqa: F841
         info = env.get_metrics()
 
         render_obs = observations_to_image(observations, info)
@@ -469,5 +476,3 @@ with habitat.Env(
     video_writer.close()
     if vut.is_notebook():
         vut.display_video(video_file_path)
-
-# %%
