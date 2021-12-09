@@ -155,7 +155,7 @@ jobs:
             - habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
-            - ccache-{{ arch }}-master
+            - ccache-{{ arch }}-main
           paths:
             - /home/circleci/.ccache
       - run:
@@ -221,7 +221,7 @@ jobs:
           paths:
             - ./habitat-sim
       - save_cache:
-          key: ccache-{{ arch }}-master
+          key: ccache-{{ arch }}-main
           background: true
           paths:
             - /home/circleci/.ccache

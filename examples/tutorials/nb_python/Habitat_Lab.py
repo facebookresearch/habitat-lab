@@ -13,7 +13,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.13.3
 #   kernelspec:
 #     display_name: Python 3
 #     name: python3
@@ -22,7 +22,7 @@
 # %%
 # @title Installation
 
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/master/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # !wget -c http://dl.fbaipublicfiles.com/habitat/mp3d_example.zip && unzip -o mp3d_example.zip -d /content/habitat-sim/data/scene_datasets/mp3d/
 
 # %%
@@ -75,7 +75,7 @@ from habitat_baselines.config.default import get_config as get_baselines_config
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
 def display_sample(
     rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])
-):  # noqa B006
+):  # noqa: B006
     from habitat_sim.utils.common import d3_40_colors_rgb
 
     rgb_img = Image.fromarray(rgb_obs, mode="RGB")
@@ -199,7 +199,7 @@ if __name__ == "__main__":
 # @markdown (double click to see the code)
 
 # example tensorboard visualization
-# for more details refer to [link](https://github.com/facebookresearch/habitat-lab/tree/master/habitat_baselines#additional-utilities).
+# for more details refer to [link](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#additional-utilities).
 
 try:
     from IPython import display
@@ -213,11 +213,11 @@ except ImportError:
 #
 # All the concepts link to their definitions:
 #
-# 1. [`habitat.sims.habitat_simulator.HabitatSim`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/sims/habitat_simulator/habitat_simulator.py#L159)
+# 1. [`habitat.sims.habitat_simulator.HabitatSim`](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/sims/habitat_simulator/habitat_simulator.py#L159)
 # Thin wrapper over `habitat_sim` providing seamless integration with experimentation framework.
 #
 #
-# 2. [`habitat.core.env.Env`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/core/env.py)
+# 2. [`habitat.core.env.Env`](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/core/env.py)
 # Abstraction for the universe of agent, task and simulator. Agents that you train and evaluate operate inside the environment.
 #
 #
@@ -233,7 +233,7 @@ except ImportError:
 # Wrapper over information required for the dataset of embodied task, contains definition and interaction with an `episode`.
 #
 #
-# 6. [`habitat.core.embodied_task.Measure`](https://github.com/facebookresearch/habitat-lab/blob/master/habitat/core/embodied_task.py#L82)
+# 6. [`habitat.core.embodied_task.Measure`](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/core/embodied_task.py#L82)
 # Defines the metrics for embodied task, eg: [SPL](https://github.com/facebookresearch/habitat-lab/blob/d0db1b55be57abbacc5563dca2ca14654c545552/habitat/tasks/nav/nav.py#L533).
 #
 #
@@ -403,7 +403,7 @@ class ForwardOnlyAgent(habitat.Agent):
 # %% [markdown]
 # ### Other Examples
 #
-# [Create a new action space](https://github.com/facebookresearch/habitat-lab/blob/master/examples/new_actions.py)
+# [Create a new action space](https://github.com/facebookresearch/habitat-lab/blob/main/examples/new_actions.py)
 
 # %%
 # @title Sim2Real with Habitat { display-mode: "form" }
