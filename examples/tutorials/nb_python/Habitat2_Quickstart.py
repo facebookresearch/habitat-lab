@@ -43,7 +43,7 @@ import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat_baselines.utils.gym_definitions  # pylint: disable=unused-import
+import habitat_baselines.utils.gym_definitions  # noqa: F401
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -241,7 +241,7 @@ class NavPickReward(RearrangeReward):
     def _get_uuid(*args, **kwargs):
         return NavPickReward.cls_uuid
 
-    def reset_metric(self, *args, episode, **kwargs):
+    def reset_metric(self, *args, task, episode, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
@@ -446,7 +446,7 @@ with open(nav_pick_cfg_path, "w") as f:
 with habitat.Env(
     config=insert_render_options(habitat.get_config(nav_pick_cfg_path))
 ) as env:
-    observations = env.reset()  # noqa: F841
+    env.reset()
 
     print("Agent acting inside environment.")
     count_steps = 0
