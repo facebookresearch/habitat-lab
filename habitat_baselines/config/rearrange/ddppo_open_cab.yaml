@@ -19,8 +19,8 @@ NUM_CHECKPOINTS: 100
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/opencab_state.yaml
-GYM_AUTO_NAME: "OpenCabState"
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/open_cab.yaml
+GYM_AUTO_NAME: "OpenCab"
 ENV_NAME: "RearrangeRLEnv"
 
 

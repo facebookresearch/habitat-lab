@@ -19,8 +19,8 @@ NUM_CHECKPOINTS: 100
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/closecab_state.yaml
-GYM_AUTO_NAME: "CloseCabState"
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/close_cab.yaml
+GYM_AUTO_NAME: "CloseCab"
 ENV_NAME: "RearrangeRLEnv"
 
 

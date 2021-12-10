@@ -924,39 +924,40 @@ if __name__ == "__main__":
             logger.info(f" SceneDataset: {mm.active_dataset}\n")
             logger.info("--------")
             logger.info(" Scenes:")
-            logger.info("--------\n    ", end="")
-            logger.info(*mm.get_scene_handles(), sep="\n    ")
+            logger.info("--------\n    ")
+            logger.info("\n     ".join(mm.get_scene_handles()))
             logger.info("---------------")
             logger.info(" Rigid Objects:")
-            logger.info("---------------\n    ", end="")
+            logger.info("---------------\n    ")
             logger.info(
-                *mm.object_template_manager.get_template_handles(),
-                sep="\n    ",
+                "\n     ".join(
+                    mm.object_template_manager.get_template_handles()
+                ),
             )
             logger.info("---------------------")
             logger.info(" Articulated Objects:")
-            logger.info("---------------------\n    ", end="")
-            logger.info(*mm.urdf_paths, sep="\n    ")
+            logger.info("---------------------\n    ")
+            logger.info("\n     ".join(mm.urdf_paths))
 
             logger.info("-------------------------")
             logger.info("Stage Global Receptacles:")
             logger.info("-------------------------")
             for handle, r_list in receptacles["stage"].items():
-                logger.info(f"  - {handle}\n    ", end="")
-                logger.info(*r_list, sep="\n    ")
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
 
             logger.info("-------------------------")
             logger.info("Rigid Object Receptacles:")
             logger.info("-------------------------")
             for handle, r_list in receptacles["rigid"].items():
-                logger.info(f"  - {handle}\n    ", end="")
-                logger.info(*r_list, sep="\n    ")
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
             logger.info("-------------------------------")
             logger.info("Articulated Object receptacles:")
             logger.info("-------------------------------")
             for handle, r_list in receptacles["articulated"].items():
-                logger.info(f"  - {handle}\n    ", end="")
-                logger.info(*r_list, sep="\n    ")
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
 
             logger.info("==================================")
             logger.info("Done listing SceneDataset summary")

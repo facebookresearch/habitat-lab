@@ -14,7 +14,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.13.3
 #   kernelspec:
 #     display_name: Python [conda env:hab_merge] *
 #     language: python
@@ -151,11 +151,22 @@ if vut.is_notebook():
 
 # %% [markdown]
 # # Defining New Tasks
-# We will define a new task to navigate to an object and then pick it up.
+#
+# We will define a new task for the robot to navigate to and then pick up a target object in the environment. To support a new task we need:
+# * A task of type `RearrangeTask` which implements the reset function. .
+# * Sensor definitions to populate the observation space.
+# * Measurement definitions to define the reward, termination condition, and additional logging information.
+#
+# For other examples of task, sensor, and measurement definitions, [see here for existing tasks]( https://github.com/facebookresearch/habitat-lab/tree/hab_suite/habitat/tasks/rearrange/sub_tasks). As explained in the next part, tasks, sensors, and measurements are connected through a config file that defines the task.
 
 # %%
 @registry.register_task(name="RearrangeNavPickTask-v0")
 class NavPickTaskV1(RearrangeTask):
+    """
+    Primarily this is used to implement the episode reset functionality.
+    Can also implement custom episode step functionality.
+    """
+
     def reset(self, episode):
         self.target_object_index = np.random.randint(
             0, self._sim.get_n_targets()
@@ -163,7 +174,7 @@ class NavPickTaskV1(RearrangeTask):
         start_pos = self._sim.pathfinder.get_random_navigable_point()
         self._sim.robot.base_pos = start_pos
 
-        # Put any task reset logic here.
+        # Put any reset logic here.
         return super().reset(episode)
 
 
@@ -231,11 +242,17 @@ class DistanceToTargetObject(Measure):
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()[idxs[task.target_object_index]]
 
+        # Metric information is stored in the `self._metric` variable.
         self._metric = np.linalg.norm(scene_pos - ee_pos, ord=2, axis=-1)
 
 
 @registry.register_measure
 class NavPickReward(RearrangeReward):
+    """
+    For every new task, you NEED to implement a reward function.
+    `RearrangeReward` includes penalties for collisions into the reward function.
+    """
+
     cls_uuid: str = "navpick_reward"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -248,6 +265,7 @@ class NavPickReward(RearrangeReward):
         return NavPickReward.cls_uuid
 
     def reset_metric(self, *args, task, episode, **kwargs):
+        # Measurements can be computed from other measurements.
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
@@ -266,12 +284,15 @@ class NavPickReward(RearrangeReward):
 
 @registry.register_measure
 class NavPickSuccess(Measure):
+    """
+    For every new task, you NEED to implement a "success" condition.
+    """
+
     cls_uuid: str = "navpick_success"
 
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
-        self._prev_ee_pos = None
         super().__init__(**kwargs)
 
     @staticmethod
@@ -288,16 +309,15 @@ class NavPickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        # Is the agent holding the object and it's at the start?
+        # Check that the agent is holding the object.
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.target_object_index]
-
-        # Check that we are holding the right object and the object is actually
-        # being held.
         self._metric = abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
 
 
 # %% [markdown]
-# ## Load as Habitat Task
+# We now add all the previously defined task, sensor, and measurement definitions to a config file to finish defining the new Habitat task. For examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite/configs/tasks/rearrange).
+#
+# This config also defines the action space through the `TASK.ACTIONS` key. You can substitute different base control actions from [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/actions.py), different arm control actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/actions.py), and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/grip_actions.py).
 
 # %%
 cfg_txt = """
@@ -325,7 +345,7 @@ TASK:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
     SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR"]
-    
+
     # Measurements
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -346,7 +366,7 @@ TASK:
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-        
+
     NAV_PICK_REWARD:
         TYPE: "NavPickSuccess"
         SUCC_THRESH: 0.15
@@ -448,6 +468,9 @@ nav_pick_cfg_path = "data/nav_pick_demo.yaml"
 with open(nav_pick_cfg_path, "w") as f:
     f.write(cfg_txt)
 
+# %% [markdown]
+# The new task can then be imported via the yaml file.
+
 # %%
 with habitat.Env(
     config=insert_render_options(habitat.get_config(nav_pick_cfg_path))
@@ -476,3 +499,79 @@ with habitat.Env(
     video_writer.close()
     if vut.is_notebook():
         vut.display_video(video_file_path)
+
+# %% [markdown]
+# # Dataset Generation
+# The previously defined task uses the default `pick.json.gz` dataset. This places objects on the counter. The episode `.json.gz` dataset defines where objects are placed and their rearrangement target positions. New episode datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where object spawns on the table.
+
+# %%
+dataset_cfg_txt = """
+---
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/"
+scene_sets:
+  -
+    name: "v3_sc"
+    included_substrings:
+      - "v3_sc"
+    excluded_substrings: []
+    comment: "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
+
+object_sets:
+  -
+    name: "kitchen"
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+    excluded_substrings: []
+    comment: "Leave included_substrings empty to select all objects."
+
+receptacle_sets:
+  -
+    name: "table"
+    included_object_substrings:
+      - "frl_apartment_table_01"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+    comment: "The empty substrings act like wildcards, selecting all receptacles for all objects."
+
+scene_sampler:
+  type: "subset"
+  params:
+    scene_sets: ["v3_sc"]
+  comment: "Samples from ReplicaCAD 105 variations with static furniture."
+
+
+object_samplers:
+  -
+    name: "kitchen_counter"
+    type: "uniform"
+    params:
+      object_sets: ["kitchen"]
+      receptacle_sets: ["table"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+      sample_region_ratio: 0.5
+
+object_target_samplers:
+  -
+    name: "kitchen_counter_targets"
+    type: "uniform"
+    params:
+      object_samplers: ["kitchen_counter"]
+      receptacle_sets: ["table"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+"""
+nav_pick_cfg_path = "data/nav_pick_dataset.yaml"
+with open(nav_pick_cfg_path, "w") as f:
+    f.write(dataset_cfg_txt)
+
+# %%
+# !python -m habitat.datasets.rearrange.rearrange_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
+
+# %% [markdown]
+# To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
