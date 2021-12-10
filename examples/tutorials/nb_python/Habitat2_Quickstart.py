@@ -111,7 +111,7 @@ with habitat.Env(
 
 # %% [markdown]
 # ## Gym API
-# You can also use environments through the Gym API.
+# You can also import environments through the Gym API.
 
 # %%
 env = gym.make("HabitatGymRenderPick-v0")
