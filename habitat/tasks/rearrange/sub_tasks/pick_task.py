@@ -36,18 +36,21 @@ class RearrangePickTaskV1(RearrangeTask):
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
         self.start_states = self.cache.load()
-        self.targ_idx = None
         self.prev_colls = None
-        self.abs_targ_idx = None
-        self.cur_dist = -1.0
-        self.prev_picked = False
+        self.force_set_idx = None
+
+    def set_args(self, obj, **kwargs):
+        self.force_set_idx = obj
 
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
     def _gen_start_pos(self, sim, is_easy_init):
         target_positions = self._get_targ_pos(sim)
-        sel_idx = np.random.randint(0, len(target_positions))
+        if self.force_set_idx is not None:
+            sel_idx = self.force_set_idx
+        else:
+            sel_idx = np.random.randint(0, len(target_positions))
         targ_pos = target_positions[sel_idx]
 
         orig_start_pos = sim.pathfinder.snap_point(targ_pos)
@@ -68,6 +71,12 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
+
+            rel_targ = targ_pos - start_pos
+            angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
+            if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
+                angle_to_obj *= -1.0
+
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
 
             is_navigable = is_easy_init or sim.pathfinder.is_navigable(
@@ -82,11 +91,6 @@ class RearrangePickTaskV1(RearrangeTask):
             sim.robot.base_pos = start_pos
 
             # Face the robot towards the object.
-            rel_targ = targ_pos - start_pos
-            angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
-            if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
-                angle_to_obj *= -1.0
-
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             sim.robot.base_rot = angle_to_obj + rot_noise
 
@@ -141,9 +145,11 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = 0
         episode_id = sim.ep_info["episode_id"]
-        use_force_recache = self._config.get("FORCE_RECACHE", False)
 
-        if episode_id in self.start_states and not use_force_recache:
+        if (
+            episode_id in self.start_states
+            and not self._config.FORCE_REGENERATE
+        ):
             start_pos, start_rot, sel_idx = self.start_states[episode_id]
         else:
             start_pos, start_rot, sel_idx = self._gen_start_pos(
@@ -155,10 +161,6 @@ class RearrangePickTaskV1(RearrangeTask):
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot
 
-        self.targ_idx = sel_idx
-        self.abs_targ_idx = sim.get_targets()[0][sel_idx]
-        # Value < 0 will not be used
-        self.cur_dist = -1.0
-        self.prev_picked = self._sim.grasp_mgr.is_grasped
+        self._targ_idx = sel_idx
 
         return super(RearrangePickTaskV1, self).reset(episode)

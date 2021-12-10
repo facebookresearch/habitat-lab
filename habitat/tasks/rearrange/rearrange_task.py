@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from habitat.core.dataset import Episode
+from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollisionDetails, rearrange_collision
@@ -22,9 +23,7 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
-DESIRED_FETCH_ARM_RESTING_REL_LOCATION = np.array([0.5, 0.0, 1.0])
-
-
+@registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping shared between
@@ -41,22 +40,49 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
-        self._desired_resting = DESIRED_FETCH_ARM_RESTING_REL_LOCATION
+        self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
+        self._sim_reset = True
+        self._targ_idx: int = 0
+
+    @property
+    def targ_idx(self):
+        return self._targ_idx
+
+    @property
+    def abs_targ_idx(self):
+        if self._targ_idx is None:
+            return None
+        return self._sim.get_targets()[0][self._targ_idx]
 
     @property
     def desired_resting(self):
         return self._desired_resting
 
+    def set_args(self, **kwargs):
+        raise NotImplementedError("Task cannot dynamically set arguments")
+
+    def set_sim_reset(self, sim_reset):
+        self._sim_reset = sim_reset
+
     def reset(self, episode: Episode):
-        super_reset = True
         self._ignore_collisions = []
-        if super_reset:
+        if self._sim_reset:
             observations = super().reset(episode)
         else:
             observations = None
+            self._sim._try_acquire_context()
+            prev_sim_obs = self._sim.get_sensor_observations()
+            observations = self._sim._sensor_suite.get_observations(
+                prev_sim_obs
+            )
+            task_obs = self.sensor_suite.get_observations(
+                observations=observations, episode=episode, task=self
+            )
+            observations.update(task_obs)
+
         self.prev_measures = self.measurements.get_metrics()
-        self.prev_picked = False
         self.n_succ_picks = 0
+        self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
         self.should_end = False
@@ -83,7 +109,10 @@ class RearrangeTask(NavigationTask):
         if self.should_end:
             done = True
 
-        if self._sim.grasp_mgr.is_violating_hold_constraint():
+        if (
+            self._sim.grasp_mgr.is_violating_hold_constraint()
+            and self._config.CONSTRAINT_VIOLATION_ENDS_EPISODE
+        ):
             done = True
 
         return not done

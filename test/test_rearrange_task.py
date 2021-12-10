@@ -5,29 +5,30 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import os.path as osp
 import time
 from glob import glob
 
 import pytest
 
 import habitat
+import habitat.datasets.rearrange.rearrange_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat_baselines.utils.env_utils
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
-from habitat.datasets import make_dataset
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
-CFG_TEST = "configs/tasks/rearrangepick_replica_cad.yaml"
+CFG_TEST = "configs/tasks/rearrange/pick.yaml"
+GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
 EPISODES_LIMIT = 6
-PARTIAL_LOAD_SCENES = 3
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -59,78 +60,7 @@ def test_rearrange_dataset():
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
-    check_json_serializaiton(dataset)
-
-
-@pytest.mark.parametrize("split", ["train", "test"])
-def test_dataset_splitting(split):
-    dataset_config = get_config(CFG_TEST).DATASET
-    dataset_config.defrost()
-    dataset_config.SPLIT = split
-
-    if not RearrangeDatasetV0.check_config_paths_exist(dataset_config):
-        pytest.skip("Test skipped as dataset files are missing.")
-
-    scenes = RearrangeDatasetV0.get_scenes_to_load(config=dataset_config)
-    assert (
-        len(scenes) > 0
-    ), "Expected dataset contains separate episode file per scene."
-
-    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
-    full_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    full_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
-    }
-
-    dataset_config.CONTENT_SCENES = scenes[: PARTIAL_LOAD_SCENES // 2]
-    split1_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split1_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
-    }
-
-    dataset_config.CONTENT_SCENES = scenes[
-        PARTIAL_LOAD_SCENES // 2 : PARTIAL_LOAD_SCENES
-    ]
-    split2_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
-    )
-    split2_episodes = {
-        (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
-    }
-
-    assert full_episodes == split1_episodes.union(
-        split2_episodes
-    ), "Split dataset is not equal to full dataset"
-    assert (
-        len(split1_episodes.intersection(split2_episodes)) == 0
-    ), "Intersection of split datasets is not the empty set"
-
-
-def test_rearrange_habitat_env():
-    config = get_config(CFG_TEST)
-
-    if not RearrangeDatasetV0.check_config_paths_exist(config.DATASET):
-        pytest.skip("Test skipped as dataset files are missing.")
-
-    config.freeze()
-    with habitat.Env(config=config, dataset=None) as env:
-        for _ in range(10):
-            env.reset()
-            while not env.episode_over:
-                action = env.action_space.sample()
-                obs = env.step(action)
-                habitat.logger.info(
-                    f"Action : "
-                    f"{action['action']}, "
-                    f"args: {action['action_args']}."
-                    f"obs: {list(obs.keys())}."
-                )
-
-        env.reset()
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize(
@@ -139,7 +69,10 @@ def test_rearrange_habitat_env():
         glob("habitat_baselines/config/rearrange/*"),
     ),
 )
-def test_rearrange_task(test_cfg_path):
+def test_rearrange_basline_envs(test_cfg_path):
+    """
+    Test the Habitat Baseline environments
+    """
     config = baselines_get_config(test_cfg_path)
 
     env_class = get_env_class(config.ENV_NAME)
@@ -154,11 +87,50 @@ def test_rearrange_task(test_cfg_path):
             done = False
             while not done:
                 action = env.action_space.sample()
-                habitat.logger.info(
-                    f"Action : "
-                    f"{action['action']}, "
-                    f"args: {action['action_args']}."
-                )
                 _, _, done, info = env.step(action=action)
 
-            logger.info(info)
+
+@pytest.mark.parametrize(
+    "test_cfg_path",
+    list(
+        glob("configs/tasks/rearrange/*"),
+    ),
+)
+def test_rearrange_tasks(test_cfg_path):
+    """
+    Test the underlying Habitat Tasks
+    """
+    print("Trying to make for ", test_cfg_path)
+    if not osp.isfile(test_cfg_path):
+        return
+
+    config = get_config(test_cfg_path)
+    env = habitat.Env(config=config)
+
+    with env:
+        for _ in range(5):
+            env.reset()
+
+
+# NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
+@pytest.mark.parametrize("debug_visualization", [False])
+@pytest.mark.parametrize("num_episodes", [2])
+@pytest.mark.parametrize("config", [GEN_TEST_CFG])
+def test_rearrange_episode_generator(
+    debug_visualization, num_episodes, config
+):
+    cfg = rr_gen.get_config_defaults()
+    cfg.merge_from_file(config)
+    dataset = RearrangeDatasetV0()
+    with rr_gen.RearrangeEpisodeGenerator(
+        cfg=cfg, debug_visualization=debug_visualization
+    ) as ep_gen:
+        start_time = time.time()
+        dataset.episodes += ep_gen.generate_episodes(num_episodes)
+
+    # test serialization of freshly generated dataset
+    check_json_serialization(dataset)
+
+    logger.info(
+        f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
+    )

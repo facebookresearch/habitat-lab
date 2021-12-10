@@ -4,102 +4,81 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import json
-import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
 
+import habitat_sim
+from habitat.config.default import Config
 from habitat.core.registry import registry
+from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.obj_loaders import (
-    load_articulated_objs,
-    load_objs,
-    place_viz_objs,
-)
-from habitat.tasks.rearrange.rearrange_grasp_manager import (
-    RearrangeGraspManager,
-)
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.utils import (
     IkHelper,
-    convert_legacy_cfg,
     get_nav_mesh_settings,
+    is_pb_installed,
     make_render_only,
 )
-from habitat_sim.gfx import LightInfo, LightPositionModel
 from habitat_sim.physics import MotionType
-from habitat_sim.robots import FetchRobot
 
-
-# temp workflow for loading lights into Habitat scene
-def load_light_setup_for_glb(json_filepath):
-    with open(json_filepath) as json_file:
-        data = json.load(json_file)
-        lighting_setup = []
-        for light in data["lights"].values():
-            t = light["position"]
-            light_w = 1.0
-            position = [float(t[0]), float(t[1]), float(t[2]), light_w]
-            color_scale = float(light["intensity"])
-            color = [float(c * color_scale) for c in light["color"]]
-            lighting_setup.append(
-                LightInfo(
-                    vector=position,
-                    color=color,
-                    model=LightPositionModel.Global,
-                )
-            )
-
-    return lighting_setup
+# flake8: noqa
+from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
-    def __init__(self, config):
+    def __init__(self, config: Config):
         super().__init__(config)
 
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
         self.first_setup = True
-        self.is_render_obs = False
-        self.ep_info = None
+        self._should_render_debug = False
+        self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
+        self._is_pb_installed = is_pb_installed()
 
         # Number of physics updates per action
         self.ac_freq_ratio = agent_config.AC_FREQ_RATIO
         # The physics update time step.
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
+        self._concur_render = self.habitat_config.get("CONCUR_RENDER", False)
+        self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
+        self._debug_render = self.habitat_config.get("DEBUG_RENDER", False)
 
-        self.art_objs = []
-        self.start_art_states = {}
-        self.cached_art_obj_ids = []
-        self.scene_obj_ids = []
-        self.viz_obj_ids = []
+        self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []
+        self._start_art_states: Dict[
+            habitat_sim.physics.ManagedArticulatedObject, List[float]
+        ] = {}
+        self._prev_obj_names: Optional[List[str]] = None
+        self.scene_obj_ids: List[int] = []
         # Used to get data from the RL environment class to sensors.
-        self.track_markers = []
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
+        self.ref_handle_to_rigid_obj_id: Optional[Dict[str, int]] = None
+        robot_cls = eval(self.habitat_config.ROBOT_TYPE)
+        self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
+        self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)
+        self._markers: Dict[str, MarkerInfo] = {}
 
-        self.ik_helper = None
+        self._ik_helper: Optional[IkHelper] = None
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
         self.ctrl_arm = True
 
-        self._light_setup = load_light_setup_for_glb(
-            "data/replica_cad/configs/lighting/frl_apartment_stage.lighting_config.json"
+        from habitat.tasks.rearrange.rearrange_grasp_manager import (
+            RearrangeGraspManager,
         )
-        obj_attr_mgr = self.get_object_template_manager()
-        obj_attr_mgr.load_configs("data/objects/ycb")
 
-        self.concur_render = self.habitat_config.get(
-            "CONCUR_RENDER", True
-        ) and hasattr(self, "get_sensor_observations_async_start")
-        self.grasp_mgr = RearrangeGraspManager(self, self.habitat_config)
+        self.grasp_mgr: RearrangeGraspManager = RearrangeGraspManager(
+            self, self.habitat_config
+        )
 
     def _get_target_trans(self):
         """
@@ -108,184 +87,318 @@ class RearrangeSim(HabitatSim):
         """
         # Preprocess the ep_info making necessary datatype conversions.
         target_trans = []
-        for i in range(len(self.ep_info["targets"])):
-            targ_idx, trans = self.ep_info["targets"][i]
-            if len(trans) == 3:
-                # Legacy position only format.
-                trans = mn.Matrix4.translation(mn.Vector3(*trans))
-            else:
-                trans = mn.Matrix4(trans)
-            target_trans.append((targ_idx, trans))
+        rom = self.get_rigid_object_manager()
+        for target_handle, trans in self.ep_info["targets"].items():
+            targ_idx = self.scene_obj_ids.index(
+                rom.get_object_by_handle(target_handle).object_id
+            )
+            target_trans.append((targ_idx, mn.Matrix4(trans)))
         return target_trans
 
     def _try_acquire_context(self):
-        if self.concur_render:
+        if self._concur_render:
             self.renderer.acquire_gl_context()
 
-    def _update_config(self, ep_info):
-        """Updates config from legacy settings. Hopefully this can be
-        deprecated soon.
+    def sleep_all_objects(self):
         """
-        scene = ep_info["scene_id"]
-        if "replica_cad" in scene and "glb" in scene:
-            parts = scene.split("/")
-            base_replica_path = "/".join(parts[:-2])
-            end_replica_path = "/".join(parts[-2:]).split(".")[0]
-            ep_info["scene_id"] = osp.join(
-                base_replica_path, "configs", end_replica_path
-            )
-        return ep_info
+        De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
+        """
+        rom = self.get_rigid_object_manager()
+        for _, ro in rom.get_objects_by_handle_substring().items():
+            ro.awake = False
+        aom = self.get_articulated_object_manager()
+        for _, ao in aom.get_objects_by_handle_substring().items():
+            ao.awake = False
 
-    def reconfigure(self, config):
+    def add_markers(self, ep_info: Config):
+        self._markers = {}
+        aom = self.get_articulated_object_manager()
+        for marker in ep_info["markers"]:
+            p = marker["params"]
+            ao = aom.get_object_by_handle(p["object"])
+            name_to_link = {}
+            name_to_link_id = {}
+            for i in range(ao.num_links):
+                name = ao.get_link_name(i)
+                link = ao.get_link_scene_node(i)
+                name_to_link[name] = link
+                name_to_link_id[name] = i
+
+            self._markers[marker["name"]] = MarkerInfo(
+                p["offset"],
+                name_to_link[p["link"]],
+                ao,
+                name_to_link_id[p["link"]],
+            )
+
+    def get_marker(self, name: str) -> MarkerInfo:
+        return self._markers[name]
+
+    def get_all_markers(self):
+        return self._markers
+
+    def _update_markers(self) -> None:
+        for m in self._markers.values():
+            m.update()
+
+    @property
+    def ik_helper(self):
+        if not self._is_pb_installed:
+            raise ImportError(
+                "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
+            )
+        return self._ik_helper
+
+    def reconfigure(self, config: Config):
         ep_info = config["ep_info"][0]
-        ep_info = self._update_config(ep_info)
+        self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
         config["SCENE"] = ep_info["scene_id"]
+
         super().reconfigure(config)
+        self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
-        self.fixed_base = ep_info["fixed_base"]
-
-        self.target_obj_ids = []
-
-        if ep_info["scene_id"] != self.prev_scene_id:
-            # Object instances are not valid between scenes.
-            self.art_objs = []
-            self.scene_obj_ids = []
-            self.robot = None
-            self.viz_ids = defaultdict(lambda: None)
-            self.viz_obj_ids = []
-        self.grasp_mgr.desnap(force=True)
-        self.prev_scene_id = ep_info["scene_id"]
-
         self._try_acquire_context()
 
-        self._add_objs(ep_info)
-        if self.robot is None:
-            self.robot = FetchRobot(self.habitat_config.ROBOT_URDF, self)
+        if self.prev_scene_id != ep_info["scene_id"]:
+            self.grasp_mgr.reconfigure()
+            # add and initialize the robot
+            ao_mgr = self.get_articulated_object_manager()
+            if self.robot.sim_obj is not None and self.robot.sim_obj.is_alive:
+                ao_mgr.remove_object_by_id(self.robot.sim_obj.object_id)
+
             self.robot.reconfigure()
-        self.robot.reset()
+            self._prev_obj_names = None
+
         self.grasp_mgr.reset()
 
-        set_pos = {}
-        # Set articulated object joint states.
-        if self.habitat_config.get("LOAD_ART_OBJS", True):
-            for i, art_state in self.start_art_states.items():
-                set_pos[i] = art_state
-            for i, art_state in ep_info["art_states"]:
-                set_pos[self.art_objs[i]] = art_state
+        # Only remove and re-add objects if we have a new set of objects.
+        obj_names = [x[0] for x in ep_info["rigid_objs"]]
+        should_add_objects = self._prev_obj_names != obj_names
+        self._prev_obj_names = obj_names
 
-        # Get the positions after things have settled down.
-        self.settle_sim(self.habitat_config.get("SETTLE_TIME", 0.1))
+        self._clear_objects(should_add_objects)
+
+        self.prev_scene_id = ep_info["scene_id"]
+        self._viz_templates: Dict[float, int] = {}
+
+        # Set the default articulated object joint state.
+        for ao, set_joint_state in self._start_art_states.items():
+            ao.clear_joint_states()
+            ao.joint_positions = set_joint_state
+
+        # Load specified articulated object states from episode config
+        self._set_ao_states_from_ep(ep_info)
+
+        use_arm_start = self._orig_robot_js_start + (
+            self.habitat_config.get("ROBOT_JOINT_START_NOISE", 0.0)
+            * np.random.randn(self._orig_robot_js_start.shape[0])
+        )
+        self.robot.params.arm_init_params = use_arm_start
+        self.robot.reset()
+
+        # consume a fixed position from SIMUALTOR.AGENT_0 if configured
+        if self.habitat_config.AGENT_0.IS_SET_START_STATE:
+            self.robot.base_pos = mn.Vector3(
+                self.habitat_config.AGENT_0.START_POSITION
+            )
+            agent_rot = self.habitat_config.AGENT_0.START_ROTATION
+            self.robot.sim_obj.rotation = mn.Quaternion(
+                mn.Vector3(agent_rot[:3]), agent_rot[3]
+            )
+
+            if "RENDER_CAMERA_OFFSET" in self.habitat_config:
+                self.robot.params.cameras[
+                    "robot_third"
+                ].cam_offset_pos = mn.Vector3(
+                    self.habitat_config.RENDER_CAMERA_OFFSET
+                )
+            if "RENDER_CAMERA_LOOKAT" in self.habitat_config:
+                self.robot.params.cameras[
+                    "robot_third"
+                ].cam_look_at_pos = mn.Vector3(
+                    self.habitat_config.RENDER_CAMERA_LOOKAT
+                )
+
+        # add episode clutter objects additional to base scene objects
+        self._add_objs(ep_info, should_add_objects)
+
+        self.add_markers(ep_info)
+
+        # auto-sleep rigid objects as optimization
+        if self._auto_sleep:
+            self.sleep_all_objects()
+
+        # recompute the NavMesh once the scene is loaded
+        # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
+        self._recompute_navmesh()
 
         # Get the starting positions of the target objects.
+        rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
-            [scene_pos[idx] for idx, _ in self.ep_info["targets"]]
+            [
+                scene_pos[
+                    self.scene_obj_ids.index(
+                        rom.get_object_by_handle(t_handle).object_id
+                    )
+                ]
+                for t_handle, _ in self.ep_info["targets"].items()
+            ]
         )
 
         if self.first_setup:
             self.first_setup = False
-            if self.habitat_config.get("IK_ARM_URDF", None) is not None:
-                self.ik_helper = IkHelper(
+            ik_arm_urdf = self.habitat_config.get("IK_ARM_URDF", None)
+            if ik_arm_urdf is not None and self._is_pb_installed:
+                self._ik_helper = IkHelper(
                     self.habitat_config.IK_ARM_URDF,
                     np.array(self.robot.params.arm_init_params),
                 )
             # Capture the starting art states
-            self.start_art_states = {
+            self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def _load_navmesh(self):
+    def _recompute_navmesh(self):
         """Generates the navmesh on the fly. This must be called
         AFTER adding articulated objects to the scene.
         """
 
+        # cache current motiontype and set to STATIC for inclusion in the NavMesh computation
         motion_types = []
         for art_obj in self.art_objs:
             motion_types.append(art_obj.motion_type)
             art_obj.motion_type = MotionType.STATIC
+        # compute new NavMesh
         self.recompute_navmesh(
             self.pathfinder,
             self.navmesh_settings,
             include_static_objects=True,
         )
+        # optionally save the new NavMesh
         if self.habitat_config.get("SAVE_NAVMESH", False):
             scene_name = self.ep_info["scene_id"]
             inferred_path = scene_name.split(".glb")[0] + ".navmesh"
             self.pathfinder.save_nav_mesh(inferred_path)
-            print("Cached navmesh to ", inferred_path)
+        # reset cached MotionTypes
         for art_obj, motion_type in zip(self.art_objs, motion_types):
             art_obj.motion_type = motion_type
 
-    def reset(self):
-        ret = super().reset()
-        if self._light_setup:
-            # Lighting reconfigure needs to be in the reset function and not
-            # the reconfigure function.
-            self.set_light_setup(self._light_setup)
+    def _clear_objects(self, should_add_objects: bool) -> None:
+        if should_add_objects:
+            rom = self.get_rigid_object_manager()
+            for scene_obj_id in self.scene_obj_ids:
+                if rom.get_library_has_id(scene_obj_id):
+                    rom.remove_object_by_id(scene_obj_id)
+            self.scene_obj_ids = []
 
-        return ret
+        # Do not remove the articulated objects from the scene, these are
+        # managed by the underlying sim.
+        self.art_objs = []
 
-    def clear_objs(self, art_names=None):
-        for scene_obj in self.scene_obj_ids:
-            self.remove_object(scene_obj)
-        self.scene_obj_ids = []
+    def _set_ao_states_from_ep(self, ep_info: Config) -> None:
+        """
+        Sets the ArticulatedObject states for the episode which are differ from base scene state.
+        """
+        aom = self.get_articulated_object_manager()
+        # NOTE: ep_info["ao_states"]: Dict[str, Dict[int, float]] : {instance_handle -> {link_ix, state}}
+        for aoi_handle, joint_states in ep_info["ao_states"].items():
+            ao = aom.get_object_by_handle(aoi_handle)
+            ao_pose = ao.joint_positions
+            for link_ix, joint_state in joint_states.items():
+                joint_position_index = ao.get_link_joint_pos_offset(
+                    int(link_ix)
+                )
+                ao_pose[joint_position_index] = joint_state
+            ao.joint_positions = ao_pose
 
-        if art_names is None or self.cached_art_obj_ids != art_names:
-            ao_mgr = self.get_articulated_object_manager()
-            ao_mgr.remove_all_objects()
-            self.art_objs = []
+    def _add_objs(self, ep_info: Config, should_add_objects: bool) -> None:
+        # Load clutter objects:
+        # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
+        rom = self.get_rigid_object_manager()
+        obj_counts: Dict[str, int] = defaultdict(int)
 
-    def _add_objs(self, ep_info):
-        art_names = [x[0] for x in ep_info["art_objs"]]
-        self.clear_objs(art_names)
+        for i, (obj_handle, transform) in enumerate(ep_info["rigid_objs"]):
+            if should_add_objects:
+                obj_attr_mgr = self.get_object_template_manager()
+                matching_templates = (
+                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
+                )
+                assert (
+                    len(matching_templates.values()) == 1
+                ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+                ro = rom.add_object_by_template_handle(
+                    list(matching_templates.keys())[0]
+                )
+            else:
+                ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
-        if self.habitat_config.get("LOAD_ART_OBJS", True):
-            self.art_objs = load_articulated_objs(
-                convert_legacy_cfg(ep_info["art_objs"]),
-                self,
-                self.art_objs,
-                auto_sleep=self.habitat_config.get("AUTO_SLEEP", True),
+            # The saved matrices need to be flipped when reloading.
+            ro.transformation = mn.Matrix4(
+                [[transform[j][i] for j in range(4)] for i in range(4)]
             )
-            self.cached_art_obj_ids = art_names
-            self.art_name_to_id = {
-                name.split("/")[-1]: art_id
-                for name, art_id in zip(art_names, self.art_objs)
-            }
 
-        self._load_navmesh()
-
-        if self.habitat_config.get("LOAD_OBJS", True):
-            self.scene_obj_ids = load_objs(
-                convert_legacy_cfg(ep_info["static_objs"]),
-                self,
-                obj_ids=self.scene_obj_ids,
-                auto_sleep=self.habitat_config.get("AUTO_SLEEP", True),
+            other_obj_handle = (
+                obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
 
-            for idx, _ in ep_info["targets"]:
-                self.target_obj_ids.append(self.scene_obj_ids[idx])
-        else:
-            self.ep_info["targets"] = []
+            if other_obj_handle in self.instance_handle_to_ref_handle:
+                ref_handle = self.instance_handle_to_ref_handle[
+                    other_obj_handle
+                ]
+                # self.ref_handle_to_rigid_obj_id[ref_handle] = ro.object_id
+                rel_idx = len(self.scene_obj_ids)
+                self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
+            obj_counts[obj_handle] += 1
 
-    def _create_obj_viz(self, ep_info):
-        self.viz_obj_ids = []
+            if should_add_objects:
+                self.scene_obj_ids.append(ro.object_id)
 
-        target_name_pos = [
-            (ep_info["static_objs"][idx][0], self.scene_obj_ids[idx], pos)
-            for idx, pos in self._get_target_trans()
-        ]
-        self.viz_obj_ids = place_viz_objs(
-            target_name_pos, self, self.viz_obj_ids
-        )
+        ao_mgr = self.get_articulated_object_manager()
+        for aoi_handle in ao_mgr.get_object_handles():
+            self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
-    def capture_state(self, with_robot_js=False):
+    def _create_obj_viz(self, ep_info: Config) -> None:
+        if self._debug_render:
+            for marker_name, m in self._markers.items():
+                m_T = m.get_current_transform()
+                self.viz_ids[marker_name] = self.visualize_position(
+                    m_T.translation, self.viz_ids[marker_name]
+                )
+
+        # TODO: refactor this
+        # target_name_pos = [
+        #     (ep_info["static_objs"][idx][0], self.scene_objs[idx], pos)
+        #     for idx, pos in self._get_target_trans()
+        # ]
+        # self.viz_obj_ids = place_viz_objs(
+        #     target_name_pos, self, self.viz_obj_ids
+        # )
+
+    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
+        """
+        Record and return a dict of state info.
+
+        :param with_robot_js: If true, state dict includes robot joint positions in addition.
+
+        State info dict includes:
+         - Robot transform
+         - a list of ArticulatedObject transforms
+         - a list of RigidObject transforms
+         - a list of ArticulatedObject joint states
+         - the object id of currently grasped object (or None)
+         - (optionally) the robot's joint positions
+        """
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
         robot_T = self.robot.sim_obj.transformation
         art_T = [ao.transformation for ao in self.art_objs]
-        static_T = [self.get_transformation(i) for i in self.scene_obj_ids]
+        rom = self.get_rigid_object_manager()
+        static_T = [
+            rom.get_object_by_id(i).transformation for i in self.scene_obj_ids
+        ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
         robot_js = self.robot.sim_obj.joint_positions
 
@@ -300,12 +413,15 @@ class RearrangeSim(HabitatSim):
             ret["robot_js"] = robot_js
         return ret
 
-    def set_state(self, state, set_hold=False):
+    def set_state(self, state: Dict[str, Any], set_hold=False) -> None:
         """
-        - set_hold: If true this will set the snapped object from the `state`.
-          This should probably be True by default, but I am not sure the effect
+        Sets the simulation state from a cached state info dict. See capture_state().
+
+          :param set_hold: If true this will set the snapped object from the `state`.
+          TODO: This should probably be True by default, but I am not sure the effect
           it will have.
         """
+        rom = self.get_rigid_object_manager()
         if state["robot_T"] is not None:
             self.robot.sim_obj.transformation = state["robot_T"]
             n_dof = len(self.robot.sim_obj.joint_forces)
@@ -319,7 +435,11 @@ class RearrangeSim(HabitatSim):
             ao.transformation = T
 
         for T, i in zip(state["static_T"], self.scene_obj_ids):
-            self.reset_obj_T(i, T)
+            # reset object transform
+            obj = rom.get_object_by_id(i)
+            obj.transformation = T
+            obj.linear_velocity = mn.Vector3()
+            obj.angular_velocity = mn.Vector3()
 
         for p, ao in zip(state["art_pos"], self.art_objs):
             ao.joint_positions = p
@@ -331,73 +451,61 @@ class RearrangeSim(HabitatSim):
             else:
                 self.grasp_mgr.desnap(True)
 
-    def reset_obj_T(self, i, T):
-        self.set_transformation(T, i)
-        self.set_linear_velocity(mn.Vector3(0, 0, 0), i)
-        self.set_angular_velocity(mn.Vector3(0, 0, 0), i)
+    def step(self, action: Union[str, int]) -> Observations:
+        rom = self.get_rigid_object_manager()
 
-    def reset_art_obj_pos(self, i, p):
-        self.set_articulated_object_positions(i, p)
-        vel = self.get_articulated_object_velocities(i)
-        forces = self.get_articulated_object_forces(i)
-        self.set_articulated_object_velocities(i, np.zeros((len(vel),)))
-        self.set_articulated_object_forces(i, np.zeros((len(forces),)))
+        self._update_markers()
 
-    def settle_sim(self, seconds):
-        steps = int(seconds * self.ctrl_freq)
-        for _ in range(steps):
-            self.step_world(-1)
-
-    def step(self, action):
-        if self.is_render_obs:
+        if self._should_render_debug:
             self._try_acquire_context()
-            for obj_idx, _ in self.ep_info["targets"]:
-                self.set_object_bb_draw(False, self.scene_obj_ids[obj_idx])
-        for viz_obj in self.viz_obj_ids:
-            self.remove_object(viz_obj)
+            for obj_handle, _ in self.ep_info["targets"].items():
+                self.set_object_bb_draw(
+                    False, rom.get_object_by_handle(obj_handle).object_id
+                )
 
         add_back_viz_objs = {}
         for name, viz_id in self.viz_ids.items():
             if viz_id is None:
                 continue
-
-            before_pos = self.get_translation(viz_id)
-            self.remove_object(viz_id)
+            rom = self.get_rigid_object_manager()
+            viz_obj = rom.get_object_by_id(viz_id)
+            before_pos = viz_obj.translation
+            rom.remove_object_by_id(viz_id)
             add_back_viz_objs[name] = before_pos
-        self.viz_obj_ids = []
         self.viz_ids = defaultdict(lambda: None)
+        self.grasp_mgr.update()
 
-        if not self.concur_render:
-            if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
+        if self._concur_render:
+            self._prev_sim_obs = self.start_async_render()
 
-            self._prev_sim_obs = self.get_sensor_observations()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
-
-        else:
-            self._prev_sim_obs = self.get_sensor_observations_async_start()
-
-            if self.habitat_config.get("STEP_PHYSICS", True):
-                for _ in range(self.ac_freq_ratio):
-                    self.internal_step(-1)
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1)
+            # self.internal_step(0.008 * self.ac_freq_ratio)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+        else:
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1)
+            # self.internal_step(0.008 * self.ac_freq_ratio)
+            self._prev_sim_obs = self.get_sensor_observations()
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
+        # TODO: Make debug cameras more flexible
         if "robot_third_rgb" in obs:
-            self.is_render_obs = True
+            self._should_render_debug = True
             self._try_acquire_context()
             for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.visualize_position(pos)
+                self.viz_ids[k] = self.visualize_position(pos, self.viz_ids[k])
 
             # Also render debug information
-            if self.habitat_config.get("RENDER_TARGS", True):
-                self._create_obj_viz(self.ep_info)
+            self._create_obj_viz(self.ep_info)
 
             # Always draw the target
-            for obj_idx, _ in self.ep_info["targets"]:
-                self.set_object_bb_draw(True, self.scene_obj_ids[obj_idx])
+            for obj_handle, _ in self.ep_info["targets"].items():
+                self.set_object_bb_draw(
+                    True, rom.get_object_by_handle(obj_handle).object_id
+                )
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
@@ -409,43 +517,61 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05):
-        """Adds the sphere object to the specified position for visualization purpose."""
+    def visualize_position(
+        self,
+        position: np.ndarray,
+        viz_id: Optional[int] = None,
+        r: float = 0.05,
+    ) -> int:
+        """Adds the sphere object to the specified position for visualization purpose.
 
-        if viz_id is None:
-            obj_mgr = self.get_object_template_manager()
-            template = obj_mgr.get_template_by_handle(
-                obj_mgr.get_template_handles("sphere")[0]
-            )
-            template.scale = mn.Vector3(r, r, r)
-            new_template_handle = obj_mgr.register_template(
-                template, "ball_new_viz"
-            )
-            viz_id = self.add_object(new_template_handle)
-            make_render_only(viz_id, self)
-        self.set_translation(mn.Vector3(*position), viz_id)
+        :param position: global position of the visual sphere
+        :param viz_id: provided if moving an existing visual sphere instead of creating a new one
+        :param r: radius of the visual sphere
 
-        return viz_id
-
-    def draw_obs(self):
-        """Synchronously gets the observation at the current step"""
-        # Update the world state to get most recent render
-        self.internal_step(-1)
-
-        prev_sim_obs = self.get_sensor_observations()
-        obs = self._sensor_suite.get_observations(prev_sim_obs)
-        return obs
-
-    def internal_step(self, dt):
-        """Never call sim.step_world directly."""
-
-        self.step_world(dt)
-        if self.robot is not None:
-            self.robot.update()
-
-    def get_targets(self):
+        :return: Object id of the newly added sphere. -1 if failed.
         """
-        - Returns: ([idx: int], [goal_pos: list]) The index of the target object
+
+        rom = self.get_object_template_manager()
+        viz_obj = None
+        if viz_id is None:
+            if r not in self._viz_templates:
+                # create and register a new template for this novel sphere scaling
+                template = rom.get_template_by_handle(
+                    rom.get_template_handles("sphere")[0]
+                )
+                template.scale = mn.Vector3(r, r, r)
+                self._viz_templates[r] = rom.register_template(
+                    template, "ball_new_viz" + str(r)
+                )
+            viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
+            make_render_only(viz_obj, self)
+        else:
+            viz_obj = rom.get_object_by_id(viz_id)
+
+        viz_obj.translation = mn.Vector3(*position)
+        return viz_obj.object_id
+
+    def internal_step(self, dt: Union[int, float]) -> None:
+        """Step the world and update the robot.
+
+        :param dt: Timestep by which to advance the world. Multiple physics substeps can be excecuted within a single timestep. -1 indicates a single physics substep.
+
+        Never call sim.step_world directly or miss updating the robot.
+        """
+
+        # optionally step physics and update the robot for benchmarking purposes
+        if self.habitat_config.get("STEP_PHYSICS", True):
+            self.step_world(dt)
+            if self.robot is not None and self.habitat_config.get(
+                "UPDATE_ROBOT", True
+            ):
+                self.robot.update()
+
+    def get_targets(self) -> Tuple[List[int], np.ndarray]:
+        """Get a mapping of object ids to goal positions for rearrange targets.
+
+        :return: ([idx: int], [goal_pos: list]) The index of the target object
           in self.scene_obj_ids and the 3D goal POSITION, rotation is IGNORED.
           Note that goal_pos is the desired position of the object, not the
           starting position.
@@ -457,20 +583,20 @@ class RearrangeSim(HabitatSim):
         ]
         return a, np.array(b)
 
-    def get_target_objs_start(self):
+    def get_n_targets(self) -> int:
+        """Get the number of rearrange targets."""
+        return len(self.ep_info["targets"])
+
+    def get_target_objs_start(self) -> np.ndarray:
+        """Get the initial positions of all objects targeted for rearrangement as a numpy array."""
         return np.array(self.target_start_pos)
 
-    def get_scene_pos(self):
+    def get_scene_pos(self) -> np.ndarray:
+        """Get the positions of all clutter RigidObjects in the scene as a numpy array."""
+        rom = self.get_rigid_object_manager()
         return np.array(
-            [self.get_translation(idx) for idx in self.scene_obj_ids]
+            [
+                rom.get_object_by_id(idx).translation
+                for idx in self.scene_obj_ids
+            ]
         )
-
-    def draw_sphere(self, r, template_name="ball_new"):
-        obj_mgr = self.get_object_template_manager()
-        template_handle = obj_mgr.get_template_handles("sphere")[0]
-        template = obj_mgr.get_template_by_handle(template_handle)
-        template.scale = mn.Vector3(r, r, r)
-        new_template_handle = obj_mgr.register_template(template, "ball_new")
-        obj_id = self.add_object(new_template_handle)
-        self.set_object_motion_type(MotionType.KINEMATIC, obj_id)
-        return obj_id

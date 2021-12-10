@@ -1,0 +1,15 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
+GYM_AUTO_NAME: "Pick"
+
+RL:
+    POLICY:
+        name: "PointNavResNetPolicy"
+        action_distribution_type: "gaussian"
+
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    GYM_OBS_KEYS: ['obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+
+ENV_NAME: "RearrangeRLEnv"
