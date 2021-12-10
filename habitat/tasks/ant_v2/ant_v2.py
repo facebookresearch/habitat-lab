@@ -185,31 +185,31 @@ class AntObservationSpaceSensor(Sensor):
         obs = self._sim.robot.observational_space
         return obs
 
-@registry.register_sensor
-class AntObservationSpaceSensor(Sensor):
+# @registry.register_sensor
+# class AntObservationSpaceSensor(Sensor):
 
-    cls_uuid: str = "ant_observation_space_sensor"
+#     cls_uuid: str = "ant_observation_space_sensor"
 
-    def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
-    ):
-        self._sim = sim
-        super().__init__(config=config)
+#     def __init__(
+#         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+#     ):
+#         self._sim = sim
+#         super().__init__(config=config)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.cls_uuid
+#     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+#         return self.cls_uuid
 
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
+#     def _get_observation_space(self, *args: Any, **kwargs: Any):
+#         return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
 
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.NORMAL
+#     def _get_sensor_type(self, *args: Any, **kwargs: Any):
+#         return SensorTypes.NORMAL
 
-    def get_observation(
-        self, observations, episode, *args: Any, **kwargs: Any
-    ):
-        obs = self._sim.robot.observational_space
-        return obs
+#     def get_observation(
+#         self, observations, episode, *args: Any, **kwargs: Any
+#     ):
+#         obs = self._sim.robot.observational_space
+#         return obs
 
 
 @registry.register_measure
