@@ -1,0 +1,171 @@
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 200
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0/pick.json.gz
+    SCENES_DIR: "data/replica_cad/"
+TASK:
+    TYPE: RearrangeNavToObjTask-v0
+
+    MUST_LOOK_AT_TARG: True
+    DEBUG_GOAL_POINT: True
+    CONSTRAINT_VIOLATE_SHOULD_END: False
+    # If true, will always regenerate the cache
+    FORCE_REGENERATE: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+
+    # Collision related
+    COUNT_OBJ_COLLISIONS: True
+    COUNT_ROBOT_OBJ_COLLS: False
+    MAX_COLLISIONS: -1.0
+
+    # PDDL related parameters
+    PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    OBJ_SUCC_THRESH: 0.3
+    ART_SUCC_THRESH: 0.15
+
+    # Measurements for composite tasks.
+    REWARD_MEASUREMENT: "nav_to_obj_reward"
+    SUCCESS_MEASUREMENT: "nav_to_obj_success"
+
+    JOINT_SENSOR:
+        TYPE: "JointSensor"
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
+        TYPE: "EEPositionSensor"
+    IS_HOLDING_SENSOR:
+        TYPE: "IsHoldingSensor"
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+
+    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+
+    ROBOT_FORCE:
+        TYPE: "RobotForce"
+        MIN_FORCE: 20.0
+    FORCE_TERMINATE:
+        TYPE: "ForceTerminate"
+        MAX_ACCUM_FORCE: 5000.0
+    ROBOT_COLLS:
+        TYPE: "RobotCollisions"
+    OBJECT_TO_GOAL_DISTANCE:
+        TYPE: "ObjectToGoalDistance"
+    END_EFFECTOR_TO_OBJECT_DISTANCE:
+        TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+    ROT_DIST_TO_GOAL:
+      TYPE: "RotDistToGoal"
+    DIST_TO_GOAL:
+      TYPE: "DistToGoal"
+    BAD_CALLED_TERMINATE:
+      TYPE: "BadCalledTerminate"
+      BAD_TERM_PEN: 0.0
+      DECAY_BAD_TERM: False
+    NAV_TO_POS_SUCC:
+      TYPE: "NavToPosSucc"
+      SUCCESS_DISTANCE: 0.2
+    REARRANGE_NAV_TO_OBJ_REWARD:
+        TYPE: "NavToObjReward"
+        # Negative means a penalty
+        SLACK: 0.0
+        SUCCESS_REWARD: 10.0
+        # Reward the agent for facing the object?
+        SHOULD_REWARD_TURN: True
+        # What distance do we start giving the reward for facing the object?
+        TURN_REWARD_DIST: 0.1
+        # Multiplier on the angle distance to the goal.
+        ANGLE_DIST_REWARD: 1.0
+        SLACK_REWARD: 0.0
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: "NavToObjSuccess"
+        MUST_LOOK_AT_TARG: True
+        # Distance in radians.
+        SUCCESS_ANGLE_DIST: 0.15
+        HEURISTIC_STOP: False
+    MEASUREMENTS:
+        - "OBJECT_TO_GOAL_DISTANCE"
+        - "ROBOT_FORCE"
+        - "FORCE_TERMINATE"
+        - "ROBOT_COLLS"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "ROT_DIST_TO_GOAL"
+        - "DIST_TO_GOAL"
+        - "BAD_CALLED_TERMINATE"
+        - "NAV_TO_POS_SUCC"
+        - "REARRANGE_NAV_TO_OBJ_SUCCESS"
+        - "REARRANGE_NAV_TO_OBJ_REWARD"
+    ACTIONS:
+      BASE_VELOCITY:
+        TYPE: "BaseVelAction"
+        LIN_SPEED: 10.0
+        ANG_SPEED: 10.0
+        ALLOW_DYN_SLIDE: True
+        ALLOW_BACK: True
+        END_ON_STOP: True
+        MIN_ABS_LIN_SPEED: 1.0
+        MIN_ABS_ANG_SPEED: 1.0
+    POSSIBLE_ACTIONS: ['BASE_VELOCITY', 'STOP']
+
+SIMULATOR:
+    ACTION_SPACE_CONFIG: v0
+    DEBUG_RENDER: False
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: False
+        RADIUS: 0.1
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+
+    # Agent setup
+    ARM_REST: [0.6, 0.0, 0.9]
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 1000.0
+
+    DEFAULT_AGENT_ID: 0
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: True
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    SEMANTIC_SENSOR:
+        HEIGHT: 480
+        HFOV: 90
+        ORIENTATION: [0.0, 0.0, 0.0]
+        POSITION: [0, 1.25, 0]
+        TYPE: HabitatSimSemanticSensor
+        WIDTH: 640
+    TILT_ANGLE: 15
+    TURN_ANGLE: 10
+    TYPE: RearrangeSim-v0

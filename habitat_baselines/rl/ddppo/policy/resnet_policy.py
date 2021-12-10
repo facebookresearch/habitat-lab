@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -33,6 +33,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
 from habitat_baselines.rl.ppo import Net, Policy
+from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
@@ -49,6 +50,7 @@ class PointNavResNetPolicy(Policy):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
+        fuse_keys: Optional[List[str]] = None,
         **kwargs
     ):
         if policy_config is not None:
@@ -61,6 +63,7 @@ class PointNavResNetPolicy(Policy):
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
+
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -73,14 +76,18 @@ class PointNavResNetPolicy(Policy):
                 normalize_visual_inputs=normalize_visual_inputs,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
+                fuse_keys=fuse_keys,
             ),
-            dim_actions=action_space.n,  # for action distribution
+            dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
         )
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: spaces.Dict, action_space
+        cls,
+        config: Config,
+        observation_space: spaces.Dict,
+        action_space,
     ):
         return cls(
             observation_space=observation_space,
@@ -92,6 +99,7 @@ class PointNavResNetPolicy(Policy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
+            fuse_keys=config.RL.get("GYM_OBS_KEYS", None),
         )
 
 
@@ -107,17 +115,16 @@ class ResNetEncoder(nn.Module):
     ):
         super().__init__()
 
-        if "rgb" in observation_space.spaces:
-            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
-            spatial_size = observation_space.spaces["rgb"].shape[0] // 2
-        else:
-            self._n_input_rgb = 0
+        # Determine which visual observations are present
+        self.rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
+        self.depth_keys = [k for k in observation_space.spaces if "depth" in k]
 
-        if "depth" in observation_space.spaces:
-            self._n_input_depth = observation_space.spaces["depth"].shape[2]
-            spatial_size = observation_space.spaces["depth"].shape[0] // 2
-        else:
-            self._n_input_depth = 0
+        # Count total # of channels for rgb and for depth
+        self._n_input_rgb, self._n_input_depth = [
+            # sum() returns 0 for an empty list
+            sum([observation_space.spaces[k].shape[2] for k in keys])
+            for keys in [self.rgb_keys, self.depth_keys]
+        ]
 
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
@@ -127,6 +134,9 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
+            # We assume that all image observations have same height and width
+            all_keys = self.rgb_keys + self.depth_keys
+            spatial_size = observation_space.spaces[all_keys[0]].shape[0] // 2
             input_channels = self._n_input_depth + self._n_input_rgb
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
@@ -173,8 +183,8 @@ class ResNetEncoder(nn.Module):
             return None
 
         cnn_input = []
-        if self._n_input_rgb > 0:
-            rgb_observations = observations["rgb"]
+        for k in self.rgb_keys:
+            rgb_observations = observations[k]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
@@ -182,12 +192,10 @@ class ResNetEncoder(nn.Module):
             )  # normalize RGB
             cnn_input.append(rgb_observations)
 
-        if self._n_input_depth > 0:
-            depth_observations = observations["depth"]
-
+        for k in self.depth_keys:
+            depth_observations = observations[k]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-
             cnn_input.append(depth_observations)
 
         x = torch.cat(cnn_input, dim=1)
@@ -216,6 +224,7 @@ class PointNavResNetNet(Net):
         normalize_visual_inputs: bool,
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
+        fuse_keys: Optional[List[str]] = None,
     ):
         super().__init__()
 
@@ -223,10 +232,17 @@ class PointNavResNetNet(Net):
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            self.prev_action_embedding = nn.Linear(action_space.n, 32)
+            num_actions = get_num_actions(action_space)
+            self.prev_action_embedding = nn.Linear(num_actions, 32)
 
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
+
+        self._fuse_keys = fuse_keys
+        if self._fuse_keys is not None:
+            rnn_input_size += sum(
+                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+            )
 
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -371,6 +387,12 @@ class PointNavResNetNet(Net):
 
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
+
+        if self._fuse_keys is not None:
+            fuse_states = torch.cat(
+                [observations[k] for k in self._fuse_keys], dim=-1
+            )
+            x.append(fuse_states)
 
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             goal_observations = observations[

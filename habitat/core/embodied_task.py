@@ -264,6 +264,8 @@ class EmbodiedTask:
         entities = OrderedDict()
         for entity_name in entity_names:
             entity_cfg = getattr(entities_config, entity_name)
+            if "TYPE" not in entity_cfg:
+                raise ValueError(f"Could not find TYPE in {entity_cfg}")
             entity_type = register_func(entity_cfg.TYPE)
             assert (
                 entity_type is not None

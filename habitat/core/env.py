@@ -91,7 +91,13 @@ class Env:
             self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
             self._config.defrost()
+            self._config.SIMULATOR.SCENE_DATASET = (
+                self.current_episode.scene_dataset_config
+            )
             self._config.SIMULATOR.SCENE = self.current_episode.scene_id
+            self._config.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
+                self.current_episode.additional_obj_config_paths
+            )
             self._config.freeze()
 
             self.number_of_episodes = len(self.episodes)
@@ -101,6 +107,7 @@ class Env:
         self._sim = make_sim(
             id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
         )
+
         self._task = make_task(
             self._config.TASK.TYPE,
             config=self._config.TASK,

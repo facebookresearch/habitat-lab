@@ -1,0 +1,179 @@
+---
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/"
+scene_sets:
+  -
+    name: "any"
+    included_substrings:
+      - ""
+    excluded_substrings: []
+    comment: "The empty substring acts like a wildcard, selecting all scenes."
+  -
+    name: "default"
+    included_substrings:
+      - "v3_sc0_staging_00"
+    excluded_substrings: []
+    comment: "The first macro variation from the 105 ReplicaCAD variations."
+  -
+    name: "v3_sc"
+    included_substrings:
+      - "v3_sc"
+    excluded_substrings: []
+    comment: "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
+  -
+    name: "original"
+    included_substrings:
+      - "apt_"
+    excluded_substrings: []
+    comment: "The original 6 Replica scene layouts with small clutter objects."
+
+object_sets:
+  -
+    name: "any"
+    included_substrings:
+      - ""
+    excluded_substrings: []
+    comment: "The empty substring acts like a wildcard, selecting all objects."
+  -
+    name: "kitchen"
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "024_bowl"
+    excluded_substrings: []
+  -
+    name: "cheezit"
+    included_substrings:
+      - "003_cracker_box"
+    excluded_substrings: []
+  -
+    name: "basket"
+    included_substrings:
+      - "frl_apartment_basket"
+    excluded_substrings: []
+  -
+    name: "apple"
+    included_substrings:
+      - "013_apple"
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "table"
+    included_object_substrings:
+      - "frl_apartment_table_01"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+    comment: "The empty substrings act like wildcards, selecting all receptacles for all objects."
+  -
+    name: "table3"
+    included_object_substrings:
+      - "frl_apartment_table_03"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+  -
+    name: "any"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+  -
+    name: "fridge"
+    included_object_substrings:
+      - "fridge"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+  -
+    name: "fridge_middle"
+    included_object_substrings:
+      - "fridge"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "middle"
+    excluded_receptacle_substrings: []
+    comment: "Selects only receptacles from the 'fridge' with 'middle' in their name."
+  -
+    name: "counter"
+    included_object_substrings:
+      - "kitchen_counter"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: "subset"
+  params:
+    scene_sets: ["v3_sc"]
+  comment: "Samples from ReplicaCAD 105 variations with static furniture."
+
+ao_state_samplers:
+  -
+    name: "open_aos"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.25, 0.25]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.35, 0.35]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.25, 0.25]
+          - ["drawer4", 0.5, 0.5]
+    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
+
+object_samplers:
+  -
+    name: "kitchen_counter"
+    type: "uniform"
+    params:
+      object_sets: ["kitchen"]
+      receptacle_sets: ["counter"]
+      num_samples: [5, 30]
+      orientation_sampling: "up"
+
+object_target_samplers:
+  -
+    name: "kitchen_counter_targets"
+    type: "uniform"
+    params:
+      object_samplers: ["kitchen_counter"]
+      receptacle_sets: ["counter"]
+      num_samples: [5, 30]
+      orientation_sampling: "up"
+
+markers:
+  -
+    name: "fridge_push_point"
+    type: "articulated_object"
+    params:
+      object: "fridge"
+      link: "bottom_door"
+      offset: [0.1, -0.62, -0.2]
+  -
+    name: "chair"
+    type: "rigid_object"
+    params:
+      object: "frl_apartment_chair_01"
+      offset: [0.1, -0.62, -0.2]

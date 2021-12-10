@@ -270,6 +270,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
         super().__init__(self.sim_config)
+        # load additional object paths specified by the dataset
+        # TODO: Should this be moved elsewhere?
+        obj_attr_mgr = self.get_object_template_manager()
+        for path in self.habitat_config.ADDITIONAL_OBJECT_PATHS:
+            obj_attr_mgr.load_configs(path)
         self._action_space = spaces.Discrete(
             len(self.sim_config.agents[0].action_space)
         )
@@ -289,6 +294,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             config_to=sim_config,
             # Ignore key as it gets propogated to sensor below
             ignore_keys={"gpu_gpu"},
+        )
+        sim_config.scene_dataset_config_file = (
+            self.habitat_config.SCENE_DATASET
         )
         sim_config.scene_id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()

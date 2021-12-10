@@ -1,0 +1,85 @@
+ENVIRONMENT:
+    # Endless episode
+    MAX_EPISODE_STEPS: 0
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/ep_datasets/bench_scene.json.gz
+    SCENES_DIR: "data/replica_cad/"
+TASK:
+    # No task logic, empty task
+    TYPE: RearrangeEmptyTask-v0
+
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+
+    # No measurements or sensors either.
+    SENSORS: []
+    MEASUREMENTS: []
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+
+SIMULATOR:
+    ############################
+    # Benchmark relevant settings
+    ############################
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
+    STEP_PHYSICS: True
+    UPDATE_ROBOT: True
+    ############################
+
+    ACTION_SPACE_CONFIG: v0
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: True
+        RADIUS: 0.1
+        SENSORS: ['HEAD_RGB_SENSOR']
+        START_POSITION: [3.66997,0.0,3.5041]
+        START_ROTATION: [0.0, 0.999657, 0.0, -0.0261769]
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+
+    # Agent setup
+    ARM_REST: [0.6, 0.0, 0.9]
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    ROBOT_TYPE: FetchRobotNoWheels
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 1000.0
+
+    DEFAULT_AGENT_ID: 0
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: True
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+        LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER: True
+    SEED: 100
+    SEMANTIC_SENSOR:
+        HEIGHT: 480
+        HFOV: 90
+        ORIENTATION: [0.0, 0.0, 0.0]
+        POSITION: [0, 1.25, 0]
+        TYPE: HabitatSimSemanticSensor
+        WIDTH: 640
+    TILT_ANGLE: 15
+    TURN_ANGLE: 10
+    TYPE: RearrangeSim-v0

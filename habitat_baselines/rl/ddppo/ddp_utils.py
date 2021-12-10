@@ -24,7 +24,7 @@ SAVE_STATE.clear()
 DEFAULT_PORT = 8738
 DEFAULT_PORT_RANGE = 127
 # Default address of world rank 0
-DEFAULT_MASTER_ADDR = "127.0.0.1"
+DEFAULT_MAIN_ADDR = "127.0.0.1"
 
 SLURM_JOBID = os.environ.get("SLURM_JOB_ID", None)
 RESUME_STATE_BASE_NAME = ".habitat-resume-state"
@@ -252,15 +252,15 @@ def init_distrib_slurm(
 
     local_rank, world_rank, world_size = get_distrib_size()
 
-    master_port = int(os.environ.get("MASTER_PORT", DEFAULT_PORT))
+    main_port = int(os.environ.get("MAIN_PORT", DEFAULT_PORT))
     if SLURM_JOBID is not None:
-        master_port += int(SLURM_JOBID) % int(
-            os.environ.get("MASTER_PORT_RANGE", DEFAULT_PORT_RANGE)
+        main_port += int(SLURM_JOBID) % int(
+            os.environ.get("MAIN_PORT_RANGE", DEFAULT_PORT_RANGE)
         )
-    master_addr = os.environ.get("MASTER_ADDR", DEFAULT_MASTER_ADDR)
+    main_addr = os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
 
     tcp_store = distrib.TCPStore(  # type: ignore
-        master_addr, master_port, world_size, world_rank == 0
+        main_addr, main_port, world_size, world_rank == 0
     )
     distrib.init_process_group(
         backend, store=tcp_store, rank=world_rank, world_size=world_size

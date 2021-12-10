@@ -218,7 +218,7 @@ def check_and_gen_physics_config():
     if os.path.exists(DEFAULT_PHYSICS_CONFIG_PATH):
         return
     #  Config is sourced from
-    #  https://github.com/facebookresearch/habitat-sim/blob/master/data/default.physics_config.json
+    #  https://github.com/facebookresearch/habitat-sim/blob/main/data/default.physics_config.json
     physics_config = {
         "physics_simulator": "bullet",
         "timestep": 0.008,

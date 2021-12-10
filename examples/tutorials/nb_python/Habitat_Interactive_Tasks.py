@@ -14,7 +14,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.13.3
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -28,7 +28,7 @@
 #     name: python
 #     nbconvert_exporter: python
 #     pygments_lexer: ipython3
-#     version: 3.7.3
+#     version: 3.6.13
 # ---
 
 # %% [markdown]
@@ -56,7 +56,7 @@
 # @title Installation { display-mode: "form" }
 # @markdown (double click to show code).
 
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/master/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # %cd /content
 
 # !gdown --id 1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853

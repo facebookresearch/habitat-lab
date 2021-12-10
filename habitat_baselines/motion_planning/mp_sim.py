@@ -154,11 +154,15 @@ class HabMpSim(MpSim):
     def get_obj_info(self, obj_idx) -> ObjectGraspTarget:
         return ObjectGraspTarget(
             bb=get_aabb(obj_idx, self._sim),
-            translation=self._sim.get_transformation(obj_idx),
+            transformation=self._sim.get_rigid_object_manager()
+            .get_object_by_id(obj_idx)
+            .transformation,
         )
 
     def set_position(self, pos, obj_id):
-        self._sim.set_translation(pos, obj_id)
+        self._sim.get_rigid_object_manager().get_object_by_id(
+            obj_id
+        ).translation = pos
 
     def get_arm_pos(self):
         return self._sim.robot.arm_joint_pos
@@ -177,18 +181,22 @@ class HabMpSim(MpSim):
         return sphere_id
 
     def remove_object(self, obj_id):
-        self._sim.remove_object(obj_id)
+        self._sim.get_rigid_object_manager().remove_object_by_id(obj_id)
 
     def set_targ_obj_idx(self, targ_obj_idx):
         if targ_obj_idx is not None:
-            self._sim.override_collision_group(targ_obj_idx, 128)
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                targ_obj_idx
+            ).override_collision_group(128)
 
     def unset_targ_obj_idx(self, targ_obj_idx):
         if targ_obj_idx is not None:
-            self._sim.override_collision_group(targ_obj_idx, 8)
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                targ_obj_idx
+            ).override_collision_group(8)
 
     def render(self):
-        obs = self._sim.step(0)
+        obs = self._sim.step(0)  # NOTE: same as step(-1)
         if "robot_third_rgb" not in obs:
             raise ValueError("No render camera")
         pic = obs["robot_third_rgb"]
@@ -206,20 +214,22 @@ class HabMpSim(MpSim):
             self._sim.grasp_mgr.snap_to_obj(self.hold_obj)
 
         # Set everything to STATIC
+        rom = self._sim.get_rigid_object_manager()
         for obj_id in self._sim.scene_obj_ids:
-            self.prev_motion_types[obj_id] = self._sim.get_object_motion_type(
-                obj_id
-            )
+            obj = rom.get_object_by_id(obj_id)
+            self.prev_motion_types[obj_id] = obj.motion_type
             if obj_id == self._snap_idx:
                 pass
-                # self._sim.set_object_motion_type(MotionType.KINEMATIC, obj_id)
+                # obj.motion_type = MotionType.KINEMATIC
             else:
-                self._sim.set_object_motion_type(MotionType.STATIC, obj_id)
+                obj.motion_type = MotionType.STATIC
 
     def end_mp(self):
+        rom = self._sim.get_rigid_object_manager()
         # Set everything to how it was
         for obj_id, mt in self.prev_motion_types.items():
-            self._sim.set_object_motion_type(mt, obj_id)
+            obj = rom.get_object_by_id(obj_id)
+            obj.motion_type = mt
 
         if self.hold_obj is not None:
             self._sim.grasp_mgr.desnap(force=True)

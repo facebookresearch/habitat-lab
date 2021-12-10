@@ -12,11 +12,11 @@ from habitat.core.dataset import Dataset
 from habitat.core.embodied_task import EmbodiedTask, Measure, Measurements
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
-from habitat.core.registry import registry  # noqa : F401
+from habitat.core.registry import registry  # noqa: F401
 from habitat.core.simulator import Sensor, SensorSuite, SensorTypes, Simulator
 from habitat.core.vector_env import ThreadedVectorEnv, VectorEnv
 from habitat.datasets import make_dataset
-from habitat.version import VERSION as __version__  # noqa
+from habitat.version import VERSION as __version__  # noqa: F401
 
 __all__ = [
     "Agent",

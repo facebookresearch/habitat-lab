@@ -50,9 +50,11 @@ from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
-    action_to_velocity_control,
+    action_array_to_dict,
     batch_obs,
     generate_video,
+    get_num_actions,
+    is_continuous_action_space,
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
@@ -249,16 +251,23 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
+        action_space = self.envs.action_spaces[0]
         if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
+            # For navigation using a continuous action space for a task that
+            # may be asking for discrete actions
+            self.policy_action_space = action_space["VELOCITY_CONTROL"]
             action_shape = (2,)
             discrete_actions = False
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = None
-            discrete_actions = True
+            self.policy_action_space = action_space
+            if is_continuous_action_space(action_space):
+                # Assume ALL actions are NOT discrete
+                action_shape = (get_num_actions(action_space),)
+                discrete_actions = False
+            else:
+                # For discrete pointnav
+                action_shape = None
+                discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -380,7 +389,7 @@ class PPOTrainer(BaseRLTrainer):
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
-            if k in cls.METRICS_BLACKLIST:
+            if not isinstance(k, str) or k in cls.METRICS_BLACKLIST:
                 continue
 
             if isinstance(v, dict):
@@ -390,7 +399,8 @@ class PPOTrainer(BaseRLTrainer):
                         for subk, subv in cls._extract_scalars_from_info(
                             v
                         ).items()
-                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
+                        if isinstance(subk, str)
+                        and k + "." + subk not in cls.METRICS_BLACKLIST
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -456,8 +466,10 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            if self.using_velocity_ctrl:
-                step_action = action_to_velocity_control(act)
+            if act.shape[0] > 1:
+                step_action = action_array_to_dict(
+                    self.policy_action_space, act
+                )
             else:
                 step_action = act.item()
             self.envs.async_step_at(index_env, step_action)
@@ -906,16 +918,23 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
+        action_space = self.envs.action_spaces[0]
         if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
+            # For navigation using a continuous action space for a task that
+            # may be asking for discrete actions
+            self.policy_action_space = action_space["VELOCITY_CONTROL"]
             action_shape = (2,)
-            action_type = torch.float
+            discrete_actions = False
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = (1,)
-            action_type = torch.long
+            self.policy_action_space = action_space
+            if is_continuous_action_space(action_space):
+                # Assume NONE of the actions are discrete
+                action_shape = (get_num_actions(action_space),)
+                discrete_actions = False
+            else:
+                # For discrete pointnav
+                action_shape = (1,)
+                discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
 
@@ -942,7 +961,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config.NUM_ENVIRONMENTS,
             *action_shape,
             device=self.device,
-            dtype=action_type,
+            dtype=torch.long if discrete_actions else torch.float,
         )
         not_done_masks = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -1001,9 +1020,9 @@ class PPOTrainer(BaseRLTrainer):
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            if self.using_velocity_ctrl:
+            if actions[0].shape[0] > 1:
                 step_data = [
-                    action_to_velocity_control(a)
+                    action_array_to_dict(self.policy_action_space, a)
                     for a in actions.to(device="cpu")
                 ]
             else:

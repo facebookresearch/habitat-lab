@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import attr
+import numpy as np
 
 import habitat_sim.utils.datasets_download as data_downloader
 from habitat.config import Config
@@ -21,16 +22,17 @@ from habitat.datasets.utils import check_and_gen_physics_config
 
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
-    art_objs: List[List[Any]]
-    static_objs: List[List[Any]]
-    targets: List[List[Any]]
-    fixed_base: bool
-    art_states: List[Any]
-    nav_mesh_path: str
-    scene_config_path: str
-    allowed_region: List[Any] = []
-    markers: List[Dict[str, Any]] = []
-    force_spawn_pos: List = None
+    r"""Specifies additional objects, targets, markers, and ArticulatedObject states for a particular instance of an object rearrangement task.
+
+    :property ao_states: Lists modified ArticulatedObject states for the scene: {instance_handle -> {link, state}}
+    :property rigid_objs: A list of objects to add to the scene, each with: (handle, transform)
+    :property targets: Maps an object instance to a new target location for placement in the task. {instance_name -> target_transform}
+    :property markers: Indicate points of interest in the scene such as grasp points like handles. {marker name -> (type, (params))}
+    """
+    ao_states: Dict[str, Dict[int, float]]
+    rigid_objs: List[Tuple[str, np.array]]
+    targets: Dict[str, np.array]
+    markers: Dict[str, Tuple[str, Tuple]] = {}
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")
@@ -68,13 +70,4 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
 
-            #  Converting path data/scene_datasets/{scene}_\d\d.glb into new format
-            if "replica_cad" not in rearrangement_episode.scene_id:
-                rearrangement_episode.scene_id = (
-                    rearrangement_episode.scene_id.replace(".glb", "").replace(
-                        "data/scene_datasets/",
-                        "data/replica_cad/stages/Stage_",
-                    )[:-3]
-                    + ".glb"
-                )
             self.episodes.append(rearrangement_episode)

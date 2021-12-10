@@ -10,7 +10,7 @@ from habitat.core.registry import registry
 
 def _try_register_nav_task():
     try:
-        from habitat.tasks.nav.nav import NavigationTask  # noqa
+        from habitat.tasks.nav.nav import NavigationTask  # noqa: F401
     except ImportError as e:
         navtask_import_error = e
 

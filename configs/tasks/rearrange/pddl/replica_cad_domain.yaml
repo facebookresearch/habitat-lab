@@ -1,0 +1,87 @@
+types:
+    - robot
+    - fridge
+art_objs:
+    cab: 0
+    fridge: 1
+markers:
+    cab_top_left: cab_push_point_7
+actions:
+    - name: nav
+      parameters: [obj_to]
+      task: RearrangeNavToObjTask-v0
+      task_def: "nav_to_obj"
+      precondition: []
+      postcondition:
+        - "at(robot,obj_to)"
+    - name: pick
+      parameters: [obj]
+      task: RearrangePickTask-v0
+      task_def: "pick"
+      precondition:
+          - "at(robot,obj)"
+          #- "!in(obj,cab_top_left) OR opened_cab(cab_top_left)"
+          #- "!in(obj,fridge) OR opened_fridge()"
+      postcondition:
+        - "holding(obj)"
+    - name: place
+      parameters: [obj, targ]
+      task: RearrangePlaceTask-v0
+      task_def: "place"
+      precondition:
+          - "holding(obj)"
+      postcondition:
+          - "not_holding()"
+          - "at(obj,targ)"
+
+    ## Fridge
+    #- name: open_fridge
+    #  parameters: [obj]
+    #  task_def: ""
+    #  task: RearrangeOpenFridgeTask-v0
+    #  precondition: ["at(robot,fridge)","closed_fridge()"]
+    #  effect: ["opened_fridge()"]
+    #- name: close_fridge
+    #  parameters: [obj]
+    #  task_def: ""
+    #  task: RearrangeCloseFridgeTask-v0
+    #  precondition: ["at(robot,fridge)","opened_fridge()"]
+    #  effect: ["closed_fridge()"]
+
+    ## Cab
+    #- name: open_cab
+    #  parameters: [cab_id]
+    #  task_def: ""
+    #  task: RearrangeOpenDrawerTask-v0
+    #  precondition: ["at(robot,cab_id)","closed_cab(cab_id)"]
+    #  effect: ["opened_cab(cab_id)"]
+
+    #- name: close_cab
+    #  parameters: [cab_id]
+    #  task_def: ""
+    #  task: RearrangeCloseDrawerTask-v0
+    #  precondition: ["at(robot,cab_id)","opened_cab(cab_id)"]
+    #  effect: ["closed_cab(cab_id)"]
+predicates:
+    - name: in
+      args: [X, Y]
+
+    - name: holding
+      args: [X]
+      state:
+        robo:
+            holding: "X"
+    - name: not_holding
+      state:
+        robo:
+            holding: 'NONE'
+    - name: at
+      args: [robot,Y]
+      state:
+        robo:
+            pos: Y
+    - name: at
+      args: [X,Y]
+      state:
+          obj_states:
+              X: Y

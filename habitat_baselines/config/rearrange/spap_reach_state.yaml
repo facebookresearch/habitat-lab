@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange_reach_replica_cad.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
 SENSE_PLAN_ACT:
   VERBOSE: True
   RUN_FREQ: 4
@@ -16,7 +16,7 @@ SENSE_PLAN_ACT:
   COUNT_OBJ_COLLISIONS: True
   GRASP_GEN_IS_VERBOSE: True
   IK_DIST_THRESH: 0.1
-  IK_SPEED_FACTOR: 10.0
+  IK_SPEED_FACTOR: 1.0
 RL:
     REWARD_MEASURE: "rearrange_reach_reward"
     SUCCESS_MEASURE: "rearrange_reach_success"
@@ -26,9 +26,10 @@ RL:
     GYM_DESIRED_GOAL_KEYS: ['resting_position']
     GYM_FIX_INFO_DICT: True
     GYM_ACTION_KEYS: ['ARM_ACTION']
+    END_ON_SUCCESS: False
 
     SUCC_THRESH: 0.15
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RearrangeRLEnv"
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]
 

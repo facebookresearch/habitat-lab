@@ -24,7 +24,10 @@ try:
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
     from habitat_baselines.run import execute_exp, run_exp
-    from habitat_baselines.utils.common import batch_obs
+    from habitat_baselines.utils.common import (
+        ObservationBatchingCache,
+        batch_obs,
+    )
 
     baseline_installed = True
 except ImportError:
@@ -328,3 +331,34 @@ def test_pausing():
     num_envs = 8
     __do_pause_test(num_envs, [])
     __do_pause_test(num_envs, list(range(num_envs)))
+
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "sensor_device,batched_device",
+    [("cpu", "cpu"), ("cpu", "cuda"), ("cuda", "cuda")],
+)
+def test_batch_obs(sensor_device, batched_device):
+    if (
+        "cuda" in (sensor_device, batched_device)
+        and not torch.cuda.is_available()
+    ):
+        pytest.skip("CUDA not avaliable")
+
+    sensor_device = torch.device(sensor_device)
+    batched_device = torch.device(batched_device)
+
+    numpy_if = lambda t: t.numpy() if sensor_device.type == "cpu" else t
+
+    cache = ObservationBatchingCache()
+    sensors = [
+        {
+            f"{s}": numpy_if(torch.randn(128, 128, device=sensor_device))
+            for s in range(4)
+        }
+        for _ in range(4)
+    ]
+
+    _ = batch_obs(sensors, device=batched_device, cache=cache)

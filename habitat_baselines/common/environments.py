@@ -57,8 +57,9 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def get_reward(self, observations):
         current_measure = self._env.get_metrics()[self._reward_measure_name]
+        reward = self._rl_config.SLACK_REWARD
 
-        reward = current_measure
+        reward += current_measure
 
         if self._episode_success():
             reward += self._rl_config.SUCCESS_REWARD
@@ -70,7 +71,12 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def get_done(self, observations):
         done = False
-        if self._env.episode_over or self._episode_success():
+        if self._env.episode_over:
+            done = True
+        if (
+            self._rl_config.get("END_ON_SUCCESS", True)
+            and self._episode_success()
+        ):
             done = True
         return done
 
