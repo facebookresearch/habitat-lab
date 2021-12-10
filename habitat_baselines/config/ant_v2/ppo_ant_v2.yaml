@@ -4,7 +4,7 @@ VERBOSE: False
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/ant-v2.yaml"
 TRAINER_NAME: "ppo"
-ENV_NAME: "NavRLEnv"
+ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
