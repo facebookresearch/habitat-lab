@@ -131,4 +131,4 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 attempt_snap_idx = marker_name
 
         if attempt_snap_idx is not None:
-            self._sim.grasp_mgr.snap_to_marker(attempt_snap_idx)
+            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_idx))

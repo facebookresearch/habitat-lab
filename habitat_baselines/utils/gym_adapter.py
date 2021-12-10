@@ -62,7 +62,8 @@ class HabGymWrapper(gym.Env):
     or filtering actions. Listed below are the
     config keys:
     - `RL.GYM_OBS_KEYS`: Which observation names from the wrapped environment
-      to include. The order of the key names is kept in the output observation array.
+      to include. The order of the key names is kept in the output observation
+      array. If not specified, all observations are included.
     - `RL.GYM_DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
       any observations are returned in the `desired_goal` returned key of the
       observation.
@@ -70,7 +71,7 @@ class HabGymWrapper(gym.Env):
       flattens the returned info dictionary to have depth 1 where sub-keys are
       concatenated to parent keys.
     - `RL.GYM_ACTION_KEYS`: Include a subset of the allowed actions in the
-      wrapped environment. If not specified or empty, all actions are included.
+      wrapped environment. If not specified, all actions are included.
     Example usage:
     ```
     config = baselines_get_config(hab_cfg_path)

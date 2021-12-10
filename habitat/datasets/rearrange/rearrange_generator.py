@@ -30,6 +30,15 @@ from habitat.utils.common import cull_string_list_by_substrings
 
 
 class RearrangeEpisodeGenerator:
+    """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement tasks.
+
+    Initialized from a provided configuration file defining dataset paths, object,scene,and receptacle sets, and state sampler parameters.
+
+    See rearrange_dataset.py for details on the RearrangeDataset and RearrangeEpisodes produced by this generator.
+    See this file's main executable function below for details on running the generator.
+    See `test_rearrange_episode_generator()` in test/test_rearrange_task.py for unit test example.
+    """
+
     def __enter__(self) -> "RearrangeEpisodeGenerator":
         return self
 

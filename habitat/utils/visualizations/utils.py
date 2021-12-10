@@ -123,7 +123,14 @@ def images_to_video(
     assert 0 <= quality <= 10
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
+    video_name = video_name.replace(" ", "_").replace("\n", "_")
+
+    # File names are not allowed to be over 255 characters
+    video_name_split = video_name.split("/")
+    video_name = "/".join(
+        video_name_split[:-1] + [video_name_split[-1][:251] + ".mp4"]
+    )
+
     writer = imageio.get_writer(
         os.path.join(output_dir, video_name),
         fps=fps,

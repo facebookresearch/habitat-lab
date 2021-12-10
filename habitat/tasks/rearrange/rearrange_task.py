@@ -110,7 +110,7 @@ class RearrangeTask(NavigationTask):
 
         if (
             self._sim.grasp_mgr.is_violating_hold_constraint()
-            and self._config.CONSTRAINT_VIOLATE_SHOULD_END
+            and self._config.CONSTRAINT_VIOLATION_ENDS_EPISODE
         ):
             done = True
 

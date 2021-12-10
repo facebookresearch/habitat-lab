@@ -1,3 +1,4 @@
+# Config for empty task to explore the scene.
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -11,6 +12,8 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
@@ -202,10 +205,10 @@ TASK:
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
-    DEBUG_RENDER: False
     GRASP_IMPULSE: 1000.0
     HOLD_THRESH: 0.09
     AC_FREQ_RATIO: 4
+    DEBUG_RENDER: False
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5
@@ -244,6 +247,7 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
+    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480
