@@ -80,7 +80,7 @@ class AntV2Robot(QuadrupedRobot):
         8 Joint velocity -> 8
         """
         # May expand to make use of external forces in the future (once this is exposed in habitat_sim & if joint torques are used in the future)
-        obs_space = np.zeros(30)
+        obs_space = np.zeros(27)
         pos = super().base_pos
         obs_space[0] = pos[1]
 
@@ -102,7 +102,7 @@ class AntV2Robot(QuadrupedRobot):
 
         # ant joint velocity
         obs_space[19:27] = super().joint_velocities
-        obs_space[27:30] = super().base_pos
+        #obs_space[27:30] = super().base_pos
 
         
         return obs_space
