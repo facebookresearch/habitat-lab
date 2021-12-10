@@ -252,7 +252,7 @@ class LegRelPosAction(SimulatorTaskAction):
     def action_space(self):
         return spaces.Box(
             shape=(self._config.LEG_JOINT_DIMENSIONALITY,),
-            low=0,
+            low=-1,
             high=1,
             dtype=np.float32,
         )
