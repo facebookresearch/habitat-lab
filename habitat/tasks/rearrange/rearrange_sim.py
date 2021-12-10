@@ -40,6 +40,7 @@ class RearrangeSim(HabitatSim):
         self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
+        self._is_pb_installed = is_pb_installed()
 
         # Number of physics updates per action
         self.ac_freq_ratio = agent_config.AC_FREQ_RATIO
@@ -65,7 +66,7 @@ class RearrangeSim(HabitatSim):
         self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)
         self._markers: Dict[str, MarkerInfo] = {}
 
-        self.ik_helper: Optional[IkHelper] = None
+        self._ik_helper: Optional[IkHelper] = None
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing.
@@ -139,6 +140,14 @@ class RearrangeSim(HabitatSim):
     def _update_markers(self) -> None:
         for m in self._markers.values():
             m.update()
+
+    @property
+    def ik_helper(self):
+        if not self._is_pb_installed:
+            raise ImportError(
+                "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
+            )
+        return self._ik_helper
 
     def reconfigure(self, config: Config):
         ep_info = config["ep_info"][0]
@@ -242,8 +251,8 @@ class RearrangeSim(HabitatSim):
         if self.first_setup:
             self.first_setup = False
             ik_arm_urdf = self.habitat_config.get("IK_ARM_URDF", None)
-            if ik_arm_urdf is not None and is_pb_installed():
-                self.ik_helper = IkHelper(
+            if ik_arm_urdf is not None and self._is_pb_installed:
+                self._ik_helper = IkHelper(
                     self.habitat_config.IK_ARM_URDF,
                     np.array(self.robot.params.arm_init_params),
                 )

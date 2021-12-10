@@ -227,11 +227,11 @@ class RearrangeGraspManager:
                 f"Tried snapping to {snap_obj_id} when already snapped to {self._snapped_obj_id}"
             )
 
+        self._snapped_obj_id = snap_obj_id
+
         if force:
             # Set the transformation to be in the robot's hand already.
             self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
-
-        self._snapped_obj_id = snap_obj_id
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.

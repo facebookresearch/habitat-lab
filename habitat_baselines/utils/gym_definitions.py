@@ -27,7 +27,7 @@ else:
     base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
 
-def get_config_no_base_task_load(cfg_file_path):
+def _get_config_no_base_task_load(cfg_file_path):
     """
     Load in a Habitat Baselines config file without loading the BASE_TASK_CONFIG_PATH file. The purpose of this is to load the config even if the BASE_TASK_CONFIG_PATH does not exist.
     """
@@ -36,7 +36,7 @@ def get_config_no_base_task_load(cfg_file_path):
     return cfg_data
 
 
-def make_habitat_gym_env(
+def _make_habitat_gym_env(
     cfg_file_path: str,
     override_options: List[Any] = None,
     use_render_mode: bool = False,
@@ -44,7 +44,7 @@ def make_habitat_gym_env(
     if override_options is None:
         override_options = []
 
-    cfg_data = get_config_no_base_task_load(cfg_file_path)
+    cfg_data = _get_config_no_base_task_load(cfg_file_path)
     task_cfg_path = osp.join(base_dir, cfg_data["BASE_TASK_CONFIG_PATH"])
 
     override_options.extend(["BASE_TASK_CONFIG_PATH", task_cfg_path])
@@ -76,14 +76,15 @@ def make_habitat_gym_env(
 # Generic supporting general configs
 register(
     id="HabitatGym-v0",
-    entry_point="habitat_baselines.utils.gym_definitions:make_habitat_gym_env",
+    entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
 )
 
 register(
     id="HabitatGymRender-v0",
-    entry_point="habitat_baselines.utils.gym_definitions:make_habitat_gym_env",
+    entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
     kwargs={"use_render_mode": True},
 )
+
 
 hab_baselines_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
 rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
@@ -93,17 +94,17 @@ for fname in os.listdir(rearrange_configs_dir):
     full_path = osp.join(rearrange_configs_dir, fname)
     if not fname.endswith(".yaml"):
         continue
-    cfg_data = get_config_no_base_task_load(full_path)
+    cfg_data = _get_config_no_base_task_load(full_path)
     if GYM_AUTO_NAME_KEY in cfg_data:
         # Register this environment name with this config
         register(
             id=gym_template_handle % cfg_data[GYM_AUTO_NAME_KEY],
-            entry_point="habitat_baselines.utils.gym_definitions:make_habitat_gym_env",
+            entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
             kwargs={"cfg_file_path": full_path},
         )
 
         register(
             id=render_gym_template_handle % cfg_data[GYM_AUTO_NAME_KEY],
-            entry_point="habitat_baselines.utils.gym_definitions:make_habitat_gym_env",
+            entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
             kwargs={"cfg_file_path": full_path, "use_render_mode": True},
         )

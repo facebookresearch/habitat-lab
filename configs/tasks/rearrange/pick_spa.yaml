@@ -11,7 +11,7 @@ TASK:
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    CONSTRAINT_VIOLATE_SHOULD_END: True
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
@@ -64,7 +64,7 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 0.0
     PICK_REWARD:
@@ -74,8 +74,8 @@ TASK:
         CONSTRAINT_VIOLATE_PEN: 10.0
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
-        COLL_PEN: 0.0
-        ROBOT_OBJ_COLL_PEN: 0.0
+        COLLISION_PENALTY: 0.0
+        ROBOT_OBJ_COLLISION_PENALTY: 0.0
 
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 0.0
@@ -90,7 +90,7 @@ TASK:
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "PICK_SUCCESS"

@@ -297,16 +297,8 @@ def is_pb_installed():
     return p is not None
 
 
-def assert_pb_install(p):
-    if p is None:
-        raise ImportError(
-            "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
-        )
-
-
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
-        assert_pb_install(p)
         self._arm_start = arm_start
         self._arm_len = 7
         self.pc_id = p.connect(p.DIRECT)

@@ -200,7 +200,7 @@ class JointSensor(Sensor):
 
 
 @registry.register_sensor
-class JointVelSensor(Sensor):
+class JointVelocitySensor(Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
