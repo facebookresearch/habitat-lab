@@ -16,13 +16,26 @@
 #       jupytext_version: 1.13.3
 #   kernelspec:
 #     display_name: Python 3
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.6.13
 # ---
 
-# %%
-# @title Installation { display-mode: "form" }
-# @markdown (double click to show code).
+# %% [markdown]
+# # Overview
+# This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets.
 
+# %%
+# Only run this cell if on Colab!
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
@@ -58,7 +71,7 @@ def insert_render_options(config):
 #
 # For Habitat 2.0 functionality, install the `hab_suite` branch of Habitat Lab. Complete installation steps:
 #
-# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. For example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`.
+# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
 # 2. Download the `hab_suite` branch of Habitat Lab: `git clone -b hab_suite https://github.com/facebookresearch/habitat-lab.git`
 # 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
 
@@ -564,3 +577,9 @@ with open(nav_pick_cfg_path, "w") as f:
 
 # %% [markdown]
 # To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
+
+# %% [markdown]
+# # Home Assistant Benchmark
+# Tutorial for the home assistant benchmark and how to setup new tasks in a [PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) like task specification is coming soon!
+
+# %%
