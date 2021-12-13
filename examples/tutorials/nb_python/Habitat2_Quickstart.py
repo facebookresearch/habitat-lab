@@ -3,9 +3,8 @@
 #   accelerator: GPU
 #   colab:
 #     collapsed_sections: []
-#     name: Habitat Interactive Tasks
+#     name: Habitat Lab
 #     provenance: []
-#     toc_visible: true
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,colabs//ipynb
@@ -16,24 +15,14 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.3
 #   kernelspec:
-#     display_name: Python [conda env:hab_merge] *
-#     language: python
-#     name: conda-env-hab_merge-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.6.13
+#     display_name: Python 3
+#     name: python3
 # ---
 
 # %%
 # @title Installation { display-mode: "form" }
 # @markdown (double click to show code).
+
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
@@ -81,7 +70,7 @@ def insert_render_options(config):
 # %%
 with habitat.Env(
     config=insert_render_options(
-        habitat.get_config("../../../configs/tasks/rearrange/pick.yaml")
+        habitat.get_config("configs/tasks/rearrange/pick.yaml")
     )
 ) as env:
     observations = env.reset()  # noqa: F841
