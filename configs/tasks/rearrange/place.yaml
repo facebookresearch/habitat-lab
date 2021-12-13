@@ -98,6 +98,7 @@ TASK:
         - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "OBJECT_TO_GOAL_DISTANCE"
         - "OBJ_AT_GOAL"
         - "PLACE_SUCCESS"
         - "PLACE_REWARD"
