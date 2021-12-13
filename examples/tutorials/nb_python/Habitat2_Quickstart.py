@@ -27,13 +27,16 @@
 # %%
 # Only run this cell if using Colab!
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+# Setup to use the hab_suite branch of Habitat Lab.
 # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
-# If this block fails due to an error like "'PIL.TiffTags' has no attribute
-# 'IFD'", then restart the Colab runtime instance and rerun.
+# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
+# 'IFD'", then restart the Colab runtime instance and rerun this cell and the next cell.
 
+# %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
+# %%
 import os.path as osp
 
 import gym
@@ -50,9 +53,6 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
-
-# %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
-
 
 # %%
 def insert_render_options(config):
