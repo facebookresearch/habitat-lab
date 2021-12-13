@@ -27,6 +27,10 @@ else:
     base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
 
+def find_hablab_config(cfg_rel_file_path):
+    return habitat.get_config(osp.join(base_dir, cfg_rel_file_path))
+
+
 def _get_config_no_base_task_load(cfg_file_path):
     """
     Load in a Habitat Baselines config file without loading the BASE_TASK_CONFIG_PATH file. The purpose of this is to load the config even if the BASE_TASK_CONFIG_PATH does not exist.

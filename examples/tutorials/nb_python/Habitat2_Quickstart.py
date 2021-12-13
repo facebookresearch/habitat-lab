@@ -18,16 +18,6 @@
 #     display_name: Python 3
 #     language: python
 #     name: python3
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.6.13
 # ---
 
 # %% [markdown]
@@ -37,6 +27,7 @@
 # %%
 # Only run this cell if on Colab!
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+# ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
 # %%
@@ -45,15 +36,16 @@ import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat_baselines.utils.gym_definitions  # noqa: F401
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.utils.visualizations.utils import observations_to_image
+from habitat_baselines.utils.gym_definitions import find_hablab_config
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
+
 
 # %%
 def insert_render_options(config):
@@ -61,7 +53,6 @@ def insert_render_options(config):
     config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
     config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
     config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
-    config.SIMULATOR.DEBUG_RENDER = True
     config.freeze()
     return config
 
@@ -81,9 +72,10 @@ def insert_render_options(config):
 # Start with a minimal environment interaction loop using the Habitat API.
 
 # %%
+
 with habitat.Env(
     config=insert_render_options(
-        habitat.get_config("configs/tasks/rearrange/pick.yaml")
+        find_hablab_config("configs/tasks/rearrange/pick.yaml")
     )
 ) as env:
     observations = env.reset()  # noqa: F841
