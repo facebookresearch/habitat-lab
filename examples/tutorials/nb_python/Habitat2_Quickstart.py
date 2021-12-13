@@ -3,7 +3,7 @@
 #   accelerator: GPU
 #   colab:
 #     collapsed_sections: []
-#     name: Habitat Lab
+#     name: Habitat 2.0 Quick Start Tutorial
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
