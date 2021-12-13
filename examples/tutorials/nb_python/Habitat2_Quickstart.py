@@ -34,18 +34,20 @@
 # 'IFD'", then restart the Colab runtime instance and rerun.
 
 
+import os.path as osp
+
 import gym
 import gym.spaces as spaces
 import numpy as np
 
 import habitat
+import habitat_baselines.utils.gym_definitions as habitat_gym
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.utils.visualizations.utils import observations_to_image
-from habitat_baselines.utils.gym_definitions import find_hablab_config
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
@@ -80,7 +82,12 @@ def insert_render_options(config):
 
 with habitat.Env(
     config=insert_render_options(
-        find_hablab_config("configs/tasks/rearrange/pick.yaml")
+        habitat.get_config(
+            osp.join(
+                habitat_gym.config_base_dir,
+                "configs/tasks/rearrange/pick.yaml",
+            )
+        )
     )
 ) as env:
     observations = env.reset()  # noqa: F841

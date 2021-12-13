@@ -22,13 +22,11 @@ GYM_AUTO_NAME_KEY = "GYM_AUTO_NAME"
 HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
 
 if HABLAB_INSTALL_PATH in os.environ:
-    base_dir = os.environ[HABLAB_INSTALL_PATH]
+    config_base_dir = os.environ[HABLAB_INSTALL_PATH]
 else:
-    base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
-
-
-def find_hablab_config(cfg_rel_file_path):
-    return habitat.get_config(osp.join(base_dir, cfg_rel_file_path))
+    config_base_dir = osp.dirname(
+        osp.dirname(osp.dirname(osp.abspath(__file__)))
+    )
 
 
 def _get_config_no_base_task_load(cfg_file_path):
@@ -49,7 +47,9 @@ def _make_habitat_gym_env(
         override_options = []
 
     cfg_data = _get_config_no_base_task_load(cfg_file_path)
-    task_cfg_path = osp.join(base_dir, cfg_data["BASE_TASK_CONFIG_PATH"])
+    task_cfg_path = osp.join(
+        config_base_dir, cfg_data["BASE_TASK_CONFIG_PATH"]
+    )
 
     override_options.extend(["BASE_TASK_CONFIG_PATH", task_cfg_path])
 
