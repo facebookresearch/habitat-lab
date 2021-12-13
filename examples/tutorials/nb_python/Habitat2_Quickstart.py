@@ -25,7 +25,7 @@
 # This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets.
 
 # %%
-# Only run this cell if on Colab!
+# Only run this cell if using Colab!
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
@@ -45,7 +45,6 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.gym_definitions import find_hablab_config
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
-
 
 # %%
 def insert_render_options(config):
