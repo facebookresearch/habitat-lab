@@ -87,3 +87,6 @@ data
 
 # vim
 *.swp
+
+# Tensorboard files
+tb/
