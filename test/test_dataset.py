@@ -368,10 +368,11 @@ def test_reset_goals():
         scene_id="1",
         start_position=[0, 0, 0],
         start_rotation=[1, 0, 0, 0],
-        goals=[NavigationGoal([1, 2, 3])],
+        goals=[NavigationGoal(position=[1, 2, 3])],
     )
+
     ep._shortest_path_cache = "Dummy"
+    assert ep._shortest_path_cache is not None
 
-    ep.goals = [NavigationGoal([3, 4, 5])]
-
+    ep.goals = [NavigationGoal(position=[3, 4, 5])]
     assert ep._shortest_path_cache is None
