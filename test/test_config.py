@@ -4,6 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from glob import glob
+
+import pytest
+
+import habitat
 from habitat.config.default import get_config
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
@@ -46,3 +51,10 @@ def test_overwrite_options():
         assert (
             config.ENVIRONMENT.MAX_EPISODE_STEPS == steps_limit
         ), "Overwriting of config options failed."
+
+
+@pytest.mark.parametrize(
+    "config_path", glob("**/config*/**/*.yaml", recursive=True)
+)
+def test_no_config_has_non_default_keys(config_path):
+    habitat.get_config(config_path)
