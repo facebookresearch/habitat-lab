@@ -22,12 +22,9 @@ from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
 
 
-def make_render_only(obj_idx, sim):
-    if hasattr(MotionType, "RENDER_ONLY"):
-        sim.set_object_motion_type(MotionType.RENDER_ONLY, obj_idx)
-    else:
-        sim.set_object_motion_type(MotionType.KINEMATIC, obj_idx)
-        sim.set_object_is_collidable(False, obj_idx)
+def make_render_only(obj, sim):
+    obj.motion_type = MotionType.KINEMATIC
+    obj.collidable = False
 
 
 def make_border_red(img):
@@ -42,6 +39,10 @@ def make_border_red(img):
 
 def coll_name_matches(coll, name):
     return name in [coll.object_id_a, coll.object_id_b]
+
+
+def coll_link_name_matches(coll, name):
+    return name in [coll.link_id_a, coll.link_id_b]
 
 
 def get_match_link(coll, name):
@@ -207,6 +208,8 @@ def convert_legacy_cfg(obj_list):
 
 def get_aabb(obj_id, sim, transformed=False):
     obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
     obj_node = obj.root_scene_node
     obj_bb = obj_node.cumulative_bb
     if transformed:
@@ -290,16 +293,12 @@ except ImportError:
     p = None
 
 
-def check_pb_install(p):
-    if p is None:
-        raise ImportError(
-            "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
-        )
+def is_pb_installed():
+    return p is not None
 
 
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
-        check_pb_install(p)
         self._arm_start = arm_start
         self._arm_len = 7
         self.pc_id = p.connect(p.DIRECT)

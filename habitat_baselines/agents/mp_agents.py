@@ -12,6 +12,7 @@ import numpy as np
 
 import habitat
 from habitat.core.simulator import Observations
+from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import EEPositionSensor
 from habitat_baselines.agents.benchmark_gym import BenchmarkGym
 from habitat_baselines.config.default import get_config
@@ -19,18 +20,34 @@ from habitat_baselines.motion_planning.motion_plan import MotionPlanner
 from habitat_baselines.motion_planning.robot_target import RobotTarget
 
 
-def get_noop_arm_action(sim):
+def get_noop_arm_action(sim, task):
     if sim.robot.is_gripper_open:
         grip_state = 1.0
     else:
         grip_state = 0.0
-    return {
-        "action": "ARM_ACTION",
-        "action_args": {
-            "arm_action": sim.robot.arm_joint_pos,
-            "grip_action": grip_state,
-        },
-    }
+
+    if "grip_action" in task.action_space.spaces["ARM_ACTION"]:
+        grip_ac_dict = {"grip_action": grip_state}
+    else:
+        grip_ac_dict = {}
+
+    if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
+        ret_val = {
+            "action": "ARM_ACTION",
+            "action_args": {
+                "arm_action": np.zeros(3),
+                **grip_ac_dict,
+            },
+        }
+    else:
+        ret_val = {
+            "action": "ARM_ACTION",
+            "action_args": {
+                "arm_action": sim.robot.arm_joint_pos,
+                **grip_ac_dict,
+            },
+        }
+    return ret_val
 
 
 class ParameterizedAgent(habitat.Agent):
@@ -132,7 +149,7 @@ class AgentComposition(ParameterizedAgent):
 
     def act(self, observations):
         if self.should_term(observations):
-            return get_noop_arm_action(self._sim)
+            return get_noop_arm_action(self._sim, self._task)
 
         action = self.skills[self.cur_skill].act(observations)
         return action
@@ -213,14 +230,24 @@ class ArmTargModule(ParameterizedAgent):
         cur_plan_ac = self._get_plan_ac(observations)
         if cur_plan_ac is None:
             self._term = True
-            return get_noop_arm_action(self._sim)
+            return get_noop_arm_action(self._sim, self._task)
 
         self._plan_idx += 1
-        grip = self._get_gripper_ac(cur_plan_ac)
-        return {
-            "action": "ARM_ACTION",
-            "action_args": {"arm_action": cur_plan_ac, "grip_action": grip},
-        }
+
+        if "grip_action" in self._task.action_space.spaces["ARM_ACTION"]:
+            grip = self._get_gripper_ac(cur_plan_ac)
+            return {
+                "action": "ARM_ACTION",
+                "action_args": {
+                    "arm_action": cur_plan_ac,
+                    "grip_action": grip,
+                },
+            }
+        else:
+            return {
+                "action": "ARM_ACTION",
+                "action_args": {"arm_action": cur_plan_ac},
+            }
 
     def _get_plan_ac(self, observations) -> np.ndarray:
         r"""Get the plan action for the current timestep. By default return the
@@ -271,10 +298,11 @@ class ArmTargModule(ParameterizedAgent):
     def _clean_viz_points(self):
         if not self._config.VERBOSE:
             return
+        rom = self._sim.get_rigid_object_manager()
         for viz_point_name in self._viz_points:
             if self._sim.viz_ids[viz_point_name] is None:
                 continue
-            self._sim.remove_object(self._sim.viz_ids[viz_point_name])
+            rom.remove_object_by_id(self._sim.viz_ids[viz_point_name])
             del self._sim.viz_ids[viz_point_name]
         self._viz_points = []
 
@@ -306,6 +334,8 @@ class ArmTargModule(ParameterizedAgent):
 
 class IkMoveArm(ArmTargModule):
     def _get_plan_ac(self, observations):
+        if self._internal_should_term(observations):
+            return None
         ee_pos = observations[EEPositionSensor.cls_uuid]
         to_target = self._robot_target - ee_pos
         to_target = self._config.IK_SPEED_FACTOR * (
@@ -379,10 +409,11 @@ class SpaManipPick(ArmTargModule):
     def _on_done(self):
         super()._on_done()
         cur_ee = self._sim.robot.ee_transform.translation
-        obj_pos = np.array(self._sim.get_translation(self._targ_obj_idx))
+        rom = self._sim.get_rigid_object_manager()
+        obj = rom.get_object_by_id(self._targ_obj_idx)
 
         ee_dist = np.linalg.norm(self._robo_targ.ee_target_pos - cur_ee)
-        ee_dist_to_obj = np.linalg.norm(obj_pos - cur_ee)
+        ee_dist_to_obj = np.linalg.norm(obj.translation - cur_ee)
         if (
             ee_dist_to_obj < self._grasp_thresh
             and ee_dist < self._config.EXEC_EE_THRESH
@@ -486,13 +517,21 @@ def main():
 
     config = get_config(args.task_cfg, args.opts)
 
+    def should_save(metrics):
+        was_success = metrics[config.RL.SUCCESS_MEASURE]
+        return (
+            was_success
+            and metrics["length"]
+            == config.TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS
+        )
+
     benchmark = BenchmarkGym(
         config,
         config.VIDEO_OPTIONS,
         config.VIDEO_DIR,
         {config.RL.SUCCESS_MEASURE},
         args.traj_save_path,
-        should_save_fn=lambda metrics: metrics[config.RL.SUCCESS_MEASURE],
+        should_save_fn=should_save,
     )
 
     ac_cfg = config.TASK_CONFIG.TASK.ACTIONS

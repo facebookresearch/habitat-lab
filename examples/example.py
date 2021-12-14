@@ -11,9 +11,7 @@ def example():
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
     with habitat.Env(
-        config=habitat.get_config(
-            "configs/tasks/rearrangepick_replica_cad.yaml"
-        )
+        config=habitat.get_config("configs/tasks/rearrange/pick.yaml")
     ) as env:
         print("Environment creation successful")
         observations = env.reset()  # noqa: F841

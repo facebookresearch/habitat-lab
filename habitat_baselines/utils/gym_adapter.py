@@ -62,15 +62,16 @@ class HabGymWrapper(gym.Env):
     or filtering actions. Listed below are the
     config keys:
     - `RL.GYM_OBS_KEYS`: Which observation names from the wrapped environment
-      to include. The order of the key names is kept in the output observation array.
+      to include. The order of the key names is kept in the output observation
+      array. If not specified, all observations are included.
     - `RL.GYM_DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
       any observations are returned in the `desired_goal` returned key of the
       observation.
-    - `RL.GYM_FIX_INFO_DICT`: By default False, but if specified as true, this
+    - `RL.GYM_FIX_INFO_DICT`: By default True, but if specified as true, this
       flattens the returned info dictionary to have depth 1 where sub-keys are
       concatenated to parent keys.
     - `RL.GYM_ACTION_KEYS`: Include a subset of the allowed actions in the
-      wrapped environment. If not specified or empty, all actions are included.
+      wrapped environment. If not specified, all actions are included.
     Example usage:
     ```
     config = baselines_get_config(hab_cfg_path)
@@ -89,9 +90,14 @@ class HabGymWrapper(gym.Env):
         self._gym_achieved_goal_keys = env._rl_config.get(
             "GYM_ACHIEVED_GOAL_KEYS", []
         )
-        self._fix_info_dict = env._rl_config.get("GYM_FIX_INFO_DICT", False)
+        self._fix_info_dict = env._rl_config.get("GYM_FIX_INFO_DICT", True)
         self._gym_action_keys = env._rl_config.get("GYM_ACTION_KEYS", None)
         self._gym_obs_keys = env._rl_config.get("GYM_OBS_KEYS", None)
+
+        if self._gym_obs_keys is None:
+            self._gym_obs_keys = list(env.observation_space.spaces.keys())
+        if self._gym_action_keys is None:
+            self._gym_action_keys = list(env.action_space.spaces.keys())
 
         action_space = env.action_space
         action_space = spaces.Dict(
@@ -129,6 +135,7 @@ class HabGymWrapper(gym.Env):
         for name, sub_space in action_space.spaces.items():
             end_i = start_i + sub_space.shape[0]
             self.action_mapping[name] = (start_i, end_i)
+            start_i = end_i
 
         self.action_space = spaces.Box(
             shape=(end_i,), low=-1.0, high=1.0, dtype=np.float32
@@ -220,3 +227,6 @@ class HabGymWrapper(gym.Env):
             raise ValueError(f"Render mode {mode} not currently supported.")
 
         return frame
+
+    def close(self):
+        self._env.close()

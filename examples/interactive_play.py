@@ -19,14 +19,23 @@ python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_ca
 ```
 
 Controls:
-    - For velocity control
-        - 1-7 to increase the motor target for the robot arm joints
-        - Q-U to decrease the motor target for the robot arm joints
-    - For IK control
-        - W,S,A,D to move side to side
-        - E,Q to move up and down
-    - I,J,K,L to move the robot base around
-    - PERIOD to print the current world coordinates of the robot base.
+- For velocity control
+    - 1-7 to increase the motor target for the robot arm joints
+    - Q-U to decrease the motor target for the robot arm joints
+- For IK control
+    - W,S,A,D to move side to side
+    - E,Q to move up and down
+- I,J,K,L to move the robot base around
+- PERIOD to print the current world coordinates of the robot base.
+
+Change the grip type:
+- Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
+
+Record and play back trajectories:
+- To record a trajectory add `--save-actions --save-actions-count 200` to
+  record a truncated episode length of 200.
+- By default the trajectories are saved to data/interactive_play_replays/play_actions.txt
+- Play the trajectories back with `--load-actions data/interactive_play_replays/play_actions.txt`
 """
 
 import argparse
@@ -34,36 +43,24 @@ import os
 import os.path as osp
 import time
 
-import cv2
 import numpy as np
 
+import habitat
 import habitat.tasks.rearrange.rearrange_task
-from habitat.tasks.rearrange.actions import ArmEEAction, ArmRelPosAction
+from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
+from habitat_sim.utils import viz_utils as vut
 
 try:
     import pygame
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrangepick_replica_cad_example.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-
-
-def make_video_cv2(observations, prefix=""):
-    output_path = "./data/vids/"
-    os.makedirs(output_path, exist_ok=True)
-    shp = observations[0].shape
-    videodims = (shp[1], shp[0])
-    fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-    vid_name = output_path + prefix + ".mp4"
-    video = cv2.VideoWriter(vid_name, fourcc, 60, videodims)
-    for ob in observations:
-        bgr_im_1st_person = ob[..., 0:3][..., ::-1]
-        video.write(bgr_im_1st_person)
-    video.release()
-    print("Saved to", vid_name)
+SAVE_VIDEO_DIR = "./data/vids"
+SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 
 def step_env(env, action_name, action_args, args):
@@ -74,13 +71,23 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     if skip_pygame:
         return step_env(env, "EMPTY", {}, g_args), None
 
-    arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
-        "arm_action"
-    ]
-    arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
+    if "ARM_ACTION" in env.action_space.spaces:
+        arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
+            "arm_action"
+        ]
+        arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
+        base_action = None
+    else:
+        arm_action_space = np.zeros(7)
+        arm_ctrlr = None
+        base_action = [0, 0]
 
-    arm_action = np.zeros(arm_action_space.shape[0])
-    base_action = None
+    if arm_action is None:
+        arm_action = np.zeros(arm_action_space.shape[0])
+        given_arm_action = False
+    else:
+        given_arm_action = True
+
     end_ep = False
     magic_grasp = None
 
@@ -105,7 +112,7 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Forward
         base_action = [1, 0]
 
-    if isinstance(arm_ctrlr, ArmRelPosAction):
+    if arm_action_space.shape[0] == 7:
         # Velocity control. A different key for each joint
         if keys[pygame.K_q]:
             arm_action[0] = 1.0
@@ -174,15 +181,23 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         print(pos)
 
     args = {}
-    if base_action is not None:
+    if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
         name = "BASE_VELOCITY"
         args = {"base_vel": base_action}
     else:
         name = "ARM_ACTION"
-        args = {"arm_action": arm_action, "grip_action": magic_grasp}
+        if given_arm_action:
+            # The grip is also contained in the provided action
+            args = {
+                "arm_action": arm_action[:-1],
+                "grip_action": arm_action[-1],
+            }
+        else:
+            args = {"arm_action": arm_action, "grip_action": magic_grasp}
 
     if end_ep:
         env.reset()
+
     if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
     else:
@@ -211,11 +226,11 @@ def play_env(env, args, config):
     if args.load_actions is not None:
         with open(args.load_actions, "rb") as f:
             use_arm_actions = np.load(f)
+            print("Loaded arm actions")
 
     obs = env.reset()
 
     if not args.no_render:
-        obs = env.step({"action": "EMPTY", "action_args": {}})
         draw_obs = observations_to_image(obs, {})
         pygame.init()
         screen = pygame.display.set_mode(
@@ -246,12 +261,16 @@ def play_env(env, args, config):
         if use_arm_actions is not None and i >= len(use_arm_actions):
             break
 
-        # obs, reward, done, info = step_result
         obs = step_result
-        reward = 0.0
         info = env.get_metrics()
+        reward_key = [k for k in info if "reward" in k]
+        if len(reward_key) > 0:
+            reward = info[reward_key[0]]
+        else:
+            reward = 0.0
 
         total_reward += reward
+        info["Total Reward"] = total_reward
 
         use_ob = observations_to_image(obs, info)
         use_ob = overlay_frame(use_ob, info)
@@ -279,19 +298,24 @@ def play_env(env, args, config):
         prev_time = curr_time
 
     if args.save_actions:
-        assert len(all_arm_actions) > 200
-        all_arm_actions = np.array(all_arm_actions)[:200]
-        save_dir = "orp/start_data/"
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = osp.join(save_dir, "bench_ac.txt")
+        if len(all_arm_actions) < args.save_actions_count:
+            raise ValueError(
+                f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
+            )
+        all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
+        os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
+        save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)
-        raise ValueError("done")
+        print(f"Saved actions to {save_path}")
+        pygame.quit()
+        return
 
     if args.save_obs:
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
-        make_video_cv2(all_obs, "interactive_play")
+        os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
+        vut.make_video(all_obs, osp.join(SAVE_VIDEO_DIR, args.save_obs_fname))
     if not args.no_render:
         pygame.quit()
 
@@ -304,16 +328,68 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
+    parser.add_argument("--save-obs-fname", type=str, default="play.mp4")
     parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument(
+        "--save-actions-fname", type=str, default="play_actions.txt"
+    )
+    parser.add_argument(
+        "--save-actions-count",
+        type=int,
+        default=200,
+        help="""
+            The number of steps the saved action trajectory is clipped to. NOTE
+            the episode must be at least this long or it will terminate with
+            error.
+            """,
+    )
+    parser.add_argument("--play-cam-res", type=int, default=512)
+    parser.add_argument(
+        "--play-task",
+        action="store_true",
+        default=False,
+        help="If true, then change the config settings to make it easier to play and visualize the task.",
+    )
+    parser.add_argument(
+        "--never-end",
+        action="store_true",
+        default=False,
+        help="If true, make the task never end due to reaching max number of steps",
+    )
+    parser.add_argument(
+        "--add-ik",
+        action="store_true",
+        default=False,
+        help="If true, changes arm control to IK",
+    )
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    parser.add_argument(
+        "opts",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="Modify config options from command line",
+    )
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
         raise ImportError(
             "Need to install PyGame (run `pip install pygame==2.0.1`)"
         )
 
-    config = habitat.get_config(args.cfg)
+    config = habitat.get_config(args.cfg, args.opts)
+    config.defrost()
+    if args.play_task:
+        config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = args.play_cam_res
+        config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
+        config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
+    if args.never_end:
+        config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
+    if args.add_ik:
+        config.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmEEAction"
+        config.SIMULATOR.IK_ARM_URDF = (
+            "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+        )
+    config.freeze()
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

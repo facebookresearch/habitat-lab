@@ -8,7 +8,7 @@ import pytest
 
 from habitat.config.default import get_config
 from habitat.core.benchmark import Benchmark
-from habitat.tasks.rearrange.rearrange_sensors import RearrangePickSuccess
+from habitat.tasks.rearrange.sub_tasks.pick_sensors import RearrangePickSuccess
 from habitat_baselines.agents.mp_agents import (
     AgentComposition,
     SpaManipPick,
@@ -16,7 +16,7 @@ from habitat_baselines.agents.mp_agents import (
 )
 from habitat_baselines.motion_planning.motion_plan import is_ompl_installed
 
-TEST_CFG = "habitat_baselines/config/rearrange/spap_rearrangepick.yaml"
+TEST_CFG = "habitat_baselines/config/rearrange/spap_pick.yaml"
 
 
 @pytest.mark.skipif(

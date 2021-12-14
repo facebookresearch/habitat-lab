@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import List
 
 import cv2
@@ -30,7 +36,7 @@ def append_text_to_image(image: np.ndarray, text: List[str]):
             (x, y),
             font,
             font_size,
-            (255, 255, 255),
+            (255, 255, 255, 255),
             font_thickness,
             lineType=cv2.LINE_AA,
         )

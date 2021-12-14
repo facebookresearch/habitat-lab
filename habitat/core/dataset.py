@@ -55,6 +55,14 @@ class Episode:
 
     episode_id: str = attr.ib(default=None, validator=not_none_validator)
     scene_id: str = attr.ib(default=None, validator=not_none_validator)
+    # path to the SceneDataset config file
+    scene_dataset_config: str = attr.ib(
+        default="default", validator=not_none_validator
+    )
+    # list of paths to search for object config files in addition to the SceneDataset
+    additional_obj_config_paths: List[str] = attr.ib(
+        default=[], validator=not_none_validator
+    )
     start_position: List[float] = attr.ib(
         default=None, validator=not_none_validator
     )

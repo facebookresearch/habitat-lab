@@ -1,21 +1,26 @@
-# The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0/pick.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    FORCE_RECACHE: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
+    FORCE_REGENERATE: False
+
+    # Measurements for composite tasks.
+    REWARD_MEASUREMENT: "rearrangepick_reward"
+    SUCCESS_MEASUREMENT: "rearrangepick_success"
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -27,10 +32,6 @@ TASK:
         DIMENSIONALITY: 3
     GOAL_SENSOR:
         TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    TARGET_CUR_SENSOR:
-        TYPE: "ObjectGoalPositionSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     ABS_TARGET_START_SENSOR:
@@ -48,77 +49,76 @@ TASK:
         TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
-    LOCAL_SENSOR:
-        TYPE: "LocalizationSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "LOCAL_SENSOR", "TARGET_CUR_SENSOR", "TARGET_CUR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
+    EXCESSIVE_FORCE_SHOULD_END:
+        TYPE: "ForceTerminate"
+        MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
-      TYPE: "RobotCollisions"
+        TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    REARRANGE_PICK_REWARD:
+    PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PICK_REWARD: 20.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
-        COLL_PEN: 1.0
-        ROBOT_OBJ_COLL_PEN: 0.0
-        MAX_ACCUM_FORCE: null
-
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
         USE_DIFF: True
-
         DROP_OBJ_SHOULD_END: False
         WRONG_PICK_SHOULD_END: False
 
-    REARRANGE_PICK_SUCCESS:
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+
+
+    PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
-        SUCC_THRESH: 0.3
+        SUCC_THRESH: 0.15
 
     MEASUREMENTS:
+        - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "REARRANGE_PICK_SUCCESS"
-        - "REARRANGE_PICK_REWARD"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmAbsPosKinematicAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
             GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
-        EMPTY:
-            TYPE: "EmptyAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        - EMPTY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
+    ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False
         RADIUS: 0.1
-        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR', 'THIRD_RGB_SENSOR']
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
         START_POSITION: [0, 0, 0]
         START_ROTATION: [0, 0, 0, 1]
     HEAD_RGB_SENSOR:
@@ -139,18 +139,14 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    THIRD_RGB_SENSOR:
-        WIDTH: 512
-        HEIGHT: 512
 
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+    ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 1
 
     # Grasping
     HOLD_THRESH: 0.09

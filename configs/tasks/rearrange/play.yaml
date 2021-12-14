@@ -1,0 +1,112 @@
+# Config for empty task to explore the scene.
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 0
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0/pick.json.gz
+    SCENES_DIR: "data/replica_cad/"
+TASK:
+    TYPE: RearrangeEmptyTask-v0
+    COUNT_OBJ_COLLISIONS: True
+    COUNT_ROBOT_OBJ_COLLS: False
+
+    # Reach task config
+    RENDER_TARGET: True
+    EE_SAMPLE_FACTOR: 0.8
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+
+    # In radians
+    #BASE_ANGLE_NOISE: 0.15
+    #BASE_NOISE: 0.05
+    BASE_ANGLE_NOISE: 0.0
+    BASE_NOISE: 0.0
+
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+    FORCE_RECACHE: True
+
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: "BaseVelAction"
+            LIN_SPEED: 12.0
+            ANG_SPEED: 12.0
+            ALLOW_DYN_SLIDE: True
+            END_ON_STOP: False
+            ALLOW_BACK: True
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+        EMPTY:
+            TYPE: "EmptyAction"
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+        - BASE_VELOCITY
+        - EMPTY
+
+SIMULATOR:
+    ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.09
+    AC_FREQ_RATIO: 4
+    DEBUG_RENDER: False
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: False
+        RADIUS: 0.1
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+    ARM_REST: [0.6, 0.0, 0.9]
+    CTRL_FREQ: 120.0
+    DEFAULT_AGENT_ID: 0
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: True
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
+    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+    SEED: 100
+    SEMANTIC_SENSOR:
+        HEIGHT: 480
+        HFOV: 90
+        ORIENTATION: [0.0, 0.0, 0.0]
+        POSITION: [0, 1.25, 0]
+        TYPE: HabitatSimSemanticSensor
+        WIDTH: 640
+    TILT_ANGLE: 15
+    TURN_ANGLE: 10
+    TYPE: RearrangeSim-v0
