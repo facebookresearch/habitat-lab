@@ -25,6 +25,13 @@
 # This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets.
 
 # %%
+from IPython.display import HTML
+
+HTML(
+    '<iframe src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview" width="640" height="480" allow="autoplay"></iframe>'
+)
+
+# %%
 # Only run this cell if using Colab!
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
 # Setup to use the hab_suite branch of Habitat Lab.
@@ -585,5 +592,3 @@ with open(nav_pick_cfg_path, "w") as f:
 # %% [markdown]
 # # Home Assistant Benchmark
 # Tutorial for the home assistant benchmark and how to setup new tasks in a [PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) like task specification is coming soon!
-
-# %%
