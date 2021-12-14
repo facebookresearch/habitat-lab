@@ -54,15 +54,30 @@ def test_overwrite_options():
 
 
 @pytest.mark.parametrize(
-    "config_path", glob("**/config*/**/*.yaml", recursive=True),
+    "config_path",
+    glob("configs/**/*.yaml", recursive=True),
 )
-def test_no_config_has_non_default_keys(config_path):
+def test_no_core_config_has_non_default_keys(config_path):
     configs_allowed_to_have_non_default_keys = [
-            "configs/test/new_keys_test.yaml",
-        ]
+        # new_keys_test.yaml excluded since it explicitely uses
+        # keys not present in the default for testing purposes
+        "configs/test/new_keys_test.yaml",
+        # Planning Domain Definition Language configs are
+        # excluded since they do not implement the default config
+        "configs/tasks/rearrange/pddl/replica_cad_domain.yaml",
+        "configs/tasks/rearrange/pddl/nav_pick.yaml",
+        "configs/tasks/rearrange/pddl/tidy_house.yaml",
+        # Trainer excluded because does not use the default config
+        "configs/baselines/ppo.yaml",
+    ]
     if config_path in configs_allowed_to_have_non_default_keys:
         return
     from habitat.config.default import _C
+
+    # We manually disallow new keys when merging to make sure all keys
+    # are in the default config
     _C.set_new_allowed(False)
-    habitat.get_config(config_path)
-    _C.set_new_allowed(True)
+    try:
+        habitat.get_config(config_path)
+    finally:
+        _C.set_new_allowed(True)
