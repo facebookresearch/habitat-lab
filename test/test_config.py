@@ -54,7 +54,15 @@ def test_overwrite_options():
 
 
 @pytest.mark.parametrize(
-    "config_path", glob("**/config*/**/*.yaml", recursive=True)
+    "config_path", glob("**/config*/**/*.yaml", recursive=True),
 )
 def test_no_config_has_non_default_keys(config_path):
+    configs_allowed_to_have_non_default_keys = [
+            "configs/test/new_keys_test.yaml",
+        ]
+    if config_path in configs_allowed_to_have_non_default_keys:
+        return
+    from habitat.config.default import _C
+    _C.set_new_allowed(False)
     habitat.get_config(config_path)
+    _C.set_new_allowed(True)
