@@ -22,7 +22,7 @@
 
 # %% [markdown]
 # # Overview
-# This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets.
+# This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
 
 # %%
 from IPython.display import HTML
