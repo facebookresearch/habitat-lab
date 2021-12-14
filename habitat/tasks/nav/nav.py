@@ -110,7 +110,9 @@ class NavigationEpisode(Episode):
     """
 
     goals: List[NavigationGoal] = attr.ib(
-        default=None, validator=not_none_validator
+        default=None,
+        validator=not_none_validator,
+        on_setattr=Episode._reset_shortest_path_cache_hook,
     )
     start_room: Optional[str] = None
     shortest_paths: Optional[List[List[ShortestPathPoint]]] = None
