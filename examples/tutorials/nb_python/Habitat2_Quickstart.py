@@ -18,6 +18,16 @@
 #     display_name: Python 3
 #     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.6.13
 # ---
 
 # %% [markdown]
@@ -35,22 +45,21 @@ HTML(
 # %%capture
 # @title Install Dependencies (if on Colab) { display-mode: "form" }
 # @markdown (double click to show code)
-is_colab = False
-try:
-    from IPython.display import get_ipython
 
-    is_colab = "google.colab" in str(get_ipython())
-except Exception:
-    pass
+import os
 
-
-if is_colab:
+if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
     # Setup to use the hab_suite branch of Habitat Lab.
     # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
+import os
+
+if "COLAB_GPU" in os.environ:
+    print("Setting Habitat base path")
+    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
 import os
 
@@ -68,10 +77,6 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
-
-if is_colab:
-    print("Setting Habitat base path")
-    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
 
 def insert_render_options(config):
