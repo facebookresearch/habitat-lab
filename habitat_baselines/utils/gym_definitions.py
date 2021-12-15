@@ -77,17 +77,26 @@ def _make_habitat_gym_env(
     return env
 
 
-if "HabitatGym-v0" not in registry.env_specs:
-    print(registry.env_specs)
-
-    # Generic supporting general configs
+def try_register(id_name, entry_point, kwargs):
+    if id_name in registry.env_specs:
+        return
     register(
-        id="HabitatGym-v0",
-        entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
+        id_name,
+        entry_point=entry_point,
+        kwargs=kwargs,
     )
 
-    register(
-        id="HabitatGymRender-v0",
+
+if "HabitatGym-v0" not in registry.env_specs:
+    # Generic supporting general configs
+    try_register(
+        id_name="HabitatGym-v0",
+        entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
+        kwargs={},
+    )
+
+    try_register(
+        id_name="HabitatGymRender-v0",
         entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
         kwargs={"use_render_mode": True},
     )
@@ -103,14 +112,15 @@ if "HabitatGym-v0" not in registry.env_specs:
         cfg_data = _get_config_no_base_task_load(full_path)
         if GYM_AUTO_NAME_KEY in cfg_data:
             # Register this environment name with this config
-            register(
-                id=gym_template_handle % cfg_data[GYM_AUTO_NAME_KEY],
+            try_register(
+                id_name=gym_template_handle % cfg_data[GYM_AUTO_NAME_KEY],
                 entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
                 kwargs={"cfg_file_path": full_path},
             )
 
-            register(
-                id=render_gym_template_handle % cfg_data[GYM_AUTO_NAME_KEY],
+            try_register(
+                id_name=render_gym_template_handle
+                % cfg_data[GYM_AUTO_NAME_KEY],
                 entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
                 kwargs={"cfg_file_path": full_path, "use_render_mode": True},
             )
