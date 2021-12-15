@@ -18,16 +18,6 @@
 #     display_name: Python 3
 #     language: python
 #     name: python3
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.6.13
 # ---
 
 # %% [markdown]
@@ -60,6 +50,11 @@ import os
 if "COLAB_GPU" in os.environ:
     print("Setting Habitat base path")
     # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
+    import importlib
+
+    import PIL
+
+    importlib.reload(PIL.TiffTags)
 
 import os
 
