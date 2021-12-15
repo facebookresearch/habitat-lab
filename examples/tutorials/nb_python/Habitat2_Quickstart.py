@@ -35,9 +35,16 @@ HTML(
 # %%capture
 # @title Install Dependencies (if on Colab) { display-mode: "form" }
 # @markdown (double click to show code)
-from IPython.display import get_ipython
+is_colab = False
+try:
+    from IPython.display import get_ipython
 
-if "google.colab" in str(get_ipython()):
+    is_colab = "google.colab" in str(get_ipython())
+except Exception:
+    pass
+
+
+if is_colab:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
     # Setup to use the hab_suite branch of Habitat Lab.
@@ -62,7 +69,7 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
-if "google.colab" in str(get_ipython()):
+if is_colab:
     print("Setting Habitat base path")
     # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
