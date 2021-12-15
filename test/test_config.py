@@ -9,7 +9,7 @@ from glob import glob
 import pytest
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_config, _C
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_EQA = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -70,8 +70,6 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
 def test_no_core_config_has_non_default_keys(config_path):
     if config_path in CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS:
         return
-    from habitat.config.default import _C
-
     # We manually disallow new keys when merging to make sure all keys
     # are in the default config
     _C.set_new_allowed(False)
