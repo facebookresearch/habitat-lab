@@ -32,17 +32,20 @@ HTML(
 )
 
 # %%
-# Only run this cell if using Colab!
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# Setup to use the hab_suite branch of Habitat Lab.
-# ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
+# %%capture
+# @title Install Dependencies (if on Colab) { display-mode: "form" }
+# @markdown (double click to show code)
+from IPython.display import get_ipython
+
+if "google.colab" in str(get_ipython()):
+    print("Setting up Habitat")
+    # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+    # Setup to use the hab_suite branch of Habitat Lab.
+    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
-# Only run this cell if using Colab!
-# %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
-# %%
-import os.path as osp
+import os
 
 import gym
 import gym.spaces as spaces
@@ -59,10 +62,11 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
-# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
-# 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
+if "google.colab" in str(get_ipython()):
+    print("Setting Habitat base path")
+    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
 
-# %%
+
 def insert_render_options(config):
     config.defrost()
     config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
@@ -70,6 +74,10 @@ def insert_render_options(config):
     config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
     config.freeze()
     return config
+
+
+# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
+# 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 
 
 # %% [markdown]
@@ -91,7 +99,7 @@ def insert_render_options(config):
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            osp.join(
+            os.path.join(
                 habitat_gym.config_base_dir,
                 "configs/tasks/rearrange/pick.yaml",
             )
