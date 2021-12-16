@@ -63,6 +63,33 @@ SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 
+def arm_vel_interp_to(env, target_pose, num_frames):
+    """
+    Compute a set of arm velocity actions to reach the target_pose from the current pose over the desired number of frames.
+    """
+    current_pose = env._sim.robot.arm_joint_pos
+
+    vel_action = (np.array(target_pose) - current_pose) / num_frames
+    # manually scale the action relative to configured DELTA_POS_LIMIT
+    vel_action /= 0.025
+
+    print(f"Computed delta pose action: {vel_action}")
+    max_displacement = max(vel_action.min(), vel_action.max(), key=abs)
+    if max_displacement > 1.0:
+        print(f"...violated max move constraint: {max_displacement}")
+
+    return [vel_action for _ix in range(num_frames)]
+
+
+# (arm_pose, num_frames) tuples to convert to actions
+arm_pose_target_queue = [
+    ([-0.223, 0.126, 0.277, -0.08, 0.448, 0.111, -0.38], 50),
+    ([0.477, 0.119, 0.308, -0.105, 0.454, 0.329, -0.369], 50),
+    ([-0.718, 0.121, 0.32, -0.056, 0.446, 0.115, -0.324], 50),
+    ([0.477, 0.119, 0.308, -0.105, 0.454, 0.329, -0.369], 50),
+]
+
+
 def step_env(env, action_name, action_args, args):
     return env.step({"action": action_name, "action_args": action_args})
 
@@ -184,6 +211,9 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
         # Print the current arm state of the robot, useful for debugging.
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
         print(f"Robot arm joint state: {joint_state}")
+    elif keys[pygame.K_n]:
+        # toggle navmesh display for debugging
+        env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
     args = {}
     if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
@@ -198,15 +228,14 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
                 "grip_action": arm_action[-1],
             }
         else:
+            if magic_grasp is None:
+                arm_action = [*arm_action, 0.0]
+            else:
+                arm_action = [*arm_action, magic_grasp]
             args = {"arm_action": arm_action, "grip_action": magic_grasp}
 
     if end_ep:
         env.reset()
-
-    if magic_grasp is None:
-        arm_action = [*arm_action, 0.0]
-    else:
-        arm_action = [*arm_action, magic_grasp]
 
     return step_env(env, name, args, g_args), arm_action
 
@@ -249,6 +278,10 @@ def play_env(env, args, config):
     total_reward = 0
     all_arm_actions = []
 
+    arm_pose_target_queue_index = 0
+    if args.pose_queue:
+        use_arm_actions = []
+
     while True:
         if (
             args.save_actions
@@ -258,6 +291,22 @@ def play_env(env, args, config):
             break
         if render_steps_limit is not None and i > render_steps_limit:
             break
+        if args.pose_queue and len(use_arm_actions) <= i:
+            if arm_pose_target_queue_index >= len(arm_pose_target_queue):
+                # when we run out, use 0 velocities
+                use_arm_actions += [np.zeros(8)]
+            else:
+                # generate the next action sequence
+                next_target = arm_pose_target_queue[
+                    arm_pose_target_queue_index
+                ]
+                use_arm_actions += [
+                    list(x) + [0]
+                    for x in arm_vel_interp_to(
+                        env, next_target[0], next_target[1]
+                    )
+                ]
+                arm_pose_target_queue_index += 1
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[i] if use_arm_actions is not None else None,
@@ -265,11 +314,16 @@ def play_env(env, args, config):
             obs,
             env,
         )
+        print(arm_action)
         if step_result is None:
             break
         all_arm_actions.append(arm_action)
         i += 1
-        if use_arm_actions is not None and i >= len(use_arm_actions):
+        if (
+            use_arm_actions is not None
+            and i >= len(use_arm_actions)
+            and not args.pose_queue
+        ):
             break
 
         obs = step_result
@@ -374,6 +428,7 @@ if __name__ == "__main__":
         help="If true, changes arm control to IK",
     )
     parser.add_argument("--load-actions", type=str, default=None)
+    parser.add_argument("--pose-queue", action="store_true", default=False)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
         "opts",
