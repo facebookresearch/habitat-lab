@@ -16,6 +16,7 @@ TASK:
     # robot
     EASY_INIT: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
 
     ACTIONS:
         ARM_ACTION:
@@ -26,7 +27,7 @@ TASK:
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             EE_CTRL_LIM: 0.015
-            DELTA_POS_LIMIT: 0.0125
+            DELTA_POS_LIMIT: 0.025
     POSSIBLE_ACTIONS:
         - ARM_ACTION
 
@@ -61,7 +62,7 @@ SIMULATOR:
         HEIGHT: 1.5
         RADIUS: 0.1
         IS_SET_START_STATE: True
-        START_POSITION: [-0.927, 0.126, 0.269]
+        START_POSITION: [-1.2, 0.158, 0.29]
         START_ROTATION: [0.0, 0.999657, 0.0, -0.0261769]
     HEAD_RGB_SENSOR:
         WIDTH: 128
