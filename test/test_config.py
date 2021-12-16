@@ -9,7 +9,7 @@ from glob import glob
 import pytest
 
 import habitat
-from habitat.config.default import get_config, _C
+from habitat.config.default import _C, get_config
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 CFG_EQA = "configs/test/habitat_mp3d_eqa_test.yaml"
@@ -62,6 +62,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
 ] + [glob("**/pddl/*.yaml", recursive=True)]
+
 
 @pytest.mark.parametrize(
     "config_path",
