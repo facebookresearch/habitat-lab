@@ -1,14 +1,8 @@
 ---
-dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
+dataset_path: "data/hab2_bench_assets/hab2_bench.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/"
 scene_sets:
-  -
-    name: "variations_105"
-    included_substrings:
-      - "Baked_sc"
-    excluded_substrings: ["Baked_sc1_staging_00_bench"]
-    comment: "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
   -
     name: "Baked_sc1_staging_00_bench"
     included_substrings:
@@ -16,11 +10,11 @@ scene_sets:
     excluded_substrings: []
     comment: "Benchmarking test scene with no URDFs except fridge and counter."
   -
-    name: "Baked_sc1_staging_00"
+    name: "p_viz_bench_scene"
     included_substrings:
-      - "Baked_sc1_staging_00"
-    excluded_substrings: ["Baked_sc1_staging_00_bench"]
-    comment: "Benchmarking test scene"
+      - "frl_apartment_stage_pvizplan_empty"
+    excluded_substrings: []
+    comment: "Benchmarking test scene from p-viz-plan"
 
 object_sets:
   -
@@ -43,7 +37,7 @@ receptacle_sets:
       - "fridge"
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - ""
+      - "refrigerator"
     excluded_receptacle_substrings: []
   -
     name: "counter"
@@ -51,14 +45,29 @@ receptacle_sets:
       - "kitchen_counter"
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - ""
+      - "counter"
     excluded_receptacle_substrings: ["drawer", "sink"]
+  -
+    name: "global_table01"
+    included_object_substrings: []
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "table01"
+    excluded_receptacle_substrings: []
+  -
+    name: "global_table02"
+    included_object_substrings: []
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "table02"
+    excluded_receptacle_substrings: []
+
 
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["Baked_sc1_staging_00_bench"]
-  comment: "Samples from ReplicaCAD 105 variations with static furniture."
+    scene_sets: ["p_viz_bench_scene"]
+  comment: ""
 
 ao_state_samplers:
   -
@@ -88,7 +97,7 @@ object_samplers:
     params:
       object_sets: ["food"]
       receptacle_sets: ["counter"]
-      num_samples: [9, 9]
+      num_samples: [10, 10]
       orientation_sampling: "up"
   -
     name: "kitchen_fridge"
@@ -98,13 +107,29 @@ object_samplers:
       receptacle_sets: ["fridge"]
       num_samples: [8, 8]
       orientation_sampling: "up"
+  -
+    name: "global_table01"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["global_table01"]
+      num_samples: [5, 5]
+      orientation_sampling: "up"
+  -
+    name: "global_table02"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["global_table02"]
+      num_samples: [5, 5]
+      orientation_sampling: "up"
 
 object_target_samplers:
   -
     name: "kitchen_targets"
     type: "uniform"
     params:
-      object_samplers: ["kitchen_counter", "kitchen_fridge"]
-      receptacle_sets: ["counter", "fridge"]
+      object_samplers: ["kitchen_counter", "kitchen_fridge", global_table01, global_table02]
+      receptacle_sets: ["counter", "fridge", global_table01, global_table02]
       num_samples: [1, 1]
       orientation_sampling: "up"

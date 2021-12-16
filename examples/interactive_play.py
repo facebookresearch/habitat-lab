@@ -178,7 +178,8 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     elif keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
         pos = ["%.3f" % x for x in env._sim.robot.sim_obj.translation]
-        print(pos)
+        rot = env._sim.robot.sim_obj.rotation
+        print(f"Robot state: pos = {pos}, rotation = {rot}")
 
     args = {}
     if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
