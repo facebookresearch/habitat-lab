@@ -584,7 +584,6 @@ class RearrangeSim(HabitatSim):
             make_render_only(viz_obj, self)
         else:
             viz_obj = rom.get_object_by_id(viz_id)
-            return self.visualize_position(position, viz_id=None, r=r)
 
         viz_obj.translation = mn.Vector3(*position)
         return viz_obj.object_id
