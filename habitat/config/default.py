@@ -327,152 +327,152 @@ _C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
 # -----------------------------------------------------------------------------
 _C.TASK.COLLISIONS = CN()
 _C.TASK.COLLISIONS.TYPE = "Collisions"
-# # -----------------------------------------------------------------------------
-# # GENERAL MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.ROBOT_FORCE = CN()
-# _C.TASK.ROBOT_FORCE.TYPE = "RobotForce"
-# _C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
-# _C.TASK.FORCE_TERMINATE = CN()
-# _C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
-# _C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
-# _C.TASK.ROBOT_COLLS = CN()
-# _C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
-# _C.TASK.OBJECT_TO_GOAL_DISTANCE = CN()
-# _C.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
-# _C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE = CN()
-# _C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE.TYPE = "EndEffectorToObjectDistance"
-# _C.TASK.END_EFFECTOR_TO_REST_DISTANCE = CN()
-# _C.TASK.END_EFFECTOR_TO_REST_DISTANCE.TYPE = "EndEffectorToRestDistance"
+# -----------------------------------------------------------------------------
+# GENERAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ROBOT_FORCE = CN()
+_C.TASK.ROBOT_FORCE.TYPE = "RobotForce"
+_C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
+_C.TASK.FORCE_TERMINATE = CN()
+_C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
+_C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
+_C.TASK.ROBOT_COLLS = CN()
+_C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
+_C.TASK.OBJECT_TO_GOAL_DISTANCE = CN()
+_C.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
+_C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE = CN()
+_C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE.TYPE = "EndEffectorToObjectDistance"
+_C.TASK.END_EFFECTOR_TO_REST_DISTANCE = CN()
+_C.TASK.END_EFFECTOR_TO_REST_DISTANCE.TYPE = "EndEffectorToRestDistance"
 
-# _C.TASK.EE_DIST_TO_MARKER = CN()
-# _C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
-# _C.TASK.ART_OBJ_STATE = CN()
-# _C.TASK.ART_OBJ_STATE.TYPE = "ArtObjState"
-# _C.TASK.ART_OBJ_SUCCESS = CN()
-# _C.TASK.ART_OBJ_SUCCESS.TYPE = "ArtObjSuccess"
-# _C.TASK.ART_OBJ_SUCCESS.USE_ABSOLUTE_DISTANCE = True
-# _C.TASK.ART_OBJ_SUCCESS.SUCCESS_DIST_THRESHOLD = 0.05
+_C.TASK.EE_DIST_TO_MARKER = CN()
+_C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
+_C.TASK.ART_OBJ_STATE = CN()
+_C.TASK.ART_OBJ_STATE.TYPE = "ArtObjState"
+_C.TASK.ART_OBJ_SUCCESS = CN()
+_C.TASK.ART_OBJ_SUCCESS.TYPE = "ArtObjSuccess"
+_C.TASK.ART_OBJ_SUCCESS.USE_ABSOLUTE_DISTANCE = True
+_C.TASK.ART_OBJ_SUCCESS.SUCCESS_DIST_THRESHOLD = 0.05
 
-# _C.TASK.ART_OBJ_REWARD = CN()
-# _C.TASK.ART_OBJ_REWARD.TYPE = "ArtObjReward"
-# _C.TASK.ART_OBJ_REWARD.DIST_REWARD = 1.0
-# _C.TASK.ART_OBJ_REWARD.WRONG_GRASP_END = True
-# _C.TASK.ART_OBJ_REWARD.WRONG_GRASP_PEN = 5.0
-# _C.TASK.ART_OBJ_REWARD.MARKER_DIST_REWARD = 0.0
-# _C.TASK.ART_OBJ_REWARD.GRASP_REWARD = 0.0
-# # General Rearrange Reward config
-# _C.TASK.ART_OBJ_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-# _C.TASK.ART_OBJ_REWARD.FORCE_PEN = 0.0
-# _C.TASK.ART_OBJ_REWARD.MAX_FORCE_PEN = 1.0
-# _C.TASK.ART_OBJ_REWARD.FORCE_END_PEN = 10.0
-# # -----------------------------------------------------------------------------
-# # NAVIGATION MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.ROT_DIST_TO_GOAL = CN()
-# _C.TASK.ROT_DIST_TO_GOAL.TYPE = "RotDistToGoal"
-# _C.TASK.DIST_TO_GOAL = CN()
-# _C.TASK.DIST_TO_GOAL.TYPE = "DistToGoal"
-# _C.TASK.BAD_CALLED_TERMINATE = CN()
-# _C.TASK.BAD_CALLED_TERMINATE.TYPE = "BadCalledTerminate"
-# _C.TASK.BAD_CALLED_TERMINATE.BAD_TERM_PEN = 0.0
-# _C.TASK.BAD_CALLED_TERMINATE.DECAY_BAD_TERM = False
-# _C.TASK.NAV_TO_POS_SUCC = CN()
-# _C.TASK.NAV_TO_POS_SUCC.TYPE = "NavToPosSucc"
-# _C.TASK.NAV_TO_POS_SUCC.SUCCESS_DISTANCE = 0.2
-# # -----------------------------------------------------------------------------
-# # REARRANGE NAVIGATION MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD = CN()
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TYPE = "NavToObjReward"
-# # Negative means a penalty
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SLACK = 0.0
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SUCCESS_REWARD = 10.0
-# # Reward the agent for facing the object?
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SHOULD_REWARD_TURN = True
-# # What distance do we start giving the reward for facing the object?
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TURN_REWARD_DIST = 0.1
-# # Multiplier on the angle distance to the goal.
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.ANGLE_DIST_REWARD = 1.0
-# _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SLACK_REWARD = 0.0
+_C.TASK.ART_OBJ_REWARD = CN()
+_C.TASK.ART_OBJ_REWARD.TYPE = "ArtObjReward"
+_C.TASK.ART_OBJ_REWARD.DIST_REWARD = 1.0
+_C.TASK.ART_OBJ_REWARD.WRONG_GRASP_END = True
+_C.TASK.ART_OBJ_REWARD.WRONG_GRASP_PEN = 5.0
+_C.TASK.ART_OBJ_REWARD.MARKER_DIST_REWARD = 0.0
+_C.TASK.ART_OBJ_REWARD.GRASP_REWARD = 0.0
+# General Rearrange Reward config
+_C.TASK.ART_OBJ_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
+_C.TASK.ART_OBJ_REWARD.FORCE_PEN = 0.0
+_C.TASK.ART_OBJ_REWARD.MAX_FORCE_PEN = 1.0
+_C.TASK.ART_OBJ_REWARD.FORCE_END_PEN = 10.0
+# -----------------------------------------------------------------------------
+# NAVIGATION MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.ROT_DIST_TO_GOAL = CN()
+_C.TASK.ROT_DIST_TO_GOAL.TYPE = "RotDistToGoal"
+_C.TASK.DIST_TO_GOAL = CN()
+_C.TASK.DIST_TO_GOAL.TYPE = "DistToGoal"
+_C.TASK.BAD_CALLED_TERMINATE = CN()
+_C.TASK.BAD_CALLED_TERMINATE.TYPE = "BadCalledTerminate"
+_C.TASK.BAD_CALLED_TERMINATE.BAD_TERM_PEN = 0.0
+_C.TASK.BAD_CALLED_TERMINATE.DECAY_BAD_TERM = False
+_C.TASK.NAV_TO_POS_SUCC = CN()
+_C.TASK.NAV_TO_POS_SUCC.TYPE = "NavToPosSucc"
+_C.TASK.NAV_TO_POS_SUCC.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# REARRANGE NAVIGATION MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD = CN()
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TYPE = "NavToObjReward"
+# Negative means a penalty
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SLACK = 0.0
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SUCCESS_REWARD = 10.0
+# Reward the agent for facing the object?
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SHOULD_REWARD_TURN = True
+# What distance do we start giving the reward for facing the object?
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TURN_REWARD_DIST = 0.1
+# Multiplier on the angle distance to the goal.
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.ANGLE_DIST_REWARD = 1.0
+_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SLACK_REWARD = 0.0
 
-# _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
-# _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
-# _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
-# # Distance in radians.
-# _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
-# _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
-# # -----------------------------------------------------------------------------
-# # REARRANGE REACH MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.REARRANGE_REACH_REWARD = CN()
-# _C.TASK.REARRANGE_REACH_REWARD.TYPE = "RearrangeReachReward"
-# _C.TASK.REARRANGE_REACH_REWARD.SCALE = 1.0
-# _C.TASK.REARRANGE_REACH_REWARD.DIFF_REWARD = True
-# _C.TASK.REARRANGE_REACH_REWARD.SPARSE_REWARD = False
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
+# Distance in radians.
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
+# -----------------------------------------------------------------------------
+# REARRANGE REACH MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.REARRANGE_REACH_REWARD = CN()
+_C.TASK.REARRANGE_REACH_REWARD.TYPE = "RearrangeReachReward"
+_C.TASK.REARRANGE_REACH_REWARD.SCALE = 1.0
+_C.TASK.REARRANGE_REACH_REWARD.DIFF_REWARD = True
+_C.TASK.REARRANGE_REACH_REWARD.SPARSE_REWARD = False
 
-# _C.TASK.REARRANGE_REACH_SUCCESS = CN()
-# _C.TASK.REARRANGE_REACH_SUCCESS.TYPE = "RearrangeReachSuccess"
-# _C.TASK.REARRANGE_REACH_SUCCESS.SUCC_THRESH = 0.2
-# # -----------------------------------------------------------------------------
-# # PICK MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.PICK_REWARD = CN()
-# _C.TASK.PICK_REWARD.TYPE = "RearrangePickReward"
-# _C.TASK.PICK_REWARD.DIST_REWARD = 20.0
-# _C.TASK.PICK_REWARD.SUCC_REWARD = 10.0
-# _C.TASK.PICK_REWARD.PICK_REWARD = 20.0
-# _C.TASK.PICK_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-# _C.TASK.PICK_REWARD.DROP_PEN = 5.0
-# _C.TASK.PICK_REWARD.WRONG_PICK_PEN = 5.0
-# _C.TASK.PICK_REWARD.COLL_PEN = 1.0
-# _C.TASK.PICK_REWARD.ROBOT_OBJ_COLL_PEN = 0.0
-# _C.TASK.PICK_REWARD.MAX_ACCUM_FORCE = 5000.0
-# _C.TASK.PICK_REWARD.FORCE_PEN = 0.001
-# _C.TASK.PICK_REWARD.MAX_FORCE_PEN = 1.0
-# _C.TASK.PICK_REWARD.FORCE_END_PEN = 10.0
-# _C.TASK.PICK_REWARD.USE_DIFF = True
-# _C.TASK.PICK_REWARD.DROP_OBJ_SHOULD_END = False
-# _C.TASK.PICK_REWARD.WRONG_PICK_SHOULD_END = False
-# _C.TASK.PICK_REWARD.COLLISION_PENALTY = 0.0
-# _C.TASK.PICK_REWARD.ROBOT_OBJ_COLLISION_PENALTY = 0.0
-# _C.TASK.PICK_SUCCESS = CN()
-# _C.TASK.PICK_SUCCESS.TYPE = "RearrangePickSuccess"
-# _C.TASK.PICK_SUCCESS.SUCC_THRESH = 0.15
-# # -----------------------------------------------------------------------------
-# # PLACE MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.OBJ_AT_GOAL = CN()
-# _C.TASK.OBJ_AT_GOAL.TYPE = "ObjAtGoal"
-# _C.TASK.OBJ_AT_GOAL.SUCC_THRESH = 0.15
+_C.TASK.REARRANGE_REACH_SUCCESS = CN()
+_C.TASK.REARRANGE_REACH_SUCCESS.TYPE = "RearrangeReachSuccess"
+_C.TASK.REARRANGE_REACH_SUCCESS.SUCC_THRESH = 0.2
+# -----------------------------------------------------------------------------
+# PICK MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.PICK_REWARD = CN()
+_C.TASK.PICK_REWARD.TYPE = "RearrangePickReward"
+_C.TASK.PICK_REWARD.DIST_REWARD = 20.0
+_C.TASK.PICK_REWARD.SUCC_REWARD = 10.0
+_C.TASK.PICK_REWARD.PICK_REWARD = 20.0
+_C.TASK.PICK_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
+_C.TASK.PICK_REWARD.DROP_PEN = 5.0
+_C.TASK.PICK_REWARD.WRONG_PICK_PEN = 5.0
+_C.TASK.PICK_REWARD.COLL_PEN = 1.0
+_C.TASK.PICK_REWARD.ROBOT_OBJ_COLL_PEN = 0.0
+_C.TASK.PICK_REWARD.MAX_ACCUM_FORCE = 5000.0
+_C.TASK.PICK_REWARD.FORCE_PEN = 0.001
+_C.TASK.PICK_REWARD.MAX_FORCE_PEN = 1.0
+_C.TASK.PICK_REWARD.FORCE_END_PEN = 10.0
+_C.TASK.PICK_REWARD.USE_DIFF = True
+_C.TASK.PICK_REWARD.DROP_OBJ_SHOULD_END = False
+_C.TASK.PICK_REWARD.WRONG_PICK_SHOULD_END = False
+_C.TASK.PICK_REWARD.COLLISION_PENALTY = 0.0
+_C.TASK.PICK_REWARD.ROBOT_OBJ_COLLISION_PENALTY = 0.0
+_C.TASK.PICK_SUCCESS = CN()
+_C.TASK.PICK_SUCCESS.TYPE = "RearrangePickSuccess"
+_C.TASK.PICK_SUCCESS.SUCC_THRESH = 0.15
+# -----------------------------------------------------------------------------
+# PLACE MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.OBJ_AT_GOAL = CN()
+_C.TASK.OBJ_AT_GOAL.TYPE = "ObjAtGoal"
+_C.TASK.OBJ_AT_GOAL.SUCC_THRESH = 0.15
 
-# _C.TASK.PLACE_REWARD = CN()
-# _C.TASK.PLACE_REWARD.TYPE = "PlaceReward"
-# _C.TASK.PLACE_REWARD.DIST_REWARD = 20.0
-# _C.TASK.PLACE_REWARD.SUCC_REWARD = 10.0
-# _C.TASK.PLACE_REWARD.PLACE_REWARD = 20.0
-# _C.TASK.PLACE_REWARD.DROP_PEN = 5.0
-# _C.TASK.PLACE_REWARD.USE_DIFF = True
-# _C.TASK.PLACE_REWARD.WRONG_DROP_SHOULD_END = False
-# _C.TASK.PLACE_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-# _C.TASK.PLACE_REWARD.FORCE_PEN = 0.001
-# _C.TASK.PLACE_REWARD.MAX_FORCE_PEN = 1.0
-# _C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
+_C.TASK.PLACE_REWARD = CN()
+_C.TASK.PLACE_REWARD.TYPE = "PlaceReward"
+_C.TASK.PLACE_REWARD.DIST_REWARD = 20.0
+_C.TASK.PLACE_REWARD.SUCC_REWARD = 10.0
+_C.TASK.PLACE_REWARD.PLACE_REWARD = 20.0
+_C.TASK.PLACE_REWARD.DROP_PEN = 5.0
+_C.TASK.PLACE_REWARD.USE_DIFF = True
+_C.TASK.PLACE_REWARD.WRONG_DROP_SHOULD_END = False
+_C.TASK.PLACE_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
+_C.TASK.PLACE_REWARD.FORCE_PEN = 0.001
+_C.TASK.PLACE_REWARD.MAX_FORCE_PEN = 1.0
+_C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
 
-# _C.TASK.PLACE_SUCCESS = CN()
-# _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
-# _C.TASK.PLACE_SUCCESS.SUCC_THRESH = 0.15
-# # -----------------------------------------------------------------------------
-# # COMPOSITE MEASUREMENT
-# # -----------------------------------------------------------------------------
-# _C.TASK.COMPOSITE_NODE_IDX = CN()
-# _C.TASK.COMPOSITE_NODE_IDX.TYPE = "CompositeNodeIdx"
-# _C.TASK.COMPOSITE_SUCCESS = CN()
-# _C.TASK.COMPOSITE_SUCCESS.TYPE = "CompositeSuccess"
-# _C.TASK.COMPOSITE_REWARD = CN()
-# _C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
-# _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
-# _C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
+_C.TASK.PLACE_SUCCESS = CN()
+_C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
+_C.TASK.PLACE_SUCCESS.SUCC_THRESH = 0.15
+# -----------------------------------------------------------------------------
+# COMPOSITE MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.COMPOSITE_NODE_IDX = CN()
+_C.TASK.COMPOSITE_NODE_IDX.TYPE = "CompositeNodeIdx"
+_C.TASK.COMPOSITE_SUCCESS = CN()
+_C.TASK.COMPOSITE_SUCCESS.TYPE = "CompositeSuccess"
+_C.TASK.COMPOSITE_REWARD = CN()
+_C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
+_C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
+_C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
