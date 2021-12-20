@@ -61,7 +61,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     "configs/baselines/ppo.yaml",
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
-] + [glob("**/pddl/*.yaml", recursive=True)]
+] + glob("**/pddl/*.yaml", recursive=True)
 
 
 @pytest.mark.parametrize(
