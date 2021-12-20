@@ -70,7 +70,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
 )
 def test_no_core_config_has_non_default_keys(config_path):
     if config_path in CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS:
-        return
+        pytest.skip(f"File {config_path} manually excluded from test")
     # We manually disallow new keys when merging to make sure all keys
     # are in the default config
     _C.set_new_allowed(False)
