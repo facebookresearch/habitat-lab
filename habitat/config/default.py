@@ -52,52 +52,52 @@ _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
 _C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
-# # -----------------------------------------------------------------------------
-# # # REARRANGE TASK
-# # -----------------------------------------------------------------------------
-# _C.TASK.MAX_COLLISIONS = -1.0
-# _C.TASK.COUNT_OBJ_COLLISIONS = True
-# _C.TASK.COUNT_ROBOT_OBJ_COLLS = False
-# _C.TASK.SETTLE_STEPS = 5
-# _C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = False
-# _C.TASK.FORCE_REGENERATE = False
-# _C.TASK.MUST_LOOK_AT_TARG = True
-# _C.TASK.DEBUG_GOAL_POINT = True
-# _C.TASK.RENDER_TARGET = True
-# _C.TASK.EE_SAMPLE_FACTOR = 0.2
-# _C.TASK.EE_EXCLUDE_REGION = 0.0
-# # In radians
-# _C.TASK.BASE_ANGLE_NOISE = 0.15
-# _C.TASK.BASE_NOISE = 0.05
-# _C.TASK.SPAWN_REGION_SCALE = 0.2
-# _C.TASK.JOINT_MAX_IMPULSE = -1.0
-# _C.TASK.CONSTRAINT_VIOLATE_SHOULD_END = False
-# _C.TASK.DESIRED_RESTING_POSITION = []
-# _C.TASK.USE_MARKER_T = True
-# _C.TASK.SUCCESS_STATE = 0.0
-# # Measurements for composite tasks.
-# _C.TASK.REWARD_MEASUREMENT = "art_obj_reward"
-# _C.TASK.SUCCESS_MEASUREMENT = "art_obj_success"
-# # If true, does not care about navigability or collisions with objects when spawning
-# # robot
-# _C.TASK.EASY_INIT = False
-# _C.TASK.FORCE_RECACHE = False
-# # -----------------------------------------------------------------------------
-# # # COMPOSITE TASK CONFIG
-# # -----------------------------------------------------------------------------
-# _C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
-# _C.TASK.TASK_SPEC = "nav_pick"
-# # PDDL domain params
-# _C.TASK.PDDL_DOMAIN_DEF = (
-#     "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
-# )
-# _C.TASK.OBJ_SUCC_THRESH = 0.3
-# _C.TASK.ART_SUCC_THRESH = 0.15
-# _C.TASK.SINGLE_EVAL_NODE = -1
-# _C.TASK.LIMIT_TASK_NODE = -1
-# _C.TASK.LIMIT_TASK_LEN_SCALING = 0.0
-# _C.TASK.DEBUG_SKIP_TO_NODE = -1
-# _C.TASK.SKIP_NODES = ["move_obj"]
+# -----------------------------------------------------------------------------
+# # REARRANGE TASK
+# -----------------------------------------------------------------------------
+_C.TASK.MAX_COLLISIONS = -1.0
+_C.TASK.COUNT_OBJ_COLLISIONS = True
+_C.TASK.COUNT_ROBOT_OBJ_COLLS = False
+_C.TASK.SETTLE_STEPS = 5
+_C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = False
+_C.TASK.FORCE_REGENERATE = False
+_C.TASK.MUST_LOOK_AT_TARG = True
+_C.TASK.DEBUG_GOAL_POINT = True
+_C.TASK.RENDER_TARGET = True
+_C.TASK.EE_SAMPLE_FACTOR = 0.2
+_C.TASK.EE_EXCLUDE_REGION = 0.0
+# In radians
+_C.TASK.BASE_ANGLE_NOISE = 0.15
+_C.TASK.BASE_NOISE = 0.05
+_C.TASK.SPAWN_REGION_SCALE = 0.2
+_C.TASK.JOINT_MAX_IMPULSE = -1.0
+_C.TASK.CONSTRAINT_VIOLATE_SHOULD_END = False
+_C.TASK.DESIRED_RESTING_POSITION = []
+_C.TASK.USE_MARKER_T = True
+_C.TASK.SUCCESS_STATE = 0.0
+# Measurements for composite tasks.
+_C.TASK.REWARD_MEASUREMENT = "art_obj_reward"
+_C.TASK.SUCCESS_MEASUREMENT = "art_obj_success"
+# If true, does not care about navigability or collisions with objects when spawning
+# robot
+_C.TASK.EASY_INIT = False
+_C.TASK.FORCE_RECACHE = False
+# -----------------------------------------------------------------------------
+# # COMPOSITE TASK CONFIG
+# -----------------------------------------------------------------------------
+_C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
+_C.TASK.TASK_SPEC = "nav_pick"
+# PDDL domain params
+_C.TASK.PDDL_DOMAIN_DEF = (
+    "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+)
+_C.TASK.OBJ_SUCC_THRESH = 0.3
+_C.TASK.ART_SUCC_THRESH = 0.15
+_C.TASK.SINGLE_EVAL_NODE = -1
+_C.TASK.LIMIT_TASK_NODE = -1
+_C.TASK.LIMIT_TASK_LEN_SCALING = 0.0
+_C.TASK.DEBUG_SKIP_TO_NODE = -1
+_C.TASK.SKIP_NODES = ["move_obj"]
 # -----------------------------------------------------------------------------
 # # ACTIONS
 # -----------------------------------------------------------------------------
@@ -128,30 +128,30 @@ _C.TASK.ACTIONS.VELOCITY_CONTROL.ANG_VEL_RANGE = [-10.0, 10.0]  # deg per sec
 _C.TASK.ACTIONS.VELOCITY_CONTROL.MIN_ABS_LIN_SPEED = 0.025  # meters per sec
 _C.TASK.ACTIONS.VELOCITY_CONTROL.MIN_ABS_ANG_SPEED = 1.0  # deg per sec
 _C.TASK.ACTIONS.VELOCITY_CONTROL.TIME_STEP = 1.0  # seconds
-# # -----------------------------------------------------------------------------
-# # # REARRANGE ACTIONS
-# # -----------------------------------------------------------------------------
-# _C.TASK.ACTIONS.ARM_ACTION = CN()
-# _C.TASK.ACTIONS.ARM_ACTION.TYPE = "ArmAction"
-# _C.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmRelPosAction"
-# _C.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER = None
-# _C.TASK.ACTIONS.ARM_ACTION.ARM_JOINT_DIMENSIONALITY = 7
-# _C.TASK.ACTIONS.ARM_ACTION.GRASP_THRESH_DIST = 0.15
-# _C.TASK.ACTIONS.ARM_ACTION.DISABLE_GRIP = False
-# _C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.025
-# _C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
-# _C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
-# _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
-# _C.TASK.ACTIONS.ARM_ACTION.ORACLE_GRASP = False
-# _C.TASK.ACTIONS.BASE_VELOCITY = CN()
-# _C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
-# _C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 12.0
-# _C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 12.0
-# _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
-# _C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
-# _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
-# _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
-# _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
+# -----------------------------------------------------------------------------
+# # REARRANGE ACTIONS
+# -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ARM_ACTION = CN()
+_C.TASK.ACTIONS.ARM_ACTION.TYPE = "ArmAction"
+_C.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmRelPosAction"
+_C.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER = None
+_C.TASK.ACTIONS.ARM_ACTION.ARM_JOINT_DIMENSIONALITY = 7
+_C.TASK.ACTIONS.ARM_ACTION.GRASP_THRESH_DIST = 0.15
+_C.TASK.ACTIONS.ARM_ACTION.DISABLE_GRIP = False
+_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.025
+_C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
+_C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
+_C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
+_C.TASK.ACTIONS.ARM_ACTION.ORACLE_GRASP = False
+_C.TASK.ACTIONS.BASE_VELOCITY = CN()
+_C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
+_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 12.0
+_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 12.0
+_C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
+_C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
+_C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
+_C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
+_C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
 # -----------------------------------------------------------------------------
@@ -203,89 +203,89 @@ _C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
 _C.TASK.PROXIMITY_SENSOR = CN()
 _C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
 _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
-# # -----------------------------------------------------------------------------
-# # JOINT SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.JOINT_SENSOR = CN()
-# _C.TASK.JOINT_SENSOR.TYPE = "JointSensor"
-# _C.TASK.JOINT_SENSOR.DIMENSIONALITY = 7
-# # -----------------------------------------------------------------------------
-# # END EFFECTOR POSITION SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.END_EFFECTOR_SENSOR = CN()
-# _C.TASK.END_EFFECTOR_SENSOR.TYPE = "EEPositionSensor"
-# # -----------------------------------------------------------------------------
-# # IS HOLDING SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.IS_HOLDING_SENSOR = CN()
-# _C.TASK.IS_HOLDING_SENSOR.TYPE = "IsHoldingSensor"
-# # -----------------------------------------------------------------------------
-# # RELATIVE RESTING POSISITON SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.RELATIVE_RESTING_POS_SENSOR = CN()
-# _C.TASK.RELATIVE_RESTING_POS_SENSOR.TYPE = "RelativeRestingPositionSensor"
-# # -----------------------------------------------------------------------------
-# # JOINT VELOCITY SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.JOINT_VELOCITY_SENSOR = CN()
-# _C.TASK.JOINT_VELOCITY_SENSOR.TYPE = "JointVelocitySensor"
-# _C.TASK.JOINT_VELOCITY_SENSOR.DIMENSIONALITY = 7
-# # -----------------------------------------------------------------------------
-# # RESTING POSISITON SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.RESTING_POS_SENSOR = CN()
-# _C.TASK.RESTING_POS_SENSOR.TYPE = "RestingPositionSensor"
-# # -----------------------------------------------------------------------------
-# # ART JOINT SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.ART_JOINT_SENSOR = CN()
-# _C.TASK.ART_JOINT_SENSOR.TYPE = "ArtJointSensor"
-# # -----------------------------------------------------------------------------
-# # ART JOINT NO VELOCITY SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.ART_JOINT_SENSOR_NO_VEL = CN()
-# _C.TASK.ART_JOINT_SENSOR_NO_VEL.TYPE = "ArtJointSensorNoVel"
-# # -----------------------------------------------------------------------------
-# # MARKER RELATIVE POSISITON SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.MARKER_REL_POS_SENSOR = CN()
-# _C.TASK.MARKER_REL_POS_SENSOR.TYPE = "MarkerRelPosSensor"
-# # -----------------------------------------------------------------------------
-# # TARGET START SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.TARGET_START_SENSOR = CN()
-# _C.TASK.TARGET_START_SENSOR.TYPE = "TargetStartSensor"
-# _C.TASK.TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# _C.TASK.TARGET_START_SENSOR.DIMENSIONALITY = 3
-# # -----------------------------------------------------------------------------
-# # OBJECT SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.OBJECT_SENSOR = CN()
-# _C.TASK.OBJECT_SENSOR.TYPE = "ObjectGoalPositionSensor"
-# _C.TASK.OBJECT_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# _C.TASK.OBJECT_SENSOR.DIMENSIONALITY = 3
+# -----------------------------------------------------------------------------
+# JOINT SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.JOINT_SENSOR = CN()
+_C.TASK.JOINT_SENSOR.TYPE = "JointSensor"
+_C.TASK.JOINT_SENSOR.DIMENSIONALITY = 7
+# -----------------------------------------------------------------------------
+# END EFFECTOR POSITION SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.END_EFFECTOR_SENSOR = CN()
+_C.TASK.END_EFFECTOR_SENSOR.TYPE = "EEPositionSensor"
+# -----------------------------------------------------------------------------
+# IS HOLDING SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.IS_HOLDING_SENSOR = CN()
+_C.TASK.IS_HOLDING_SENSOR.TYPE = "IsHoldingSensor"
+# -----------------------------------------------------------------------------
+# RELATIVE RESTING POSISITON SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.RELATIVE_RESTING_POS_SENSOR = CN()
+_C.TASK.RELATIVE_RESTING_POS_SENSOR.TYPE = "RelativeRestingPositionSensor"
+# -----------------------------------------------------------------------------
+# JOINT VELOCITY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.JOINT_VELOCITY_SENSOR = CN()
+_C.TASK.JOINT_VELOCITY_SENSOR.TYPE = "JointVelocitySensor"
+_C.TASK.JOINT_VELOCITY_SENSOR.DIMENSIONALITY = 7
+# -----------------------------------------------------------------------------
+# RESTING POSISITON SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.RESTING_POS_SENSOR = CN()
+_C.TASK.RESTING_POS_SENSOR.TYPE = "RestingPositionSensor"
+# -----------------------------------------------------------------------------
+# ART JOINT SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ART_JOINT_SENSOR = CN()
+_C.TASK.ART_JOINT_SENSOR.TYPE = "ArtJointSensor"
+# -----------------------------------------------------------------------------
+# ART JOINT NO VELOCITY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ART_JOINT_SENSOR_NO_VEL = CN()
+_C.TASK.ART_JOINT_SENSOR_NO_VEL.TYPE = "ArtJointSensorNoVel"
+# -----------------------------------------------------------------------------
+# MARKER RELATIVE POSISITON SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.MARKER_REL_POS_SENSOR = CN()
+_C.TASK.MARKER_REL_POS_SENSOR.TYPE = "MarkerRelPosSensor"
+# -----------------------------------------------------------------------------
+# TARGET START SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_START_SENSOR = CN()
+_C.TASK.TARGET_START_SENSOR.TYPE = "TargetStartSensor"
+_C.TASK.TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.TARGET_START_SENSOR.DIMENSIONALITY = 3
+# -----------------------------------------------------------------------------
+# OBJECT SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECT_SENSOR = CN()
+_C.TASK.OBJECT_SENSOR.TYPE = "ObjectGoalPositionSensor"
+_C.TASK.OBJECT_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.OBJECT_SENSOR.DIMENSIONALITY = 3
 
-# # -----------------------------------------------------------------------------
-# # GOAL SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.GOAL_SENSOR = CN()
-# _C.TASK.GOAL_SENSOR.TYPE = "GoalSensor"
-# _C.TASK.GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# _C.TASK.GOAL_SENSOR.DIMENSIONALITY = 3
-# # -----------------------------------------------------------------------------
-# # ABSOLUTE TARGET START SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.ABS_TARGET_START_SENSOR = CN()
-# _C.TASK.ABS_TARGET_START_SENSOR.TYPE = "AbsTargetStartSensor"
-# _C.TASK.ABS_TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# _C.TASK.ABS_TARGET_START_SENSOR.DIMENSIONALITY = 3
-# # -----------------------------------------------------------------------------
-# # ABSOLUTE GOAL SENSOR
-# # -----------------------------------------------------------------------------
-# _C.TASK.ABS_GOAL_SENSOR = CN()
-# _C.TASK.ABS_GOAL_SENSOR.TYPE = "AbsGoalSensor"
-# _C.TASK.ABS_GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-# _C.TASK.ABS_GOAL_SENSOR.DIMENSIONALITY = 3
+# -----------------------------------------------------------------------------
+# GOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GOAL_SENSOR = CN()
+_C.TASK.GOAL_SENSOR.TYPE = "GoalSensor"
+_C.TASK.GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.GOAL_SENSOR.DIMENSIONALITY = 3
+# -----------------------------------------------------------------------------
+# ABSOLUTE TARGET START SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ABS_TARGET_START_SENSOR = CN()
+_C.TASK.ABS_TARGET_START_SENSOR.TYPE = "AbsTargetStartSensor"
+_C.TASK.ABS_TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.ABS_TARGET_START_SENSOR.DIMENSIONALITY = 3
+# -----------------------------------------------------------------------------
+# ABSOLUTE GOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.ABS_GOAL_SENSOR = CN()
+_C.TASK.ABS_GOAL_SENSOR.TYPE = "AbsGoalSensor"
+_C.TASK.ABS_GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
+_C.TASK.ABS_GOAL_SENSOR.DIMENSIONALITY = 3
 
 # -----------------------------------------------------------------------------
 # SUCCESS MEASUREMENT
