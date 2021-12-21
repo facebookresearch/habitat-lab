@@ -520,10 +520,10 @@ _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.CREATE_RENDERER = False
 _C.SIMULATOR.REQUIRES_TEXTURES = True
 _C.SIMULATOR.LAG_OBSERVATIONS = 0
-_C.SIMULATOR.AUTO_SLEEP = True
+_C.SIMULATOR.AUTO_SLEEP = False
 _C.SIMULATOR.STEP_PHYSICS = True
-# _C.SIMULATOR.UPDATE_ROBOT = True
-# _C.SIMULATOR.CONCUR_RENDER = True
+_C.SIMULATOR.UPDATE_ROBOT = True
+_C.SIMULATOR.CONCUR_RENDER = False
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
@@ -535,21 +535,21 @@ _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
-# _C.SIMULATOR.DEBUG_RENDER = False
-# _C.SIMULATOR.ROBOT_JOINT_START_NOISE = 0.0
-# # Rearrange Agent Setup
-# _C.SIMULATOR.ARM_REST = [0.6, 0.0, 0.9]
-# _C.SIMULATOR.CTRL_FREQ = 120.0
-# _C.SIMULATOR.AC_FREQ_RATIO = 4
-# _C.SIMULATOR.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-# _C.SIMULATOR.ROBOT_TYPE = "FetchRobot"
-# _C.SIMULATOR.EE_LINK_NAME = None
-# _C.SIMULATOR.LOAD_OBJS = False
-# # Rearrange Agent Grasping
-# _C.SIMULATOR.HOLD_THRESH = 0.09
-# _C.SIMULATOR.GRASP_IMPULSE = 1000.0
-# # ROBOT
-# _C.SIMULATOR.IK_ARM_URDF = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+_C.SIMULATOR.DEBUG_RENDER = False
+_C.SIMULATOR.ROBOT_JOINT_START_NOISE = 0.0
+# Rearrange Agent Setup
+_C.SIMULATOR.ARM_REST = [0.6, 0.0, 0.9]
+_C.SIMULATOR.CTRL_FREQ = 120.0
+_C.SIMULATOR.AC_FREQ_RATIO = 4
+_C.SIMULATOR.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+_C.SIMULATOR.ROBOT_TYPE = "FetchRobot"
+_C.SIMULATOR.EE_LINK_NAME = None
+_C.SIMULATOR.LOAD_OBJS = False
+# Rearrange Agent Grasping
+_C.SIMULATOR.HOLD_THRESH = 0.09
+_C.SIMULATOR.GRASP_IMPULSE = 1000.0
+# ROBOT
+_C.SIMULATOR.IK_ARM_URDF = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
