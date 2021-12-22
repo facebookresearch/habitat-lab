@@ -48,6 +48,7 @@ _C.BATCHED_ENV = False
 _C.STUB_BATCH_SIMULATOR = False
 _C.SAVE_VIDEOS_INTERVAL = -1
 _C.REWARD_SCALE = 1.0
+_C.HACK_ACTION_SCALE = 1.0
 
 
 # For our use case, the CPU side things are mainly memory copies
