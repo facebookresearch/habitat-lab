@@ -177,8 +177,13 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
 
     elif keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = ["%.3f" % x for x in env._sim.robot.sim_obj.translation]
-        print(pos)
+        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
+        rot = env._sim.robot.sim_obj.rotation
+        print(f"Robot state: pos = {pos}, rotation = {rot}")
+    elif keys[pygame.K_COMMA]:
+        # Print the current arm state of the robot, useful for debugging.
+        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
+        print(f"Robot arm joint state: {joint_state}")
 
     args = {}
     if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
@@ -245,6 +250,12 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     while True:
+        if (
+            args.save_actions
+            and len(all_arm_actions) > args.save_actions_count
+        ):
+            # quit the application when the action recording queue is full
+            break
         if render_steps_limit is not None and i > render_steps_limit:
             break
         step_result, arm_action = get_input_vel_ctlr(

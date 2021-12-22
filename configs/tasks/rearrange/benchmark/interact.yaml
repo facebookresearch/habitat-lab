@@ -1,0 +1,96 @@
+ENVIRONMENT:
+    # Endless episode
+    MAX_EPISODE_STEPS: 0
+
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/ep_datasets/bench_scene.json.gz
+    SCENES_DIR: "data/replica_cad/"
+
+TASK:
+    # No task logic, empty task
+    TYPE: RearrangeEmptyTask-v0
+
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            EE_CTRL_LIM: 0.015
+            DELTA_POS_LIMIT: 0.025
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+
+SIMULATOR:
+    ############################
+    # Benchmark relevant settings
+    ############################
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
+    STEP_PHYSICS: True
+    UPDATE_ROBOT: True
+    ############################
+
+    SEED: 100
+    TILT_ANGLE: 15
+    TURN_ANGLE: 10
+    TYPE: RearrangeSim-v0
+
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: True
+        ENABLE_PHYSICS: True
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+        GPU_DEVICE_ID: 0
+        SCENE_LIGHT_SETUP: ""
+        FRUSTUM_CULLING: True
+        LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER: True
+
+    HIGH_RES_DIM: 512
+    AGENTS: ['AGENT_0']
+    AGENT_0:
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+        HEIGHT: 1.5
+        RADIUS: 0.1
+        IS_SET_START_STATE: True
+        START_POSITION: [-1.2, 0.158, 0.29]
+        START_ROTATION: [0.0, 0.999657, 0.0, -0.0261769]
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+
+    # Agent setup
+    ARM_REST: [0.6, 0.0, 0.9]
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    ROBOT_TYPE: FetchRobotNoWheels
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 1000.0
