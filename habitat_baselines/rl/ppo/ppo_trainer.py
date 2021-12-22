@@ -10,6 +10,7 @@ import random
 import time
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional
+from PIL import Image
 
 import numpy as np
 import torch
@@ -878,6 +879,9 @@ class PPOTrainer(BaseRLTrainer):
                 if self._is_distributed:
                     self.num_rollouts_done_store.add("num_done", 1)
 
+                # do this before _update_agent, which resets some rollout storage state  
+                self._check_save_rollouts()
+
                 (
                     value_loss,
                     action_loss,
@@ -906,58 +910,77 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     count_checkpoints += 1
 
-                # save episodes periodically
-                num_updates_to_save = 5
-                num_updates_minus_one = self.num_updates_done - 1
-                if self.config.SAVE_VIDEOS_INTERVAL != -1 and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL < num_updates_to_save:
-                    is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
-                    if_last_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == num_updates_to_save - 1
-
-                    envs_to_save = [0, 1, 10, self.envs.num_envs - 8, self.envs.num_envs - 2, self.envs.num_envs - 1]
-
-                    primary_obs_name = "rgba_camera"
-
-                    if is_first_update_of_save:
-                        self.debug_video_observations = []
-                        for env_index in range(self.envs.num_envs):
-                            self.debug_video_observations.append([])
-
-                    for rgb_obs in self.rollouts.buffers["observations"]["rgb"]:
-
-                        assert len(rgb_obs) == self.envs.num_envs
-                        if not isinstance(rgb_obs, np.ndarray):
-                            rgb_obs = rgb_obs.cpu().numpy()
-                        for env_index in envs_to_save:
-                            env_rgb = rgb_obs[env_index, ...]
-                            # [3, width, height] => [width, height, 3]
-                            # env_rgb = np.swapaxes(env_rgb, 0, 2)
-                            # env_rgb = np.swapaxes(env_rgb, 0, 1)
-                            env_saved_observations = self.debug_video_observations[env_index]
-                            env_saved_observations.append({primary_obs_name: env_rgb})
-
-                    if if_last_update_of_save:
-                        if not vut:
-                            print("vut (viz utils) unavailable, so we can't save videos")
-                        else:
-                            video_folder = self.config.VIDEO_DIR
-                            print("saving videos to ", video_folder)
-                            rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
-                            for env_index in envs_to_save:
-                                env_saved_observations = self.debug_video_observations[env_index]
-                                vut.make_video(
-                                    env_saved_observations,
-                                    primary_obs_name,
-                                    "color",
-                                    video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
-                                    fps=10,  # very slow fps
-                                    open_vid=False,
-                                )
-                            print("done saving videos!")
-                                
-
                 profiling_wrapper.range_pop()  # train update
 
             self.envs.close()
+
+    def _check_save_rollouts(self):
+
+        # save episodes periodically
+        num_updates_to_save = 20
+        num_updates_minus_one = self.num_updates_done
+        if self.config.SAVE_VIDEOS_INTERVAL != -1 and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL < num_updates_to_save:
+            is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
+            if_last_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == num_updates_to_save - 1
+
+            if self.envs.num_envs >= 19:
+                envs_to_save = [0, 1, 10, self.envs.num_envs - 8, self.envs.num_envs - 2, self.envs.num_envs - 1]
+            elif self.envs.num_envs >= 4:
+                envs_to_save = [0, 1, self.envs.num_envs - 2, self.envs.num_envs - 1]
+            else:
+                envs_to_save = [range(self.envs.num_envs)]
+
+            # temp
+            envs_to_save = [0]
+
+            primary_obs_name = "rgba_camera"
+
+            if is_first_update_of_save:
+                self.debug_video_observations = {}
+                for env_index in envs_to_save:
+                    self.debug_video_observations[env_index] = []
+
+            assert self.rollouts.current_rollout_step_idx > 0
+            for frame_index in range(self.rollouts.current_rollout_step_idx):
+                
+                rgb_obs = self.rollouts.buffers["observations"]["rgb"][frame_index]
+
+                assert len(rgb_obs) == self.envs.num_envs
+                if not isinstance(rgb_obs, np.ndarray):
+                    rgb_obs = rgb_obs.cpu().numpy()
+                for env_index in envs_to_save:
+                    env_rgb = rgb_obs[env_index, ...]
+                    env_saved_observations = self.debug_video_observations[env_index]
+                    env_saved_observations.append({primary_obs_name: env_rgb})
+
+                    # reference code to save individual frames as images
+                    # video_folder = self.config.VIDEO_DIR
+                    # rgb_image = Image.fromarray(np.uint8(env_rgb))
+                    # rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+                    # rgb_image.save(video_folder + "/rank" + str(rank) + "_env" +
+                    #     str(env_index) + "_update_" + str(self.num_updates_done) +
+                    #     "_frame" + str(frame_index) + "_rgb.png")
+
+
+            if if_last_update_of_save:
+                if not vut:
+                    print("vut (viz utils) unavailable, so we can't save videos")
+                else:
+                    video_folder = self.config.VIDEO_DIR
+                    print("saving videos to ", video_folder)
+                    rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+                    for env_index in envs_to_save:
+                        env_saved_observations = self.debug_video_observations[env_index]
+                        vut.make_video(
+                            env_saved_observations,
+                            primary_obs_name,
+                            "color",
+                            video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
+                            fps=2,  # very slow fps
+                            open_vid=False,
+                        )
+                    print("done saving videos!")
+                    
 
     def _eval_checkpoint(
         self,
