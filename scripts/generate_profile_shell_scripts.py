@@ -89,7 +89,7 @@ if __name__ == "__main__":
         #   startup time is 2 minutes and 100 steps takes 12 minutes
         # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
         #   startup time is 2 minutes and 100 steps takes 5.9 minutes
-        buffered_start_minutes = 2
+        buffered_start_minutes = 8
         buffered_minutes_per_100_steps = 2
         if do_capture_step_range:
             slurm_job_termination_minutes = buffered_start_minutes + int(
@@ -204,7 +204,6 @@ fi
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
 #SBATCH --ntasks-per-node 8
-#SBATCH --mem-per-cpu=5GB
 #SBATCH --partition=devlab
 #SBATCH --time="""
             + str(slurm_job_termination_minutes)

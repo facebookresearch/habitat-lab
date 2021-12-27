@@ -4,6 +4,7 @@ VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
 NUM_CHECKPOINTS: 0
 BATCHED_ENV: True
+OVERLAP_PHYSICS: True
 SAVE_VIDEOS_INTERVAL: 500
 NUM_UPDATES: 61
 NUM_ENVIRONMENTS: 512
@@ -12,8 +13,8 @@ SIMULATOR:
   AGENT_0:
     SENSORS: ['HEAD_RGB_SENSOR']
   HEAD_RGB_SENSOR:
-    WIDTH: 64
-    HEIGHT: 64
+    WIDTH: 128
+    HEIGHT: 128
 RL:
   PPO:
     ppo_epoch: 1
@@ -25,5 +26,5 @@ RL:
   POLICY:
     action_distribution_type: "gaussian"
   DDPPO:
-    backbone: "se_resnet9_fixup"
+    backbone: "PointNavResNetPolicy"
 FORCE_BLIND_POLICY: False

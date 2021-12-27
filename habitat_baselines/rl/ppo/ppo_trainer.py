@@ -912,12 +912,15 @@ class PPOTrainer(BaseRLTrainer):
 
                 profiling_wrapper.range_pop()  # train update
 
+            logger.info(
+                "collision fraction: {:.4f}".format(self.envs.get_recent_collision_fraction()))
+
             self.envs.close()
 
     def _check_save_rollouts(self):
 
         # save episodes periodically
-        num_updates_to_save = 20
+        num_updates_to_save = 5
         num_updates_minus_one = self.num_updates_done
         if self.config.SAVE_VIDEOS_INTERVAL != -1 and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL < num_updates_to_save:
             is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
@@ -929,9 +932,6 @@ class PPOTrainer(BaseRLTrainer):
                 envs_to_save = [0, 1, self.envs.num_envs - 2, self.envs.num_envs - 1]
             else:
                 envs_to_save = [range(self.envs.num_envs)]
-
-            # temp
-            envs_to_save = [0]
 
             primary_obs_name = "rgba_camera"
 

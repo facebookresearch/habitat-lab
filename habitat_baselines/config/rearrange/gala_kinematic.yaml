@@ -2,20 +2,21 @@ TENSORBOARD_DIR: "tb/reward_0p01"
 CHECKPOINT_FOLDER: "data/checkpoints/reward_0p01"
 VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
-HACK_ACTION_SCALE: 48.0
+HACK_ACTION_SCALE: 1.0
 NUM_CHECKPOINTS: 0
 BATCHED_ENV: True
 STUB_BATCH_SIMULATOR: False
-SAVE_VIDEOS_INTERVAL: 500
-NUM_UPDATES: 61
-NUM_ENVIRONMENTS: 256
+OVERLAP_PHYSICS: True
+SAVE_VIDEOS_INTERVAL: -1
+NUM_UPDATES: 120
+NUM_ENVIRONMENTS: 512
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
     SENSORS: ['HEAD_RGB_SENSOR']
   HEAD_RGB_SENSOR:
-    WIDTH: 128
-    HEIGHT: 128
+    WIDTH: 64
+    HEIGHT: 64
 RL:
   PPO:
     ppo_epoch: 1
@@ -28,5 +29,5 @@ RL:
     name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
   DDPPO:
-    backbone: "se_resnet9_fixup"
+    backbone: "PointNavResNetPolicy"
 FORCE_BLIND_POLICY: False

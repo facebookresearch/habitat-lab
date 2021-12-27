@@ -65,6 +65,8 @@ class BatchedEnv:
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
             bsim_config.sensor0.hfov = 45.0
+            bsim_config.force_random_actions = True
+            bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             self._bsim = BatchedSimulator(bsim_config)
         else:
             self._bsim = None
@@ -150,11 +152,19 @@ class BatchedEnv:
         :return: list of outputs from the reset method of envs.
         """
         if self._bsim:
-            self._bsim.auto_reset_or_step_physics()  # sloppy: do explicit reset here
+            # sloppy: need to do explicit reset here
+            if self._config.OVERLAP_PHYSICS:
+                self._bsim.auto_reset_or_start_async_step_physics()
+            else: 
+                self._bsim.auto_reset_or_step_physics()
             self._bsim.start_render()
             self._bsim.wait_for_frame()
         return self._observations
         
+    def get_recent_collision_fraction(self):
+        return self._bsim.get_recent_collision_fraction_and_reset()
+
+    
 
     def async_step(
         self, actions
@@ -167,26 +177,35 @@ class BatchedEnv:
         actions_flat_list = actions.flatten().tolist()
         assert len(actions_flat_list) == self.num_envs * self.action_dim
         if self._bsim:
-            self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
-            self._bsim.auto_reset_or_step_physics()
-            self._bsim.start_render()
+            if self._config.OVERLAP_PHYSICS:
+                self._bsim.wait_async_step_physics()
+
+                self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
+                self._bsim.auto_reset_or_start_async_step_physics()
+                self._bsim.start_render()
+            else:
+                self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
+                self._bsim.auto_reset_or_step_physics()
+                self._bsim.start_render()
 
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Any]:
         r"""Todo"""
 
         if self._bsim:
+
+            # this updates self._observations tensor
+            self._bsim.wait_for_frame()
+
+            # hack: these aren't one frame behind like the observations
             rewards = self._bsim.get_rewards()
             assert len(rewards) == self._num_envs
             dones = self._bsim.get_dones()
             assert len(dones) == self._num_envs
-
             if self._config.REWARD_SCALE != 1.0:
                 # perf todo: avoid dynamic list construction
                 rewards = [r * self._config.REWARD_SCALE for r in rewards]
 
-            # this updates self._observations tensor
-            self._bsim.wait_for_frame()
         else:
             # rgb_observations = self._observations["rgb"]
             # torch.rand(rgb_observations.shape, dtype=torch.float32, out=rgb_observations)
@@ -214,6 +233,9 @@ class BatchedEnv:
     def close(self) -> None:
         if self._is_closed:
             return
+
+        self._bsim.close()
+        self._bsim = None
 
         self._is_closed = True
 
