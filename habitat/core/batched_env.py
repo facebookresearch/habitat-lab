@@ -91,9 +91,10 @@ class BatchedEnv:
 
         self._is_closed = False
 
-        num_joint_degrees = 15  # hard-coded to match Fetch
+        num_other_actions = 1  # doAttemptGrip
         num_base_degrees = 2  # rotate and move-forward/back
-        self.action_dim = num_joint_degrees + num_base_degrees
+        num_joint_degrees = 15  # hard-coded to match Fetch
+        self.action_dim = num_other_actions + num_base_degrees + num_joint_degrees
 
         # assert False 
         # todo: figure out why these are needed
@@ -172,7 +173,8 @@ class BatchedEnv:
         r"""Asynchronously step in the environments.
         """
         scale = self._config.HACK_ACTION_SCALE
-        actions = torch.mul(actions, scale)
+        if self._config.HACK_ACTION_SCALE != 1.0:
+            actions = torch.mul(actions, scale)
 
         actions_flat_list = actions.flatten().tolist()
         assert len(actions_flat_list) == self.num_envs * self.action_dim
