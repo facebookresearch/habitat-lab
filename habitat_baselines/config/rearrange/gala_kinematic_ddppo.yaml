@@ -24,6 +24,7 @@ RL:
     use_linear_lr_decay: False
     max_grad_norm: 1.0
   POLICY:
+    name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
   DDPPO:
     backbone: "PointNavResNetPolicy"

@@ -931,7 +931,7 @@ class PPOTrainer(BaseRLTrainer):
             elif self.envs.num_envs >= 4:
                 envs_to_save = [0, 1, self.envs.num_envs - 2, self.envs.num_envs - 1]
             else:
-                envs_to_save = [range(self.envs.num_envs)]
+                envs_to_save = range(self.envs.num_envs)
 
             primary_obs_name = "rgba_camera"
 
