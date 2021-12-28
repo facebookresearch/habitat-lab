@@ -64,9 +64,10 @@ class BatchedEnv:
             bsim_config.num_envs = self._num_envs
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
-            bsim_config.sensor0.hfov = 45.0
+            bsim_config.sensor0.hfov = 60.0
             bsim_config.force_random_actions = True
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
+            bsim_config.max_episode_length = 100
             self._bsim = BatchedSimulator(bsim_config)
         else:
             self._bsim = None
@@ -162,11 +163,6 @@ class BatchedEnv:
             self._bsim.wait_for_frame()
         return self._observations
         
-    def get_recent_collision_fraction(self):
-        return self._bsim.get_recent_collision_fraction_and_reset()
-
-    
-
     def async_step(
         self, actions
     ) -> None:

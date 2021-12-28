@@ -913,7 +913,7 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_pop()  # train update
 
             logger.info(
-                "collision fraction: {:.4f}".format(self.envs.get_recent_collision_fraction()))
+                "batched_sim stats: {}".format(self.envs._bsim.get_recent_stats_and_reset()))
 
             self.envs.close()
 
