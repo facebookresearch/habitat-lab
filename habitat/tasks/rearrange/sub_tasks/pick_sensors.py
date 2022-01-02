@@ -17,6 +17,27 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 
 
 @registry.register_measure
+class DidPickObjectMeasure(Measure):
+    cls_uuid: str = "did_pick_object"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DidPickObjectMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self._did_pick = False
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+        self._did_pick = self._did_pick or self._sim.grasp_mgr.is_grasped
+        self._metric = int(self._did_pick)
+
+
+@registry.register_measure
 class RearrangePickReward(RearrangeReward):
     cls_uuid: str = "rearrangepick_reward"
 
