@@ -195,7 +195,7 @@ class BatchedEnv:
             # this updates self._observations tensor
             self._bsim.wait_for_frame()
 
-            # hack: these aren't one frame behind like the observations
+            # these are "one frame behind" like the observations
             rewards = self._bsim.get_rewards()
             assert len(rewards) == self._num_envs
             dones = self._bsim.get_dones()
