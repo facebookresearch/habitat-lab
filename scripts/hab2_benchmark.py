@@ -3,6 +3,7 @@ import multiprocessing
 import os
 import time
 from collections import defaultdict
+from sys import platform
 
 import numpy as np
 
@@ -89,20 +90,23 @@ class HabDemoRunner:
             cores_per_proc = 8
         else:
             cores_per_proc = 16
-        import psutil
 
-        procs_per_gpu = args.n_procs // args.n_gpus
-        gpu_idx = proc_idx // procs_per_gpu
-        current_process = psutil.Process()
-        orig_cpus = current_process.cpu_affinity()
-        cpus = []
-        for idx in range(len(orig_cpus) // 2):
-            cpus.append(orig_cpus[idx])
-            cpus.append(orig_cpus[idx + len(orig_cpus) // 2])
+        if platform != "darwin":
+            # cpu_affinity only supported on linux/windows
+            import psutil
 
-        current_process.cpu_affinity(
-            cpus[gpu_idx * cores_per_proc : (gpu_idx + 1) * cores_per_proc]
-        )
+            procs_per_gpu = args.n_procs // args.n_gpus
+            gpu_idx = proc_idx // procs_per_gpu
+            current_process = psutil.Process()
+            orig_cpus = current_process.cpu_affinity()
+            cpus = []
+            for idx in range(len(orig_cpus) // 2):
+                cpus.append(orig_cpus[idx])
+                cpus.append(orig_cpus[idx + len(orig_cpus) // 2])
+
+            current_process.cpu_affinity(
+                cpus[gpu_idx * cores_per_proc : (gpu_idx + 1) * cores_per_proc]
+            )
 
         self.envs = create_env(self.args, proc_idx)
         self.envs.reset()
@@ -118,8 +122,15 @@ class HabDemoRunner:
                     "Loading action trajectory of size %i vs %i"
                     % (len(use_actions), self.args.n_steps)
                 )
+            # create an action dictionary compatible with loaded rearrange arm actions
             self.get_actions = lambda i: np.array(
-                [use_actions[i] for _ in range(self.args.n_procs)]
+                [
+                    {
+                        "action": "ARM_ACTION",
+                        "action_args": {"arm_action": use_actions[i][:-1]},
+                    }
+                    for _ in range(self.args.n_procs)
+                ]
             )
 
         else:

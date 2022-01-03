@@ -66,6 +66,8 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
+    DID_PICK_OBJECT:
+        TYPE: "DidPickObjectMeasure"
     PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -95,6 +97,7 @@ TASK:
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "DID_PICK_OBJECT"
         - "PICK_SUCCESS"
         - "PICK_REWARD"
     ACTIONS:

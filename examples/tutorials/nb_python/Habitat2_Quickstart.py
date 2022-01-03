@@ -25,26 +25,42 @@
 # This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
 
 # %%
-from IPython.display import HTML
+# Play a teaser video
+try:
+    from IPython.display import HTML
 
-HTML(
-    '<iframe src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview" width="640" height="480" allow="autoplay"></iframe>'
-)
-
-# %%
-# Only run this cell if using Colab!
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# Setup to use the hab_suite branch of Habitat Lab.
-# ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
+    HTML(
+        '<iframe src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview" width="640" height="480" allow="autoplay"></iframe>'
+    )
+except Exception:
+    pass
 
 # %%
-# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
-# 'IFD'", then restart the Colab runtime instance and rerun this cell and the next cell.
+# %%capture
+# @title Install Dependencies (if on Colab) { display-mode: "form" }
+# @markdown (double click to show code)
 
-# %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
+import os
+
+if "COLAB_GPU" in os.environ:
+    print("Setting up Habitat")
+    # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+    # Setup to use the hab_suite branch of Habitat Lab.
+    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
-import os.path as osp
+import os
+
+if "COLAB_GPU" in os.environ:
+    print("Setting Habitat base path")
+    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
+    import importlib
+
+    import PIL
+
+    importlib.reload(PIL.TiffTags)
+
+import os
 
 import gym
 import gym.spaces as spaces
@@ -61,7 +77,7 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
-# %%
+
 def insert_render_options(config):
     config.defrost()
     config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
@@ -69,6 +85,10 @@ def insert_render_options(config):
     config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
     config.freeze()
     return config
+
+
+# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
+# 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 
 
 # %% [markdown]
@@ -90,7 +110,7 @@ def insert_render_options(config):
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            osp.join(
+            os.path.join(
                 habitat_gym.config_base_dir,
                 "configs/tasks/rearrange/pick.yaml",
             )

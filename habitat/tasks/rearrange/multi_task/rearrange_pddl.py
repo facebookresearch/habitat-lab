@@ -351,11 +351,19 @@ class SetState:
 
             sim.internal_step(-1)
 
-        robo_state = self.robo_state
-        if robo_state.holding == "NONE" and sim.snapped_obj_id is not None:
+        # Set the snapped object information
+        if (
+            self.robo_state.holding == "NONE"
+            and sim.snapped_obj_id is not None
+        ):
             sim.desnap_object(force=True)
-        elif robo_state.holding is not None:
-            rel_obj_idx = name_to_id[robo_state.holding]
+        elif self.robo_state.holding is not None:
+            rel_obj_idx = name_to_id[self.robo_state.holding]
             sim.internal_step(-1)
             sim.full_snap(rel_obj_idx)
             sim.internal_step(-1)
+
+        # Set the robot starting position
+        if self.robo_state.pos == "rnd":
+            start_pos = sim.pathfinder.get_random_navigable_point()
+            sim.robot.base_pos = start_pos
