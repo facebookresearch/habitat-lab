@@ -44,6 +44,10 @@ class BatchedEnv:
             config.NUM_ENVIRONMENTS > 0
         ), "number of environments to be created should be greater than 0"
 
+        include_depth = "DEPTH_SENSOR" in config.SENSORS
+        include_rgb = "RGB_SENSOR" in config.SENSORS
+        assert include_depth or include_rgb
+
         self._num_envs = config.NUM_ENVIRONMENTS
 
         self._auto_reset_done = auto_reset_done
@@ -60,7 +64,8 @@ class BatchedEnv:
             from habitat_sim._ext.habitat_sim_bindings import BatchedSimulator, BatchedSimulatorConfig
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
-            print("bsim_config.gpu_id: ", bsim_config.gpu_id)
+            bsim_config.include_depth = include_depth
+            bsim_config.include_color = include_rgb
             bsim_config.num_envs = self._num_envs
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
@@ -68,6 +73,7 @@ class BatchedEnv:
             bsim_config.force_random_actions = True
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.max_episode_length = 100
+            bsim_config.num_physics_substeps = self._config.NUM_PHYSICS_SUBSTEPS
             self._bsim = BatchedSimulator(bsim_config)
         else:
             self._bsim = None
@@ -78,41 +84,64 @@ class BatchedEnv:
         observations = OrderedDict()
         if self._bsim:
             import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
-            observations["rgb"] = bps_pytorch.make_color_tensor(
-                self._bsim.rgba(buffer_index),
-                SIMULATOR_GPU_ID,
-                self._num_envs // (2 if double_buffered else 1),
-                [sensor_height, sensor_width],
-            )[..., 0:3].permute(0, 1, 2, 3)  # todo: get rid of no-op permute
+
+            if include_rgb:
+                observations["rgb"] = bps_pytorch.make_color_tensor(
+                    self._bsim.rgba(buffer_index),
+                    SIMULATOR_GPU_ID,
+                    self._num_envs // (2 if double_buffered else 1),
+                    [sensor_height, sensor_width],
+                )[..., 0:3].permute(0, 1, 2, 3)  # todo: get rid of no-op permute
+
+            if include_depth:
+                observations["depth"] = bps_pytorch.make_depth_tensor(
+                    self._bsim.depth(buffer_index),
+                    SIMULATOR_GPU_ID,
+                    self._num_envs // (2 if double_buffered else 1),
+                    [sensor_height, sensor_width],
+                ).unsqueeze(3)
+
         else:
             observations["rgb"] = torch.rand([self._num_envs, sensor_height, sensor_width, 3], dtype=torch.float32) * 255
+            observations["depth"] = torch.rand([self._num_envs, sensor_height, sensor_width, 1], dtype=torch.float32) * 255
         self._observations = observations
 
         # print('observations["rgb"].shape: ', observations["rgb"].shape)
 
         self._is_closed = False
 
-        num_other_actions = 1  # doAttemptGrip
+        num_other_actions = 1  # doAttemptGrip/doAttemptDrop
         num_base_degrees = 2  # rotate and move-forward/back
         num_joint_degrees = 15  # hard-coded to match Fetch
         self.action_dim = num_other_actions + num_base_degrees + num_joint_degrees
 
-        # assert False 
-        # todo: figure out why these are needed
+        obs_dict = spaces.Dict({})
+        if include_rgb:
+            RGBSENSOR_DIMENSION = 3
+            rgb_obs = spaces.Box(
+                low=0,
+                high=255,
+                shape=(
+                    agent_0_sensor_0_config.HEIGHT,
+                    agent_0_sensor_0_config.WIDTH,
+                    RGBSENSOR_DIMENSION,
+                ),
+                dtype=np.uint8,
+            )
+            obs_dict["rgb"] = rgb_obs
 
-        RGBSENSOR_DIMENSION = 3
-
-        rgb_obs = spaces.Box(
-            low=0,
-            high=255,
-            shape=(
-                agent_0_sensor_0_config.HEIGHT,
-                agent_0_sensor_0_config.WIDTH,
-                RGBSENSOR_DIMENSION,
-            ),
-            dtype=np.uint8,
-        )
-        obs_dict = spaces.Dict({"rgb": rgb_obs})
+        if include_depth:
+            depth_obs = spaces.Box(
+                low=0.0,
+                high=20.0,  # todo: investigate depth min/max
+                shape=(
+                    agent_0_sensor_0_config.HEIGHT,
+                    agent_0_sensor_0_config.WIDTH,
+                    1
+                ),
+                dtype=np.float32,
+            )
+            obs_dict["depth"] = depth_obs
 
         self.observation_spaces = [obs_dict] * 1  # config.NUM_ENVIRONMENTS  # note we only ever read element #0 of this array
 

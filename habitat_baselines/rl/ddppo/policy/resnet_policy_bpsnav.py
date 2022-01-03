@@ -279,6 +279,7 @@ class ResNetEncoder(nn.Module):
 
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
+            assert(depth_observations.shape[1] == 1)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
 
             cnn_input.append(depth_observations)
 

@@ -50,6 +50,7 @@ _C.OVERLAP_PHYSICS = False
 _C.SAVE_VIDEOS_INTERVAL = -1
 _C.REWARD_SCALE = 1.0
 _C.HACK_ACTION_SCALE = 1.0
+_C.NUM_PHYSICS_SUBSTEPS = 1
 
 
 # For our use case, the CPU side things are mainly memory copies

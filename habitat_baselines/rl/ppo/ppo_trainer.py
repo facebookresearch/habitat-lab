@@ -933,25 +933,41 @@ class PPOTrainer(BaseRLTrainer):
             else:
                 envs_to_save = range(self.envs.num_envs)
 
-            primary_obs_name = "rgba_camera"
-
             if is_first_update_of_save:
                 self.debug_video_observations = {}
                 for env_index in envs_to_save:
                     self.debug_video_observations[env_index] = []
 
+            include_depth = "DEPTH_SENSOR" in self.config.SENSORS
+            include_rgb = "RGB_SENSOR" in self.config.SENSORS
+            obs_types_to_save = []
+            if include_depth:
+                obs_types_to_save.append("depth")
+            if include_rgb:
+                obs_types_to_save.append("rgb")
+            
             assert self.rollouts.current_rollout_step_idx > 0
             for frame_index in range(self.rollouts.current_rollout_step_idx):
                 
-                rgb_obs = self.rollouts.buffers["observations"]["rgb"][frame_index]
+                if include_rgb:
+                    rgb_obs = self.rollouts.buffers["observations"]["rgb"][frame_index]
+                    assert len(rgb_obs) == self.envs.num_envs
+                    if not isinstance(rgb_obs, np.ndarray):
+                        rgb_obs = rgb_obs.cpu().numpy()
+                if include_depth:
+                    depth_obs = self.rollouts.buffers["observations"]["depth"][frame_index]
+                    assert len(depth_obs) == self.envs.num_envs
+                    if not isinstance(depth_obs, np.ndarray):
+                        depth_obs = depth_obs.cpu().numpy()
 
-                assert len(rgb_obs) == self.envs.num_envs
-                if not isinstance(rgb_obs, np.ndarray):
-                    rgb_obs = rgb_obs.cpu().numpy()
                 for env_index in envs_to_save:
-                    env_rgb = rgb_obs[env_index, ...]
                     env_saved_observations = self.debug_video_observations[env_index]
-                    env_saved_observations.append({primary_obs_name: env_rgb})
+                    new_dict = {}
+                    if include_rgb:
+                        new_dict["rgb"] = rgb_obs[env_index, ...]
+                    if include_depth:
+                        new_dict["depth"] = depth_obs[env_index, ...]
+                    env_saved_observations.append(new_dict)
 
                     # reference code to save individual frames as images
                     # video_folder = self.config.VIDEO_DIR
@@ -969,16 +985,17 @@ class PPOTrainer(BaseRLTrainer):
                     video_folder = self.config.VIDEO_DIR
                     print("saving videos to ", video_folder)
                     rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
-                    for env_index in envs_to_save:
-                        env_saved_observations = self.debug_video_observations[env_index]
-                        vut.make_video(
-                            env_saved_observations,
-                            primary_obs_name,
-                            "color",
-                            video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_rgb",
-                            fps=2,  # very slow fps
-                            open_vid=False,
-                        )
+                    for primary_obs_name in obs_types_to_save:
+                        for env_index in envs_to_save:
+                            env_saved_observations = self.debug_video_observations[env_index]
+                            vut.make_video(
+                                env_saved_observations,
+                                primary_obs_name,
+                                "color" if primary_obs_name == "rgb" else "depth",
+                                video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_" + primary_obs_name,
+                                fps=2,  # very slow fps
+                                open_vid=False,
+                            )
                     print("done saving videos!")
                     
 
