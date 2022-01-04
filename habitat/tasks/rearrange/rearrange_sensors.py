@@ -651,7 +651,7 @@ class RearrangeReward(Measure):
         # Penalize the force that was added to the accumulated force at the
         # last time step.
         reward -= max(
-            0,
+            0,  # This penalty is always positive
             min(
                 self._config.FORCE_PEN * force_metric.add_force,
                 self._config.MAX_FORCE_PEN,
