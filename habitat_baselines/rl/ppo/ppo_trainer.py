@@ -497,6 +497,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.env_time += time.time() - t_step_env
 
+        profiling_wrapper.range_push("save to rollout storage")
         self.rollouts.insert(
             next_recurrent_hidden_states=recurrent_hidden_states,
             actions=actions,
@@ -504,6 +505,7 @@ class PPOTrainer(BaseRLTrainer):
             value_preds=values,
             buffer_index=buffer_index,
         )
+        profiling_wrapper.range_pop() # save to rollout storage
 
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -536,6 +538,8 @@ class PPOTrainer(BaseRLTrainer):
                 observations, device=self.device, cache=self._obs_batching_cache
             )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+
+        profiling_wrapper.range_push("rewards, done_masks, stats")
 
         rewards = torch.tensor(
             rewards_l,
@@ -571,9 +575,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
 
+        profiling_wrapper.range_pop()  # rewards, done_masks, stats
+
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
+
+        profiling_wrapper.range_push("save observations to rollout storage")
 
         self.rollouts.insert(
             next_observations=batch,
@@ -581,6 +589,8 @@ class PPOTrainer(BaseRLTrainer):
             next_masks=not_done_masks,
             buffer_index=buffer_index,
         )
+
+        profiling_wrapper.range_pop()  # save observations to rollout storage
 
         self.rollouts.advance_rollout(buffer_index)
 

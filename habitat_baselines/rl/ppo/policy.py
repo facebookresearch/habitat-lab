@@ -91,7 +91,7 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
         )
         return self.critic(features)
 
-    @profiling_wrapper.RangeContext("Policy.evaluate_actions")
+    # @profiling_wrapper.RangeContext("Policy.evaluate_actions")
     def evaluate_actions(
         self, observations, rnn_hidden_states, prev_actions, masks, action
     ):

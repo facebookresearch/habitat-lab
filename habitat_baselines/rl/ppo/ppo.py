@@ -104,7 +104,7 @@ class PPO(nn.Module):
             for batch in data_generator:
                 precision_context = autocast if use_mixed_precision else dummy_context_mgr
                 with precision_context():
-                    profiling_wrapper.range_push("mini batch")
+                    profiling_wrapper.range_push("PPO mini batch")
                     (
                         values,
                         action_log_probs,

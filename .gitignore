@@ -87,3 +87,10 @@ data
 
 # vim
 *.swp
+
+# Nsight systems profiling output
+profile*.nsys-rep
+profile*.sqlite
+
+# pyspy profiling output
+pyspy*.speedscope
