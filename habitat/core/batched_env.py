@@ -206,10 +206,9 @@ class BatchedEnv:
         if self._bsim:
             if self._config.OVERLAP_PHYSICS:
                 self._bsim.wait_async_step_physics()
-
+                self._bsim.start_render()
                 self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
                 self._bsim.auto_reset_or_start_async_step_physics()
-                self._bsim.start_render()
             else:
                 self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
                 self._bsim.auto_reset_or_step_physics()
