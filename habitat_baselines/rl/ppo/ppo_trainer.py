@@ -598,12 +598,12 @@ class PPOTrainer(BaseRLTrainer):
 
         return env_slice.stop - env_slice.start
 
-    @profiling_wrapper.RangeContext("_collect_rollout_step")
+    @profiling_wrapper.RangeContext("rollout step")
     def _collect_rollout_step(self):
         self._compute_actions_and_step_envs()
         return self._collect_environment_result()
 
-    @profiling_wrapper.RangeContext("_update_agent")
+    @profiling_wrapper.RangeContext("update agent policy")
     def _update_agent(self):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()

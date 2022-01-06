@@ -96,7 +96,7 @@ class PPO(nn.Module):
         dist_entropy_epoch = 0.0
 
         for _e in range(self.ppo_epoch):
-            profiling_wrapper.range_push("PPO.update epoch")
+            # profiling_wrapper.range_push("PPO.update epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.num_mini_batch
             )
@@ -176,7 +176,7 @@ class PPO(nn.Module):
                 dist_entropy_epoch += dist_entropy.item()
                 profiling_wrapper.range_pop()
 
-            profiling_wrapper.range_pop()  # PPO.update epoch
+            # profiling_wrapper.range_pop()  # PPO.update epoch
 
         num_updates = self.ppo_epoch * self.num_mini_batch
 
