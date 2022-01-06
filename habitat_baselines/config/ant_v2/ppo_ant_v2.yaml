@@ -26,7 +26,11 @@ NUM_CHECKPOINTS: 100
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
+  POLICY:
+      name: "PointNavResNetPolicy"
+      action_distribution_type: "gaussian"
   REWARD_MEASURE: "X_LOCATION"
+  SUCCESS_MEASURE: "X_LOCATION"
   PPO:
     # ppo params
     clip_param: 0.2

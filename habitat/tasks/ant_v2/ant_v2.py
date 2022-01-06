@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Tuple
-from collections import defaultdict
 import math
+from collections import defaultdict
+from typing import Any, List, Optional, Tuple
 
 import attr
 import numpy as np
@@ -20,7 +20,6 @@ from habitat.core.embodied_task import (
     Measure,
     SimulatorTaskAction,
 )
-from habitat.tasks.nav.nav import NavigationTask
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -34,6 +33,7 @@ from habitat.core.simulator import (
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -55,6 +55,7 @@ except ImportError:
 
 # import quadruped_wrapper
 from habitat.tasks.ant_v2.ant_robot import AntV2Robot
+
 
 def merge_sim_episode_with_object_config(sim_config, episode):
     sim_config.defrost()
@@ -100,7 +101,7 @@ class AntV2Sim(HabitatSim):
         # Is this relevant?
         if self.concur_render:
             self.renderer.acquire_gl_context()
-    
+
     def reconfigure(self, config):
         print("Sim reconfiguring..")
         ep_info = config["ep_info"][0]
@@ -126,11 +127,12 @@ class AntV2Sim(HabitatSim):
         # get the rigid object manager
         rigid_obj_mgr = self.get_rigid_object_manager()
 
-
         # add ant
         self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
         self.robot.reconfigure()
-        self.robot.base_pos = mn.Vector3(self.habitat_config.AGENT_0.START_POSITION)
+        self.robot.base_pos = mn.Vector3(
+            self.habitat_config.AGENT_0.START_POSITION
+        )
         self.robot.base_rot = math.pi / 2
 
         # add floor
@@ -144,7 +146,7 @@ class AntV2Sim(HabitatSim):
 
         floor_obj.translation = np.array([2.50, -2, 0.5])
         floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
-    
+
     def step(self, action):
         # what to do with action?
 
@@ -153,7 +155,6 @@ class AntV2Sim(HabitatSim):
         self._prev_sim_obs = self.get_sensor_observations()
         obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         return obs
-
 
     # Need to figure out MVP for the simulator + how to set up a camera which isn't part of the obs space.
     # Also need to figure out how to define rewards based on measurements/observations
@@ -174,7 +175,9 @@ class AntObservationSpaceSensor(Sensor):
         return self.cls_uuid
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
+        return spaces.Box(
+            low=-np.inf, high=np.inf, shape=(27,), dtype=np.float
+        )
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.NORMAL
@@ -184,6 +187,7 @@ class AntObservationSpaceSensor(Sensor):
     ):
         obs = self._sim.robot.observational_space
         return obs
+
 
 # @registry.register_sensor
 # class AntObservationSpaceSensor(Sensor):
@@ -236,10 +240,11 @@ class XLocation(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         if self._metric is None:
-            self._metric = {"x_location": None}
+            self._metric = None
 
         current_position = self._sim.robot.base_pos
-        self._metric["x_location"] = current_position.x
+        self._metric = current_position.x
+
 
 @registry.register_task_action
 class LegRelPosAction(SimulatorTaskAction):
@@ -269,6 +274,7 @@ class LegRelPosAction(SimulatorTaskAction):
         if should_step:
             return self._sim.step(HabitatSimActions.LEG_VEL)
         return None
+
 
 @registry.register_task_action
 class LegAction(SimulatorTaskAction):
@@ -301,7 +307,8 @@ class AntV2Task(NavigationTask):
     def __init__(
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
-        #config.enable_physics = True
+        # config.enable_physics = True
         super().__init__(config=config, sim=sim, dataset=dataset)
+
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
