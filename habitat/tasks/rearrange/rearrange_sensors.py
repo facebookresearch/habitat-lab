@@ -64,8 +64,7 @@ class AbsObjectGoalPositionSensor(MultiObjSensor):
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
-
-        return pos
+        return [coordinate for position in pos for coordinate in position]
 
 
 @registry.register_sensor
@@ -75,6 +74,14 @@ class ObjectGoalPositionSensor(MultiObjSensor):
     """
 
     cls_uuid: str = "obj_goal_pos_sensor"
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
 
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
@@ -98,6 +105,14 @@ class TargetStartSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_start_sensor"
 
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
@@ -119,7 +134,7 @@ class AbsTargetStartSensor(MultiObjSensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
-        return pos
+        return [coordinate for position in pos for coordinate in position]
 
 
 @registry.register_sensor
@@ -137,7 +152,7 @@ class GoalSensor(MultiObjSensor):
         _, pos = self._sim.get_targets()
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
-        return pos
+        return [coordinate for position in pos for coordinate in position]
 
 
 @registry.register_sensor
@@ -146,7 +161,7 @@ class AbsGoalSensor(MultiObjSensor):
 
     def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
-        return pos
+        return [coordinate for position in pos for coordinate in position]
 
 
 @registry.register_sensor
@@ -175,7 +190,7 @@ class JointSensor(Sensor):
 
 
 @registry.register_sensor
-class JointVelSensor(Sensor):
+class JointVelocitySensor(Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -663,8 +678,11 @@ class RearrangeReward(Measure):
         force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
         # Penalize the force that was added to the accumulated force at the
         # last time step.
-        reward -= min(
-            self._config.FORCE_PEN * force_metric.add_force,
-            self._config.MAX_FORCE_PEN,
+        reward -= max(
+            0,
+            min(
+                self._config.FORCE_PEN * force_metric.add_force,
+                self._config.MAX_FORCE_PEN,
+            ),
         )
         return reward

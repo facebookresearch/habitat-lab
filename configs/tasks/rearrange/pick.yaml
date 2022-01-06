@@ -15,7 +15,7 @@ TASK:
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    CONSTRAINT_VIOLATE_SHOULD_END: True
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
@@ -55,7 +55,7 @@ TASK:
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
@@ -66,6 +66,8 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
+    DID_PICK_OBJECT:
+        TYPE: "DidPickObjectMeasure"
     PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -91,10 +93,11 @@ TASK:
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "DID_PICK_OBJECT"
         - "PICK_SUCCESS"
         - "PICK_REWARD"
     ACTIONS:

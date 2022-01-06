@@ -51,6 +51,7 @@ def run_main_subproc(args):
     "args",
     [
         ("examples/tutorials/nb_python/Habitat_Lab.py",),
+        ("examples/tutorials/nb_python/Habitat2_Quickstart.py",),
     ],
 )
 def test_example_modules(args):

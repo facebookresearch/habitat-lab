@@ -36,7 +36,7 @@ TASK:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
     JOINT_VEL_SENSOR:
-        TYPE: "JointVelSensor"
+        TYPE: "JointVelocitySensor"
         DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
         TYPE: "EEPositionSensor"

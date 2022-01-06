@@ -43,7 +43,6 @@ import os
 import os.path as osp
 import time
 
-import cv2
 import numpy as np
 
 import habitat
@@ -51,6 +50,7 @@ import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
+from habitat_sim.utils import viz_utils as vut
 
 try:
     import pygame
@@ -59,21 +59,8 @@ except ImportError:
 
 DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-
-
-def make_video_cv2(observations, prefix=""):
-    output_path = "./data/vids/"
-    os.makedirs(output_path, exist_ok=True)
-    shp = observations[0].shape
-    videodims = (shp[1], shp[0])
-    fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
-    vid_name = output_path + prefix + ".mp4"
-    video = cv2.VideoWriter(vid_name, fourcc, 60, videodims)
-    for ob in observations:
-        bgr_im_1st_person = ob[..., 0:3][..., ::-1]
-        video.write(bgr_im_1st_person)
-    video.release()
-    print("Saved to", vid_name)
+SAVE_VIDEO_DIR = "./data/vids"
+SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 
 def step_env(env, action_name, action_args, args):
@@ -190,8 +177,13 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
 
     elif keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = ["%.3f" % x for x in env._sim.robot.sim_obj.translation]
-        print(pos)
+        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
+        rot = env._sim.robot.sim_obj.rotation
+        print(f"Robot state: pos = {pos}, rotation = {rot}")
+    elif keys[pygame.K_COMMA]:
+        # Print the current arm state of the robot, useful for debugging.
+        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
+        print(f"Robot arm joint state: {joint_state}")
 
     args = {}
     if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
@@ -244,8 +236,6 @@ def play_env(env, args, config):
     obs = env.reset()
 
     if not args.no_render:
-        # obs = env.step({"action": "EMPTY", "action_args": {}})
-        # obs = env.step(
         draw_obs = observations_to_image(obs, {})
         pygame.init()
         screen = pygame.display.set_mode(
@@ -260,6 +250,12 @@ def play_env(env, args, config):
     all_arm_actions = []
 
     while True:
+        if (
+            args.save_actions
+            and len(all_arm_actions) > args.save_actions_count
+        ):
+            # quit the application when the action recording queue is full
+            break
         if render_steps_limit is not None and i > render_steps_limit:
             break
         step_result, arm_action = get_input_vel_ctlr(
@@ -318,9 +314,8 @@ def play_env(env, args, config):
                 f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
             )
         all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
-        save_dir = "data/interactive_play_replays"
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = osp.join(save_dir, "play_actions.txt")
+        os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
+        save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)
         print(f"Saved actions to {save_path}")
@@ -330,7 +325,8 @@ def play_env(env, args, config):
     if args.save_obs:
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
-        make_video_cv2(all_obs, "interactive_play")
+        os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
+        vut.make_video(all_obs, osp.join(SAVE_VIDEO_DIR, args.save_obs_fname))
     if not args.no_render:
         pygame.quit()
 
@@ -343,7 +339,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     parser.add_argument("--save-obs", action="store_true", default=False)
+    parser.add_argument("--save-obs-fname", type=str, default="play.mp4")
     parser.add_argument("--save-actions", action="store_true", default=False)
+    parser.add_argument(
+        "--save-actions-fname", type=str, default="play_actions.txt"
+    )
     parser.add_argument(
         "--save-actions-count",
         type=int,

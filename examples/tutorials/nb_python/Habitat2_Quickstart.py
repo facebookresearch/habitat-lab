@@ -3,9 +3,8 @@
 #   accelerator: GPU
 #   colab:
 #     collapsed_sections: []
-#     name: Habitat Interactive Tasks
+#     name: Habitat 2.0 Quick Start Tutorial
 #     provenance: []
-#     toc_visible: true
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,colabs//ipynb
@@ -16,34 +15,59 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.3
 #   kernelspec:
-#     display_name: Python [conda env:hab_merge] *
+#     display_name: Python 3
 #     language: python
-#     name: conda-env-hab_merge-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.6.13
+#     name: python3
 # ---
 
-# %%
-# @title Installation { display-mode: "form" }
-# @markdown (double click to show code).
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
+# %% [markdown]
+# # Overview
+# This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
 
 # %%
+# Play a teaser video
+try:
+    from IPython.display import HTML
+
+    HTML(
+        '<iframe src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview" width="640" height="480" allow="autoplay"></iframe>'
+    )
+except Exception:
+    pass
+
+# %%
+# %%capture
+# @title Install Dependencies (if on Colab) { display-mode: "form" }
+# @markdown (double click to show code)
+
+import os
+
+if "COLAB_GPU" in os.environ:
+    print("Setting up Habitat")
+    # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
+    # Setup to use the hab_suite branch of Habitat Lab.
+    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
+
+# %%
+import os
+
+if "COLAB_GPU" in os.environ:
+    print("Setting Habitat base path")
+    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
+    import importlib
+
+    import PIL
+
+    importlib.reload(PIL.TiffTags)
+
+import os
+
 import gym
 import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat_baselines.utils.gym_definitions  # noqa: F401
+import habitat_baselines.utils.gym_definitions as habitat_gym
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -53,15 +77,18 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
-# %%
+
 def insert_render_options(config):
     config.defrost()
     config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
     config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
     config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
-    config.SIMULATOR.DEBUG_RENDER = True
     config.freeze()
     return config
+
+
+# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
+# 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 
 
 # %% [markdown]
@@ -69,7 +96,7 @@ def insert_render_options(config):
 #
 # For Habitat 2.0 functionality, install the `hab_suite` branch of Habitat Lab. Complete installation steps:
 #
-# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. For example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`.
+# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
 # 2. Download the `hab_suite` branch of Habitat Lab: `git clone -b hab_suite https://github.com/facebookresearch/habitat-lab.git`
 # 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
 
@@ -79,9 +106,15 @@ def insert_render_options(config):
 # Start with a minimal environment interaction loop using the Habitat API.
 
 # %%
+
 with habitat.Env(
     config=insert_render_options(
-        habitat.get_config("../../../configs/tasks/rearrange/pick.yaml")
+        habitat.get_config(
+            os.path.join(
+                habitat_gym.config_base_dir,
+                "configs/tasks/rearrange/pick.yaml",
+            )
+        )
     )
 ) as env:
     observations = env.reset()  # noqa: F841
@@ -575,3 +608,7 @@ with open(nav_pick_cfg_path, "w") as f:
 
 # %% [markdown]
 # To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
+
+# %% [markdown]
+# # Home Assistant Benchmark
+# Tutorial for the home assistant benchmark and how to setup new tasks in a [PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) like task specification is coming soon!

@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 100
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -10,17 +10,18 @@ TASK:
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    CONSTRAINT_VIOLATE_SHOULD_END: True
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "place_reward"
-    SUCCESS_MEASUREMENT: "place_success"
+    REWARD_MEASUREMENT: "rearrangepick_reward"
+    SUCCESS_MEASUREMENT: "rearrangepick_success"
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -28,6 +29,10 @@ TASK:
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    OBJECT_SENSOR:
+        TYPE: "ObjectGoalPositionSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     GOAL_SENSOR:
@@ -51,7 +56,10 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    JOINT_VELOCITY_SENSOR:
+        TYPE: "JointVelocitySensor"
+        DIMENSIONALITY: 7
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "OBJECT_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -86,11 +94,11 @@ TASK:
         SUCC_THRESH: 0.15
 
     MEASUREMENTS:
-        - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "OBJECT_TO_GOAL_DISTANCE"
         - "OBJ_AT_GOAL"
         - "PLACE_SUCCESS"
         - "PLACE_REWARD"
@@ -98,11 +106,11 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
+            GRIP_CONTROLLER: "SuctionGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            DELTA_POS_LIMIT: 0.0125
+            DELTA_POS_LIMIT: 0.025
             EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
         - ARM_ACTION
@@ -110,6 +118,8 @@ TASK:
 SIMULATOR:
     DEBUG_RENDER: False
     ACTION_SPACE_CONFIG: v0
+    CREATE_RENDERER: False
+    REQUIRES_TEXTURES: False
     AGENTS: ['AGENT_0']
     ROBOT_JOINT_START_NOISE: 0.0
     AGENT_0:
@@ -123,8 +133,8 @@ SIMULATOR:
         WIDTH: 128
         HEIGHT: 128
     HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 32
+        HEIGHT: 32
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
@@ -145,6 +155,8 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
+    AUTO_SLEEP: False
+    CONCUR_RENDER: False
 
     # Grasping
     HOLD_THRESH: 0.09
