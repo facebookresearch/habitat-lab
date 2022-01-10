@@ -7,7 +7,7 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 1
+NUM_ENVIRONMENTS: 4
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
@@ -39,7 +39,7 @@ RL:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
-    num_mini_batch: 1
+    num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
