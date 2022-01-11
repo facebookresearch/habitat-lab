@@ -76,8 +76,8 @@ TASK:
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
         USE_DIFF: True
-        DROP_OBJ_SHOULD_END: False
-        WRONG_PICK_SHOULD_END: False
+        DROP_OBJ_SHOULD_END: True
+        WRONG_PICK_SHOULD_END: True
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
