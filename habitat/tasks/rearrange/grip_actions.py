@@ -79,6 +79,54 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
 
 @registry.register_task_action
+class AutoGraspAction(GripSimulatorTaskAction):
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(0,), high=1.0, low=-1.0)
+
+    def _try_grasp(self):
+        scene_obj_pos = self._sim.get_scene_pos()
+        ee_pos = self._sim.robot.ee_transform.translation
+        # Get objects we are close to.
+        if len(scene_obj_pos) != 0:
+            # Get the target the EE is closest to.
+            closest_obj_idx = np.argmin(
+                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+            )
+
+            to_target = np.linalg.norm(
+                ee_pos - scene_obj_pos[closest_obj_idx], ord=2
+            )
+
+            if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.grasp_mgr.snap_to_obj(
+                    self._sim.scene_obj_ids[closest_obj_idx]
+                )
+
+        # Get markers we are close to.
+        markers = self._sim.get_all_markers()
+        if len(markers) > 0:
+            names = list(markers.keys())
+            pos = np.array([markers[k].get_current_position() for k in names])
+
+            closest_idx = np.argmin(
+                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+            )
+
+            to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
+
+            if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.grasp_mgr.snap_to_marker(names[closest_idx])
+
+    def _ungrasp(self):
+        self._sim.grasp_mgr.desnap()
+
+    def step(self, grip_ac, should_step=True, *args, **kwargs):
+        if not self._sim.grasp_mgr.is_grasped:
+            self._try_grasp()
+
+
+@registry.register_task_action
 class SuctionGraspAction(GripSimulatorTaskAction):
     """
     Action to automatically grasp when the gripper makes contact with an object. Does not allow for ungrasping.

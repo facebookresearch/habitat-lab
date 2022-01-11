@@ -85,9 +85,9 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
-
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
+        SHOULD_ARM_RETURN_TO_RESTING: True
         SUCC_THRESH: 0.15
 
     MEASUREMENTS:

@@ -177,10 +177,16 @@ class RearrangePickSuccess(Measure):
 
         # Check that we are holding the right object and the object is actually
         # being held.
-        self._metric = (
+        is_hold_good = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and ee_to_rest_distance < self._config.SUCC_THRESH
         )
+
+        if self._config.SHOULD_ARM_RETURN_TO_RESTING:
+            self._metric = (
+                is_hold_good and ee_to_rest_distance < self._config.SUCC_THRESH
+            )
+        else:
+            self._metric = is_hold_good
 
         self._prev_ee_pos = observations["ee_pos"]

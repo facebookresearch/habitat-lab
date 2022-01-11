@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -320,7 +321,7 @@ class IsHoldingSensor(Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        return np.array(int(self._sim.grasp_mgr.is_grasped)).reshape((1,))
+        return np.array(float(self._sim.grasp_mgr.is_grasped)).reshape((1,))
 
 
 @registry.register_measure
@@ -684,3 +685,50 @@ class RearrangeReward(Measure):
             self._config.MAX_FORCE_PEN,
         )
         return reward
+
+
+@registry.register_sensor
+class EEOrientationSensor(Sensor):
+    cls_uuid: str = "obj_rel_pos_rot"
+
+    def __init__(self, sim, config, task, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self.lower_viz_id = None
+        self.upper_viz_id = None
+        self._task = task
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EEOrientationSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(6,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        OFFSET = 0.05
+        lower = mn.Vector3(-OFFSET, 0, 0)
+        upper = mn.Vector3(OFFSET, 0, 0)
+
+        ee_T = self._sim.robot.ee_transform
+        ee_lower = ee_T @ mn.Matrix4.translation(lower)
+        ee_upper = ee_T @ mn.Matrix4.translation(upper)
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        obj_pos = scene_pos[idxs][self._task.targ_idx]
+
+        rel_obj_ee_lower = ee_lower.inverted().transform_point(obj_pos)
+        rel_obj_ee_upper = ee_upper.inverted().transform_point(obj_pos)
+
+        return np.concatenate(
+            [np.array(rel_obj_ee_lower), np.array(rel_obj_ee_upper)], axis=0
+        )

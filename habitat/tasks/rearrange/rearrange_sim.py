@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -565,7 +565,9 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05) -> int:
+    def visualize_position(
+        self, position: Iterable[float], viz_id=None, r=0.05
+    ) -> int:
         """Adds the sphere object to the specified position for visualization purpose."""
 
         template_mgr = self.get_object_template_manager()

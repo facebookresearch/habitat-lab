@@ -140,6 +140,7 @@ TASK:
         DROP_OBJ_SHOULD_END: False
         WRONG_PICK_SHOULD_END: False
     PICK_SUCCESS:
+        SHOULD_ARM_RETURN_TO_RESTING: True
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
     ########################
