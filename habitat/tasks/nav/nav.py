@@ -1201,7 +1201,7 @@ class VelocityAction(SimulatorTaskAction):
         )
         agent_state = self._sim.get_agent_state()
 
-        # Convert from np.quaternion to mn.Quaternion
+        # Convert from np.quaternion (quaternion.quaternion) to mn.Quaternion
         normalized_quaternion = agent_state.rotation
         agent_mn_quat = mn.Quaternion(
             normalized_quaternion.imag, normalized_quaternion.real

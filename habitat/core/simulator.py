@@ -223,7 +223,7 @@ class AgentState:
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]
-    action: Optional[int] = None
+    action: Union[int, np.ndarray, None] = None
 
 
 class Simulator:

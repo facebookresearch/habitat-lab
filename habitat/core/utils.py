@@ -124,7 +124,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
         # JSON doesn't support numpy ndarray and quaternion
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        if isinstance(obj, np.quaternion):
+        if isinstance(obj, quaternion.quaternion):
             return quaternion_to_list(obj)
 
         return (

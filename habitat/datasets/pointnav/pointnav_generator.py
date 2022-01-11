@@ -157,7 +157,7 @@ def generate_pointnav_episode(
                 break
         if is_compatible:
             angle = np.random.uniform(0, 2 * np.pi)
-            source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+            source_rotation = [0.0, np.sin(angle / 2), 0, np.cos(angle / 2)]
 
             shortest_paths = None
             if is_gen_shortest_path:

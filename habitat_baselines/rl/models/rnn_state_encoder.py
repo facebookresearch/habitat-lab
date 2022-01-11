@@ -266,6 +266,10 @@ class RNNStateEncoder(nn.Module):
     timesteps to handle episodes ending in the middle of a rollout.
     """
 
+    def __init__(self):
+        super().__init__()
+        self.rnn: torch.nn.Module
+
     def layer_init(self):
         for name, param in self.rnn.named_parameters():
             if "weight" in name:

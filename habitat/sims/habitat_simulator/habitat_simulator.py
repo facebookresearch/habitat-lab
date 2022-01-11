@@ -20,7 +20,6 @@ from typing import (
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
-from numpy import ndarray
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -114,7 +113,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
@@ -156,7 +155,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
@@ -166,10 +165,6 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
             obs = np.expand_dims(
                 obs, axis=2
             )  # make depth observation a 3D array
-        else:
-            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)  # type: ignore[attr-defined]
-
-            obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
 
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
@@ -197,7 +192,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[ndarray, bool, "Tensor"]]
+        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
@@ -235,7 +230,7 @@ class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
     _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
-def check_sim_obs(obs: Optional[ndarray], sensor: Sensor) -> None:
+def check_sim_obs(obs: Optional[np.ndarray], sensor: Sensor) -> None:
     assert obs is not None, (
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
@@ -384,7 +379,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._prev_sim_obs = sim_obs
         return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: Union[str, int]) -> Observations:
+    def step(self, action: Union[str, np.ndarray, int]) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
@@ -425,7 +420,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def geodesic_distance(
         self,
-        position_a: Union[Sequence[float], ndarray],
+        position_a: Union[Sequence[float], np.ndarray],
         position_b: Union[Sequence[float], Sequence[Sequence[float]]],
         episode: Optional[Episode] = None,
     ) -> float:
@@ -602,7 +597,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             return None
 
     def distance_to_closest_obstacle(
-        self, position: ndarray, max_search_radius: float = 2.0
+        self, position: np.ndarray, max_search_radius: float = 2.0
     ) -> float:
         return self.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius

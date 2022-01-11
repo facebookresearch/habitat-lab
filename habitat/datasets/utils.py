@@ -12,7 +12,7 @@ import os
 import re
 import typing
 from collections import Counter
-from typing import Iterable, List, Union
+from typing import Iterable, List
 
 from numpy import float64
 
@@ -182,7 +182,7 @@ class VocabFromText(VocabDict):
 def get_action_shortest_path(
     sim: "HabitatSim",
     source_position: List[float],
-    source_rotation: List[Union[int, float64]],
+    source_rotation: List[float],
     goal_position: List[float],
     success_distance: float = 0.05,
     max_episode_steps: int = 500,
