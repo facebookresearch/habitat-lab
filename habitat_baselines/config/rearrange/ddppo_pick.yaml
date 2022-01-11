@@ -10,6 +10,7 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_ENVIRONMENTS: 4
+WRITER_TYPE: 'tb'
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
@@ -24,6 +25,7 @@ FORCE_TORCH_SINGLE_THREADED: True
 GYM_AUTO_NAME: "Pick"
 
 RL:
+
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
