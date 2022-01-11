@@ -7,32 +7,6 @@ gpu: &gpu
     FPS_THRESHOLD: 900
 
 jobs:
-  python_lint:
-    docker:
-      - image: circleci/python:3.6
-    steps:
-      - checkout
-      - run:
-          name: setup
-          command: |
-              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy --progress-bar off
-              sudo pip install -r requirements.txt --progress-bar off
-      - run:
-          name: run black
-          command: |
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --check
-      - run:
-          name: run isort
-          command: |
-              isort --version
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
-      - run:
-          name: run flake8
-          command: |
-              flake8 --version
-              flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
   pre-commit:
     docker:
       - image: circleci/python:3.6
@@ -277,5 +251,4 @@ workflows:
   install_and_test:
     jobs:
       - pre-commit
-      - python_lint
       - install_and_test_ubuntu
