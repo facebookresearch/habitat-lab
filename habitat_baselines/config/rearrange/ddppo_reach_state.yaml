@@ -28,6 +28,8 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      ACTION_DIST:
+        use_log_std: True
 
   REWARD_MEASURE: "rearrange_reach_reward"
   SUCCESS_MEASURE: "rearrange_reach_success"
