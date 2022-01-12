@@ -649,14 +649,11 @@ class PPOTrainer(BaseRLTrainer):
             for k, v in deltas.items()
             if k not in {"reward", "count"}
         }
-        if len(metrics) > 0:
-            writer.add_scalars("metrics", metrics, self.num_steps_done)
 
-        writer.add_scalars(
-            "losses",
-            losses,
-            self.num_steps_done,
-        )
+        for k, v in metrics.items():
+            writer.add_scalar(f"metrics/{k}", v, self.num_steps_done)
+        for k, v in losses.items():
+            writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
@@ -841,7 +838,11 @@ class PPOTrainer(BaseRLTrainer):
 
                 self.num_updates_done += 1
                 losses = self._coalesce_post_step(
-                    dict(value_loss=value_loss, action_loss=action_loss),
+                    dict(
+                        value_loss=value_loss,
+                        action_loss=action_loss,
+                        entropy=dist_entropy,
+                    ),
                     count_steps_delta,
                 )
 
@@ -1114,14 +1115,12 @@ class PPOTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
-        writer.add_scalars(
-            "eval_reward",
-            {"average reward": aggregated_stats["reward"]},
-            step_id,
+        writer.add_scalar(
+            "eval_reward/average_reward", aggregated_stats["reward"], step_id
         )
 
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
-        if len(metrics) > 0:
-            writer.add_scalars("eval_metrics", metrics, step_id)
+        for k, v in metrics.items():
+            writer.add_scalar(f"eval_metrics/{k}", v, step_id)
 
         self.envs.close()
