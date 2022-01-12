@@ -67,7 +67,6 @@ def merge_sim_episode_with_object_config(sim_config, episode):
 @registry.register_simulator(name="Ant-v2-sim")
 class AntV2Sim(HabitatSim):
     def __init__(self, config):
-        print("Sim loading..")
         super().__init__(config)
 
         agent_config = self.habitat_config
@@ -77,6 +76,7 @@ class AntV2Sim(HabitatSim):
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
         self.enable_physics = True
+        self.robot = None
 
         # Number of physics updates per action
         self.ac_freq_ratio = agent_config.AC_FREQ_RATIO
@@ -103,7 +103,6 @@ class AntV2Sim(HabitatSim):
             self.renderer.acquire_gl_context()
 
     def reconfigure(self, config):
-        print("Sim reconfiguring..")
         ep_info = config["ep_info"][0]
         # ep_info = self._update_config(ep_info)
 
@@ -118,34 +117,41 @@ class AntV2Sim(HabitatSim):
 
         self._try_acquire_context()
 
-        # # get the primitive assets attributes manager
-        prim_templates_mgr = self.get_asset_template_manager()
+        if self.robot is None: # Load the environment
+            # # get the primitive assets attributes manager
+            prim_templates_mgr = self.get_asset_template_manager()
 
-        # get the physics object attributes manager
-        obj_templates_mgr = self.get_object_template_manager()
+            # get the physics object attributes manager
+            obj_templates_mgr = self.get_object_template_manager()
 
-        # get the rigid object manager
-        rigid_obj_mgr = self.get_rigid_object_manager()
+            # get the rigid object manager
+            rigid_obj_mgr = self.get_rigid_object_manager()
 
-        # add ant
-        self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
-        self.robot.reconfigure()
-        self.robot.base_pos = mn.Vector3(
-            self.habitat_config.AGENT_0.START_POSITION
-        )
-        self.robot.base_rot = math.pi / 2
+            # add ant
+            self.robot = AntV2Robot(self.habitat_config.ROBOT_URDF, self)
+            self.robot.reconfigure()
+            self.robot.base_pos = mn.Vector3(
+                self.habitat_config.AGENT_0.START_POSITION
+            )
+            self.robot.base_rot = math.pi / 2
 
-        # add floor
-        cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
-        floor = obj_templates_mgr.get_template_by_handle(cube_handle)
-        floor.scale = np.array([20.0, 0.05, 20.0])
+            # add floor
+            cube_handle = obj_templates_mgr.get_template_handles("cube")[0]
+            floor = obj_templates_mgr.get_template_by_handle(cube_handle)
+            floor.scale = np.array([20.0, 0.05, 20.0])
 
-        obj_templates_mgr.register_template(floor, "floor")
-        floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
-        floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+            obj_templates_mgr.register_template(floor, "floor")
+            floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
+            floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
 
-        floor_obj.translation = np.array([2.50, -2, 0.5])
-        floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
+            floor_obj.translation = np.array([2.50, -2, 0.5])
+            floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
+        else: # environment is already loaded; reset the Ant
+            self.robot.reset()
+            self.robot.base_pos = mn.Vector3(
+                self.habitat_config.AGENT_0.START_POSITION
+            )
+            self.robot.base_rot = math.pi / 2
 
     def step(self, action):
         # what to do with action?

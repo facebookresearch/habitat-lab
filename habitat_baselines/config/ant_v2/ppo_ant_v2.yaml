@@ -35,7 +35,7 @@ RL:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 4
-    num_mini_batch: 2
+    num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
