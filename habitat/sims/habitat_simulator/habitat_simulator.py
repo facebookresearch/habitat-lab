@@ -421,7 +421,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def geodesic_distance(
         self,
         position_a: Union[Sequence[float], np.ndarray],
-        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
+        position_b: Union[
+            Sequence[float], Sequence[Sequence[float]], np.ndarray
+        ],
         episode: Optional[Episode] = None,
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:

@@ -150,7 +150,7 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.config.RL.DDPPO.pretrained:
             self.actor_critic.load_state_dict(
-                {
+                {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
@@ -271,7 +271,7 @@ class PPOTrainer(BaseRLTrainer):
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
         self._setup_actor_critic_agent(ppo_cfg)
-        if self._is_distributed:
+        if isinstance(self.agent, DDPPO):
             self.agent.init_distributed(find_unused_params=True)
 
         logger.info(

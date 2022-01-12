@@ -89,7 +89,7 @@ class PPOAgent(Agent):
             ckpt = torch.load(config.MODEL_PATH, map_location=self.device)
             #  Filter only actor_critic weights
             self.actor_critic.load_state_dict(
-                {
+                {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in ckpt["state_dict"].items()
                     if "actor_critic" in k

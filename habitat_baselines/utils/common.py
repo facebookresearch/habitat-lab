@@ -367,7 +367,9 @@ def generate_video(
         )
 
 
-def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
+def tensor_to_depth_images(
+    tensor: Union[torch.Tensor, List]
+) -> List[np.ndarray]:
     r"""Converts tensor (or list) of n image tensors to list of n images.
     Args:
         tensor: tensor containing n image tensors

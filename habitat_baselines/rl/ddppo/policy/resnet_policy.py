@@ -218,7 +218,7 @@ class PointNavResNetNet(Net):
         discrete_actions: bool = True,
     ):
         super().__init__()
-
+        self.prev_action_embedding: nn.Module
         self.discrete_actions = discrete_actions
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)

@@ -12,7 +12,6 @@ that aren't part of a floor.
 from typing import Dict, Generator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from numpy import float64
 
 from habitat.core.simulator import ShortestPathPoint
 from habitat.datasets.utils import get_action_shortest_path
@@ -75,7 +74,7 @@ def _create_episode(
     episode_id: Union[int, str],
     scene_id: str,
     start_position: List[float],
-    start_rotation: List[Union[int, float64]],
+    start_rotation: List[float],
     target_position: List[float],
     shortest_paths: Optional[List[List[ShortestPathPoint]]] = None,
     radius: Optional[float] = None,

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 

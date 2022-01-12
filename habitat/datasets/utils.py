@@ -14,8 +14,6 @@ import typing
 from collections import Counter
 from typing import Iterable, List
 
-from numpy import float64
-
 from habitat.core.logging import logger
 from habitat.core.simulator import ShortestPathPoint
 from habitat.sims.habitat_simulator.actions import HabitatSimActions

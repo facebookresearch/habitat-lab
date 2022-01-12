@@ -51,7 +51,7 @@ def quaternion_to_list(q: quaternion.quaternion):
     return q.imag.tolist() + [q.real]
 
 
-def quaternion_from_coeff(coeffs: np.ndarray) -> quaternion.quaternion:
+def quaternion_from_coeff(coeffs: List[float]) -> quaternion.quaternion:
     r"""Creates a quaternions from coeffs in [x, y, z, w] format"""
     quat = quaternion.quaternion(0, 0, 0, 0)
     quat.real = coeffs[3]
