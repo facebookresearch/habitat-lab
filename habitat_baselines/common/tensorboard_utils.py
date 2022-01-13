@@ -41,7 +41,11 @@ class TensorboardWriter:
             self.writer.close()
 
     def add_video_from_np_images(
-        self, video_name: str, step_idx: int, images: List[np.ndarray], fps: int = 10
+        self,
+        video_name: str,
+        step_idx: int,
+        images: List[np.ndarray],
+        fps: int = 10,
     ) -> None:
         r"""Write video into tensorboard from images frames.
 

@@ -174,8 +174,8 @@ class BenchmarkGym:
             save_dir = osp.dirname(self._traj_save_path)
             os.makedirs(save_dir, exist_ok=True)
             if isinstance(self._gym_env.observation_space, spaces.Dict):
-                all_obs = batch_obs(all_obs_l) #type:ignore
-                all_next_obs = batch_obs(all_next_obs_l) #type:ignore
+                all_obs = batch_obs(all_obs_l)  # type:ignore
+                all_next_obs = batch_obs(all_next_obs_l)  # type:ignore
             torch.save(
                 {
                     "done": torch.FloatTensor(all_dones),

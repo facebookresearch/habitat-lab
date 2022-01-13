@@ -8,7 +8,7 @@ import math
 import os
 import time
 from datetime import datetime
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader
 import habitat
 from habitat import logger
 from habitat.core.utils import try_cv2_import
+from habitat.dataset.utils import VocabDict
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -28,7 +29,6 @@ from habitat_baselines.il.models.models import (
     NavPlannerControllerModel,
 )
 from habitat_baselines.utils.common import generate_video
-from habitat.dataset.utils import VocabDict
 
 cv2 = try_cv2_import()
 
@@ -400,7 +400,7 @@ class PACMANTrainer(BaseILTrainer):
                 idx, question, answer, actions, action_length, goal_pos = batch
 
                 metrics_slug = {}
-                imgs = [] #type:ignore
+                imgs = []  # type:ignore
                 for i in [10, 30, 50, "rand_init"]:
                     for j in ["pred", "fwd-only"]:
                         question = question.to(self.device)

@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Iterable, Tuple, Union, List
+from typing import Dict, Iterable, List, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -11,6 +11,7 @@ from habitat import logger
 
 HiddenState = Union[Tensor, Tuple[Tensor, Tensor], None]
 
+
 def build_mlp(
     input_dim: int,
     hidden_dims: Iterable[int],
@@ -19,7 +20,7 @@ def build_mlp(
     dropout: float = 0,
     add_sigmoid: bool = True,
 ):
-    layers:List[nn.Module] = []
+    layers: List[nn.Module] = []
     D = input_dim
     if dropout > 0:
         layers.append(nn.Dropout(p=dropout))
@@ -285,7 +286,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "checkpoint_path": eqa_cnn_pretrain_ckpt_path,
             "freeze_encoder": freeze_encoder,
         }
-        self.cnn = MultitaskCNN(**cnn_kwargs) #type:ignore
+        self.cnn = MultitaskCNN(**cnn_kwargs)  # type:ignore
         self.cnn_fc_layer = nn.Sequential(
             nn.Linear(32 * 12 * 12, 64), nn.ReLU(), nn.Dropout(p=0.5)
         )
@@ -297,13 +298,13 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "rnn_num_layers": question_num_layers,
             "rnn_dropout": question_dropout,
         }
-        self.q_rnn = QuestionLstmEncoder(**q_rnn_kwargs) #type:ignore
+        self.q_rnn = QuestionLstmEncoder(**q_rnn_kwargs)  # type:ignore
 
         self.img_tr = nn.Sequential(nn.Linear(64, 64), nn.Dropout(p=0.5))
 
         self.ques_tr = nn.Sequential(nn.Linear(64, 64), nn.Dropout(p=0.5))
 
-        classifier_kwargs = {  #type:ignore
+        classifier_kwargs = {  # type:ignore
             "input_dim": 64,
             "hidden_dims": fc_dims,
             "output_dim": len(ans_vocab),
@@ -311,7 +312,7 @@ class VqaLstmCnnAttentionModel(nn.Module):
             "dropout": fc_dropout,
             "add_sigmoid": False,
         }
-        self.classifier = build_mlp(**classifier_kwargs) #type:ignore
+        self.classifier = build_mlp(**classifier_kwargs)  # type:ignore
 
         self.att = nn.Sequential(
             nn.Tanh(), nn.Dropout(p=0.5), nn.Linear(128, 1)
@@ -398,7 +399,7 @@ class NavPlannerControllerModel(nn.Module):
             "rnn_num_layers": question_num_layers,
             "rnn_dropout": question_dropout,
         }
-        self.q_rnn = QuestionLstmEncoder(**q_rnn_kwargs) #type:ignore
+        self.q_rnn = QuestionLstmEncoder(**q_rnn_kwargs)  # type:ignore
         self.ques_tr = nn.Sequential(
             nn.Linear(question_hidden_dim, question_hidden_dim),
             nn.ReLU(),
@@ -428,7 +429,7 @@ class NavPlannerControllerModel(nn.Module):
             "output_dim": 2,
             "add_sigmoid": 0,
         }
-        self.controller = build_mlp(**controller_kwargs) #type:ignore
+        self.controller = build_mlp(**controller_kwargs)  # type:ignore
 
     def forward(
         self,
@@ -458,13 +459,13 @@ class NavPlannerControllerModel(nn.Module):
         )
 
         planner_hidden_index = planner_hidden_index[
-            :, : controller_action_lengths.max() #type:ignore
+            :, : controller_action_lengths.max()  # type:ignore
         ]
         controller_img_feats = controller_img_feats[
-            :, : controller_action_lengths.max() #type:ignore
+            :, : controller_action_lengths.max()  # type:ignore
         ]
         controller_actions_in = controller_actions_in[
-            :, : controller_action_lengths.max() #type:ignore
+            :, : controller_action_lengths.max()  # type:ignore
         ]
 
         N_c, T_c, _ = controller_img_feats.size()
@@ -614,7 +615,9 @@ class NavRnn(nn.Module):
 
         self.decoder = nn.Linear(self.rnn_hidden_dim, self.num_actions)
 
-    def init_hidden(self, bsz: int) -> Union[Tuple[Tensor,Tensor], Tensor, None]:
+    def init_hidden(
+        self, bsz: int
+    ) -> Union[Tuple[Tensor, Tensor], Tensor, None]:
         weight = next(self.parameters()).data
         if self.rnn_type == "LSTM":
             return (
@@ -689,7 +692,7 @@ class NavRnn(nn.Module):
         hidden: HiddenState,
     ) -> Tuple[Tensor, Tensor]:
 
-        T:Union[bool, int] = False
+        T: Union[bool, int] = False
         if self.image_input is True:
             N, T, _ = img_feats.size()
             input_feats = img_feats

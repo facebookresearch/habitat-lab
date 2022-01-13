@@ -44,7 +44,7 @@ class NavDataset(wds.Dataset):
         """
         self.config = config.TASK_CONFIG
         self.env = env
-        self.episodes = self.env._dataset.episodes #type:ignore
+        self.episodes = self.env._dataset.episodes  # type:ignore
         self.max_controller_actions = max_controller_actions
         self.device = device
         self.sim = self.env.sim
@@ -52,8 +52,8 @@ class NavDataset(wds.Dataset):
         # sorting and making episode ids consecutive for simpler indexing
         self.sort_episodes()
 
-        self.q_vocab = self.env._dataset.question_vocab #type:ignore
-        self.ans_vocab = self.env._dataset.answer_vocab #type:ignore
+        self.q_vocab = self.env._dataset.question_vocab  # type:ignore
+        self.ans_vocab = self.env._dataset.answer_vocab  # type:ignore
 
         self.eval_save_results = config.EVAL_SAVE_RESULTS
 
