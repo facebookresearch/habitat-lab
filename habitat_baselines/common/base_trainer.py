@@ -13,7 +13,6 @@ from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
-from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.ddp_utils import SAVE_STATE, is_slurm_batch_job
