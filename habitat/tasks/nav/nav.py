@@ -382,7 +382,7 @@ class HeadingSensor(Sensor):
         if isinstance(rotation_world_agent, quaternion.quaternion):
             return self._quat_to_xy_heading(rotation_world_agent.inverse())
         else:
-            raise AttributeError("Agent's rotation was not a quaternion")
+            raise ValueError("Agent's rotation was not a quaternion")
 
 
 @registry.register_sensor(name="CompassSensor")
@@ -407,7 +407,7 @@ class EpisodicCompassSensor(HeadingSensor):
                 rotation_world_agent.inverse() * rotation_world_start
             )
         else:
-            raise AttributeError("Agent's rotation was not a quaternion")
+            raise ValueError("Agent's rotation was not a quaternion")
 
 
 @registry.register_sensor(name="GPSSensor")
