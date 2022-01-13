@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import habitat
 from habitat import logger
 from habitat.core.utils import try_cv2_import
-from habitat.dataset.utils import VocabDict
+from habitat.datasets.utils import VocabDict
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
