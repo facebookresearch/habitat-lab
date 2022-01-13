@@ -98,6 +98,10 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
         if isinstance(index, str):
             super().__setitem__(index, value)  # type: ignore
         else:
+            if not isinstance(value, dict):
+                raise RuntimeError(
+                    "Set with indexing requires that the value is a dict"
+                )
             if strict and (self.keys() != value.keys()):
                 raise KeyError(
                     "Keys don't match: Dest={} Source={}".format(
@@ -113,11 +117,30 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
                         continue
 
                 v = value[k]
+                tgt = self[k]
 
                 if isinstance(v, (TensorDict, dict)):
-                    self[k].set(index, v, strict=strict)
+                    assert isinstance(tgt, TensorDict)
+                    tgt.set(index, v, strict=strict)
                 else:
-                    self[k][index].copy_(torch.as_tensor(v))
+                    assert isinstance(tgt, torch.Tensor)
+                    tgt[index].copy_(torch.as_tensor(v))
+
+    @overload
+    def __setitem__(
+        self,
+        index: str,
+        value: Union[torch.Tensor, "TensorDict"],
+    ) -> None:
+        ...
+
+    @overload
+    def __setitem__(
+        self,
+        index: TensorIndexType,
+        value: Union["TensorDict", DictTree, TensorLike],
+    ) -> None:
+        ...
 
     def __setitem__(
         self,
@@ -137,10 +160,12 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
             dst = TensorDict()
 
         for k, v in src.items():
-            if torch.is_tensor(v):
+            if isinstance(v, torch.Tensor):
                 dst[k] = func(v)
             else:
-                dst[k] = cls.map_func(func, v, dst.get(k, None))
+                sub_dst = dst.get(k, None)
+                assert sub_dst is None or isinstance(sub_dst, TensorDict)
+                dst[k] = cls.map_func(func, v, sub_dst)
 
         return dst
 
