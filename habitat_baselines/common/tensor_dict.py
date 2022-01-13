@@ -74,7 +74,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: str,
-        value: Union[TensorLike, "TensorDict", DictTree],
+        value: Union[torch.Tensor, "TensorDict"],
         strict: bool = True,
     ) -> None:
         ...
@@ -92,7 +92,6 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
         self,
         index: Union[str, TensorIndexType],
         value: Union[torch.Tensor, "TensorDict", DictTree, TensorLike],
-
         strict: bool = True,
     ) -> None:
         if isinstance(index, str):
