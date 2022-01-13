@@ -28,7 +28,8 @@ class BaseTrainer:
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
-
+    config: Config
+    flush_secs: float
     supported_tasks: ClassVar[List[str]]
 
     def train(self) -> None:
@@ -278,7 +279,7 @@ class BaseRLTrainer(BaseTrainer):
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
-        envs: Union[VectorEnv, RLEnv, Env],
+        envs: VectorEnv,
         test_recurrent_hidden_states: Tensor,
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
@@ -286,7 +287,7 @@ class BaseRLTrainer(BaseTrainer):
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
-        Union[VectorEnv, RLEnv, Env],
+        VectorEnv,
         Tensor,
         Tensor,
         Tensor,

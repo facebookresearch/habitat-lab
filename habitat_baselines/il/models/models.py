@@ -9,6 +9,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from habitat import logger
 
+HiddenState = Union[Tensor, Tuple[Tensor, Tensor], None]
 
 def build_mlp(
     input_dim: int,
@@ -508,7 +509,7 @@ class NavPlannerControllerModel(nn.Module):
         questions: Tensor,
         img_feats: Tensor,
         actions_in: Tensor,
-        planner_hidden: Tensor,
+        planner_hidden: HiddenState,
     ) -> Tuple[Tensor, Tensor]:
         img_feats = self.cnn_fc_layer(img_feats)
         ques_feats = self.q_rnn(questions)
@@ -685,7 +686,7 @@ class NavRnn(nn.Module):
         img_feats: Tensor,
         question_feats: Tensor,
         actions_in: Tensor,
-        hidden: Tensor,
+        hidden: HiddenState,
     ) -> Tuple[Tensor, Tensor]:
 
         T:Union[bool, int] = False
