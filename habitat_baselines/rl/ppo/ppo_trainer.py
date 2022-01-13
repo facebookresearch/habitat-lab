@@ -32,22 +32,25 @@ from habitat_baselines.common.obs_transformers import (
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo import DDPPO
-from habitat_baselines.rl.ddppo.algo.ddp_utils import (
+from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
-    REQUEUE,
     add_signal_handlers,
     get_distrib_size,
     init_distrib_slurm,
     is_slurm_batch_job,
-    load_interrupted_state,
+    load_resume_state,
     rank0_only,
     requeue_job,
-    save_interrupted_state,
+    save_resume_state,
+)
+from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+    PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
+    action_to_velocity_control,
     batch_obs,
     generate_video,
 )
@@ -70,10 +73,6 @@ class PPOTrainer(BaseRLTrainer):
     actor_critic: Policy
 
     def __init__(self, config=None):
-        interrupted_state = load_interrupted_state()
-        if interrupted_state is not None:
-            config = interrupted_state["config"]
-
         super().__init__(config)
         self.actor_critic = None
         self.agent = None
@@ -84,10 +83,14 @@ class PPOTrainer(BaseRLTrainer):
         self._encoder = None
         self._obs_space = None
 
-        # Distirbuted if the world size would be
+        # Distributed if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
+
+        self.using_velocity_ctrl = (
+            self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+        ) == ["VELOCITY_CONTROL"]
 
     @property
     def obs_space(self):
@@ -130,8 +133,9 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
+
         self.actor_critic = policy.from_config(
-            self.config, observation_space, self.envs.action_spaces[0]
+            self.config, observation_space, self.policy_action_space
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -194,6 +198,13 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def _init_train(self):
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.config: Config = resume_state["config"]
+            self.using_velocity_ctrl = (
+                self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+            ) == ["VELOCITY_CONTROL"]
+
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
 
@@ -216,8 +227,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config.SIMULATOR_GPU_ID = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
             self.config.TASK_CONFIG.SEED += (
-                torch.distributed.get_world_size()
-                * self.config.NUM_ENVIRONMENTS
+                torch.distributed.get_rank() * self.config.NUM_ENVIRONMENTS
             )
             self.config.freeze()
 
@@ -238,6 +248,17 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         self._init_envs()
+
+        if self.using_velocity_ctrl:
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
+            action_shape = (2,)
+            discrete_actions = False
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = None
+            discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -275,14 +296,17 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
+
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
-            self.envs.action_spaces[0],
+            self.policy_action_space,
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+            action_shape=action_shape,
+            discrete_actions=discrete_actions,
         )
         self.rollouts.to(self.device)
 
@@ -432,7 +456,11 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            self.envs.async_step_at(index_env, act.item())
+            if self.using_velocity_ctrl:
+                step_action = action_to_velocity_control(act)
+            else:
+                step_action = act.item()
+            self.envs.async_step_at(index_env, step_action)
 
         self.env_time += time.time() - t_step_env
 
@@ -621,14 +649,11 @@ class PPOTrainer(BaseRLTrainer):
             for k, v in deltas.items()
             if k not in {"reward", "count"}
         }
-        if len(metrics) > 0:
-            writer.add_scalars("metrics", metrics, self.num_steps_done)
 
-        writer.add_scalars(
-            "losses",
-            losses,
-            self.num_steps_done,
-        )
+        for k, v in metrics.items():
+            writer.add_scalar(f"metrics/{k}", v, self.num_steps_done)
+        for k, v in losses.items():
+            writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
@@ -691,15 +716,13 @@ class PPOTrainer(BaseRLTrainer):
             lr_lambda=lambda x: 1 - self.percent_done(),
         )
 
-        interrupted_state = load_interrupted_state()
-        if interrupted_state is not None:
-            self.agent.load_state_dict(interrupted_state["state_dict"])
-            self.agent.optimizer.load_state_dict(
-                interrupted_state["optim_state"]
-            )
-            lr_scheduler.load_state_dict(interrupted_state["lr_sched_state"])
+        resume_state = load_resume_state(self.config)
+        if resume_state is not None:
+            self.agent.load_state_dict(resume_state["state_dict"])
+            self.agent.optimizer.load_state_dict(resume_state["optim_state"])
+            lr_scheduler.load_state_dict(resume_state["lr_sched_state"])
 
-            requeue_stats = interrupted_state["requeue_stats"]
+            requeue_stats = resume_state["requeue_stats"]
             self.env_time = requeue_stats["env_time"]
             self.pth_time = requeue_stats["pth_time"]
             self.num_steps_done = requeue_stats["num_steps_done"]
@@ -710,9 +733,10 @@ class PPOTrainer(BaseRLTrainer):
             count_checkpoints = requeue_stats["count_checkpoints"]
             prev_time = requeue_stats["prev_time"]
 
-            self._last_checkpoint_percent = requeue_stats[
-                "_last_checkpoint_percent"
-            ]
+            self.running_episode_stats = requeue_stats["running_episode_stats"]
+            self.window_episode_stats.update(
+                requeue_stats["window_episode_stats"]
+            )
 
         ppo_cfg = self.config.RL.PPO
 
@@ -732,32 +756,37 @@ class PPOTrainer(BaseRLTrainer):
                         1 - self.percent_done()
                     )
 
+                if rank0_only() and self._should_save_resume_state():
+                    requeue_stats = dict(
+                        env_time=self.env_time,
+                        pth_time=self.pth_time,
+                        count_checkpoints=count_checkpoints,
+                        num_steps_done=self.num_steps_done,
+                        num_updates_done=self.num_updates_done,
+                        _last_checkpoint_percent=self._last_checkpoint_percent,
+                        prev_time=(time.time() - self.t_start) + prev_time,
+                        running_episode_stats=self.running_episode_stats,
+                        window_episode_stats=dict(self.window_episode_stats),
+                    )
+
+                    save_resume_state(
+                        dict(
+                            state_dict=self.agent.state_dict(),
+                            optim_state=self.agent.optimizer.state_dict(),
+                            lr_sched_state=lr_scheduler.state_dict(),
+                            config=self.config,
+                            requeue_stats=requeue_stats,
+                        ),
+                        self.config,
+                    )
+
                 if EXIT.is_set():
                     profiling_wrapper.range_pop()  # train update
 
                     self.envs.close()
 
-                    if REQUEUE.is_set() and rank0_only():
-                        requeue_stats = dict(
-                            env_time=self.env_time,
-                            pth_time=self.pth_time,
-                            count_checkpoints=count_checkpoints,
-                            num_steps_done=self.num_steps_done,
-                            num_updates_done=self.num_updates_done,
-                            _last_checkpoint_percent=self._last_checkpoint_percent,
-                            prev_time=(time.time() - self.t_start) + prev_time,
-                        )
-                        save_interrupted_state(
-                            dict(
-                                state_dict=self.agent.state_dict(),
-                                optim_state=self.agent.optimizer.state_dict(),
-                                lr_sched_state=lr_scheduler.state_dict(),
-                                config=self.config,
-                                requeue_stats=requeue_stats,
-                            )
-                        )
-
                     requeue_job()
+
                     return
 
                 self.agent.eval()
@@ -809,7 +838,11 @@ class PPOTrainer(BaseRLTrainer):
 
                 self.num_updates_done += 1
                 losses = self._coalesce_post_step(
-                    dict(value_loss=value_loss, action_loss=action_loss),
+                    dict(
+                        value_loss=value_loss,
+                        action_loss=action_loss,
+                        entropy=dist_entropy,
+                    ),
                     count_steps_delta,
                 )
 
@@ -873,6 +906,18 @@ class PPOTrainer(BaseRLTrainer):
             logger.info(f"env config: {config}")
 
         self._init_envs(config)
+
+        if self.using_velocity_ctrl:
+            self.policy_action_space = self.envs.action_spaces[0][
+                "VELOCITY_CONTROL"
+            ]
+            action_shape = (2,)
+            action_type = torch.float
+        else:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = (1,)
+            action_type = torch.long
+
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -896,9 +941,9 @@ class PPOTrainer(BaseRLTrainer):
         )
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            1,
+            *action_shape,
             device=self.device,
-            dtype=torch.long,
+            dtype=action_type,
         )
         not_done_masks = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -952,13 +997,18 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
-
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            step_data = [a.item() for a in actions.to(device="cpu")]
+            if self.using_velocity_ctrl:
+                step_data = [
+                    action_to_velocity_control(a)
+                    for a in actions.to(device="cpu")
+                ]
+            else:
+                step_data = [a.item() for a in actions.to(device="cpu")]
 
             outputs = self.envs.step(step_data)
 
@@ -1065,14 +1115,12 @@ class PPOTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
-        writer.add_scalars(
-            "eval_reward",
-            {"average reward": aggregated_stats["reward"]},
-            step_id,
+        writer.add_scalar(
+            "eval_reward/average_reward", aggregated_stats["reward"], step_id
         )
 
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
-        if len(metrics) > 0:
-            writer.add_scalars("eval_metrics", metrics, step_id)
+        for k, v in metrics.items():
+            writer.add_scalar(f"eval_metrics/{k}", v, step_id)
 
         self.envs.close()

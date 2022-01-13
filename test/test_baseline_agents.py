@@ -85,7 +85,8 @@ def test_simple_agents():
         simple_agents.RandomForwardAgent,
     ]:
         agent = agent_class(
-            config_env.TASK.SUCCESS_DISTANCE, config_env.TASK.GOAL_SENSOR_UUID
+            config_env.TASK.SUCCESS.SUCCESS_DISTANCE,
+            config_env.TASK.GOAL_SENSOR_UUID,
         )
         habitat.logger.info(agent_class.__name__)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=100))

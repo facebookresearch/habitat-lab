@@ -41,14 +41,13 @@ if sys.version_info[:2] < (3, 8):
                 file, protocol, **kwargs
             ).dispatch_table
 
-
 else:
     import pickle
 
     ForkingPickler5 = _ForkingPickler
 
 
-class ConnectionWrapper(object):
+class ConnectionWrapper:
     """Proxy class for _multiprocessing.Connection which uses ForkingPickler to
     serialize objects. Will use the Pickle5 backport if available."""
 

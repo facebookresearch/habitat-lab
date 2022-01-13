@@ -46,7 +46,7 @@ def save_seg_results(
 
     Args:
         gt_seg: ground truth segmentation tensor
-        pred_seg: ouput segmentation tensor
+        pred_seg: output segmentation tensor
         path: to save images
     """
 
@@ -70,7 +70,7 @@ def save_depth_results(
 
     Args:
         gt_depth: ground truth depth tensor
-        pred_depth: ouput depth tensor
+        pred_depth: output depth tensor
         path: to save images
     """
     path = path.format(split="val", type="depth")

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-import quaternion  # noqa # pylint: disable=unused-import
+import quaternion  # noqa: F401 # pylint: disable=unused-import
 
 
 def quaternion_to_rotation(q_r, q_i, q_j, q_k):
@@ -46,3 +46,19 @@ def compute_pixel_coverage(instance_seg, object_id):
     cand_mask = instance_seg == object_id
     score = cand_mask.sum().astype(np.float64) / cand_mask.size
     return score
+
+
+def get_angle(x, y):
+    """
+    Gets the angle between two vectors in radians.
+    """
+    if np.linalg.norm(x) != 0:
+        x_norm = x / np.linalg.norm(x)
+    else:
+        x_norm = x
+
+    if np.linalg.norm(y) != 0:
+        y_norm = y / np.linalg.norm(y)
+    else:
+        y_norm = y
+    return np.arccos(np.clip(np.dot(x_norm, y_norm), -1, 1))

@@ -87,7 +87,7 @@ class DecentralizedDistributedMixin:
         """
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
-        class Guard:
+        class Guard:  # noqa: SIM119
             def __init__(self, model, device):
                 if torch.cuda.is_available():
                     self.ddp = torch.nn.parallel.DistributedDataParallel(
@@ -108,7 +108,7 @@ class DecentralizedDistributedMixin:
         self, observations, rnn_hidden_states, prev_actions, masks, action
     ):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
-        that directly so that that call can be overrided with inheritence
+        that directly so that that call can be overrided with inheritance
         """
         return self._evaluate_actions_wrapper.ddp(
             observations, rnn_hidden_states, prev_actions, masks, action

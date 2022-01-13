@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import numbers
 import os
 import re
 import shutil
@@ -31,6 +32,7 @@ from torch import Size, Tensor
 from torch import nn as nn
 
 from habitat import logger
+from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
@@ -74,6 +76,58 @@ class CategoricalNet(nn.Module):
         return CustomFixedCategorical(logits=x)
 
 
+class CustomNormal(torch.distributions.normal.Normal):
+    def sample(
+        self, sample_shape: Size = torch.Size()  # noqa: B008
+    ) -> Tensor:
+        return super().rsample(sample_shape)
+
+    def log_probs(self, actions) -> Tensor:
+        ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
+        return ret
+
+
+class GaussianNet(nn.Module):
+    def __init__(
+        self,
+        num_inputs: int,
+        num_outputs: int,
+        config: Config,
+    ) -> None:
+        super().__init__()
+
+        self.action_activation = config.action_activation
+        self.use_log_std = config.use_log_std
+        self.use_softplus = config.use_softplus
+        if config.use_log_std:
+            self.min_std = config.min_log_std
+            self.max_std = config.max_log_std
+        else:
+            self.min_std = config.min_std
+            self.max_std = config.max_std
+
+        self.mu = nn.Linear(num_inputs, num_outputs)
+        self.std = nn.Linear(num_inputs, num_outputs)
+
+        nn.init.orthogonal_(self.mu.weight, gain=0.01)
+        nn.init.constant_(self.mu.bias, 0)
+        nn.init.orthogonal_(self.std.weight, gain=0.01)
+        nn.init.constant_(self.std.bias, 0)
+
+    def forward(self, x: Tensor) -> CustomNormal:
+        mu = self.mu(x)
+        if self.action_activation == "tanh":
+            mu = torch.tanh(mu)
+
+        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.use_log_std:
+            std = torch.exp(std)
+        if self.use_softplus:
+            std = torch.nn.functional.softplus(std)
+
+        return CustomNormal(mu, std)
+
+
 def linear_decay(epoch: int, total_num_updates: int) -> float:
     r"""Returns a multiplicative factor for linear value decay
 
@@ -92,7 +146,7 @@ class ObservationBatchingCache:
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
-    _pool: Dict[Any, torch.Tensor] = attr.Factory(dict)
+    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = attr.Factory(dict)
 
     def get(
         self,
@@ -100,7 +154,7 @@ class ObservationBatchingCache:
         sensor_name: str,
         sensor: torch.Tensor,
         device: Optional[torch.device] = None,
-    ) -> torch.Tensor:
+    ) -> Union[torch.Tensor, np.ndarray]:
         r"""Returns a tensor of the right size to batch num_obs observations together
 
         If sensor is a cpu-side tensor and device is a cuda device the batched tensor will
@@ -127,6 +181,11 @@ class ObservationBatchingCache:
             and cache.device.type == "cpu"
         ):
             cache = cache.pin_memory()
+
+        if cache.device.type == "cpu":
+            # Pytorch indexing is slow,
+            # so convert to numpy
+            cache = cache.numpy()
 
         self._pool[key] = cache
         return cache
@@ -158,24 +217,65 @@ def batch_obs(
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
 
-    for i, obs in enumerate(observations):
-        for sensor_name, sensor in obs.items():
-            sensor = torch.as_tensor(sensor)
+    obs = observations[0]
+    # Order sensors by size, stack and move the largest first
+    sensor_names = sorted(
+        obs.keys(),
+        key=lambda name: 1
+        if isinstance(obs[name], numbers.Number)
+        else np.prod(obs[name].shape),
+        reverse=True,
+    )
+
+    for sensor_name in sensor_names:
+        for i, obs in enumerate(observations):
+            sensor = obs[sensor_name]
             if cache is None:
-                batch[sensor_name].append(sensor)
+                batch[sensor_name].append(torch.as_tensor(sensor))
             else:
                 if sensor_name not in batch_t:
                     batch_t[sensor_name] = cache.get(
-                        len(observations), sensor_name, sensor, device
+                        len(observations),
+                        sensor_name,
+                        torch.as_tensor(sensor),
+                        device,
                     )
 
-                batch_t[sensor_name][i].copy_(sensor)
+                # Use isinstance(sensor, np.ndarray) here instead of
+                # np.asarray as this is quickier for the more common
+                # path of sensor being an np.ndarray
+                # np.asarray is ~3x slower than checking
+                if isinstance(sensor, np.ndarray):
+                    batch_t[sensor_name][i] = sensor
+                elif torch.is_tensor(sensor):
+                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)
+                # If the sensor wasn't a tensor, then it's some CPU side data
+                # so use a numpy array
+                else:
+                    batch_t[sensor_name][i] = np.asarray(sensor)
+
+        # With the batching cache, we use pinned mem
+        # so we can start the move to the GPU async
+        # and continue stacking other things with it
+        if cache is not None:
+            # If we were using a numpy array to do indexing and copying,
+            # convert back to torch tensor
+            # We know that batch_t[sensor_name] is either an np.ndarray
+            # or a torch.Tensor, so this is faster than torch.as_tensor
+            if isinstance(batch_t[sensor_name], np.ndarray):
+                batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
+
+            batch_t[sensor_name] = batch_t[sensor_name].to(
+                device, non_blocking=True
+            )
 
     if cache is None:
         for sensor in batch:
             batch_t[sensor] = torch.stack(batch[sensor], dim=0)
 
-    return batch_t.map(lambda v: v.to(device, non_blocking=True))
+        batch_t.map_in_place(lambda v: v.to(device))
+
+    return batch_t
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
@@ -231,6 +331,7 @@ def generate_video(
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
     fps: int = 10,
+    verbose: bool = True,
 ) -> None:
     r"""Generate video according to specified information.
 
@@ -259,7 +360,7 @@ def generate_video(
     )
     if "disk" in video_option:
         assert video_dir is not None
-        images_to_video(images, video_dir, video_name)
+        images_to_video(images, video_dir, video_name, verbose=verbose)
     if "tensorboard" in video_option:
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
@@ -474,3 +575,21 @@ def create_tar_archive(archive_path: str, dataset_path: str) -> None:
 
 def delete_folder(path: str) -> None:
     shutil.rmtree(path)
+
+
+def action_to_velocity_control(
+    action: torch.Tensor,
+    allow_sliding: bool = None,
+) -> Dict[str, Any]:
+    lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
+    step_action = {
+        "action": {
+            "action": "VELOCITY_CONTROL",
+            "action_args": {
+                "linear_velocity": lin_vel.item(),
+                "angular_velocity": ang_vel.item(),
+                "allow_sliding": allow_sliding,
+            },
+        }
+    }
+    return step_action

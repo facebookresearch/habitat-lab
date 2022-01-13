@@ -202,7 +202,7 @@ def test_pointnav_episode_generator():
         random.seed(config.SEED)
         generator = pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
-            shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
+            shortest_path_success_distance=config.TASK.SUCCESS.SUCCESS_DISTANCE,
             shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
         )
         episodes = []
@@ -213,7 +213,7 @@ def test_pointnav_episode_generator():
         for episode in pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
             num_episodes=NUM_EPISODES,
-            shortest_path_success_distance=config.TASK.SUCCESS_DISTANCE,
+            shortest_path_success_distance=config.TASK.SUCCESS.SUCCESS_DISTANCE,
             shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
             geodesic_to_euclid_min_ratio=0,
         ):

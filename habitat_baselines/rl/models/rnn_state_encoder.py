@@ -109,7 +109,7 @@ def _build_pack_info_from_dones(
         # Creates this array
         # [step * N + start for step in range(prev_len, next_len)
         #                   for start in episode_starts[0:num_valid_for_length]
-        # * N because each step is seperated by N elements
+        # * N because each step is separated by N elements
         new_inds = (
             torch.arange(
                 prev_len, next_len, device=episode_starts.device

@@ -103,6 +103,7 @@ def images_to_video(
     video_name: str,
     fps: int = 10,
     quality: Optional[float] = 5,
+    verbose: bool = True,
     **kwargs,
 ):
     r"""Calls imageio to run FFMPEG on a list of images. For more info on
@@ -122,7 +123,14 @@ def images_to_video(
     assert 0 <= quality <= 10
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
+    video_name = video_name.replace(" ", "_").replace("\n", "_")
+
+    # File names are not allowed to be over 255 characters
+    video_name_split = video_name.split("/")
+    video_name = "/".join(
+        video_name_split[:-1] + [video_name_split[-1][:251] + ".mp4"]
+    )
+
     writer = imageio.get_writer(
         os.path.join(output_dir, video_name),
         fps=fps,
@@ -130,7 +138,11 @@ def images_to_video(
         **kwargs,
     )
     logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
-    for im in tqdm.tqdm(images):
+    if verbose:
+        images_iter = tqdm.tqdm(images)
+    else:
+        images_iter = images
+    for im in images_iter:
         writer.append_data(im)
     writer.close()
 
@@ -152,6 +164,45 @@ def draw_collision(view: np.ndarray, alpha: float = 0.4) -> np.ndarray:
     return view
 
 
+def tile_images(render_obs_images: List[np.ndarray]) -> np.ndarray:
+    """Tiles multiple images of non-equal size to a single image. Images are
+    tiled into columns making the returned image wider than tall.
+    """
+    # Get the images in descending order of vertical height.
+    render_obs_images = sorted(
+        render_obs_images, key=lambda x: x.shape[0], reverse=True
+    )
+    img_cols = [[render_obs_images[0]]]
+    max_height = render_obs_images[0].shape[0]
+    cur_y = 0.0
+    # Arrange the images in columns with the largest image to the left.
+    col = []
+    for im in render_obs_images[1:]:
+        if cur_y + im.shape[0] <= max_height:
+            col.append(im)
+            cur_y += im.shape[0]
+        else:
+            img_cols.append(col)
+            col = [im]
+            cur_y = im.shape[0]
+    img_cols.append(col)
+    col_widths = [max(col_ele.shape[1] for col_ele in col) for col in img_cols]
+    # Get the total width of all the columns put together.
+    total_width = sum(col_widths)
+
+    # Tile the images, pasting the columns side by side.
+    final_im = np.zeros(
+        (max_height, total_width, 3), dtype=render_obs_images[0].dtype
+    )
+    cur_x = 0
+    for i in range(len(img_cols)):
+        next_x = cur_x + col_widths[i]
+        total_col_im = np.concatenate(img_cols[i], axis=0)
+        final_im[: total_col_im.shape[0], cur_x:next_x] = total_col_im
+        cur_x = next_x
+    return final_im
+
+
 def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     r"""Generate image of single frame from observation and info
     returned from a single environment step().
@@ -163,23 +214,22 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     Returns:
         generated image of a single frame.
     """
-    egocentric_view_l: List[np.ndarray] = []
-    if "rgb" in observation:
-        rgb = observation["rgb"]
-        if not isinstance(rgb, np.ndarray):
-            rgb = rgb.cpu().numpy()
+    render_obs_images: List[np.ndarray] = []
+    for sensor_name in observation:
+        if "rgb" in sensor_name:
+            rgb = observation[sensor_name]
+            if not isinstance(rgb, np.ndarray):
+                rgb = rgb.cpu().numpy()
 
-        egocentric_view_l.append(rgb)
+            render_obs_images.append(rgb)
+        elif "depth" in sensor_name:
+            depth_map = observation[sensor_name].squeeze() * 255.0
+            if not isinstance(depth_map, np.ndarray):
+                depth_map = depth_map.cpu().numpy()
 
-    # draw depth map if observation has depth info
-    if "depth" in observation:
-        depth_map = observation["depth"].squeeze() * 255.0
-        if not isinstance(depth_map, np.ndarray):
-            depth_map = depth_map.cpu().numpy()
-
-        depth_map = depth_map.astype(np.uint8)
-        depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-        egocentric_view_l.append(depth_map)
+            depth_map = depth_map.astype(np.uint8)
+            depth_map = np.stack([depth_map for _ in range(3)], axis=2)
+            render_obs_images.append(depth_map)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:
@@ -187,25 +237,28 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
 
-        egocentric_view_l.append(rgb)
+        render_obs_images.append(rgb)
 
     assert (
-        len(egocentric_view_l) > 0
+        len(render_obs_images) > 0
     ), "Expected at least one visual sensor enabled."
-    egocentric_view = np.concatenate(egocentric_view_l, axis=1)
+
+    shapes_are_equal = len(set(x.shape for x in render_obs_images)) == 1
+    if not shapes_are_equal:
+        render_frame = tile_images(render_obs_images)
+    else:
+        render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
     if "collisions" in info and info["collisions"]["is_collision"]:
-        egocentric_view = draw_collision(egocentric_view)
-
-    frame = egocentric_view
+        render_frame = draw_collision(render_frame)
 
     if "top_down_map" in info:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info["top_down_map"], egocentric_view.shape[0]
+            info["top_down_map"], render_frame.shape[0]
         )
-        frame = np.concatenate((egocentric_view, top_down_map), axis=1)
-    return frame
+        render_frame = np.concatenate((render_frame, top_down_map), axis=1)
+    return render_frame
 
 
 def append_text_to_image(image: np.ndarray, text: str):

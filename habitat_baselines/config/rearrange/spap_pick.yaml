@@ -1,0 +1,62 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
+
+SENSE_PLAN_ACT:
+  VERBOSE: True
+  RUN_FREQ: 2
+  KINEMATIC_CTRL: True
+  N_GRASPS: 100
+  MP_OBJ: True
+  MP_MARGIN: null
+  MP_RENDER: True
+  TIMEOUT: 3
+  EXEC_EE_THRESH: 0.1
+  # "Priv" or "Reg"
+  MP_SIM_TYPE: "Priv"
+  VIDEO_DIR: 'data/vids'
+  DEBUG_DIR: "data/mp_test"
+  COUNT_OBJ_COLLISIONS: True
+  GRASP_GEN_IS_VERBOSE: True
+  IK_DIST_THRESH: 0.1
+RL:
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 2000.0
+    SLACK_REWARD: -0.01
+
+    GYM_OBS_KEYS: ['joint', 'ee_pos']
+    GYM_DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
+
+    GYM_ACHIEVED_GOAL_KEYS: []
+    GYM_FIX_INFO_DICT: True
+    GYM_ACTION_KEYS: ['ARM_ACTION']
+    END_ON_SUCCESS: False
+
+    DIST_REWARD: 20.0
+    SUCC_REWARD: 10.0
+    PICK_REWARD: 20.0
+    CONSTRAINT_VIOLATE_PEN: 10.0
+    DROP_PEN: 5.0
+    WRONG_PICK_PEN: 5.0
+    COLLISION_PENALTY: 1.0
+    ROBOT_OBJ_COLLISION_PENALTY: 0.0
+
+    FORCE_PEN: 0.001
+    MAX_FORCE_PEN: 1.0
+    FORCE_END_PEN: 10.0
+
+    USE_DIFF: True
+
+    SUCC_THRESH: 0.15
+    HOLD_THRESH: 0.09
+    # In radians
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 0.05
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+ENV_NAME: "RearrangeRLEnv"
+VIDEO_DIR: "data/vids/"
+VIDEO_OPTIONS: ["disk"]
+
+COUNT_OBJ_COLLISIONS: True
+COUNT_ROBOT_OBJ_COLLS: False

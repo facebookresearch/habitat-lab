@@ -132,8 +132,8 @@ class Benchmark:
 
         count_episodes = 0
         while count_episodes < num_episodes:
-            agent.reset()
             observations = self._env.reset()
+            agent.reset()
 
             while not self._env.episode_over:
                 action = agent.act(observations)
@@ -141,7 +141,11 @@ class Benchmark:
 
             metrics = self._env.get_metrics()
             for m, v in metrics.items():
-                agg_metrics[m] += v
+                if isinstance(v, dict):
+                    for sub_m, sub_v in v.items():
+                        agg_metrics[m + "/" + str(sub_m)] += sub_v
+                else:
+                    agg_metrics[m] += v
             count_episodes += 1
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}

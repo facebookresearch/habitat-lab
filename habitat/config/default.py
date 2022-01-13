@@ -47,7 +47,6 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
-_C.TASK.SUCCESS_DISTANCE = 0.2
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
 _C.TASK.GOAL_SENSOR_UUID = "pointgoal"
@@ -73,6 +72,13 @@ ACTIONS.LOOK_DOWN = CN()
 ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
 ACTIONS.TELEPORT = CN()
 ACTIONS.TELEPORT.TYPE = "TeleportAction"
+ACTIONS.VELOCITY_CONTROL = CN()
+ACTIONS.VELOCITY_CONTROL.TYPE = "VelocityAction"
+ACTIONS.VELOCITY_CONTROL.LIN_VEL_RANGE = [0.0, 0.25]  # meters per sec
+ACTIONS.VELOCITY_CONTROL.ANG_VEL_RANGE = [-10.0, 10.0]  # deg per sec
+ACTIONS.VELOCITY_CONTROL.MIN_ABS_LIN_SPEED = 0.025  # meters per sec
+ACTIONS.VELOCITY_CONTROL.MIN_ABS_ANG_SPEED = 1.0  # deg per sec
+ACTIONS.VELOCITY_CONTROL.TIME_STEP = 1.0  # seconds
 
 _C.TASK.ACTIONS = ACTIONS
 # -----------------------------------------------------------------------------
@@ -213,6 +219,10 @@ _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
+_C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
+_C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
+    []
+)  # a list of directory or config paths to search in addition to the dataset for object configs
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
@@ -223,39 +233,126 @@ _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 SIMULATOR_SENSOR = CN()
 SIMULATOR_SENSOR.HEIGHT = 480
 SIMULATOR_SENSOR.WIDTH = 640
-SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+
+# -----------------------------------------------------------------------------
+# CAMERA SENSOR
+# -----------------------------------------------------------------------------
+CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+
+SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+SIMULATOR_DEPTH_SENSOR.MIN_DEPTH = 0.0
+SIMULATOR_DEPTH_SENSOR.MAX_DEPTH = 10.0
+SIMULATOR_DEPTH_SENSOR.NORMALIZE_DEPTH = True
+
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
+_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
-_C.SIMULATOR.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH = 10.0
-_C.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = True
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+# -----------------------------------------------------------------------------
+# EQUIRECT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_RGB_SENSOR.TYPE = "HabitatSimEquirectangularRGBSensor"
+# -----------------------------------------------------------------------------
+# EQUIRECT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
+    "HabitatSimEquirectangularDepthSensor"
+)
+# -----------------------------------------------------------------------------
+# EQUIRECT SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
+    "HabitatSimEquirectangularSemanticSensor"
+)
+# -----------------------------------------------------------------------------
+# FISHEYE SENSOR
+# -----------------------------------------------------------------------------
+FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
+FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
+# -----------------------------------------------------------------------------
+# ROBOT HEAD RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.HEAD_RGB_SENSOR.UUID = "robot_head_rgb"
+# -----------------------------------------------------------------------------
+# ROBOT HEAD DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.HEAD_DEPTH_SENSOR.UUID = "robot_head_depth"
+# -----------------------------------------------------------------------------
+# ARM RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ARM_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.ARM_RGB_SENSOR.UUID = "robot_arm_rgb"
+# -----------------------------------------------------------------------------
+# ARM DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
+# -----------------------------------------------------------------------------
+# 3rd RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.THIRD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
+# -----------------------------------------------------------------------------
+# 3rd DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
+
+# The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
+# Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
+# Camera Model, The International Conference on 3D Vision (3DV), 2018
+# You can find the intrinsic parameters for the other lenses in the same table as well.
+FISHEYE_SIM_SENSOR.XI = -0.27
+FISHEYE_SIM_SENSOR.ALPHA = 0.57
+FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [364.84, 364.86]
+# Place camera at center of screen
+# Can be specified, otherwise is calculated automatically.
+FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = None  # (defaults to (h/2,w/2))
+FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
+# -----------------------------------------------------------------------------
+# FISHEYE RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
+# -----------------------------------------------------------------------------
+# FISHEYE SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR = FISHEYE_SIM_SENSOR.clone()
+_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
 # -----------------------------------------------------------------------------
 # AGENT
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.AGENT_0 = CN()
 _C.SIMULATOR.AGENT_0.HEIGHT = 1.5
 _C.SIMULATOR.AGENT_0.RADIUS = 0.1
-_C.SIMULATOR.AGENT_0.MASS = 32.0
-_C.SIMULATOR.AGENT_0.LINEAR_ACCELERATION = 20.0
-_C.SIMULATOR.AGENT_0.ANGULAR_ACCELERATION = 4 * 3.14
-_C.SIMULATOR.AGENT_0.LINEAR_FRICTION = 0.5
-_C.SIMULATOR.AGENT_0.ANGULAR_FRICTION = 1.0
-_C.SIMULATOR.AGENT_0.COEFFICIENT_OF_RESTITUTION = 0.0
 _C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
@@ -279,6 +376,8 @@ _C.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = False
 _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
     "./data/default.physics_config.json"
 )
+# Possibly unstable optimization for extra performance with concurrent rendering
+_C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------
@@ -334,6 +433,11 @@ _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# DEPRECATED KEYS
+# -----------------------------------------------------------------------------'
+_C.register_deprecated_key("TASK.SUCCESS_DISTANCE")
 # -----------------------------------------------------------------------------
 
 

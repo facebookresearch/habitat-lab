@@ -50,13 +50,21 @@ def run_main_subproc(args):
 @pytest.mark.parametrize(
     "args",
     [
-        (
-            "examples/tutorials/nb_python/Habitat_Interactive_Tasks.py",
-            "--no-show-video",
-            "--no-make-video",
-        ),
         ("examples/tutorials/nb_python/Habitat_Lab.py",),
     ],
 )
 def test_example_modules(args):
+    run_main_subproc(args)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        (
+            "examples/interactive_play.py",
+            "--no-render",
+        ),
+    ],
+)
+def test_rearrange_example_modules(args):
     run_main_subproc(args)

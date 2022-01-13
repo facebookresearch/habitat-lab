@@ -69,10 +69,34 @@ _C.RL.SUCCESS_MEASURE = "spl"
 _C.RL.SUCCESS_REWARD = 2.5
 _C.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
+# preemption CONFIG
+# -----------------------------------------------------------------------------
+_C.RL.preemption = CN()
+# Append the slurm job ID to the resume state filename if running a slurm job
+# This is useful when you want to have things from a different job but same
+# same checkpoint dir not resume.
+_C.RL.preemption.append_slurm_job_id = False
+# Number of gradient updates between saving the resume state
+_C.RL.preemption.save_resume_state_interval = 100
+# Save resume states only when running with slurm
+# This is nice if you don't want debug jobs to resume
+_C.RL.preemption.save_state_batch_only = False
+# -----------------------------------------------------------------------------
 # POLICY CONFIG
 # -----------------------------------------------------------------------------
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
+_C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
+# For gaussian action distribution:
+_C.RL.POLICY.ACTION_DIST = CN()
+_C.RL.POLICY.ACTION_DIST.use_log_std = False
+_C.RL.POLICY.ACTION_DIST.use_softplus = False
+_C.RL.POLICY.ACTION_DIST.min_std = 1e-6
+_C.RL.POLICY.ACTION_DIST.max_std = 1
+_C.RL.POLICY.ACTION_DIST.min_log_std = -5
+_C.RL.POLICY.ACTION_DIST.max_log_std = 2
+# For continuous action distributions (including gaussian):
+_C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------

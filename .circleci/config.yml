@@ -117,6 +117,7 @@ jobs:
               # sudo apt-get --yes --force-yes install cuda
               # touch ./cuda_installed
               nvidia-smi
+      # Restore Conda cache
       - restore_cache:
           keys:
             - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
@@ -154,7 +155,7 @@ jobs:
             - habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
-            - ccache-{{ arch }}-master
+            - ccache-{{ arch }}-main
           paths:
             - /home/circleci/.ccache
       - run:
@@ -178,6 +179,7 @@ jobs:
               . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
+              pip install pillow
               python -u setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
@@ -219,7 +221,7 @@ jobs:
           paths:
             - ./habitat-sim
       - save_cache:
-          key: ccache-{{ arch }}-master
+          key: ccache-{{ arch }}-main
           background: true
           paths:
             - /home/circleci/.ccache
