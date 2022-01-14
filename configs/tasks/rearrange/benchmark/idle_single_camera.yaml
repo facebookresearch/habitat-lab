@@ -13,6 +13,7 @@ TASK:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
     # No measurements or sensors either.
     SENSORS: []

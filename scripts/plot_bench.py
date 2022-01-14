@@ -70,6 +70,7 @@ for i in [1, 16]:
             "idle_single_camera_noconcur": "[Idle (head-RGB) No Concurrent Rendering]",
             "idle_single_camera_nosleep": "[Idle (head-RGB) No Auto-sleep]",
             # "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
+            "interact": "[Interact]",
         },
         "opts_%i" % i,
         "ReplicaCAD: 200 Steps %i Processes" % i,
