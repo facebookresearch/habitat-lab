@@ -165,6 +165,10 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
             obs = np.expand_dims(
                 obs, axis=2
             )  # make depth observation a 3D array
+        else:
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)  # type: ignore[attr-defined, unreachable]
+
+            obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
 
         if self.config.NORMALIZE_DEPTH:
             # normalize depth observation to [0, 1]
