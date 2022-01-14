@@ -22,12 +22,9 @@ from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
 
 
-def make_render_only(obj_idx, sim):
-    if hasattr(MotionType, "RENDER_ONLY"):
-        sim.set_object_motion_type(MotionType.RENDER_ONLY, obj_idx)
-    else:
-        sim.set_object_motion_type(MotionType.KINEMATIC, obj_idx)
-        sim.set_object_is_collidable(False, obj_idx)
+def make_render_only(obj, sim):
+    obj.motion_type = MotionType.KINEMATIC
+    obj.collidable = False
 
 
 def make_border_red(img):
