@@ -9,7 +9,7 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 4
+NUM_ENVIRONMENTS: 32
 WRITER_TYPE: 'tb'
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
@@ -29,6 +29,8 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      ACTION_DIST:
+         use_log_std: True
 
   REWARD_MEASURE: "rearrangepick_reward"
   SUCCESS_MEASURE: "rearrangepick_success"
@@ -42,7 +44,7 @@ RL:
     ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
-    entropy_coef: 0.01
+    entropy_coef: 0.0001
     lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2
