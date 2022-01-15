@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 100
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -15,7 +15,7 @@ TASK:
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
@@ -57,7 +57,7 @@ TASK:
         MIN_FORCE: 20.0
     EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
-        MAX_ACCUM_FORCE: 5000.0
+        MAX_ACCUM_FORCE: 0.0
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
@@ -76,14 +76,14 @@ TASK:
         DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
         USE_DIFF: True
-        DROP_OBJ_SHOULD_END: True
-        WRONG_PICK_SHOULD_END: True
+        DROP_OBJ_SHOULD_END: False
+        WRONG_PICK_SHOULD_END: False
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
+        FORCE_PEN: 0.0
+        MAX_FORCE_PEN: 0.0
+        FORCE_END_PEN: 0.0
 
 
     PICK_SUCCESS:
@@ -104,7 +104,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
+            GRIP_CONTROLLER: "SuctionGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
@@ -151,6 +151,8 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
+    AUTO_SLEEP: False
+    CONCUR_RENDER: False
 
     # Grasping
     HOLD_THRESH: 0.09
