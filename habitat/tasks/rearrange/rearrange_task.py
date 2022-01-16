@@ -87,6 +87,12 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
 
+        if self._config.get("RESET_TO_START", False):
+            base_trans = self._sim.robot.base_transformation
+            ee_pos = self._sim.robot.ee_transform.translation
+            local_ee_pos = base_trans.inverted().transform_point(ee_pos)
+            self._desired_resting = np.array(local_ee_pos)
+
         return observations
 
     def step(self, action: Dict[str, Any], episode: Episode):

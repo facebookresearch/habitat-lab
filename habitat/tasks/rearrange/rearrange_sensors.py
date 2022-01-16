@@ -688,6 +688,39 @@ class RearrangeReward(Measure):
 
 
 @registry.register_sensor
+class ObjectRotationSensor(Sensor):
+    cls_uuid: str = "obj_rot"
+
+    def __init__(self, sim, config, task, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjectRotationSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(4,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        idxs, _ = self._sim.get_targets()
+        idx = idxs[self._task.targ_idx]
+
+        rom = self._sim.get_rigid_object_manager()
+        rot_quat = rom.get_object_by_id(idx).rotation
+        return np.array([*rot_quat.vector, rot_quat.scalar])
+
+
+@registry.register_sensor
 class EEOrientationSensor(Sensor):
     cls_uuid: str = "obj_rel_pos_rot"
 
@@ -715,7 +748,7 @@ class EEOrientationSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         OFFSET = 0.05
-        lower = mn.Vector3(-OFFSET, 0, 0)
+        lower = mn.Vector3(0, 0, 0)
         upper = mn.Vector3(OFFSET, 0, 0)
 
         ee_T = self._sim.robot.ee_transform

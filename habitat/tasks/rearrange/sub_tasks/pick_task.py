@@ -135,6 +135,9 @@ class RearrangePickTaskV1(RearrangeTask):
             # No releasing the object once it is held.
             action_args["grip_ac"] = None
         obs = super().step(action=action, episode=episode)
+        base_trans = self._sim.robot.base_transformation
+        ee_pos = self._sim.robot.ee_transform.translation
+        local_ee_pos = base_trans.inverted().transform_point(ee_pos)
 
         return obs
 
@@ -163,4 +166,5 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self._targ_idx = sel_idx
 
-        return super(RearrangePickTaskV1, self).reset(episode)
+        ret = super(RearrangePickTaskV1, self).reset(episode)
+        return ret
