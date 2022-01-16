@@ -348,6 +348,9 @@ class RearrangeSim(HabitatSim):
             ao.joint_positions = ao_pose
 
     def _add_objs(self, ep_info: Config, should_add_objects: bool) -> None:
+        """
+        Loads the scene objects and sets their transformations. If the objects are already loaded, then this just sets the transformations and clears any forces / velocities.
+        """
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
@@ -372,6 +375,8 @@ class RearrangeSim(HabitatSim):
             ro.transformation = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
+            ro.angular_velocity = mn.Vector3.zero_init()
+            ro.linear_velocity = mn.Vector3.zero_init()
 
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
