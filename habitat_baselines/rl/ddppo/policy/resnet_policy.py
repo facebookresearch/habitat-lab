@@ -134,18 +134,26 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            # We assume that all image observations have same height and width
             all_keys = self.rgb_keys + self.depth_keys
-            spatial_size = observation_space.spaces[all_keys[0]].shape[0] // 2
+            spatial_size_h = (
+                observation_space.spaces[all_keys[0]].shape[0] // 2
+            )
+            spatial_size_w = (
+                observation_space.spaces[all_keys[0]].shape[1] // 2
+            )
             input_channels = self._n_input_depth + self._n_input_rgb
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
-            final_spatial = max(
-                1, int(spatial_size * self.backbone.final_spatial_compress)
+            final_spatial_h = int(
+                np.ceil(spatial_size_h * self.backbone.final_spatial_compress)
             )
+            final_spatial_w = int(
+                np.ceil(spatial_size_w * self.backbone.final_spatial_compress)
+            )
+
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial ** 2))
+                round(after_compression_flat_size / (final_spatial_h ** 2))
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
@@ -161,8 +169,8 @@ class ResNetEncoder(nn.Module):
 
             self.output_shape = (
                 num_compression_channels,
-                final_spatial,
-                final_spatial,
+                final_spatial_h,
+                final_spatial_w,
             )
 
     @property
