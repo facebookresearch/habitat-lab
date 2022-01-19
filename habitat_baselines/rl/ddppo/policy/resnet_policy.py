@@ -153,7 +153,7 @@ class ResNetEncoder(nn.Module):
 
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial_h ** 2))
+                round(after_compression_flat_size / (final_spatial_h * final_spatial_w))
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
