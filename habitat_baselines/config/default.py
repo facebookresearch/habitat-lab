@@ -28,7 +28,6 @@ _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.TENSORBOARD_DIR = "tb"
-_C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
