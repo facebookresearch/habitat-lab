@@ -277,23 +277,6 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def get_nav_pos(self, pos):
-        pos = mn.Vector3(*pos)
-        height_thresh = 0.15
-        z_min = -0.2
-        use_vs = np.array(self.pathfinder.build_navmesh_vertices())
-
-        if height_thresh is not None:
-            use_vs = use_vs[use_vs[:, 1] < height_thresh]
-        if z_min is not None:
-            use_vs = use_vs[use_vs[:, 2] > z_min]
-        dists = np.linalg.norm(
-            use_vs[:, [0, 2]] - np.array(pos)[[0, 2]], axis=-1
-        )
-
-        closest_idx = np.argmin(dists)
-        return use_vs[closest_idx]
-
     def _recompute_navmesh(self):
         """Generates the navmesh on the fly. This must be called
         AFTER adding articulated objects to the scene.
