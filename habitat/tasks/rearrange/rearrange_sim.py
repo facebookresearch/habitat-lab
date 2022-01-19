@@ -565,9 +565,16 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05) -> int:
-        """Adds the sphere object to the specified position for visualization purpose."""
+    def visualize_position(
+        self, position: np.ndarray, viz_id=None, r=0.05
+    ) -> int:
+        """Adds the sphere object to the specified position for visualization purpose.
+        :param position: global position of the visual sphere
+        :param viz_id: provided if moving an existing visual sphere instead of creating a new one
+        :param r: radius of the visual sphere
 
+        :return: Object id of the newly added sphere. -1 if failed.
+        """
         template_mgr = self.get_object_template_manager()
         rom = self.get_rigid_object_manager()
         viz_obj = None
@@ -578,7 +585,7 @@ class RearrangeSim(HabitatSim):
                 )
                 template.scale = mn.Vector3(r, r, r)
                 self._viz_templates[r] = template_mgr.register_template(
-                    template, "ball_new_viz"
+                    template, "ball_new_viz" + str(r)
                 )
             viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
             make_render_only(viz_obj, self)
