@@ -59,7 +59,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             pos = np.array([markers[k].get_current_position() for k in names])
 
             closest_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+                np.linalg.norm(pos - ee_pos, ord=2, axis=-1)
             )
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
