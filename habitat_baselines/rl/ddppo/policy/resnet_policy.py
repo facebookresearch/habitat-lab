@@ -150,10 +150,12 @@ class ResNetEncoder(nn.Module):
             final_spatial_w = int(
                 np.ceil(spatial_size_w * self.backbone.final_spatial_compress)
             )
-
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial_h * final_spatial_w))
+                round(
+                    after_compression_flat_size
+                    / (final_spatial_h * final_spatial_w)
+                )
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
