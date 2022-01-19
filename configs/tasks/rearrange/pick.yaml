@@ -15,7 +15,7 @@ TASK:
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
@@ -57,7 +57,7 @@ TASK:
         MIN_FORCE: 20.0
     EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
-        MAX_ACCUM_FORCE: 0.0
+        MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
@@ -151,8 +151,6 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
-    AUTO_SLEEP: False
-    CONCUR_RENDER: False
 
     # Grasping
     HOLD_THRESH: 0.09
