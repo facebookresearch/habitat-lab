@@ -50,6 +50,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self._sim.grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx]
                 )
+                return
 
         # Get markers we are close to.
         markers = self._sim.get_all_markers()
