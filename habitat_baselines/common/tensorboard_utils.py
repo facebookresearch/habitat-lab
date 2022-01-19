@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 try:
     import wandb
-except:
+except ImportError:
     pass
 
 
