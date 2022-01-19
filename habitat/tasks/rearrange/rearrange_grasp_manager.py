@@ -11,7 +11,6 @@ import magnum as mn
 import numpy as np
 
 from habitat.config.default import Config
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -28,7 +27,7 @@ class RearrangeGraspManager:
 
     def __init__(
         self,
-        sim: RearrangeSim,
+        sim,
         config: Config,
     ) -> None:
         """Initialize a grasp manager for the simulator instance provided.
@@ -228,6 +227,9 @@ class RearrangeGraspManager:
             )
 
         self._snapped_obj_id = snap_obj_id
+        if force:
+            # Set the transformation to be in the robot's hand already.
+            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
 
         if force:
             # Set the transformation to be in the robot's hand already.
