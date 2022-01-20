@@ -35,7 +35,7 @@ def setup_function(test_trainers):
 @pytest.mark.parametrize(
     "config_path,num_updates,target_reward",
     [
-        ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 20, 5.0),
+        ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 40, 5.0),
     ],
 )
 def test_trainers(config_path, num_updates, target_reward):
@@ -57,6 +57,8 @@ def test_trainers(config_path, num_updates, target_reward):
     random.seed(config.TASK_CONFIG.SEED)
     np.random.seed(config.TASK_CONFIG.SEED)
     torch.manual_seed(config.TASK_CONFIG.SEED)
+    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    torch.backends.cudnn.deterministic = True
     if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
         torch.set_num_threads(1)
 
