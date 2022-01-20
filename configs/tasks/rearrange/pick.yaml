@@ -72,8 +72,8 @@ TASK:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
-        PICK_REWARD: 5.0
-        DROP_PEN: 20.0
+        PICK_REWARD: 20.0
+        DROP_PEN: 5.0
         WRONG_PICK_PEN: 5.0
         USE_DIFF: True
         DROP_OBJ_SHOULD_END: True
