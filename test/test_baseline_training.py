@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
+import os
 import random
 
 import numpy as np
@@ -13,12 +15,18 @@ try:
     import torch
     import torch.distributed
 
+    import habitat_sim.utils.datasets_download as data_downloader
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
 
     baseline_installed = True
 except ImportError:
     baseline_installed = False
+
+
+def setup_function(test_trainers):
+    # Download the needed datasets
+    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
 
 
 @pytest.mark.skipif(
@@ -31,6 +39,10 @@ except ImportError:
     ],
 )
 def test_trainers(config_path, num_updates, target_reward):
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    # Setup the training
     config = get_config(
         config_path,
         [
@@ -39,7 +51,7 @@ def test_trainers(config_path, num_updates, target_reward):
             "TOTAL_NUM_STEPS",
             -1.0,
             "CHECKPOINT_FOLDER",
-            "data/test_checkpoints/ppo/test_trainer/" + config_path,
+            "data/test_checkpoints/test_training",
         ],
     )
     random.seed(config.TASK_CONFIG.SEED)
@@ -56,14 +68,18 @@ def test_trainers(config_path, num_updates, target_reward):
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
     trainer = trainer_init(config)
 
+    # Train
     trainer.train()
 
+    # Gather the data
     deltas = {
         k: ((v[-1] - v[0]).sum().item() if len(v) > 1 else v[0].sum().item())
         for k, v in trainer.window_episode_stats.items()
     }
     deltas["count"] = max(deltas["count"], 1.0)
     reward = deltas["reward"] / deltas["count"]
+
+    # Make sure the final reward is greater than the target
     assert (
         reward >= target_reward
     ), f"reward for task {config_path} was {reward} but is expected to be at least {target_reward}"
