@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 100
+    MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -72,18 +72,18 @@ TASK:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
-        PICK_REWARD: 20.0
-        DROP_PEN: 5.0
+        PICK_REWARD: 5.0
+        DROP_PEN: 20.0
         WRONG_PICK_PEN: 5.0
         USE_DIFF: True
-        DROP_OBJ_SHOULD_END: False
-        WRONG_PICK_SHOULD_END: False
+        DROP_OBJ_SHOULD_END: True
+        WRONG_PICK_SHOULD_END: True
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 0.0
-        FORCE_END_PEN: 0.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
 
 
     PICK_SUCCESS:
@@ -104,7 +104,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "SuctionGraspAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
