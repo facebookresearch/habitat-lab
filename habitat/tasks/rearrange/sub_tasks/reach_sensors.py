@@ -11,6 +11,12 @@ from habitat.tasks.rearrange.rearrange_sensors import EndEffectorToRestDistance
 
 @registry.register_measure
 class RearrangeReachReward(Measure):
+    """
+    Reward measure for the reach task.
+    If SPARSE, the reward will be SCALE if the end-effector reached any object.
+    Otherwise, the agent is rewarded every time it gets closer to the goal.
+    """
+
     cls_uuid: str = "rearrange_reach_reward"
 
     @staticmethod
@@ -61,6 +67,11 @@ class RearrangeReachReward(Measure):
 
 @registry.register_measure
 class RearrangeReachSuccess(Measure):
+    """
+    Success measure for the reach task. Will be 1.0 if the end-effector reached
+    and object and 0.0 otherwise.
+    """
+
     cls_uuid: str = "rearrange_reach_success"
 
     @staticmethod
@@ -93,38 +104,3 @@ class RearrangeReachSuccess(Measure):
             ].get_metric()
             < self._config.SUCC_THRESH
         )
-
-
-@registry.register_measure
-class AnyReachSuccess(Measure):
-    cls_uuid: str = "any_reach_success"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return AnyReachSuccess.cls_uuid
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                RearrangeReachSuccess.cls_uuid,
-            ],
-        )
-        self._did_succ = False
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs
-        )
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._did_succ = (
-            self._did_succ
-            or task.measurements.measures[
-                RearrangeReachSuccess.cls_uuid
-            ].get_metric()
-        )
-
-        self._metric = self._did_succ
