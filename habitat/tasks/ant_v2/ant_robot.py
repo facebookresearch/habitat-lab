@@ -31,7 +31,7 @@ class AntV2Robot(QuadrupedRobot):
                     attached_link_id=-1,
                 ),
                 "robot_third": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
+                    cam_offset_pos=mn.Vector3(-10.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
                 ),
@@ -80,7 +80,7 @@ class AntV2Robot(QuadrupedRobot):
         8 Joint velocity -> 8
         """
         # May expand to make use of external forces in the future (once this is exposed in habitat_sim & if joint torques are used in the future)
-        obs_space = np.zeros(27)
+        obs_space = np.zeros(13)
         pos = super().base_pos
         obs_space[0] = pos[1]
 
@@ -95,13 +95,13 @@ class AntV2Robot(QuadrupedRobot):
         obs_space[5:13] = super().leg_joint_pos
 
         # ant directional velocity
-        obs_space[13:16] = super().base_velocity
+        #obs_space[13:16] = super().base_velocity
 
         # ant angular velocity
-        obs_space[16:19] = super().base_angular_velocity
+        #obs_space[16:19] = super().base_angular_velocity
 
         # ant joint velocity
-        obs_space[19:27] = super().joint_velocities
+        # obs_space[19:27] = super().joint_velocities
         #obs_space[27:30] = super().base_pos
 
         

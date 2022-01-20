@@ -14,10 +14,10 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints_steps_128"
 NUM_ENVIRONMENTS: 1
 SENSORS: []
-CHECKPOINT_FOLDER: "data/new_checkpoints"
+CHECKPOINT_FOLDER: "data/new_checkpoints_steps_128"
 # TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25
 NUM_CHECKPOINTS: 100
@@ -39,15 +39,15 @@ RL:
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 2.5e-4
-    eps: 1e-2
-    max_grad_norm: 0.5
-    num_steps: 128
+    eps: 1e-5
+    max_grad_norm: 0.2
+    num_steps: 128 # 16384
     hidden_size: 512
     use_gae: True
     gamma: 0.99
     tau: 0.95
-    use_linear_clip_decay: True
-    use_linear_lr_decay: True
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
     reward_window_size: 50
 
     # Use double buffered sampling, typically helps

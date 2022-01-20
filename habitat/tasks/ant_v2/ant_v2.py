@@ -24,6 +24,7 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    DepthSensor,
     RGBSensor,
     Sensor,
     SensorTypes,
@@ -144,7 +145,7 @@ class AntV2Sim(HabitatSim):
             floor_obj = rigid_obj_mgr.add_object_by_template_handle("floor")
             floor_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
 
-            floor_obj.translation = np.array([2.50, -2, 0.5])
+            floor_obj.translation = np.array([2.50, -1, 0.5])
             floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
         else: # environment is already loaded; reset the Ant
             self.robot.reset()
@@ -182,7 +183,7 @@ class AntObservationSpaceSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=-np.inf, high=np.inf, shape=(27,), dtype=np.float
+            low=-np.inf, high=np.inf, shape=(13,), dtype=np.float
         )
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -193,33 +194,6 @@ class AntObservationSpaceSensor(Sensor):
     ):
         obs = self._sim.robot.observational_space
         return obs
-
-
-# @registry.register_sensor
-# class AntObservationSpaceSensor(Sensor):
-
-#     cls_uuid: str = "ant_observation_space_sensor"
-
-#     def __init__(
-#         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
-#     ):
-#         self._sim = sim
-#         super().__init__(config=config)
-
-#     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-#         return self.cls_uuid
-
-#     def _get_observation_space(self, *args: Any, **kwargs: Any):
-#         return spaces.Box(low=-np.inf, high=np.inf, shape=(27,), dtype=np.float)
-
-#     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-#         return SensorTypes.NORMAL
-
-#     def get_observation(
-#         self, observations, episode, *args: Any, **kwargs: Any
-#     ):
-#         obs = self._sim.robot.observational_space
-#         return obs
 
 
 @registry.register_measure
@@ -249,7 +223,8 @@ class XLocation(Measure):
             self._metric = None
 
         current_position = self._sim.robot.base_pos
-        self._metric = current_position.x
+        self._metric = current_position.x * 100
+        # print(self._metric)
 
 
 @registry.register_task_action
@@ -315,6 +290,11 @@ class AntV2Task(NavigationTask):
     ) -> None:
         # config.enable_physics = True
         super().__init__(config=config, sim=sim, dataset=dataset)
+        """habitat_sim.gfx.Renderer()
+        navmesh_settings = habitat_sim.NavMeshSettings()
+        navmesh_settings.set_defaults()
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
+        print("NAVMESH COMPUTED?")"""
 
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
