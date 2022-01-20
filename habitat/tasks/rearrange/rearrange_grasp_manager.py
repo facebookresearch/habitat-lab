@@ -5,13 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
 from habitat.config.default import Config
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
+if TYPE_CHECKING:
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -28,7 +31,7 @@ class RearrangeGraspManager:
 
     def __init__(
         self,
-        sim: RearrangeSim,
+        sim: "RearrangeSim",
         config: Config,
     ) -> None:
         """Initialize a grasp manager for the simulator instance provided.
