@@ -638,7 +638,7 @@ def action_array_to_dict(
     action_args = {}
     action_offset = 0
     for action_name, action_length in action_name_to_lengths.items():
-        action_values = action[action_offset:action_length]
+        action_values = action[action_offset : action_offset + action_length]
         if clip:
             action_values = np.clip(
                 action_values.detach().cpu().numpy(), -1.0, 1.0

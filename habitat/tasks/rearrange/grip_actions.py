@@ -50,6 +50,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self._sim.grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx]
                 )
+                return
 
         # Get markers we are close to.
         markers = self._sim.get_all_markers()
@@ -58,7 +59,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             pos = np.array([markers[k].get_current_position() for k in names])
 
             closest_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+                np.linalg.norm(pos - ee_pos, ord=2, axis=-1)
             )
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
