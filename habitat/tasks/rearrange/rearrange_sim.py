@@ -394,7 +394,7 @@ class RearrangeSim(HabitatSim):
                 )
             )
             ro = rom.add_object_by_template_handle(
-                list(matching_templates.keys())[0]
+                next(iter(matching_templates.keys()))
             )
             ro.transformation = transform
             make_render_only(ro, self)
