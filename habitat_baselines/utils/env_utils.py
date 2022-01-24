@@ -59,7 +59,7 @@ def construct_envs(
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
     if num_environments < 1:
-        raise RuntimeError("NUM_ENVIRONMENTS must be strictly positive")
+        raise RuntimeError(f"NUM_ENVIRONMENTS must be strictly positive: {num_environments}")
 
     if len(scenes) == 0:
         raise RuntimeError(
