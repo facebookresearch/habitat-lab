@@ -21,10 +21,10 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 GYM_AUTO_NAME_KEY = "GYM_AUTO_NAME"
 HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
 
-if HABLAB_INSTALL_PATH in os.environ:
-    base_dir = os.environ[HABLAB_INSTALL_PATH]
-else:
-    base_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+base_dir = os.environ.get(
+    HABLAB_INSTALL_PATH,
+    osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))),
+)
 
 
 def _get_config_no_base_task_load(cfg_file_path):

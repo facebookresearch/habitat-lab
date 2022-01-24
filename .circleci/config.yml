@@ -15,7 +15,7 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy mypy==v0.910 --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
@@ -33,6 +33,9 @@ jobs:
           command: |
               flake8 --version
               flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
+      - run:
+          name: run mypy
+          command: mypy
   pre-commit:
     docker:
       - image: circleci/python:3.6

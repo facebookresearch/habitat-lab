@@ -142,7 +142,7 @@ class PyRobotDepthSensor(DepthSensor):
 @registry.register_sensor
 class PyRobotBumpSensor(BumpSensor):
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(low=False, high=True, shape=(1,), dtype=np.bool)
+        return spaces.Box(low=False, high=True, shape=(1,), dtype=bool)
 
     def get_observation(self, robot_obs, *args: Any, **kwargs: Any):
         return np.array(robot_obs["bump"])

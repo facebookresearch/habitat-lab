@@ -6,7 +6,7 @@
 
 import copy
 import json
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -17,7 +17,9 @@ class Metric:
         self.info = info
         self.metric_names = sorted(metric_names) if metric_names else []
 
-        self.metrics = [[None, None, None] for _ in self.metric_names]
+        self.metrics: List[List[Optional[float]]] = [
+            [None, None, None] for _ in self.metric_names
+        ]
 
         self.stats = []
         self.num_iters = 0

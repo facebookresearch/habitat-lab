@@ -10,6 +10,7 @@ from typing import Any, List, Optional, Tuple
 
 import attr
 import numpy as np
+import quaternion
 from gym import spaces
 
 from habitat.config import Config
@@ -362,7 +363,7 @@ class HeadingSensor(Sensor):
         return SensorTypes.HEADING
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float)
+        return spaces.Box(low=-np.pi, high=np.pi, shape=(1,), dtype=np.float32)
 
     def _quat_to_xy_heading(self, quat):
         direction_vector = np.array([0, 0, -1])
@@ -378,7 +379,10 @@ class HeadingSensor(Sensor):
         agent_state = self._sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
 
-        return self._quat_to_xy_heading(rotation_world_agent.inverse())
+        if isinstance(rotation_world_agent, quaternion.quaternion):
+            return self._quat_to_xy_heading(rotation_world_agent.inverse())
+        else:
+            raise ValueError("Agent's rotation was not a quaternion")
 
 
 @registry.register_sensor(name="CompassSensor")
@@ -398,9 +402,12 @@ class EpisodicCompassSensor(HeadingSensor):
         rotation_world_agent = agent_state.rotation
         rotation_world_start = quaternion_from_coeff(episode.start_rotation)
 
-        return self._quat_to_xy_heading(
-            rotation_world_agent.inverse() * rotation_world_start
-        )
+        if isinstance(rotation_world_agent, quaternion.quaternion):
+            return self._quat_to_xy_heading(
+                rotation_world_agent.inverse() * rotation_world_start
+            )
+        else:
+            raise ValueError("Agent's rotation was not a quaternion")
 
 
 @registry.register_sensor(name="GPSSensor")
@@ -564,10 +571,12 @@ class SPL(Measure):
     def __init__(
         self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
     ):
-        self._previous_position = None
-        self._start_end_episode_distance = None
+        self._previous_position: Optional[np.ndarray] = None
+        self._start_end_episode_distance: Optional[float] = None
         self._agent_episode_distance: Optional[float] = None
-        self._episode_view_points = None
+        self._episode_view_points: Optional[
+            List[Tuple[float, float, float]]
+        ] = None
         self._sim = sim
         self._config = config
 
@@ -731,7 +740,7 @@ class TopDownMap(Measure):
         t_x, t_y = maps.to_grid(
             position[2],
             position[0],
-            self._top_down_map.shape[0:2],
+            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
             sim=self._sim,
         )
         self._top_down_map[
@@ -798,7 +807,10 @@ class TopDownMap(Measure):
                         maps.to_grid(
                             p[2],
                             p[0],
-                            self._top_down_map.shape[0:2],
+                            (
+                                self._top_down_map.shape[0],
+                                self._top_down_map.shape[1],
+                            ),
                             sim=self._sim,
                         )
                         for p in corners
@@ -824,7 +836,10 @@ class TopDownMap(Measure):
             )
             self._shortest_path_points = [
                 maps.to_grid(
-                    p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim
+                    p[2],
+                    p[0],
+                    (self._top_down_map.shape[0], self._top_down_map.shape[1]),
+                    sim=self._sim,
                 )
                 for p in _shortest_path_points
             ]
@@ -850,7 +865,7 @@ class TopDownMap(Measure):
         a_x, a_y = maps.to_grid(
             agent_position[2],
             agent_position[0],
-            self._top_down_map.shape[0:2],
+            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
             sim=self._sim,
         )
         self._previous_xy_location = (a_y, a_x)
@@ -899,7 +914,7 @@ class TopDownMap(Measure):
         a_x, a_y = maps.to_grid(
             agent_position[2],
             agent_position[0],
-            self._top_down_map.shape[0:2],
+            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
             sim=self._sim,
         )
         # Don't draw over the source point
@@ -992,7 +1007,11 @@ class DistanceToGoal(Measure):
                     f"Non valid DISTANCE_TO parameter was provided: {self._config.DISTANCE_TO}"
                 )
 
-            self._previous_position = current_position
+            self._previous_position = (
+                current_position[0],
+                current_position[1],
+                current_position[2],
+            )
             self._metric = distance_to_target
 
 
@@ -1201,7 +1220,7 @@ class VelocityAction(SimulatorTaskAction):
         )
         agent_state = self._sim.get_agent_state()
 
-        # Convert from np.quaternion to mn.Quaternion
+        # Convert from np.quaternion (quaternion.quaternion) to mn.Quaternion
         normalized_quaternion = agent_state.rotation
         agent_mn_quat = mn.Quaternion(
             normalized_quaternion.imag, normalized_quaternion.real

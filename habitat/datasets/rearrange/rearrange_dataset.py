@@ -30,8 +30,8 @@ class RearrangeEpisode(Episode):
     :property markers: Indicate points of interest in the scene such as grasp points like handles. {marker name -> (type, (params))}
     """
     ao_states: Dict[str, Dict[int, float]]
-    rigid_objs: List[Tuple[str, np.array]]
-    targets: Dict[str, np.array]
+    rigid_objs: List[Tuple[str, np.ndarray]]
+    targets: Dict[str, np.ndarray]
     markers: Dict[str, Tuple[str, Tuple]] = {}
 
 
