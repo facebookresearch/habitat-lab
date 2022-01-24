@@ -165,6 +165,13 @@ class RearrangeSim(HabitatSim):
 
         self._targets = {}
         for target_handle, transform in self.ep_info["targets"].items():
+            assert (
+                len(transform) == 4
+            ), "The target transform must be a 4x4 matrix"
+            for i in range(4):
+                assert (
+                    len(transform[i]) == 4
+                ), "The target transform must be a 4x4 matrix"
             self._targets[target_handle] = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
