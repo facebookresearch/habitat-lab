@@ -204,6 +204,8 @@ class PointNavResNetNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
+    prev_action_embedding: nn.Module
+
     def __init__(
         self,
         observation_space: spaces.Dict,
@@ -218,7 +220,7 @@ class PointNavResNetNet(Net):
         discrete_actions: bool = True,
     ):
         super().__init__()
-
+        self.prev_action_embedding: nn.Module
         self.discrete_actions = discrete_actions
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
@@ -364,11 +366,9 @@ class PointNavResNetNet(Net):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
-            if "visual_features" in observations:
-                visual_feats = observations["visual_features"]
-            else:
-                visual_feats = self.visual_encoder(observations)
-
+            visual_feats = observations.get(
+                "visual_features", self.visual_encoder(observations)
+            )
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 

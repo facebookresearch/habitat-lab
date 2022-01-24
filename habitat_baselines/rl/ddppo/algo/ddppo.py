@@ -61,7 +61,7 @@ class DecentralizedDistributedMixin:
         self, rollouts: RolloutStorage
     ) -> torch.Tensor:
         advantages = (
-            rollouts.buffers["returns"][: rollouts.current_rollout_step_idx]
+            rollouts.buffers["returns"][: rollouts.current_rollout_step_idx]  # type: ignore
             - rollouts.buffers["value_preds"][
                 : rollouts.current_rollout_step_idx
             ]
@@ -90,14 +90,14 @@ class DecentralizedDistributedMixin:
         class Guard:  # noqa: SIM119
             def __init__(self, model, device):
                 if torch.cuda.is_available():
-                    self.ddp = torch.nn.parallel.DistributedDataParallel(
+                    self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
                         model,
                         device_ids=[device],
                         output_device=device,
                         find_unused_parameters=find_unused_params,
                     )
                 else:
-                    self.ddp = torch.nn.parallel.DistributedDataParallel(
+                    self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
                         model,
                         find_unused_parameters=find_unused_params,
                     )

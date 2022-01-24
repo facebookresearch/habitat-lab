@@ -8,7 +8,7 @@ import math
 import os
 import time
 from datetime import datetime
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader
 import habitat
 from habitat import logger
 from habitat.core.utils import try_cv2_import
+from habitat.datasets.utils import VocabDict
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -54,11 +55,11 @@ class PACMANTrainer(BaseILTrainer):
 
     def _save_nav_results(
         self,
-        ckpt_path: int,
+        ckpt_path: str,
         ep_id: int,
         questions: torch.Tensor,
         imgs: List[np.ndarray],
-        q_vocab_dict: Dict,
+        q_vocab_dict: VocabDict,
         results_dir: str,
         writer: TensorboardWriter,
         video_option: list,
@@ -82,7 +83,7 @@ class PACMANTrainer(BaseILTrainer):
 
         ckpt_epoch = ckpt_path[ckpt_path.rfind("/") + 1 : -5]
         results_dir = os.path.join(results_dir, ckpt_epoch)
-        ckpt_no = ckpt_epoch[6:]
+        ckpt_no = int(ckpt_epoch[6:])
 
         q_string = q_vocab_dict.token_idx_2_string(question)
         frames_with_text = []
@@ -399,7 +400,7 @@ class PACMANTrainer(BaseILTrainer):
                 idx, question, answer, actions, action_length, goal_pos = batch
 
                 metrics_slug = {}
-                imgs = []
+                imgs = []  # type:ignore
                 for i in [10, 30, 50, "rand_init"]:
                     for j in ["pred", "fwd-only"]:
                         question = question.to(self.device)

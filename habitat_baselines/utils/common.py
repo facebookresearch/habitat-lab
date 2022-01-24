@@ -223,7 +223,7 @@ def batch_obs(
         obs.keys(),
         key=lambda name: 1
         if isinstance(obs[name], numbers.Number)
-        else np.prod(obs[name].shape),
+        else np.prod(obs[name].shape),  # type: ignore
         reverse=True,
     )
 
@@ -234,7 +234,7 @@ def batch_obs(
                 batch[sensor_name].append(torch.as_tensor(sensor))
             else:
                 if sensor_name not in batch_t:
-                    batch_t[sensor_name] = cache.get(
+                    batch_t[sensor_name] = cache.get(  # type: ignore
                         len(observations),
                         sensor_name,
                         torch.as_tensor(sensor),
@@ -246,13 +246,13 @@ def batch_obs(
                 # path of sensor being an np.ndarray
                 # np.asarray is ~3x slower than checking
                 if isinstance(sensor, np.ndarray):
-                    batch_t[sensor_name][i] = sensor
+                    batch_t[sensor_name][i] = sensor  # type: ignore
                 elif torch.is_tensor(sensor):
-                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)
+                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)  # type: ignore
                 # If the sensor wasn't a tensor, then it's some CPU side data
                 # so use a numpy array
                 else:
-                    batch_t[sensor_name][i] = np.asarray(sensor)
+                    batch_t[sensor_name][i] = np.asarray(sensor)  # type: ignore
 
         # With the batching cache, we use pinned mem
         # so we can start the move to the GPU async
@@ -265,7 +265,7 @@ def batch_obs(
             if isinstance(batch_t[sensor_name], np.ndarray):
                 batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
 
-            batch_t[sensor_name] = batch_t[sensor_name].to(
+            batch_t[sensor_name] = batch_t[sensor_name].to(  # type: ignore
                 device, non_blocking=True
             )
 
@@ -367,7 +367,9 @@ def generate_video(
         )
 
 
-def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> np.ndarray:
+def tensor_to_depth_images(
+    tensor: Union[torch.Tensor, List]
+) -> List[np.ndarray]:
     r"""Converts tensor (or list) of n image tensors to list of n images.
     Args:
         tensor: tensor containing n image tensors

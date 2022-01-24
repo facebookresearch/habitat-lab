@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 import torch
@@ -41,7 +41,11 @@ class TensorboardWriter:
             self.writer.close()
 
     def add_video_from_np_images(
-        self, video_name: str, step_idx: int, images: np.ndarray, fps: int = 10
+        self,
+        video_name: str,
+        step_idx: int,
+        images: List[np.ndarray],
+        fps: int = 10,
     ) -> None:
         r"""Write video into tensorboard from images frames.
 

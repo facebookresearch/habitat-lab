@@ -40,7 +40,7 @@ class EQACNNPretrainDataset(Dataset):
                 "Number of {} episodes: {}".format(mode, len(self.episodes))
             )
 
-            self.scene_ids = []
+            self.scene_ids: List[str] = []
             self.scene_episode_dict = {}
 
             # dict for storing list of episodes for each scene
@@ -64,7 +64,7 @@ class EQACNNPretrainDataset(Dataset):
                 for episode in tqdm(self.scene_episode_dict[scene]):
                     try:
                         # TODO: Consider alternative for shortest_paths
-                        pos_queue = episode.shortest_paths[0]
+                        pos_queue = episode.shortest_paths[0]  # type:ignore
                     except AttributeError as e:
                         logger.error(e)
 
@@ -100,7 +100,7 @@ class EQACNNPretrainDataset(Dataset):
             depth = observation["depth"]
             rgb = observation["rgb"]
 
-            scene = self.env.sim.semantic_annotations()
+            scene = self.env.sim.semantic_annotations()  # type:ignore
             instance_id_to_label_id = {
                 int(obj.id.split("_")[-1]): obj.category.index()
                 for obj in scene.objects

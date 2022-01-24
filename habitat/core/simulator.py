@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 import attr
 import numpy as np
+import quaternion
 from gym import Space, spaces
 
 from habitat.config import Config
@@ -215,15 +216,15 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    position: Optional["np.ndarray"]
-    rotation: Optional["np.ndarray"] = None
+    position: Optional[np.ndarray]
+    rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 
 @attr.s(auto_attribs=True)
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]
-    action: Optional[int] = None
+    action: Union[int, np.ndarray, None] = None
 
 
 class Simulator:
@@ -266,8 +267,10 @@ class Simulator:
 
     def geodesic_distance(
         self,
-        position_a: Sequence[float],
-        position_b: Union[Sequence[float], Sequence[Sequence[float]]],
+        position_a: Union[Sequence[float], np.ndarray],
+        position_b: Union[
+            Sequence[float], Sequence[Sequence[float]], np.ndarray
+        ],
         episode: Optional[Episode] = None,
     ) -> float:
         r"""Calculates geodesic distance between two points.
