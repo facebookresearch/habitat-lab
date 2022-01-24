@@ -241,7 +241,7 @@ class PointNavResNetNet(Net):
         self._fuse_keys = fuse_keys
         if self._fuse_keys is not None:
             rnn_input_size += sum(
-                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+                (observation_space.spaces[k].shape[0] for k in self._fuse_keys)
             )
 
         if (
