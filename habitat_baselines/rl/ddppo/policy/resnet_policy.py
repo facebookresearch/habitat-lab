@@ -366,11 +366,9 @@ class PointNavResNetNet(Net):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
-            if "visual_features" in observations:
-                visual_feats = observations["visual_features"]
-            else:
-                visual_feats = self.visual_encoder(observations)
-
+            visual_feats = observations.get(
+                "visual_features", self.visual_encoder(observations)
+            )
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
