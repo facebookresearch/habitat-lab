@@ -42,6 +42,7 @@ class RearrangeTask(NavigationTask):
         self._ignore_collisions: List[Any] = []
         self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
         self._sim_reset = True
+        self._prev_action = None
         self._targ_idx: int = 0
 
     @property
@@ -86,6 +87,7 @@ class RearrangeTask(NavigationTask):
         self.prev_coll_accum = CollisionDetails()
         self.should_end = False
         self._done = False
+        self._prev_action = None
 
         if self._config.get("RESET_TO_START", False):
             base_trans = self._sim.robot.base_transformation
@@ -97,6 +99,7 @@ class RearrangeTask(NavigationTask):
 
     def step(self, action: Dict[str, Any], episode: Episode):
         obs = super().step(action=action, episode=episode)
+        self._prev_action = action
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
 

@@ -694,6 +694,38 @@ class ForceTerminate(Measure):
             self._metric = False
 
 
+@registry.register_measure
+class ArmPenaltyMeasure(Measure):
+    cls_uuid: str = "arm_penalty"
+
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+
+        super().__init__(*args, config=config, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ArmPenaltyMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        if task._prev_action is not None:
+            arm_ac = task._prev_action["action_args"].get(
+                "arm_action", np.zeros(1)
+            )
+            self._metric = self._config.ARM_PENALTY * np.linalg.norm(arm_ac)
+        else:
+            self._metric = 0.0
+
+
 class RearrangeReward(Measure):
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
@@ -723,6 +755,11 @@ class RearrangeReward(Measure):
         reward = 0.0
 
         reward += self._get_coll_reward()
+
+        if ArmPenaltyMeasure.cls_uuid in task.measurements.measures:
+            reward -= task.measurements.measures[
+                ArmPenaltyMeasure.cls_uuid
+            ].get_metric()
 
         if self._sim.grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.CONSTRAINT_VIOLATE_PEN
