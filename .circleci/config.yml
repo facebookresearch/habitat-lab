@@ -35,7 +35,9 @@ jobs:
               flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
       - run:
           name: run mypy
-          command: mypy
+          command: |
+              mypy --version
+              mypy
   pre-commit:
     docker:
       - image: circleci/python:3.6
