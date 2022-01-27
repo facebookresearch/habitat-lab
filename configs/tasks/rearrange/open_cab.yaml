@@ -18,7 +18,7 @@ TASK:
     SPAWN_REGION_SCALE: 0.2
     # -1 does not change the max impulse
     JOINT_MAX_IMPULSE: -1.0
-    CONSTRAINT_VIOLATE_SHOULD_END: False
+    CONSTRAINT_VIOLATION_SHOULD_END: False
 
     # Standard deviation of the noise to add to the arm starting position.
 
