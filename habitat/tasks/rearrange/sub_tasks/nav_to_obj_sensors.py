@@ -42,6 +42,9 @@ class GeoMeasure(Measure):
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
             print("Distance is infinity", "returning ", distance_to_target)
+        if distance_to_target is None:
+            distance_to_target = 30
+            print("Distance is None", "returning ", distance_to_target)
         return distance_to_target
 
 
