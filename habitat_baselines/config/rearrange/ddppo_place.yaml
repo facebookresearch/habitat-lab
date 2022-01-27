@@ -29,8 +29,8 @@ RL:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
 
-  REWARD_MEASURE: "rearrangepick_reward"
-  SUCCESS_MEASURE: "rearrangepick_success"
+  REWARD_MEASURE: "place_reward"
+  SUCCESS_MEASURE: "place_success"
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
   GYM_OBS_KEYS: ['obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
