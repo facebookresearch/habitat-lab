@@ -548,7 +548,8 @@ class ResNeXtBottleneck(Bottleneck):
 class SpaceToDepth(nn.Module):
     def forward(self, x):
         N, C, H, W = x.size()
-        assert C == 3
+        # depth-only, RGB, or RGBD
+        assert C == 1 or C == 3 or C == 4
         x = x.view(N, C, H // 4, 4, W // 4, 4)
         x = x.permute(0, 3, 5, 1, 2, 4)
         x = x.reshape(N, C * 16, H // 4, W // 4)
