@@ -291,26 +291,35 @@ class EmbodiedTask:
 
         return observations
 
-    def _step_single_action(self, observations:Any, action_name:Any, action: Dict[str, Any], episode: Episode):
+    def _step_single_action(
+        self,
+        observations: Any,
+        action_name: Any,
+        action: Dict[str, Any],
+        episode: Episode,
+    ):
         if isinstance(action_name, (int, np.integer)):
             action_name = self.get_action_name(action_name)
         assert (
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
-        observations.update(task_action.step(**action["action_args"], task=self))
-
+        observations.update(
+            task_action.step(**action["action_args"], task=self)
+        )
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_name = action["action"]
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         observations = {}
-        if isinstance(action_name, tuple): # there are multiple actions
+        if isinstance(action_name, tuple):  # there are multiple actions
             for a_name in action_name:
                 self._step_single_action(observations, a_name, action, episode)
         else:
-            self._step_single_action(observations, action_name, action, episode)
+            self._step_single_action(
+                observations, action_name, action, episode
+            )
 
         observations.update(
             self.sensor_suite.get_observations(

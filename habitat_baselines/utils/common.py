@@ -638,7 +638,8 @@ def action_array_to_dict(
     action_name_to_lengths = {}
     for act_dict in action_space.spaces.values():
         for k, v in act_dict.items():
-            action_name_to_lengths[k] = v.shape[0] # The only element in the action
+            # The only element in the action
+            action_name_to_lengths[k] = v.shape[0]
 
     # Determine action arguments for root_action_name
     action_args = {}
