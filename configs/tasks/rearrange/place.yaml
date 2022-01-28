@@ -20,8 +20,8 @@ TASK:
     FORCE_REGENERATE: False
 
     # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "rearrangepick_reward"
-    SUCCESS_MEASUREMENT: "rearrangepick_success"
+    REWARD_MEASUREMENT: "place_reward"
+    SUCCESS_MEASUREMENT: "place_success"
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -82,7 +82,7 @@ TASK:
         PLACE_REWARD: 20.0
         DROP_PEN: 5.0
         USE_DIFF: True
-        WRONG_DROP_SHOULD_END: False
+        WRONG_DROP_SHOULD_END: True
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0

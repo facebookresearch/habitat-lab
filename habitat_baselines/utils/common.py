@@ -631,8 +631,14 @@ def action_array_to_dict(
     """We naively assume that all actions are 1D (len(shape) == 1)"""
 
     # Assume that the action space only has one root SimulatorTaskAction
-    root_action_name, space = list(action_space.spaces.items())[0]
-    action_name_to_lengths = {k: v.shape[0] for k, v in space.spaces.items()}
+    root_action_names = tuple(action_space.spaces.keys())
+    if len(root_action_names) == 1:
+        # No need for a tuple if there is only one action
+        root_action_names = root_action_names[0]
+    action_name_to_lengths = {}
+    for act_dict in action_space.spaces.values():
+        for k, v in act_dict.items():
+            action_name_to_lengths[k] = v.shape[0] # The only element in the action
 
     # Determine action arguments for root_action_name
     action_args = {}
@@ -648,9 +654,8 @@ def action_array_to_dict(
 
     action_dict = {
         "action": {
-            "action": root_action_name,
+            "action": root_action_names,
             "action_args": action_args,
         },
     }
-
     return action_dict

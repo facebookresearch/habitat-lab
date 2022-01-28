@@ -54,7 +54,7 @@ RL:
     use_linear_lr_decay: False
     reward_window_size: 50
 
-    use_normalized_advantage: False
+    use_normalized_advantage: True
 
     hidden_size: 512
 
