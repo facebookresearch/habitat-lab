@@ -10,7 +10,7 @@ TASK:
 
     MUST_LOOK_AT_TARG: True
     DEBUG_GOAL_POINT: True
-    CONSTRAINT_VIOLATION_SHOULD_END: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
     FORCE_REGENERATE: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
