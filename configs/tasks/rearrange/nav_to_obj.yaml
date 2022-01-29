@@ -104,7 +104,7 @@ TASK:
         ANG_SPEED: 10.0
         ALLOW_DYN_SLIDE: True
         ALLOW_BACK: True
-        END_ON_STOP: True
+        END_ON_STOP: False
         MIN_ABS_LIN_SPEED: 1.0
         MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS: ['BASE_VELOCITY']

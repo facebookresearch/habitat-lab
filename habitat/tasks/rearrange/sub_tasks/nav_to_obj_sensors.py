@@ -280,9 +280,6 @@ class NavToObjSuccess(GeoMeasure):
         called_stop = self.does_action_want_stop(task, observations)
         if self._action_can_stop and not called_stop:
             self._metric = False
-        if "STOP" not in task.actions:
-            # If the robot cannot stop, stop the task automatically
-            task.should_end |= self._metric
 
     def does_action_want_stop(self, task, obs):
         if self._config.HEURISTIC_STOP:
