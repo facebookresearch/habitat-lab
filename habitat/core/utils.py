@@ -9,6 +9,7 @@ import json
 import math
 from typing import Any, Dict, List, Optional
 
+import attr
 import numpy as np
 import quaternion  # noqa: F401
 
@@ -60,7 +61,7 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 
 
 def not_none_validator(
-    self: Any, attribute: Any, value: Optional[Any]
+    self: Any, attribute: attr.Attribute, value: Optional[Any]
 ) -> None:
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
@@ -123,7 +124,7 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
         # JSON doesn't support numpy ndarray and quaternion
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        if isinstance(obj, np.quaternion):
+        if isinstance(obj, quaternion.quaternion):
             return quaternion_to_list(obj)
 
         return (

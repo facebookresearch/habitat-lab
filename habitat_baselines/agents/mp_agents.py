@@ -6,7 +6,7 @@
 
 import abc
 import argparse
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 
@@ -32,12 +32,13 @@ def get_noop_arm_action(sim, task):
         grip_ac_dict = {}
 
     if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
+        arm_args: Dict[str, Union[float, np.ndarray]] = {
+            "arm_action": np.zeros(3),
+            **grip_ac_dict,
+        }
         ret_val = {
             "action": "ARM_ACTION",
-            "action_args": {
-                "arm_action": np.zeros(3),
-                **grip_ac_dict,
-            },
+            "action_args": arm_args,
         }
     else:
         ret_val = {

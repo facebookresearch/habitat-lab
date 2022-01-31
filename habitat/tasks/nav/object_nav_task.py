@@ -149,7 +149,7 @@ class ObjectGoalSensor(Sensor):
         *args: Any,
         episode: ObjectGoalNavEpisode,
         **kwargs: Any,
-    ) -> Optional[int]:
+    ) -> Optional[np.ndarray]:
 
         if len(episode.goals) == 0:
             logger.error(

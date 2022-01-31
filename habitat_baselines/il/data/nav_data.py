@@ -44,7 +44,7 @@ class NavDataset(wds.Dataset):
         """
         self.config = config.TASK_CONFIG
         self.env = env
-        self.episodes = self.env._dataset.episodes
+        self.episodes = self.env._dataset.episodes  # type:ignore
         self.max_controller_actions = max_controller_actions
         self.device = device
         self.sim = self.env.sim
@@ -52,8 +52,8 @@ class NavDataset(wds.Dataset):
         # sorting and making episode ids consecutive for simpler indexing
         self.sort_episodes()
 
-        self.q_vocab = self.env._dataset.question_vocab
-        self.ans_vocab = self.env._dataset.answer_vocab
+        self.q_vocab = self.env._dataset.question_vocab  # type:ignore
+        self.ans_vocab = self.env._dataset.answer_vocab  # type:ignore
 
         self.eval_save_results = config.EVAL_SAVE_RESULTS
 
@@ -142,7 +142,7 @@ class NavDataset(wds.Dataset):
             logger.info("[ Frame dataset is ready. ]")
 
     def flat_to_hierarchical_actions(
-        self, actions: List, controller_action_lim: int
+        self, actions: Union[List[int], np.ndarray], controller_action_lim: int
     ):
         assert len(actions) != 0
 
@@ -178,17 +178,17 @@ class NavDataset(wds.Dataset):
         return planner_actions, controller_actions, pq_idx, cq_idx, ph_idx
 
     def get_img_features(
-        self, img: Union[np.ndarray, torch.Tensor], preprocess: bool = False
+        self, img: np.ndarray, preprocess: bool = False
     ) -> torch.Tensor:
         if preprocess:
-            img = (
+            img_t = (
                 (torch.from_numpy(img.transpose(2, 0, 1)).float() / 255.0)
                 .view(1, 3, 256, 256)
                 .to(self.device)
             )
 
         with torch.no_grad():
-            return self.cnn(img)
+            return self.cnn(img_t)
 
     def get_hierarchical_features_till_spawn(
         self,

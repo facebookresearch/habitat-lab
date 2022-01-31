@@ -346,7 +346,7 @@ class ArmEEAction(SimulatorTaskAction):
             self._sim.robot.params.ee_constraint[:, 1],
         )
 
-    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> np.ndarray:
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
         self.ee_target += np.array(ee_pos)
 
         self.apply_ee_constraints()
@@ -361,8 +361,6 @@ class ArmEEAction(SimulatorTaskAction):
         des_joint_pos = ik.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
         self._sim.robot.arm_motor_pos = des_joint_pos
-
-        return des_joint_pos
 
     def step(self, ee_pos, should_step=True, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)

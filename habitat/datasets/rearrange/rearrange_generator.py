@@ -538,7 +538,7 @@ class RearrangeEpisodeGenerator:
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
             episode_id=str(self.num_ep_generated - 1),
-            start_position=np.zeros(3),
+            start_position=[0, 0, 0],
             start_rotation=[
                 0,
                 0,

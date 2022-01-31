@@ -9,6 +9,7 @@ from itertools import groupby, islice
 import pytest
 
 from habitat.core.dataset import Dataset, Episode
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
 
 
 def _construct_dataset(num_episodes, num_groups=10):
@@ -359,3 +360,19 @@ def test_preserve_order():
     episode_iter = dataset.get_episode_iterator(shuffle=False, cycle=False)
 
     assert list(episode_iter) == episodes
+
+
+def test_reset_goals():
+    ep = NavigationEpisode(
+        episode_id="0",
+        scene_id="1",
+        start_position=[0, 0, 0],
+        start_rotation=[1, 0, 0, 0],
+        goals=[NavigationGoal(position=[1, 2, 3])],
+    )
+
+    ep._shortest_path_cache = "Dummy"
+    assert ep._shortest_path_cache is not None
+
+    ep.goals = [NavigationGoal(position=[3, 4, 5])]
+    assert ep._shortest_path_cache is None

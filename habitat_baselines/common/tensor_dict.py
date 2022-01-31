@@ -12,9 +12,11 @@ from typing import Callable, Dict, Optional, Tuple, Union, overload
 import numpy as np
 import torch
 
-TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
-DictTree = Dict[str, Union[TensorLike, "DictTree"]]
-TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
+TensorLike = Union[torch.Tensor, np.ndarray, numbers.Integral]
+DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
+TensorIndexType = Union[
+    int, slice, torch.Tensor, Tuple[Union[int, slice, torch.Tensor], ...]
+]
 
 
 class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
@@ -72,7 +74,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: str,
-        value: Union[TensorLike, "TensorDict", DictTree],
+        value: Union[torch.Tensor, "TensorDict"],
         strict: bool = True,
     ) -> None:
         ...
@@ -81,7 +83,7 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: TensorIndexType,
-        value: Union["TensorDict", DictTree],
+        value: Union["TensorDict", DictTree, TensorLike],
         strict: bool = True,
     ) -> None:
         ...
@@ -89,12 +91,16 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
     def set(
         self,
         index: Union[str, TensorIndexType],
-        value: Union[TensorLike, "TensorDict"],
+        value: Union[torch.Tensor, "TensorDict", DictTree, TensorLike],
         strict: bool = True,
     ) -> None:
         if isinstance(index, str):
-            super().__setitem__(index, value)
+            super().__setitem__(index, value)  # type: ignore
         else:
+            if not isinstance(value, dict):
+                raise RuntimeError(
+                    "Set with indexing requires that the value is a dict"
+                )
             if strict and (self.keys() != value.keys()):
                 raise KeyError(
                     "Keys don't match: Dest={} Source={}".format(
@@ -110,18 +116,37 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
                         continue
 
                 v = value[k]
+                tgt = self[k]
 
                 if isinstance(v, (TensorDict, dict)):
-                    self[k].set(index, v, strict=strict)
+                    assert isinstance(tgt, TensorDict)
+                    tgt.set(index, v, strict=strict)
                 else:
-                    self[k][index].copy_(torch.as_tensor(v))
+                    assert isinstance(tgt, torch.Tensor)
+                    tgt[index].copy_(torch.as_tensor(v))
+
+    @overload
+    def __setitem__(
+        self,
+        index: str,
+        value: Union[torch.Tensor, "TensorDict"],
+    ) -> None:
+        ...
+
+    @overload
+    def __setitem__(
+        self,
+        index: TensorIndexType,
+        value: Union["TensorDict", DictTree, TensorLike],
+    ) -> None:
+        ...
 
     def __setitem__(
         self,
         index: Union[str, TensorIndexType],
-        value: Union[torch.Tensor, "TensorDict"],
-    ):
-        self.set(index, value)
+        value: Union[torch.Tensor, "TensorDict", DictTree, TensorLike],
+    ) -> None:
+        self.set(index, value)  # type: ignore
 
     @classmethod
     def map_func(
@@ -134,10 +159,12 @@ class TensorDict(Dict[str, Union["TensorDict", torch.Tensor]]):
             dst = TensorDict()
 
         for k, v in src.items():
-            if torch.is_tensor(v):
+            if isinstance(v, torch.Tensor):
                 dst[k] = func(v)
             else:
-                dst[k] = cls.map_func(func, v, dst.get(k, None))
+                sub_dst = dst.get(k, None)
+                assert sub_dst is None or isinstance(sub_dst, TensorDict)
+                dst[k] = cls.map_func(func, v, sub_dst)
 
         return dst
 

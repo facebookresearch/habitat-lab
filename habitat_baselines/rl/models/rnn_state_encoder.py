@@ -265,6 +265,7 @@ class RNNStateEncoder(nn.Module):
     is that it takes an addition masks input that resets the hidden state between two adjacent
     timesteps to handle episodes ending in the middle of a rollout.
     """
+    rnn: torch.nn.Module
 
     def layer_init(self):
         for name, param in self.rnn.named_parameters():

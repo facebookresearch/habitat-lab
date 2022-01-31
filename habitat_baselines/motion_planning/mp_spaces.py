@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 from PIL import Image
@@ -38,7 +38,7 @@ class MpSpace(ABC):
         pass
 
     @abstractmethod
-    def set_arm(self, x: List[float]):
+    def set_arm(self, x: Union[List[float], np.ndarray]):
         pass
 
     def set_env_state(self, env_state: Dict[str, Any]):

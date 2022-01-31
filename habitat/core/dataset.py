@@ -72,6 +72,16 @@ class Episode:
     info: Optional[Dict[str, Any]] = None
     _shortest_path_cache: Any = attr.ib(init=False, default=None)
 
+    # NB: This method is marked static despite taking self so that
+    # on_setattr=Episode._reset_shortest_path_cache_hook works as attrs
+    # will pass the instance as the first argument!
+    @staticmethod
+    def _reset_shortest_path_cache_hook(
+        self: "Episode", attribute: attr.Attribute, value: Any
+    ) -> Any:
+        self._shortest_path_cache = None
+        return value
+
     def __getstate__(self):
         return {
             k: v
