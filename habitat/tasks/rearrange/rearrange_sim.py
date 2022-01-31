@@ -372,6 +372,8 @@ class RearrangeSim(HabitatSim):
             ro.transformation = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
+            ro.angular_velocity = mn.Vector3.zero_init()
+            ro.linear_velocity = mn.Vector3.zero_init()
 
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"

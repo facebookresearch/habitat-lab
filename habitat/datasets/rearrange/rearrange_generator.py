@@ -519,19 +519,18 @@ class RearrangeEpisodeGenerator:
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
-        sampled_rigid_object_states = [
-            (
-                x.creation_attributes.handle.split(
-                    x.creation_attributes.file_directory
-                )[-1].split("/")[-1],
-                np.array(x.transformation),
+        sampled_rigid_object_states = []
+        for sampled_obj in self.ep_sampled_objects:
+            creation_attrib = sampled_obj.creation_attributes
+            file_handle = creation_attrib.handle.split(
+                creation_attrib.file_directory
+            )[-1].split("/")[-1]
+            sampled_rigid_object_states.append(
+                (
+                    file_handle,
+                    np.array(sampled_obj.transformation),
+                )
             )
-            for x in self.ep_sampled_objects
-        ]
-        # sampled_rigid_object_states = [
-        #     (x.creation_attributes.handle, np.array(x.transformation))
-        #     for x in self.ep_sampled_objects
-        # ]
 
         self.num_ep_generated += 1
         return RearrangeEpisode(
