@@ -16,8 +16,8 @@ SIMULATOR:
         WIDTH: 128
         HEIGHT: 128
   THIRD_RGB_SENSOR:
-        WIDTH: 512
-        HEIGHT: 512
+        WIDTH: 1024
+        HEIGHT: 1024
         POSITION: [-2,2,0]
         HFOV: 90
         ORIENTATION: [-0.5, -1.57,0.0]
@@ -32,6 +32,8 @@ SIMULATOR:
   CTRL_FREQ: 120.0
   AC_FREQ_RATIO: 4
 
+  # LOAD_OBSTACLES: True # Loads obstacles for the ant to avoid
+
   HABITAT_SIM_V0:
     ALLOW_SLIDING: True
     ENABLE_PHYSICS: True
@@ -43,7 +45,7 @@ TASK:
   TYPE: Ant-v2-task
   ANT_OBSERVATION_SPACE_SENSOR:
         TYPE: "AntObservationSpaceSensor"
-        DIMENSIONALITY: 13
+        DIMENSIONALITY: 29
   SENSORS: ["ANT_OBSERVATION_SPACE_SENSOR"]
 
   X_LOCATION:
@@ -55,7 +57,7 @@ TASK:
       TYPE: "LegAction"
       LEG_CONTROLLER: "LegRelPosAction"
       LEG_JOINT_DIMENSIONALITY: 8
-      DELTA_POS_LIMIT: 0.1
+      DELTA_POS_LIMIT: 0.5
   POSSIBLE_ACTIONS:
     - LEG_ACTION
 

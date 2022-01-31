@@ -216,7 +216,7 @@ def batch_obs(
     batch_t: TensorDict = TensorDict()
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
-
+    # print(len(observations[0]))
     obs = observations[0]
     # Order sensors by size, stack and move the largest first
     sensor_names = sorted(
@@ -229,6 +229,7 @@ def batch_obs(
 
     for sensor_name in sensor_names:
         for i, obs in enumerate(observations):
+            #print(observations)
             sensor = obs[sensor_name]
             if cache is None:
                 batch[sensor_name].append(torch.as_tensor(sensor))

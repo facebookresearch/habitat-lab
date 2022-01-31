@@ -80,31 +80,32 @@ class AntV2Robot(QuadrupedRobot):
         8 Joint velocity -> 8
         """
         # May expand to make use of external forces in the future (once this is exposed in habitat_sim & if joint torques are used in the future)
-        obs_space = np.zeros(13)
+        obs_space = np.zeros(29)
         pos = super().base_pos
-        obs_space[0] = pos[1]
+        obs_space[0] = pos[0]
+        obs_space[1] = pos[1]
+        obs_space[2] = pos[2]
+
 
         # ant orientation
         orientation = super().base_rot
-        obs_space[1] = orientation.vector.x
-        obs_space[2] = orientation.vector.y
-        obs_space[3] = orientation.vector.z
-        obs_space[4] = orientation.scalar
+        obs_space[3] = orientation.vector.x
+        obs_space[4] = orientation.vector.y
+        obs_space[5] = orientation.vector.z
+        obs_space[6] = orientation.scalar
 
         # ant joint angles (Radians)
-        obs_space[5:13] = super().leg_joint_pos
+        obs_space[7:15] = super().leg_joint_pos
 
         # ant directional velocity
-        #obs_space[13:16] = super().base_velocity
+        obs_space[15:18] = super().base_velocity
 
         # ant angular velocity
-        #obs_space[16:19] = super().base_angular_velocity
+        obs_space[18:21] = super().base_angular_velocity
 
         # ant joint velocity
-        # obs_space[19:27] = super().joint_velocities
+        obs_space[21:29] = super().joint_velocities
         #obs_space[27:30] = super().base_pos
-
-        
         return obs_space
 
     def update(self):

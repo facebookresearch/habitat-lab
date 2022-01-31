@@ -874,8 +874,8 @@ class PPOTrainer(BaseRLTrainer):
 
             self.envs.close()
 
-    def _eval_checkpoint(
-        self,
+    def _eval_checkpoint( # Can add custom metrics for tensorboard logging into here
+        self, # Add logic to query sensor
         checkpoint_path: str,
         writer: TensorboardWriter,
         checkpoint_index: int = 0,
@@ -909,7 +909,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if len(self.config.VIDEO_OPTION) > 0:
             config.defrost()
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+            # config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+            # Add another measurement
+            #config.TASK_CONFIG.TASK.SENSORS.append("THIRD_RGB_SENSOR")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
             config.freeze()
 
@@ -976,6 +978,9 @@ class PPOTrainer(BaseRLTrainer):
         rgb_frames = [
             [] for _ in range(self.config.NUM_ENVIRONMENTS)
         ]  # type: List[List[np.ndarray]]
+        
+        print("Video Option: ", self.config.VIDEO_OPTION)
+        
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
 
@@ -1033,6 +1038,8 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            # batch.items will contain rgb 
+            print("RESET OBS:", observations)
             batch = batch_obs(
                 observations,
                 device=self.device,
@@ -1046,7 +1053,7 @@ class PPOTrainer(BaseRLTrainer):
                 device="cpu",
             )
 
-            rewards = torch.tensor(
+            rewards = torch.tensor( # look at tensors 
                 rewards_l, dtype=torch.float, device="cpu"
             ).unsqueeze(1)
             current_episode_reward += rewards
@@ -1077,11 +1084,11 @@ class PPOTrainer(BaseRLTrainer):
                         )
                     ] = episode_stats
 
-                    if len(self.config.VIDEO_OPTION) > 0:
+                    if len(self.config.VIDEO_OPTION) > 0: # generates video & formats it for tensorboard
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
-                            images=rgb_frames[i],
+                            images=rgb_frames[i], # create rgb_frames
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),

@@ -39,8 +39,7 @@ def ant_environment_example():
 
             #if keystroke == 27:
             #    break
-            print(obs.keys())
-            print(obs["ant_observation_space_sensor"])
+            #print(obs["ant_observation_space_sensor"])
             #cv2.imshow("RGB", obs["robot_third_rgb"])
 
         env.reset()

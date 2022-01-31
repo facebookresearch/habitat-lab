@@ -14,23 +14,28 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints_steps_128"
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints_video_enabled_2"
 NUM_ENVIRONMENTS: 1
 SENSORS: []
-CHECKPOINT_FOLDER: "data/new_checkpoints_steps_128"
-# TOTAL_NUM_STEPS: 75e6
+CHECKPOINT_FOLDER: "data/new_checkpoints_video_enabled_2"
+#TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25
 NUM_CHECKPOINTS: 100
+
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
+  END_ON_SUCCESS: False
+  SUCCESS_REWARD: 0.0
+  SLACK_REWARD: 0.0
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
   REWARD_MEASURE: "X_LOCATION"
   SUCCESS_MEASURE: "X_LOCATION"
+  # GYM_OBS_KEYS: []
   PPO:
     # ppo params
     clip_param: 0.2
@@ -41,7 +46,7 @@ RL:
     lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2
-    num_steps: 128 # 16384
+    num_steps: 300 # 16384
     hidden_size: 512
     use_gae: True
     gamma: 0.99

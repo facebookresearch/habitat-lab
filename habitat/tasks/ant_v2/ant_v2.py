@@ -84,6 +84,9 @@ class AntV2Sim(HabitatSim):
         # The physics update time step.
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
+        self.load_obstacles = False
+        # self.load_obstacles = agent_config.LOAD_OBSTACLES # Not working during training!
+
 
         self.art_objs = []
         self.start_art_states = {}
@@ -147,6 +150,23 @@ class AntV2Sim(HabitatSim):
 
             floor_obj.translation = np.array([2.50, -1, 0.5])
             floor_obj.motion_type = habitat_sim.physics.MotionType.STATIC
+            
+            obstacles = []
+            if self.load_obstacles:
+                # load periodically placed obstacles
+                # add floor
+                cube_obstacle = obj_templates_mgr.get_template_by_handle(cube_handle)
+                cube_obstacle.scale = np.array([0.1, 1, 4.8])
+                # TODO: COLOR OBSTACLE RED
+                obj_templates_mgr.register_template(cube_obstacle, "cube_obstacle")
+                
+                for i in range(6):
+                    obstacles.append(rigid_obj_mgr.add_object_by_template_handle("cube_obstacle"))
+                    obstacles[-1].motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                    obstacles[-1].translation = np.array([i*3 + 2, -0.5, 5 * (1 - 2 * (i % 2))])
+                    obstacles[-1].motion_type = habitat_sim.physics.MotionType.STATIC
+                    
+                    
         else: # environment is already loaded; reset the Ant
             self.robot.reset()
             self.robot.base_pos = mn.Vector3(
@@ -183,7 +203,7 @@ class AntObservationSpaceSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=-np.inf, high=np.inf, shape=(13,), dtype=np.float
+            low=-np.inf, high=np.inf, shape=(29,), dtype=np.float
         )
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
@@ -223,7 +243,7 @@ class XLocation(Measure):
             self._metric = None
 
         current_position = self._sim.robot.base_pos
-        self._metric = current_position.x * 100
+        self._metric = current_position.x
         # print(self._metric)
 
 
@@ -290,11 +310,20 @@ class AntV2Task(NavigationTask):
     ) -> None:
         # config.enable_physics = True
         super().__init__(config=config, sim=sim, dataset=dataset)
+        # add custom sensor if eval mode is triggered, use below code to compute navmesh as well
+        
         """habitat_sim.gfx.Renderer()
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
         sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         print("NAVMESH COMPUTED?")"""
+
+        if config.RUN_TYPE == "eval":
+            config.defrost()
+            config.SENSORS.append("THIRD_RGB_SENSOR")
+            config.DEBUG_RENDER = True
+            config.freeze()
+        print("TASK CONFIG:", config)
 
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
