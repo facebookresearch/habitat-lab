@@ -53,7 +53,7 @@ class RearrangePickTaskV1(RearrangeTask):
             sel_idx = np.random.randint(0, len(target_positions))
         targ_pos = target_positions[sel_idx]
 
-        orig_start_pos = sim.pathfinder.snap_point(targ_pos)
+        orig_start_pos = sim.safe_snap_point(targ_pos)
 
         state = sim.capture_state()
         start_pos = orig_start_pos

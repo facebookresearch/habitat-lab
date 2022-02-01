@@ -10,12 +10,17 @@ Manually control the robot to interact with the environment. Run as
 python examples/interative_play.py
 ```
 
-To Run you need PyGame installed.
+To run you need PyGame installed.
 
-By default this controls with velocity control (which makes controlling the
+By default, this runs using the same setup as the agent, which means low resolution cameras. Fix this and make it so the episode does not end on success with
+```
+python examples/interative_play.py --never-end --play-task
+```
+
+Also by default, this controls with velocity control (which makes controlling the
 robot hard). To use IK control instead: run with
 ```
-python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_cad_example_ik.yaml
+python examples/interactive_play.py --add-ik
 ```
 
 Controls:

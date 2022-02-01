@@ -31,7 +31,7 @@ class GeoMeasure(Measure):
 
     def _get_agent_pos(self):
         current_pos = self._sim.robot.base_pos
-        return self._sim.pathfinder.snap_point(current_pos)
+        return self._sim.safe_snap_point(current_pos)
 
     def _get_cur_geo_dist(self, task):
         distance_to_target = self._sim.geodesic_distance(

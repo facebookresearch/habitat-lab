@@ -53,7 +53,7 @@ class DynNavRLEnv(RearrangeTask):
     def _get_agent_pos(self):
         sim = self._env._sim
         current_pos = sim.get_robot_transform().translation
-        return sim.pathfinder.snap_point(current_pos)
+        return sim.safe_snap_point(current_pos)
 
     def _get_cur_geo_dist(self):
         sim = self._env._sim
@@ -106,7 +106,7 @@ class DynNavRLEnv(RearrangeTask):
         targ_pos, targ_angle, _ = self._determine_nav_pos(episode)
         orig_nav_targ_pos = self._sim.get_nav_pos(targ_pos)
         self._nav_target_pos = np.array(
-            self._sim.pathfinder.snap_point(orig_nav_targ_pos)
+            self._sim.safe_snap_point(orig_nav_targ_pos)
         )
 
         start_pos, start_rot = get_robo_start_pos(
@@ -150,7 +150,7 @@ class DynNavRLEnv(RearrangeTask):
                 )
                 orig_nav_targ_pos = sim.get_nav_pos(targ_pos)
                 self._nav_target_pos = np.array(
-                    sim.pathfinder.snap_point(orig_nav_targ_pos)
+                    sim.safe_snap_point(orig_nav_targ_pos)
                 )
                 self._nav_target_angle = float(self._nav_target_angle)
 
@@ -274,7 +274,7 @@ def get_robo_start_pos(sim, nav_targ_pos):
 
         current_position = sim.robot.base_pos
         # This should only snap the height
-        current_position = sim.pathfinder.snap_point(current_position)
+        current_position = sim.safe_snap_point(current_position)
         distance_to_target = sim.geodesic_distance(
             current_position, [nav_targ_pos], None
         )

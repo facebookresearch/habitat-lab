@@ -347,6 +347,23 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
+    def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
+        """
+        snap_point can return nan which produces hard to catch errors.
+        """
+        new_pos = self.pathfinder.snap_point(pos)
+        if np.isnan(new_pos[0]):
+            navmesh_vertices = np.stack(
+                self.pathfinder.build_navmesh_vertices(), axis=0
+            )
+            distances = np.linalg.norm(
+                np.array(pos).reshape(1, 3) - navmesh_vertices, axis=-1
+            )
+            closest_idx = np.argmin(distances)
+            new_pos = navmesh_vertices[closest_idx]
+
+        return new_pos
+
     def _add_objs(self, ep_info: Config, should_add_objects: bool) -> None:
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
