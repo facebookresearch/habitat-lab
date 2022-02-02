@@ -312,7 +312,7 @@ class EmbodiedTask:
         action_name = action["action"]
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
-        observations = {}
+        observations: Any = {}
         if isinstance(action_name, tuple):  # there are multiple actions
             for a_name in action_name:
                 self._step_single_action(observations, a_name, action, episode)
