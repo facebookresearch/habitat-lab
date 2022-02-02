@@ -100,7 +100,7 @@ class WeightsAndBiasesWriter:
             wb_kwargs["entity"] = config.WB.ENTITY
         if config.WB.GROUP != "":
             wb_kwargs["group"] = config.WB.GROUP
-        self.run = wandb.init(**wb_kwargs)
+        self.run = wandb.init(config=config, **wb_kwargs)
 
     def __getattr__(self, item):
         if self.writer:

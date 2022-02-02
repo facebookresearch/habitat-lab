@@ -77,6 +77,7 @@ class PointNavResNetPolicy(Policy):
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
                 fuse_keys=fuse_keys,
+                include_visual_keys=policy_config.include_visual_keys,
             ),
             dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
@@ -237,6 +238,7 @@ class PointNavResNetNet(Net):
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
         fuse_keys: Optional[List[str]] = None,
+        include_visual_keys: Optional[List[str]] = None,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -250,7 +252,11 @@ class PointNavResNetNet(Net):
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
 
-        self._fuse_keys = fuse_keys
+        # Only fuse the 1D state inputs. Other inputs are processed by the
+        # visual encoder
+        self._fuse_keys = [
+            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
+        ]
         if self._fuse_keys is not None:
             rnn_input_size += sum(
                 [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
@@ -345,8 +351,19 @@ class PointNavResNetNet(Net):
 
         self._hidden_size = hidden_size
 
+        if force_blind_policy:
+            use_obs_space = spaces.Dict({})
+        if include_visual_keys is not None and len(include_visual_keys) != 0:
+            use_obs_space = spaces.Dict(
+                {
+                    k: v
+                    for k, v in observation_space.spaces.items()
+                    if k in include_visual_keys
+                }
+            )
+
         self.visual_encoder = ResNetEncoder(
-            observation_space if not force_blind_policy else spaces.Dict({}),
+            use_obs_space,
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),

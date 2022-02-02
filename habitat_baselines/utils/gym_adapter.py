@@ -43,7 +43,9 @@ def smash_observation_space(obs_space, limit_keys):
         return spaces.Box(
             shape=(total_dim,), low=-1.0, high=1.0, dtype=np.float32
         )
-    return obs_space
+    return spaces.Dict(
+        {k: v for k, v in obs_space.spaces.items() if k in limit_keys}
+    )
 
 
 class HabGymWrapper(gym.Env):
@@ -185,16 +187,13 @@ class HabGymWrapper(gym.Env):
         return obs, reward, done, info
 
     def _is_space_flat(self, space_name):
-        if isinstance(self.observation_space, spaces.Box):
-            return True
-        return isinstance(
-            self.observation_space.spaces[space_name], spaces.Box
-        )
+        return isinstance(self.observation_space, spaces.Box)
 
     def _transform_obs(self, obs):
         if self._save_orig_obs:
             self.orig_obs = obs
-        observation = {"observation": [obs[k] for k in self._gym_obs_keys]}
+
+        observation = {"observation": {k: obs[k] for k in self._gym_obs_keys}}
 
         if len(self._gym_goal_keys) > 0:
             observation["desired_goal"] = [obs[k] for k in self._gym_goal_keys]
@@ -204,11 +203,11 @@ class HabGymWrapper(gym.Env):
                 obs[k] for k in self._gym_achieved_goal_keys
             ]
 
+        if len(observation) == 1:
+            observation = observation["observation"]
         for k, v in observation.items():
             if self._is_space_flat(k):
                 observation[k] = np.concatenate(v)
-        if len(observation) == 1:
-            return observation["observation"]
 
         return observation
 

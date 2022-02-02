@@ -332,6 +332,7 @@ def generate_video(
     tb_writer: TensorboardWriter,
     fps: int = 10,
     verbose: bool = True,
+    keys_to_include_in_name: Optional[List[str]] = None,
 ) -> None:
     r"""Generate video according to specified information.
 
@@ -352,8 +353,22 @@ def generate_video(
         return
 
     metric_strs = []
-    for k, v in metrics.items():
-        metric_strs.append(f"{k}={v:.2f}")
+    if (
+        keys_to_include_in_name is not None
+        and len(keys_to_include_in_name) > 0
+    ):
+        use_metrics_k = [
+            k
+            for k in metrics
+            if any(
+                to_include_k in k for to_include_k in keys_to_include_in_name
+            )
+        ]
+    else:
+        use_metrics_k = metrics
+
+    for k in use_metrics_k:
+        metric_strs.append(f"{k}={metrics[k]:.2f}")
 
     video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
