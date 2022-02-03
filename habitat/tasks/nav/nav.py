@@ -271,7 +271,7 @@ class ImageGoalSensor(Sensor):
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
         # to be sure that the rotation is the same for the same episode_id
         # since the task is currently using pointnav Dataset.
-        seed = abs(hash(episode.episode_id)) % (2 ** 32)
+        seed = abs(hash(episode.episode_id)) % (2**32)
         rng = np.random.RandomState(seed)
         angle = rng.uniform(0, 2 * np.pi)
         source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]

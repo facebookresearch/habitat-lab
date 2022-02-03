@@ -16,19 +16,19 @@ def quaternion_to_rotation(q_r, q_i, q_j, q_k):
     rotation_mat = np.array(
         [
             [
-                1 - 2 * s * (q_j ** 2 + q_k ** 2),
+                1 - 2 * s * (q_j**2 + q_k**2),
                 2 * s * (q_i * q_j - q_k * q_r),
                 2 * s * (q_i * q_k + q_j * q_r),
             ],
             [
                 2 * s * (q_i * q_j + q_k * q_r),
-                1 - 2 * s * (q_i ** 2 + q_k ** 2),
+                1 - 2 * s * (q_i**2 + q_k**2),
                 2 * s * (q_j * q_k - q_i * q_r),
             ],
             [
                 2 * s * (q_i * q_k - q_j * q_r),
                 2 * s * (q_j * q_k + q_i * q_r),
-                1 - 2 * s * (q_i ** 2 + q_j ** 2),
+                1 - 2 * s * (q_i**2 + q_j**2),
             ],
         ],
         dtype=np.float32,
@@ -37,7 +37,7 @@ def quaternion_to_rotation(q_r, q_i, q_j, q_k):
 
 
 def cartesian_to_polar(x, y):
-    rho = np.sqrt(x ** 2 + y ** 2)
+    rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return rho, phi
 
