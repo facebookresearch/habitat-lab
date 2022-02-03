@@ -18,6 +18,7 @@ NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_to_obj.yaml
 GYM_AUTO_NAME: "NavToObj"
@@ -28,12 +29,15 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      include_visual_keys: ["robot_head_depth"]
+      ACTION_DIST:
+         use_log_std: True
 
   REWARD_MEASURE: "nav_to_obj_reward"
   SUCCESS_MEASURE: "nav_to_obj_success"
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
-  # GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js']
+  GYM_OBS_KEYS: ['obj_start_sensor']
   END_ON_SUCCESS: True
 
   PPO:

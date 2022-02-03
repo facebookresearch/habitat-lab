@@ -29,13 +29,11 @@ TASK:
     REWARD_MEASUREMENT: "nav_to_obj_reward"
     SUCCESS_MEASUREMENT: "nav_to_obj_success"
 
-
-    TARGET_POINTGOAL_WITH_GPS_COMPASS_SENSOR:
-        TYPE: "TargetPointGoalGPSAndCompassSensor"
+    TARGET_START_SENSOR:
+        TYPE: "TargetStartSensor"
         GOAL_FORMAT: "POLAR"
         DIMENSIONALITY: 2
-
-    SENSORS: ["TARGET_POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR"]
 
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -107,7 +105,7 @@ SIMULATOR:
         HEIGHT: 1.5
         IS_SET_START_STATE: False
         RADIUS: 0.1
-        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+        SENSORS: ['HEAD_DEPTH_SENSOR']
         START_POSITION: [0, 0, 0]
         START_ROTATION: [0, 0, 0, 1]
     HEAD_RGB_SENSOR:

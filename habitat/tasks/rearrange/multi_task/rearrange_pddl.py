@@ -285,8 +285,8 @@ class SetState:
                 return False
 
             targ_idx = name_to_id[target]
-            _, pos_targs = sim.get_targets()
-            targ_pos = pos_targs[targ_idx]
+            idxs, pos_targs = sim.get_targets()
+            targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
             dist = np.linalg.norm(cur_pos - targ_pos)
             if dist >= obj_thresh:

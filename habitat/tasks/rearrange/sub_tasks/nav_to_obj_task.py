@@ -131,6 +131,8 @@ class DynNavRLEnv(RearrangeTask):
                 self._config,
                 self._sim,
             )
+        else:
+            self.domain.reset()
 
         episode_id = sim.ep_info["episode_id"]
 

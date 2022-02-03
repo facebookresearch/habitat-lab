@@ -9,21 +9,21 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import Action, Predicate
 class PddlDomain:
     def __init__(self, load_file, dataset, cur_task_config, sim):
         with open(load_file, "r") as f:
-            domain_def = yaml.safe_load(f)
+            self.domain_def = yaml.safe_load(f)
 
         self.sim = sim
-        self._name_to_id = self.get_name_id_conversions(domain_def)
+        self.reset()
 
         self.predicates = []
-        for pred_d in domain_def["predicates"]:
+        for pred_d in self.domain_def["predicates"]:
             pred = Predicate(pred_d)
             self.predicates.append(pred)
-        self.types = domain_def["types"]
+        self.types = self.domain_def["types"]
 
         self._config = cur_task_config
 
         self.actions = {}
-        for action_d in domain_def["actions"]:
+        for action_d in self.domain_def["actions"]:
             action = Action(
                 action_d,
                 cur_task_config,
@@ -33,6 +33,9 @@ class PddlDomain:
                 self.predicate_lookup,
             )
             self.actions[action.name] = action
+
+    def reset(self):
+        self._name_to_id = self.get_name_id_conversions(self.domain_def)
 
     def get_task_match_for_name(self, task_name_cls):
         matches = []
