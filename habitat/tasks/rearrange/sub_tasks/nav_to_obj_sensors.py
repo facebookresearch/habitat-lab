@@ -42,6 +42,9 @@ class GeoMeasure(Measure):
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
             print("Distance is infinity", "returning ", distance_to_target)
+        if distance_to_target is None:
+            distance_to_target = 30
+            print("Distance is None", "returning ", distance_to_target)
         return distance_to_target
 
 
@@ -74,11 +77,7 @@ class NavToObjReward(GeoMeasure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = self._config.SLACK_REWARD
-        cur_dist = self._get_cur_geo_dist(task)
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
-        cur_angle_dist = task.measurements.measures[
-            RotDistToGoal.cls_uuid
-        ].get_metric()
 
         reward += self._prev_dist - cur_dist
         self._prev_dist = cur_dist
@@ -104,7 +103,7 @@ class NavToObjReward(GeoMeasure):
                 RotDistToGoal.cls_uuid
             ].get_metric()
 
-            if cur_angle_dist < 0:
+            if self._cur_angle_dist < 0:
                 angle_diff = 0.0
             else:
                 angle_diff = self._cur_angle_dist - angle_dist

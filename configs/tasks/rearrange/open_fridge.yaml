@@ -18,7 +18,7 @@ TASK:
     SPAWN_REGION_SCALE: 0.2
     # -1 does not change the max impulse
     JOINT_MAX_IMPULSE: -1.0
-    CONSTRAINT_VIOLATION_SHOULD_END: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
 
     USE_MARKER_T: True
     # (pi/2) - 0.35

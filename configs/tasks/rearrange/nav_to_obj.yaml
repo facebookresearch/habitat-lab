@@ -10,7 +10,7 @@ TASK:
 
     MUST_LOOK_AT_TARG: True
     DEBUG_GOAL_POINT: True
-    CONSTRAINT_VIOLATION_SHOULD_END: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
     FORCE_REGENERATE: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
@@ -29,17 +29,13 @@ TASK:
     REWARD_MEASUREMENT: "nav_to_obj_reward"
     SUCCESS_MEASUREMENT: "nav_to_obj_success"
 
-    JOINT_SENSOR:
-        TYPE: "JointSensor"
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: "EEPositionSensor"
-    IS_HOLDING_SENSOR:
-        TYPE: "IsHoldingSensor"
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: "RelativeRestingPositionSensor"
 
-    SENSORS: ["JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    TARGET_POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+        TYPE: "TargetPointGoalGPSAndCompassSensor"
+        GOAL_FORMAT: "POLAR"
+        DIMENSIONALITY: 2
+
+    SENSORS: ["TARGET_POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
 
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -51,10 +47,6 @@ TASK:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
         TYPE: "ObjectToGoalDistance"
-    END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: "EndEffectorToObjectDistance"
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: "EndEffectorToRestDistance"
     ROT_DIST_TO_GOAL:
       TYPE: "RotDistToGoal"
     DIST_TO_GOAL:
@@ -89,8 +81,6 @@ TASK:
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
-        - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "ROT_DIST_TO_GOAL"
         - "DIST_TO_GOAL"
         - "BAD_CALLED_TERMINATE"
@@ -104,10 +94,10 @@ TASK:
         ANG_SPEED: 10.0
         ALLOW_DYN_SLIDE: True
         ALLOW_BACK: True
-        END_ON_STOP: True
+        END_ON_STOP: False
         MIN_ABS_LIN_SPEED: 1.0
         MIN_ABS_ANG_SPEED: 1.0
-    POSSIBLE_ACTIONS: ['BASE_VELOCITY', 'STOP']
+    POSSIBLE_ACTIONS: ['BASE_VELOCITY']
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
