@@ -9,7 +9,6 @@ TASK:
     TYPE: RearrangeNavToObjTask-v0
 
     MUST_LOOK_AT_TARG: True
-    DEBUG_GOAL_POINT: True
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
     FORCE_REGENERATE: False
@@ -56,6 +55,8 @@ TASK:
     NAV_TO_POS_SUCC:
       TYPE: "NavToPosSucc"
       SUCCESS_DISTANCE: 0.2
+    NUM_STEPS:
+      TYPE: "NumStepsMeasure"
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: "NavToObjReward"
         # Negative means a penalty
@@ -85,6 +86,7 @@ TASK:
         - "NAV_TO_POS_SUCC"
         - "REARRANGE_NAV_TO_OBJ_SUCCESS"
         - "REARRANGE_NAV_TO_OBJ_REWARD"
+        - "NUM_STEPS"
     ACTIONS:
       BASE_VELOCITY:
         TYPE: "BaseVelAction"
@@ -92,7 +94,7 @@ TASK:
         ANG_SPEED: 10.0
         ALLOW_DYN_SLIDE: True
         ALLOW_BACK: True
-        END_ON_STOP: False
+        END_ON_STOP: True
         MIN_ABS_LIN_SPEED: 1.0
         MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS: ['BASE_VELOCITY']
@@ -100,6 +102,8 @@ TASK:
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5

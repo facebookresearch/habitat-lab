@@ -223,7 +223,6 @@ class NavToPosSucc(GeoMeasure):
             self.uuid,
             [DistToGoal.cls_uuid],
         )
-        self._action_can_stop = task.actions[BASE_ACTION_NAME].end_on_stop
 
         super().reset_metric(
             *args,

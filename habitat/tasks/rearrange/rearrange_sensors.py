@@ -586,6 +586,20 @@ class RobotForce(Measure):
 
         self._metric = self._accum_force
 
+@registry.register_measure
+class NumStepsMeasure(Measure):
+    cls_uuid: str = "num_steps"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NumStepsMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = 0
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric += 1
+
 
 @registry.register_measure
 class ForceTerminate(Measure):

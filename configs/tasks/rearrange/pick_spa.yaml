@@ -117,6 +117,8 @@ SIMULATOR:
     DEBUG_RENDER: False
     AGENTS: ['AGENT_0']
     ROBOT_JOINT_START_NOISE: 0.0
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

@@ -670,13 +670,15 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in losses.items():
             writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
+        fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
+        writer.add_scalar(f"metrics/fps", fps, self.num_steps_done)
+
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
-                    self.num_steps_done
-                    / ((time.time() - self.t_start) + prev_time),
+                    fps,
                 )
             )
 

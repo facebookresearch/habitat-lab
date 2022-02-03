@@ -39,7 +39,6 @@ class RearrangeSim(HabitatSim):
         agent_config = self.habitat_config
         self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
         self.first_setup = True
-        self._should_render_debug = False
         self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
@@ -50,9 +49,6 @@ class RearrangeSim(HabitatSim):
         # The physics update time step.
         self.ctrl_freq = agent_config.CTRL_FREQ
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
-        self._concur_render = self.habitat_config.get("CONCUR_RENDER", False)
-        self._auto_sleep = self.habitat_config.get("AUTO_SLEEP", False)
-        self._debug_render = self.habitat_config.get("DEBUG_RENDER", False)
 
         self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []
         self._start_art_states: Dict[
@@ -70,6 +66,7 @@ class RearrangeSim(HabitatSim):
         self._markers: Dict[str, MarkerInfo] = {}
 
         self._viz_templates: Dict[str, Any] = {}
+        self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
 
         self._ik_helper: Optional[IkHelper] = None
@@ -98,7 +95,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self._concur_render:
+        if self.habitat_config.CONCUR_RENDER:
             self.renderer.acquire_gl_context()
 
     def sleep_all_objects(self):
@@ -196,6 +193,7 @@ class RearrangeSim(HabitatSim):
 
         self.prev_scene_id = ep_info["scene_id"]
         self._viz_templates = {}
+        self._viz_handle_to_template = {}
 
         # Set the default articulated object joint state.
         for ao, set_joint_state in self._start_art_states.items():
@@ -241,7 +239,7 @@ class RearrangeSim(HabitatSim):
         self.add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self._auto_sleep:
+        if self.habitat_config.AUTO_SLEEP:
             self.sleep_all_objects()
 
         if new_scene:
@@ -515,7 +513,7 @@ class RearrangeSim(HabitatSim):
 
         self._update_markers()
 
-        if self._debug_render:
+        if self.habitat_config.DEBUG_RENDER:
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
             # Don't draw bounding boxes over target objects.
@@ -538,12 +536,13 @@ class RearrangeSim(HabitatSim):
                 viz_obj = rom.get_object_by_id(viz_id)
                 before_pos = viz_obj.translation
                 rom.remove_object_by_id(viz_id)
-                add_back_viz_objs[name] = before_pos
+                r = self._viz_handle_to_template[viz_id]
+                add_back_viz_objs[name] = (before_pos, r)
             self.viz_ids = defaultdict(lambda: None)
 
         self.grasp_mgr.update()
 
-        if self._concur_render:
+        if self.habitat_config.CONCUR_RENDER:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -560,10 +559,14 @@ class RearrangeSim(HabitatSim):
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self._debug_render:
+        if "robot_third_rgb" in obs and self.habitat_config.DEBUG_RENDER:
             self._try_acquire_context()
-            for k, pos in add_back_viz_objs.items():
-                self.viz_ids[k] = self.visualize_position(pos, self.viz_ids[k])
+            for k, (pos, r) in add_back_viz_objs.items():
+                viz_id = self.viz_ids[k]
+
+                self.viz_ids[k] = self.visualize_position(
+                    pos, self.viz_ids[k], r=r
+                )
 
             # Also render debug information
             self._create_obj_viz(self.ep_info)
@@ -601,6 +604,7 @@ class RearrangeSim(HabitatSim):
                 )
             viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
             make_render_only(viz_obj, self)
+            self._viz_handle_to_template[viz_obj.object_id] = r
         else:
             viz_obj = rom.get_object_by_id(viz_id)
 

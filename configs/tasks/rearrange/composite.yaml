@@ -210,6 +210,8 @@ SIMULATOR:
     AC_FREQ_RATIO: 4
     DEBUG_RENDER: False
     AGENTS: ['AGENT_0']
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

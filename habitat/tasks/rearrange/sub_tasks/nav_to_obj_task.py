@@ -204,11 +204,12 @@ class DynNavRLEnv(RearrangeTask):
         if not sim.pathfinder.is_navigable(self._nav_target_pos):
             print("Goal is not navigable")
 
-        if self._config.DEBUG_GOAL_POINT:
+        if self._sim.habitat_config.DEBUG_RENDER:
+            # Visualize the position the agent is navigating to.
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
                 self._nav_target_pos,
                 sim.viz_ids["nav_targ_pos"],
-                r=10.0,
+                r=30.0,
             )
 
         return observations

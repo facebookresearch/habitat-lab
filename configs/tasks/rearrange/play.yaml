@@ -135,6 +135,8 @@ SIMULATOR:
     HOLD_THRESH: 0.09
     AC_FREQ_RATIO: 4
     DEBUG_RENDER: False
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5
