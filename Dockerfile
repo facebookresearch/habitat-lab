@@ -38,7 +38,7 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
 # Conda environment
-RUN conda create -n habitat python=3.6 cmake=3.14.0
+RUN conda create -n habitat python=3.7 cmake=3.14.0
 
 # Setup habitat-sim
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
