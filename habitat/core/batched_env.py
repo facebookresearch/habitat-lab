@@ -61,6 +61,8 @@ class BatchedEnv:
         sensor_width, sensor_height = agent_0_sensor_0_config.WIDTH, agent_0_sensor_0_config.HEIGHT
 
         if not config.STUB_BATCH_SIMULATOR:
+            # require CUDA 11.0+ (lower versions will work but runtime perf will be bad!)
+            assert torch.cuda.is_available() and torch.version.cuda.startswith("11")
             from habitat_sim._ext.habitat_sim_bindings import BatchedSimulator, BatchedSimulatorConfig
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
