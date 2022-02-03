@@ -217,7 +217,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     render_obs_images: List[np.ndarray] = []
     print("obs @@@@@@@@@: ", observation)
     for sensor_name in observation:
-        if "rgb" in sensor_name:
+        if "rgb" in sensor_name or "third" in sensor_name:
             rgb = observation[sensor_name]
             if not isinstance(rgb, np.ndarray):
                 rgb = rgb.cpu().numpy()

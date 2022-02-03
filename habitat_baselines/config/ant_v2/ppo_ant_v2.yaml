@@ -9,14 +9,18 @@ SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 # Can be uncommented to generate videos.
-VIDEO_OPTION: ["disk", "tensorboard"]
+#VIDEO_OPTION: ["disk", "tensorboard"]
+VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 # Evaluate on all episodes
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints_video_enabled_2"
 NUM_ENVIRONMENTS: 1
-SENSORS: []
+#use the empty sensor list for training
+#SENSORS: []
+#include the "third_sensor" for eval
+SENSORS: ['THIRD_SENSOR']
 CHECKPOINT_FOLDER: "data/new_checkpoints_video_enabled_2"
 #TOTAL_NUM_STEPS: 75e6
 LOG_INTERVAL: 25

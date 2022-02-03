@@ -313,13 +313,13 @@ _C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
 # -----------------------------------------------------------------------------
 # 3rd RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.THIRD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
+_C.SIMULATOR.THIRD_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.THIRD_SENSOR.UUID = "robot_third"
 # -----------------------------------------------------------------------------
 # 3rd DEPTH SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
+_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_depth"
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
