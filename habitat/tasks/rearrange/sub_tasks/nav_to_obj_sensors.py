@@ -277,8 +277,11 @@ class NavToObjSuccess(GeoMeasure):
         else:
             self._metric = nav_pos_succ
         called_stop = self.does_action_want_stop(task, observations)
-        if self._action_can_stop and not called_stop:
-            self._metric = False
+        if self._action_can_stop:
+            if called_stop:
+                task.should_end = True
+            else:
+                self._metric = False
 
     def does_action_want_stop(self, task, obs):
         if self._config.HEURISTIC_STOP:
