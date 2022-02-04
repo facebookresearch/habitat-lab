@@ -317,7 +317,7 @@ class ArmEEAction(SimulatorTaskAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
-        self.ee_target = None
+        self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.robot_ee_constraints = np.array(
