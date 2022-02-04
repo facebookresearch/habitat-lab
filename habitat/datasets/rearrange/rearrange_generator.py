@@ -418,6 +418,7 @@ class RearrangeEpisodeGenerator:
         self.episode_data: Dict[str, Dict[str, Any]] = {
             "sampled_objects": {},  # object sampler name -> sampled object instances
             "sampled_targets": {},  # target sampler name -> (object, target state)
+            "sampled_receptacles": {},  # target_handle -> receptacle
         }
 
         ep_scene_handle = self.generate_scene()
@@ -485,7 +486,8 @@ class RearrangeEpisodeGenerator:
                 self.sim, snap_down=True, vdb=self.vdb
             )
             # cache transforms and add visualizations
-            for instance_handle, target_object in new_target_objects.items():
+            for instance_handle, value in new_target_objects.items():
+                target_object, target_receptacle = value
                 assert (
                     instance_handle not in self.episode_data["sampled_targets"]
                 ), f"Duplicate target for instance '{instance_handle}'."
@@ -497,6 +499,9 @@ class RearrangeEpisodeGenerator:
                 self.episode_data["sampled_targets"][
                     instance_handle
                 ] = np.array(target_transform)
+                self.episode_data["sampled_receptacles"][
+                    instance_handle
+                ] = target_receptacle.parent_object_handle
                 target_refs[
                     instance_handle
                 ] = f"{sampler_name}|{len(target_refs)}"
@@ -548,6 +553,7 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
+            target_receptacles=self.episode_data["sampled_receptacles"],
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
