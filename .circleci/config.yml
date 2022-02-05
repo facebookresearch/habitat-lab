@@ -9,13 +9,13 @@ gpu: &gpu
 jobs:
   python_lint:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run:
           name: setup
           command: |
-              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy mypy==v0.910 --progress-bar off
+              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy mypy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
@@ -40,7 +40,7 @@ jobs:
               mypy
   pre-commit:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     working_directory: ~/repo/
 
     steps:
@@ -137,7 +137,7 @@ jobs:
                 ~/miniconda.sh -b -p $HOME/miniconda
                 rm ~/miniconda.sh
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                conda create -y -n habitat python=3.6
+                conda create -y -n habitat python=3.7
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
                 pip install pytest-sugar

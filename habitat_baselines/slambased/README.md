@@ -30,7 +30,7 @@ If you use this code or the provided environments in your research, please cite 
 
 ## Tested with:
 - Ubuntu 16.04
-- python 3.6
+- python 3.7
 - pytorch 0.4, 1.0
 
 

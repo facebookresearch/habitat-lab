@@ -5,7 +5,7 @@ default_language_version:
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
     -   id: trailing-whitespace
     -   id: check-added-large-files
@@ -44,7 +44,7 @@ repos:
         additional_dependencies: [toml]
 
 -   repo: https://github.com/ambv/black
-    rev: 21.12b0
+    rev: 22.1.0
     hooks:
     - id: black
       exclude: ^examples/tutorials/(nb_python|colabs)
@@ -69,12 +69,13 @@ repos:
         - flake8-simplify==0.14.1
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.910-1
+    rev: v0.931
     hooks:
     -   id: mypy
         pass_filenames: false
         additional_dependencies:
          - attrs>=19.1.0
+         - numpy
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.5.0
@@ -83,7 +84,7 @@ repos:
         files: ".ipynb"
 
 -   repo: https://github.com/mwouts/jupytext
-    rev: v1.13.3
+    rev: v1.13.6
     hooks:
     -   id: jupytext
         files: '^examples/tutorials/(colabs|nb_python)/(.*\.py|.*\.ipynb)$'
@@ -94,7 +95,7 @@ repos:
             - isort
 
 -   repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.8.0.1
+    rev: v0.8.0.3
     hooks:
     -   id: shellcheck
         exclude: ^habitat_baselines/slambased/

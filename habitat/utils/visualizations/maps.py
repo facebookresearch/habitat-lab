@@ -138,8 +138,8 @@ def pointnav_draw_target_birdseye_view(
 
     goal_agent_dist = np.linalg.norm(agent_position - goal_position, 2)
 
-    goal_distance_padding = max(
-        2, 2 ** np.ceil(np.log(max(1e-6, goal_agent_dist)) / np.log(2))
+    goal_distance_padding = np.maximum(
+        2, 2 ** np.ceil(np.log(np.maximum(1e-6, goal_agent_dist)) / np.log(2))
     )
     movement_scale = 1.0 / goal_distance_padding
     half_res = resolution_px // 2
