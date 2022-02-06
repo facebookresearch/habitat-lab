@@ -86,6 +86,8 @@ TASK:
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
@@ -95,6 +97,7 @@ TASK:
         - "ART_OBJ_STATE"
         - "ART_OBJ_SUCCESS"
         - "ART_OBJ_REWARD"
+        - "NUM_STEPS"
 
     ACTIONS:
         ARM_ACTION:

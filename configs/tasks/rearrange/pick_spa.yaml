@@ -87,6 +87,8 @@ TASK:
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
@@ -95,6 +97,7 @@ TASK:
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "PICK_SUCCESS"
         - "PICK_REWARD"
+        - "NUM_STEPS"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"

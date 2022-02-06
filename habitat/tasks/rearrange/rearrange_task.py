@@ -68,17 +68,6 @@ class RearrangeTask(NavigationTask):
         self._ignore_collisions = []
         if self._sim_reset:
             observations = super().reset(episode)
-        else:
-            observations = None
-            self._sim._try_acquire_context()
-            prev_sim_obs = self._sim.get_sensor_observations()
-            observations = self._sim._sensor_suite.get_observations(
-                prev_sim_obs
-            )
-            task_obs = self.sensor_suite.get_observations(
-                observations=observations, episode=episode, task=self
-            )
-            observations.update(task_obs)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
@@ -87,6 +76,20 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
 
+        start_pos = self._sim.pathfinder.get_random_navigable_point()
+        self._sim.robot.base_pos = start_pos
+
+        # Re-do the sensor readings after the new robot base position is set.
+        return self._get_observations(episode)
+
+    def _get_observations(self, episode):
+        self._sim._try_acquire_context()
+        prev_sim_obs = self._sim.get_sensor_observations()
+        observations = self._sim._sensor_suite.get_observations(prev_sim_obs)
+        task_obs = self.sensor_suite.get_observations(
+            observations=observations, episode=episode, task=self
+        )
+        observations.update(task_obs)
         return observations
 
     def step(self, action: Dict[str, Any], episode: Episode):

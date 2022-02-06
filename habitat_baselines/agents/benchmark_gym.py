@@ -105,12 +105,14 @@ class BenchmarkGym:
         all_next_obs_l = []
         all_actions = []
         all_episode_ids = []
+        all_rewards = []
 
         traj_obs = []
         traj_dones = []
         traj_next_obs = []
         traj_actions = []
         traj_episode_ids = []
+        traj_rewards = []
         pbar = tqdm(total=num_episodes)
 
         while count_episodes < num_episodes:
@@ -131,9 +133,10 @@ class BenchmarkGym:
                     int(self._env.current_episode.episode_id)
                 )
 
-                observations, _, done, _ = self._gym_env.direct_hab_step(
+                observations, reward, done, _ = self._gym_env.direct_hab_step(
                     action
                 )
+                traj_rewards.append(reward)
 
                 traj_next_obs.append(observations)
 
@@ -148,6 +151,7 @@ class BenchmarkGym:
                 assert sum(traj_dones) == 1
                 all_obs_l.extend(traj_obs)
                 all_dones.extend(traj_dones)
+                all_rewards.extend(traj_rewards)
                 all_next_obs_l.extend(traj_next_obs)
                 all_actions.extend(traj_actions)
                 all_episode_ids.extend(traj_episode_ids)
@@ -160,6 +164,7 @@ class BenchmarkGym:
             traj_next_obs = []
             traj_actions = []
             traj_episode_ids = []
+            traj_rewards = []
 
             metrics = self._env.get_metrics()
             for m, v in metrics.items():
@@ -199,6 +204,7 @@ class BenchmarkGym:
                     "done": torch.FloatTensor(all_dones),
                     "obs": all_obs_l,
                     "next_obs": all_next_obs_l,
+                    "rewards": torch.FloatTensor(all_rewards),
                     "episode_ids": torch.tensor(all_episode_ids),
                     "actions": torch.tensor(compressed_actions),
                 },

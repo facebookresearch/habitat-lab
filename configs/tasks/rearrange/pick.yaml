@@ -68,6 +68,8 @@ TASK:
         TYPE: "EndEffectorToRestDistance"
     DID_PICK_OBJECT:
         TYPE: "DidPickObjectMeasure"
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
     PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -100,6 +102,7 @@ TASK:
         - "DID_PICK_OBJECT"
         - "PICK_SUCCESS"
         - "PICK_REWARD"
+        - "NUM_STEPS"
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"

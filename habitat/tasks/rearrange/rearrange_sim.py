@@ -21,6 +21,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 from habitat.tasks.rearrange.utils import (
     IkHelper,
+    get_aabb,
     get_nav_mesh_settings,
     is_pb_installed,
     make_render_only,
@@ -419,6 +420,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
+            # Visualize the goal of the object
             new_target_handle = (
                 target_handle.split("_:")[0] + ".object_config.json"
             )
@@ -430,9 +432,26 @@ class RearrangeSim(HabitatSim):
             ro = rom.add_object_by_template_handle(
                 list(matching_templates.keys())[0]
             )
+            self.set_object_bb_draw(True, ro.object_id)
             ro.transformation = transform
             make_render_only(ro, self)
+            bb = get_aabb(ro.object_id, self, True)
+            bb_viz_name1 = target_handle + "_bb1"
+            bb_viz_name2 = target_handle + "_bb2"
+            viz_r = 0.01
+            self.viz_ids[bb_viz_name1] = self.visualize_position(
+                bb.front_bottom_right, self.viz_ids[bb_viz_name1], viz_r
+            )
+            self.viz_ids[bb_viz_name2] = self.visualize_position(
+                bb.back_top_left, self.viz_ids[bb_viz_name2], viz_r
+            )
+
             self._viz_objs[target_handle] = ro
+
+            # Draw a bounding box around the target object
+            self.set_object_bb_draw(
+                True, rom.get_object_by_handle(target_handle).object_id
+            )
 
     def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
         """
@@ -570,12 +589,6 @@ class RearrangeSim(HabitatSim):
 
             # Also render debug information
             self._create_obj_viz(self.ep_info)
-
-            # Always draw the target
-            for obj_handle, _ in self._targets.items():
-                self.set_object_bb_draw(
-                    True, rom.get_object_by_handle(obj_handle).object_id
-                )
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]

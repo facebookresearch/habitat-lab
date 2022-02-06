@@ -199,8 +199,6 @@ class DynNavRLEnv(RearrangeTask):
 
             targ_idxs, goal_pos = sim.get_targets()
 
-        observations = super().reset(episode)
-
         if not sim.pathfinder.is_navigable(self._nav_target_pos):
             print("Goal is not navigable")
 
@@ -212,7 +210,7 @@ class DynNavRLEnv(RearrangeTask):
                 r=30.0,
             )
 
-        return observations
+        return self._get_observations(episode)
 
 
 def get_nav_targ(

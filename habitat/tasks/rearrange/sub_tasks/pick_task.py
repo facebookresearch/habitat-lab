@@ -125,7 +125,7 @@ class RearrangePickTaskV1(RearrangeTask):
         return (
             self._sim.grasp_mgr.is_grasped
             and action_args.get("grip_action", None) is not None
-            and action_args["grip_action"] <= 0
+            and action_args["grip_action"] < 0
         )
 
     def step(self, action, episode):
@@ -163,4 +163,4 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self._targ_idx = sel_idx
 
-        return super(RearrangePickTaskV1, self).reset(episode)
+        return self._get_observations(episode)
