@@ -49,21 +49,38 @@ receptacle_sets:
       - ""
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - "receptacle_aabb_Chr1_Top1_frl_apartment_chair_01"
-      - "receptacle_aabb_Tbl1_Top1_frl_apartment_table_01"
-      - "receptacle_aabb_Tbl2_Top1_frl_apartment_table_02"
-      - "receptacle_aabb_TvStnd1_Top1_frl_apartment_tvstand"
-      - "receptacle_aabb_sink_kitchen_counter"
-      - "receptacle_aabb_counter_right_kitchen_counter"
-      - "receptacle_aabb_counter_left_kitchen_counter"
+      # - "receptacle_aabb_Chr1_Top1_frl_apartment_chair_01"
+      # - "receptacle_aabb_Tbl1_Top1_frl_apartment_table_01"
+      # - "receptacle_aabb_Tbl2_Top1_frl_apartment_table_02"
+      # - "receptacle_aabb_TvStnd1_Top1_frl_apartment_tvstand"
+      # - "receptacle_aabb_sink_kitchen_counter"
+      # - "receptacle_aabb_counter_right_kitchen_counter"
+      # - "receptacle_aabb_counter_left_kitchen_counter"
 
       # Inside of articulated objects
-      #- "receptacle_aabb_middle_bottomfrl_apartment_refrigerator"
-      #- "receptacle_aabb_middle_topfrl_apartment_refrigerator"
-      #- "receptacle_aabb_middlefrl_apartment_refrigerator"
-      #- "receptacle_aabb_topfrl_apartment_refrigerator"
-      #- "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_middle_bottomfrl_apartment_refrigerator"
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+      - "receptacle_aabb_middlefrl_apartment_refrigerator"
+      - "receptacle_aabb_topfrl_apartment_refrigerator"
     excluded_receptacle_substrings: []
+
+ao_state_samplers:
+  -
+    name: "open_fridge_cab"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+      -
+        ao_handle: "cabinet"
+        joint_states:
+          - ["right_slide", -0.04, -0.04]
+          - ["left_slide", 0.76, 0.76]
+    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
+
+
 
 scene_sampler:
   type: "subset"
@@ -80,7 +97,7 @@ object_samplers:
       num_samples: [1, 25]
       orientation_sampling: "up"
 
-object_target_samplers: 
+object_target_samplers:
   -
     name: "any_targets"
     type: "uniform"
