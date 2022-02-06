@@ -410,14 +410,17 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         return output
 
-    def reconfigure(self, habitat_config: Config) -> None:
+    def reconfigure(
+        self, habitat_config: Config, should_close_on_new_scene: bool = False
+    ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = habitat_config.SCENE == self._current_scene
         self.habitat_config = habitat_config
         self.sim_config = self.create_sim_config(self._sensor_suite)
         if not is_same_scene:
             self._current_scene = habitat_config.SCENE
-            self.close()
+            if should_close_on_new_scene:
+                self.close()
             super().reconfigure(self.sim_config)
 
         self._update_agents_state()

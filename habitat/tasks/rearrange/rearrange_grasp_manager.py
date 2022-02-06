@@ -45,8 +45,10 @@ class RearrangeGraspManager:
         """Removes any existing constraints managed by this structure.
         Called from _sim.reconfigure().
         """
-        for constraint_id in self._snap_constraints:
-            self._sim.remove_rigid_constraint(constraint_id)
+        # for constraint_id in self._snap_constraints:
+        #    print("Trying to remove ", constraint_id)
+        #    self._sim.remove_rigid_constraint(constraint_id)
+        #    print("Done trying to remove")
         self._snap_constraints.clear()
 
     def reset(self) -> None:

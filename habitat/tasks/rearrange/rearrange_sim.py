@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -155,7 +156,8 @@ class RearrangeSim(HabitatSim):
 
         config["SCENE"] = ep_info["scene_id"]
 
-        super().reconfigure(config)
+        super().reconfigure(config, should_close_on_new_scene=False)
+
         self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
@@ -294,29 +296,33 @@ class RearrangeSim(HabitatSim):
         return use_vs[closest_idx]
 
     def _recompute_navmesh(self):
-        """Generates the navmesh on the fly. This must be called
+        """Generates the navmesh or loads the saved navmesh if it exists. This must be called
         AFTER adding articulated objects to the scene.
         """
 
-        # cache current motiontype and set to STATIC for inclusion in the NavMesh computation
-        motion_types = []
-        for art_obj in self.art_objs:
-            motion_types.append(art_obj.motion_type)
-            art_obj.motion_type = MotionType.STATIC
-        # compute new NavMesh
-        self.recompute_navmesh(
-            self.pathfinder,
-            self.navmesh_settings,
-            include_static_objects=True,
-        )
-        # optionally save the new NavMesh
-        if self.habitat_config.get("SAVE_NAVMESH", False):
-            scene_name = self.ep_info["scene_id"]
-            inferred_path = scene_name.split(".glb")[0] + ".navmesh"
-            self.pathfinder.save_nav_mesh(inferred_path)
-        # reset cached MotionTypes
-        for art_obj, motion_type in zip(self.art_objs, motion_types):
-            art_obj.motion_type = motion_type
+        scene_name = self.ep_info["scene_id"]
+        navmesh_path = scene_name.split(".glb")[0] + ".navmesh"
+
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            # cache current motiontype and set to STATIC for inclusion in the NavMesh computation
+            motion_types = []
+            for art_obj in self.art_objs:
+                motion_types.append(art_obj.motion_type)
+                art_obj.motion_type = MotionType.STATIC
+
+            # compute new NavMesh
+            self.recompute_navmesh(
+                self.pathfinder,
+                self.navmesh_settings,
+                include_static_objects=True,
+            )
+            # optionally save the new NavMesh
+            self.pathfinder.save_nav_mesh(navmesh_path)
+            # reset cached MotionTypes
+            for art_obj, motion_type in zip(self.art_objs, motion_types):
+                art_obj.motion_type = motion_type
 
     def _clear_objects(self, should_add_objects: bool) -> None:
         if should_add_objects:

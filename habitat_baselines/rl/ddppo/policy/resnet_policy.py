@@ -353,7 +353,7 @@ class PointNavResNetNet(Net):
 
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
-        if include_visual_keys is not None and len(include_visual_keys) != 0:
+        elif include_visual_keys is not None and len(include_visual_keys) != 0:
             use_obs_space = spaces.Dict(
                 {
                     k: v
@@ -361,6 +361,8 @@ class PointNavResNetNet(Net):
                     if k in include_visual_keys
                 }
             )
+        else:
+            use_obs_space = observation_space
 
         self.visual_encoder = ResNetEncoder(
             use_obs_space,
