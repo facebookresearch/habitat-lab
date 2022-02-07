@@ -45,7 +45,7 @@ def ant_environment_example():
         env.reset()
     vut.make_video(
         observations,
-        "robot_third_rgb",
+        "robot_third",
         "color",
         "test_ant_wrapper",
         open_vid=True,

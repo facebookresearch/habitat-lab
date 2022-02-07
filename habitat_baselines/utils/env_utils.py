@@ -64,14 +64,14 @@ def construct_envs(
                 "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
             )
 
-        if len(scenes) < num_environments:
+        """if len(scenes) < num_environments:
             raise RuntimeError(
                 "reduce the number of environments as there "
                 "aren't enough number of scenes.\n"
                 "num_environments: {}\tnum_scenes: {}".format(
                     num_environments, len(scenes)
                 )
-            )
+            )"""
 
         random.shuffle(scenes)
 
@@ -99,7 +99,7 @@ def construct_envs(
         proc_config.freeze()
         configs.append(proc_config)
 
-    envs = habitat.ThreadedVectorEnv( # Getting EOFError with VectorEnv, using ThreadedVectorEnv instead
+    envs = habitat.VectorEnv( # Getting EOFError with VectorEnv, using ThreadedVectorEnv instead
         make_env_fn=make_env_fn,
         env_fn_args=tuple(zip(configs, env_classes)),
         workers_ignore_signals=workers_ignore_signals,

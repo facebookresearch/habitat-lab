@@ -318,12 +318,12 @@ class AntV2Task(NavigationTask):
         sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         print("NAVMESH COMPUTED?")"""
 
-        if config.RUN_TYPE == "eval":
+        """if config.RUN_TYPE == "eval":
             config.defrost()
             config.SENSORS.append("THIRD_RGB_SENSOR")
             config.DEBUG_RENDER = True
             config.freeze()
-        print("TASK CONFIG:", config)
+        print("TASK CONFIG:", config)"""
 
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)

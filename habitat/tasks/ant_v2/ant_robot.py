@@ -106,6 +106,7 @@ class AntV2Robot(QuadrupedRobot):
         # ant joint velocity
         obs_space[21:29] = super().joint_velocities
         #obs_space[27:30] = super().base_pos
+        return np.zeros(29)
         return obs_space
 
     def update(self):
