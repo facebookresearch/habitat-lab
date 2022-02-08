@@ -160,9 +160,11 @@ class RearrangePickTaskV1(RearrangeTask):
             if len(episode.targets.keys()) == 1:
                 target_key = list(episode.targets.keys())[0]
 
-                receptacle_ao = mgr.get_object_by_handle(
-                    episode.target_receptacles[target_key]
-                )
+                receptacle_ao = None
+                if target_key in episode.target_receptacles:
+                    receptacle_ao = mgr.get_object_by_handle(
+                        episode.target_receptacles[target_key]
+                    )
                 if receptacle_ao is not None:
                     # There is only one target inside an articulated object receptacle
                     # The start position is in front of the receptcacle

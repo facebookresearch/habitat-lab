@@ -23,10 +23,10 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 from habitat.tasks.rearrange.utils import (
     IkHelper,
     get_aabb,
-    get_nav_mesh_settings,
     is_pb_installed,
     make_render_only,
 )
+from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
 
 # flake8: noqa
@@ -39,7 +39,15 @@ class RearrangeSim(HabitatSim):
         super().__init__(config)
 
         agent_config = self.habitat_config
-        self.navmesh_settings = get_nav_mesh_settings(self._get_agent_config())
+
+        agent_cfg = self._get_agent_config()
+
+        self.navmesh_settings = NavMeshSettings()
+        self.navmesh_settings.set_defaults()
+        self.navmesh_settings.agent_radius = agent_cfg.RADIUS
+        self.navmesh_settings.agent_height = agent_cfg.HEIGHT
+        self.navmesh_settings.agent_max_climb = 0.05
+
         self.first_setup = True
         self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None
@@ -237,9 +245,6 @@ class RearrangeSim(HabitatSim):
             self.sleep_all_objects()
 
         if new_scene:
-            # Recompute the NavMesh once the scene is loaded. Only recompute
-            # the navmesh if the scene is different.
-            # NOTE: because ReplicaCADv3_sc scenes, for example, have STATIC objects with no accompanying NavMesh files
             self._recompute_navmesh()
 
         # Get the starting positions of the target objects.
@@ -301,7 +306,9 @@ class RearrangeSim(HabitatSim):
         scene_name = self.ep_info["scene_id"]
         navmesh_path = scene_name.split(".glb")[0] + ".navmesh"
 
-        if osp.exists(navmesh_path):
+        if osp.exists(navmesh_path) and not self.habitat_config.get(
+            "FORCE_RECOMPUTE_NAVMESH", False
+        ):
             self.pathfinder.load_nav_mesh(navmesh_path)
         else:
             # cache current motiontype and set to STATIC for inclusion in the NavMesh computation

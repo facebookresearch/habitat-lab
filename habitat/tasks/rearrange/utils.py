@@ -18,7 +18,6 @@ import numpy as np
 import quaternion
 
 import habitat_sim
-from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
 
 
@@ -160,19 +159,6 @@ def rearrange_collision(
             robot_scene_colls=min(robot_scene_colls, 1),
         )
     return coll_details.total_collisions > 0, coll_details
-
-
-def get_nav_mesh_settings(agent_config):
-    return get_nav_mesh_settings_from_height(agent_config.HEIGHT)
-
-
-def get_nav_mesh_settings_from_height(height):
-    navmesh_settings = NavMeshSettings()
-    navmesh_settings.set_defaults()
-    navmesh_settings.agent_radius = 0.4
-    navmesh_settings.agent_height = height
-    navmesh_settings.agent_max_climb = 0.05
-    return navmesh_settings
 
 
 def convert_legacy_cfg(obj_list):
