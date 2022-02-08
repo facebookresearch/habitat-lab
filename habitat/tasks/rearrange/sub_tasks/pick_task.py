@@ -45,8 +45,11 @@ class RearrangePickTaskV1(RearrangeTask):
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
-    def _gen_start_pos(self, sim, is_easy_init):
-        target_positions = self._get_targ_pos(sim)
+    def _gen_start_pos(self, sim, is_easy_init, start_pos=None):
+        if start_pos is not None:
+            target_positions = [start_pos]
+        else:
+            target_positions = self._get_targ_pos(sim)
         if self.force_set_idx is not None:
             sel_idx = self.force_set_idx
         else:
@@ -152,8 +155,26 @@ class RearrangePickTaskV1(RearrangeTask):
         ):
             start_pos, start_rot, sel_idx = self.start_states[episode_id]
         else:
+            mgr = sim.get_articulated_object_manager()
+            start_pos = None
+            if len(episode.targets.keys()) == 1:
+                target_key = list(episode.targets.keys())[0]
+
+                receptacle_ao = mgr.get_object_by_handle(
+                    episode.target_receptacles[target_key]
+                )
+                if receptacle_ao is not None:
+                    # There is only one target inside an articulated object receptacle
+                    # The start position is in front of the receptcacle
+                    start_pos = (
+                        receptacle_ao.translation
+                        + receptacle_ao.rotation.transform_vector(
+                            np.array([0.5, 0, 0])
+                        )
+                    )
+                    start_pos = np.array(start_pos)
             start_pos, start_rot, sel_idx = self._gen_start_pos(
-                sim, self._config.EASY_INIT
+                sim, self._config.EASY_INIT, start_pos
             )
             self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
             self.cache.save(self.start_states)

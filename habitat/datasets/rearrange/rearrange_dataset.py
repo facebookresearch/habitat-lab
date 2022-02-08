@@ -33,6 +33,7 @@ class RearrangeEpisode(Episode):
     rigid_objs: List[Tuple[str, np.ndarray]]
     targets: Dict[str, np.ndarray]
     markers: Dict[str, Tuple[str, Tuple]] = {}
+    target_receptacles: Dict[str, str] = {}
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")

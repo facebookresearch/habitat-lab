@@ -73,11 +73,11 @@ ao_state_samplers:
         ao_handle: "fridge"
         joint_states:
           - ["top_door", 1.5, 1.5]
-      -
-        ao_handle: "cabinet"
-        joint_states:
-          - ["right_slide", -0.04, -0.04]
-          - ["left_slide", 0.76, 0.76]
+      # -
+      #   ao_handle: "cabinet"
+      #   joint_states:
+      #     - ["right_slide", -0.04, -0.04]
+      #     - ["left_slide", 0.76, 0.76]
     comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
 
 
