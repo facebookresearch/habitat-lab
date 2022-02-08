@@ -454,32 +454,33 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
             # Visualize the goal of the object
-            new_target_handle = (
-                target_handle.split("_:")[0] + ".object_config.json"
-            )
-            matching_templates = (
-                obj_attr_mgr.get_templates_by_handle_substring(
-                    new_target_handle
+            if self.habitat_config.DEBUG_RENDER_GOAL:
+                new_target_handle = (
+                    target_handle.split("_:")[0] + ".object_config.json"
                 )
-            )
-            ro = rom.add_object_by_template_handle(
-                list(matching_templates.keys())[0]
-            )
-            self.set_object_bb_draw(True, ro.object_id)
-            ro.transformation = transform
-            make_render_only(ro, self)
-            bb = get_aabb(ro.object_id, self, True)
-            bb_viz_name1 = target_handle + "_bb1"
-            bb_viz_name2 = target_handle + "_bb2"
-            viz_r = 0.01
-            self.viz_ids[bb_viz_name1] = self.visualize_position(
-                bb.front_bottom_right, self.viz_ids[bb_viz_name1], viz_r
-            )
-            self.viz_ids[bb_viz_name2] = self.visualize_position(
-                bb.back_top_left, self.viz_ids[bb_viz_name2], viz_r
-            )
+                matching_templates = (
+                    obj_attr_mgr.get_templates_by_handle_substring(
+                        new_target_handle
+                    )
+                )
+                ro = rom.add_object_by_template_handle(
+                    list(matching_templates.keys())[0]
+                )
+                self.set_object_bb_draw(True, ro.object_id)
+                ro.transformation = transform
+                make_render_only(ro, self)
+                bb = get_aabb(ro.object_id, self, True)
+                bb_viz_name1 = target_handle + "_bb1"
+                bb_viz_name2 = target_handle + "_bb2"
+                viz_r = 0.01
+                self.viz_ids[bb_viz_name1] = self.visualize_position(
+                    bb.front_bottom_right, self.viz_ids[bb_viz_name1], viz_r
+                )
+                self.viz_ids[bb_viz_name2] = self.visualize_position(
+                    bb.back_top_left, self.viz_ids[bb_viz_name2], viz_r
+                )
 
-            self._viz_objs[target_handle] = ro
+                self._viz_objs[target_handle] = ro
 
             # Draw a bounding box around the target object
             self.set_object_bb_draw(
