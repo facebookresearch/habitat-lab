@@ -10,17 +10,12 @@ Manually control the robot to interact with the environment. Run as
 python examples/interative_play.py
 ```
 
-To run you need PyGame installed.
+To Run you need PyGame installed.
 
-By default, this runs using the same setup as the agent, which means low resolution cameras. Fix this and make it so the episode does not end on success with
-```
-python examples/interative_play.py --never-end --play-task
-```
-
-Also by default, this controls with velocity control (which makes controlling the
+By default this controls with velocity control (which makes controlling the
 robot hard). To use IK control instead: run with
 ```
-python examples/interactive_play.py --add-ik
+python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_cad_example_ik.yaml
 ```
 
 Controls:
@@ -48,11 +43,13 @@ import os
 import os.path as osp
 import time
 
+import magnum as mn
 import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction
+from habitat.tasks.rearrange.utils import euler_to_quat
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
@@ -72,7 +69,9 @@ def step_env(env, action_name, action_args, args):
     return env.step({"action": action_name, "action_args": action_args})
 
 
-def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
+def get_input_vel_ctlr(
+    skip_pygame, arm_action, g_args, prev_obs, env, not_block_input
+):
     if skip_pygame:
         return step_env(env, "EMPTY", {}, g_args), None
 
@@ -103,82 +102,83 @@ def get_input_vel_ctlr(skip_pygame, arm_action, g_args, prev_obs, env):
     elif keys[pygame.K_m]:
         end_ep = True
 
-    # Base control
-    elif keys[pygame.K_j]:
-        # Left
-        base_action = [0, 1]
-    elif keys[pygame.K_l]:
-        # Right
-        base_action = [0, -1]
-    elif keys[pygame.K_k]:
-        # Back
-        base_action = [-1, 0]
-    elif keys[pygame.K_i]:
-        # Forward
-        base_action = [1, 0]
+    if not_block_input:
+        # Base control
+        if keys[pygame.K_j]:
+            # Left
+            base_action = [0, 1]
+        elif keys[pygame.K_l]:
+            # Right
+            base_action = [0, -1]
+        elif keys[pygame.K_k]:
+            # Back
+            base_action = [-1, 0]
+        elif keys[pygame.K_i]:
+            # Forward
+            base_action = [1, 0]
 
-    if arm_action_space.shape[0] == 7:
-        # Velocity control. A different key for each joint
-        if keys[pygame.K_q]:
-            arm_action[0] = 1.0
-        elif keys[pygame.K_1]:
-            arm_action[0] = -1.0
+        if arm_action_space.shape[0] == 7:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
 
-        elif keys[pygame.K_w]:
-            arm_action[1] = 1.0
-        elif keys[pygame.K_2]:
-            arm_action[1] = -1.0
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
 
-        elif keys[pygame.K_e]:
-            arm_action[2] = 1.0
-        elif keys[pygame.K_3]:
-            arm_action[2] = -1.0
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
 
-        elif keys[pygame.K_r]:
-            arm_action[3] = 1.0
-        elif keys[pygame.K_4]:
-            arm_action[3] = -1.0
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
 
-        elif keys[pygame.K_t]:
-            arm_action[4] = 1.0
-        elif keys[pygame.K_5]:
-            arm_action[4] = -1.0
+            elif keys[pygame.K_t]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[4] = -1.0
 
-        elif keys[pygame.K_y]:
-            arm_action[5] = 1.0
-        elif keys[pygame.K_6]:
-            arm_action[5] = -1.0
+            elif keys[pygame.K_y]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[5] = -1.0
 
-        elif keys[pygame.K_u]:
-            arm_action[6] = 1.0
-        elif keys[pygame.K_7]:
-            arm_action[6] = -1.0
-    elif isinstance(arm_ctrlr, ArmEEAction):
-        EE_FACTOR = 0.5
-        # End effector control
-        if keys[pygame.K_d]:
-            arm_action[1] -= EE_FACTOR
-        elif keys[pygame.K_a]:
-            arm_action[1] += EE_FACTOR
-        elif keys[pygame.K_w]:
-            arm_action[0] += EE_FACTOR
-        elif keys[pygame.K_s]:
-            arm_action[0] -= EE_FACTOR
-        elif keys[pygame.K_q]:
-            arm_action[2] += EE_FACTOR
-        elif keys[pygame.K_e]:
-            arm_action[2] -= EE_FACTOR
-    else:
-        raise ValueError("Unrecognized arm action space")
+            elif keys[pygame.K_u]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[6] = -1.0
+        elif isinstance(arm_ctrlr, ArmEEAction):
+            EE_FACTOR = 0.5
+            # End effector control
+            if keys[pygame.K_d]:
+                arm_action[1] -= EE_FACTOR
+            elif keys[pygame.K_a]:
+                arm_action[1] += EE_FACTOR
+            elif keys[pygame.K_w]:
+                arm_action[0] += EE_FACTOR
+            elif keys[pygame.K_s]:
+                arm_action[0] -= EE_FACTOR
+            elif keys[pygame.K_q]:
+                arm_action[2] += EE_FACTOR
+            elif keys[pygame.K_e]:
+                arm_action[2] -= EE_FACTOR
+        else:
+            raise ValueError("Unrecognized arm action space")
 
-    if keys[pygame.K_p]:
-        print("[play.py]: Unsnapping")
-        # Unsnap
-        magic_grasp = -1
-    elif keys[pygame.K_o]:
-        # Snap
-        print("[play.py]: Snapping")
-        magic_grasp = 1
+        if keys[pygame.K_p]:
+            print("[play.py]: Unsnapping")
+            # Unsnap
+            magic_grasp = -1
+        elif keys[pygame.K_o]:
+            # Snap
+            print("[play.py]: Snapping")
+            magic_grasp = 1
 
     elif keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
@@ -254,6 +254,11 @@ def play_env(env, args, config):
     total_reward = 0
     all_arm_actions = []
 
+    is_free_cam_mode = False
+    last_pressed = -1
+    free_rpy = np.zeros(3)
+    free_xyz = np.zeros(3)
+
     while True:
         if (
             args.save_actions
@@ -263,15 +268,68 @@ def play_env(env, args, config):
             break
         if render_steps_limit is not None and i > render_steps_limit:
             break
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_z] and (i - last_pressed) > 60:
+            is_free_cam_mode = not is_free_cam_mode
+            last_pressed = i
+            print(f"Switching camera mode to {is_free_cam_mode}")
+
+        if is_free_cam_mode:
+            offset_rpy = np.zeros(3)
+            if keys[pygame.K_u]:
+                offset_rpy[1] += 1
+            elif keys[pygame.K_o]:
+                offset_rpy[1] -= 1
+            elif keys[pygame.K_i]:
+                offset_rpy[2] += 1
+            elif keys[pygame.K_k]:
+                offset_rpy[2] -= 1
+            elif keys[pygame.K_j]:
+                offset_rpy[0] += 1
+            elif keys[pygame.K_l]:
+                offset_rpy[0] -= 1
+
+            offset_xyz = np.zeros(3)
+            if keys[pygame.K_q]:
+                offset_xyz[1] += 1
+            elif keys[pygame.K_e]:
+                offset_xyz[1] -= 1
+            elif keys[pygame.K_w]:
+                offset_xyz[2] += 1
+            elif keys[pygame.K_s]:
+                offset_xyz[2] -= 1
+            elif keys[pygame.K_a]:
+                offset_xyz[0] += 1
+            elif keys[pygame.K_d]:
+                offset_xyz[0] -= 1
+            offset_rpy *= 0.1
+            offset_xyz *= 0.1
+            free_rpy += offset_rpy
+            free_xyz += offset_xyz
+            if keys[pygame.K_b]:
+                free_rpy = np.zeros(3)
+                free_xyz = np.zeros(3)
+
         step_result, arm_action = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[i] if use_arm_actions is not None else None,
             args,
             obs,
             env,
+            not is_free_cam_mode,
         )
         if step_result is None:
             break
+
+        if is_free_cam_mode:
+            quat = euler_to_quat(free_rpy)
+            trans = mn.Matrix4.from_(quat.to_matrix(), mn.Vector3(*free_xyz))
+            env._sim._sensors[
+                "robot_third_rgb"
+            ]._sensor_object.node.transformation = trans
+            step_result = env._sim.get_sensor_observations()
+
         all_arm_actions.append(arm_action)
         i += 1
         if use_arm_actions is not None and i >= len(use_arm_actions):
@@ -288,8 +346,14 @@ def play_env(env, args, config):
         total_reward += reward
         info["Total Reward"] = total_reward
 
-        use_ob = observations_to_image(obs, info)
-        use_ob = overlay_frame(use_ob, info)
+        if is_free_cam_mode:
+            cam = obs["robot_third_rgb"]
+            use_ob = np.zeros(draw_obs.shape)
+            use_ob[:, : cam.shape[1]] = cam[:, :, :3]
+
+        else:
+            use_ob = observations_to_image(obs, info)
+            use_ob = overlay_frame(use_ob, info)
 
         draw_ob = use_ob[:]
 
@@ -331,7 +395,12 @@ def play_env(env, args, config):
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
-        vut.make_video(all_obs, osp.join(SAVE_VIDEO_DIR, args.save_obs_fname))
+        vut.make_video(
+            [all_obs],
+            0,
+            "color",
+            osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),
+        )
     if not args.no_render:
         pygame.quit()
 

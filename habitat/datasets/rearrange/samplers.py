@@ -85,7 +85,6 @@ class ObjectSampler:
         self.receptacle_candidates: Optional[
             List[Receptacle]
         ] = None  # the specific receptacle instances relevant to this sampler
-        assert len(self.object_set) > 0
         assert len(self.receptacle_sets) > 0
         self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing

@@ -349,8 +349,8 @@ class RearrangeSim(HabitatSim):
 
         # Reset all marker visualization points
         for obj_id in self.viz_ids.values():
-            if rom.get_library_has_id(scene_obj_id):
-                rom.remove_object_by_id(scene_obj_id)
+            if rom.get_library_has_id(obj_id):
+                rom.remove_object_by_id(obj_id)
         self.viz_ids = defaultdict(lambda: None)
 
         # Remove all object mesh visualizations.
