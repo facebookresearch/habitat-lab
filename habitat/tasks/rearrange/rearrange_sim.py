@@ -163,12 +163,6 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
-        self._targets = {}
-        for target_handle, transform in self.ep_info["targets"].items():
-            self._targets[target_handle] = mn.Matrix4(
-                [[transform[j][i] for j in range(4)] for i in range(4)]
-            )
-
         new_scene = self.prev_scene_id != ep_info["scene_id"]
 
         if new_scene:
@@ -180,10 +174,6 @@ class RearrangeSim(HabitatSim):
 
             self.robot.reconfigure()
             self._prev_obj_names = None
-
-            # Reset all vis info
-            self.viz_ids = defaultdict(lambda: None)
-            self._viz_objs = {}
 
         self.grasp_mgr.reset()
 
@@ -238,6 +228,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
+        self._setup_targets()
 
         self.add_markers(ep_info)
 
@@ -277,6 +268,13 @@ class RearrangeSim(HabitatSim):
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
+
+    def _setup_targets(self):
+        self._targets = {}
+        for target_handle, transform in self.ep_info["targets"].items():
+            self._targets[target_handle] = mn.Matrix4(
+                [[transform[j][i] for j in range(4)] for i in range(4)]
+            )
 
     def get_nav_pos(self, pos):
         pos = mn.Vector3(*pos)
@@ -324,13 +322,35 @@ class RearrangeSim(HabitatSim):
             for art_obj, motion_type in zip(self.art_objs, motion_types):
                 art_obj.motion_type = motion_type
 
+    def _get_non_frl_objs(self):
+        rom = self.get_rigid_object_manager()
+        return [
+            handle
+            for handle in rom.get_object_handles()
+            if "frl" not in handle
+        ]
+
     def _clear_objects(self, should_add_objects: bool) -> None:
+        rom = self.get_rigid_object_manager()
+
+        # Clear all the rigid objects.
         if should_add_objects:
-            rom = self.get_rigid_object_manager()
             for scene_obj_id in self.scene_obj_ids:
                 if rom.get_library_has_id(scene_obj_id):
                     rom.remove_object_by_id(scene_obj_id)
             self.scene_obj_ids = []
+
+        # Reset all marker visualization points
+        for obj_id in self.viz_ids.values():
+            if rom.get_library_has_id(scene_obj_id):
+                rom.remove_object_by_id(scene_obj_id)
+        self.viz_ids = defaultdict(lambda: None)
+
+        # Remove all object mesh visualizations.
+        for viz_obj in self._viz_objs.values():
+            if rom.get_library_has_id(viz_obj.object_id):
+                rom.remove_object_by_id(viz_obj.object_id)
+        self._viz_objs = {}
 
         # Do not remove the articulated objects from the scene, these are
         # managed by the underlying sim.
