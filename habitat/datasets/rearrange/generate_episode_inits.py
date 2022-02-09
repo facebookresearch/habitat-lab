@@ -16,7 +16,7 @@ def generate_inits(cfg_path, opts):
     with habitat.Env(config=config) as env:
         for i in tqdm(range(env.number_of_episodes)):
             if i % 100 == 0:
-                print(cfg_path)
+                print(cfg_path, config.DATASET.DATA_PATH)
             env.reset()
 
 

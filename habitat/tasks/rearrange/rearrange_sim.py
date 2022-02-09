@@ -427,17 +427,16 @@ class RearrangeSim(HabitatSim):
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
+            if should_add_objects:
+                self.scene_obj_ids.append(ro.object_id)
 
             if other_obj_handle in self.instance_handle_to_ref_handle:
                 ref_handle = self.instance_handle_to_ref_handle[
                     other_obj_handle
                 ]
-                rel_idx = len(self.scene_obj_ids)
+                rel_idx = self.scene_obj_ids.index(ro.object_id)
                 self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
             obj_counts[obj_handle] += 1
-
-            if should_add_objects:
-                self.scene_obj_ids.append(ro.object_id)
 
         ao_mgr = self.get_articulated_object_manager()
         for aoi_handle in ao_mgr.get_object_handles():
