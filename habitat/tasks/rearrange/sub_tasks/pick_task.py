@@ -17,6 +17,7 @@ from habitat.tasks.utils import get_angle
 
 @registry.register_task(name="RearrangePickTask-v0")
 class RearrangePickTaskV1(RearrangeTask):
+    DISTANCE_TO_RECEPTACLE = 1.0
     """
     Rearrange Pick Task with Fetch robot interacting with objects and environment.
     """
@@ -35,7 +36,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cache = CacheHelper(
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
-        self.start_states = self.cache.load()
+        self.start_states = {}  # self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -62,12 +63,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
         state = sim.capture_state()
         start_pos = orig_start_pos
-
-        # Spawn 30 cm away from the target
-        rel_targ = targ_pos - start_pos
-        rel_targ[1] = 0
-        rel_targ /= np.linalg.norm(rel_targ)
-        start_pos -= rel_targ * 0.3
 
         forward = np.array([1.0, 0, 0])
         dist_thresh = 0.1
@@ -178,7 +173,7 @@ class RearrangePickTaskV1(RearrangeTask):
                     start_pos = (
                         receptacle_ao.translation
                         + receptacle_ao.rotation.transform_vector(
-                            np.array([0.1, 0, 0])
+                            np.array([self.DISTANCE_TO_RECEPTACLE, 0, 0])
                         )
                     )
                     start_pos = np.array(start_pos)
