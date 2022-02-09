@@ -338,9 +338,9 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
-            new_object, _ = self.single_sample(sim, snap_down, vdb)
+            new_object, receptacle = self.single_sample(sim, snap_down, vdb)
             if new_object is not None:
-                new_objects.append(new_object)
+                new_objects.append((new_object, receptacle))
 
         if len(new_objects) >= self.num_objects[0]:
             return new_objects

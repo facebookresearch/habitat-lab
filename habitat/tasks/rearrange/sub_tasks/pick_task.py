@@ -163,7 +163,12 @@ class RearrangePickTaskV1(RearrangeTask):
                 target_key = list(episode.targets.keys())[0]
 
                 receptacle_ao = None
-                if target_key in episode.target_receptacles:
+                if target_key in episode.target_receptacles and (
+                    # Not a typo, "fridge" is sometimes "frige" in
+                    # ReplicaCAD.
+                    "frige" in episode.target_receptacles[target_key]
+                    or "fridge" in episode.target_receptacles[target_key]
+                ):
                     receptacle_ao = mgr.get_object_by_handle(
                         episode.target_receptacles[target_key]
                     )
