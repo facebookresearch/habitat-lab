@@ -63,6 +63,12 @@ class RearrangePickTaskV1(RearrangeTask):
         state = sim.capture_state()
         start_pos = orig_start_pos
 
+        # Spawn 30 cm away from the target
+        rel_targ = targ_pos - start_pos
+        rel_targ[1] = 0
+        rel_targ /= np.linalg.norm(rel_targ)
+        start_pos -= rel_targ * 0.3
+
         forward = np.array([1.0, 0, 0])
         dist_thresh = 0.1
         did_collide = False
@@ -76,7 +82,6 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
-
             rel_targ = targ_pos - start_pos
             angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
             if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
@@ -173,7 +178,7 @@ class RearrangePickTaskV1(RearrangeTask):
                     start_pos = (
                         receptacle_ao.translation
                         + receptacle_ao.rotation.transform_vector(
-                            np.array([0.5, 0, 0])
+                            np.array([0.1, 0, 0])
                         )
                     )
                     start_pos = np.array(start_pos)
