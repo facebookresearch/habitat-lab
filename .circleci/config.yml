@@ -271,7 +271,7 @@ jobs:
               curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
 
               cd docs
-              conda install -y -c conda-forge doxygen==1.8.16
+              conda install -y -c conda-forge doxygen
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
