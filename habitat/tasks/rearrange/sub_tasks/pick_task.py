@@ -36,7 +36,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cache = CacheHelper(
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
-        self.start_states = {}  # self.cache.load()
+        self.start_states = self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
 

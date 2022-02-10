@@ -547,6 +547,13 @@ class RearrangeEpisodeGenerator:
             k: object_to_containing_receptacle[k].parent_object_handle
             for k in self.episode_data["sampled_targets"]
         }
+
+        # ignore_ao_sampling_for_non_receptacles
+        ao_states_keys = list(ao_states.keys())
+        for k in ao_states_keys:
+            if k not in target_receptacles.values():
+                ao_states.pop(k)
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
