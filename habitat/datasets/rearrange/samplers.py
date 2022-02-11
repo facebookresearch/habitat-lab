@@ -297,10 +297,14 @@ class ObjectSampler:
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
+        fixed_target_receptacle=None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
         object_handle = self.sample_object()
-        target_receptacle = self.sample_receptacle(sim)
+        if fixed_target_receptacle is not None:
+            target_receptacle = fixed_target_receptacle
+        else:
+            target_receptacle = self.sample_receptacle(sim)
         logger.info(
             f"Sampling '{object_handle}' from '{target_receptacle.name}'"
         )
@@ -314,6 +318,7 @@ class ObjectSampler:
     def sample(
         self,
         sim: habitat_sim.Simulator,
+        target_receptacle,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
     ) -> List[habitat_sim.physics.ManagedRigidObject]:
@@ -338,7 +343,15 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
-            new_object, receptacle = self.single_sample(sim, snap_down, vdb)
+            if len(new_objects) == 0:
+                # no objects sampled yet
+                new_object, receptacle = self.single_sample(
+                    sim, snap_down, vdb, target_receptacle
+                )
+            else:
+                new_object, receptacle = self.single_sample(
+                    sim, snap_down, vdb
+                )
             if new_object is not None:
                 new_objects.append((new_object, receptacle))
 
@@ -390,6 +403,8 @@ class ObjectTargetSampler(ObjectSampler):
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
+        target_receptacle=None,
+        object_to_containing_receptacle=None,
     ) -> Optional[
         Dict[str, Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]
     ]:
@@ -418,29 +433,52 @@ class ObjectTargetSampler(ObjectSampler):
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
+
             new_object, receptacle = self.single_sample(sim, snap_down, vdb)
-            if new_object is not None:
-                targets_found += 1
-                found_match = False
+            found_match = False
+            for i in range(1000):
+                if found_match:
+                    break
+                new_object, receptacle = self.single_sample(
+                    sim, snap_down, vdb
+                )
+                if new_object is None:
+                    continue
+
                 for object_instance in self.object_instance_set:
                     if (
                         object_instance.creation_attributes.handle
                         == new_object.creation_attributes.handle
                         and object_instance.handle not in new_target_objects
                     ):
-                        new_target_objects[object_instance.handle] = (
-                            new_object,
-                            receptacle,
-                        )
-                        found_match = True
-                        # remove this object instance match from future pairings
-                        self.object_set.remove(
-                            new_object.creation_attributes.handle
-                        )
-                        break
-                assert (
-                    found_match is True
-                ), "Failed to match instance to generated object. Shouldn't happen, must be a bug."
+                        if (
+                            target_receptacle is not None
+                            and object_to_containing_receptacle is not None
+                        ):
+                            if (
+                                object_to_containing_receptacle[
+                                    object_instance.handle
+                                ].parent_object_handle
+                                == target_receptacle.parent_object_handle
+                                and object_to_containing_receptacle[
+                                    object_instance.handle
+                                ].parent_link
+                                == target_receptacle.parent_link
+                            ):
+                                new_target_objects[object_instance.handle] = (
+                                    new_object,
+                                    target_receptacle,
+                                )
+                                found_match = True
+                                # remove this object instance match from future pairings
+                                self.object_set.remove(
+                                    new_object.creation_attributes.handle
+                                )
+                                targets_found += 1
+                                break
+            assert (
+                found_match is True
+            ), "Failed to match instance to generated object. Shouldn't happen, must be a bug."
 
         if len(new_target_objects) >= self.num_objects[0]:
             return new_target_objects
@@ -530,7 +568,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 )
 
     def sample(
-        self, sim: habitat_sim.Simulator
+        self, sim: habitat_sim.Simulator, receptacle
     ) -> Optional[
         Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
     ]:
@@ -577,10 +615,24 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
             ] = {}
             # sample a composite joint configuration
             for ao_instance, link_ranges in link_sample_params.items():
+                if ao_instance.handle != receptacle.parent_object_handle:
+                    continue
                 ao_states[ao_instance] = {}
                 # NOTE: only query and set pose once per instance for efficiency
                 pose = ao_instance.joint_positions
                 for link_ix, joint_range in link_ranges.items():
+                    if (link_ix != receptacle.parent_link) and (
+                        receptacle.parent_link > 0
+                    ):
+                        continue
+                    if (
+                        receptacle.parent_link == 0
+                        and "kitchen_counter_"
+                        in receptacle.parent_object_handle
+                    ):
+                        # If receptacle is the top of the kitchen counter, do not open drawers
+                        continue
+
                     joint_state = random.uniform(
                         joint_range[0], joint_range[1]
                     )
