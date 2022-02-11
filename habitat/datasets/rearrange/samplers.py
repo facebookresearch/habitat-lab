@@ -615,27 +615,22 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
             ] = {}
             # sample a composite joint configuration
             for ao_instance, link_ranges in link_sample_params.items():
-                if ao_instance.handle != receptacle.parent_object_handle:
-                    continue
                 ao_states[ao_instance] = {}
                 # NOTE: only query and set pose once per instance for efficiency
                 pose = ao_instance.joint_positions
                 for link_ix, joint_range in link_ranges.items():
-                    if (link_ix != receptacle.parent_link) and (
-                        receptacle.parent_link > 0
-                    ):
-                        continue
                     if (
-                        receptacle.parent_link == 0
-                        and "kitchen_counter_"
-                        in receptacle.parent_object_handle
+                        ao_instance.handle == receptacle.parent_object_handle
+                    ) and (
+                        (link_ix == receptacle.parent_link)
+                        or ("frige" in receptacle.parent_object_handle)
+                        or ("fridge" in receptacle.parent_object_handle)
                     ):
-                        # If receptacle is the top of the kitchen counter, do not open drawers
-                        continue
-
-                    joint_state = random.uniform(
-                        joint_range[0], joint_range[1]
-                    )
+                        joint_state = random.uniform(
+                            joint_range[0], joint_range[1]
+                        )
+                    else:
+                        joint_state = 0.0
                     pose[
                         ao_instance.get_link_joint_pos_offset(link_ix)
                     ] = joint_state
