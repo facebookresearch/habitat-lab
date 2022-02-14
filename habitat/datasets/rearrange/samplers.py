@@ -436,7 +436,7 @@ class ObjectTargetSampler(ObjectSampler):
 
             new_object, receptacle = self.single_sample(sim, snap_down, vdb)
             found_match = False
-            for i in range(1000):
+            for _ in range(1000):
                 if found_match:
                     break
                 new_object, receptacle = self.single_sample(
@@ -450,32 +450,28 @@ class ObjectTargetSampler(ObjectSampler):
                         object_instance.creation_attributes.handle
                         == new_object.creation_attributes.handle
                         and object_instance.handle not in new_target_objects
+                        and target_receptacle is not None
+                        and object_to_containing_receptacle is not None
+                        and object_to_containing_receptacle[
+                            object_instance.handle
+                        ].parent_object_handle
+                        == target_receptacle.parent_object_handle
+                        and object_to_containing_receptacle[
+                            object_instance.handle
+                        ].parent_link
+                        == target_receptacle.parent_link
                     ):
-                        if (
-                            target_receptacle is not None
-                            and object_to_containing_receptacle is not None
-                        ):
-                            if (
-                                object_to_containing_receptacle[
-                                    object_instance.handle
-                                ].parent_object_handle
-                                == target_receptacle.parent_object_handle
-                                and object_to_containing_receptacle[
-                                    object_instance.handle
-                                ].parent_link
-                                == target_receptacle.parent_link
-                            ):
-                                new_target_objects[object_instance.handle] = (
-                                    new_object,
-                                    target_receptacle,
-                                )
-                                found_match = True
-                                # remove this object instance match from future pairings
-                                self.object_set.remove(
-                                    new_object.creation_attributes.handle
-                                )
-                                targets_found += 1
-                                break
+                        new_target_objects[object_instance.handle] = (
+                            new_object,
+                            target_receptacle,
+                        )
+                        found_match = True
+                        # remove this object instance match from future pairings
+                        self.object_set.remove(
+                            new_object.creation_attributes.handle
+                        )
+                        targets_found += 1
+                        break
             assert (
                 found_match is True
             ), "Failed to match instance to generated object. Shouldn't happen, must be a bug."
@@ -508,7 +504,7 @@ class ArticulatedObjectStateSampler:
         assert self.state_range[1] >= self.state_range[0]
 
     def sample(
-        self, sim: habitat_sim.Simulator
+        self, sim: habitat_sim.Simulator, receptacle=None
     ) -> Optional[
         Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
     ]:

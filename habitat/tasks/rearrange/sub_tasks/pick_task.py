@@ -190,10 +190,6 @@ class RearrangePickTaskV1(RearrangeTask):
             mgr = sim.get_articulated_object_manager()
             start_pos = None
             if len(episode.targets.keys()) == 1:
-                target_key = list(episode.targets.keys())[0]
-
-                receptacle_ao = None
-                offset = None
                 receptacle_handle = episode.target_receptacles[0]
                 receptacle_link_idx = episode.target_receptacles[1]
                 if (
@@ -214,7 +210,6 @@ class RearrangePickTaskV1(RearrangeTask):
                     and receptacle_link_idx != 0
                 ):
                     receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
-                    base_T = receptacle_handle
                     link_T = receptacle_ao.get_link_scene_node(
                         receptacle_link_idx
                     ).transformation

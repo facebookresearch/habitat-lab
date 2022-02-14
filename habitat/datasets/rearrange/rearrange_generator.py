@@ -550,11 +550,6 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
-        target_receptacles = {
-            k: object_to_containing_receptacle[k].parent_object_handle
-            for k in self.episode_data["sampled_targets"]
-        }
-
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
