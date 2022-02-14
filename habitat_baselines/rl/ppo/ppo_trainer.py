@@ -671,7 +671,7 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
-        writer.add_scalar(f"metrics/fps", fps, self.num_steps_done)
+        writer.add_scalar("metrics/fps", fps, self.num_steps_done)
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
@@ -911,7 +911,10 @@ class PPOTrainer(BaseRLTrainer):
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
 
-        if len(self.config.VIDEO_OPTION) > 0:
+        if (
+            len(self.config.VIDEO_OPTION) > 0
+            and self.config.VIDEO_RENDER_TOP_DOWN
+        ):
             config.defrost()
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
@@ -1089,6 +1092,7 @@ class PPOTrainer(BaseRLTrainer):
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
+                            fps=self.config.VIDEO_FPS,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.EVAL_KEYS_TO_INCLUDE_IN_NAME,
                         )

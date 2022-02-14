@@ -46,7 +46,7 @@ class RearrangePickTaskV1(RearrangeTask):
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
-    def _gen_start_pos(self, sim, is_easy_init, force_snap_pos=None):
+    def _gen_start_pos(self, sim, is_easy_init, episode, force_snap_pos=None):
         target_positions = self._get_targ_pos(sim)
         if self.force_set_idx is not None:
             sel_idx = self.force_set_idx
@@ -99,6 +99,20 @@ class RearrangePickTaskV1(RearrangeTask):
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             sim.robot.base_rot = angle_to_obj + rot_noise
 
+            # Ensure the target is within reach
+            is_within_bounds = True
+            if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
+                robot_T = self._sim.robot.base_transformation
+                rel_targ_pos = robot_T.inverted().transform_point(targ_pos)
+                eps = 1e-2
+                lower_bound = self._sim.robot.params.ee_constraint[:, 0] - eps
+                upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
+                is_within_bounds = (lower_bound < rel_targ_pos).all() and (
+                    rel_targ_pos < upper_bound
+                ).all()
+                if not is_within_bounds:
+                    continue
+
             # Make sure the robot is not colliding with anything in this
             # position.
             for _ in range(100):
@@ -120,7 +134,14 @@ class RearrangePickTaskV1(RearrangeTask):
                 break
 
         if attempt == timeout - 1 and (not is_easy_init):
-            start_pos, angle_to_obj, sel_idx = self._gen_start_pos(sim, True)
+            start_pos, angle_to_obj, sel_idx = self._gen_start_pos(
+                sim, True, episode
+            )
+
+        if not is_within_bounds:
+            raise ValueError(
+                f"Episode {episode.episode_id} failed to place robot"
+            )
 
         sim.set_state(state)
 
@@ -183,7 +204,7 @@ class RearrangePickTaskV1(RearrangeTask):
                     )
                     start_pos = np.array(start_pos)
             start_pos, start_rot, sel_idx = self._gen_start_pos(
-                sim, self._config.EASY_INIT, start_pos
+                sim, self._config.EASY_INIT, episode, start_pos
             )
             self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
             self.cache.save(self.start_states)

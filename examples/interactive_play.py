@@ -180,11 +180,12 @@ def get_input_vel_ctlr(
             print("[play.py]: Snapping")
             magic_grasp = 1
 
-    elif keys[pygame.K_PERIOD]:
+    if keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
         pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
         rot = env._sim.robot.sim_obj.rotation
-        print(f"Robot state: pos = {pos}, rotation = {rot}")
+        ee_pos = env._sim.robot.ee_transform.translation
+        print(f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}")
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the robot, useful for debugging.
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]

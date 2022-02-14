@@ -11,6 +11,8 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
+    SHOULD_ENFORCE_TARGET_WITHIN_REACH: False
+
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
@@ -162,8 +164,6 @@ SIMULATOR:
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
-    AUTO_SLEEP: False
-    CONCUR_RENDER: False
 
     # Grasping
     HOLD_THRESH: 0.09

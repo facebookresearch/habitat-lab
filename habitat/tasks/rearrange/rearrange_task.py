@@ -67,7 +67,7 @@ class RearrangeTask(NavigationTask):
     def reset(self, episode: Episode):
         self._ignore_collisions = []
         if self._sim_reset:
-            observations = super().reset(episode)
+            super().reset(episode)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

@@ -24,7 +24,7 @@ from habitat_baselines.agents.mp_agents import (
     SpaManipPick,
     SpaResetModule,
 )
-from habitat_baselines.agents.ppo_agents import PPOAgent, get_default_config
+from habitat_baselines.agents.ppo_agents import PPOAgent
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
@@ -320,6 +320,8 @@ def main():
 
     ac_cfg = config.TASK_CONFIG.TASK.ACTIONS
     env = benchmark._env
+
+    use_skill: Agent = None
 
     if args.skill_type == "mp_reach":
 

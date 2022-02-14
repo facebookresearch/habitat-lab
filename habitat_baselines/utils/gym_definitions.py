@@ -45,9 +45,7 @@ def _make_habitat_gym_env(
         override_options = []
 
     cfg_data = _get_config_no_base_task_load(cfg_file_path)
-    task_cfg_path = osp.join(
-        config_base_dir, cfg_data["BASE_TASK_CONFIG_PATH"]
-    )
+    task_cfg_path = osp.join(base_dir, cfg_data["BASE_TASK_CONFIG_PATH"])
 
     override_options.extend(["BASE_TASK_CONFIG_PATH", task_cfg_path])
 

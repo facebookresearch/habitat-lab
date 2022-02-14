@@ -196,12 +196,14 @@ class HabGymWrapper(gym.Env):
         observation = {"observation": {k: obs[k] for k in self._gym_obs_keys}}
 
         if len(self._gym_goal_keys) > 0:
-            observation["desired_goal"] = [obs[k] for k in self._gym_goal_keys]
+            observation["desired_goal"] = {
+                k: obs[k] for k in self._gym_goal_keys
+            }
 
         if len(self._gym_achieved_goal_keys) > 0:
-            observation["achieved_goal"] = [
-                obs[k] for k in self._gym_achieved_goal_keys
-            ]
+            observation["achieved_goal"] = {
+                k: obs[k] for k in self._gym_achieved_goal_keys
+            }
 
         if len(observation) == 1:
             observation = observation["observation"]

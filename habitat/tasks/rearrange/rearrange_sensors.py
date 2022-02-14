@@ -586,6 +586,7 @@ class RobotForce(Measure):
 
         self._metric = self._accum_force
 
+
 @registry.register_measure
 class NumStepsMeasure(Measure):
     cls_uuid: str = "num_steps"

@@ -4,29 +4,14 @@ additional_object_paths:
   - "data/objects/ycb/"
 scene_sets:
   -
-    name: "any"
+    name: "scene_train_split"
     included_substrings:
-      - ""
+      - "v3_sc0_staging"
+      - "v3_sc1_staging"
+      - "v3_sc2_staging"
+      - "v3_sc3_staging"
     excluded_substrings: []
-    comment: "The empty substring acts like a wildcard, selecting all scenes."
-  -
-    name: "default"
-    included_substrings:
-      - "v3_sc0_staging_00"
-    excluded_substrings: []
-    comment: "The first macro variation from the 105 ReplicaCAD variations."
-  -
-    name: "v3_sc"
-    included_substrings:
-      - "v3_sc"
-    excluded_substrings: []
-    comment: "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
-  -
-    name: "original"
-    included_substrings:
-      - "apt_"
-    excluded_substrings: []
-    comment: "The original 6 Replica scene layouts with small clutter objects."
+    comment: "v3_sc4_staging saved for evaluation"
 
 object_sets:
   -

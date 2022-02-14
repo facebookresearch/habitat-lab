@@ -365,7 +365,7 @@ def generate_video(
             )
         ]
     else:
-        use_metrics_k = metrics
+        use_metrics_k = list(metrics.keys())
 
     for k in use_metrics_k:
         metric_strs.append(f"{k}={metrics[k]:.2f}")

@@ -31,7 +31,7 @@ scene_sets:
 object_sets:
   -
     name: "kitchen"
-    included_substrings: 
+    included_substrings:
       - "002_master_chef_can"
     excluded_substrings: []
 
