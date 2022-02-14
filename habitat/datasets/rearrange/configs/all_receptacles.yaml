@@ -47,6 +47,14 @@ receptacle_sets:
       - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
       - "receptacle_aabb_middlefrl_apartment_refrigerator"
       - "receptacle_aabb_topfrl_apartment_refrigerator"
+
+      - receptacle_aabb_drawer_left_bottom_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_middle_bottom_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_right_bottom_frl_apartment_kitchen_counter
+      - receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter
     excluded_receptacle_substrings: []
 
 ao_state_samplers:
@@ -58,13 +66,17 @@ ao_state_samplers:
         ao_handle: "fridge"
         joint_states:
           - ["top_door", 1.5, 1.5]
-      # -
-      #   ao_handle: "cabinet"
-      #   joint_states:
-      #     - ["right_slide", -0.04, -0.04]
-      #     - ["left_slide", 0.76, 0.76]
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.5, 0.5]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.5, 0.5]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.5, 0.5]
+          - ["drawer4", 0.5, 0.5]
     comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
-
 
 
 scene_sampler:

@@ -418,16 +418,21 @@ class RearrangeEpisodeGenerator:
         self.episode_data: Dict[str, Dict[str, Any]] = {
             "sampled_objects": {},  # object sampler name -> sampled object instances
             "sampled_targets": {},  # target sampler name -> (object, target state)
-            "sampled_receptacles": {},  # target_handle -> receptacle
         }
 
         ep_scene_handle = self.generate_scene()
+
+        # Get the unique open receptacle
+        sampler = list(self._obj_samplers.values())[0]
+        target_receptacle = sampler.sample_receptacle(self.sim)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
         for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
-            sampler_states = ao_state_sampler.sample(self.sim)
+            sampler_states = ao_state_sampler.sample(
+                self.sim, target_receptacle
+            )
             assert (
                 sampler_states is not None
             ), f"AO sampler '{sampler_name}' failed"
@@ -447,6 +452,7 @@ class RearrangeEpisodeGenerator:
         for sampler_name, obj_sampler in self._obj_samplers.items():
             object_sample_data = obj_sampler.sample(
                 self.sim,
+                target_receptacle,
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
             )
@@ -487,7 +493,11 @@ class RearrangeEpisodeGenerator:
         # sample targets
         for sampler_name, target_sampler in self._target_samplers.items():
             new_target_objects = target_sampler.sample(
-                self.sim, snap_down=True, vdb=self.vdb
+                self.sim,
+                snap_down=True,
+                vdb=self.vdb,
+                target_receptacle=target_receptacle,
+                object_to_containing_receptacle=object_to_containing_receptacle,
             )
             # cache transforms and add visualizations
             for instance_handle, value in new_target_objects.items():
@@ -503,9 +513,6 @@ class RearrangeEpisodeGenerator:
                 self.episode_data["sampled_targets"][
                     instance_handle
                 ] = np.array(target_transform)
-                self.episode_data["sampled_receptacles"][
-                    instance_handle
-                ] = target_receptacle.parent_object_handle
                 target_refs[
                     instance_handle
                 ] = f"{sampler_name}|{len(target_refs)}"
@@ -548,12 +555,6 @@ class RearrangeEpisodeGenerator:
             for k in self.episode_data["sampled_targets"]
         }
 
-        # ignore_ao_sampling_for_non_receptacles
-        ao_states_keys = list(ao_states.keys())
-        for k in ao_states_keys:
-            if k not in target_receptacles.values():
-                ao_states.pop(k)
-
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -569,7 +570,10 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
-            target_receptacles=target_receptacles,
+            target_receptacles=(
+                target_receptacle.parent_object_handle,
+                target_receptacle.parent_link,
+            ),
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )

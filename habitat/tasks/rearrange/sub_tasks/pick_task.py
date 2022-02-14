@@ -36,7 +36,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cache = CacheHelper(
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
-        self.start_states = self.cache.load()
+        self.start_states = {}  # self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -184,15 +184,20 @@ class RearrangePickTaskV1(RearrangeTask):
                 target_key = list(episode.targets.keys())[0]
 
                 receptacle_ao = None
-                if target_key in episode.target_receptacles and (
+                receptacle_handle = episode.target_receptacles[0]
+                receptacle_link_idx = episode.target_receptacles[1]
+                if (
                     # Not a typo, "fridge" is sometimes "frige" in
                     # ReplicaCAD.
-                    "frige" in episode.target_receptacles[target_key]
-                    or "fridge" in episode.target_receptacles[target_key]
+                    "frige" in receptacle_handle
+                    or "fridge" in receptacle_handle
                 ):
-                    receptacle_ao = mgr.get_object_by_handle(
-                        episode.target_receptacles[target_key]
-                    )
+                    receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
+                if (
+                    "kitchen_counter" in receptacle_handle
+                    and receptacle_link_idx != 0
+                ):
+                    receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
                 if receptacle_ao is not None:
                     # There is only one target inside an articulated object receptacle
                     # The start position is in front of the receptcacle
