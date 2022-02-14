@@ -6,6 +6,7 @@
 
 import os.path as osp
 
+import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
@@ -68,10 +69,16 @@ class RearrangePickTaskV1(RearrangeTask):
         dist_thresh = 0.1
         did_collide = False
 
+        if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
+            # Setting so the object is within reach is harder and requires more
+            # tries.
+            timeout = 5000
+        else:
+            timeout = 1000
+        attempt = 0
+
         # Add noise to the base position and angle for a collision free
         # starting position
-        timeout = 1000
-        attempt = 0
         while attempt < timeout:
             attempt += 1
             start_pos = orig_start_pos + np.random.normal(
@@ -139,9 +146,11 @@ class RearrangePickTaskV1(RearrangeTask):
             )
 
         if not is_within_bounds:
-            raise ValueError(
-                f"Episode {episode.episode_id} failed to place robot"
-            )
+            print(f"Episode {episode.episode_id} failed to place robot")
+
+            # raise ValueError(
+            #
+            # )
 
         sim.set_state(state)
 
@@ -184,6 +193,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 target_key = list(episode.targets.keys())[0]
 
                 receptacle_ao = None
+                offset = None
                 receptacle_handle = episode.target_receptacles[0]
                 receptacle_link_idx = episode.target_receptacles[1]
                 if (
@@ -193,21 +203,25 @@ class RearrangePickTaskV1(RearrangeTask):
                     or "fridge" in receptacle_handle
                 ):
                     receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
+                    start_pos = np.array(
+                        receptacle_ao.transformation.transform_point(
+                            mn.Vector3(self.DISTANCE_TO_RECEPTACLE, 0, 0)
+                        )
+                    )
+
                 if (
                     "kitchen_counter" in receptacle_handle
                     and receptacle_link_idx != 0
                 ):
                     receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
-                if receptacle_ao is not None:
-                    # There is only one target inside an articulated object receptacle
-                    # The start position is in front of the receptcacle
-                    start_pos = (
-                        receptacle_ao.translation
-                        + receptacle_ao.rotation.transform_vector(
-                            np.array([self.DISTANCE_TO_RECEPTACLE, 0, 0])
-                        )
+                    base_T = receptacle_handle
+                    link_T = receptacle_ao.get_link_scene_node(
+                        receptacle_link_idx
+                    ).transformation
+                    start_pos = np.array(
+                        link_T.transform_point(mn.Vector3(0.8, 0, 0))
                     )
-                    start_pos = np.array(start_pos)
+
             start_pos, start_rot, sel_idx = self._gen_start_pos(
                 sim, self._config.EASY_INIT, episode, start_pos
             )

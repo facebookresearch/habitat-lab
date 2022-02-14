@@ -82,7 +82,7 @@ ao_state_samplers:
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["v3_sc"]
+    scene_sets: ["scene_train_split"]
 
 object_samplers:
   -

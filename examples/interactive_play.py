@@ -472,6 +472,10 @@ if __name__ == "__main__":
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
     if args.add_ik:
+        if "ARM_ACTION" not in config.TASK.ACTIONS:
+            raise ValueError(
+                "Action space does not have any arm control so incompatible with `--add-ik` option"
+            )
         config.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmEEAction"
         config.SIMULATOR.IK_ARM_URDF = (
             "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
