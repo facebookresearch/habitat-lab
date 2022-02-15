@@ -24,7 +24,7 @@ class DynNavRLEnv(RearrangeTask):
         self._prev_measure = 1.0
         self.nav_obj_name = None
 
-        data_path = dataset.config.DATA_PATH
+        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
         mtime = osp.getmtime(data_path)
         cache_name = str(mtime) + data_path
         cache_name = cache_name.replace(".", "_")
