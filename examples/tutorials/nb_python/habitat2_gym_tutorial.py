@@ -9,7 +9,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
 #     display_name: Python [conda env:habitat] *
 #     language: python
@@ -70,6 +70,7 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 # The ONLY two lines you need to add to start importing Habitat 2.0 Gym environments.
 import gym
 
+# flake8: noqa
 import habitat_baselines.utils.gym_definitions
 
 # %% [markdown]
@@ -94,6 +95,8 @@ video_writer.close()
 if vut.is_notebook():
     vut.display_video(video_file_path)
 
+env.close()
+
 # %% [markdown]
 # # Environment Options
 # To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `HabitatGym[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be included.
@@ -114,10 +117,12 @@ if vut.is_notebook():
 # Dictionary observation space
 env = gym.make("HabitatGymPick-v0")
 print({k: v.shape for k, v in env.observation_space.spaces.items()})
+env.close()
 
 # Array observation space
 env = gym.make("HabitatGymReachState-v0")
 print(env.observation_space)
+env.close()
 
 # %% [markdown]
 # # Environment Configuration
@@ -132,3 +137,5 @@ env = gym.make(
         "SuctionGraspAction",
     ],
 )
+print(env.action_space)
+env.close()

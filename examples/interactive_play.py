@@ -27,6 +27,10 @@ Controls:
     - E,Q to move up and down
 - I,J,K,L to move the robot base around
 - PERIOD to print the current world coordinates of the robot base.
+- Z to toggle the camera to free movement mode. When in free camera mode:
+    - W,S,A,D,Q,E to translate the camera
+    - I,J,K,L,U,O to rotate the camera
+    - B to reset the camera position
 
 Change the grip type:
 - Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
@@ -228,55 +232,25 @@ def get_wrapped_prop(venv, prop):
     return None
 
 
-def play_env(env, args, config):
-    render_steps_limit = None
-    if args.no_render:
-        render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
+class FreeCamHelper:
+    def __init__(self):
+        self._is_free_cam_mode = False
+        self._last_pressed = 0
+        self._free_rpy = np.zeros(3)
+        self._free_xyz = np.zeros(3)
 
-    use_arm_actions = None
-    if args.load_actions is not None:
-        with open(args.load_actions, "rb") as f:
-            use_arm_actions = np.load(f)
-            print("Loaded arm actions")
+    @property
+    def is_free_cam_mode(self):
+        return self._is_free_cam_mode
 
-    obs = env.reset()
-
-    if not args.no_render:
-        draw_obs = observations_to_image(obs, {})
-        pygame.init()
-        screen = pygame.display.set_mode(
-            [draw_obs.shape[1], draw_obs.shape[0]]
-        )
-
-    i = 0
-    target_fps = 60.0
-    prev_time = time.time()
-    all_obs = []
-    total_reward = 0
-    all_arm_actions = []
-
-    is_free_cam_mode = False
-    last_pressed = -1
-    free_rpy = np.zeros(3)
-    free_xyz = np.zeros(3)
-
-    while True:
-        if (
-            args.save_actions
-            and len(all_arm_actions) > args.save_actions_count
-        ):
-            # quit the application when the action recording queue is full
-            break
-        if render_steps_limit is not None and i > render_steps_limit:
-            break
-
+    def update(self, env, step_result, update_idx):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_z] and (i - last_pressed) > 60:
-            is_free_cam_mode = not is_free_cam_mode
-            last_pressed = i
-            print(f"Switching camera mode to {is_free_cam_mode}")
+        if keys[pygame.K_z] and (update_idx - self._last_pressed) > 60:
+            self._is_free_cam_mode = not self._is_free_cam_mode
+            print(f"Switching camera mode to {self._is_free_cam_mode}")
+            self._last_pressed = update_idx
 
-        if is_free_cam_mode:
+        if self._is_free_cam_mode:
             offset_rpy = np.zeros(3)
             if keys[pygame.K_u]:
                 offset_rpy[1] += 1
@@ -306,34 +280,82 @@ def play_env(env, args, config):
                 offset_xyz[0] -= 1
             offset_rpy *= 0.1
             offset_xyz *= 0.1
-            free_rpy += offset_rpy
-            free_xyz += offset_xyz
+            self._free_rpy += offset_rpy
+            self._free_xyz += offset_xyz
             if keys[pygame.K_b]:
-                free_rpy = np.zeros(3)
-                free_xyz = np.zeros(3)
+                self._free_rpy = np.zeros(3)
+                self._free_xyz = np.zeros(3)
 
-        step_result, arm_action = get_input_vel_ctlr(
-            args.no_render,
-            use_arm_actions[i] if use_arm_actions is not None else None,
-            args,
-            obs,
-            env,
-            not is_free_cam_mode,
-        )
-        if step_result is None:
-            break
-
-        if is_free_cam_mode:
-            quat = euler_to_quat(free_rpy)
-            trans = mn.Matrix4.from_(quat.to_matrix(), mn.Vector3(*free_xyz))
+            quat = euler_to_quat(self._free_rpy)
+            trans = mn.Matrix4.from_(
+                quat.to_matrix(), mn.Vector3(*self._free_xyz)
+            )
             env._sim._sensors[
                 "robot_third_rgb"
             ]._sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
+            return step_result
+        return step_result
+
+
+def play_env(env, args, config):
+    render_steps_limit = None
+    if args.no_render:
+        render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
+
+    use_arm_actions = None
+    if args.load_actions is not None:
+        with open(args.load_actions, "rb") as f:
+            use_arm_actions = np.load(f)
+            print("Loaded arm actions")
+
+    obs = env.reset()
+
+    if not args.no_render:
+        draw_obs = observations_to_image(obs, {})
+        pygame.init()
+        screen = pygame.display.set_mode(
+            [draw_obs.shape[1], draw_obs.shape[0]]
+        )
+
+    update_idx = 0
+    target_fps = 60.0
+    prev_time = time.time()
+    all_obs = []
+    total_reward = 0
+    all_arm_actions = []
+
+    free_cam = FreeCamHelper()
+
+    while True:
+        if (
+            args.save_actions
+            and len(all_arm_actions) > args.save_actions_count
+        ):
+            # quit the application when the action recording queue is full
+            break
+        if render_steps_limit is not None and update_idx > render_steps_limit:
+            break
+
+        step_result, arm_action = get_input_vel_ctlr(
+            args.no_render,
+            use_arm_actions[update_idx]
+            if use_arm_actions is not None
+            else None,
+            args,
+            obs,
+            env,
+            not free_cam.is_free_cam_mode,
+        )
+        if step_result is None:
+            break
+
+        if not args.no_render:
+            step_result = free_cam.update(env, step_result, update_idx)
 
         all_arm_actions.append(arm_action)
-        i += 1
-        if use_arm_actions is not None and i >= len(use_arm_actions):
+        update_idx += 1
+        if use_arm_actions is not None and update_idx >= len(use_arm_actions):
             break
 
         obs = step_result
@@ -347,7 +369,7 @@ def play_env(env, args, config):
         total_reward += reward
         info["Total Reward"] = total_reward
 
-        if is_free_cam_mode:
+        if free_cam.is_free_cam_mode:
             cam = obs["robot_third_rgb"]
             use_ob = np.zeros(draw_obs.shape)
             use_ob[:, : cam.shape[1]] = cam[:, :, :3]
