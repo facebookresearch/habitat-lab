@@ -947,6 +947,7 @@ if __name__ == "__main__":
             # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
             mm = ep_gen.sim.metadata_mediator
             receptacles = get_all_scenedataset_receptacles(ep_gen.sim)
+            list_sep = "\n    "
             logger.info("==================================")
             logger.info("Listing SceneDataset Summary")
             logger.info("==================================")

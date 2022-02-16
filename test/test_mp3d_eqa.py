@@ -173,10 +173,13 @@ def test_mp3d_eqa_sim():
                 assert obs["rgb"].shape[:2] == (
                     eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                     eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                ), "Observation resolution {} doesn't correspond to config " "({}, {}).".format(
-                    obs["rgb"].shape[:2],
-                    eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                    eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                ), (
+                    "Observation resolution {} doesn't correspond to config "
+                    "({}, {}).".format(
+                        obs["rgb"].shape[:2],
+                        eqa_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                        eqa_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                    )
                 )
 
 

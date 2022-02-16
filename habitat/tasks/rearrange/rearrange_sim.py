@@ -6,10 +6,11 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
+import numpy.typing as npt
 
 import habitat_sim
 from habitat.config.default import Config
@@ -673,7 +674,7 @@ class RearrangeSim(HabitatSim):
             ):
                 self.robot.update()
 
-    def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_targets(self):
         """Get a mapping of object ids to goal positions for rearrange targets.
 
         :return: ([idx: int], [goal_pos: list]) The index of the target object
@@ -692,11 +693,11 @@ class RearrangeSim(HabitatSim):
         """Get the number of rearrange targets."""
         return len(self.ep_info["targets"])
 
-    def get_target_objs_start(self) -> np.ndarray:
+    def get_target_objs_start(self):
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""
         return np.array(self.target_start_pos)
 
-    def get_scene_pos(self) -> np.ndarray:
+    def get_scene_pos(self):
         """Get the positions of all clutter RigidObjects in the scene as a numpy array."""
         rom = self.get_rigid_object_manager()
         return np.array(

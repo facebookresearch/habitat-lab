@@ -298,7 +298,7 @@ class Dataset(Generic[T]):
 
         rand_items = np.random.choice(
             self.num_episodes, num_episodes, replace=False
-        )
+        ).tolist()
         if collate_scene_ids:
             scene_ids: Dict[str, List[int]] = {}
             for rand_ind in rand_items:
@@ -392,8 +392,8 @@ class EpisodeIterator(Iterator[T]):
 
         # sample episodes
         if num_episode_sample >= 0:
-            episodes = np.random.choice(
-                episodes, num_episode_sample, replace=False
+            episodes = np.random.choice(  # type: ignore[assignment]
+                episodes, num_episode_sample, replace=False  # type: ignore[arg-type]
             )
 
         if not isinstance(episodes, list):

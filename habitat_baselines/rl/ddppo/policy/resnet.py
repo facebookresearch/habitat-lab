@@ -235,7 +235,7 @@ class ResNet(nn.Module):
         )
 
         self.final_channels = self.inplanes
-        self.final_spatial_compress = 1.0 / (2 ** 5)
+        self.final_spatial_compress = 1.0 / (2**5)
 
     def _make_layer(
         self,

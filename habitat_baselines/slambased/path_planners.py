@@ -451,16 +451,11 @@ class DifferentiableStarPlanner(nn.Module):
             current_g_cost = g[:, :, ymin:ymax, xmin:xmax][mask].clone()
         if len(current_g_cost.view(-1)) > 1:
             current_g_cost = current_g_cost - torch.min(current_g_cost).item()
-            current_g_cost = (
-                current_g_cost
-                + 0.41
-                * torch.randperm(
-                    len(current_g_cost),
-                    dtype=torch.float32,
-                    device=torch.device("cpu"),
-                )
-                / (len(current_g_cost))
-            )
+            current_g_cost = current_g_cost + 0.41 * torch.randperm(
+                len(current_g_cost),
+                dtype=torch.float32,
+                device=torch.device("cpu"),
+            ) / (len(current_g_cost))
         #
         coords_roi = coords[:, :, ymin:ymax, xmin:xmax]
         out = self.argmin(
