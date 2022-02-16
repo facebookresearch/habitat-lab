@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import os
 import os.path as osp
 from typing import Any, List
@@ -97,14 +98,13 @@ if "HabitatGym-v0" not in registry.env_specs:
         kwargs={"use_render_mode": True},
     )
 
-    hab_baselines_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
-    rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
     gym_template_handle = "HabitatGym%s-v0"
     render_gym_template_handle = "HabitatGymRender%s-v0"
-    for fname in os.listdir(rearrange_configs_dir):
-        full_path = osp.join(rearrange_configs_dir, fname)
-        if not fname.endswith(".yaml"):
-            continue
+    hab_baselines_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
+    rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
+    for full_path in glob.glob(
+        rearrange_configs_dir + "/**/*.yaml", recursive=True
+    ):
         cfg_data = _get_config_no_base_task_load(full_path)
         if GYM_AUTO_NAME_KEY in cfg_data:
             # Register this environment name with this config

@@ -19,7 +19,7 @@ NUM_CHECKPOINTS: 100
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/state/reach.yaml
 GYM_AUTO_NAME: "ReachState"
 ENV_NAME: "RearrangeRLEnv"
 

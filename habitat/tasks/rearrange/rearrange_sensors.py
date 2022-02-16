@@ -278,6 +278,41 @@ class RelativeRestingPositionSensor(Sensor):
 
 
 @registry.register_sensor
+class ObjectToRestingPositionSensor(Sensor):
+    cls_uuid: str = "obj_to_resting_position"
+
+    def _get_uuid(self, *args, **kwargs):
+        return ObjectToRestingPositionSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        base_trans = self._sim.robot.base_transformation
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        pos = scene_pos[task.targ_idx]
+        obj_pos = base_trans.inverted().transform_point(pos)
+
+        relative_desired_resting = task.desired_resting - obj_pos
+
+        return np.array(relative_desired_resting, dtype=np.float32)
+
+
+@registry.register_sensor
 class RestingPositionSensor(Sensor):
     cls_uuid: str = "resting_position"
 
@@ -344,6 +379,32 @@ class ObjectToGoalDistance(Measure):
         target_pos = scene_pos[idxs]
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
         self._metric = {idx: dist for idx, dist in zip(idxs, distances)}
+
+
+@registry.register_measure
+class ObjectToRestDistance(Measure):
+    """
+    Distance between current end effector position and position where end effector rests within the robot body.
+    """
+
+    cls_uuid: str = "obj_to_rest_dist"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjectToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[ObjectToRestingPositionSensor.cls_uuid]
+
+        self._metric = np.linalg.norm(to_resting)
 
 
 @registry.register_measure

@@ -1,0 +1,13 @@
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/state/pick.yaml
+GYM_AUTO_NAME: "PickState"
+
+RL:
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: -0.01
+
+    GYM_OBS_KEYS: ['joint_vel', 'joint', 'is_holding', 'relative_resting_position', 'obj_goal_pos_sensor']
+    END_ON_SUCCESS: True
+
+ENV_NAME: "RearrangeRLEnv"

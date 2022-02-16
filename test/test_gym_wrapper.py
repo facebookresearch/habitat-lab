@@ -23,7 +23,7 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            "habitat_baselines/config/rearrange/state/rl_reach.yaml",
             [],
             7,
             np.ndarray,
@@ -117,7 +117,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/*"),
+        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):

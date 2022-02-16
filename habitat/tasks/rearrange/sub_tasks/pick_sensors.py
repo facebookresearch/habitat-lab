@@ -190,3 +190,29 @@ class RearrangePickSuccess(Measure):
         )
 
         self._prev_ee_pos = observations["ee_pos"]
+
+
+@registry.register_measure
+class WhenPickObjectMeasure(Measure):
+    cls_uuid: str = "when_pick_object"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return WhenPickObjectMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self._pick_idx = 0
+        self._total_idx = 0
+        self._did_pick = False
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+        if not self._did_pick:
+            self._pick_idx += 1
+        self._total_idx += 1
+        self._did_pick = self._did_pick or self._sim.grasp_mgr.is_grasped
+        self._metric = self._pick_idx / self._total_idx

@@ -66,13 +66,15 @@ def test_rearrange_dataset():
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/*"),
+        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_rearrange_basline_envs(test_cfg_path):
     """
     Test the Habitat Baseline environments
     """
+    if ".yaml" not in test_cfg_path:
+        return
     config = baselines_get_config(test_cfg_path)
 
     env_class = get_env_class(config.ENV_NAME)
@@ -92,9 +94,15 @@ def test_rearrange_basline_envs(test_cfg_path):
 
 @pytest.mark.parametrize(
     "test_cfg_path",
-    list(
-        glob("configs/tasks/rearrange/*"),
-    ),
+    # Cannot use one glob because there are several directories to exclude.
+    [
+        fname
+        for folder in [
+            "configs/tasks/rearrange/state/*",
+            "configs/tasks/rearrange/*",
+        ]
+        for fname in glob(folder)
+    ],
 )
 def test_rearrange_tasks(test_cfg_path):
     """
