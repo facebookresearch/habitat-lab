@@ -26,8 +26,8 @@ jobs:
           name: run isort
           command: |
               isort --version
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff --treat-comment-as-code "# %%"
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only --treat-comment-as-code "# %%"
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff
+              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
       - run:
           name: run flake8
           command: |
