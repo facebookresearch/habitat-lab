@@ -19,6 +19,8 @@ TASK:
     COUNT_ROBOT_OBJ_COLLS: False
     MAX_COLLISIONS: -1.0
 
+    FILTER_NAV_TO_TASKS: []
+
     # PDDL related parameters
     PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
     OBJ_SUCC_THRESH: 0.3
