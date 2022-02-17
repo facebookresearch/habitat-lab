@@ -290,7 +290,7 @@ class NavPickReward(RearrangeReward):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
-        super().__init__(**kwargs)
+        super().__init__(sim=sim, config=config, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -304,7 +304,7 @@ class NavPickReward(RearrangeReward):
                 DistanceToTargetObject.cls_uuid,
             ],
         )
-        self.update_metric(*args, episode=episode, **kwargs)
+        self.update_metric(*args, task=task, episode=episode, **kwargs)
 
     def update_metric(self, *args, task, episode, **kwargs):
         ee_to_object_distance = task.measurements.measures[
@@ -438,6 +438,8 @@ SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
     ROBOT_JOINT_START_NOISE: 0.0
+    CONCUR_RENDER: False
+    AUTO_SLEEP: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

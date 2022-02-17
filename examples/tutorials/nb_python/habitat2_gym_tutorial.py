@@ -21,7 +21,8 @@
 
 # %% [markdown]
 # # Habitat 2.0 Gym API
-# This tutorial covers how to use Habitat 2.0 environments as standard gym environments
+# This tutorial covers how to use Habitat 2.0 environments as standard gym environments. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
+# See [here for Habitat 2.0 installation instructions](https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/hab_suite/examples/tutorials/colabs/Habitat2_Quickstart.ipynb#scrollTo=50rOVwceXvzL)
 
 # %%
 # %%capture
@@ -79,9 +80,7 @@ video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 done = False
 env.reset()
 while not done:
-    print("About to step")
     obs, reward, done, info = env.step(env.action_space.sample())
-    print(reward)
     video_writer.append_data(env.render("rgb_array"))
 
 video_writer.close()
