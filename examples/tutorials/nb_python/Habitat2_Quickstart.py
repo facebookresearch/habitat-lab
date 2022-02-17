@@ -15,19 +15,8 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
+#     display_name: Python 3
 #     name: python3
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
 # ---
 
 # %% [markdown]
@@ -121,7 +110,7 @@ with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
             os.path.join(
-                habitat_gym.config_base_dir,
+                habitat_gym.base_dir,
                 "configs/tasks/rearrange/pick.yaml",
             )
         )
@@ -410,9 +399,8 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
-    NAV_PICK_REWARD:
+    NAV_PICK_SUCCESS:
         TYPE: "NavPickSuccess"
-        SUCC_THRESH: 0.15
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
@@ -420,7 +408,7 @@ TASK:
         - "ROBOT_COLLS"
         - "DISTANCE_TO_TARGET_OBJECT"
         - "NAV_PICK_REWARD"
-        - "NAV_PICK_REWARD"
+        - "NAV_PICK_SUCCESS"
     ACTIONS:
         # Defining the action space.
         ARM_ACTION:

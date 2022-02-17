@@ -1,6 +1,10 @@
 # ---
 # jupyter:
 #   accelerator: GPU
+#   colab:
+#     collapsed_sections: []
+#     name: Habitat 2.0 Gym Tutorial
+#     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,colabs//ipynb
@@ -11,19 +15,8 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python [conda env:habitat] *
-#     language: python
-#     name: conda-env-habitat-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
+#     display_name: Python 3
+#     name: python3
 # ---
 
 # %% [markdown]
