@@ -647,7 +647,7 @@ class RearrangeSim(HabitatSim):
                 )
                 template.scale = mn.Vector3(r, r, r)
                 self._viz_templates[r] = template_mgr.register_template(
-                    template, "ball_new_viz"
+                    template, "ball_new_viz_" + str(r)
                 )
             viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
             make_render_only(viz_obj, self)
