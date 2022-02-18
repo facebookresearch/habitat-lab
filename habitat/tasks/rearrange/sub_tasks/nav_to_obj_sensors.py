@@ -67,6 +67,7 @@ class NavToObjReward(GeoMeasure):
             ],
         )
         self._cur_angle_dist = -1.0
+        self._give_turn_reward = False
         super().reset_metric(
             *args,
             episode=episode,
@@ -94,10 +95,12 @@ class NavToObjReward(GeoMeasure):
         if success:
             reward += self._config.SUCCESS_REWARD
 
+        # if self._give_turn_reward:
         if (
             self._config.SHOULD_REWARD_TURN
             and cur_dist < self._config.TURN_REWARD_DIST
         ):
+            self._give_turn_reward = True
 
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid

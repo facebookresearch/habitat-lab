@@ -212,7 +212,7 @@ class DynNavRLEnv(RearrangeTask):
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
                 self._nav_target_pos,
                 sim.viz_ids["nav_targ_pos"],
-                r=0.1,
+                r=0.2,
             )
 
         return self._get_observations(episode)

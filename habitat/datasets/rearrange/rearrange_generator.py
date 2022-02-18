@@ -499,6 +499,9 @@ class RearrangeEpisodeGenerator:
                 target_receptacle=target_receptacle,
                 object_to_containing_receptacle=object_to_containing_receptacle,
             )
+            if new_target_objects is None:
+                raise ValueError("Cannot sample target objects")
+
             # cache transforms and add visualizations
             for instance_handle, value in new_target_objects.items():
                 target_object, target_receptacle = value

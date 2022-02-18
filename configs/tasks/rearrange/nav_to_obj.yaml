@@ -61,8 +61,6 @@ TASK:
         TYPE: "NumStepsMeasure"
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: "NavToObjReward"
-        # Negative means a penalty
-        SLACK: 0.0
         SUCCESS_REWARD: 10.0
         # Reward the agent for facing the object?
         SHOULD_REWARD_TURN: True
@@ -70,6 +68,7 @@ TASK:
         TURN_REWARD_DIST: 0.1
         # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
+        # Negative means a penalty
         SLACK_REWARD: 0.0
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: "NavToObjSuccess"

@@ -487,7 +487,7 @@ class ObjectTargetSampler(ObjectSampler):
             f"    Only able to sample {len(new_target_objects)} targets out of {len(self.object_instance_set)}..."
         )
         # cleanup
-        for new_object in new_target_objects.values():
+        for new_object, _ in new_target_objects.values():
             sim.get_rigid_object_manager().remove_object_by_handle(
                 new_object.handle
             )
