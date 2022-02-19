@@ -50,6 +50,9 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
+from habitat_baselines.rl.ppo.hierarchical_policy import (  # noqa: F401.
+    HierarchicalPolicy,
+)
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
