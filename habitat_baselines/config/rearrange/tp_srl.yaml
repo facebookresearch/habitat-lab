@@ -41,13 +41,7 @@ RL:
           LOAD_CKPT_FILE: ""
 
         nav:
-          skill_name: "NavSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
-          ACTION_DIST:
-             use_log_std: True
-          LOAD_CKPT_FILE: ""
+          skill_name: "OracleNavPolicy"
 
   REWARD_MEASURE: "rearrangepick_reward"
   SUCCESS_MEASURE: "rearrangepick_success"
