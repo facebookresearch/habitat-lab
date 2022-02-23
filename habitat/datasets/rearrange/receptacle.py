@@ -271,6 +271,7 @@ def parse_receptacles_from_user_config(
     user_subconfig: habitat_sim._ext.habitat_sim_bindings.Configuration,
     parent_object_handle: Optional[str] = None,
     valid_link_names: Optional[List[str]] = None,
+    ao_uniform_scaling: float = 1.0,
 ) -> List[Union[Receptacle, AABBReceptacle]]:
     """
     Parse receptacle metadata from the provided user subconfig object.
@@ -278,6 +279,8 @@ def parse_receptacles_from_user_config(
     :param user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
     :param parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
+    :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
+    :param ao_uniform_scaling: Uniform scaling applied to the parent AO is applied directly to the Receptacle.
 
     Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
@@ -331,13 +334,19 @@ def parse_receptacles_from_user_config(
                     "parent_link"
                 ), "ArticulatedObject parent link name defined in config, but no valid_link_names provided. Mistake?"
 
+            # apply AO uniform instance scaling
+            receptacle_position = ao_uniform_scaling * sub_config.get(
+                "position"
+            )
+            receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
+
             # TODO: adding more receptacle types will require additional logic here
             receptacles.append(
                 AABBReceptacle(
                     name=receptacle_name,
                     bounds=mn.Range3D.from_center(
-                        sub_config.get("position"),
-                        sub_config.get("scale"),
+                        receptacle_position,
+                        receptacle_scale,
                     ),
                     rotation=rotation,
                     up=up,
@@ -389,6 +398,7 @@ def find_receptacles(
                     obj.get_link_name(link)
                     for link in range(-1, obj.num_links)
                 ],
+                ao_uniform_scaling=obj.global_scale,
             )
         )
 
