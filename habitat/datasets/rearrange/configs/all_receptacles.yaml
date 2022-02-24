@@ -27,6 +27,9 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
+
+unique_target: True
+
 receptacle_sets:
   -
     name: "hab2"

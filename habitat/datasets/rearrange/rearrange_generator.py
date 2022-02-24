@@ -219,6 +219,10 @@ class RearrangeEpisodeGenerator:
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
         self._target_samplers: Dict[str, samplers.ObjectTargetSampler] = {}
+        if self.cfg.unique_target:
+            assert (
+                len(self.cfg.object_target_samplers) == 1
+            ), "If the unique target option is True, there can only be one target sampler"
         for target_sampler_info in self.cfg.object_target_samplers:
             assert "name" in target_sampler_info
             assert "type" in target_sampler_info
@@ -244,8 +248,12 @@ class RearrangeEpisodeGenerator:
                     object_instances,
                     receptacle_info,
                     (
-                        target_sampler_info["params"]["num_samples"][0],
-                        target_sampler_info["params"]["num_samples"][1],
+                        1
+                        if self.cfg.unique_target
+                        else target_sampler_info["params"]["num_samples"][0],
+                        1
+                        if self.cfg.unique_target
+                        else target_sampler_info["params"]["num_samples"][1],
                     ),
                     target_sampler_info["params"]["orientation_sampling"],
                 )
@@ -423,8 +431,11 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
 
         # Get the unique open receptacle
-        sampler = list(self._obj_samplers.values())[0]
-        target_receptacle = sampler.sample_receptacle(self.sim)
+        single_target_in_open_receptacle = self.cfg.unique_target
+        target_receptacle = None
+        if single_target_in_open_receptacle:
+            sampler = list(self._obj_samplers.values())[0]
+            target_receptacle = sampler.sample_receptacle(self.sim)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
@@ -553,6 +564,13 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
+        target_receptacles_data = None
+        if single_target_in_open_receptacle:
+            target_receptacles_data = (
+                target_receptacle.parent_object_handle,
+                target_receptacle.parent_link,
+            )
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -568,10 +586,7 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
-            target_receptacles=(
-                target_receptacle.parent_object_handle,
-                target_receptacle.parent_link,
-            ),
+            target_receptacles=target_receptacles_data,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
@@ -865,6 +880,10 @@ def get_config_defaults() -> CN:
     #   "offset": vec3 []
     #  }
     _C.markers = []
+
+    # If true, the episode will contain a single target. In addition, all AO will have their default (non-sampled) joint articulation EXCEPT
+    # for the AO receptacle containing the target (if any)
+    _C.unique_target = True
 
     return _C.clone()
 
