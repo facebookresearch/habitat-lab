@@ -47,7 +47,7 @@ RL:
     ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
-    entropy_coef: 0.001
+    entropy_coef: 0.0001
     lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2
