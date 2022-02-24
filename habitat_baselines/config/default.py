@@ -105,8 +105,7 @@ _C.RL.POLICY.include_visual_keys = []
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
-# If use_std_param is True, the std of distribution will be a
-# parameter not conditioned on state
+# If True, the std will be a parameter not conditioned on state
 _C.RL.POLICY.ACTION_DIST.use_std_param = False
 _C.RL.POLICY.ACTION_DIST.min_std = 1e-6
 _C.RL.POLICY.ACTION_DIST.max_std = 1
