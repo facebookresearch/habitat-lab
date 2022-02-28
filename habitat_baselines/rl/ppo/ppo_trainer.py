@@ -1076,16 +1076,21 @@ class PPOTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+                    goal_name = None
+                    if hasattr(current_episodes[i], "object_category"):
+                        goal_name = current_episodes[i].object_category
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
+                            scene_id=current_episodes[i].scene_id,
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
+                            goal_name=goal_name,
                         )
 
                         rgb_frames[i] = []
