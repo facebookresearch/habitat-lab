@@ -86,6 +86,9 @@ class CustomNormal(torch.distributions.normal.Normal):
         ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
         return ret
 
+    def entropy(self) -> Tensor:
+        return super().entropy().sum(-1).unsqueeze(-1)
+
 
 class GaussianNet(nn.Module):
     def __init__(
@@ -99,27 +102,42 @@ class GaussianNet(nn.Module):
         self.action_activation = config.action_activation
         self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
+        self.use_std_param = config.use_std_param
+        self.clamp_std = config.clamp_std
         if config.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
+            std_init = 0.0  # initialize std value so that exp(std) ~ 1
         else:
             self.min_std = config.min_std
             self.max_std = config.max_std
+            std_init = 1.0  # initialize std value so that std ~ 1
 
         self.mu = nn.Linear(num_inputs, num_outputs)
-        self.std = nn.Linear(num_inputs, num_outputs)
-
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
         nn.init.constant_(self.mu.bias, 0)
-        nn.init.orthogonal_(self.std.weight, gain=0.01)
-        nn.init.constant_(self.std.bias, 0)
+
+        if self.use_std_param:
+            self.std = torch.nn.parameter.Parameter(
+                torch.randn(num_outputs) * 0.01 + std_init
+            )
+        else:
+            self.std = nn.Linear(num_inputs, num_outputs)
+            nn.init.orthogonal_(self.std.weight, gain=0.01)
+            nn.init.constant_(self.std.bias, std_init)
 
     def forward(self, x: Tensor) -> CustomNormal:
         mu = self.mu(x)
         if self.action_activation == "tanh":
             mu = torch.tanh(mu)
 
-        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.use_std_param:
+            std = self.std
+        else:
+            std = self.std(x)
+
+        if self.clamp_std:
+            std = torch.clamp(std, min=self.min_std, max=self.max_std)
         if self.use_log_std:
             std = torch.exp(std)
         if self.use_softplus:
