@@ -883,7 +883,8 @@ def get_config_defaults() -> CN:
 
     # If true, the episode will contain a single target. In addition, all AO will have their default (non-sampled) joint articulation EXCEPT
     # for the AO receptacle containing the target (if any)
-    _C.unique_target = True
+    #TODO: consider refactoring the generator to support this option more generically.
+    _C.unique_target = False
 
     return _C.clone()
 
