@@ -1045,8 +1045,9 @@ class PPOTrainer(BaseRLTrainer):
                 # episode ended
                 if not not_done_masks[i].item():
                     pbar.update()
-                    episode_stats = {}
-                    episode_stats["reward"] = current_episode_reward[i].item()
+                    episode_stats = {
+                        "reward": current_episode_reward[i].item()
+                    }
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
