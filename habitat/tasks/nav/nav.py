@@ -34,11 +34,18 @@ from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.tasks.nav.semantic_constants import (
+    GIBSON_CATEGORY_TO_TASK_CATEGORY_ID,
+    MP3D_CATEGORY_TO_TASK_CATEGORY_ID,
+    HM3D_CATEGORY_TO_TASK_CATEGORY_ID,
+)
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
+from habitat_sim.utils.common import d3_40_colors_rgb
+from PIL import Image
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -512,6 +519,118 @@ class ProximitySensor(Sensor):
             ],
             dtype=np.float32,
         )
+
+
+@registry.register_sensor(name="SemanticCategorySensor")
+class SemanticCategorySensor(Sensor):
+    r"""Lists the object categories for each pixel location.
+    Args:
+        sim: reference to the simulator for calculating task observations.
+    """
+    cls_uuid: str = "semantic_category"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._current_episode_id = None
+        self.mapping = None
+        self.category_to_task_category_id = None
+        self.instance_id_to_task_id = None
+        self._initialize_category_mappings(config)
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any):
+        return self.cls_uuid
+
+    def _initialize_category_mappings(self, config):
+        assert config.DATASET in ["gibson", "mp3d", "hm3d"]
+        if config.DATASET == "gibson":
+            cat_mapping = GIBSON_CATEGORY_TO_TASK_CATEGORY_ID
+        elif config.DATASET == "mp3d":
+            cat_mapping = MP3D_CATEGORY_TO_TASK_CATEGORY_ID
+        else:
+            cat_mapping = HM3D_CATEGORY_TO_TASK_CATEGORY_ID
+        self.category_to_task_category_id = cat_mapping
+        if config.RAW_NAME_TO_CATEGORY_MAPPING != "":
+            with open(config.RAW_NAME_TO_CATEGORY_MAPPING, "r") as fp:
+                lines = fp.readlines()
+            lines = lines[1:]
+            lines = [l.strip().split("    ") for l in lines]
+            self.raw_to_cat_mapping = {}
+            for l in lines:
+                raw_name = l[1]
+                cat_name = l[-1]
+                if cat_name in cat_mapping:
+                    self.raw_to_cat_mapping[raw_name] = cat_name
+        else:
+            self.raw_to_cat_mapping = {k: k for k in cat_mapping.keys()}
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.COLOR
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        if self.config.CONVERT_TO_RGB:
+            observation_space = spaces.Box(
+                low=0,
+                high=255,
+                shape=(self.config.HEIGHT, self.config.WIDTH, 3),
+                dtype=np.uint8,
+            )
+        else:
+            observation_space = spaces.Box(
+                low=np.iinfo(np.int32).min,
+                high=np.iinfo(np.int32).max,
+                shape=(self.config.HEIGHT, self.config.WIDTH),
+                dtype=np.int32,
+            )
+        return observation_space
+
+    def get_observation(
+        self, *args: Any, observations, episode, **kwargs: Any
+    ):
+        episode_uniq_id = f"{episode.scene_id} {episode.episode_id}"
+        if self._current_episode_id != episode_uniq_id:
+            self._current_episode_id = episode_uniq_id
+            # Get mapping from instance id to task id
+            scene = self._sim.semantic_annotations()
+            self.instance_id_to_task_id = np.ones(
+                (len(scene.objects), ), dtype=np.int64
+            ) * -1 # Non-task objects are set to -1
+            for obj in scene.objects:
+                if obj is None:
+                    continue
+                obj_inst_id = int(obj.id.split("_")[-1])
+                obj_name = obj.category.name()
+                if obj_name in self.raw_to_cat_mapping:
+                    obj_name = self.raw_to_cat_mapping[obj_name]
+                    obj_task_id = self.category_to_task_category_id[obj_name]
+                    self.instance_id_to_task_id[obj_inst_id] = obj_task_id
+        # Set invalid instance IDs to unknown object 0
+        semantic = np.copy(observations["semantic"])
+        semantic[semantic >= self.instance_id_to_task_id.shape[0]] = 0
+        # Map from instance id to task id
+        semantic_category = np.take(self.instance_id_to_task_id, semantic)
+        if self.config.CONVERT_TO_RGB:
+            semantic_category = self.convert_semantic_to_rgb(semantic_category)
+
+        return semantic_category
+
+    def convert_semantic_to_rgb(self, x):
+        max_valid_id = max(list(self.category_to_task_category_id.values()))
+        assert max_valid_id < 39
+        # Map invalid values (-1) to max_valid_id + 1
+        invalid_locs = x == -1
+        x[x == -1] = max_valid_id + 1
+        # Get RGB image
+        semantic_img = Image.new("P", (x.shape[1], x.shape[0]))
+        semantic_img.putpalette(d3_40_colors_rgb.flatten())
+        semantic_img.putdata((x.flatten() % 40).astype(np.uint8))
+        semantic_img = np.array(semantic_img.convert("RGB"))
+        # Set pixels for invalid objects to (0, 0, 0)
+        semantic_img[invalid_locs, :] = np.array([0, 0, 0])
+        return semantic_img
 
 
 @registry.register_measure

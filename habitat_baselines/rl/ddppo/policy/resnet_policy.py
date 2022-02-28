@@ -119,15 +119,22 @@ class ResNetEncoder(nn.Module):
         else:
             self._n_input_depth = 0
 
+        if "semantic_category" in observation_space.spaces:
+            self._n_input_semantic_category = observation_space.spaces["semantic_category"].shape[2]
+            spatial_size = observation_space.spaces["semantic_category"].shape[0] // 2
+            assert self._n_input_semantic_category == 3, "ResNetEncoder only supports RGB values from SemanticCategory sensor!"
+        else:
+            self._n_input_semantic_category = 0
+
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
-                self._n_input_depth + self._n_input_rgb
+                self._n_input_depth + self._n_input_rgb + self._n_input_semantic_category
             )
         else:
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            input_channels = self._n_input_depth + self._n_input_rgb
+            input_channels = self._n_input_depth + self._n_input_rgb + self._n_input_semantic_category
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
             final_spatial = int(
@@ -189,6 +196,17 @@ class ResNetEncoder(nn.Module):
             depth_observations = depth_observations.permute(0, 3, 1, 2)
 
             cnn_input.append(depth_observations)
+
+        if self._n_input_semantic_category > 0:
+            semcat_observations = observations["semantic_category"]
+
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            semcat_observations = semcat_observations.permute(0, 3, 1, 2)
+            semcat_observations = (
+                semcat_observations.float() / 255.0
+            ) # normalize RGB values
+
+            cnn_input.append(semcat_observations)
 
         x = torch.cat(cnn_input, dim=1)
         x = F.avg_pool2d(x, 2)
