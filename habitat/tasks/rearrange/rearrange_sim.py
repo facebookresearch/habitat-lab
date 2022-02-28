@@ -6,7 +6,7 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -443,7 +443,7 @@ class RearrangeSim(HabitatSim):
         for aoi_handle in ao_mgr.get_object_handles():
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
-    def _create_obj_viz(self, ep_info):
+    def _create_obj_viz(self, ep_info: Config):
         for marker_name, m in self._markers.items():
             m_T = m.get_current_transform()
             self.viz_ids[marker_name] = self.visualize_position(
@@ -634,7 +634,12 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def visualize_position(self, position, viz_id=None, r=0.05) -> int:
+    def visualize_position(
+        self,
+        position: np.ndarray,
+        viz_id: Optional[int] = None,
+        r: float = 0.05,
+    ) -> int:
         """Adds the sphere object to the specified position for visualization purpose."""
 
         template_mgr = self.get_object_template_manager()
@@ -646,10 +651,12 @@ class RearrangeSim(HabitatSim):
                     template_mgr.get_template_handles("sphere")[0]
                 )
                 template.scale = mn.Vector3(r, r, r)
-                self._viz_templates[r] = template_mgr.register_template(
+                self._viz_templates[str(r)] = template_mgr.register_template(
                     template, "ball_new_viz_" + str(r)
                 )
-            viz_obj = rom.add_object_by_template_id(self._viz_templates[r])
+            viz_obj = rom.add_object_by_template_id(
+                self._viz_templates[str(r)]
+            )
             make_render_only(viz_obj, self)
             self._viz_handle_to_template[viz_obj.object_id] = r
         else:
@@ -674,7 +681,7 @@ class RearrangeSim(HabitatSim):
             ):
                 self.robot.update()
 
-    def get_targets(self):
+    def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
 
         :return: ([idx: int], [goal_pos: list]) The index of the target object
@@ -693,11 +700,11 @@ class RearrangeSim(HabitatSim):
         """Get the number of rearrange targets."""
         return len(self.ep_info["targets"])
 
-    def get_target_objs_start(self):
+    def get_target_objs_start(self) -> np.ndarray:
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""
         return np.array(self.target_start_pos)
 
-    def get_scene_pos(self):
+    def get_scene_pos(self) -> np.ndarray:
         """Get the positions of all clutter RigidObjects in the scene as a numpy array."""
         rom = self.get_rigid_object_manager()
         return np.array(

@@ -134,7 +134,7 @@ class AbsTargetStartSensor(MultiObjSensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
-        return np.hstack(pos)
+        return np.hstack(pos)  # type: ignore
 
 
 @registry.register_sensor
@@ -152,7 +152,7 @@ class GoalSensor(MultiObjSensor):
         _, pos = self._sim.get_targets()
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
-        return np.hstack(pos)
+        return np.hstack(pos)  # type: ignore
 
 
 @registry.register_sensor
@@ -161,7 +161,7 @@ class AbsGoalSensor(MultiObjSensor):
 
     def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
-        return np.hstack(pos)
+        return np.hstack(pos)  # type: ignore
 
 
 @registry.register_sensor
