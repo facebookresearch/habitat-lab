@@ -343,7 +343,7 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
-            # To ensue at least one object will be sampled in the target_receptacle,
+            # To ensure at least one object will be sampled in the target_receptacle,
             # it is enforced that the first object will be in the target_receptacle
             if len(new_objects) == 0:
                 # no objects sampled yet
