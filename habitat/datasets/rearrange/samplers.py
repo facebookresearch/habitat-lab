@@ -583,7 +583,9 @@ class ArticulatedObjectStateSampler:
                                 self.state_range[0], self.state_range[1]
                             )
                         else:
-                            joint_state = 0.0
+                            joint_state = ao_instance.joint_positions[
+                                ao_instance.get_link_joint_pos_offset(link_ix)
+                            ]
                     else:
                         joint_state = random.uniform(
                             self.state_range[0], self.state_range[1]
@@ -696,7 +698,9 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                                 joint_range[0], joint_range[1]
                             )
                         else:
-                            joint_state = 0.0
+                            joint_state = pose[
+                                ao_instance.get_link_joint_pos_offset(link_ix)
+                            ]
                     else:
                         joint_state = random.uniform(
                             joint_range[0], joint_range[1]
