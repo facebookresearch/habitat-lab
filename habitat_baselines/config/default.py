@@ -105,6 +105,10 @@ _C.RL.POLICY.include_visual_keys = []
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
+# If True, the std will be a parameter not conditioned on state
+_C.RL.POLICY.ACTION_DIST.use_std_param = False
+# If True, the std will be clamped to the specified min and max std values
+_C.RL.POLICY.ACTION_DIST.clamp_std = True
 _C.RL.POLICY.ACTION_DIST.min_std = 1e-6
 _C.RL.POLICY.ACTION_DIST.max_std = 1
 _C.RL.POLICY.ACTION_DIST.min_log_std = -5
