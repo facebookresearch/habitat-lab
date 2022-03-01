@@ -66,7 +66,7 @@ object_target_samplers:
     params:
       object_samplers: ["hab2"]
       receptacle_sets: ["hab2"]
-      num_samples: [1, 1]
+      num_samples: [5, 5]
       orientation_sampling: "up"
 
 markers:
