@@ -287,9 +287,10 @@ class ObjectSampler:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )
-        logger.info(
-            f"Failed to sample object placement in {self.max_placement_attempts} tries."
+        logger.warning(
+            f"Failed to sample {object_handle} placement on {receptacle.name} in {self.max_placement_attempts} tries."
         )
+
         return None
 
     def single_sample(
@@ -318,7 +319,7 @@ class ObjectSampler:
     def sample(
         self,
         sim: habitat_sim.Simulator,
-        target_receptacle,
+        target_receptacles,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
     ) -> List[habitat_sim.physics.ManagedRigidObject]:
@@ -343,10 +344,10 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
-            if len(new_objects) == 0:
+            if len(new_objects) < len(target_receptacles):
                 # no objects sampled yet
                 new_object, receptacle = self.single_sample(
-                    sim, snap_down, vdb, target_receptacle
+                    sim, snap_down, vdb, target_receptacles[len(new_objects)]
                 )
             else:
                 new_object, receptacle = self.single_sample(
@@ -384,6 +385,7 @@ class ObjectTargetSampler(ObjectSampler):
         receptacle_sets: List[
             Tuple[List[str], List[str], List[str], List[str]]
         ],
+        target_number,
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
     ) -> None:
@@ -398,12 +400,14 @@ class ObjectTargetSampler(ObjectSampler):
             object_set, receptacle_sets, num_targets, orientation_sample
         )
 
+        self.target_number = target_number
+
     def sample(
         self,
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
-        target_receptacle=None,
+        target_receptacles=None,
         object_to_containing_receptacle=None,
     ) -> Optional[
         Dict[str, Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]
@@ -417,24 +421,17 @@ class ObjectTargetSampler(ObjectSampler):
         targets_found = 0
         new_target_objects = {}
 
-        target_number = (
-            random.randrange(self.num_objects[0], self.num_objects[1])
-            if self.num_objects[1] > self.num_objects[0]
-            else self.num_objects[0]
-        )
-        target_number = min(target_number, len(self.object_instance_set))
         logger.info(
-            f"    Trying to sample {target_number} targets from range {self.num_objects}"
+            f"    Trying to sample {self.target_number} targets from range {self.num_objects}"
         )
 
         num_pairing_tries = 0
         while (
-            targets_found < target_number
+            targets_found < self.target_number
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
 
-            new_object, receptacle = self.single_sample(sim, snap_down, vdb)
             found_match = False
             for _ in range(1000):
                 if found_match:
@@ -446,24 +443,33 @@ class ObjectTargetSampler(ObjectSampler):
                     continue
 
                 for object_instance in self.object_instance_set:
+                    matching_target_recep = None
+                    if (
+                        target_receptacles is not None
+                        and object_to_containing_receptacle is not None
+                    ):
+                        contain_recep = object_to_containing_receptacle[
+                            object_instance.handle
+                        ]
+                        for recep in target_receptacles:
+                            if (
+                                contain_recep.parent_object_handle
+                                == recep.parent_object_handle
+                                and contain_recep.parent_link
+                                == recep.parent_link
+                            ):
+                                matching_target_recep = recep
+                                break
+
                     if (
                         object_instance.creation_attributes.handle
                         == new_object.creation_attributes.handle
                         and object_instance.handle not in new_target_objects
-                        and target_receptacle is not None
-                        and object_to_containing_receptacle is not None
-                        and object_to_containing_receptacle[
-                            object_instance.handle
-                        ].parent_object_handle
-                        == target_receptacle.parent_object_handle
-                        and object_to_containing_receptacle[
-                            object_instance.handle
-                        ].parent_link
-                        == target_receptacle.parent_link
+                        and matching_target_recep is not None
                     ):
                         new_target_objects[object_instance.handle] = (
                             new_object,
-                            target_receptacle,
+                            matching_target_recep,
                         )
                         found_match = True
                         # remove this object instance match from future pairings
@@ -504,7 +510,7 @@ class ArticulatedObjectStateSampler:
         assert self.state_range[1] >= self.state_range[0]
 
     def sample(
-        self, sim: habitat_sim.Simulator, receptacle=None
+        self, sim: habitat_sim.Simulator, receptacles=None
     ) -> Optional[
         Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
     ]:
@@ -564,7 +570,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 )
 
     def sample(
-        self, sim: habitat_sim.Simulator, receptacle
+        self, sim: habitat_sim.Simulator, receptacles
     ) -> Optional[
         Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
     ]:
@@ -615,12 +621,17 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 # NOTE: only query and set pose once per instance for efficiency
                 pose = ao_instance.joint_positions
                 for link_ix, joint_range in link_ranges.items():
-                    if (
-                        ao_instance.handle == receptacle.parent_object_handle
-                    ) and (
-                        (link_ix == receptacle.parent_link)
-                        or ("frige" in receptacle.parent_object_handle)
-                        or ("fridge" in receptacle.parent_object_handle)
+
+                    matching_recep = None
+                    for recep in receptacles:
+                        if ao_instance.handle == recep.parent_object_handle:
+                            matching_recep = recep
+                            break
+
+                    if matching_recep is not None and (
+                        (link_ix == matching_recep.parent_link)
+                        or ("frige" in matching_recep.parent_object_handle)
+                        or ("fridge" in matching_recep.parent_object_handle)
                     ):
                         joint_state = random.uniform(
                             joint_range[0], joint_range[1]
