@@ -10,6 +10,17 @@ sys.path = [os.path.join(os.path.dirname(__file__), "../")] + sys.path
 
 import habitat  # isort:skip
 
+import gym  # isort:skip
+import typing  # isort:skip
+
+# Override the typing annotation of _np_random of gym.Env since the type provided is
+# "RandomNumberGenerator | None" and the "|" symbol for typing is not valid in Python <3.10
+# Remove when upgrading to Python 3.10
+gym.Env.__annotations__["_np_random"] = typing.Optional[
+    gym.utils.seeding.RandomNumberGenerator
+]
+
+
 # Overrides the __all__ as that one pulls everything into the root module
 # and doesn't expose any submodules
 habitat.__all__ = ["config", "core", "Agent", "Benchmark"]
