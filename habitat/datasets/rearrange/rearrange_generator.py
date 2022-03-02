@@ -312,13 +312,17 @@ class RearrangeEpisodeGenerator:
                     ao_info["params"][0],
                     ao_info["params"][1],
                     (ao_info["params"][2], ao_info["params"][3]),
+                    ao_info.get("should_sample_all_joints", False),
                 )
             elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
-                    str, Dict[str, Tuple[float, float]]
+                    str, Dict[str, Tuple[float, float, bool]]
                 ] = {}
                 for entry in ao_info["params"]:
                     ao_handle = entry["ao_handle"]
+                    should_sample_all_joints = entry.get(
+                        "should_sample_all_joints", False
+                    )
                     link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
@@ -333,6 +337,7 @@ class RearrangeEpisodeGenerator:
                         composite_ao_sampler_params[ao_handle][link_name] = (
                             link_params[1],
                             link_params[2],
+                            should_sample_all_joints,
                         )
                 self._ao_state_samplers[
                     ao_info["name"]
@@ -866,7 +871,9 @@ def get_config_defaults() -> CN:
         #     "type": "uniform",
         #     "params": ["fridge", "top_door", 1.5, 1.5]}
         # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+        # Only works in `unique_target: True`.
     ]
 
     # ----- marker definitions ------

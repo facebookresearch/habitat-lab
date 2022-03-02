@@ -536,11 +536,16 @@ class ObjectTargetSampler(ObjectSampler):
 
 class ArticulatedObjectStateSampler:
     def __init__(
-        self, ao_handle: str, link_name: str, state_range: Tuple[float, float]
+        self,
+        ao_handle: str,
+        link_name: str,
+        state_range: Tuple[float, float],
+        should_sample_all_joints: bool = False,
     ) -> None:
         self.ao_handle = ao_handle
         self.link_name = link_name
         self.state_range = state_range
+        self.should_sample_all_joints = should_sample_all_joints
         assert self.state_range[1] >= self.state_range[0]
 
     def sample(
@@ -573,8 +578,7 @@ class ArticulatedObjectStateSampler:
                             == receptacle.parent_object_handle
                         ) and (
                             (link_ix == receptacle.parent_link)
-                            or ("frige" in receptacle.parent_object_handle)
-                            or ("fridge" in receptacle.parent_object_handle)
+                            or self.should_sample_all_joints
                         ):
                             # If this is true, this means that the receptacle AO must be opened. That is because
                             # the object is spawned inside the fridge OR inside the kitchen counter BUT not on top of the counter
@@ -613,7 +617,8 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
     """
 
     def __init__(
-        self, ao_sampler_params: Dict[str, Dict[str, Tuple[float, float]]]
+        self,
+        ao_sampler_params: Dict[str, Dict[str, Tuple[float, float, bool]]],
     ) -> None:
         """
         ao_sampler_params : {ao_handle -> {link_name -> (min, max)}}
@@ -656,7 +661,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
         # construct an efficiently iterable structure for reject sampling of link states
         link_sample_params: Dict[
             habitat_sim.physics.ManagedArticulatedObject,
-            Dict[int, Tuple[float, float]],
+            Dict[int, Tuple[float, float, bool]],
         ] = {}
         for ao_handle, ao_instances in matching_ao_instances.items():
             for ao_instance in ao_instances:
@@ -682,14 +687,14 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 # NOTE: only query and set pose once per instance for efficiency
                 pose = ao_instance.joint_positions
                 for link_ix, joint_range in link_ranges.items():
+                    should_sample_all_joints = joint_range[2]
                     if receptacle is not None:
                         if (
                             ao_instance.handle
                             == receptacle.parent_object_handle
                         ) and (
                             (link_ix == receptacle.parent_link)
-                            or ("frige" in receptacle.parent_object_handle)
-                            or ("fridge" in receptacle.parent_object_handle)
+                            or should_sample_all_joints
                         ):
                             # If this is true, this means that the receptacle AO must be opened. That is because
                             # the object is spawned inside the fridge OR inside the kitchen counter BUT not on top of the counter
