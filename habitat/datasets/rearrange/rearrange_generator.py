@@ -434,7 +434,7 @@ class RearrangeEpisodeGenerator:
         single_target_in_open_receptacle = self.cfg.unique_target
         target_receptacle = None
         if single_target_in_open_receptacle:
-            sampler = list(self._obj_samplers.values())[0]
+            sampler = next(iter(self._obj_samplers.values()))
             target_receptacle = sampler.sample_receptacle(self.sim)
 
         # sample AO states for objects in the scene
