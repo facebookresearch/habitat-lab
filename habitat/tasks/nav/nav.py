@@ -618,7 +618,7 @@ class SemanticCategorySensor(Sensor):
         return semantic_category
 
     def convert_semantic_to_rgb(self, x):
-        max_valid_id = max(list(self.category_to_task_category_id.values()))
+        max_valid_id = max(self.category_to_task_category_id.values())
         assert max_valid_id < 39
         # Map invalid values (-1) to max_valid_id + 1
         invalid_locs = x == -1
