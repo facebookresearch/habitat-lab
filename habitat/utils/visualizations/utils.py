@@ -230,6 +230,11 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             depth_map = depth_map.astype(np.uint8)
             depth_map = np.stack([depth_map for _ in range(3)], axis=2)
             render_obs_images.append(depth_map)
+        elif "semantic_category" in sensor_name:
+            semcat = observation[sensor_name]
+            if not isinstance(semcat, np.ndarray):
+                semcat = semcat.cpu().numpy()
+            render_obs_images.append(semcat)
 
     # add image goal if observation has image_goal info
     if "imagegoal" in observation:

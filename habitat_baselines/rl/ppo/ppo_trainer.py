@@ -66,6 +66,7 @@ class PPOTrainer(BaseRLTrainer):
     supported_tasks = ["Nav-v0"]
 
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
+    SENSORS_BLACKLIST = ["semantic"]
     _is_distributed: bool
     _obs_batching_cache: ObservationBatchingCache
     envs: VectorEnv
@@ -95,7 +96,10 @@ class PPOTrainer(BaseRLTrainer):
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
-            self._obs_space = self.envs.observation_spaces[0]
+            self._obs_space = spaces.Dict({
+                k: v for k, v in self.envs.observation_spaces[0].spaces.items()
+                if k not in self.SENSORS_BLACKLIST
+            })
 
         return self._obs_space
 
@@ -311,6 +315,8 @@ class PPOTrainer(BaseRLTrainer):
         self.rollouts.to(self.device)
 
         observations = self.envs.reset()
+        observations = self._clean_observations(observations)
+
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
@@ -400,6 +406,15 @@ class PPOTrainer(BaseRLTrainer):
 
         return result
 
+    def _clean_observations(self, observations):
+        clean_observations = []
+        for obs in observations:
+            obs = {
+                k: v for k, v in obs.items() if k not in self.SENSORS_BLACKLIST
+            }
+            clean_observations.append(obs)
+        return clean_observations
+
     @classmethod
     def _extract_scalars_from_infos(
         cls, infos: List[Dict[str, Any]]
@@ -488,6 +503,7 @@ class PPOTrainer(BaseRLTrainer):
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
         ]
+        observations = self._clean_observations(observations)
 
         self.env_time += time.time() - t_step_env
 
@@ -924,6 +940,7 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
+        observations = self._clean_observations(observations)
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
@@ -1015,6 +1032,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            observations = self._clean_observations(observations)
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,
@@ -1059,16 +1077,21 @@ class PPOTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
                     ] = episode_stats
+                    goal_name = None
+                    if hasattr(current_episodes[i], "object_category"):
+                        goal_name = current_episodes[i].object_category
 
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
+                            scene_id=current_episodes[i].scene_id,
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
+                            goal_name=goal_name,
                         )
 
                         rgb_frames[i] = []

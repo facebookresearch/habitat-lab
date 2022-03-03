@@ -133,6 +133,16 @@ _C.TASK.PROXIMITY_SENSOR = CN()
 _C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
 _C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
 # -----------------------------------------------------------------------------
+# SEMANTIC CATEGORY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.SEMANTIC_CATEGORY_SENSOR = CN()
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.HEIGHT = 480
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.WIDTH = 640
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.TYPE = "SemanticCategorySensor"
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.CONVERT_TO_RGB = True
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.DATASET = "mp3d"
+_C.TASK.SEMANTIC_CATEGORY_SENSOR.RAW_NAME_TO_CATEGORY_MAPPING = ""
+# -----------------------------------------------------------------------------
 # SUCCESS MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.SUCCESS = CN()

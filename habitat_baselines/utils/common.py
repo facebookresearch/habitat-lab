@@ -326,10 +326,12 @@ def generate_video(
     video_option: List[str],
     video_dir: Optional[str],
     images: List[np.ndarray],
+    scene_id: str,
     episode_id: Union[int, str],
     checkpoint_idx: int,
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
+    goal_name: Optional[str] = None,
     fps: int = 10,
     verbose: bool = True,
 ) -> None:
@@ -339,11 +341,13 @@ def generate_video(
         video_option: string list of "tensorboard" or "disk" or both.
         video_dir: path to target video directory.
         images: list of images to be converted to video.
+        scene_id: scene id for video naming.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
         metric_name: name of the performance metric, e.g. "spl".
         metric_value: value of metric.
         tb_writer: tensorboard writer object for uploading video.
+        goal_name: name of the goal for the current episode
         fps: fps for generated video.
     Returns:
         None
@@ -355,9 +359,12 @@ def generate_video(
     for k, v in metrics.items():
         metric_strs.append(f"{k}={v:.2f}")
 
-    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
+    scene_name = scene_id.split("/")[-1].split(".")[0]
+    video_name = f"scene={scene_name}-episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
     )
+    if goal_name is not None:
+        video_name += "_" + goal_name
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(images, video_dir, video_name, verbose=verbose)

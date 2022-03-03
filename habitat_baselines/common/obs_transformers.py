@@ -74,7 +74,7 @@ class ResizeShortestEdge(ObservationTransformer):
         self,
         size: int,
         channels_last: bool = True,
-        trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
+        trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic_category"),
     ):
         """Args:
         size: The size you want to resize the shortest edge to
@@ -145,7 +145,7 @@ class CenterCropper(ObservationTransformer):
         self,
         size: Union[numbers.Integral, Tuple[int, int]],
         channels_last: bool = True,
-        trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
+        trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic_category"),
     ):
         """Args:
         size: A sequence (h, w) or int of the size you wish to resize/center_crop.
