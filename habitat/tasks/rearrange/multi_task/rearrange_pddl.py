@@ -16,6 +16,9 @@ from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
 
 
 def parse_func(x):
+    """
+    :returns: args is an empty string if there are no arguments.
+    """
     name = x.split("(")[0]
     args = x.split("(")[1].split(")")[0]
     return name, args

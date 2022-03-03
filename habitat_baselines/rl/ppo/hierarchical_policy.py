@@ -6,6 +6,7 @@ import torch.nn as nn
 import yaml
 
 from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.ppo.policy import Policy
@@ -26,7 +27,9 @@ class GtHighLevelPolicy:
     def __init__(self, config, task_spec_file, num_envs, skill_name_to_idx):
         with open(task_spec_file, "r") as f:
             task_spec = yaml.safe_load(f)
-        self._solution_actions = task_spec["solution"]
+        self._solution_actions = [
+            parse_func(sol_step) for sol_step in task_spec["solution"]
+        ]
         self._next_sol_idxs = torch.zeros(num_envs)
         self._num_envs = num_envs
         self._skill_name_to_idx = skill_name_to_idx
@@ -34,12 +37,21 @@ class GtHighLevelPolicy:
     def get_next_skill(
         self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
     ):
-        next_skill = torch.zeros(self._num_envs)
+        next_skill = torch.zeros(self._num_envs, device=prev_actions.device)
+        skill_args_tensor = torch.zeros(self._num_envs)
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
-                skill_name = self._solution_actions[batch_idx]
+                skill_name, skill_args = self._solution_actions[
+                    self._next_sol_idxs[batch_idx].item()
+                ]
                 next_skill[batch_idx] = self._skill_name_to_idx[skill_name]
-        return next_skill
+                # Need to convert the name into the corresponding target index.
+                # For now use a hack and assume the name correctly indexes
+                if len(skill_args) > 0:
+                    targ_idx = int(skill_args.split("|")[1])
+                    skill_args_tensor[batch_idx] = targ_idx
+                self._next_sol_idxs[batch_idx] += 1
+        return next_skill, skill_args_tensor
 
 
 @baseline_registry.register_policy
@@ -109,6 +121,7 @@ class HierarchicalPolicy(Policy):
         batched_prev_actions = prev_actions.unsqueeze(1)
         batched_masks = masks.unsqueeze(1)
 
+        # Check if skills should terminate.
         for batch_idx, skill_idx in enumerate(self._cur_skills):
             should_terminate = self._skills[skill_idx.item()].should_terminate(
                 TensorDict(
@@ -125,6 +138,8 @@ class HierarchicalPolicy(Policy):
             self._call_high_level + (~masks).float().view(-1), 0.0, 1.0
         )
 
+        # If any skills want to terminate invoke the high-level policy to get
+        # the next skill.
         if self._call_high_level.sum() > 0:
             (
                 new_skills,
@@ -277,6 +292,15 @@ class NnSkillPolicy(Policy):
                 if k in policy_cfg.TASK_CONFIG.TASK.ACTIONS
             }
         )
+
+        ###############################################
+        # TEMPORARY CODE TO ADD MISSING CONFIG KEYS
+        policy_cfg.defrost()
+        policy_cfg.RL.POLICY.ACTION_DIST.use_std_param = False
+        policy_cfg.RL.POLICY.ACTION_DIST.clamp_std = False
+        policy_cfg.freeze()
+        ###############################################
+
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )

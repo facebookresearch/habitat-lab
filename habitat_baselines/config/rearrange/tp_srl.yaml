@@ -41,7 +41,13 @@ RL:
           LOAD_CKPT_FILE: ""
 
         nav:
-          skill_name: "OracleNavPolicy"
+          skill_name: "NavSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          include_visual_keys: ["robot_head_depth"]
+          ACTION_DIST:
+             use_log_std: True
+          LOAD_CKPT_FILE: ""
 
   REWARD_MEASURE: "rearrangepick_reward"
   SUCCESS_MEASURE: "rearrangepick_success"
@@ -89,7 +95,7 @@ RL:
     # Whether or not the visual encoder backbone will be trained.
     train_encoder: True
     # Whether or not to reset the critic linear layer
-    reset_critic: True
+    reset_critic: False
 
     # Model parameters
     backbone: resnet50
