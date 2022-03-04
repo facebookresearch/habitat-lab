@@ -30,7 +30,7 @@ class GtHighLevelPolicy:
         self._solution_actions = [
             parse_func(sol_step) for sol_step in task_spec["solution"]
         ]
-        self._next_sol_idxs = torch.zeros(num_envs)
+        self._next_sol_idxs = torch.zeros(num_envs, dtype=torch.int32)
         self._num_envs = num_envs
         self._skill_name_to_idx = skill_name_to_idx
 
@@ -62,6 +62,7 @@ class HierarchicalPolicy(Policy):
         super().__init__()
 
         self._action_space = action_space
+        self._num_envs = num_envs
 
         # Maps (skill idx -> skill)
         self._skills = {}
@@ -70,12 +71,11 @@ class HierarchicalPolicy(Policy):
         for i, (skill_name, skill_config) in enumerate(config.skills.items()):
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
-                skill_config, observation_space, action_space
+                skill_config, observation_space, action_space, self._num_envs
             )
             self._skills[i] = skill_policy
             self._name_to_idx[skill_name] = i
 
-        self._num_envs = num_envs
         self._call_high_level = torch.ones(self._num_envs)
         self._cur_skills: torch.Tensor = torch.zeros(self._num_envs)
 
@@ -152,12 +152,14 @@ class HierarchicalPolicy(Policy):
                 self._call_high_level,
             )
 
-            self._cur_skills = self._call_high_level * new_skills
-
             for new_skill_batch_idx in torch.nonzero(self._call_high_level):
-                skill_idx = self._cur_skills[new_skill_batch_idx.item()]
+                skill_idx = new_skills[new_skill_batch_idx.item()]
+
                 skill = self._skills[skill_idx.item()]
-                skill.on_enter(new_skill_args[new_skill_batch_idx])
+                skill.on_enter(
+                    new_skill_args[new_skill_batch_idx], new_skill_batch_idx
+                )
+            self._cur_skills = self._call_high_level * new_skills
 
         actions = torch.zeros(
             self._num_envs, get_num_actions(self._action_space)
@@ -170,6 +172,7 @@ class HierarchicalPolicy(Policy):
                 batched_rnn_hidden_states[batch_idx],
                 batched_prev_actions[batch_idx],
                 batched_masks[batch_idx],
+                batch_idx,
             )
             actions[batch_idx] = action
 
@@ -194,14 +197,19 @@ class NnSkillPolicy(Policy):
         action_space,
         filtered_obs_space,
         filtered_action_space,
+        batch_size,
     ):
         self._wrap_policy = wrap_policy
         self._action_space = action_space
         self._config = config
+        self._batch_size = batch_size
         self._filtered_obs_space = filtered_obs_space
         self._filtered_action_space = filtered_action_space
         self._ac_start = 0
         self._ac_len = get_num_actions(filtered_action_space)
+
+        self._cur_skill_args = torch.zeros(self._batch_size)
+
         for k in action_space:
             if k not in filtered_action_space.keys():
                 self._ac_start += get_num_actions(action_space[k])
@@ -217,8 +225,8 @@ class NnSkillPolicy(Policy):
     ) -> torch.Tensor:
         return torch.zeros(observations.shape[0]).to(masks.device)
 
-    def on_enter(self, skill_args):
-        pass
+    def on_enter(self, skill_arg, new_skill_batch_idx):
+        self._cur_skill_args[new_skill_batch_idx] = skill_arg
 
     def parameters(self):
         if self._wrap_policy is not None:
@@ -237,12 +245,16 @@ class NnSkillPolicy(Policy):
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
 
+    def _select_obs(self, obs, cur_batch_idx):
+        return obs
+
     def act(
         self,
         observations,
         rnn_hidden_states,
         prev_actions,
         masks,
+        cur_batch_idx,
         deterministic=False,
     ):
         filtered_obs = TensorDict(
@@ -255,6 +267,7 @@ class NnSkillPolicy(Policy):
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len
         ]
+        filtered_obs = self._select_obs(filtered_obs, cur_batch_idx)
 
         _, action, _, _ = self._wrap_policy.act(
             filtered_obs,
@@ -268,7 +281,7 @@ class NnSkillPolicy(Policy):
         return full_action
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(cls, config, observation_space, action_space, batch_size):
         # Load the wrap policy from file
         if len(config.LOAD_CKPT_FILE) == 0:
             raise ValueError("Need to specify load location")
@@ -317,10 +330,28 @@ class NnSkillPolicy(Policy):
             action_space,
             filtered_obs_space,
             filtered_action_space,
+            batch_size,
         )
 
 
 class PickSkillPolicy(NnSkillPolicy):
+    def _select_obs(self, obs, cur_batch_idx):
+        obs["obs_start_sensor"] = obs["obs_start_sensor"][
+            self._cur_skill_args[cur_batch_idx].item()
+        ]
+        return obs
+
+    def should_terminate(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> torch.Tensor:
+        return torch.zeros(masks.shape[0]).to(masks.device)
+
+
+class NavSkillPolicy(NnSkillPolicy):
     def should_terminate(
         self,
         observations,
@@ -342,22 +373,12 @@ class OracleNavPolicy(NnSkillPolicy):
         return torch.zeros(masks.shape[0]).to(masks.device)
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(cls, config, observation_space, action_space, batch_size):
         return cls(
             None,
             config,
             action_space,
             observation_space,
             action_space,
+            batch_size,
         )
-
-
-class NavSkillPolicy(NnSkillPolicy):
-    def should_terminate(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-    ) -> torch.Tensor:
-        return torch.zeros(masks.shape[0]).to(masks.device)
