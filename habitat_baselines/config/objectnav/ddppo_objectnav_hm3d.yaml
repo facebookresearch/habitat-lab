@@ -72,4 +72,3 @@ RL:
     backbone: resnet50
     rnn_type: LSTM
     num_recurrent_layers: 2
-

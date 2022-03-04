@@ -47,4 +47,3 @@ DATASET:
   SPLIT: train
   DATA_PATH: "data/datasets/objectnav/hm3d/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"
-
