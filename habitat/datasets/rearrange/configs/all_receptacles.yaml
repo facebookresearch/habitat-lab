@@ -27,6 +27,9 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
+
+unique_target: True
+
 receptacle_sets:
   -
     name: "hab2"
@@ -64,6 +67,7 @@ ao_state_samplers:
     params:
       -
         ao_handle: "fridge"
+        should_sample_all_joints: True
         joint_states:
           - ["top_door", 1.5, 1.5]
       -

@@ -219,6 +219,10 @@ class RearrangeEpisodeGenerator:
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
         self._target_samplers: Dict[str, samplers.ObjectTargetSampler] = {}
+        if self.cfg.unique_target:
+            assert (
+                len(self.cfg.object_target_samplers) == 1
+            ), "If the unique target option is True, there can only be one target sampler"
         for target_sampler_info in self.cfg.object_target_samplers:
             assert "name" in target_sampler_info
             assert "type" in target_sampler_info
@@ -244,8 +248,12 @@ class RearrangeEpisodeGenerator:
                     object_instances,
                     receptacle_info,
                     (
-                        target_sampler_info["params"]["num_samples"][0],
-                        target_sampler_info["params"]["num_samples"][1],
+                        1
+                        if self.cfg.unique_target
+                        else target_sampler_info["params"]["num_samples"][0],
+                        1
+                        if self.cfg.unique_target
+                        else target_sampler_info["params"]["num_samples"][1],
                     ),
                     target_sampler_info["params"]["orientation_sampling"],
                 )
@@ -304,13 +312,17 @@ class RearrangeEpisodeGenerator:
                     ao_info["params"][0],
                     ao_info["params"][1],
                     (ao_info["params"][2], ao_info["params"][3]),
+                    ao_info.get("should_sample_all_joints", False),
                 )
             elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
-                    str, Dict[str, Tuple[float, float]]
+                    str, Dict[str, Tuple[float, float, bool]]
                 ] = {}
                 for entry in ao_info["params"]:
                     ao_handle = entry["ao_handle"]
+                    should_sample_all_joints = entry.get(
+                        "should_sample_all_joints", False
+                    )
                     link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
@@ -325,6 +337,7 @@ class RearrangeEpisodeGenerator:
                         composite_ao_sampler_params[ao_handle][link_name] = (
                             link_params[1],
                             link_params[2],
+                            should_sample_all_joints,
                         )
                 self._ao_state_samplers[
                     ao_info["name"]
@@ -423,8 +436,11 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
 
         # Get the unique open receptacle
-        sampler = list(self._obj_samplers.values())[0]
-        target_receptacle = sampler.sample_receptacle(self.sim)
+        single_target_in_open_receptacle = self.cfg.unique_target
+        target_receptacle = None
+        if single_target_in_open_receptacle:
+            sampler = next(iter(self._obj_samplers.values()))
+            target_receptacle = sampler.sample_receptacle(self.sim)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
@@ -553,6 +569,13 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
+        target_receptacles_data = None
+        if single_target_in_open_receptacle:
+            target_receptacles_data = (
+                target_receptacle.parent_object_handle,
+                target_receptacle.parent_link,
+            )
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -568,10 +591,7 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
-            target_receptacles=(
-                target_receptacle.parent_object_handle,
-                target_receptacle.parent_link,
-            ),
+            target_receptacles=target_receptacles_data,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
@@ -851,7 +871,9 @@ def get_config_defaults() -> CN:
         #     "type": "uniform",
         #     "params": ["fridge", "top_door", 1.5, 1.5]}
         # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+        # Only works in `unique_target: True`.
     ]
 
     # ----- marker definitions ------
@@ -865,6 +887,11 @@ def get_config_defaults() -> CN:
     #   "offset": vec3 []
     #  }
     _C.markers = []
+
+    # If true, the episode will contain a single target. In addition, all AO will have their default (non-sampled) joint articulation EXCEPT
+    # for the AO receptacle containing the target (if any)
+    # TODO: consider refactoring the generator to support this option more generically.
+    _C.unique_target = False
 
     return _C.clone()
 
