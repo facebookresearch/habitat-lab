@@ -699,6 +699,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                             # If this is true, this means that the receptacle AO must be opened. That is because
                             # the object is spawned inside the fridge OR inside the kitchen counter BUT not on top of the counter
                             # because in this case all drawers must be closed.
+                            # TODO: move this receptacle access logic to the ao_config files in a future refactor
                             joint_state = random.uniform(
                                 joint_range[0], joint_range[1]
                             )
