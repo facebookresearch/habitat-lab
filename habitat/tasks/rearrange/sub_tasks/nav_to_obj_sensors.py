@@ -5,11 +5,44 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
+from gym import spaces
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.core.simulator import Sensor, SensorTypes
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
+
+
+@registry.register_sensor
+class DistToNavGoalSensor(Sensor):
+    cls_uuid: str = "dist_to_nav_goal"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return DistToNavGoalSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        agent_pos = self._sim.safe_snap_point(self._sim.robot.base_pos)
+        distance_to_target = self._sim.geodesic_distance(
+            agent_pos,
+            task.nav_target_pos,
+        )
+        return distance_to_target
 
 
 class GeoMeasure(Measure):

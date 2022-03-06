@@ -58,6 +58,8 @@ TASK:
         TYPE: "AbsGoalSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
+    DIST_TO_NAV_GOAL:
+        TYPE: "DistToNavGoalSensor"
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -67,7 +69,7 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "DIST_TO_NAV_GOAL"]
 
     ########################
     # General measures

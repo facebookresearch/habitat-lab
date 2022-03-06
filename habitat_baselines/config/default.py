@@ -32,6 +32,7 @@ _C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.VIDEO_FPS = 10
 _C.VIDEO_RENDER_TOP_DOWN = True
+_C.VIDEO_RENDER_ALL_INFO = False
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_ENVIRONMENTS = 16

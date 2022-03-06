@@ -13,14 +13,15 @@ import numpy as np
 from habitat_baselines.utils.gym_adapter import flatten_dict
 
 
-def append_text_to_image(image: np.ndarray, text: List[str]):
+def append_text_to_image(
+    image: np.ndarray, text: List[str], font_size: float = 0.5
+):
     r"""Appends lines of text underneath an image.
     :param image: the image to put text underneath
     :param text: The list of strings which will be rendered, separated by new lines.
     :returns: A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
-    font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     text_image = np.zeros_like(image, dtype=np.uint8)
@@ -51,7 +52,7 @@ def overlay_frame(frame, info, additional=None):
     if additional is not None:
         lines.extend(additional)
 
-    frame = append_text_to_image(frame, lines)
+    frame = append_text_to_image(frame, lines, font_size=0.35)
 
     return frame
 
