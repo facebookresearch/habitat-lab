@@ -60,6 +60,8 @@ TASK:
         DIMENSIONALITY: 3
     DIST_TO_NAV_GOAL:
         TYPE: "DistToNavGoalSensor"
+    LOCALIZATION_SENSOR:
+        TYPE: "LocalizationSensor"
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -69,7 +71,14 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "DIST_TO_NAV_GOAL"]
+
+    ORACLE_NAV_ACTION_SENSOR:
+      TYPE: "OracleNavigationActionSensor"
+
+    NAV_GOAL_SENSOR:
+      TYPE: "NavGoalSensor"
+
+    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "DIST_TO_NAV_GOAL", "ORACLE_NAV_ACTION_SENSOR", "ABS_TARGET_START_SENSOR", "LOCALIZATION_SENSOR", "NAV_GOAL_SENSOR"]
 
     ########################
     # General measures
@@ -195,8 +204,8 @@ TASK:
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 12.0
-            ANG_SPEED: 12.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True

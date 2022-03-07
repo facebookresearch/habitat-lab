@@ -1,13 +1,22 @@
-import os.path as osp
+from typing import Tuple
 
 import gym.spaces as spaces
+import magnum as mn
+import numpy as np
 import torch
 import torch.nn as nn
 
 from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.rearrange_sensors import (
+    AbsTargetStartSensor,
+    LocalizationSensor,
+)
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToNavGoalSensor,
+    NavGoalSensor,
+    OracleNavigationActionSensor,
 )
+from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.hrl.high_level_policy import (
@@ -46,10 +55,11 @@ class NnSkillPolicy(Policy):
                 break
 
     def _select_obs(self, obs, cur_batch_idx):
-        entity_positions = obs[self._config.OBS_SKILL_INPUT].view(1, -1, 3)
-        obs[self._config.OBS_SKILL_INPUT] = entity_positions[
-            :, self._cur_skill_args[cur_batch_idx].item()
-        ]
+        for k in self._config.OBS_SKILL_INPUTS:
+            entity_positions = obs[k].view(1, -1, 3)
+            obs[k] = entity_positions[
+                :, self._cur_skill_args[cur_batch_idx].item()
+            ]
         return obs
 
     def should_terminate(
@@ -61,8 +71,23 @@ class NnSkillPolicy(Policy):
     ) -> torch.Tensor:
         return torch.zeros(observations.shape[0]).to(masks.device)
 
-    def on_enter(self, skill_arg, new_skill_batch_idx):
-        self._cur_skill_args[new_skill_batch_idx] = skill_arg
+    def on_enter(
+        self,
+        skill_arg,
+        batch_idx,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        :returns: The new hidden state and prev_actions ONLY at the batch_idx.
+        """
+        self._cur_skill_args[batch_idx] = skill_arg
+
+        return (
+            rnn_hidden_states[batch_idx] * 0.0,
+            prev_actions[batch_idx] * 0.0,
+        )
 
     def parameters(self):
         if self._wrap_policy is not None:
@@ -102,7 +127,7 @@ class NnSkillPolicy(Policy):
         ]
         filtered_obs = self._select_obs(filtered_obs, cur_batch_idx)
 
-        _, action, _, _ = self._wrap_policy.act(
+        _, action, _, rnn_hidden_states = self._wrap_policy.act(
             filtered_obs,
             rnn_hidden_states,
             filtered_prev_actions,
@@ -111,7 +136,7 @@ class NnSkillPolicy(Policy):
         )
         full_action = torch.zeros(prev_actions.shape)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
-        return full_action
+        return full_action, rnn_hidden_states
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, batch_size):
@@ -194,14 +219,46 @@ class NavSkillPolicy(NnSkillPolicy):
 
 
 class OracleNavPolicy(NnSkillPolicy):
-    def should_terminate(
+    def __init__(
         self,
+        wrap_policy,
+        config,
+        action_space,
+        filtered_obs_space,
+        filtered_action_space,
+        batch_size,
+    ):
+        super().__init__(
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+        )
+        self._is_at_targ = torch.zeros(batch_size)
+        self._nav_targs = torch.zeros(batch_size, 3)
+
+    def to(self, device):
+        self._is_at_targ = self._is_at_targ.to(device)
+        self._nav_targs = self._nav_targs.to(device)
+        return self
+
+    def on_enter(
+        self,
+        skill_arg,
+        batch_idx,
         observations,
         rnn_hidden_states,
         prev_actions,
-        masks,
-    ) -> torch.Tensor:
-        return torch.zeros(masks.shape[0]).to(masks.device)
+    ):
+        self._is_at_targ[batch_idx] = 0.0
+        self._nav_targs[batch_idx] = observations[NavGoalSensor.cls_uuid][
+            batch_idx
+        ]
+        return super().on_enter(
+            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+        )
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, batch_size):
@@ -213,3 +270,99 @@ class OracleNavPolicy(NnSkillPolicy):
             action_space,
             batch_size,
         )
+
+    def should_terminate(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> torch.Tensor:
+        return self._is_at_targ
+
+    def _compute_forward(self, localization):
+        # Compute forward direction
+        forward = np.array([1.0, 0, 0])
+        heading_angle = localization[-1]
+        rot_mat = mn.Matrix4.rotation(
+            mn.Rad(heading_angle), mn.Vector3(0, 1, 0)
+        )
+        robot_forward = np.array(rot_mat.transform_vector(forward))
+        return robot_forward
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        batch_nav_targ = observations[OracleNavigationActionSensor.cls_uuid]
+        batch_localization = observations[LocalizationSensor.cls_uuid]
+        batch_obj_targ_pos = observations[AbsTargetStartSensor.cls_uuid]
+
+        full_action = torch.zeros(prev_actions.shape, device=masks.device)
+        for i, (
+            nav_targ,
+            localization,
+            obj_targ_pos,
+            final_nav_goal,
+        ) in enumerate(
+            zip(
+                batch_nav_targ,
+                batch_localization,
+                batch_obj_targ_pos,
+                self._nav_targs,
+            )
+        ):
+            robot_pos = localization[:3]
+
+            robot_forward = self._compute_forward(localization)
+
+            # Compute relative target.
+            rel_targ = nav_targ - robot_pos
+
+            # Compute heading angle (2D calculation)
+            robot_forward = robot_forward[[0, 2]]
+            rel_targ = rel_targ[[0, 2]].cpu().numpy()
+            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]].cpu().numpy()
+
+            dist_to_final_nav_targ = torch.linalg.norm(
+                (final_nav_goal - robot_pos)[[0, 2]]
+            ).item()
+
+            rel_angle = get_angle(robot_forward, rel_targ)
+            rel_obj_angle = get_angle(robot_forward, rel_pos)
+
+            vel = [0, 0]
+            turn_vel = self._config.TURN_VELOCITY
+            for_vel = self._config.FORWARD_VELOCITY
+
+            def compute_turn(rel_a, rel):
+                is_left = np.cross(robot_forward, rel) > 0
+                if is_left:
+                    vel = [0, -turn_vel]
+                else:
+                    vel = [0, turn_vel]
+                return vel
+
+            if dist_to_final_nav_targ < self._config.DIST_THRESH:
+                # Look at the object
+                vel = compute_turn(rel_obj_angle, rel_pos)
+            elif rel_angle < self._config.TURN_THRESH:
+                # Move towards the target
+                vel = [for_vel, 0]
+            else:
+                # Look at the target.
+                vel = compute_turn(rel_angle, rel_targ)
+
+            if (
+                dist_to_final_nav_targ < self._config.DIST_THRESH
+                and rel_obj_angle < self._config.LOOK_AT_OBJ_THRESH
+            ):
+                self._is_at_targ[i] = 1.0
+
+            full_action[i, -2:] = torch.tensor(vel).to(masks.device)
+        return full_action, rnn_hidden_states

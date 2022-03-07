@@ -71,6 +71,7 @@ class CompositeReward(Measure):
             reward += self._config.SUCCESS_REWARD
 
         self._metric = cur_task_reward
+        self._prev_node_idx = node_idx
 
 
 @registry.register_measure

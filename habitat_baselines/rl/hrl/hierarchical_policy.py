@@ -35,13 +35,17 @@ class HierarchicalPolicy(Policy):
         self._skills = {}
         self._name_to_idx = {}
 
-        for i, (skill_name, skill_config) in enumerate(config.skills.items()):
+        for i, (skill_id, use_skill_name) in enumerate(
+            config.USE_SKILLS.items()
+        ):
+            skill_config = config.DEFINED_SKILLS[use_skill_name]
+
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config, observation_space, action_space, self._num_envs
             )
             self._skills[i] = skill_policy
-            self._name_to_idx[skill_name] = i
+            self._name_to_idx[skill_id] = i
 
         self._call_high_level = torch.ones(self._num_envs)
         self._cur_skills: torch.Tensor = torch.zeros(self._num_envs)
@@ -83,9 +87,10 @@ class HierarchicalPolicy(Policy):
 
         self._high_level_policy.apply_mask(masks)
 
-        batched_observations = {
-            k: v.unsqueeze(1) for k, v in observations.items()
-        }
+        batched_observations = [
+            {k: v[batch_idx].unsqueeze(0) for k, v in observations.items()}
+            for batch_idx in range(self._num_envs)
+        ]
         batched_rnn_hidden_states = rnn_hidden_states.unsqueeze(1)
         batched_prev_actions = prev_actions.unsqueeze(1)
         batched_masks = masks.unsqueeze(1)
@@ -93,9 +98,7 @@ class HierarchicalPolicy(Policy):
         # Check if skills should terminate.
         for batch_idx, skill_idx in enumerate(self._cur_skills):
             should_terminate = self._skills[skill_idx.item()].should_terminate(
-                TensorDict(
-                    {k: v[batch_idx] for k, v in batched_observations.items()}
-                ),
+                batched_observations[batch_idx],
                 batched_rnn_hidden_states[batch_idx],
                 batched_prev_actions[batch_idx],
                 batched_masks[batch_idx],
@@ -125,8 +128,16 @@ class HierarchicalPolicy(Policy):
                 skill_idx = new_skills[new_skill_batch_idx.item()]
 
                 skill = self._skills[skill_idx.item()]
-                skill.on_enter(
-                    new_skill_args[new_skill_batch_idx], new_skill_batch_idx
+
+                (
+                    batched_rnn_hidden_states[new_skill_batch_idx],
+                    batched_prev_actions[new_skill_batch_idx],
+                ) = skill.on_enter(
+                    new_skill_args[new_skill_batch_idx],
+                    new_skill_batch_idx,
+                    batched_observations[new_skill_batch_idx],
+                    batched_rnn_hidden_states[new_skill_batch_idx],
+                    batched_prev_actions[new_skill_batch_idx],
                 )
             self._cur_skills = self._call_high_level * new_skills
 
@@ -134,10 +145,10 @@ class HierarchicalPolicy(Policy):
             self._num_envs, get_num_actions(self._action_space)
         )
         for batch_idx, skill_idx in enumerate(self._cur_skills):
-            action = self._skills[skill_idx.item()].act(
-                TensorDict(
-                    {k: v[batch_idx] for k, v in batched_observations.items()}
-                ),
+            action, batched_rnn_hidden_states[batch_idx] = self._skills[
+                skill_idx.item()
+            ].act(
+                batched_observations[batch_idx],
                 batched_rnn_hidden_states[batch_idx],
                 batched_prev_actions[batch_idx],
                 batched_masks[batch_idx],
@@ -145,7 +156,12 @@ class HierarchicalPolicy(Policy):
             )
             actions[batch_idx] = action
 
-        return None, actions, None, rnn_hidden_states
+        return (
+            None,
+            actions,
+            None,
+            batched_rnn_hidden_states.view(rnn_hidden_states.shape),
+        )
 
     @classmethod
     def from_config(cls, config, observation_space, action_space):
