@@ -310,10 +310,13 @@ class RearrangeEpisodeGenerator:
                 )
             elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
-                    str, Dict[str, Tuple[float, float]]
+                    str, Dict[str, Tuple[float, float, bool]]
                 ] = {}
                 for entry in ao_info["params"]:
                     ao_handle = entry["ao_handle"]
+                    should_sample_all_joints = entry.get(
+                        "should_sample_all_joints", False
+                    )
                     link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
@@ -328,6 +331,7 @@ class RearrangeEpisodeGenerator:
                         composite_ao_sampler_params[ao_handle][link_name] = (
                             link_params[1],
                             link_params[2],
+                            should_sample_all_joints,
                         )
                 self._ao_state_samplers[
                     ao_info["name"]
@@ -889,7 +893,11 @@ def get_config_defaults() -> CN:
         #     "type": "uniform",
         #     "params": ["fridge", "top_door", 1.5, 1.5]}
         # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+        # for example, should_sample_all_joints should be true for the fridge since the joints (the door) angle need to be sampled when the object
+        # is inside. But for kitchen drawers, this should be false since the joints (all drawers) should not be sampled when the object is on the
+        # countertop (only need to sample for the drawer the object is in)
     ]
 
     # ----- marker definitions ------
