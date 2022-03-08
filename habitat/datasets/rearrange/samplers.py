@@ -554,7 +554,8 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
     """
 
     def __init__(
-        self, ao_sampler_params: Dict[str, Dict[str, Tuple[float, float]]]
+        self,
+        ao_sampler_params: Dict[str, Dict[str, Tuple[float, float, bool]]],
     ) -> None:
         """
         ao_sampler_params : {ao_handle -> {link_name -> (min, max)}}
@@ -595,7 +596,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
         # construct an efficiently iterable structure for reject sampling of link states
         link_sample_params: Dict[
             habitat_sim.physics.ManagedArticulatedObject,
-            Dict[int, Tuple[float, float]],
+            Dict[int, Tuple[float, float, bool]],
         ] = {}
         for ao_handle, ao_instances in matching_ao_instances.items():
             for ao_instance in ao_instances:
@@ -621,7 +622,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 # NOTE: only query and set pose once per instance for efficiency
                 pose = ao_instance.joint_positions
                 for link_ix, joint_range in link_ranges.items():
-
+                    should_sample_all_joints = joint_range[2]
                     matching_recep = None
                     for recep in receptacles:
                         if ao_instance.handle == recep.parent_object_handle:
@@ -630,14 +631,19 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
 
                     if matching_recep is not None and (
                         (link_ix == matching_recep.parent_link)
-                        or ("frige" in matching_recep.parent_object_handle)
-                        or ("fridge" in matching_recep.parent_object_handle)
+                        or should_sample_all_joints
                     ):
+                        # If this is true, this means that the receptacle AO must be opened. That is because
+                        # the object is spawned inside the fridge OR inside the kitchen counter BUT not on top of the counter
+                        # because in this case all drawers must be closed.
+                        # TODO: move this receptacle access logic to the ao_config files in a future refactor
                         joint_state = random.uniform(
                             joint_range[0], joint_range[1]
                         )
                     else:
-                        joint_state = 0.0
+                        joint_state = pose[
+                            ao_instance.get_link_joint_pos_offset(link_ix)
+                        ]
                     pose[
                         ao_instance.get_link_joint_pos_offset(link_ix)
                     ] = joint_state
