@@ -6,22 +6,35 @@
 
 import copy
 from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
+from habitat import Config
+from habitat.core.dataset import Episode
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
     load_task_object,
 )
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 
-def parse_func(x):
+def parse_func(x: str) -> Tuple[str, List[str]]:
+    """
+    Parses out the components of a function string.
+    """
     name = x.split("(")[0]
     args = x.split("(")[1].split(")")[0]
     return name, args
 
 
-def search_for_id(k, name_to_id):
+def search_for_id(k: str, name_to_id: Dict[str, int]) -> str:
+    """
+    Checks if an object exists in the name to ID conversion. This automatically
+    checks for ART prefixes as well.
+    """
     if isinstance(k, str):
         if k not in name_to_id and "ART_" + k in name_to_id:
             return name_to_id["ART_" + k]
@@ -30,30 +43,82 @@ def search_for_id(k, name_to_id):
     return k
 
 
+class Predicate:
+    def __init__(self, load_config: Dict[str, Any]):
+        self.name = load_config["name"]
+        if "state" in load_config:
+            self.set_state = SetState(load_config["state"])
+        else:
+            self.set_state = None
+        self.args = load_config.get("args", [])
+        self.set_args = None
+
+    def get_n_args(self) -> int:
+        return len(self.args)
+
+    def is_equal(self, b) -> bool:
+        """
+        Is the same definition as another predicate.
+        """
+        return (
+            (b.name == self.name)
+            and (self.args == b.args)
+            and (self.set_args == b.set_args)
+        )
+
+    def bind(self, set_args: List[str]) -> None:
+        """
+        Instantiate the predicate with particular entities.
+        """
+        if len(self.args) != len(set_args):
+            raise ValueError()
+
+        self.set_args = set_args
+
+        if self.set_state is not None:
+            self.set_state.bind(self.args, set_args)
+
+    def __str__(self):
+        return f"<Predicate: {self.name} [{self.args}] [{self.set_args}]>"
+
+    def __repr__(self):
+        return str(self)
+
+
 class Action:
     def __init__(
-        self, load_d, config, dataset, name_to_id, env, predicate_lookup_fn
+        self,
+        load_config: Dict[str, Any],
+        config: Config,
+        dataset: RearrangeDatasetV0,
+        name_to_id: Dict[str, int],
+        env: RearrangeTask,
+        predicate_lookup_fn: Callable[[str], Optional[Predicate]],
     ):
-        self.name = load_d["name"]
-        self.parameters = load_d["parameters"]
+        """
+        :param predicate_lookup_fn: A function that takes as input a predicate
+            identifier and returns a predicate if one was found.
+        """
+        self.name = load_config["name"]
+        self.parameters = load_config["parameters"]
         self.name_to_id = name_to_id
-        self.task = load_d["task"]
-        self.task_def = load_d["task_def"]
+        self.task = load_config["task"]
+        self.task_def = load_config["task_def"]
 
         self.load_task_fn = partial(
-            self._load_task, load_d, config, dataset, name_to_id
+            self._load_task, load_config, config, dataset, name_to_id
         )
         self.precond = []
         self.precond_strs = []
 
-        for precond_str in load_d["precondition"]:
+        for precond_str in load_config["precondition"]:
             precond = copy.deepcopy(predicate_lookup_fn(precond_str))
             self.precond.append(precond)
             self.precond_strs.append(parse_func(precond_str)[1])
 
         self.postcond = []
         self.postcond_args = []
-        for effect_s in load_d["postcondition"]:
+        for effect_s in load_config["postcondition"]:
             _, effect_arg = parse_func(effect_s)
             self.postcond_args.append(effect_arg)
             postcond = predicate_lookup_fn(effect_s)
@@ -66,10 +131,15 @@ class Action:
     def __repr__(self):
         return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
 
-    def bind(self, args, add_args=None):
+    def bind(
+        self, args: List[str], add_args: Optional[Dict[str, str]] = None
+    ) -> None:
         """
-        - args list[str]
+        :param args: Args passed to the sub-task linked to this action. Must
+            match the ordering in `self.parameters`
+        :param add_args: Additional optional kwargs passed to the task.
         """
+
         if add_args is None:
             add_args = {}
         assert not self.is_bound
@@ -102,15 +172,15 @@ class Action:
 
     def _load_task(
         self,
-        load_d,
-        config,
-        dataset,
-        name_to_id,
-        env,
-        episode,
-        should_reset=True,
-    ):
-        if "task" not in load_d:
+        load_config: Dict[str, Any],
+        config: Config,
+        dataset: RearrangeDatasetV0,
+        name_to_id: Dict[str, int],
+        env: RearrangeTask,
+        episode: Episode,
+        should_reset: bool = True,
+    ) -> RearrangeTask:
+        if "task" not in load_config:
             return None
         func_kwargs = {
             k: v for k, v in zip(self.parameters, self.applied_func_args)
@@ -128,8 +198,8 @@ class Action:
             },
         }
         return load_task_object(
-            load_d["task"],
-            load_d["task_def"],
+            load_config["task"],
+            load_config["task_def"],
             config,
             env,
             dataset,
@@ -138,16 +208,26 @@ class Action:
             episode,
         )
 
-    def init_task(self, env, episode, should_reset=True):
+    def init_task(
+        self, env: RearrangeTask, episode: Episode, should_reset=True
+    ) -> RearrangeTask:
         return self.load_task_fn(env, episode, should_reset=should_reset)
 
-    def are_preconditions_true(self, preds):
+    def are_preconditions_true(self, preds: List[Predicate]) -> bool:
+        """
+        :param preds: List of currently True predicates.
+        """
+
         def has_match(pred):
             return any([other_pred.is_equal(pred) for other_pred in preds])
 
         return all(has_match(precond_pred) for precond_pred in self.precond)
 
-    def apply_postconditions(self, preds):
+    def apply_postconditions(self, preds: List[Predicate]) -> List[Predicate]:
+        """
+        :param preds: Set of all True predicates.
+        :returns: Set of all true predicates after applying post conditions.
+        """
         new_preds = copy.deepcopy(preds)
         for pred in self.postcond:
             if (
@@ -181,7 +261,10 @@ class Action:
                 new_preds.append(pred)
         return new_preds
 
-    def apply(self, name_to_id, sim):
+    def apply(self, name_to_id: Dict[str, int], sim: RearrangeSim) -> None:
+        """
+        Applies the effects of all the post conditions.
+        """
         for postcond in self.postcond:
             self._apply_effect(postcond, name_to_id, sim)
 
@@ -190,46 +273,10 @@ class Action:
         set_state.set_state(name_to_id, sim)
 
 
-class Predicate:
-    def __init__(self, load_d):
-        self.name = load_d["name"]
-        if "state" in load_d:
-            self.set_state = SetState(load_d["state"])
-        else:
-            self.set_state = None
-        self.args = load_d.get("args", [])
-        self.set_args = None
-
-    def get_n_args(self):
-        return len(self.args)
-
-    def is_equal(self, b):
-        return (
-            (b.name == self.name)
-            and (self.args == b.args)
-            and (self.set_args == b.set_args)
-        )
-
-    def bind(self, set_args):
-        if len(self.args) != len(set_args):
-            raise ValueError()
-
-        self.set_args = set_args
-
-        if self.set_state is not None:
-            self.set_state.bind(self.args, set_args)
-
-    def __str__(self):
-        return f"<Predicate: {self.name} [{self.args}] [{self.set_args}]>"
-
-    def __repr__(self):
-        return str(self)
-
-
 class RoboState:
-    def __init__(self, load_d):
-        self.holding = load_d.get("holding", None)
-        self.pos = load_d.get("pos", None)
+    def __init__(self, load_config):
+        self.holding = load_config.get("holding", None)
+        self.pos = load_config.get("pos", None)
 
     def bind(self, arg_k, arg_v):
         for k, v in zip(arg_k, arg_v):
@@ -240,13 +287,19 @@ class RoboState:
 
 
 class SetState:
-    def __init__(self, load_d):
-        self.art_states = load_d.get("art_states", {})
-        self.obj_states = load_d.get("obj_states", {})
-        self.robo_state = RoboState(load_d.get("robo", {}))
-        self.load_d = load_d
+    def __init__(self, load_config):
+        self.art_states = load_config.get("art_states", {})
+        self.obj_states = load_config.get("obj_states", {})
+        self.robo_state = RoboState(load_config.get("robo", {}))
+        self.load_config = load_config
 
-    def bind(self, arg_k, arg_v):
+    def bind(self, arg_k: List[str], arg_v: List[str]) -> None:
+        """
+        Defines a state in the environment grounded in scene entities.
+        :param arg_k: The names of the environment parameters to set.
+        :param arg_v: The values of the environment parameters to set.
+        """
+
         def list_replace(l, k, v):
             new_l = {}
             for l_k, l_v in l.items():
@@ -260,10 +313,10 @@ class SetState:
         for k, v in zip(arg_k, arg_v):
             self.art_states = list_replace(self.art_states, k, v)
             self.obj_states = list_replace(self.obj_states, k, v)
-            if "catch_ids" in self.load_d:
-                self.load_d["catch_ids"] = self.load_d["catch_ids"].replace(
-                    k, v
-                )
+            if "catch_ids" in self.load_config:
+                self.load_config["catch_ids"] = self.load_config[
+                    "catch_ids"
+                ].replace(k, v)
 
         self.robo_state.bind(arg_k, arg_v)
 
@@ -273,7 +326,17 @@ class SetState:
         """
         return not id_str.startswith("ART_")
 
-    def is_satisfied(self, name_to_id, sim, obj_thresh, art_thresh):
+    def is_satisfied(
+        self,
+        name_to_id: Dict[str, int],
+        sim: RearrangeSim,
+        obj_thresh: float,
+        art_thresh: float,
+    ) -> bool:
+        """
+        Returns True if the grounded state is present in the current simulator state.
+        """
+
         rom = sim.get_rigid_object_manager()
         for obj_name, target in self.obj_states.items():
             if not self._is_id_rigid_object(obj_name):
@@ -331,7 +394,10 @@ class SetState:
 
         return True
 
-    def set_state(self, name_to_id, sim):
+    def set_state(self, name_to_id: Dict[str, int], sim: RearrangeSim) -> None:
+        """
+        Set this state in the simulator. Warning, this steps the simulator.
+        """
         for obj_name, target in self.obj_states.items():
             obj_idx = name_to_id[obj_name]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
