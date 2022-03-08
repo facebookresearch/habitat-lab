@@ -26,6 +26,7 @@ from habitat.tasks.rearrange.utils import (
     get_aabb,
     is_pb_installed,
     make_render_only,
+    rearrange_collision,
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
@@ -274,6 +275,23 @@ class RearrangeSim(HabitatSim):
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
+
+    def set_robot_base_to_random_point(self):
+        for _ in range(50):
+            start_pos = self.pathfinder.get_random_navigable_point()
+            start_rot = np.random.uniform(0, 2 * np.pi)
+
+            self.robot.base_pos = start_pos
+            self.robot.base_rot = start_rot
+
+            self.internal_step(-1)
+            did_collide, details = rearrange_collision(
+                self,
+                True,
+                ignore_base=False,
+            )
+            if not did_collide:
+                break
 
     def _setup_targets(self):
         self._targets = {}

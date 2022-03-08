@@ -374,5 +374,4 @@ class SetState:
 
         # Set the robot starting position
         if self.robo_state.pos == "rnd":
-            start_pos = sim.pathfinder.get_random_navigable_point()
-            sim.robot.base_pos = start_pos
+            sim.set_robot_base_to_random_point()

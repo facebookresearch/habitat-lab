@@ -76,8 +76,7 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
 
-        start_pos = self._sim.pathfinder.get_random_navigable_point()
-        self._sim.robot.base_pos = start_pos
+        self._sim.set_robot_base_to_random_point()
 
         # Re-do the sensor readings after the new robot base position is set.
         return self._get_observations(episode)
