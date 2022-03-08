@@ -29,16 +29,16 @@ class PddlDomain:
         sim: RearrangeSim,
     ):
         with open(load_file_path, "r") as f:
-            domain_def = yaml.safe_load(f)
+            self.domain_def = yaml.safe_load(f)
 
         self._sim = sim
         self.reset()
 
         self.predicates: List[Predicate] = []
-        for pred_d in domain_def["predicates"]:
+        for pred_d in self.domain_def["predicates"]:
             pred = Predicate(pred_d)
             self.predicates.append(pred)
-        self.types: List[str] = domain_def["types"]
+        self.types: List[str] = self.domain_def["types"]
 
         self._config = cur_task_config
 
@@ -53,6 +53,9 @@ class PddlDomain:
                 self.predicate_lookup,
             )
             self.actions[action.name] = action
+
+    def reset(self):
+        self._name_to_id = self.get_name_id_conversions(self.domain_def)
 
     def get_task_match_for_name(self, task_name_cls: str) -> Action:
         matches = []

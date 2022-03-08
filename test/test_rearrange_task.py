@@ -97,7 +97,6 @@ def test_rearrange_basline_envs(test_cfg_path):
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
-    test_cfg_path = "configs/tasks/rearrange/composite.yaml"
     """
     Test the underlying Habitat Tasks
     """
