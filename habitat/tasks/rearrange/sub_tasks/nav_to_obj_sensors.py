@@ -43,7 +43,7 @@ class DistToNavGoalSensor(Sensor):
             agent_pos,
             task.nav_target_pos,
         )
-        return distance_to_target
+        return np.array([distance_to_target])
 
 
 @registry.register_sensor
