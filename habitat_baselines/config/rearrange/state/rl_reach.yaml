@@ -15,7 +15,7 @@ NUM_ENVIRONMENTS: 32
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 2.5e9
+TOTAL_NUM_STEPS: 1e6
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
@@ -31,7 +31,7 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      include_visual_keys: []
+      include_visual_keys: ["IGNORE"]
       ACTION_DIST:
         use_log_std: True
 
