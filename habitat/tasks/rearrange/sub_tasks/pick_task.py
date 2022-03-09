@@ -148,10 +148,6 @@ class RearrangePickTaskV1(RearrangeTask):
         if not is_within_bounds:
             print(f"Episode {episode.episode_id} failed to place robot")
 
-            # raise ValueError(
-            #
-            # )
-
         sim.set_state(state)
 
         return start_pos, angle_to_obj, sel_idx

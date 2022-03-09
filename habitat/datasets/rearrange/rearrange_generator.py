@@ -446,14 +446,13 @@ class RearrangeEpisodeGenerator:
 
         ep_scene_handle = self.generate_scene()
 
-        # Get the unique open receptacle
-        sampler = list(self._obj_samplers.values())[0]
-
         target_numbers = self._get_target_numbers()
         target_receptacles = {}
         all_target_receptacles = []
         # for sampler_name, sampler in self._target_samplers.items():
-        for sampler_name, num_targets in target_numbers.items():
+        for sampler, (sampler_name, num_targets) in zip(
+            self._obj_samplers.values(), target_numbers.items()
+        ):
             new_target_receptacles = [
                 sampler.sample_receptacle(self.sim) for _ in range(num_targets)
             ]
@@ -469,7 +468,7 @@ class RearrangeEpisodeGenerator:
             )
             assert (
                 sampler_states is not None
-            ), f"AO sampler '{sampler_name}' failed"
+            ), f"AO sampler {sampler_name} failed"
             for sampled_instance, link_states in sampler_states.items():
                 if sampled_instance.handle not in ao_states:
                     ao_states[sampled_instance.handle] = {}
@@ -590,6 +589,14 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
+        if len(all_target_receptacles) != 0:
+            use_target_receptacles = (
+                all_target_receptacles[0].parent_object_handle,
+                all_target_receptacles[0].parent_link,
+            )
+        else:
+            use_target_receptacles = ("", 0)
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -608,12 +615,7 @@ class RearrangeEpisodeGenerator:
             # Hack. The pick task needs to know if the object is starting in a
             # receptacle. This code assumes that the dataset for the pick task
             # always contains the desired object in the 0th index.
-            target_receptacles=(
-                all_target_receptacles[0].parent_object_handle,
-                all_target_receptacles[0].parent_link,
-            )
-            if len(all_target_receptacles) != 0
-            else ("", 0),
+            target_receptacles=use_target_receptacles,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )

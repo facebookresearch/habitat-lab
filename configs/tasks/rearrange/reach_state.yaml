@@ -3,7 +3,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/counter_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/empty_1k_100.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     BASE_ANGLE_NOISE: 0.0

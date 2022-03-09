@@ -1,15 +1,15 @@
 ---
-dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/"
 scene_sets:
   -
     name: "scene_train_split"
     included_substrings:
-      - "Baked_sc0"
-      - "Baked_sc1"
-      - "Baked_sc2"
-      - "Baked_sc3"
+      - "v3_sc0_staging"
+      - "v3_sc1_staging"
+      - "v3_sc2_staging"
+      - "v3_sc3_staging"
     excluded_substrings: []
     comment: "v3_sc4_staging saved for evaluation"
 
@@ -27,7 +27,6 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
-
 receptacle_sets:
   -
     name: "hab2"
@@ -42,19 +41,14 @@ receptacle_sets:
       - "receptacle_aabb_sink_kitchen_counter"
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
 
       # Inside of articulated objects
-      - "receptacle_aabb_middle_bottomfrl_apartment_refrigerator"
       - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
-      - "receptacle_aabb_middlefrl_apartment_refrigerator"
-      - "receptacle_aabb_topfrl_apartment_refrigerator"
 
-      - "receptacle_aabb_drawer_left_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_right_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
     excluded_receptacle_substrings: []
 
@@ -65,9 +59,9 @@ ao_state_samplers:
     params:
       -
         ao_handle: "fridge"
-        should_sample_all_joints: True
         joint_states:
           - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
       -
         ao_handle: "counter"
         joint_states:
