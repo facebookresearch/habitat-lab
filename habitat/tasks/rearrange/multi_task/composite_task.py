@@ -149,6 +149,8 @@ class CompositeTask(RearrangeTask):
 
             for k, preconds in self.task_def["stage_goals"].items():
                 self._stage_goals[k] = self._parse_precond_list(preconds)
+        else:
+            self.domain.reset()
 
         self.start_state.set_state(
             self.domain.get_name_to_id_mapping(), self._sim

@@ -58,7 +58,7 @@ object_samplers:
 
 object_target_samplers:
   -
-    name: "hab2_targets"
+    name: "any_targets"
     type: "uniform"
     params:
       object_samplers: ["hab2"]
