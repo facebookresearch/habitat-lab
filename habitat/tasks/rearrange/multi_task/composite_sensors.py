@@ -11,6 +11,10 @@ from habitat.core.registry import registry
 
 @registry.register_measure
 class CompositeReward(Measure):
+    """
+    The reward based on where the agent currently is in the hand defined solution list.
+    """
+
     cls_uuid: str = "composite_reward"
 
     @staticmethod
@@ -67,10 +71,15 @@ class CompositeReward(Measure):
             reward += self._config.SUCCESS_REWARD
 
         self._metric = cur_task_reward
+        self._prev_node_idx = node_idx
 
 
 @registry.register_measure
 class CompositeSuccess(Measure):
+    """
+    Did satisfy all the goal predicates?
+    """
+
     cls_uuid: str = "composite_success"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -101,6 +110,16 @@ class CompositeSuccess(Measure):
 
 @registry.register_measure
 class CompositeNodeIdx(Measure):
+    """
+    Adds several keys to the metrics dictionary:
+        - `reached_i`: Did the agent succeed in sub-task at index `i` of the
+          sub-task `solution` list?
+        - `node_idx`: Index of the agent in completing the sub-tasks from
+          the `solution` list.
+        - `[TASK_NAME]_success`: Did the agent complete a particular stage
+          defined in `stage_goals`.
+    """
+
     cls_uuid: str = "composite_node_idx"
 
     def __init__(self, sim, config, *args, **kwargs):

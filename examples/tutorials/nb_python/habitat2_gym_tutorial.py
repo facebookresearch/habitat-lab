@@ -1,6 +1,10 @@
 # ---
 # jupyter:
 #   accelerator: GPU
+#   colab:
+#     collapsed_sections: []
+#     name: Habitat 2.0 Gym Tutorial
+#     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,colabs//ipynb
@@ -9,26 +13,16 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python [conda env:habitat] *
-#     language: python
-#     name: conda-env-habitat-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
+#     display_name: Python 3
+#     name: python3
 # ---
 
 # %% [markdown]
 # # Habitat 2.0 Gym API
-# This tutorial covers how to use Habitat 2.0 environments as standard gym environments
+# This tutorial covers how to use Habitat 2.0 environments as standard gym environments. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
+# See [here for Habitat 2.0 installation instructions](https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/hab_suite/examples/tutorials/colabs/Habitat2_Quickstart.ipynb#scrollTo=50rOVwceXvzL)
 
 # %%
 # %%capture
@@ -70,6 +64,7 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 # The ONLY two lines you need to add to start importing Habitat 2.0 Gym environments.
 import gym
 
+# flake8: noqa
 import habitat_baselines.utils.gym_definitions
 
 # %% [markdown]
@@ -85,14 +80,14 @@ video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 done = False
 env.reset()
 while not done:
-    print("About to step")
     obs, reward, done, info = env.step(env.action_space.sample())
-    print(reward)
     video_writer.append_data(env.render("rgb_array"))
 
 video_writer.close()
 if vut.is_notebook():
     vut.display_video(video_file_path)
+
+env.close()
 
 # %% [markdown]
 # # Environment Options
@@ -114,10 +109,12 @@ if vut.is_notebook():
 # Dictionary observation space
 env = gym.make("HabitatGymPick-v0")
 print({k: v.shape for k, v in env.observation_space.spaces.items()})
+env.close()
 
 # Array observation space
 env = gym.make("HabitatGymReachState-v0")
 print(env.observation_space)
+env.close()
 
 # %% [markdown]
 # # Environment Configuration
@@ -132,3 +129,5 @@ env = gym.make(
         "SuctionGraspAction",
     ],
 )
+print(env.action_space)
+env.close()

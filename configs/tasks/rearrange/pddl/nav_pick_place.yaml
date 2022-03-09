@@ -1,0 +1,22 @@
+stage_goals:
+  stage_0_5:
+    - "holding(kitchen_counter_targets|0)"
+  stage_1:
+    - "at(kitchen_counter_targets|0,TARGET_kitchen_counter_targets|0)"
+start:
+    precondition: []
+    state:
+        art_states:
+            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
+            "fridge_:0000": [0,0]
+        robo:
+            pos: 'rnd'
+
+goal:
+  - "at(kitchen_counter_targets|0,TARGET_kitchen_counter_targets|0)"
+
+solution:
+    - "nav(kitchen_counter_targets|0)"
+    - "pick(kitchen_counter_targets|0)"
+    - "nav(TARGET_kitchen_counter_targets|0)"
+    - "place(kitchen_counter_targets|0,TARGET_kitchen_counter_targets|0)"

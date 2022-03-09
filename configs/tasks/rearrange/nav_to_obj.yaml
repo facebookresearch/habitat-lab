@@ -3,7 +3,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeNavToObjTask-v0
@@ -18,6 +18,8 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
     MAX_COLLISIONS: -1.0
+
+    FILTER_NAV_TO_TASKS: []
 
     # PDDL related parameters
     PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
@@ -59,8 +61,6 @@ TASK:
         TYPE: "NumStepsMeasure"
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: "NavToObjReward"
-        # Negative means a penalty
-        SLACK: 0.0
         SUCCESS_REWARD: 10.0
         # Reward the agent for facing the object?
         SHOULD_REWARD_TURN: True
@@ -68,6 +68,7 @@ TASK:
         TURN_REWARD_DIST: 0.1
         # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
+        # Negative means a penalty
         SLACK_REWARD: 0.0
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: "NavToObjSuccess"

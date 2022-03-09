@@ -32,6 +32,7 @@ _C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.VIDEO_FPS = 10
 _C.VIDEO_RENDER_TOP_DOWN = True
+_C.VIDEO_RENDER_ALL_INFO = False
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_ENVIRONMENTS = 16
@@ -105,6 +106,10 @@ _C.RL.POLICY.include_visual_keys = []
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
+# If True, the std will be a parameter not conditioned on state
+_C.RL.POLICY.ACTION_DIST.use_std_param = False
+# If True, the std will be clamped to the specified min and max std values
+_C.RL.POLICY.ACTION_DIST.clamp_std = True
 _C.RL.POLICY.ACTION_DIST.min_std = 1e-6
 _C.RL.POLICY.ACTION_DIST.max_std = 1
 _C.RL.POLICY.ACTION_DIST.min_log_std = -5

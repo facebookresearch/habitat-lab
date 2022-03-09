@@ -6,6 +6,8 @@ VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 VIDEO_FPS: 30
+VIDEO_RENDER_TOP_DOWN: False
+VIDEO_RENDER_ALL_INFO: True
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_ENVIRONMENTS: 4
@@ -13,9 +15,9 @@ NUM_ENVIRONMENTS: 4
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 2.5e9
+TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 100
+NUM_CHECKPOINTS: 20
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
@@ -47,7 +49,7 @@ RL:
     ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
-    entropy_coef: 0.001
+    entropy_coef: 0.0001
     lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2

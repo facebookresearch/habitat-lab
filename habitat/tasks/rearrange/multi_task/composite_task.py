@@ -9,6 +9,7 @@ import os.path as osp
 from typing import Dict
 
 import magnum as mn
+import numpy as np
 import yaml
 
 from habitat.core.dataset import Episode
@@ -241,9 +242,7 @@ class CompositeTask(RearrangeTask):
 
     @property
     def nav_target_pos(self):
-        return self._try_get_subtask_prop(
-            "nav_target_pos", mn.Vector3(0.0, 0.0, 0.0)
-        )
+        return self._try_get_subtask_prop("nav_target_pos", np.zeros((3,)))
 
     @property
     def nav_target_angle(self):

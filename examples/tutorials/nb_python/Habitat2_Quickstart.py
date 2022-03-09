@@ -13,21 +13,10 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
+#     display_name: Python 3
 #     name: python3
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
 # ---
 
 # %% [markdown]
@@ -121,7 +110,7 @@ with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
             os.path.join(
-                habitat_gym.config_base_dir,
+                habitat_gym.base_dir,
                 "configs/tasks/rearrange/pick.yaml",
             )
         )
@@ -301,7 +290,7 @@ class NavPickReward(RearrangeReward):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
-        super().__init__(**kwargs)
+        super().__init__(sim=sim, config=config, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -315,7 +304,7 @@ class NavPickReward(RearrangeReward):
                 DistanceToTargetObject.cls_uuid,
             ],
         )
-        self.update_metric(*args, episode=episode, **kwargs)
+        self.update_metric(*args, task=task, episode=episode, **kwargs)
 
     def update_metric(self, *args, task, episode, **kwargs):
         ee_to_object_distance = task.measurements.measures[
@@ -369,7 +358,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/rearrange_pick_replica_cad_v0/pick.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeNavPickTask-v0
@@ -410,9 +399,8 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
-    NAV_PICK_REWARD:
+    NAV_PICK_SUCCESS:
         TYPE: "NavPickSuccess"
-        SUCC_THRESH: 0.15
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
@@ -420,7 +408,7 @@ TASK:
         - "ROBOT_COLLS"
         - "DISTANCE_TO_TARGET_OBJECT"
         - "NAV_PICK_REWARD"
-        - "NAV_PICK_REWARD"
+        - "NAV_PICK_SUCCESS"
     ACTIONS:
         # Defining the action space.
         ARM_ACTION:
@@ -450,6 +438,8 @@ SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
     ROBOT_JOINT_START_NOISE: 0.0
+    CONCUR_RENDER: False
+    AUTO_SLEEP: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

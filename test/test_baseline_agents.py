@@ -65,6 +65,7 @@ def test_ppo_agents(input_type, resolution):
 
     agent = ppo_agents.PPOAgent(agent_config)
     habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
+    benchmark._env.close()
 
 
 @pytest.mark.skipif(

@@ -41,20 +41,15 @@ receptacle_sets:
       - "receptacle_aabb_sink_kitchen_counter"
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
 
       # Inside of articulated objects
-      - "receptacle_aabb_middle_bottomfrl_apartment_refrigerator"
       - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
-      - "receptacle_aabb_middlefrl_apartment_refrigerator"
-      - "receptacle_aabb_topfrl_apartment_refrigerator"
 
-      - receptacle_aabb_drawer_left_bottom_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_middle_bottom_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_right_bottom_frl_apartment_kitchen_counter
-      - receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
     excluded_receptacle_substrings: []
 
 ao_state_samplers:
@@ -66,6 +61,7 @@ ao_state_samplers:
         ao_handle: "fridge"
         joint_states:
           - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
       -
         ao_handle: "counter"
         joint_states:

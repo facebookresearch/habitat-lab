@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path as osp
 import random
 
@@ -28,6 +34,7 @@ class DynNavRLEnv(RearrangeTask):
         mtime = osp.getmtime(data_path)
         cache_name = str(mtime) + data_path
         cache_name = cache_name.replace(".", "_")
+        cache_name += ",".join(self._config.FILTER_NAV_TO_TASKS)
         fname = data_path.split("/")[-1].split(".")[0]
         self.cache = CacheHelper(
             "dyn_nav_start_pos", cache_name, {}, verbose=True, rel_dir=fname
@@ -72,6 +79,10 @@ class DynNavRLEnv(RearrangeTask):
             for action in self.domain.actions.values()
             if action.task != DYN_NAV_TASK_NAME
             and action.are_preconditions_true(cur_preds)
+            and (
+                len(self._config.FILTER_NAV_TO_TASKS) == 0
+                or action.name in self._config.FILTER_NAV_TO_TASKS
+            )
         ]
 
         use_task = random.choice(allowed_tasks)
@@ -207,7 +218,7 @@ class DynNavRLEnv(RearrangeTask):
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
                 self._nav_target_pos,
                 sim.viz_ids["nav_targ_pos"],
-                r=30.0,
+                r=0.2,
             )
 
         return self._get_observations(episode)

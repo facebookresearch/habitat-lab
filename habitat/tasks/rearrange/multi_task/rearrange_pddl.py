@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import copy
 from functools import partial
 
@@ -10,6 +16,9 @@ from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
 
 
 def parse_func(x):
+    """
+    :returns: args is an empty string if there are no arguments.
+    """
     name = x.split("(")[0]
     args = x.split("(")[1].split(")")[0]
     return name, args
@@ -365,5 +374,4 @@ class SetState:
 
         # Set the robot starting position
         if self.robo_state.pos == "rnd":
-            start_pos = sim.pathfinder.get_random_navigable_point()
-            sim.robot.base_pos = start_pos
+            sim.set_robot_base_to_random_point()

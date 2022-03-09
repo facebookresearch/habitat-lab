@@ -298,6 +298,8 @@ class BaseVelAction(SimulatorTaskAction):
         lin_vel = np.clip(lin_vel, -1, 1)
         lin_vel *= self._config.LIN_SPEED
         ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
+        if not self._config.ALLOW_BACK:
+            lin_vel = np.maximum(lin_vel, 0)
 
         if (
             self.end_on_stop

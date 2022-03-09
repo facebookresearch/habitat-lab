@@ -5,11 +5,111 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
+from gym import spaces
 
+import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.core.simulator import Sensor, SensorTypes
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
+
+
+@registry.register_sensor
+class DistToNavGoalSensor(Sensor):
+    cls_uuid: str = "dist_to_nav_goal"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return DistToNavGoalSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        agent_pos = self._sim.safe_snap_point(self._sim.robot.base_pos)
+        distance_to_target = self._sim.geodesic_distance(
+            agent_pos,
+            task.nav_target_pos,
+        )
+        return distance_to_target
+
+
+@registry.register_sensor
+class NavGoalSensor(Sensor):
+    cls_uuid: str = "nav_goal"
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavGoalSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        return task.nav_target_pos
+
+
+@registry.register_sensor
+class OracleNavigationActionSensor(Sensor):
+    cls_uuid: str = "oracle_nav_actions"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return OracleNavigationActionSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _path_to_point(self, point):
+        agent_pos = self._sim.robot.base_pos
+
+        path = habitat_sim.ShortestPath()
+        path.requested_start = agent_pos
+        path.requested_end = point
+        found_path = self._sim.pathfinder.find_path(path)
+        if not found_path:
+            return [agent_pos, point]
+        # print(
+        #    "   path finding: starting from",
+        #    agent_pos,
+        #    " navigating to ",
+        #    path.points,
+        # )
+        return path.points
+
+    def get_observation(self, task, *args, **kwargs):
+        path = self._path_to_point(task.nav_target_pos)
+        return path[1]
 
 
 class GeoMeasure(Measure):
@@ -41,10 +141,8 @@ class GeoMeasure(Measure):
 
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
-            print("Distance is infinity", "returning ", distance_to_target)
         if distance_to_target is None:
             distance_to_target = 30
-            print("Distance is None", "returning ", distance_to_target)
         return distance_to_target
 
 
@@ -67,6 +165,7 @@ class NavToObjReward(GeoMeasure):
             ],
         )
         self._cur_angle_dist = -1.0
+        self._give_turn_reward = False
         super().reset_metric(
             *args,
             episode=episode,
@@ -94,10 +193,12 @@ class NavToObjReward(GeoMeasure):
         if success:
             reward += self._config.SUCCESS_REWARD
 
+        # if self._give_turn_reward:
         if (
             self._config.SHOULD_REWARD_TURN
             and cur_dist < self._config.TURN_REWARD_DIST
         ):
+            self._give_turn_reward = True
 
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid

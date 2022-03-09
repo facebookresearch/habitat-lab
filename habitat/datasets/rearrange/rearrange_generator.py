@@ -6,6 +6,7 @@
 
 import os
 import os.path as osp
+import random
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -214,10 +215,11 @@ class RearrangeEpisodeGenerator:
                 )
                 raise (NotImplementedError)
 
-    def _get_object_target_samplers(self) -> None:
+    def _get_object_target_samplers(self, target_numbers) -> None:
         """
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
+
         self._target_samplers: Dict[str, samplers.ObjectTargetSampler] = {}
         for target_sampler_info in self.cfg.object_target_samplers:
             assert "name" in target_sampler_info
@@ -243,6 +245,7 @@ class RearrangeEpisodeGenerator:
                 ] = samplers.ObjectTargetSampler(
                     object_instances,
                     receptacle_info,
+                    target_numbers[target_sampler_info["name"]],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -307,10 +310,13 @@ class RearrangeEpisodeGenerator:
                 )
             elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
-                    str, Dict[str, Tuple[float, float]]
+                    str, Dict[str, Tuple[float, float, bool]]
                 ] = {}
                 for entry in ao_info["params"]:
                     ao_handle = entry["ao_handle"]
+                    should_sample_all_joints = entry.get(
+                        "should_sample_all_joints", False
+                    )
                     link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
@@ -325,6 +331,7 @@ class RearrangeEpisodeGenerator:
                         composite_ao_sampler_params[ao_handle][link_name] = (
                             link_params[1],
                             link_params[2],
+                            should_sample_all_joints,
                         )
                 self._ao_state_samplers[
                     ao_info["name"]
@@ -409,6 +416,23 @@ class RearrangeEpisodeGenerator:
 
         return generated_episodes
 
+    def _get_target_numbers(self):
+        target_numbers = {}
+        for target_sampler_info in self.cfg.object_target_samplers:
+            num_objects = (
+                target_sampler_info["params"]["num_samples"][0],
+                target_sampler_info["params"]["num_samples"][1],
+            )
+            target_number = (
+                random.randrange(num_objects[0], num_objects[1])
+                if num_objects[1] > num_objects[0]
+                else num_objects[0]
+            )
+            sampler_name = target_sampler_info["name"]
+            target_numbers[sampler_name] = target_number
+
+        return target_numbers
+
     def generate_single_episode(self) -> Optional[RearrangeEpisode]:
         """
         Generate a single episode, sampling the scene.
@@ -422,20 +446,29 @@ class RearrangeEpisodeGenerator:
 
         ep_scene_handle = self.generate_scene()
 
-        # Get the unique open receptacle
-        sampler = list(self._obj_samplers.values())[0]
-        target_receptacle = sampler.sample_receptacle(self.sim)
+        target_numbers = self._get_target_numbers()
+        target_receptacles = {}
+        all_target_receptacles = []
+        # for sampler_name, sampler in self._target_samplers.items():
+        for sampler, (sampler_name, num_targets) in zip(
+            self._obj_samplers.values(), target_numbers.items()
+        ):
+            new_target_receptacles = [
+                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
+            ]
+            target_receptacles[sampler_name] = new_target_receptacles
+            all_target_receptacles.extend(new_target_receptacles)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
         for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
             sampler_states = ao_state_sampler.sample(
-                self.sim, target_receptacle
+                self.sim, all_target_receptacles
             )
             assert (
                 sampler_states is not None
-            ), f"AO sampler '{sampler_name}' failed"
+            ), f"AO sampler {sampler_name} failed"
             for sampled_instance, link_states in sampler_states.items():
                 if sampled_instance.handle not in ao_states:
                     ao_states[sampled_instance.handle] = {}
@@ -452,7 +485,7 @@ class RearrangeEpisodeGenerator:
         for sampler_name, obj_sampler in self._obj_samplers.items():
             object_sample_data = obj_sampler.sample(
                 self.sim,
-                target_receptacle,
+                all_target_receptacles,
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
             )
@@ -486,7 +519,7 @@ class RearrangeEpisodeGenerator:
             return None
 
         # generate the target samplers
-        self._get_object_target_samplers()
+        self._get_object_target_samplers(target_numbers)
 
         target_refs: Dict[str, str] = {}
 
@@ -496,12 +529,18 @@ class RearrangeEpisodeGenerator:
                 self.sim,
                 snap_down=True,
                 vdb=self.vdb,
-                target_receptacle=target_receptacle,
+                target_receptacles=target_receptacles[sampler_name],
                 object_to_containing_receptacle=object_to_containing_receptacle,
             )
+            if new_target_objects is None:
+                raise ValueError("Cannot sample target objects")
+
             # cache transforms and add visualizations
-            for instance_handle, value in new_target_objects.items():
+            for i, (instance_handle, value) in enumerate(
+                new_target_objects.items()
+            ):
                 target_object, target_receptacle = value
+                target_receptacles[sampler_name][i] = target_receptacle
                 assert (
                     instance_handle not in self.episode_data["sampled_targets"]
                 ), f"Duplicate target for instance '{instance_handle}'."
@@ -550,6 +589,14 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
+        if len(all_target_receptacles) != 0:
+            use_target_receptacles = (
+                all_target_receptacles[0].parent_object_handle,
+                all_target_receptacles[0].parent_link,
+            )
+        else:
+            use_target_receptacles = ("", 0)
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -565,10 +612,10 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
-            target_receptacles=(
-                target_receptacle.parent_object_handle,
-                target_receptacle.parent_link,
-            ),
+            # Hack. The pick task needs to know if the object is starting in a
+            # receptacle. This code assumes that the dataset for the pick task
+            # always contains the desired object in the 0th index.
+            target_receptacles=use_target_receptacles,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
@@ -848,7 +895,11 @@ def get_config_defaults() -> CN:
         #     "type": "uniform",
         #     "params": ["fridge", "top_door", 1.5, 1.5]}
         # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+        # for example, should_sample_all_joints should be true for the fridge since the joints (the door) angle need to be sampled when the object
+        # is inside. But for kitchen drawers, this should be false since the joints (all drawers) should not be sampled when the object is on the
+        # countertop (only need to sample for the drawer the object is in)
     ]
 
     # ----- marker definitions ------

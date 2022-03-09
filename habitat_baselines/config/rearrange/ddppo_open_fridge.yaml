@@ -5,6 +5,9 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
+VIDEO_FPS: 30
+VIDEO_RENDER_TOP_DOWN: False
+VIDEO_RENDER_ALL_INFO: True
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_ENVIRONMENTS: 4
@@ -42,7 +45,7 @@ RL:
     ppo_epoch: 2
     num_mini_batch: 2
     value_loss_coef: 0.5
-    entropy_coef: 0.01
+    entropy_coef: 0.0001
     lr: 2.5e-4
     eps: 1e-5
     max_grad_norm: 0.2

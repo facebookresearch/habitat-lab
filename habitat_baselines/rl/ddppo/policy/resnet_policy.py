@@ -32,12 +32,12 @@ from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo import Net, Policy
+from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
-class PointNavResNetPolicy(Policy):
+class PointNavResNetPolicy(NetPolicy):
     def __init__(
         self,
         observation_space: spaces.Dict,
@@ -60,9 +60,11 @@ class PointNavResNetPolicy(Policy):
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
+            include_visual_keys = policy_config.include_visual_keys
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
+            include_visual_keys = None
 
         super().__init__(
             PointNavResNetNet(
@@ -77,7 +79,7 @@ class PointNavResNetPolicy(Policy):
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
                 fuse_keys=fuse_keys,
-                include_visual_keys=policy_config.include_visual_keys,
+                include_visual_keys=include_visual_keys,
             ),
             dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
@@ -250,14 +252,16 @@ class PointNavResNetNet(Net):
             self.prev_action_embedding = nn.Linear(num_actions, 32)
 
         self._n_prev_action = 32
-        rnn_input_size = self._n_prev_action
+        rnn_input_size = self._n_prev_action  # test
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys = [
+        if fuse_keys is None:
+            fuse_keys = []
+        self._fuse_keys: List[str] = [
             k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
         ]
-        if self._fuse_keys is not None:
+        if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
                 [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
             )
@@ -417,7 +421,7 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        if self._fuse_keys is not None:
+        if len(self._fuse_keys) != 0:
             fuse_states = torch.cat(
                 [observations[k] for k in self._fuse_keys], dim=-1
             )
