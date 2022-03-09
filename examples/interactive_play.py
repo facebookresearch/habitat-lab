@@ -310,6 +310,8 @@ def play_env(env, args, config):
             print("Loaded arm actions")
 
     obs = env.reset()
+    # while env.current_episode.episode_id != "18":
+    #    obs = env.reset()
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})

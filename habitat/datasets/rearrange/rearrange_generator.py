@@ -7,6 +7,7 @@
 import os
 import os.path as osp
 import random
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -28,6 +29,7 @@ from habitat.datasets.rearrange.receptacle import (
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+from habitat_sim.nav import NavMeshSettings
 
 
 class RearrangeEpisodeGenerator:
@@ -197,6 +199,11 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["receptacle_sets"]
                 ]
 
+                sample_region_ratios = defaultdict(lambda: 1.0)
+                sample_region_ratios.update(
+                    obj_sampler_info["params"].get("sample_region_ratio", {})
+                )
+
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
@@ -207,7 +214,7 @@ class RearrangeEpisodeGenerator:
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
                     obj_sampler_info["params"]["orientation_sampling"],
-                    obj_sampler_info["params"].get("sample_region_ratio", 1.0),
+                    sample_region_ratios,
                 )
             else:
                 logger.info(
@@ -445,6 +452,16 @@ class RearrangeEpisodeGenerator:
         }
 
         ep_scene_handle = self.generate_scene()
+        self.navmesh_settings = NavMeshSettings()
+        self.navmesh_settings.set_defaults()
+        self.navmesh_settings.agent_radius = 0.3
+        self.navmesh_settings.agent_height = 1.5
+        self.navmesh_settings.agent_max_climb = 0.05
+        self.sim.recompute_navmesh(
+            self.sim.pathfinder,
+            self.navmesh_settings,
+            include_static_objects=True,
+        )
 
         target_numbers = self._get_target_numbers()
         target_receptacles = {}
@@ -665,6 +682,7 @@ class RearrangeEpisodeGenerator:
         hab_cfg = habitat_sim.Configuration(backend_cfg, [agent_cfg])
         if self.sim is None:
             self.sim = habitat_sim.Simulator(hab_cfg)
+
             object_attr_mgr = self.sim.get_object_template_manager()
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))

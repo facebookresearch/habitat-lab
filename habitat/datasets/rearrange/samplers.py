@@ -7,15 +7,19 @@
 import math
 import random
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
+import numpy as np
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.receptacle import Receptacle, find_receptacles
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+
+ACCESSIBILITY_DISTANCE = 1.5
 
 
 class SceneSampler(ABC):
@@ -75,7 +79,7 @@ class ObjectSampler:
         ],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
-        sample_region_ratio: float = 1.0,
+        sample_region_ratio: Optional[Dict[str, float]] = None,
     ) -> None:
         self.object_set = object_set
         self.receptacle_sets = receptacle_sets
@@ -87,12 +91,14 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         assert len(self.receptacle_sets) > 0
         self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
-        self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
+        self.max_placement_attempts = 100  # number of times to attempt a single object|receptacle placement pairing
         self.num_objects = num_objects  # tuple of [min,max] objects to sample
         assert self.num_objects[1] >= self.num_objects[0]
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
+        if sample_region_ratio is None:
+            sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         # More possible parameters of note:
         # - surface vs volume
@@ -211,12 +217,19 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
+        navmesh_vertices = np.stack(
+            sim.pathfinder.build_navmesh_vertices(), axis=0
+        )
+        self.largest_island_size = max(
+            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
+        )
+
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
 
             # sample the object location
             target_object_position = receptacle.sample_uniform_global(
-                sim, self.sample_region_ratio
+                sim, self.sample_region_ratio[receptacle.name]
             )
 
             # instance the new potential object from the handle
@@ -275,12 +288,16 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
+                    if not self.is_accessible(sim, new_object):
+                        continue
                     return new_object
 
             elif not new_object.contact_test():
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
+                if not self.is_accessible(sim, new_object):
+                    continue
                 return new_object
 
         # if num_placement_tries > self.max_placement_attempts:
@@ -292,6 +309,17 @@ class ObjectSampler:
         )
 
         return None
+
+    def is_accessible(self, sim, new_object):
+        snapped = sim.pathfinder.snap_point(new_object.translation)
+        island_radius = sim.pathfinder.island_radius(snapped)
+        dist = np.linalg.norm(
+            np.array((snapped - new_object.translation))[[0, 2]]
+        )
+        return (
+            dist < ACCESSIBILITY_DISTANCE
+            and island_radius == self.largest_island_size
+        )
 
     def single_sample(
         self,

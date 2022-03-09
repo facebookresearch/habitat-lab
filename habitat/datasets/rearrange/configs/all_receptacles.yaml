@@ -89,6 +89,8 @@ object_samplers:
       receptacle_sets: ["hab2"]
       num_samples: [1, 25]
       orientation_sampling: "up"
+      sample_region_ratio: 
+        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
 
 object_target_samplers:
   -
@@ -99,6 +101,7 @@ object_target_samplers:
       receptacle_sets: ["hab2"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+      sample_region_ratio: 0.5
 markers:
   - name: "cab_push_point_7"
     type: "articulated_object"
