@@ -567,7 +567,7 @@ class ArticulatedObjectStateSampler:
         matching_ao_instances = aom.get_objects_by_handle_substring(
             self.ao_handle
         ).values()
-        for ao_instance in matching_ao_instances.values():
+        for ao_instance in matching_ao_instances:
             # now find a matching link
             for link_ix in range(ao_instance.num_links):
                 if ao_instance.get_link_name(link_ix) == self.link_name:
