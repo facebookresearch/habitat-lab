@@ -32,6 +32,14 @@ from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
 
 
+def get_sample_region_ratios(load_dict):
+    sample_region_ratios = defaultdict(lambda: 1.0)
+    sample_region_ratios.update(
+        load_dict["params"].get("sample_region_ratio", {})
+    )
+    return sample_region_ratios
+
+
 class RearrangeEpisodeGenerator:
     """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement tasks.
 
@@ -199,11 +207,6 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["receptacle_sets"]
                 ]
 
-                sample_region_ratios = defaultdict(lambda: 1.0)
-                sample_region_ratios.update(
-                    obj_sampler_info["params"].get("sample_region_ratio", {})
-                )
-
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
@@ -214,7 +217,10 @@ class RearrangeEpisodeGenerator:
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
                     obj_sampler_info["params"]["orientation_sampling"],
-                    sample_region_ratios,
+                    get_sample_region_ratios(obj_sampler_info),
+                    obj_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -258,6 +264,10 @@ class RearrangeEpisodeGenerator:
                         target_sampler_info["params"]["num_samples"][1],
                     ),
                     target_sampler_info["params"]["orientation_sampling"],
+                    get_sample_region_ratios(target_sampler_info),
+                    target_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -506,6 +516,8 @@ class RearrangeEpisodeGenerator:
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
             )
+            if len(object_sample_data) == 0:
+                return None
             new_objects, receptacles = zip(*object_sample_data)
             for obj, rec in zip(new_objects, receptacles):
                 object_to_containing_receptacle[obj.handle] = rec
