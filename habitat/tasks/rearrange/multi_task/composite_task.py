@@ -35,8 +35,7 @@ class CompositeTask(RearrangeTask):
             task_def = yaml.safe_load(f)
         self.task_def = task_def
 
-        start_d = task_def["start"]
-        self.start_state = SetState(start_d["state"])
+        self.start_state = SetState(task_def["start"]["state"])
 
         self._cur_node: int = -1
         self._cur_task: RearrangeTask = None
@@ -135,20 +134,23 @@ class CompositeTask(RearrangeTask):
     def reset(self, episode: Episode):
         super().reset(episode)
         if self.domain is None:
-            start_d = self.task_def["start"]
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
                 self._dataset,
                 self._config,
                 self._sim,
             )
+        else:
+            self.domain.reset()
 
-            self._solution = self.load_solution(self.task_def["solution"])
-            self._goal_state = self._parse_precond_list(self.task_def["goal"])
-            self._cur_state = self._parse_precond_list(start_d["precondition"])
+        self._solution = self.load_solution(self.task_def["solution"])
+        self._goal_state = self._parse_precond_list(self.task_def["goal"])
+        self._cur_state = self._parse_precond_list(
+            self.task_def["start"]["precondition"]
+        )
 
-            for k, preconds in self.task_def["stage_goals"].items():
-                self._stage_goals[k] = self._parse_precond_list(preconds)
+        for k, preconds in self.task_def["stage_goals"].items():
+            self._stage_goals[k] = self._parse_precond_list(preconds)
 
         self.start_state.set_state(
             self.domain.get_name_to_id_mapping(), self._sim

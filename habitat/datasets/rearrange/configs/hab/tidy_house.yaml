@@ -48,7 +48,7 @@ scene_sampler:
 
 object_samplers:
   -
-    name: "hab2"
+    name: "any_targets"
     type: "uniform"
     params:
       object_sets: ["hab2"]
@@ -58,10 +58,10 @@ object_samplers:
 
 object_target_samplers:
   -
-    name: "hab2_targets"
+    name: "any_targets"
     type: "uniform"
     params:
-      object_samplers: ["hab2"]
+      object_samplers: ["any_targets"]
       receptacle_sets: ["hab2"]
       num_samples: [5, 5]
       orientation_sampling: "up"
