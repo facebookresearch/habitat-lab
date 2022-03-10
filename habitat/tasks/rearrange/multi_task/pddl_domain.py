@@ -18,7 +18,7 @@ class PddlDomain:
             self.domain_def = yaml.safe_load(f)
 
         self.sim = sim
-        self.reset()
+
 
         self.predicates = []
         for pred_d in self.domain_def["predicates"]:
@@ -28,20 +28,22 @@ class PddlDomain:
 
         self._config = cur_task_config
 
+        self.dataset = dataset
         self.actions = {}
+        self.reset()
+
+    def reset(self):
+        self._name_to_id = self.get_name_id_conversions(self.domain_def)
         for action_d in self.domain_def["actions"]:
             action = Action(
                 action_d,
-                cur_task_config,
-                dataset,
+                self._config,
+                self.dataset,
                 self._name_to_id,
                 self,
                 self.predicate_lookup,
             )
             self.actions[action.name] = action
-
-    def reset(self):
-        self._name_to_id = self.get_name_id_conversions(self.domain_def)
 
     def get_task_match_for_name(self, task_name_cls):
         matches = []
