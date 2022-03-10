@@ -44,7 +44,7 @@ class PlaceReward(RearrangeReward):
             ],
         )
         self.cur_dist = -1.0
-        self._prev_dropped = self._sim.grasp_mgr.is_grasped
+        self._prev_dropped = not self._sim.grasp_mgr.is_grasped
 
         super().reset_metric(
             *args,
@@ -81,8 +81,8 @@ class PlaceReward(RearrangeReward):
         else:
             dist_to_goal = ee_to_rest_distance
 
-        self._prev_dropped = (not cur_picked) and (not self._prev_dropped)
-        if self._prev_dropped:
+        if (not self._prev_dropped) and (not cur_picked):
+            self._prev_dropped = True
             if obj_at_goal:
                 reward += self._config.PLACE_REWARD
                 # If we just transitioned to the next stage our current

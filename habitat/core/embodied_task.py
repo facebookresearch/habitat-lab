@@ -255,6 +255,8 @@ class EmbodiedTask:
         )
         self._action_keys = list(self.actions.keys())
 
+        self._is_episode_active = False
+
     def _init_entities(
         self, entity_names, register_func, entities_config=None
     ) -> OrderedDict:
@@ -288,6 +290,8 @@ class EmbodiedTask:
 
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
+
+        self._is_episode_active = True
 
         return observations
 

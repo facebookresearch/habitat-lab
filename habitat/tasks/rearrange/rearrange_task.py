@@ -105,7 +105,6 @@ class RearrangeTask(NavigationTask):
         episode: Episode,
         **kwargs: Any,
     ) -> bool:
-
         done = False
         if self.should_end:
             done = True
@@ -162,3 +161,20 @@ class RearrangeTask(NavigationTask):
 
     def get_n_targets(self) -> int:
         return self.n_objs
+
+    @property
+    def should_end(self) -> bool:
+        return self._should_end
+
+    @should_end.setter
+    def should_end(self, new_val: bool):
+        self._should_end = new_val
+        ##
+        # NB: _check_episode_is_active is called after step() but
+        # before metrics are updated. Thus if should_end is set
+        # by a metric, the episode will end on the _next_
+        # step. This makes sure that the episode is ended
+        # on the correct step.
+        self._is_episode_active = (
+            not self._should_end
+        ) and self._is_episode_active
