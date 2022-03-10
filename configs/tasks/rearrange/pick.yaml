@@ -19,6 +19,7 @@ TASK:
     BASE_NOISE: 0.05
     CONSTRAINT_VIOLATION_ENDS_EPISODE: True
     FORCE_REGENERATE: False
+    FORCE_RECOMPUTE_NAVMESH: True
 
     # Measurements for composite tasks.
     REWARD_MEASUREMENT: "rearrangepick_reward"

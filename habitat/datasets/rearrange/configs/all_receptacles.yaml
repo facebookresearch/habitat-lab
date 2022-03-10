@@ -27,7 +27,6 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
-
 receptacle_sets:
   -
     name: "hab2"
@@ -42,19 +41,14 @@ receptacle_sets:
       - "receptacle_aabb_sink_kitchen_counter"
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
 
       # Inside of articulated objects
-      - "receptacle_aabb_middle_bottomfrl_apartment_refrigerator"
       - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
-      - "receptacle_aabb_middlefrl_apartment_refrigerator"
-      - "receptacle_aabb_topfrl_apartment_refrigerator"
 
-      - "receptacle_aabb_drawer_left_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_right_bottom_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
     excluded_receptacle_substrings: []
 
@@ -65,9 +59,9 @@ ao_state_samplers:
     params:
       -
         ao_handle: "fridge"
-        should_sample_all_joints: True
         joint_states:
           - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
       -
         ao_handle: "counter"
         joint_states:
@@ -95,16 +89,22 @@ object_samplers:
       receptacle_sets: ["hab2"]
       num_samples: [1, 25]
       orientation_sampling: "up"
+      sample_region_ratio:
+        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
+      nav_to_min_distance: 1.5
 
 object_target_samplers:
   -
-    name: "any_targets"
+    name: "hab2"
     type: "uniform"
     params:
       object_samplers: ["hab2"]
       receptacle_sets: ["hab2"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+      sample_region_ratio:
+        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
+      nav_to_min_distance: 1.5
 markers:
   - name: "cab_push_point_7"
     type: "articulated_object"

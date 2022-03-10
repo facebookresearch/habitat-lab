@@ -6,9 +6,8 @@ scene_sets:
   -
     name: "scene_train_split"
     included_substrings:
-      - "v3_sc"
+      - "v3"
     excluded_substrings: []
-    comment: "v3_sc4_staging saved for evaluation"
 
 object_sets:
   -
@@ -38,6 +37,7 @@ receptacle_sets:
       - "receptacle_aabb_sink_kitchen_counter"
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
 
     excluded_receptacle_substrings: []
 
@@ -48,7 +48,7 @@ scene_sampler:
 
 object_samplers:
   -
-    name: "hab2"
+    name: "any_targets"
     type: "uniform"
     params:
       object_sets: ["hab2"]
@@ -61,7 +61,7 @@ object_target_samplers:
     name: "any_targets"
     type: "uniform"
     params:
-      object_samplers: ["hab2"]
+      object_samplers: ["any_targets"]
       receptacle_sets: ["hab2"]
       num_samples: [5, 5]
       orientation_sampling: "up"

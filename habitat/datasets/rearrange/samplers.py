@@ -7,9 +7,11 @@
 import math
 import random
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
+import numpy as np
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
@@ -75,8 +77,12 @@ class ObjectSampler:
         ],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
-        sample_region_ratio: float = 1.0,
+        sample_region_ratio: Optional[Dict[str, float]] = None,
+        nav_to_min_distance: float = -1.0,
     ) -> None:
+        """
+        :param nav_to_min_distance: -1.0 means there will be accessibility constraint.
+        """
         self.object_set = object_set
         self.receptacle_sets = receptacle_sets
         self.receptacle_instances: Optional[
@@ -93,7 +99,10 @@ class ObjectSampler:
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
+        if sample_region_ratio is None:
+            sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
+        self.nav_to_min_distance = nav_to_min_distance
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -211,12 +220,19 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
+        navmesh_vertices = np.stack(
+            sim.pathfinder.build_navmesh_vertices(), axis=0
+        )
+        self.largest_island_size = max(
+            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
+        )
+
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
 
             # sample the object location
             target_object_position = receptacle.sample_uniform_global(
-                sim, self.sample_region_ratio
+                sim, self.sample_region_ratio[receptacle.name]
             )
 
             # instance the new potential object from the handle
@@ -275,12 +291,16 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
+                    if not self.is_accessible(sim, new_object):
+                        continue
                     return new_object
 
             elif not new_object.contact_test():
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
+                if not self.is_accessible(sim, new_object):
+                    continue
                 return new_object
 
         # if num_placement_tries > self.max_placement_attempts:
@@ -292,6 +312,19 @@ class ObjectSampler:
         )
 
         return None
+
+    def is_accessible(self, sim, new_object):
+        if self.nav_to_min_distance == -1:
+            return True
+        snapped = sim.pathfinder.snap_point(new_object.translation)
+        island_radius = sim.pathfinder.island_radius(snapped)
+        dist = np.linalg.norm(
+            np.array((snapped - new_object.translation))[[0, 2]]
+        )
+        return (
+            dist < self.nav_to_min_distance
+            and island_radius == self.largest_island_size
+        )
 
     def single_sample(
         self,
@@ -388,6 +421,8 @@ class ObjectTargetSampler(ObjectSampler):
         target_number,
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
+        sample_region_ratio: Optional[Dict[str, float]] = None,
+        nav_to_min_distance: float = -1.0,
     ) -> None:
         """
         Initialize a standard ObjectSampler but construct the object_set to correspond with specific object instances provided.
@@ -397,7 +432,12 @@ class ObjectTargetSampler(ObjectSampler):
             x.creation_attributes.handle for x in self.object_instance_set
         ]
         super().__init__(
-            object_set, receptacle_sets, num_targets, orientation_sample
+            object_set,
+            receptacle_sets,
+            num_targets,
+            orientation_sample,
+            sample_region_ratio,
+            nav_to_min_distance,
         )
 
         self.target_number = target_number
@@ -527,7 +567,7 @@ class ArticulatedObjectStateSampler:
         matching_ao_instances = aom.get_objects_by_handle_substring(
             self.ao_handle
         ).values()
-        for ao_instance in matching_ao_instances.values():
+        for ao_instance in matching_ao_instances:
             # now find a matching link
             for link_ix in range(ao_instance.num_links):
                 if ao_instance.get_link_name(link_ix) == self.link_name:

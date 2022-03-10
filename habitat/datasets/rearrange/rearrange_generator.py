@@ -7,6 +7,7 @@
 import os
 import os.path as osp
 import random
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -28,6 +29,15 @@ from habitat.datasets.rearrange.receptacle import (
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+from habitat_sim.nav import NavMeshSettings
+
+
+def get_sample_region_ratios(load_dict):
+    sample_region_ratios = defaultdict(lambda: 1.0)
+    sample_region_ratios.update(
+        load_dict["params"].get("sample_region_ratio", {})
+    )
+    return sample_region_ratios
 
 
 class RearrangeEpisodeGenerator:
@@ -207,7 +217,10 @@ class RearrangeEpisodeGenerator:
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
                     obj_sampler_info["params"]["orientation_sampling"],
-                    obj_sampler_info["params"].get("sample_region_ratio", 1.0),
+                    get_sample_region_ratios(obj_sampler_info),
+                    obj_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -251,6 +264,10 @@ class RearrangeEpisodeGenerator:
                         target_sampler_info["params"]["num_samples"][1],
                     ),
                     target_sampler_info["params"]["orientation_sampling"],
+                    get_sample_region_ratios(target_sampler_info),
+                    target_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -445,15 +462,24 @@ class RearrangeEpisodeGenerator:
         }
 
         ep_scene_handle = self.generate_scene()
-
-        # Get the unique open receptacle
-        sampler = list(self._obj_samplers.values())[0]
+        self.navmesh_settings = NavMeshSettings()
+        self.navmesh_settings.set_defaults()
+        self.navmesh_settings.agent_radius = 0.3
+        self.navmesh_settings.agent_height = 1.5
+        self.navmesh_settings.agent_max_climb = 0.05
+        self.sim.recompute_navmesh(
+            self.sim.pathfinder,
+            self.navmesh_settings,
+            include_static_objects=True,
+        )
 
         target_numbers = self._get_target_numbers()
         target_receptacles = {}
         all_target_receptacles = []
         # for sampler_name, sampler in self._target_samplers.items():
-        for sampler_name, num_targets in target_numbers.items():
+        for sampler, (sampler_name, num_targets) in zip(
+            self._obj_samplers.values(), target_numbers.items()
+        ):
             new_target_receptacles = [
                 sampler.sample_receptacle(self.sim) for _ in range(num_targets)
             ]
@@ -469,7 +495,7 @@ class RearrangeEpisodeGenerator:
             )
             assert (
                 sampler_states is not None
-            ), f"AO sampler '{sampler_name}' failed"
+            ), f"AO sampler {sampler_name} failed"
             for sampled_instance, link_states in sampler_states.items():
                 if sampled_instance.handle not in ao_states:
                     ao_states[sampled_instance.handle] = {}
@@ -490,6 +516,8 @@ class RearrangeEpisodeGenerator:
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
             )
+            if len(object_sample_data) == 0:
+                return None
             new_objects, receptacles = zip(*object_sample_data)
             for obj, rec in zip(new_objects, receptacles):
                 object_to_containing_receptacle[obj.handle] = rec
@@ -590,6 +618,14 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
+        if len(all_target_receptacles) != 0:
+            use_target_receptacles = (
+                all_target_receptacles[0].parent_object_handle,
+                all_target_receptacles[0].parent_link,
+            )
+        else:
+            use_target_receptacles = ("", 0)
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -608,12 +644,7 @@ class RearrangeEpisodeGenerator:
             # Hack. The pick task needs to know if the object is starting in a
             # receptacle. This code assumes that the dataset for the pick task
             # always contains the desired object in the 0th index.
-            target_receptacles=(
-                all_target_receptacles[0].parent_object_handle,
-                all_target_receptacles[0].parent_link,
-            )
-            if len(all_target_receptacles) != 0
-            else ("", 0),
+            target_receptacles=use_target_receptacles,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
@@ -663,6 +694,7 @@ class RearrangeEpisodeGenerator:
         hab_cfg = habitat_sim.Configuration(backend_cfg, [agent_cfg])
         if self.sim is None:
             self.sim = habitat_sim.Simulator(hab_cfg)
+
             object_attr_mgr = self.sim.get_object_template_manager()
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))

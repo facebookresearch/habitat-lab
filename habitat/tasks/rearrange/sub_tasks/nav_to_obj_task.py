@@ -115,10 +115,7 @@ class DynNavRLEnv(RearrangeTask):
 
     def _generate_nav_start_goal(self, episode):
         targ_pos, targ_angle, _ = self._determine_nav_pos(episode)
-        orig_nav_targ_pos = self._sim.get_nav_pos(targ_pos)
-        self._nav_target_pos = np.array(
-            self._sim.safe_snap_point(orig_nav_targ_pos)
-        )
+        self._nav_target_pos = np.array(self._sim.safe_snap_point(targ_pos))
 
         start_pos, start_rot = get_robo_start_pos(
             self._sim, self._nav_target_pos
@@ -161,9 +158,8 @@ class DynNavRLEnv(RearrangeTask):
                 targ_pos, self._nav_target_angle = self._get_nav_targ(
                     task_cls_name, task_args, episode
                 )
-                orig_nav_targ_pos = sim.get_nav_pos(targ_pos)
                 self._nav_target_pos = np.array(
-                    sim.safe_snap_point(orig_nav_targ_pos)
+                    self._sim.safe_snap_point(targ_pos)
                 )
                 self._nav_target_angle = float(self._nav_target_angle)
 

@@ -1,10 +1,9 @@
-# Config for empty task to explore the scene.
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidyhouse_data.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeCompositeTask-v0

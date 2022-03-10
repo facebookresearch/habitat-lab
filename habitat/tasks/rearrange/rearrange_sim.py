@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3,
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
@@ -26,6 +26,7 @@ from habitat.tasks.rearrange.utils import (
     get_aabb,
     is_pb_installed,
     make_render_only,
+    rearrange_collision,
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import MotionType
@@ -275,29 +276,29 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
+    def set_robot_base_to_random_point(self):
+        for _ in range(50):
+            start_pos = self.pathfinder.get_random_navigable_point()
+            start_rot = np.random.uniform(0, 2 * np.pi)
+
+            self.robot.base_pos = start_pos
+            self.robot.base_rot = start_rot
+
+            self.internal_step(-1)
+            did_collide, details = rearrange_collision(
+                self,
+                True,
+                ignore_base=False,
+            )
+            if not did_collide:
+                break
+
     def _setup_targets(self):
         self._targets = {}
         for target_handle, transform in self.ep_info["targets"].items():
             self._targets[target_handle] = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
-
-    def get_nav_pos(self, pos):
-        pos = mn.Vector3(*pos)
-        height_thresh = 0.15
-        z_min = -0.2
-        use_vs = np.array(self.pathfinder.build_navmesh_vertices())
-
-        if height_thresh is not None:
-            use_vs = use_vs[use_vs[:, 1] < height_thresh]
-        if z_min is not None:
-            use_vs = use_vs[use_vs[:, 2] > z_min]
-        dists = np.linalg.norm(
-            use_vs[:, [0, 2]] - np.array(pos)[[0, 2]], axis=-1
-        )
-
-        closest_idx = np.argmin(dists)
-        return use_vs[closest_idx]
 
     def _recompute_navmesh(self):
         """Generates the navmesh or loads the saved navmesh if it exists. This must be called
@@ -329,6 +330,14 @@ class RearrangeSim(HabitatSim):
             # reset cached MotionTypes
             for art_obj, motion_type in zip(self.art_objs, motion_types):
                 art_obj.motion_type = motion_type
+
+        self._navmesh_vertices = np.stack(
+            self.pathfinder.build_navmesh_vertices(), axis=0
+        )
+        self._island_sizes = [
+            self.pathfinder.island_radius(p) for p in self._navmesh_vertices
+        ]
+        self._max_island_size = max(self._island_sizes)
 
     def _get_non_frl_objs(self):
         rom = self.get_rigid_object_manager()
@@ -385,15 +394,32 @@ class RearrangeSim(HabitatSim):
         snap_point can return nan which produces hard to catch errors.
         """
         new_pos = self.pathfinder.snap_point(pos)
-        if np.isnan(new_pos[0]):
-            navmesh_vertices = np.stack(
-                self.pathfinder.build_navmesh_vertices(), axis=0
-            )
+        island_radius = self.pathfinder.island_radius(new_pos)
+
+        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
+            # The point is not valid or not in a different island. Find a
+            # different point nearby that is on a different island and is
+            # valid.
+            for _ in range(10):
+                new_pos = self.pathfinder.get_random_navigable_point_near(
+                    pos, 1.5, 1000
+                )
+                island_radius = self.pathfinder.island_radius(new_pos)
+                if island_radius == self._max_island_size:
+                    break
+
+        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
+            # This is a last resort, take a navmesh vertex that is closest
+            use_verts = [
+                x
+                for s, x in zip(self._island_sizes, self._navmesh_vertices)
+                if s == self._max_island_size
+            ]
             distances = np.linalg.norm(
-                np.array(pos).reshape(1, 3) - navmesh_vertices, axis=-1
+                np.array(pos).reshape(1, 3) - use_verts, axis=-1
             )
             closest_idx = np.argmin(distances)
-            new_pos = navmesh_vertices[closest_idx]
+            new_pos = self._navmesh_vertices[closest_idx]
 
         return new_pos
 

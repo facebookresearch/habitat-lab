@@ -112,11 +112,8 @@ class RearrangePickTaskV1(RearrangeTask):
                 robot_T = self._sim.robot.base_transformation
                 rel_targ_pos = robot_T.inverted().transform_point(targ_pos)
                 eps = 1e-2
-                lower_bound = self._sim.robot.params.ee_constraint[:, 0] - eps
                 upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
-                is_within_bounds = (lower_bound < rel_targ_pos).all() and (
-                    rel_targ_pos < upper_bound
-                ).all()
+                is_within_bounds = (rel_targ_pos < upper_bound).all()
                 if not is_within_bounds:
                     continue
 
@@ -140,17 +137,12 @@ class RearrangePickTaskV1(RearrangeTask):
             if not did_collide:
                 break
 
-        if attempt == timeout - 1 and (not is_easy_init):
+        if attempt == timeout and (not is_easy_init):
             start_pos, angle_to_obj, sel_idx = self._gen_start_pos(
                 sim, True, episode
             )
-
-        if not is_within_bounds:
+        elif not is_within_bounds or attempt == timeout or did_collide:
             print(f"Episode {episode.episode_id} failed to place robot")
-
-            # raise ValueError(
-            #
-            # )
 
         sim.set_state(state)
 

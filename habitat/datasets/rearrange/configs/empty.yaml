@@ -37,33 +37,14 @@ receptacle_sets:
     excluded_receptacle_substrings: []
 
 scene_sampler:
-  type: "subset"
+  type: "single"
   params:
     scene_sets: ["v3_sc"]
   comment: "Samples from ReplicaCAD 105 variations with static furniture."
 
+object_samplers: []
+object_target_samplers: []
 
-object_samplers:
-  -
-    name: "kitchen_counter"
-    type: "uniform"
-    params:
-      object_sets: ["kitchen"]
-      receptacle_sets: ["counter"]
-      num_samples: [1, 1]
-      orientation_sampling: "up"
-      nav_to_min_distance: 1.5
-
-object_target_samplers:
-  -
-    name: "kitchen_counter_targets"
-    type: "uniform"
-    params:
-      object_samplers: ["kitchen_counter"]
-      receptacle_sets: ["counter"]
-      num_samples: [1, 1]
-      orientation_sampling: "up"
-      nav_to_min_distance: 1.5
 markers:
   - name: "cab_push_point_7"
     type: "articulated_object"

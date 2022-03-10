@@ -21,7 +21,10 @@
 
 # %% [markdown]
 # # Overview
-# This tutorial covers the basics of using Habitat 2.0 including: setting up the environment, creating custom environments, and creating new episode datasets. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
+# This tutorial covers the basics of using Habitat 2.0 including: setting up
+# the environment, creating custom environments, and creating new episode
+# datasets. Currently, to use Habitat 2.0, you **must use the
+# `hab_suite_baselines` development branch of Habitat Lab.**
 
 # %%
 # Play a teaser video
@@ -44,8 +47,8 @@ import os
 if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-    # Setup to use the hab_suite branch of Habitat Lab.
-    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
+    # Setup to use the hab_suite_baselines branch of Habitat Lab.
+    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite_baselines' && git fetch -v && git checkout hab_suite_baselines && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
 import os
@@ -93,10 +96,10 @@ def insert_render_options(config):
 # %% [markdown]
 # # Local installation
 #
-# For Habitat 2.0 functionality, install the `hab_suite` branch of Habitat Lab. Complete installation steps:
+# For Habitat 2.0 functionality, install the `hab_suite_baselines` branch of Habitat Lab. Complete installation steps:
 #
 # 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
-# 2. Download the `hab_suite` branch of Habitat Lab: `git clone -b hab_suite https://github.com/facebookresearch/habitat-lab.git`
+# 2. Download the `hab_suite_baselines` branch of Habitat Lab: `git clone -b hab_suite_baselines https://github.com/facebookresearch/habitat-lab.git`
 # 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
 
 # %% [markdown]
@@ -168,7 +171,8 @@ if vut.is_notebook():
 # ```
 # python examples/interactive_play.py --cfg configs/tasks/rearrange/composite.yaml --play-task --never-end
 # ```
-# For more information about the interactive play script, see the [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/examples/interactive_play.py).
+# For more information about the interactive play script, see the
+# [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/interactive_play.py).
 
 # %% [markdown]
 # ## Training with Habitat Baselines
@@ -177,7 +181,7 @@ if vut.is_notebook():
 # ```
 # python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/ddppo_pick.yaml --run-type train
 # ```
-# Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
+# Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
 #
 # See [here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines) for more information on how to run with Habitat Baselines.
 
@@ -189,7 +193,8 @@ if vut.is_notebook():
 # * Sensor definitions to populate the observation space.
 # * Measurement definitions to define the reward, termination condition, and additional logging information.
 #
-# For other examples of task, sensor, and measurement definitions, [see here for existing tasks]( https://github.com/facebookresearch/habitat-lab/tree/hab_suite/habitat/tasks/rearrange/sub_tasks). As explained in the next part, tasks, sensors, and measurements are connected through a config file that defines the task.
+# For other examples of task, sensor, and measurement definitions, [see here
+# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat/tasks/rearrange/sub_tasks). As explained in the next part, tasks, sensors, and measurements are connected through a config file that defines the task.
 
 # %%
 @registry.register_task(name="RearrangeNavPickTask-v0")
@@ -347,9 +352,16 @@ class NavPickSuccess(Measure):
 
 
 # %% [markdown]
-# We now add all the previously defined task, sensor, and measurement definitions to a config file to finish defining the new Habitat task. For examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite/configs/tasks/rearrange).
+# We now add all the previously defined task, sensor, and measurement
+# definitions to a config file to finish defining the new Habitat task. For
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/configs/tasks/rearrange).
 #
-# This config also defines the action space through the `TASK.ACTIONS` key. You can substitute different base control actions from [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/actions.py), different arm control actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/actions.py), and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/tasks/rearrange/grip_actions.py).
+# This config also defines the action space through the `TASK.ACTIONS` key. You
+# can substitute different base control actions from
+# [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/actions.py),
+# different arm control actions [from
+# here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/actions.py),
+# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/grip_actions.py).
 
 # %%
 cfg_txt = """
@@ -535,7 +547,10 @@ with habitat.Env(
 
 # %% [markdown]
 # # Dataset Generation
-# The previously defined task uses the default `pick.json.gz` dataset. This places objects on the counter. The episode `.json.gz` dataset defines where objects are placed and their rearrangement target positions. New episode datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/hab_suite/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where object spawns on the table.
+# The previously defined task uses the default `pick.json.gz` dataset. This
+# places objects on the counter. The episode `.json.gz` dataset defines where
+# objects are placed and their rearrangement target positions. New episode
+# datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where object spawns on the table.
 
 # %%
 dataset_cfg_txt = """
