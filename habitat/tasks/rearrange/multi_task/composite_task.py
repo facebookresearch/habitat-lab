@@ -132,7 +132,7 @@ class CompositeTask(RearrangeTask):
             self._cur_task = task
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        result = super().reset(episode)
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
@@ -167,7 +167,8 @@ class CompositeTask(RearrangeTask):
         self._inf_cur_node = 0
         self._inf_cur_task = None
         self._get_next_inf_sol(episode)
-        return super().reset(episode)
+        self.cached_tasks = {}
+        return result
 
     def get_inf_cur_node(self):
         return self._inf_cur_node
