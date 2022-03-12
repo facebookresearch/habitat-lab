@@ -65,7 +65,7 @@ class NavGoalSensor(Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        return task.nav_target_pos
+        return task.nav_target_pos.astype(np.float32)
 
 
 @registry.register_sensor

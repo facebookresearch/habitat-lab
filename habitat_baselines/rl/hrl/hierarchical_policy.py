@@ -75,6 +75,7 @@ class HierarchicalPolicy(Policy):
         for skill in self._skills.values():
             skill.to(device)
         self._call_high_level = self._call_high_level.to(device)
+        self._cur_skills = self._cur_skills.to(device)
 
     def act(
         self,
@@ -140,7 +141,7 @@ class HierarchicalPolicy(Policy):
                     batched_prev_actions[new_skill_batch_idx],
                 )
             self._cur_skills = (
-                (~self._call_high_level) * self._cur_skills
+                (1.0 - self._call_high_level) * self._cur_skills
             ) + (self._call_high_level * new_skills)
 
         actions = torch.zeros(
