@@ -139,7 +139,9 @@ class HierarchicalPolicy(Policy):
                     batched_rnn_hidden_states[new_skill_batch_idx],
                     batched_prev_actions[new_skill_batch_idx],
                 )
-            self._cur_skills = self._call_high_level * new_skills
+            self._cur_skills = (
+                (~self._call_high_level) * self._cur_skills
+            ) + (self._call_high_level * new_skills)
 
         actions = torch.zeros(
             self._num_envs, get_num_actions(self._action_space)

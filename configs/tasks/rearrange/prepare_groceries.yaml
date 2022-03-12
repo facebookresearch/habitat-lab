@@ -81,7 +81,7 @@ TASK:
 
     ########################
     # General measures
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_FORCE:
@@ -172,7 +172,7 @@ TASK:
         # General measure
         - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"

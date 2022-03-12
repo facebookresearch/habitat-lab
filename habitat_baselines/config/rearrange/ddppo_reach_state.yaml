@@ -26,6 +26,8 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
 GYM_AUTO_NAME: "ReachState"
 ENV_NAME: "RearrangeRLEnv"
 
+EVAL:
+  SPLIT: "eval"
 
 RL:
   POLICY:

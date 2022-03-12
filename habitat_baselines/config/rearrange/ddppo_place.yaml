@@ -27,6 +27,8 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/place.yaml
 GYM_AUTO_NAME: "Place"
 ENV_NAME: "RearrangeRLEnv"
 
+EVAL:
+  SPLIT: "eval"
 
 RL:
   POLICY:

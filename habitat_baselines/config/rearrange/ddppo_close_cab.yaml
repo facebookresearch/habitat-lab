@@ -2,7 +2,7 @@ VERBOSE: False
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: []
+VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 VIDEO_FPS: 30
@@ -25,6 +25,8 @@ FORCE_TORCH_SINGLE_THREADED: True
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/close_cab.yaml
 GYM_AUTO_NAME: "CloseCab"
 ENV_NAME: "RearrangeRLEnv"
+EVAL:
+  SPLIT: "eval"
 
 
 RL:

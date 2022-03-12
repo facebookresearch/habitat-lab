@@ -64,6 +64,7 @@ object_target_samplers:
       num_samples: [1, 1]
       orientation_sampling: "up"
       nav_to_min_distance: 1.5
+
 markers:
   - name: "cab_push_point_7"
     type: "articulated_object"

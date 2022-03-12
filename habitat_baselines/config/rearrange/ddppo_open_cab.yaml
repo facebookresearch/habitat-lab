@@ -26,6 +26,8 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/open_cab.yaml
 GYM_AUTO_NAME: "OpenCab"
 ENV_NAME: "RearrangeRLEnv"
 
+EVAL:
+  SPLIT: "eval"
 
 RL:
   POLICY:

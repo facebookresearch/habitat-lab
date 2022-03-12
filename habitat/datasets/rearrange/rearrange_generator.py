@@ -228,7 +228,7 @@ class RearrangeEpisodeGenerator:
                 )
                 raise (NotImplementedError)
 
-    def _get_object_target_samplers(self, target_numbers) -> None:
+    def _get_object_target_samplers(self) -> None:
         """
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
@@ -242,12 +242,7 @@ class RearrangeEpisodeGenerator:
                 target_sampler_info["name"] not in self._target_samplers
             ), f"Duplicate target sampler name '{target_sampler_info['name']}' in config."
             if target_sampler_info["type"] == "uniform":
-                # merge and flatten object and receptacle sets
-                object_instances = [
-                    x
-                    for y in target_sampler_info["params"]["object_samplers"]
-                    for x in self.episode_data["sampled_objects"][y]
-                ]
+                # merge and flatten receptacle sets
                 receptacle_info = [
                     self._receptacle_sets[y]
                     for y in target_sampler_info["params"]["receptacle_sets"]
@@ -256,9 +251,9 @@ class RearrangeEpisodeGenerator:
                 self._target_samplers[
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
-                    object_instances,
+                    # Add object set later
+                    [],
                     receptacle_info,
-                    target_numbers[target_sampler_info["name"]],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -473,7 +468,11 @@ class RearrangeEpisodeGenerator:
             include_static_objects=True,
         )
 
-        target_numbers = self._get_target_numbers()
+        self._get_object_target_samplers()
+        target_numbers = {
+            k: sampler.target_objects_number
+            for k, sampler in self._target_samplers.items()
+        }
         target_receptacles = {}
         all_target_receptacles = []
         # for sampler_name, sampler in self._target_samplers.items():
@@ -486,12 +485,23 @@ class RearrangeEpisodeGenerator:
             target_receptacles[sampler_name] = new_target_receptacles
             all_target_receptacles.extend(new_target_receptacles)
 
+        goal_receptacles = {}
+        all_goal_receptacles = []
+        for sampler, (sampler_name, num_targets) in zip(
+            self._target_samplers.values(), target_numbers.items()
+        ):
+            new_goal_receptacles = [
+                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
+            ]
+            goal_receptacles[sampler_name] = new_goal_receptacles
+            all_goal_receptacles.extend(new_goal_receptacles)
+
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
         for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
             sampler_states = ao_state_sampler.sample(
-                self.sim, all_target_receptacles
+                self.sim, [*all_target_receptacles, *all_goal_receptacles]
             )
             assert (
                 sampler_states is not None
@@ -547,8 +557,18 @@ class RearrangeEpisodeGenerator:
             )
             return None
 
-        # generate the target samplers
-        self._get_object_target_samplers(target_numbers)
+        for sampler, target_sampler_info in zip(
+            self._target_samplers.values(), self.cfg.object_target_samplers
+        ):
+            sampler.object_instance_set = [
+                x
+                for y in target_sampler_info["params"]["object_samplers"]
+                for x in self.episode_data["sampled_objects"][y]
+            ]
+            sampler.object_set = [
+                x.creation_attributes.handle
+                for x in sampler.object_instance_set
+            ]
 
         target_refs: Dict[str, str] = {}
 
@@ -559,10 +579,11 @@ class RearrangeEpisodeGenerator:
                 snap_down=True,
                 vdb=self.vdb,
                 target_receptacles=target_receptacles[sampler_name],
+                goal_receptacles=all_goal_receptacles,
                 object_to_containing_receptacle=object_to_containing_receptacle,
             )
             if new_target_objects is None:
-                raise ValueError("Cannot sample target objects")
+                return None
 
             # cache transforms and add visualizations
             for i, (instance_handle, value) in enumerate(
@@ -618,13 +639,15 @@ class RearrangeEpisodeGenerator:
 
         self.num_ep_generated += 1
 
-        if len(all_target_receptacles) != 0:
-            use_target_receptacles = (
-                all_target_receptacles[0].parent_object_handle,
-                all_target_receptacles[0].parent_link,
-            )
-        else:
-            use_target_receptacles = ("", 0)
+        def extract_recep_info(recep):
+            return (recep.parent_object_handle, recep.parent_link)
+
+        save_target_receps = [
+            extract_recep_info(x) for x in all_target_receptacles
+        ]
+        save_goal_receps = [
+            extract_recep_info(x) for x in all_goal_receptacles
+        ]
 
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
@@ -641,10 +664,8 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
-            # Hack. The pick task needs to know if the object is starting in a
-            # receptacle. This code assumes that the dataset for the pick task
-            # always contains the desired object in the 0th index.
-            target_receptacles=use_target_receptacles,
+            target_receptacles=save_target_receps,
+            goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )

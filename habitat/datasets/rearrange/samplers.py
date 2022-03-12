@@ -103,6 +103,7 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
+        self.set_num_samples()
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -332,9 +333,13 @@ class ObjectSampler:
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         fixed_target_receptacle=None,
+        fixed_obj_handle=None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
-        object_handle = self.sample_object()
+        if fixed_obj_handle is None:
+            object_handle = self.sample_object()
+        else:
+            object_handle = fixed_obj_handle
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
         else:
@@ -348,6 +353,13 @@ class ObjectSampler:
         )
 
         return new_object, target_receptacle
+
+    def set_num_samples(self):
+        self.target_objects_number = (
+            random.randrange(self.num_objects[0], self.num_objects[1])
+            if self.num_objects[1] > self.num_objects[0]
+            else self.num_objects[0]
+        )
 
     def sample(
         self,
@@ -363,17 +375,12 @@ class ObjectSampler:
         num_pairing_tries = 0
         new_objects: List[habitat_sim.physics.ManagedRigidObject] = []
 
-        target_objects_number = (
-            random.randrange(self.num_objects[0], self.num_objects[1])
-            if self.num_objects[1] > self.num_objects[0]
-            else self.num_objects[0]
-        )
         logger.info(
-            f"    Trying to sample {target_objects_number} from range {self.num_objects}"
+            f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
         )
 
         while (
-            len(new_objects) < target_objects_number
+            len(new_objects) < self.target_objects_number
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
@@ -418,7 +425,6 @@ class ObjectTargetSampler(ObjectSampler):
         receptacle_sets: List[
             Tuple[List[str], List[str], List[str], List[str]]
         ],
-        target_number,
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
@@ -440,14 +446,13 @@ class ObjectTargetSampler(ObjectSampler):
             nav_to_min_distance,
         )
 
-        self.target_number = target_number
-
     def sample(
         self,
         sim: habitat_sim.Simulator,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         target_receptacles=None,
+        goal_receptacles=None,
         object_to_containing_receptacle=None,
     ) -> Optional[
         Dict[str, Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]
@@ -457,72 +462,37 @@ class ObjectTargetSampler(ObjectSampler):
         Returns None if failed, or a dict mapping object handles to new object instances in the sampled target location.
         """
 
-        # initialize all targets to None
-        targets_found = 0
         new_target_objects = {}
 
         logger.info(
-            f"    Trying to sample {self.target_number} targets from range {self.num_objects}"
+            f"    Trying to sample {self.target_objects_number} targets from range {self.num_objects}"
         )
 
-        num_pairing_tries = 0
-        while (
-            targets_found < self.target_number
-            and num_pairing_tries < self.max_sample_attempts
+        assert len(target_receptacles) == len(goal_receptacles)
+        # The first objects were sampled to be in the target object receptacle
+        # locations, so they must be used as the target objects.
+        for use_target, use_recep, goal_recep in zip(
+            self.object_instance_set, target_receptacles, goal_receptacles
         ):
-            num_pairing_tries += 1
-
-            found_match = False
-            for _ in range(1000):
-                if found_match:
-                    break
-                new_object, receptacle = self.single_sample(
-                    sim, snap_down, vdb
-                )
-                if new_object is None:
-                    continue
-
-                for object_instance in self.object_instance_set:
-                    matching_target_recep = None
-                    if (
-                        target_receptacles is not None
-                        and object_to_containing_receptacle is not None
-                    ):
-                        contain_recep = object_to_containing_receptacle[
-                            object_instance.handle
-                        ]
-                        for recep in target_receptacles:
-                            if (
-                                contain_recep.parent_object_handle
-                                == recep.parent_object_handle
-                                and contain_recep.parent_link
-                                == recep.parent_link
-                            ):
-                                matching_target_recep = recep
-                                break
-
-                    if (
-                        object_instance.creation_attributes.handle
-                        == new_object.creation_attributes.handle
-                        and object_instance.handle not in new_target_objects
-                        and matching_target_recep is not None
-                    ):
-                        new_target_objects[object_instance.handle] = (
-                            new_object,
-                            matching_target_recep,
-                        )
-                        found_match = True
-                        # remove this object instance match from future pairings
-                        self.object_set.remove(
-                            new_object.creation_attributes.handle
-                        )
-                        targets_found += 1
-                        break
             assert (
-                found_match is True
-            ), "Failed to match instance to generated object. Shouldn't happen, must be a bug."
+                object_to_containing_receptacle[use_target.handle] == use_recep
+            )
+            new_object, receptacle = self.single_sample(
+                sim,
+                snap_down,
+                vdb,
+                goal_recep,
+                use_target.creation_attributes.handle,
+            )
+            if new_object is None:
+                break
+            new_target_objects[use_target.handle] = (
+                new_object,
+                use_recep,
+            )
 
-        if len(new_target_objects) >= self.num_objects[0]:
+        # Did we successfully place all the objects?
+        if len(new_target_objects) == self.target_objects_number:
             return new_target_objects
 
         # we didn't find all placements, so remove all new objects and return
@@ -665,14 +635,17 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                     should_sample_all_joints = joint_range[2]
                     matching_recep = None
                     for recep in receptacles:
-                        if ao_instance.handle == recep.parent_object_handle:
+                        link_matches = (
+                            link_ix == recep.parent_link
+                        ) or should_sample_all_joints
+                        if (
+                            ao_instance.handle == recep.parent_object_handle
+                            and link_matches
+                        ):
                             matching_recep = recep
                             break
 
-                    if matching_recep is not None and (
-                        (link_ix == matching_recep.parent_link)
-                        or should_sample_all_joints
-                    ):
+                    if matching_recep is not None:
                         # If this is true, this means that the receptacle AO must be opened. That is because
                         # the object is spawned inside the fridge OR inside the kitchen counter BUT not on top of the counter
                         # because in this case all drawers must be closed.

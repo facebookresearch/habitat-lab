@@ -26,6 +26,8 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/open_fridge.yaml
 GYM_AUTO_NAME: "OpenFridge"
 ENV_NAME: "RearrangeRLEnv"
 
+EVAL:
+  SPLIT: "eval"
 
 RL:
   POLICY:

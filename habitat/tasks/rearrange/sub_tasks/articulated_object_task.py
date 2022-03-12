@@ -68,6 +68,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         # Transform to global coordinates
         start_pos = np.array(T.transform_point(mn.Vector3(*start_pos)))
         start_pos = np.array([start_pos[0], 0, start_pos[2]])
+        start_pos = self._sim.safe_snap_point(start_pos)
 
         targ_pos = np.array(T.transform_point(mn.Vector3(*targ_pos)))
 
@@ -77,6 +78,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
         if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
             angle_to_obj *= -1.0
+
         return angle_to_obj, start_pos
 
     def step(self, action: Dict[str, Any], episode: Episode):
@@ -102,24 +104,25 @@ class SetArticulatedObjectTask(RearrangeTask):
         marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
 
         num_timeout = 100
-        num_pos_timeout = 100
         self._disable_art_sleep()
         for _ in range(num_timeout):
             self._set_link_state(self._gen_start_state())
 
-            for _ in range(num_pos_timeout):
-                angle_to_obj, start_pos = self._sample_robot_start(T)
-                if self._sim.pathfinder.is_navigable(start_pos):
-                    break
+            angle_to_obj, base_pos = self._sample_robot_start(T)
 
             noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             self._sim.robot.base_rot = angle_to_obj + noise
-            base_pos = mn.Vector3(
-                start_pos[0],
-                self._sim.robot.base_pos[1],
-                start_pos[2],
-            )
             self._sim.robot.base_pos = base_pos
+
+            robot_T = self._sim.robot.base_transformation
+            rel_targ_pos = robot_T.inverted().transform_point(
+                marker.current_transform.translation
+            )
+            eps = 1e-2
+            upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
+            is_within_bounds = (rel_targ_pos < upper_bound).all()
+            if not is_within_bounds:
+                continue
 
             did_collide = False
             for _ in range(self._config.SETTLE_STEPS):

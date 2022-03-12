@@ -394,7 +394,7 @@ TASK:
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
@@ -416,7 +416,7 @@ TASK:
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "DISTANCE_TO_TARGET_OBJECT"
         - "NAV_PICK_REWARD"

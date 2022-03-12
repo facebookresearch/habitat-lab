@@ -25,6 +25,8 @@ FORCE_TORCH_SINGLE_THREADED: True
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/close_fridge.yaml
 GYM_AUTO_NAME: "CloseFridge"
 ENV_NAME: "RearrangeRLEnv"
+EVAL:
+  SPLIT: "eval"
 
 
 RL:

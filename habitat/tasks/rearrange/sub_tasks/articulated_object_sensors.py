@@ -69,7 +69,7 @@ class ArtJointSensor(Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         js = self._task.get_use_marker().get_targ_js()
         js_vel = self._task.get_use_marker().get_targ_js_vel()
-        return np.array([js, js_vel]).reshape((2,))
+        return np.array([js, js_vel], dtype=np.float32).reshape((2,))
 
 
 @registry.register_sensor

@@ -17,6 +17,10 @@ SENSE_PLAN_ACT:
   COUNT_OBJ_COLLISIONS: True
   GRASP_GEN_IS_VERBOSE: True
   IK_DIST_THRESH: 0.1
+
+EVAL:
+  SPLIT: "eval"
+
 RL:
     REWARD_MEASURE: "rearrangepick_reward"
     SUCCESS_MEASURE: "rearrangepick_success"

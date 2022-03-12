@@ -56,7 +56,7 @@ TASK:
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
     ROBOT_COLLS:
@@ -91,7 +91,7 @@ TASK:
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "EE_DIST_TO_MARKER"
         - "ART_OBJ_STATE"
@@ -103,7 +103,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "SuctionGraspAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False

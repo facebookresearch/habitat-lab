@@ -47,12 +47,17 @@ class RearrangePickTaskV1(RearrangeTask):
     def _get_targ_pos(self, sim):
         return sim.get_target_objs_start()
 
-    def _gen_start_pos(self, sim, is_easy_init, episode, force_snap_pos=None):
-        target_positions = self._get_targ_pos(sim)
+    def _sample_idx(self, sim):
         if self.force_set_idx is not None:
             sel_idx = self.force_set_idx
         else:
-            sel_idx = np.random.randint(0, len(target_positions))
+            sel_idx = np.random.randint(0, len(self._get_targ_pos(sim)))
+        return sel_idx
+
+    def _gen_start_pos(
+        self, sim, is_easy_init, episode, sel_idx, force_snap_pos=None
+    ):
+        target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
 
         if force_snap_pos is not None:
@@ -138,15 +143,15 @@ class RearrangePickTaskV1(RearrangeTask):
                 break
 
         if attempt == timeout and (not is_easy_init):
-            start_pos, angle_to_obj, sel_idx = self._gen_start_pos(
-                sim, True, episode
+            start_pos, angle_to_obj = self._gen_start_pos(
+                sim, True, episode, sel_idx
             )
         elif not is_within_bounds or attempt == timeout or did_collide:
             print(f"Episode {episode.episode_id} failed to place robot")
 
         sim.set_state(state)
 
-        return start_pos, angle_to_obj, sel_idx
+        return start_pos, angle_to_obj
 
     def _should_prevent_grip(self, action_args):
         return (
@@ -165,6 +170,9 @@ class RearrangePickTaskV1(RearrangeTask):
 
         return obs
 
+    def _get_receptacle_info(self, episode, sel_idx):
+        return episode.target_receptacles[sel_idx]
+
     def reset(self, episode: Episode):
         sim = self._sim
 
@@ -180,40 +188,39 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos, start_rot, sel_idx = self.start_states[episode_id]
         else:
             mgr = sim.get_articulated_object_manager()
-            start_pos = None
+            sel_idx = self._sample_idx(sim)
+
+            receptacle_handle, receptacle_link_idx = self._get_receptacle_info(
+                episode, sel_idx
+            )
             if (
-                len(episode.targets.keys()) == 1
-                and episode.target_receptacles is not None
+                # Not a typo, "fridge" is sometimes "frige" in
+                # ReplicaCAD.
+                "frige" in receptacle_handle
+                or "fridge" in receptacle_handle
             ):
-                receptacle_handle = episode.target_receptacles[0]
-                receptacle_link_idx = episode.target_receptacles[1]
-                if (
-                    # Not a typo, "fridge" is sometimes "frige" in
-                    # ReplicaCAD.
-                    "frige" in receptacle_handle
-                    or "fridge" in receptacle_handle
-                ):
-                    receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
-                    start_pos = np.array(
-                        receptacle_ao.transformation.transform_point(
-                            mn.Vector3(self.DISTANCE_TO_RECEPTACLE, 0, 0)
-                        )
+                receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
+                start_pos = np.array(
+                    receptacle_ao.transformation.transform_point(
+                        mn.Vector3(self.DISTANCE_TO_RECEPTACLE, 0, 0)
                     )
+                )
+            elif (
+                "kitchen_counter" in receptacle_handle
+                and receptacle_link_idx != 0
+            ):
+                receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
+                link_T = receptacle_ao.get_link_scene_node(
+                    receptacle_link_idx
+                ).transformation
+                start_pos = np.array(
+                    link_T.transform_point(mn.Vector3(0.8, 0, 0))
+                )
+            else:
+                start_pos = None
 
-                if (
-                    "kitchen_counter" in receptacle_handle
-                    and receptacle_link_idx != 0
-                ):
-                    receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
-                    link_T = receptacle_ao.get_link_scene_node(
-                        receptacle_link_idx
-                    ).transformation
-                    start_pos = np.array(
-                        link_T.transform_point(mn.Vector3(0.8, 0, 0))
-                    )
-
-            start_pos, start_rot, sel_idx = self._gen_start_pos(
-                sim, self._config.EASY_INIT, episode, start_pos
+            start_pos, start_rot = self._gen_start_pos(
+                sim, self._config.EASY_INIT, episode, sel_idx, start_pos
             )
             self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
             self.cache.save(self.start_states)

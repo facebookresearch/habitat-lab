@@ -105,6 +105,7 @@ object_target_samplers:
       sample_region_ratio:
         "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
       nav_to_min_distance: 1.5
+
 markers:
   - name: "cab_push_point_7"
     type: "articulated_object"
