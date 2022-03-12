@@ -38,6 +38,10 @@ class Policy(metaclass=abc.ABCMeta):
     ):
         pass
 
+    @property
+    def num_recurrent_layers(self) -> int:
+        raise NotImplementedError()
+
     @classmethod
     @abc.abstractmethod
     def from_config(cls, config, observation_space, action_space):
@@ -77,6 +81,10 @@ class NetPolicy(nn.Module, Policy):
             )
 
         self.critic = CriticHead(self.net.output_size)
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        return self.net.num_recurrent_layers
 
     def forward(self, *x):
         raise NotImplementedError
