@@ -217,6 +217,10 @@ class RearrangeSim(HabitatSim):
             0.26, 1.2, 0.0
         )
 
+        self.robot.params.cameras[
+            "robot_head"
+        ].cam_offset_pos = mn.Vector3(0.26, 1.2, 0.0)
+
         # consume a fixed position from SIMUALTOR.AGENT_0 if configured
         if self.habitat_config.AGENT_0.IS_SET_START_STATE:
             self.robot.base_pos = mn.Vector3(
