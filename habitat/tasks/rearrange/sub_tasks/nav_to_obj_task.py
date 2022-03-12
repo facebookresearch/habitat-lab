@@ -37,7 +37,7 @@ class DynNavRLEnv(RearrangeTask):
         cache_name += ",".join(self._config.FILTER_NAV_TO_TASKS)
         fname = data_path.split("/")[-1].split(".")[0]
         self.cache = CacheHelper(
-            "dyn_nav_start_pos", cache_name, {}, verbose=True, rel_dir=fname
+            "dyn_nav_start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
         self.start_states = self.cache.load()
         self.domain = None

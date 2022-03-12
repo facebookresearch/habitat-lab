@@ -45,11 +45,13 @@ class RearrangePickTaskV1(RearrangeTask):
         self.force_set_idx = obj
 
     def _get_targ_pos(self, sim):
-        return sim.get_target_objs_start()
+        return self._sim.get_targets()[1]
 
     def _sample_idx(self, sim):
         if self.force_set_idx is not None:
+            idxs = self._sim.get_targets()[0]
             sel_idx = self.force_set_idx
+            sel_idx = list(idxs).index(sel_idx)
         else:
             sel_idx = np.random.randint(0, len(self._get_targ_pos(sim)))
         return sel_idx
