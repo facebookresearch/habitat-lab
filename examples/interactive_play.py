@@ -419,7 +419,7 @@ def play_env(env, args, config):
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
-            [all_obs],
+            np.expand_dims(all_obs, 1),
             0,
             "color",
             osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),

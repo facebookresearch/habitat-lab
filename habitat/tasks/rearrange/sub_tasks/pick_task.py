@@ -37,7 +37,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.cache = CacheHelper(
             "start_pos", cache_name, {}, verbose=False, rel_dir=fname
         )
-        self.start_states = {}  # self.cache.load()
+        self.start_states = self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -45,7 +45,9 @@ class RearrangePickTaskV1(RearrangeTask):
         self.force_set_idx = obj
 
     def _get_targ_pos(self, sim):
-        return self._sim.get_targets()[1]
+        scene_pos = sim.get_scene_pos()
+        targ_idxs = sim.get_targets()[0]
+        return scene_pos[targ_idxs]
 
     def _sample_idx(self, sim):
         if self.force_set_idx is not None:
