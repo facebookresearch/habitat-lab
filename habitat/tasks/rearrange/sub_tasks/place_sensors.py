@@ -77,7 +77,7 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            dist_to_goal = obj_to_goal_dist[task.abs_targ_idx]
+            dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
         else:
             dist_to_goal = ee_to_rest_distance
 

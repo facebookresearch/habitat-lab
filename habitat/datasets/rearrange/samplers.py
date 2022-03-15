@@ -468,15 +468,19 @@ class ObjectTargetSampler(ObjectSampler):
             f"    Trying to sample {self.target_objects_number} targets from range {self.num_objects}"
         )
 
-        assert len(target_receptacles) == len(goal_receptacles)
+        if len(target_receptacles) != len(goal_receptacles):
+            raise ValueError(
+                f"# target receptacles {len(target_receptacles)}, # goal receptacles {len(goal_receptacles)}"
+            )
         # The first objects were sampled to be in the target object receptacle
         # locations, so they must be used as the target objects.
         for use_target, use_recep, goal_recep in zip(
             self.object_instance_set, target_receptacles, goal_receptacles
         ):
-            assert (
-                object_to_containing_receptacle[use_target.handle] == use_recep
-            )
+            if object_to_containing_receptacle[use_target.handle] != use_recep:
+                raise ValueError(
+                    f"Object {use_target.handle}, contained {object_to_containing_receptacle[use_target.handle].name}, target receptacle {use_recep.name}"
+                )
             new_object, receptacle = self.single_sample(
                 sim,
                 snap_down,

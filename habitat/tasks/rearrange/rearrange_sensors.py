@@ -380,7 +380,7 @@ class ObjectToGoalDistance(Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
-        self._metric = {idx: dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
 
 
 @registry.register_measure
@@ -416,7 +416,7 @@ class ObjAtGoal(Measure):
         ].get_metric()
 
         self._metric = {
-            idx: dist < self._config.SUCC_THRESH
+            str(idx): dist < self._config.SUCC_THRESH
             for idx, dist in obj_to_goal_dists.items()
         }
 
@@ -450,7 +450,7 @@ class EndEffectorToObjectDistance(Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
-        self._metric = {idx: dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
 
 
 @registry.register_measure
@@ -681,6 +681,32 @@ class ForceTerminate(Measure):
             self._metric = True
         else:
             self._metric = False
+
+
+@registry.register_measure
+class DidViolateHoldConstraintMeasure(Measure):
+    cls_uuid: str = "did_violate_hold_constraint"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DidViolateHoldConstraintMeasure.cls_uuid
+
+    def __init__(self, *args, sim, **kwargs):
+        self._sim = sim
+
+        super().__init__(*args, sim=sim, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, **kwargs):
+        self._metric = self._sim.grasp_mgr.is_violating_hold_constraint()
 
 
 class RearrangeReward(Measure):
