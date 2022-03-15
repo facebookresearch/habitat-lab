@@ -63,8 +63,6 @@ TASK:
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
-    OBJECT_TO_GOAL_DISTANCE:
-        TYPE: "ObjectToGoalDistance"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
@@ -98,7 +96,6 @@ TASK:
         SUCC_THRESH: 0.15
 
     MEASUREMENTS:
-        - "OBJECT_TO_GOAL_DISTANCE"
         - "ROBOT_FORCE"
         - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
