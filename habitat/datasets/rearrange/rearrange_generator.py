@@ -201,7 +201,7 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["object_sets"]
                     for x in self._obj_sets[y]
                 ]
-                object_handles = list(set(object_handles))
+                object_handles = sorted(set(object_handles))
                 receptacle_info = [
                     self._receptacle_sets[y]
                     for y in obj_sampler_info["params"]["receptacle_sets"]
@@ -289,7 +289,7 @@ class RearrangeEpisodeGenerator:
                 unified_scene_set += self._scene_sets[set_name]
 
             # cull duplicates
-            unified_scene_set = list(set(unified_scene_set))
+            unified_scene_set = sorted(set(unified_scene_set))
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
             logger.error(
@@ -731,6 +731,7 @@ class RearrangeEpisodeGenerator:
             object_attr_mgr = self.sim.get_object_template_manager()
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
+            # self.sim.seed(0)
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
                 # we need to force a reset, so change the internal config scene name
@@ -1034,8 +1035,13 @@ if __name__ == "__main__":
         default=1,
         help="The number of episodes to generate.",
     )
+    parser.add_argument("--seed", type=int)
 
     args, _ = parser.parse_known_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
 
     # merge the configuration from file with the default
     cfg = get_config_defaults()
