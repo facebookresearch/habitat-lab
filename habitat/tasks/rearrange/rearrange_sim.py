@@ -17,7 +17,7 @@ from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.marker_info import MarkerInfo
+from habitat.tasks.rearrange.marker_info import MarkerInfo, Tuple
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -48,7 +48,6 @@ class RearrangeSim(HabitatSim):
         self.navmesh_settings.set_defaults()
         self.navmesh_settings.agent_radius = agent_cfg.RADIUS
         self.navmesh_settings.agent_height = agent_cfg.HEIGHT
-        self.navmesh_settings.agent_max_climb = 0.05
 
         self.first_setup = True
         self.ep_info: Optional[Config] = None
@@ -343,14 +342,6 @@ class RearrangeSim(HabitatSim):
         ]
         self._max_island_size = max(self._island_sizes)
 
-    def _get_non_frl_objs(self):
-        rom = self.get_rigid_object_manager()
-        return [
-            handle
-            for handle in rom.get_object_handles()
-            if "frl" not in handle
-        ]
-
     def _clear_objects(self, should_add_objects: bool) -> None:
         rom = self.get_rigid_object_manager()
 
@@ -474,6 +465,12 @@ class RearrangeSim(HabitatSim):
             self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
 
     def _create_obj_viz(self, ep_info: Config):
+        """
+        Adds a visualization of the goal for each of the target objects in the
+        scene. This is the same as the target object, but is a render only
+        object. This also places dots around the bounding box of the object to
+        further distinguish the goal from the target object.
+        """
         for marker_name, m in self._markers.items():
             m_T = m.get_current_transform()
             self.viz_ids[marker_name] = self.visualize_position(

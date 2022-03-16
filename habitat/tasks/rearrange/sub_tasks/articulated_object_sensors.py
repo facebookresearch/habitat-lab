@@ -16,6 +16,12 @@ from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 
 @registry.register_sensor
 class MarkerRelPosSensor(Sensor):
+    """
+    Tracks the relative position of a marker to the robot end-effector
+    specified by `use_marker_name` in the task. This `use_marker_name` must
+    exist in the task and refer to the name of a marker in the simulator.
+    """
+
     cls_uuid: str = "marker_rel_pos"
 
     def __init__(self, sim, config, *args, task, **kwargs):
@@ -50,6 +56,11 @@ class MarkerRelPosSensor(Sensor):
 
 @registry.register_sensor
 class ArtJointSensor(Sensor):
+    """
+    Gets the joint state (position and velocity) of the articulated object
+    specified by the `use_marker_name` property in the task object.
+    """
+
     cls_uuid: str = "marker_js"
 
     def __init__(self, sim, config, *args, task, **kwargs):
@@ -74,6 +85,11 @@ class ArtJointSensor(Sensor):
 
 @registry.register_sensor
 class ArtJointSensorNoVel(Sensor):
+    """
+    Gets the joint state (just position) of the articulated object
+    specified by the `use_marker_name` property in the task object.
+    """
+
     cls_uuid: str = "marker_js_no_vel"
 
     def __init__(self, sim, config, *args, task, **kwargs):
@@ -97,6 +113,10 @@ class ArtJointSensorNoVel(Sensor):
 
 @registry.register_measure
 class ArtObjState(Measure):
+    """
+    Measures the current joint state of the target articulated object.
+    """
+
     cls_uuid: str = "art_obj_state"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -122,6 +142,10 @@ class ArtObjState(Measure):
 
 @registry.register_measure
 class ArtObjSuccess(Measure):
+    """
+    Measures if the target articulated object joint state is at the success criteria.
+    """
+
     cls_uuid: str = "art_obj_success"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -153,6 +177,10 @@ class ArtObjSuccess(Measure):
 
 @registry.register_measure
 class EndEffectorDistToMarker(Measure):
+    """
+    The distance of the end-effector to the target marker on the articulated object.
+    """
+
     cls_uuid: str = "ee_dist_to_marker"
 
     @staticmethod
@@ -176,6 +204,10 @@ class EndEffectorDistToMarker(Measure):
 
 @registry.register_measure
 class ArtObjReward(RearrangeReward):
+    """
+    A general reward definition for any tasks involving manipulating articulated objects.
+    """
+
     cls_uuid: str = "art_obj_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
