@@ -912,8 +912,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
 
         config.defrost()
-        # config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
-        config.TASK_CONFIG.DATASET.SPLIT = "eval"
+        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
 
         if (
@@ -950,7 +949,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._setup_actor_critic_agent(ppo_cfg)
 
-        # self.agent.load_state_dict(ckpt_dict["state_dict"])
+        self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()

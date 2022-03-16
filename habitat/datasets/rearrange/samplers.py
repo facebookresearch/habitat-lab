@@ -132,6 +132,12 @@ class ObjectSampler:
         if self.receptacle_candidates is None:
             self.receptacle_candidates = []
             for receptacle in self.receptacle_instances:
+                if (
+                    # "bowl" in receptacle.name
+                    "bowl"
+                    in self.receptacle_sets[0][2][0]
+                ):
+                    print("  Trying ", receptacle.name)
                 found_match = False
                 for r_set_tuple in self.receptacle_sets:
                     # r_set_tuple = (included_obj_substrs, excluded_obj_substrs, included_receptacle_substrs, excluded_receptacle_substrs)

@@ -31,13 +31,12 @@ class DynNavRLEnv(RearrangeTask):
         self.nav_obj_name = None
 
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
-        mtime = osp.getmtime(data_path)
-        cache_name = str(mtime) + data_path
-        cache_name = cache_name.replace(".", "_")
-        cache_name += ",".join(self._config.FILTER_NAV_TO_TASKS)
         fname = data_path.split("/")[-1].split(".")[0]
+        save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            "dyn_nav_start_pos", cache_name, {}, verbose=False, rel_dir=fname
+            osp.join(save_dir, fname + "_start.pickle"),
+            def_val={},
+            verbose=False,
         )
         self.start_states = self.cache.load()
         self.domain = None

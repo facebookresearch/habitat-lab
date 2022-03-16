@@ -29,6 +29,8 @@ def search_for_id(k, name_to_id):
         if k not in name_to_id and "ART_" + k in name_to_id:
             return name_to_id["ART_" + k]
         else:
+            if k not in name_to_id:
+                raise ValueError(f"Cannot find {k} in {name_to_id}")
             return name_to_id[k]
     return k
 
@@ -321,6 +323,10 @@ class SetState:
             and self._is_id_rigid_object(self.robo_state.holding)
         ):
             # Robot must be holding right object.
+            if self.robo_state.holding not in name_to_id:
+                raise ValueError(
+                    f"Cannot find {self.robo_state.holding} in {name_to_id}"
+                )
             obj_idx = name_to_id[self.robo_state.holding]
             abs_obj_id = sim.scene_obj_ids[obj_idx]
             if sim.grasp_mgr.snap_idx != abs_obj_id:

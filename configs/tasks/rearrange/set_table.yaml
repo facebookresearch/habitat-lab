@@ -3,7 +3,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/prepare_groceries_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -26,7 +26,7 @@ TASK:
     # Composite task config
     ########################
     TASK_SPEC_BASE_PATH: "configs/tasks/rearrange/pddl/"
-    TASK_SPEC: "prepare_groceries"
+    TASK_SPEC: "set_table"
 
     # PDDL domain params
     PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"

@@ -1,0 +1,51 @@
+start:
+    precondition: []
+    state:
+        art_states:
+            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
+            "fridge_:0000": [0,2.35619]
+        robo:
+            pos: 'rnd'
+
+goal:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "at(obj1_target|1,TARGET_obj1_target|1)"
+    - "at(obj2_target|2,TARGET_obj2_target|2)"
+    - "not_holding()"
+stage_goals:
+  stage_0_5:
+    - "holding(obj0_target|0)"
+  stage_1:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "not_holding()"
+  stage_1_5:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "holding(obj1_target|1)"
+  stage_2:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "at(obj1_target|1,TARGET_obj1_target|1)"
+    - "not_holding()"
+  stage_2_5:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "at(obj1_target|1,TARGET_obj1_target|1)"
+    - "holding(obj2_target|2)"
+  stage_3:
+    - "at(obj0_target|0,TARGET_obj0_target|0)"
+    - "at(obj1_target|1,TARGET_obj1_target|1)"
+    - "at(obj2_target|2,TARGET_obj2_target|2)"
+
+solution:
+    - "nav(obj0_target|0)"
+    - "pick(obj0_target|0)"
+    - "nav(TARGET_obj0_target|0)"
+    - "place(obj0_target|0,TARGET_obj0_target|0)"
+
+    - "nav(obj1_target|1)"
+    - "pick(obj1_target|1)"
+    - "nav(TARGET_obj1_target|1)"
+    - "place(obj1_target|1,TARGET_obj1_target|1)"
+
+    - "nav(obj2_target|2)"
+    - "pick(obj2_target|2)"
+    - "nav(TARGET_obj2_target|2)"
+    - "place(obj2_target|2,TARGET_obj2_target|2)"

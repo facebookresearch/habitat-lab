@@ -27,15 +27,12 @@ class RearrangePickTaskV1(RearrangeTask):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
 
-        mtime = osp.getmtime(data_path)
-        cache_name = str(mtime) + dataset.config.SPLIT
-        cache_name += str(self._config.BASE_NOISE)
-        cache_name = cache_name.replace(".", "_")
-
         fname = data_path.split("/")[-1].split(".")[0]
-
+        save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            "start_pos", cache_name, {}, verbose=False, rel_dir=fname
+            osp.join(save_dir, fname + "_start.pickle"),
+            def_val={},
+            verbose=False,
         )
         self.start_states = self.cache.load()
         self.prev_colls = None

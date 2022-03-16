@@ -144,7 +144,7 @@ class PlaceSuccess(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         is_obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[task.abs_targ_idx]
+        ].get_metric()[str(task.abs_targ_idx)]
         is_holding = self._sim.grasp_mgr.is_grasped
 
         ee_to_rest_distance = task.measurements.measures[
