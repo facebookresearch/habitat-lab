@@ -731,7 +731,6 @@ class RearrangeEpisodeGenerator:
             object_attr_mgr = self.sim.get_object_template_manager()
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
-            # self.sim.seed(0)
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
                 # we need to force a reset, so change the internal config scene name
