@@ -17,6 +17,11 @@ from habitat.tasks.rearrange.utils import CollisionDetails
 
 @registry.register_sensor
 class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
+    """
+    GPS and compass sensor relative to the starting target position. Only for
+    the first target object.
+    """
+
     cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
 
     def __init__(self, *args, task, **kwargs):
@@ -36,6 +41,10 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
 
 
 class MultiObjSensor(PointGoalSensor):
+    """
+    Abstract parent class for a sensor that specifies the locations of all targets.
+    """
+
     def __init__(self, *args, task, **kwargs):
         self._task = task
         self._sim: RearrangeSim
@@ -279,6 +288,10 @@ class RelativeRestingPositionSensor(Sensor):
 
 @registry.register_sensor
 class RestingPositionSensor(Sensor):
+    """
+    Relative position of the end-effector to the defined resting position.
+    """
+
     cls_uuid: str = "resting_position"
 
     def _get_uuid(self, *args, **kwargs):
@@ -305,6 +318,10 @@ class RestingPositionSensor(Sensor):
 
 @registry.register_sensor
 class IsHoldingSensor(Sensor):
+    """
+    Binary if the robot is holding an object or grasped onto an articulated object.
+    """
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -324,6 +341,10 @@ class IsHoldingSensor(Sensor):
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
+    """
+    Euclidean distance from the target object to the goal.
+    """
+
     cls_uuid: str = "object_to_goal_distance"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -348,6 +369,11 @@ class ObjectToGoalDistance(Measure):
 
 @registry.register_measure
 class ObjAtGoal(Measure):
+    """
+    Returns if the target object is at the goal (binary) for each of the target
+    objects in the scene.
+    """
+
     cls_uuid: str = "obj_at_goal"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -484,22 +510,11 @@ class ReturnToRestDistance(Measure):
 
 
 @registry.register_measure
-class DummyMeasure(Measure):
-    cls_uuid: str = "dummy_measure"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return DummyMeasure.cls_uuid
-
-    def reset_metric(self, *args, episode, **kwargs):
-        self.update_metric(*args, episode=episode, **kwargs)
-
-    def update_metric(self, *args, episode, **kwargs):
-        self._metric = 0
-
-
-@registry.register_measure
 class RobotCollisions(Measure):
+    """
+    Returns a dictionary with the counts for different types of collisions.
+    """
+
     cls_uuid: str = "robot_collisions"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -535,6 +550,10 @@ class RobotCollisions(Measure):
 
 @registry.register_measure
 class RobotForce(Measure):
+    """
+    The amount of force in newton's accumulatively applied by the robot.
+    """
+
     cls_uuid: str = "robot_force"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -589,6 +608,10 @@ class RobotForce(Measure):
 
 @registry.register_measure
 class NumStepsMeasure(Measure):
+    """
+    The number of steps elapsed in the current episode.
+    """
+
     cls_uuid: str = "num_steps"
 
     @staticmethod
@@ -604,6 +627,10 @@ class NumStepsMeasure(Measure):
 
 @registry.register_measure
 class ForceTerminate(Measure):
+    """
+    If the accumulated force throughout this episode exceeds the limit.
+    """
+
     cls_uuid: str = "force_terminate"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -647,6 +674,11 @@ class ForceTerminate(Measure):
 
 
 class RearrangeReward(Measure):
+    """
+    An abstract class defining some measures that are always a part of any
+    reward function in the Habitat 2.0 tasks.
+    """
+
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config

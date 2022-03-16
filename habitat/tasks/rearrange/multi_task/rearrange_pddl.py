@@ -274,6 +274,10 @@ class Action:
 
 
 class RoboState:
+    """
+    Specifies the configuration of the robot. Only used as a data structure. Not used to set the simulator state.
+    """
+
     def __init__(self, load_config):
         self.holding = load_config.get("holding", None)
         self.pos = load_config.get("pos", None)
@@ -287,7 +291,14 @@ class RoboState:
 
 
 class SetState:
-    def __init__(self, load_config):
+    """
+    A partially specified state of the simulator. First this object needs to be
+    bound to a specific set of arguments specifying scene entities
+    (`self.bind`). After, you can query this object to get if the specified
+    scene state is satifisfied and set everything specified.
+    """
+
+    def __init__(self, load_config: Dict[str, Any]):
         self.art_states = load_config.get("art_states", {})
         self.obj_states = load_config.get("obj_states", {})
         self.robo_state = RoboState(load_config.get("robo", {}))
@@ -320,7 +331,7 @@ class SetState:
 
         self.robo_state.bind(arg_k, arg_v)
 
-    def _is_id_rigid_object(self, id_str):
+    def _is_id_rigid_object(self, id_str: str) -> bool:
         """
         Used to check if an identifier can be used to look up the object ID in the scene_ojbs_id list of the simulator.
         """
