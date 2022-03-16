@@ -201,7 +201,7 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["object_sets"]
                     for x in self._obj_sets[y]
                 ]
-                object_handles = list(set(object_handles))
+                object_handles = sorted(set(object_handles))
                 receptacle_info = [
                     self._receptacle_sets[y]
                     for y in obj_sampler_info["params"]["receptacle_sets"]
@@ -289,7 +289,7 @@ class RearrangeEpisodeGenerator:
                 unified_scene_set += self._scene_sets[set_name]
 
             # cull duplicates
-            unified_scene_set = list(set(unified_scene_set))
+            unified_scene_set = sorted(set(unified_scene_set))
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
             logger.error(
@@ -1034,8 +1034,13 @@ if __name__ == "__main__":
         default=1,
         help="The number of episodes to generate.",
     )
+    parser.add_argument("--seed", type=int)
 
     args, _ = parser.parse_known_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
 
     # merge the configuration from file with the default
     cfg = get_config_defaults()
