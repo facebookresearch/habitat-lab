@@ -71,7 +71,7 @@ class PlaceReward(RearrangeReward):
         ].get_metric()
         obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[task.abs_targ_idx]
+        ].get_metric()[str(task.abs_targ_idx)]
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None

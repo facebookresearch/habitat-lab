@@ -30,7 +30,7 @@ class RearrangePickTaskV1(RearrangeTask):
         fname = data_path.split("/")[-1].split(".")[0]
         save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            osp.join(save_dir, fname + "_start.pickle"),
+            osp.join(save_dir, f"{fname}_{config.TYPE}_start.pickle"),
             def_val={},
             verbose=False,
         )

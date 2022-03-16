@@ -34,7 +34,7 @@ class DynNavRLEnv(RearrangeTask):
         fname = data_path.split("/")[-1].split(".")[0]
         save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            osp.join(save_dir, fname + "_start.pickle"),
+            osp.join(save_dir, fname + "{config.TYPE}_start.pickle"),
             def_val={},
             verbose=False,
         )
