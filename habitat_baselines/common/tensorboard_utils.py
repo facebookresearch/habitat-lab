@@ -74,10 +74,11 @@ class TensorboardWriter:
         )
 
     def add_config(self, config: Config) -> None:
-        self.writer.add_text(
-            "config", TensorboardWriter._config_to_tb_string(config, 0)
-        )
-        self.writer.flush()
+        if self.writer:
+            self.writer.add_text(
+                "config", TensorboardWriter._config_to_tb_string(config, 0)
+            )
+            self.writer.flush()
 
     @staticmethod
     def _config_to_tb_string(config: Union[Any, Config], indent: int) -> str:
