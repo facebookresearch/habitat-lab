@@ -37,3 +37,5 @@ class HabitatLogger(logging.Logger):
 logger = HabitatLogger(
     name="habitat", level=logging.INFO, format_str="%(asctime)-15s %(message)s"
 )
+
+# logger.setLevel(logging.WARNING)

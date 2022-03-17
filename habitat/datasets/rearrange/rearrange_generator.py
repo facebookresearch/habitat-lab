@@ -512,9 +512,8 @@ class RearrangeEpisodeGenerator:
             sampler_states = ao_state_sampler.sample(
                 self.sim, [*all_target_receptacles, *all_goal_receptacles]
             )
-            assert (
-                sampler_states is not None
-            ), f"AO sampler {sampler_name} failed"
+            if sampler_states is None:
+                return None
             for sampled_instance, link_states in sampler_states.items():
                 if sampled_instance.handle not in ao_states:
                     ao_states[sampled_instance.handle] = {}

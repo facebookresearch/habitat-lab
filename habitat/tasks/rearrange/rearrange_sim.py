@@ -17,7 +17,7 @@ from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.marker_info import MarkerInfo, Tuple
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -48,6 +48,7 @@ class RearrangeSim(HabitatSim):
         self.navmesh_settings.set_defaults()
         self.navmesh_settings.agent_radius = agent_cfg.RADIUS
         self.navmesh_settings.agent_height = agent_cfg.HEIGHT
+        self.navmesh_settings.agent_max_climb = 0.15
 
         self.first_setup = True
         self.ep_info: Optional[Config] = None

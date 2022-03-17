@@ -32,7 +32,6 @@ class PddlDomain:
             self.domain_def = yaml.safe_load(f)
 
         self._sim = sim
-        self.reset()
 
         self.predicates: List[Predicate] = []
         for pred_d in self.domain_def["predicates"]:

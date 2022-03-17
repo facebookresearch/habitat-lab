@@ -197,8 +197,11 @@ class RearrangePickTaskV1(RearrangeTask):
             if (
                 # Not a typo, "fridge" is sometimes "frige" in
                 # ReplicaCAD.
-                "frige" in receptacle_handle
-                or "fridge" in receptacle_handle
+                receptacle_handle is not None
+                and (
+                    "frige" in receptacle_handle
+                    or "fridge" in receptacle_handle
+                )
             ):
                 receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
                 start_pos = np.array(
@@ -207,7 +210,8 @@ class RearrangePickTaskV1(RearrangeTask):
                     )
                 )
             elif (
-                "kitchen_counter" in receptacle_handle
+                receptacle_handle is not None
+                and "kitchen_counter" in receptacle_handle
                 and receptacle_link_idx != 0
             ):
                 receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
