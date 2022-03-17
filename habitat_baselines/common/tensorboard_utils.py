@@ -4,11 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List
+from typing import Any, List, Union
 
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
+
+from habitat.config import Config
 
 
 class TensorboardWriter:
@@ -70,3 +72,30 @@ class TensorboardWriter:
         self.writer.add_video(
             video_name, video_tensor, fps=fps, global_step=step_idx
         )
+
+    def add_config(self, config: Config) -> None:
+        self.writer.add_text(
+            "config", TensorboardWriter._config_to_tb_string(config, 0)
+        )
+        self.writer.flush()
+
+    @staticmethod
+    def _config_to_tb_string(config: Union[Any, Config], indent: int) -> str:
+        """
+        Args:
+            config: A nested yacs Config or the contents of a yacs Config.
+            indent: The indentation level of the config.
+        Returns:
+            A string version of the config.
+        """
+        if not isinstance(config, Config):
+            return str(config)
+        else:
+            return ("\n" if indent > 0 else "") + "\n".join(
+                [
+                    "\t"
+                    + "  " * indent
+                    + f"{k}:\t{TensorboardWriter._config_to_tb_string(v, indent + 1)}"
+                    for k, v in config.items()
+                ]
+            )

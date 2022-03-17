@@ -12,6 +12,7 @@ import torch
 
 from habitat.config import Config
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.config.default import get_config
 
 
@@ -54,6 +55,10 @@ def execute_exp(config: Config, run_type: str) -> None:
 
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+
+    with TensorboardWriter(config.TENSORBOARD_DIR) as writer:
+        writer.add_config(config)
+
     trainer = trainer_init(config)
 
     if run_type == "train":
