@@ -149,6 +149,9 @@ class BatchedEnv:
 
         action_space = Box(low=-1.0, high=1.0, shape=(self.action_dim,), dtype=np.float32)
 
+        self.rewards = [0.0] * self._num_envs
+        self.dones = [True] * self._num_envs
+
         self.action_spaces = [action_space] * 1  # note we only ever read element #0 of this array
         # self.number_of_episodes = []
         self._paused: List[int] = []
@@ -179,19 +182,43 @@ class BatchedEnv:
         results = []
         return results
 
+    def get_nonpixel_observations(self, env_states, observations):
+        for state in env_states:
+            robot_pos = state.robot_position
+            robot_yaw = state.robot_yaw
+            # todo: update observations here
+
+
+    def get_dones_and_rewards_and_fix_actions(self, env_states, actions):
+        for (b, state) in enumerate(env_states):
+            if state.did_finish_episode_and_reset:
+                self.dones[b] = True
+                self.rewards[b] = 100.0 if state.finished_episode_success else 0.0
+                # The previously-computed action shouldn't be used for the next step because
+                # it was computed from a stale observation from the just-ended episode.
+                for i in range(self.action_dim):
+                    actions[b * self.action_dim + i] = 0.0
+            else:            
+                self.dones[b] = False
+                self.rewards[b] = -1.0 if state.did_collide else 0.0
+        
+        return actions
+
     def reset(self):
         r"""Reset all the vectorized environments
 
         :return: list of outputs from the reset method of envs.
         """
         if self._bsim:
-            # sloppy: need to do explicit reset here
-            if self._config.OVERLAP_PHYSICS:
-                self._bsim.auto_reset_or_start_async_step_physics()
-            else: 
-                self._bsim.auto_reset_or_step_physics()
+            self._bsim.reset()
             self._bsim.start_render()
+            env_states = self._bsim.get_environment_states()
+            self.get_nonpixel_observations(env_states, self._observations)
             self._bsim.wait_for_frame()
+
+        self.rewards = [0.0] * self._num_envs
+        self.dones = [True] * self._num_envs
+
         return self._observations
         
     def async_step(
@@ -209,8 +236,11 @@ class BatchedEnv:
             if self._config.OVERLAP_PHYSICS:
                 self._bsim.wait_async_step_physics()
                 self._bsim.start_render()
-                self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
-                self._bsim.auto_reset_or_start_async_step_physics()
+                env_states = self._bsim.get_environment_states()
+                # todo: decide if Python gets a copy of env_states vs direct access to C++ memory,
+                # and then decide whether to start async physics step *before* processing env_states
+                actions_flat_list = self.get_dones_and_rewards_and_fix_actions(env_states, actions_flat_list)
+                self._bsim.start_async_step_physics(actions_flat_list)
             else:
                 self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
                 self._bsim.auto_reset_or_step_physics()
@@ -222,13 +252,15 @@ class BatchedEnv:
 
         if self._bsim:
 
-            # this updates self._observations tensor
+            # this updates self._observations["depth"] (and rgb) tensors
+            # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
             self._bsim.wait_for_frame()
 
-            # these are "one frame behind" like the observations
-            rewards = self._bsim.get_rewards()
+            # these are "one frame behind" like the observations (i.e. computed from
+            # the same earlier env state).
+            rewards = self.rewards
             assert len(rewards) == self._num_envs
-            dones = self._bsim.get_dones()
+            dones = self.dones
             assert len(dones) == self._num_envs
             if self._config.REWARD_SCALE != 1.0:
                 # perf todo: avoid dynamic list construction
