@@ -39,6 +39,10 @@ class Policy(metaclass=abc.ABCMeta):
         pass
 
     @property
+    def should_load_agent_state(self) -> bool:
+        return True
+
+    @property
     def num_recurrent_layers(self) -> int:
         raise NotImplementedError()
 

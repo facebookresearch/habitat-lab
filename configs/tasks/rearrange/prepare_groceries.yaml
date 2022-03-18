@@ -226,7 +226,6 @@ SIMULATOR:
     AGENTS: ['AGENT_0']
     CONCUR_RENDER: True
     AUTO_SLEEP: True
-    FORCE_RECOMPUTE_NAVMESH: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

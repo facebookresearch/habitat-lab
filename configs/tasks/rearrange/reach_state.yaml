@@ -68,7 +68,6 @@ SIMULATOR:
     AUTO_SLEEP: True
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
-    FORCE_RECOMPUTE_NAVMESH: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: True

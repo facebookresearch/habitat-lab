@@ -137,7 +137,6 @@ SIMULATOR:
     AUTO_SLEEP: True
     AGENTS: ['AGENT_0']
 
-    FORCE_RECOMPUTE_NAVMESH: True
 
     AGENT_0:
         HEIGHT: 1.5

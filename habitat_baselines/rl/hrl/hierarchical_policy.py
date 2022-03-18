@@ -68,6 +68,10 @@ class HierarchicalPolicy(Policy):
     def num_recurrent_layers(self):
         return self._skills[0].num_recurrent_layers
 
+    @property
+    def should_load_agent_state(self):
+        return False
+
     def parameters(self):
         return self._skills[0].parameters()
 

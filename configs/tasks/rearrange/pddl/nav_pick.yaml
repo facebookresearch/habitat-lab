@@ -9,8 +9,8 @@ start:
             pos: 'rnd'
 
 goal:
-  - "holding(kitchen_counter_targets|0)"
+  - "holding(hab2|0)"
 
 solution:
-    - "nav(kitchen_counter_targets|0)"
-    - "pick(kitchen_counter_targets|0)"
+    - "nav(hab2|0)"
+    - "pick(hab2|0)"
