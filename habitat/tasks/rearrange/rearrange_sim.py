@@ -305,35 +305,11 @@ class RearrangeSim(HabitatSim):
             )
 
     def _recompute_navmesh(self):
-        """Generates the navmesh or loads the saved navmesh if it exists. This must be called
-        AFTER adding articulated objects to the scene.
-        """
+        scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
+        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
 
-        scene_name = self.ep_info["scene_id"]
-        navmesh_path = scene_name.split(".glb")[0] + ".navmesh"
-
-        if osp.exists(navmesh_path) and not self.habitat_config.get(
-            "FORCE_RECOMPUTE_NAVMESH", False
-        ):
-            self.pathfinder.load_nav_mesh(navmesh_path)
-        else:
-            # cache current motiontype and set to STATIC for inclusion in the NavMesh computation
-            motion_types = []
-            for art_obj in self.art_objs:
-                motion_types.append(art_obj.motion_type)
-                art_obj.motion_type = MotionType.STATIC
-
-            # compute new NavMesh
-            self.recompute_navmesh(
-                self.pathfinder,
-                self.navmesh_settings,
-                include_static_objects=True,
-            )
-            # optionally save the new NavMesh
-            self.pathfinder.save_nav_mesh(navmesh_path)
-            # reset cached MotionTypes
-            for art_obj, motion_type in zip(self.art_objs, motion_types):
-                art_obj.motion_type = motion_type
+        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0

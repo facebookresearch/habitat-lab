@@ -115,8 +115,18 @@ TASK:
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: "BaseVelAction"
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: True
+            END_ON_STOP: False
+            ALLOW_BACK: True
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
+        - BASE_VELOCITY
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
@@ -126,7 +136,6 @@ SIMULATOR:
     CONCUR_RENDER: True
     AUTO_SLEEP: True
     ROBOT_JOINT_START_NOISE: 0.0
-    FORCE_RECOMPUTE_NAVMESH: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False
