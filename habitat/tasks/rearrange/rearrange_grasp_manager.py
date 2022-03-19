@@ -94,15 +94,11 @@ class RearrangeGraspManager:
         """
         if self._leave_info is not None:
             ee_pos = self._sim.robot.ee_transform.translation
-            dist = np.linalg.norm(ee_pos - self._leave_info[0])
+            rigid_obj = self._leave_info[0]
+            dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
-                rigid_obj = (
-                    self._sim.get_rigid_object_manager().get_object_by_id(
-                        self._leave_info[2]
-                    )
-                )
                 rigid_obj.override_collision_group(CollisionGroups.Default)
-            self._leave_info = None
+                self._leave_info = None
 
     def desnap(self, force=False) -> None:
         """Removes any hold constraints currently active.
@@ -124,9 +120,8 @@ class RearrangeGraspManager:
                     )
                 else:
                     self._leave_info = (
-                        self.snap_rigid_obj.translation,
+                        self.snap_rigid_obj,
                         max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                        self._snapped_obj_id,
                     )
 
         for constraint_id in self._snap_constraints:

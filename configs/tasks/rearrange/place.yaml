@@ -82,9 +82,9 @@ TASK:
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PLACE_REWARD: 20.0
-        DROP_PEN: 5.0
+        DROP_PEN: 0.0
         USE_DIFF: True
-        WRONG_DROP_SHOULD_END: True
+        WRONG_DROP_SHOULD_END: False
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
