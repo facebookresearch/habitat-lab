@@ -126,7 +126,7 @@ class PPO(nn.Module):
                         )
                         * batch["advantages"]
                     )
-                    action_loss = -(torch.min(surr1, surr2).mean())
+                    action_loss = -torch.min(surr1, surr2)
 
                     if self.use_clipped_value_loss:
                         value_pred_clipped = batch["value_preds"] + (
@@ -142,6 +142,16 @@ class PPO(nn.Module):
                     else:
                         value_loss = 0.5 * (batch["returns"] - values).pow(2)
 
+
+                    # Mask the loss. The mask corresponds to the transition right
+                    # after a reset. This first observation needs to be ignored
+                    # because its observation is actually part of the previous episode
+                    action_loss = action_loss * batch["masks"]
+                    value_loss = value_loss * batch["masks"]
+                    dist_entropy = dist_entropy * batch["masks"]
+
+
+                    action_loss = action_loss.mean()
                     value_loss = value_loss.mean()
                     dist_entropy = dist_entropy.mean()
 
