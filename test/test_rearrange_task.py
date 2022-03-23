@@ -73,7 +73,7 @@ def test_rearrange_basline_envs(test_cfg_path):
     """
     Test the Habitat Baseline environments
     """
-    if ".yaml" not in test_cfg_path:
+    if not test_cfg_path.endswith(".yaml"):
         return
     config = baselines_get_config(test_cfg_path)
 

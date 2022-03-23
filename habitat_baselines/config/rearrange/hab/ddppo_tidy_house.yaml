@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/composite.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/tidy_house.yaml
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -21,51 +21,20 @@ NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
+# Force PyTorch to be single threaded as
+# this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
+GYM_AUTO_NAME: "TidyHouse"
+
 RL:
   POLICY:
-      name: "HierarchicalPolicy"
-      high_level_policy:
-        name: "GtHighLevelPolicy"
-      DEFINED_SKILLS:
-        NN_PICK:
-          skill_name: "PickSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          ACTION_DIST:
-             use_log_std: True
-          LOAD_CKPT_FILE: ""
-
-        NN_NAV:
-          skill_name: "NavSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          ORACLE_STOP: True
-          ORACLE_STOP_DIST: 0.2
-          ACTION_DIST:
-             use_log_std: True
-          LOAD_CKPT_FILE: ""
-
-        GT_NAV:
-          skill_name: "OracleNavPolicy"
-          include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor"]
-          # GT nav
-          TURN_THRESH: 0.1
-          DIST_THRESH: 0.2
-          LOOK_AT_OBJ_THRESH: 0.2
-          TURN_VELOCITY: 1.0
-          FORWARD_VELOCITY: 1.0
-
-      USE_SKILLS:
-        pick: "NN_PICK"
-        nav: "GT_NAV"
+      name: "PointNavResNetPolicy"
+      action_distribution_type: "gaussian"
+      include_visual_keys: ["robot_head_depth"]
+      ACTION_DIST:
+         use_log_std: True
 
   REWARD_MEASURE: "composite_reward"
   SUCCESS_MEASURE: "composite_success"
@@ -113,7 +82,7 @@ RL:
     # Whether or not the visual encoder backbone will be trained.
     train_encoder: True
     # Whether or not to reset the critic linear layer
-    reset_critic: False
+    reset_critic: True
 
     # Model parameters
     backbone: resnet50

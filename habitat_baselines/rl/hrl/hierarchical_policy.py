@@ -68,6 +68,10 @@ class HierarchicalPolicy(Policy):
     def num_recurrent_layers(self):
         return self._skills[0].num_recurrent_layers
 
+    @property
+    def should_load_agent_state(self):
+        return False
+
     def parameters(self):
         return self._skills[0].parameters()
 
@@ -75,6 +79,7 @@ class HierarchicalPolicy(Policy):
         for skill in self._skills.values():
             skill.to(device)
         self._call_high_level = self._call_high_level.to(device)
+        self._cur_skills = self._cur_skills.to(device)
 
     def act(
         self,
@@ -139,7 +144,9 @@ class HierarchicalPolicy(Policy):
                     batched_rnn_hidden_states[new_skill_batch_idx],
                     batched_prev_actions[new_skill_batch_idx],
                 )
-            self._cur_skills = self._call_high_level * new_skills
+            self._cur_skills = (
+                (1.0 - self._call_high_level) * self._cur_skills
+            ) + (self._call_high_level * new_skills)
 
         actions = torch.zeros(
             self._num_envs, get_num_actions(self._action_space)

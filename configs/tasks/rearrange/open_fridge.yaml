@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 100
+    MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -20,7 +20,8 @@ TASK:
     JOINT_MAX_IMPULSE: -1.0
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
 
-    USE_MARKER_T: True
+    USE_MARKER_T: False
+
     # (pi/2) - 0.35
     SUCCESS_STATE: 1.2207963268
 
@@ -49,13 +50,13 @@ TASK:
     MARKER_REL_POS_SENSOR:
         TYPE: "MarkerRelPosSensor"
 
-    SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "MARKER_REL_POS_SENSOR"]
+    SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "MARKER_REL_POS_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
 
 
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
     ROBOT_COLLS:
@@ -67,18 +68,28 @@ TASK:
     EE_DIST_TO_MARKER:
         TYPE: "EndEffectorDistToMarker"
 
-    ART_OBJ_SUCCESS:
-        TYPE: "ArtObjSuccess"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+
+    ART_OBJ_AT_DESIRED_STATE:
+        TYPE: "ArtObjAtDesiredState"
         USE_ABSOLUTE_DISTANCE: False
         SUCCESS_DIST_THRESHOLD: 0.05
 
+    ART_OBJ_SUCCESS:
+        TYPE: "ArtObjSuccess"
+        REST_DIST_THRESHOLD: 0.15
+
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
-        DIST_REWARD: 10.0
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
-        MARKER_DIST_REWARD: 1.0
         GRASP_REWARD: 5.0
+        ART_AT_DESIRED_STATE_REWARD: 5.0
+
+        MARKER_DIST_REWARD: 1.0
+        ART_DIST_REWARD: 10.0
+        EE_DIST_REWARD: 1.0
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 0.0
@@ -90,9 +101,11 @@ TASK:
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
         - "EE_DIST_TO_MARKER"
+        - "ART_OBJ_AT_DESIRED_STATE"
         - "ART_OBJ_STATE"
         - "ART_OBJ_SUCCESS"
         - "ART_OBJ_REWARD"
@@ -102,7 +115,7 @@ TASK:
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "SuctionGraspAction"
+            GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
@@ -110,8 +123,8 @@ TASK:
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 12.0
-            ANG_SPEED: 12.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True
@@ -129,7 +142,6 @@ SIMULATOR:
     ROBOT_JOINT_START_NOISE: 0.0
     CONCUR_RENDER: True
     AUTO_SLEEP: True
-    FORCE_RECOMPUTE_NAVMESH: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

@@ -1,20 +1,4 @@
 ---
-## To use the baked scenes
-#dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
-#additional_object_paths:
-#  - "data/objects/ycb/"
-#scene_sets:
-#  -
-#    name: "scene_train_split"
-#    included_substrings:
-#      - "Baked_sc0_staging"
-#      - "Baked_sc1_staging"
-#      - "Baked_sc2_staging"
-#      - "Baked_sc3_staging"
-#    excluded_substrings: []
-#    comment: "sc4_staging saved for evaluation"
-
-# To use the non-baked scenes
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/"
@@ -22,12 +6,8 @@ scene_sets:
   -
     name: "scene_train_split"
     included_substrings:
-      - "v3_sc0_staging"
-      - "v3_sc1_staging"
-      - "v3_sc2_staging"
-      - "v3_sc3_staging"
+      - "v3"
     excluded_substrings: []
-    comment: "sc4_staging saved for evaluation"
 
 object_sets:
   -
@@ -43,9 +23,48 @@ object_sets:
       - "010_potted_meat_can"
       - "024_bowl"
     excluded_substrings: []
+  -
+    name: "fruits"
+    included_substrings:
+      - "013_apple"
+    excluded_substrings: []
+  -
+    name: "basket"
+    included_substrings:
+      - "024_bowl"
+    excluded_substrings: []
 receptacle_sets:
   -
-    name: "hab2"
+    name: "drawer"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
+    excluded_receptacle_substrings: []
+  -
+    name: "table"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_Tbl1_Top1_frl_apartment_table_01"
+    excluded_receptacle_substrings: []
+
+  -
+    name: "fridge"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+    excluded_receptacle_substrings: []
+
+  -
+    name: "clutter"
     included_object_substrings:
       - ""
     excluded_object_substrings: []
@@ -61,35 +80,7 @@ receptacle_sets:
 
       # Inside of articulated objects
       - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
-
-      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
     excluded_receptacle_substrings: []
-
-ao_state_samplers:
-  -
-    name: "open_fridge_cab"
-    type: "composite"
-    params:
-      -
-        ao_handle: "fridge"
-        joint_states:
-          - ["top_door", 1.5, 1.5]
-        should_sample_all_joints: True
-      -
-        ao_handle: "counter"
-        joint_states:
-          - ["drawer1_top", 0.5, 0.5]
-          - ["drawer1_bottom", 0.5, 0.5]
-          - ["drawer2_top", 0.5, 0.5]
-          - ["drawer2_middle", 0.5, 0.5]
-          - ["drawer2_bottom", 0.5, 0.5]
-          - ["drawer3", 0.5, 0.5]
-          - ["drawer4", 0.5, 0.5]
-    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
-
 
 scene_sampler:
   type: "subset"
@@ -98,12 +89,29 @@ scene_sampler:
 
 object_samplers:
   -
-    name: "hab2"
+    name: "clutter"
     type: "uniform"
     params:
       object_sets: ["hab2"]
-      receptacle_sets: ["hab2"]
-      num_samples: [1, 25]
+      receptacle_sets: ["clutter"]
+      num_samples: [27, 27]
+      orientation_sampling: "up"
+  -
+    name: "basket"
+    type: "uniform"
+    params:
+      object_sets: ["basket"]
+      receptacle_sets: ["drawer"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+      nav_to_min_distance: 1.5
+  -
+    name: "fruit"
+    type: "uniform"
+    params:
+      object_sets: ["fruits"]
+      receptacle_sets: ["fridge"]
+      num_samples: [1, 1]
       orientation_sampling: "up"
       sample_region_ratio:
         "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
@@ -111,15 +119,22 @@ object_samplers:
 
 object_target_samplers:
   -
-    name: "hab2"
+    name: "bowl_target"
     type: "uniform"
     params:
-      object_samplers: ["hab2"]
-      receptacle_sets: ["hab2"]
+      object_samplers: ["basket"]
+      receptacle_sets: ["table"]
       num_samples: [1, 1]
       orientation_sampling: "up"
-      sample_region_ratio:
-        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
+      nav_to_min_distance: 1.5
+  -
+    name: "fruit_target"
+    type: "uniform"
+    params:
+      object_samplers: ["fruit"]
+      receptacle_sets: ["table"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
       nav_to_min_distance: 1.5
 
 markers:

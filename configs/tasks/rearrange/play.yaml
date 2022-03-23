@@ -55,7 +55,7 @@ TASK:
 
     ########################
     # General measures
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
     ROBOT_FORCE:
@@ -112,8 +112,8 @@ TASK:
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 12.0
-            ANG_SPEED: 12.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True
@@ -137,7 +137,6 @@ SIMULATOR:
     AUTO_SLEEP: True
     AGENTS: ['AGENT_0']
 
-    FORCE_RECOMPUTE_NAVMESH: True
 
     AGENT_0:
         HEIGHT: 1.5

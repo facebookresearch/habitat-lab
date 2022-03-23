@@ -44,7 +44,7 @@ class PlaceReward(RearrangeReward):
             ],
         )
         self.cur_dist = -1.0
-        self._prev_dropped = self._sim.grasp_mgr.is_grasped
+        self._prev_dropped = not self._sim.grasp_mgr.is_grasped
 
         super().reset_metric(
             *args,
@@ -71,18 +71,18 @@ class PlaceReward(RearrangeReward):
         ].get_metric()
         obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[task.abs_targ_idx]
+        ].get_metric()[str(task.abs_targ_idx)]
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            dist_to_goal = obj_to_goal_dist[task.abs_targ_idx]
+            dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
         else:
             dist_to_goal = ee_to_rest_distance
 
-        self._prev_dropped = (not cur_picked) and (not self._prev_dropped)
-        if self._prev_dropped:
+        if (not self._prev_dropped) and (not cur_picked):
+            self._prev_dropped = True
             if obj_at_goal:
                 reward += self._config.PLACE_REWARD
                 # If we just transitioned to the next stage our current
@@ -93,8 +93,8 @@ class PlaceReward(RearrangeReward):
                 reward -= self._config.DROP_PEN
                 if self._config.WRONG_DROP_SHOULD_END:
                     self._task.should_end = True
-                self._metric = reward
-                return
+                    self._metric = reward
+                    return
 
         if self._config.USE_DIFF:
             if self.cur_dist < 0:
@@ -144,7 +144,7 @@ class PlaceSuccess(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         is_obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[task.abs_targ_idx]
+        ].get_metric()[str(task.abs_targ_idx)]
         is_holding = self._sim.grasp_mgr.is_grasped
 
         ee_to_rest_distance = task.measurements.measures[

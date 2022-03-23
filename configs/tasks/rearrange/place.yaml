@@ -65,7 +65,7 @@ TASK:
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    FORCE_TERMINATE:
+    EXCESSIVE_FORCE_SHOULD_END:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
@@ -82,9 +82,9 @@ TASK:
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PLACE_REWARD: 20.0
-        DROP_PEN: 5.0
+        DROP_PEN: 0.0
         USE_DIFF: True
-        WRONG_DROP_SHOULD_END: True
+        WRONG_DROP_SHOULD_END: False
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
@@ -99,7 +99,7 @@ TASK:
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
+        - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "OBJECT_TO_GOAL_DISTANCE"
@@ -130,7 +130,6 @@ SIMULATOR:
     ROBOT_JOINT_START_NOISE: 0.0
     CONCUR_RENDER: True
     AUTO_SLEEP: True
-    FORCE_RECOMPUTE_NAVMESH: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

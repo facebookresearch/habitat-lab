@@ -5,19 +5,24 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_collision
 from habitat.tasks.utils import get_angle
 
 
 class SetArticulatedObjectTask(RearrangeTask):
+    """
+    Base class for all tasks involving manipulating articulated objects.
+    """
+
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         self._use_marker: str = None
@@ -25,25 +30,34 @@ class SetArticulatedObjectTask(RearrangeTask):
         self._force_use_marker = None
 
     @property
-    def use_marker_name(self):
+    def use_marker_name(self) -> str:
+        """
+        The name of the target marker the agent interacts with.
+        """
         return self._use_marker
 
-    def get_use_marker(self):
+    def get_use_marker(self) -> MarkerInfo:
+        """
+        The marker the agent should interact with.
+        """
         return self._sim.get_marker(self._use_marker)
 
     def set_args(self, marker, **kwargs):
         self._force_use_marker = marker
 
     @property
-    def success_js_state(self):
+    def success_js_state(self) -> float:
+        """
+        The success state of the articulated object desired joint.
+        """
         return self._config.SUCCESS_STATE
 
     @abstractmethod
-    def _gen_start_state(self):
+    def _gen_start_state(self) -> np.ndarray:
         pass
 
     @abstractmethod
-    def _get_look_pos(self):
+    def _get_look_pos(self) -> np.ndarray:
         """
         The point defining where the robot should face at the start of the
         episode.
@@ -51,9 +65,14 @@ class SetArticulatedObjectTask(RearrangeTask):
 
     @abstractmethod
     def _get_spawn_region(self) -> mn.Range2D:
-        pass
+        """
+        The region on the ground the robot can be placed.
+        """
 
-    def _sample_robot_start(self, T):
+    def _sample_robot_start(self, T) -> Tuple[float, np.ndarray]:
+        """
+        Returns the start face direction and the starting position of the robot.
+        """
         spawn_region = self._get_spawn_region()
         spawn_region = mn.Range2D.from_center(
             spawn_region.center(),
@@ -68,6 +87,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         # Transform to global coordinates
         start_pos = np.array(T.transform_point(mn.Vector3(*start_pos)))
         start_pos = np.array([start_pos[0], 0, start_pos[2]])
+        start_pos = self._sim.safe_snap_point(start_pos)
 
         targ_pos = np.array(T.transform_point(mn.Vector3(*targ_pos)))
 
@@ -77,6 +97,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
         if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
             angle_to_obj *= -1.0
+
         return angle_to_obj, start_pos
 
     def step(self, action: Dict[str, Any], episode: Episode):
@@ -102,24 +123,25 @@ class SetArticulatedObjectTask(RearrangeTask):
         marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
 
         num_timeout = 100
-        num_pos_timeout = 100
         self._disable_art_sleep()
         for _ in range(num_timeout):
             self._set_link_state(self._gen_start_state())
 
-            for _ in range(num_pos_timeout):
-                angle_to_obj, start_pos = self._sample_robot_start(T)
-                if self._sim.pathfinder.is_navigable(start_pos):
-                    break
+            angle_to_obj, base_pos = self._sample_robot_start(T)
 
             noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             self._sim.robot.base_rot = angle_to_obj + noise
-            base_pos = mn.Vector3(
-                start_pos[0],
-                self._sim.robot.base_pos[1],
-                start_pos[2],
-            )
             self._sim.robot.base_pos = base_pos
+
+            robot_T = self._sim.robot.base_transformation
+            rel_targ_pos = robot_T.inverted().transform_point(
+                marker.current_transform.translation
+            )
+            eps = 1e-2
+            upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
+            is_within_bounds = (rel_targ_pos < upper_bound).all()
+            if not is_within_bounds:
+                continue
 
             did_collide = False
             for _ in range(self._config.SETTLE_STEPS):
@@ -144,20 +166,27 @@ class SetArticulatedObjectTask(RearrangeTask):
         return self._get_observations(episode)
 
     def _disable_art_sleep(self):
+        """
+        Disables the sleeping state of the articulated object. Use when setting
+        the articulated object joint states.
+        """
         ao = self.get_use_marker().ao_parent
         self._prev_awake = ao.awake
         ao.awake = True
 
-    def _reset_art_sleep(self):
+    def _reset_art_sleep(self) -> None:
+        """
+        Resets the sleeping state of the target articulated object.
+        """
         ao = self.get_use_marker().ao_parent
         ao.awake = self._prev_awake
 
-    def _set_link_state(self, art_pos):
+    def _set_link_state(self, art_pos: np.ndarray) -> None:
+        """
+        Set the joint state of all the joints on the target articulated object.
+        """
         ao = self.get_use_marker().ao_parent
         ao.joint_positions = art_pos
-
-    def _get_art_pos(self):
-        return self.get_use_marker().ao_parent.transformation.translation
 
 
 @registry.register_task(name="RearrangeOpenDrawerTask-v0")
