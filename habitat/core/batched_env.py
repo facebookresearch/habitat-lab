@@ -13,12 +13,18 @@ from typing import (
 
 from gym.spaces import Box
 import numpy as np
+import quaternion
 from gym import spaces
 from habitat.utils import profiling_wrapper
 from collections import OrderedDict
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
+
+from habitat.utils.geometry_utils import (
+    quaternion_rotate_vector,
+)
+from habitat.tasks.utils import cartesian_to_polar
 
 class BatchedEnv:
     r"""Todo
@@ -46,6 +52,11 @@ class BatchedEnv:
 
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
+        # include_gps = "GPS_SENSOR" in config.SENSORS
+        # include_compass = "COMPASS_SENSOR" in config.SENSORS
+        self.include_point_goal_gps_compass = "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
+        gps_compass_sensor_shape= 4
+        print(self.include_point_goal_gps_compass, config.SENSORS)
         assert include_depth or include_rgb
 
         self._num_envs = config.NUM_ENVIRONMENTS
@@ -106,6 +117,12 @@ class BatchedEnv:
         else:
             observations["rgb"] = torch.rand([self._num_envs, sensor_height, sensor_width, 3], dtype=torch.float32) * 255
             observations["depth"] = torch.rand([self._num_envs, sensor_height, sensor_width, 1], dtype=torch.float32) * 255
+        # if include_gps:
+        #     observations["gps"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
+        # if include_compass:
+        #     observations["compass"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
+        if self.include_point_goal_gps_compass:
+            observations["goal_gps_compass"] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
         self._observations = observations
 
         # print('observations["rgb"].shape: ', observations["rgb"].shape)
@@ -144,6 +161,15 @@ class BatchedEnv:
                 dtype=np.float32,
             )
             obs_dict["depth"] = depth_obs
+        # if include_gps:
+        # if include_compass:
+        if self.include_point_goal_gps_compass:
+            obs_dict["goal_gps_compass"] = spaces.Box(
+                low=0.0,
+                high=np.inf,  # todo: investigate depth min/max
+                shape=(gps_compass_sensor_shape,),
+                dtype=np.float32,
+            )
 
         self.observation_spaces = [obs_dict] * 1  # config.NUM_ENVIRONMENTS  # note we only ever read element #0 of this array
 
@@ -155,6 +181,7 @@ class BatchedEnv:
         self.action_spaces = [action_space] * 1  # note we only ever read element #0 of this array
         # self.number_of_episodes = []
         self._paused: List[int] = []
+
 
     @property
     def num_envs(self):
@@ -183,10 +210,25 @@ class BatchedEnv:
         return results
 
     def get_nonpixel_observations(self, env_states, observations):
-        for state in env_states:
-            robot_pos = state.robot_position
-            robot_yaw = state.robot_yaw
-            # todo: update observations here
+        # TODO: update observations here
+        for (b, state) in enumerate(env_states):
+            if self.include_point_goal_gps_compass:
+                robot_pos = state.robot_position
+                robot_yaw = state.robot_yaw
+            
+                # direction_vector = state.goal_pos - robot_pos
+                # source_rotation = quaternion.quaternion(0, 0, 0, 0) #TODO:get actual rotation
+                # direction_vector_agent = quaternion_rotate_vector(
+                #     source_rotation.inverse(), direction_vector
+                # )
+                # rho, phi = cartesian_to_polar(
+                #         -direction_vector_agent[2], direction_vector_agent[0]
+                #     )
+                observations["goal_gps_compass"] [b, 0] = robot_pos[0]
+                observations["goal_gps_compass"] [b, 1] = robot_pos[1]
+                observations["goal_gps_compass"] [b, 2] = robot_pos[2]
+                observations["goal_gps_compass"] [b, 3] = robot_yaw
+            
 
 
     def get_dones_and_rewards_and_fix_actions(self, env_states, actions):
@@ -239,6 +281,7 @@ class BatchedEnv:
                 env_states = self._bsim.get_environment_states()
                 # todo: decide if Python gets a copy of env_states vs direct access to C++ memory,
                 # and then decide whether to start async physics step *before* processing env_states
+                self.get_nonpixel_observations(env_states, self._observations)
                 actions_flat_list = self.get_dones_and_rewards_and_fix_actions(env_states, actions_flat_list)
                 self._bsim.start_async_step_physics(actions_flat_list)
             else:
@@ -254,6 +297,7 @@ class BatchedEnv:
 
             # this updates self._observations["depth"] (and rgb) tensors
             # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
+            
             self._bsim.wait_for_frame()
 
             # these are "one frame behind" like the observations (i.e. computed from

@@ -1,5 +1,5 @@
-TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
-CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
+TENSORBOARD_DIR: "data/tb/gala_kinematic_ddppo"
+CHECKPOINT_FOLDER: "data/ckpt/gala_kinematic_ddppo"
 VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
 NUM_CHECKPOINTS: 0
@@ -8,6 +8,7 @@ OVERLAP_PHYSICS: True
 SAVE_VIDEOS_INTERVAL: 500
 NUM_UPDATES: 61
 NUM_ENVIRONMENTS: 512
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
