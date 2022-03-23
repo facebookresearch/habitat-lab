@@ -106,6 +106,7 @@ class Action:
         self.name_to_id = name_to_id
         self.task = load_config["task"]
         self.task_def = load_config["task_def"]
+        self._config_task_args = load_config.get("task_args", {})
 
         self.load_task_fn = partial(
             self._load_task, load_config, config, dataset, name_to_id
@@ -129,6 +130,10 @@ class Action:
 
             self.postcond.append(postcond)
         self.is_bound = False
+
+    @property
+    def config_task_args(self):
+        return self._config_task_args
 
     def __repr__(self):
         return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
@@ -208,6 +213,7 @@ class Action:
             should_reset,
             task_kwargs,
             episode,
+            self.config_task_args,
         )
 
     def init_task(

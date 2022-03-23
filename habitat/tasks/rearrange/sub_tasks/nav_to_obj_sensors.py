@@ -99,12 +99,6 @@ class OracleNavigationActionSensor(Sensor):
         found_path = self._sim.pathfinder.find_path(path)
         if not found_path:
             return [agent_pos, point]
-        # print(
-        #    "   path finding: starting from",
-        #    agent_pos,
-        #    " navigating to ",
-        #    path.points,
-        # )
         return path.points
 
     def get_observation(self, task, *args, **kwargs):

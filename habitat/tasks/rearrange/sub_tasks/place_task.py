@@ -23,7 +23,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             and action_args["grip_action"] >= 0
         )
 
-    def _get_receptacle_info(self, episode, sel_idx):
+    def get_receptacle_info(self, episode, sel_idx):
         return episode.goal_receptacles[sel_idx]
 
     def reset(self, episode: Episode):

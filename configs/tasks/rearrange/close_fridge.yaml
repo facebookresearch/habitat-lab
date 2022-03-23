@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 100
+    MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -19,7 +19,7 @@ TASK:
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 
-    USE_MARKER_T: True
+    USE_MARKER_T: False
     SUCCESS_STATE: 0.0
 
     # Measurements for composite tasks.
@@ -49,7 +49,7 @@ TASK:
     MARKER_REL_POS_SENSOR:
         TYPE: "MarkerRelPosSensor"
 
-    SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "ART_JOINT_SENSOR_NO_VEL", "MARKER_REL_POS_SENSOR"]
+    SENSORS: ["JOINT_SENSOR", "JOINT_VEL_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "ART_JOINT_SENSOR_NO_VEL", "MARKER_REL_POS_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
 
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -67,18 +67,29 @@ TASK:
     ART_OBJ_STATE:
         TYPE: "ArtObjState"
 
-    ART_OBJ_SUCCESS:
-        TYPE: "ArtObjSuccess"
+    ART_OBJ_AT_DESIRED_STATE:
+        TYPE: "ArtObjAtDesiredState"
         USE_ABSOLUTE_DISTANCE: True
         SUCCESS_DIST_THRESHOLD: 0.05
 
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+
+    ART_OBJ_SUCCESS:
+        TYPE: "ArtObjSuccess"
+        REST_DIST_THRESHOLD: 0.15
+
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
-        DIST_REWARD: 1.0
 
         WRONG_GRASP_END: True
         WRONG_GRASP_PEN: 5.0
-        MARKER_DIST_REWARD: 0.0
+
+        ART_DIST_REWARD: 10.0
+        EE_DIST_REWARD: 1.0
+        MARKER_DIST_REWARD: 1.0
+
+        ART_AT_DESIRED_STATE_REWARD: 5.0
         GRASP_REWARD: 0.0
 
         # General Rearrange Reward config
@@ -94,6 +105,8 @@ TASK:
         - "EXCESSIVE_FORCE_SHOULD_END"
         - "ROBOT_COLLS"
         - "EE_DIST_TO_MARKER"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "ART_OBJ_AT_DESIRED_STATE"
         - "ART_OBJ_STATE"
         - "ART_OBJ_SUCCESS"
         - "ART_OBJ_REWARD"
@@ -106,7 +119,7 @@ TASK:
             GRIP_CONTROLLER: null
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: False
+            DISABLE_GRIP: True
             DELTA_POS_LIMIT: 0.025
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:

@@ -65,6 +65,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
             if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.robot.open_gripper()
                 self._sim.grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):

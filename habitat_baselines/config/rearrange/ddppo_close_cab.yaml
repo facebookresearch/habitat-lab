@@ -10,17 +10,18 @@ VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 4
+NUM_ENVIRONMENTS: 32
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 2.5e9
+TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 100
+NUM_CHECKPOINTS: 20
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/close_cab.yaml
 GYM_AUTO_NAME: "CloseCab"
@@ -33,12 +34,13 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      include_visual_keys: ["robot_head_depth"]
 
   REWARD_MEASURE: "art_obj_reward"
   SUCCESS_MEASURE: "art_obj_success"
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
-  GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js']
+  GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
   END_ON_SUCCESS: True
 
   PPO:

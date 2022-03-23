@@ -14,6 +14,7 @@ actions:
       precondition: []
       postcondition:
         - "at(robot,obj_to)"
+
     - name: pick
       parameters: [obj]
       task: RearrangePickTask-v0
@@ -24,6 +25,11 @@ actions:
           #- "!in(obj,fridge) OR opened_fridge()"
       postcondition:
         - "holding(obj)"
+      task_args:
+        TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
+        TASK.FORCE_REGENERATE: True
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.BASE_NOISE: 0.0
     - name: place
       parameters: [obj, targ]
       task: RearrangePlaceTask-v0
@@ -33,6 +39,11 @@ actions:
       postcondition:
           - "not_holding()"
           - "at(obj,targ)"
+      task_args:
+        TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
+        TASK.FORCE_REGENERATE: True
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.BASE_NOISE: 0.0
 
     ## Fridge
     #- name: open_fridge

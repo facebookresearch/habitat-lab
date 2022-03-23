@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
+from typing import Tuple
 
 import magnum as mn
 import numpy as np
@@ -37,6 +38,10 @@ class RearrangePickTaskV1(RearrangeTask):
         self.start_states = self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
+
+    @property
+    def target_idx(self) -> int:
+        return self._targ_idx
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -171,7 +176,12 @@ class RearrangePickTaskV1(RearrangeTask):
 
         return obs
 
-    def _get_receptacle_info(self, episode, sel_idx):
+    def get_receptacle_info(
+        self, episode: Episode, sel_idx: int
+    ) -> Tuple[str, int]:
+        """
+        Returns the receptacle handle and receptacle parent link index.
+        """
         return episode.target_receptacles[sel_idx]
 
     def reset(self, episode: Episode):
@@ -191,7 +201,7 @@ class RearrangePickTaskV1(RearrangeTask):
             mgr = sim.get_articulated_object_manager()
             sel_idx = self._sample_idx(sim)
 
-            receptacle_handle, receptacle_link_idx = self._get_receptacle_info(
+            receptacle_handle, receptacle_link_idx = self.get_receptacle_info(
                 episode, sel_idx
             )
             if (
