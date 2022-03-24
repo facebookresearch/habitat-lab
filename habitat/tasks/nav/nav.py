@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 import attr
 import numpy as np
@@ -1091,7 +1091,7 @@ class TeleportAction(SimulatorTaskAction):
         self,
         *args: Any,
         position: List[float],
-        rotation: List[float],
+        rotation: Sequence[float],
         **kwargs: Any,
     ):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -1099,7 +1099,7 @@ class TeleportAction(SimulatorTaskAction):
         """
 
         if not isinstance(rotation, list):
-            rotation = list(rotation)  # type: ignore
+            rotation = list(rotation)
 
         if not self._sim.is_navigable(position):
             return self._sim.get_observations_at()  # type: ignore
