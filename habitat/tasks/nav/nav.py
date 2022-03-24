@@ -1099,7 +1099,7 @@ class TeleportAction(SimulatorTaskAction):
         """
 
         if not isinstance(rotation, list):
-            rotation = list(rotation)
+            rotation = list(rotation)  # type: ignore
 
         if not self._sim.is_navigable(position):
             return self._sim.get_observations_at()  # type: ignore
