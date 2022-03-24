@@ -56,7 +56,6 @@ class BatchedEnv:
         # include_compass = "COMPASS_SENSOR" in config.SENSORS
         self.include_point_goal_gps_compass = "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
         gps_compass_sensor_shape= 4
-        print(self.include_point_goal_gps_compass, config.SENSORS)
         assert include_depth or include_rgb
 
         self._num_envs = config.NUM_ENVIRONMENTS
