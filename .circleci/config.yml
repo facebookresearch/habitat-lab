@@ -15,8 +15,9 @@ jobs:
       - run:
           name: setup
           command: |
-              sudo pip install black "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black --progress-bar off
               sudo pip install flake8==3.9.2 flake8-builtins==1.5.3 flake8-bugbear==21.4.3 flake8-comprehensions==3.4.0 flake8-return==1.1.2 flake8-simplify==0.14.1  --progress-bar off
+              sudo pip install "isort[pyproject]" numpy --progress-bar off
               sudo pip install mypy==0.931 --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
