@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional,  Tuple, Sequence
 
 import attr
 import numpy as np
