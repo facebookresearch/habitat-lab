@@ -650,8 +650,11 @@ class RearrangeReward(Measure):
         force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
         # Penalize the force that was added to the accumulated force at the
         # last time step.
-        reward -= min(
-            self._config.FORCE_PEN * force_metric.add_force,
-            self._config.MAX_FORCE_PEN,
+        reward -= max(
+            0,  # This penalty is always positive
+            min(
+                self._config.FORCE_PEN * force_metric.add_force,
+                self._config.MAX_FORCE_PEN,
+            ),
         )
         return reward

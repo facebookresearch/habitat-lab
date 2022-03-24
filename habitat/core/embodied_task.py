@@ -316,7 +316,7 @@ class EmbodiedTask:
 
         return observations
 
-    def get_action_name(self, action_index: int):
+    def get_action_name(self, action_index: Union[int, np.integer]):
         if action_index >= len(self.actions):
             raise ValueError(f"Action index '{action_index}' is out of range.")
         return self._action_keys[action_index]

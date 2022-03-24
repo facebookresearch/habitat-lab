@@ -35,7 +35,6 @@ TASK:
 
   SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
   GOAL_SENSOR_UUID: objectgoal
-
   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
 
   DISTANCE_TO_GOAL:
@@ -46,5 +45,5 @@ TASK:
 DATASET:
   TYPE: ObjectNav-v1
   SPLIT: train
-  DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/objectnav/hm3d/v1/{split}/{split}.json.gz"
   SCENES_DIR: "data/scene_datasets/"

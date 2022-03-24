@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
+from typing import Union
 
 import torch
 from gym import spaces
@@ -24,10 +25,13 @@ from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
+    action_distribution: nn.Module
+
     def __init__(self, net, dim_actions, policy_config=None):
         super().__init__()
         self.net = net
         self.dim_actions = dim_actions
+        self.action_distribution: Union[CategoricalNet, GaussianNet]
 
         if policy_config is None:
             self.action_distribution_type = "categorical"

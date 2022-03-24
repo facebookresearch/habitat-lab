@@ -3,7 +3,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-lab/blob/main/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/facebookresearch/habitat-lab)](https://github.com/facebookresearch/habitat-lab/releases/latest)
 [![Supports Habitat_Sim](https://img.shields.io/static/v1?label=supports&message=Habitat%20Sim&color=informational&link=https://github.com/facebookresearch/habitat-sim)](https://github.com/facebookresearch/habitat-sim)
-[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://timothycrosley.github.io/isort/)
@@ -13,7 +13,7 @@
 Habitat Lab
 ==============================
 
-Habitat Lab is a modular high-level library for end-to-end development in embodied AI --
+Habitat Lab is a modular high-level library for end-to-end development in embodied AI –
 defining embodied AI tasks (e.g. navigation, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in classical SLAM), and benchmarking their performance on the defined tasks using standard metrics.
 
 Habitat Lab currently uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator, but is designed with a modular abstraction for the simulator backend to maintain compatibility over multiple simulators. For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
@@ -67,7 +67,7 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
 
 ## Installation
 
-1. Clone a stable version from the github repository and install habitat-lab using the commands below. Note that python>=3.6 is required for working with habitat-lab. All the development and testing was done using python3.6. Please use 3.6 to avoid possible issues.
+1. Clone a stable version from the github repository and install habitat-lab using the commands below. Note that python>=3.7 is required for working with habitat-lab. All the development and testing was done using python3.7. Please use 3.7 to avoid possible issues.
 
     ```bash
     git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
@@ -126,7 +126,7 @@ while not env.episode_over:
 
 ```
 
-See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code
+See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code.
 
 ## Documentation
 
@@ -213,6 +213,7 @@ Download the Habitat related Gibson dataset following the instructions [here](ht
 | [Point goal navigation](https://arxiv.org/abs/1807.06757) | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/pointnav/mp3d.yaml`](configs/datasets/pointnav/mp3d.yaml) | 400 MB |
 | 🆕[Point goal navigation](https://arxiv.org/abs/1807.06757) | HM3D | [pointnav_hm3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/hm3d/v1/pointnav_hm3d_v1.zip) | `data/datasets/pointnav/hm3d/v1/` |  [`datasets/pointnav/hm3d.yaml`](configs/datasets/pointnav/hm3d.yaml) | 992 MB |
 | [Object goal navigation](https://arxiv.org/abs/2006.13171) | MatterPort3D | [objectnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/objectnav/m3d/v1/objectnav_mp3d_v1.zip) | `data/datasets/objectnav/mp3d/v1/` | [`datasets/objectnav/mp3d.yaml`](configs/datasets/objectnav/mp3d.yaml) | 170 MB |
+| 🆕[Object goal navigation](https://arxiv.org/abs/2006.13171) | HM3D | [objectnav_hm3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/objectnav/hm3d/v1/objectnav_hm3d_v1.zip) | `data/datasets/objectnav/hm3d/v1/` |  [`datasets/objectnav/hm3d.yaml`](configs/datasets/objetnav/hm3d.yaml) | 154 MB |
 | [Embodied Question Answering](https://embodiedqa.org/) | MatterPort3D | [eqa_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/eqa/mp3d/v1/eqa_mp3d_v1.zip) | `data/datasets/eqa/mp3d/v1/` | [`datasets/eqa/mp3d.yaml`](configs/datasets/eqa/mp3d.yaml) | 44 MB |
 | [Visual Language Navigation](https://bringmeaspoon.org/) | MatterPort3D | [vln_r2r_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/vln/mp3d/r2r/v1/vln_r2r_mp3d_v1.zip) | `data/datasets/vln/mp3d/r2r/v1` | [`datasets/vln/mp3d_r2r.yaml`](configs/datasets/vln/mp3d_r2r.yaml) | 2.7 MB |
 | [Image goal navigation](https://github.com/facebookresearch/habitat-lab/pull/333) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/imagenav/gibson.yaml`](configs/datasets/imagenav/gibson.yaml) | 385 MB |

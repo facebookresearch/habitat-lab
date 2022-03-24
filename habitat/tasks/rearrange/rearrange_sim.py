@@ -568,7 +568,7 @@ class RearrangeSim(HabitatSim):
             ):
                 self.robot.update()
 
-    def get_targets(self) -> Tuple[List[int], np.ndarray]:
+    def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
 
         :return: ([idx: int], [goal_pos: list]) The index of the target object

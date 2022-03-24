@@ -148,12 +148,10 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                             )
                         )
 
-                        writer.add_scalar("total_loss", loss, t)
-                        writer.add_scalars(
-                            "individual_losses",
-                            {"seg_loss": l1, "ae_loss": l2, "depth_loss": l3},
-                            t,
-                        )
+                        writer.add_scalar("loss/total_loss", loss, t)
+                        writer.add_scalar("loss/seg_loss", l1, t)
+                        writer.add_scalar("loss/ae_loss", l2, t)
+                        writer.add_scalar("loss/depth_loss", l3, t)
 
                     loss.backward()
                     optim.step()
@@ -283,12 +281,12 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         avg_l2 /= len(eval_loader)
         avg_l3 /= len(eval_loader)
 
-        writer.add_scalar("avg val total loss", avg_loss, checkpoint_index)
-        writer.add_scalars(
-            "avg val individual_losses",
-            {"seg_loss": avg_l1, "ae_loss": avg_l2, "depth_loss": avg_l3},
-            checkpoint_index,
+        writer.add_scalar(
+            "avg_val_loss/total_loss", avg_loss, checkpoint_index
         )
+        writer.add_scalar("avg_val_loss/seg_loss", avg_l1, checkpoint_index)
+        writer.add_scalar("avg_val_loss/ae_loss", avg_l2, checkpoint_index)
+        writer.add_scalar("avg_val_loss/depth_loss", avg_l3, checkpoint_index)
 
         logger.info("[ Average loss: {:.3f} ]".format(avg_loss))
         logger.info("[ Average seg loss: {:.3f} ]".format(avg_l1))

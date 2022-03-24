@@ -362,7 +362,7 @@ class MotionPlanner:
                 use_targ_state - use_sim.get_ee_pos()
             )
         else:
-            dist_to_goal = -1.0
+            dist_to_goal = -1.0  # type: ignore[assignment]
 
         save_dir = osp.join(self._run_cfg.VIDEO_DIR, "mp_plans")
         os.makedirs(save_dir, exist_ok=True)

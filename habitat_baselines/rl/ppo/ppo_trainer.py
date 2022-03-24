@@ -150,7 +150,7 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.config.RL.DDPPO.pretrained:
             self.actor_critic.load_state_dict(
-                {
+                {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
@@ -272,7 +272,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._setup_actor_critic_agent(ppo_cfg)
         if self._is_distributed:
-            self.agent.init_distributed(find_unused_params=True)
+            self.agent.init_distributed(find_unused_params=True)  # type: ignore
 
         logger.info(
             "agent number of parameters: {}".format(
@@ -314,13 +314,13 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
-        self.rollouts.buffers["observations"][0] = batch
+        self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
@@ -495,7 +495,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         rewards = torch.tensor(
             rewards_l,
@@ -649,14 +649,11 @@ class PPOTrainer(BaseRLTrainer):
             for k, v in deltas.items()
             if k not in {"reward", "count"}
         }
-        if len(metrics) > 0:
-            writer.add_scalars("metrics", metrics, self.num_steps_done)
 
-        writer.add_scalars(
-            "losses",
-            losses,
-            self.num_steps_done,
-        )
+        for k, v in metrics.items():
+            writer.add_scalar(f"metrics/{k}", v, self.num_steps_done)
+        for k, v in losses.items():
+            writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
@@ -744,7 +741,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.RL.PPO
 
         with (
-            TensorboardWriter(
+            TensorboardWriter(  # type: ignore
                 self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
             )
             if rank0_only()
@@ -841,7 +838,11 @@ class PPOTrainer(BaseRLTrainer):
 
                 self.num_updates_done += 1
                 losses = self._coalesce_post_step(
-                    dict(value_loss=value_loss, action_loss=action_loss),
+                    dict(
+                        value_loss=value_loss,
+                        action_loss=action_loss,
+                        entropy=dist_entropy,
+                    ),
                     count_steps_delta,
                 )
 
@@ -926,7 +927,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
@@ -1014,12 +1015,12 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            batch = batch_obs(
+            batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,
                 cache=self._obs_batching_cache,
             )
-            batch = apply_obs_transforms_batch(batch, self.obs_transforms)
+            batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
             not_done_masks = torch.tensor(
                 [[not done] for done in dones],
@@ -1044,8 +1045,9 @@ class PPOTrainer(BaseRLTrainer):
                 # episode ended
                 if not not_done_masks[i].item():
                     pbar.update()
-                    episode_stats = {}
-                    episode_stats["reward"] = current_episode_reward[i].item()
+                    episode_stats = {
+                        "reward": current_episode_reward[i].item()
+                    }
                     episode_stats.update(
                         self._extract_scalars_from_info(infos[i])
                     )
@@ -1114,14 +1116,12 @@ class PPOTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
-        writer.add_scalars(
-            "eval_reward",
-            {"average reward": aggregated_stats["reward"]},
-            step_id,
+        writer.add_scalar(
+            "eval_reward/average_reward", aggregated_stats["reward"], step_id
         )
 
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
-        if len(metrics) > 0:
-            writer.add_scalars("eval_metrics", metrics, step_id)
+        for k, v in metrics.items():
+            writer.add_scalar(f"eval_metrics/{k}", v, step_id)
 
         self.envs.close()

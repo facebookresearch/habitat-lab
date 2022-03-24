@@ -13,7 +13,6 @@ from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
-from habitat.core.env import Env, RLEnv
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.ddp_utils import SAVE_STATE, is_slurm_batch_job
@@ -28,7 +27,8 @@ class BaseTrainer:
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
-
+    config: Config
+    flush_secs: float
     supported_tasks: ClassVar[List[str]]
 
     def train(self) -> None:
@@ -121,7 +121,7 @@ class BaseTrainer:
                             self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
-                    logger.info(f"=======current_ckpt: {current_ckpt}=======")
+                    logger.info(f"=======current_ckpt: {current_ckpt}=======")  # type: ignore
                     prev_ckpt_ind += 1
                     self._eval_checkpoint(
                         checkpoint_path=current_ckpt,
@@ -278,7 +278,7 @@ class BaseRLTrainer(BaseTrainer):
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
-        envs: Union[VectorEnv, RLEnv, Env],
+        envs: VectorEnv,
         test_recurrent_hidden_states: Tensor,
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
@@ -286,7 +286,7 @@ class BaseRLTrainer(BaseTrainer):
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
-        Union[VectorEnv, RLEnv, Env],
+        VectorEnv,
         Tensor,
         Tensor,
         Tensor,

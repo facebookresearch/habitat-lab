@@ -147,8 +147,11 @@ def test_r2r_vln_sim():
                     assert obs["rgb"].shape[:2] == (
                         vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
                         vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
-                    ), "Observation resolution {} doesn't correspond to config " "({}, {}).".format(
-                        obs["rgb"].shape[:2],
-                        vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
-                        vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                    ), (
+                        "Observation resolution {} doesn't correspond to config "
+                        "({}, {}).".format(
+                            obs["rgb"].shape[:2],
+                            vln_config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                            vln_config.SIMULATOR.RGB_SENSOR.WIDTH,
+                        )
                     )

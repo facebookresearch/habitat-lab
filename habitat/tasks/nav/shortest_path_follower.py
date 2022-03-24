@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -14,7 +14,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
 
-def action_to_one_hot(action: int) -> np.array:
+def action_to_one_hot(action: int) -> np.ndarray:
     one_hot = np.zeros(len(HabitatSimActions), dtype=np.float32)
     one_hot[action] = 1
     return one_hot
@@ -62,15 +62,15 @@ class ShortestPathFollower:
             )
             self._current_scene = self._sim.habitat_config.SCENE
 
-    def _get_return_value(self, action) -> Union[int, np.array]:
+    def _get_return_value(self, action) -> Union[int, np.ndarray]:
         if self._return_one_hot:
             return action_to_one_hot(action)
         else:
             return action
 
     def get_next_action(
-        self, goal_pos: np.array
-    ) -> Optional[Union[int, np.array]]:
+        self, goal_pos: Union[List[float], np.ndarray]
+    ) -> Optional[Union[int, np.ndarray]]:
         """Returns the next action along the shortest path."""
         self._build_follower()
         assert self._follower is not None

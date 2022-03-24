@@ -2,20 +2,20 @@ version: 2
 gpu: &gpu
   machine:
     image: ubuntu-1604-cuda-10.1:201909-23
-  resource_class: gpu.small
+  resource_class: gpu.nvidia.medium
   environment:
     FPS_THRESHOLD: 900
 
 jobs:
   python_lint:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     steps:
       - checkout
       - run:
           name: setup
           command: |
-              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy --progress-bar off
+              sudo pip install black flake8 flake8-builtins flake8-bugbear flake8-comprehensions flake8-return flake8-simplify "isort[pyproject]" numpy mypy --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
@@ -33,9 +33,14 @@ jobs:
           command: |
               flake8 --version
               flake8 habitat/. habitat_baselines/. examples/. tests/. setup.py
+      - run:
+          name: run mypy
+          command: |
+              mypy --version
+              mypy
   pre-commit:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
     working_directory: ~/repo/
 
     steps:
@@ -132,7 +137,7 @@ jobs:
                 ~/miniconda.sh -b -p $HOME/miniconda
                 rm ~/miniconda.sh
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                conda create -y -n habitat python=3.6
+                conda create -y -n habitat python=3.7
                 . activate habitat
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
                 pip install pytest-sugar
@@ -266,7 +271,7 @@ jobs:
               curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
 
               cd docs
-              conda install -y -c conda-forge doxygen==1.8.16
+              conda install -y -c conda-forge doxygen
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
