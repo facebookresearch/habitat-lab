@@ -6,10 +6,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from habitat.core.logging import logger
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     AbsTargetStartSensor,
+    IsHoldingSensor,
     LocalizationSensor,
+    RelativeRestingPositionSensor,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToNavGoalSensor,
@@ -49,13 +52,24 @@ class NnSkillPolicy(Policy):
         self._cur_skill_args = torch.zeros(self._batch_size, dtype=torch.int32)
 
         for k in action_space:
-            if k not in filtered_action_space.keys():
+            if k not in filtered_action_space.spaces.keys():
                 self._ac_start += get_num_actions(action_space[k])
             else:
                 break
 
+        logger.info(
+            f"Skill {self._config.skill_name} action offset {self._ac_start}, action length {self._ac_len}"
+        )
+
     def _select_obs(self, obs, cur_batch_idx):
+        """
+        Selects out the part of the observation that corresponds to the current goal of the skill.
+        """
         for k in self._config.OBS_SKILL_INPUTS:
+            if k not in obs:
+                raise ValueError(
+                    f"Could not find {k} in skill {self._config.skill_name} out of {obs.keys()}"
+                )
             entity_positions = obs[k].view(1, -1, 3)
             obs[k] = entity_positions[
                 :, self._cur_skill_args[cur_batch_idx].item()
@@ -69,6 +83,9 @@ class NnSkillPolicy(Policy):
         prev_actions,
         masks,
     ) -> torch.Tensor:
+        """
+        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        """
         return torch.zeros(observations.shape[0]).to(masks.device)
 
     def on_enter(
@@ -117,11 +134,11 @@ class NnSkillPolicy(Policy):
     ):
         filtered_obs = TensorDict(
             {
-                k: v
-                for k, v in observations.items()
-                if k in self._filtered_obs_space.keys()
+                k: observations[k]
+                for k in self._filtered_obs_space.spaces.keys()
             }
         )
+
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len
         ]
@@ -142,45 +159,53 @@ class NnSkillPolicy(Policy):
     def from_config(cls, config, observation_space, action_space, batch_size):
         # Load the wrap policy from file
         if len(config.LOAD_CKPT_FILE) == 0:
-            raise ValueError("Need to specify load location")
+            raise ValueError(
+                f"Need to specify LOAD_CKPT_FILE for {config.skill_name}"
+            )
 
         ckpt_dict = torch.load(config.LOAD_CKPT_FILE, map_location="cpu")
         policy = baseline_registry.get_policy(config.name)
         policy_cfg = ckpt_dict["config"]
 
-        filtered_obs_space = spaces.Dict(
-            {
-                k: v
-                for k, v in observation_space.spaces.items()
-                if (k in policy_cfg.RL.POLICY.include_visual_keys)
-                or (k in policy_cfg.RL.GYM_OBS_KEYS)
-            }
+        expected_obs_keys = list(
+            set(
+                policy_cfg.RL.POLICY.include_visual_keys
+                + policy_cfg.RL.GYM_OBS_KEYS
+            )
         )
-        filtered_action_space = ActionSpace(
-            {
-                k: v
-                for k, v in action_space.spaces.items()
-                if k in policy_cfg.TASK_CONFIG.TASK.ACTIONS
-            }
+        filtered_obs_space = spaces.Dict(
+            {k: observation_space.spaces[k] for k in expected_obs_keys}
+        )
+        logger.info(
+            f"Loaded observation space {filtered_obs_space} for skill {config.skill_name}"
         )
 
-        ###############################################
-        # TEMPORARY CODE TO ADD MISSING CONFIG KEYS
-        policy_cfg.defrost()
-        policy_cfg.RL.POLICY.ACTION_DIST.use_std_param = False
-        policy_cfg.RL.POLICY.ACTION_DIST.clamp_std = False
-        policy_cfg.freeze()
-        ###############################################
+        filtered_action_space = ActionSpace(
+            {
+                k: action_space[k]
+                for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+            }
+        )
+        logger.info(
+            f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
+        )
 
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )
-        actor_critic.load_state_dict(
-            {  # type: ignore
-                k[len("actor_critic.") :]: v
-                for k, v in ckpt_dict["state_dict"].items()
-            }
-        )
+        try:
+            actor_critic.load_state_dict(
+                {  # type: ignore
+                    k[len("actor_critic.") :]: v
+                    for k, v in ckpt_dict["state_dict"].items()
+                }
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Could not load checkpoint for skill {config.skill_name}"
+            )
+            raise e
 
         return cls(
             actor_critic,
@@ -200,7 +225,32 @@ class PickSkillPolicy(NnSkillPolicy):
         prev_actions,
         masks,
     ) -> torch.Tensor:
-        return torch.zeros(masks.shape[0]).to(masks.device)
+        # Is the agent holding the object and is the end-effector at the
+        # resting position?
+        rel_resting_pos = torch.norm(
+            observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
+        )
+        is_within_thresh = rel_resting_pos < self._config.AT_RESTING_THRESHOLD
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        return is_holding * is_within_thresh.float()
+
+
+class PlaceSkillPolicy(NnSkillPolicy):
+    def should_terminate(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> torch.Tensor:
+        # Is the agent not holding an object and is the end-effector at the
+        # resting position?
+        rel_resting_pos = torch.norm(
+            observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
+        )
+        is_within_thresh = rel_resting_pos < self._config.AT_RESTING_THRESHOLD
+        is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
+        return is_not_holding * is_within_thresh.float()
 
 
 class NavSkillPolicy(NnSkillPolicy):

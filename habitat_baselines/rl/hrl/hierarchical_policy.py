@@ -16,6 +16,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     NnSkillPolicy,
     OracleNavPolicy,
     PickSkillPolicy,
+    PlaceSkillPolicy,
 )
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions

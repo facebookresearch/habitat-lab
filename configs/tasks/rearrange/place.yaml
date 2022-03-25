@@ -34,7 +34,7 @@ TASK:
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     OBJECT_SENSOR:
-        TYPE: "ObjectGoalPositionSensor"
+        TYPE: "TargetCurrentSensor"
         GOAL_FORMAT: "CARTESIAN"
         DIMENSIONALITY: 3
     GOAL_SENSOR:
@@ -141,8 +141,8 @@ SIMULATOR:
         WIDTH: 128
         HEIGHT: 128
     HEAD_DEPTH_SENSOR:
-        WIDTH: 32
-        HEIGHT: 32
+        WIDTH: 128
+        HEIGHT: 128
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True

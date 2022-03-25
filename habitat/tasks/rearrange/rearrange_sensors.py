@@ -62,23 +62,7 @@ class MultiObjSensor(PointGoalSensor):
 
 
 @registry.register_sensor
-class AbsObjectGoalPositionSensor(MultiObjSensor):
-    """
-    This is the ground truth object position sensor relative to the scene coordinate frame.
-    """
-
-    cls_uuid: str = "abs_obj_goal_pos_sensor"
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        self._sim: RearrangeSim
-        idxs, _ = self._sim.get_targets()
-        scene_pos = self._sim.get_scene_pos()
-        pos = scene_pos[idxs]
-        return np.hstack(pos)
-
-
-@registry.register_sensor
-class ObjectGoalPositionSensor(MultiObjSensor):
+class TargetCurrentSensor(MultiObjSensor):
     """
     This is the ground truth object position sensor relative to the robot end-effector coordinate frame.
     """
@@ -290,7 +274,7 @@ class RelativeRestingPositionSensor(Sensor):
 @registry.register_sensor
 class RestingPositionSensor(Sensor):
     """
-    Relative position of the end-effector to the defined resting position.
+    Desired resting position in the robot coordinate frame.
     """
 
     cls_uuid: str = "resting_position"
@@ -359,12 +343,14 @@ class IsHoldingSensor(Sensor):
     Binary if the robot is holding an object or grasped onto an articulated object.
     """
 
+    cls_uuid: str = "is_holding"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
     def _get_uuid(self, *args, **kwargs):
-        return "is_holding"
+        return IsHoldingSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR

@@ -34,6 +34,7 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      include_visual_keys: ["robot_head_depth"]
 
   REWARD_MEASURE: "art_obj_reward"
   SUCCESS_MEASURE: "art_obj_success"

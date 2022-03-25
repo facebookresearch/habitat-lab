@@ -38,10 +38,22 @@ RL:
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
           include_visual_keys: ["robot_head_depth"]
+          AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           ACTION_DIST:
              use_log_std: True
           LOAD_CKPT_FILE: ""
+
+        #NN_PLACE:
+        #  skill_name: "PlaceSkillPolicy"
+        #  name: "PointNavResNetPolicy"
+        #  action_distribution_type: "gaussian"
+        #  include_visual_keys: ["robot_head_depth"]
+        #  AT_RESTING_THRESHOLD: 0.15
+        #  OBS_SKILL_INPUTS: ["obj_goal_sensor"]
+        #  ACTION_DIST:
+        #     use_log_std: True
+        #  LOAD_CKPT_FILE: ""
 
         NN_NAV:
           skill_name: "NavSkillPolicy"
@@ -68,6 +80,7 @@ RL:
 
       USE_SKILLS:
         pick: "NN_PICK"
+        #place: "NN_PLACE"
         nav: "GT_NAV"
 
   REWARD_MEASURE: "composite_reward"

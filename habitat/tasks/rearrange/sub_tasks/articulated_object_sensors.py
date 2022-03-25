@@ -287,7 +287,7 @@ class ArtObjReward(RearrangeReward):
         ].get_metric()
 
         self._prev_art_state = link_state
-        self._prev_has_grasped = task._sim.grasp_mgr.is_grasped
+        self._any_has_grasped = task._sim.grasp_mgr.is_grasped
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
         self._any_at_desired_state = False
@@ -332,7 +332,7 @@ class ArtObjReward(RearrangeReward):
         cur_ee_dist_to_marker = task.measurements.measures[
             EndEffectorDistToMarker.cls_uuid
         ].get_metric()
-        if cur_has_grasped and not self._prev_has_grasped:
+        if cur_has_grasped and not self._any_has_grasped:
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker
                 reward -= self._config.WRONG_GRASP_PEN
@@ -341,6 +341,7 @@ class ArtObjReward(RearrangeReward):
             else:
                 # Grasped right marker
                 reward += self._config.GRASP_REWARD
+            self._any_has_grasped = True
 
         if is_art_obj_state_succ:
             if not self._any_at_desired_state:
@@ -358,5 +359,4 @@ class ArtObjReward(RearrangeReward):
 
         self._prev_ee_dist_to_marker = cur_ee_dist_to_marker
         self._prev_art_state = link_state
-        self._prev_has_grasped = cur_has_grasped
         self._metric = reward
