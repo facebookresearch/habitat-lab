@@ -2,9 +2,6 @@ stage_goals: {}
 start:
     precondition: []
     state:
-        art_states:
-            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
-            "fridge_:0000": [0,0]
         robo:
             pos: 'rnd'
 
