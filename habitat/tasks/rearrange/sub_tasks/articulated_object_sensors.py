@@ -11,7 +11,10 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.rearrange_sensors import (
+    EndEffectorToRestDistance,
+    RearrangeReward,
+)
 
 
 @registry.register_sensor
@@ -141,6 +144,38 @@ class ArtObjState(Measure):
 
 
 @registry.register_measure
+class ArtObjAtDesiredState(Measure):
+    cls_uuid: str = "art_obj_at_desired_state"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ArtObjAtDesiredState.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        dist = task.success_js_state - task.get_use_marker().get_targ_js()
+
+        # If not absolute distance, we can have a joint state greater than the
+        # target.
+        if self._config.USE_ABSOLUTE_DISTANCE:
+            self._metric = abs(dist) < self._config.SUCCESS_DIST_THRESHOLD
+        else:
+            self._metric = dist < self._config.SUCCESS_DIST_THRESHOLD
+
+
+@registry.register_measure
 class ArtObjSuccess(Measure):
     """
     Measures if the target articulated object joint state is at the success criteria.
@@ -150,6 +185,7 @@ class ArtObjSuccess(Measure):
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
+        self._sim = sim
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -167,12 +203,21 @@ class ArtObjSuccess(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.success_js_state - task.get_use_marker().get_targ_js()
+
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+        is_art_obj_state_succ = task.measurements.measures[
+            ArtObjAtDesiredState.cls_uuid
+        ].get_metric()
+
         # If not absolute distance, we can have a joint state greater than the
         # target.
-        if self._config.USE_ABSOLUTE_DISTANCE:
-            self._metric = abs(dist) < self._config.SUCCESS_DIST_THRESHOLD
-        else:
-            self._metric = dist < self._config.SUCCESS_DIST_THRESHOLD
+        self._metric = (
+            is_art_obj_state_succ
+            and ee_to_rest_distance < self._config.REST_DIST_THRESHOLD
+            and not self._sim.grasp_mgr.is_grasped
+        )
 
 
 @registry.register_measure
@@ -221,7 +266,13 @@ class ArtObjReward(RearrangeReward):
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid, [ArtObjState.cls_uuid, ArtObjSuccess.cls_uuid]
+            self.uuid,
+            [
+                ArtObjState.cls_uuid,
+                ArtObjSuccess.cls_uuid,
+                EndEffectorToRestDistance.cls_uuid,
+                ArtObjAtDesiredState.cls_uuid,
+            ],
         )
         link_state = task.measurements.measures[
             ArtObjState.cls_uuid
@@ -231,9 +282,15 @@ class ArtObjReward(RearrangeReward):
             EndEffectorDistToMarker.cls_uuid
         ].get_metric()
 
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+
         self._prev_art_state = link_state
         self._prev_has_grasped = task._sim.grasp_mgr.is_grasped
         self._prev_ee_dist_to_marker = dist_to_marker
+        self._prev_ee_to_rest = ee_to_rest_distance
+        self._any_at_desired_state = False
         super().reset_metric(
             *args,
             episode=episode,
@@ -255,30 +312,49 @@ class ArtObjReward(RearrangeReward):
             ArtObjState.cls_uuid
         ].get_metric()
 
+        ee_to_rest_distance = task.measurements.measures[
+            EndEffectorToRestDistance.cls_uuid
+        ].get_metric()
+
+        is_art_obj_state_succ = task.measurements.measures[
+            ArtObjAtDesiredState.cls_uuid
+        ].get_metric()
+
         cur_dist = abs(link_state - task.success_js_state)
         prev_dist = abs(self._prev_art_state - task.success_js_state)
 
+        # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
-        reward += self._config.DIST_REWARD * dist_diff
+        reward += self._config.ART_DIST_REWARD * dist_diff
 
         cur_has_grasped = task._sim.grasp_mgr.is_grasped
 
         cur_ee_dist_to_marker = task.measurements.measures[
             EndEffectorDistToMarker.cls_uuid
         ].get_metric()
-        if not cur_has_grasped:
-            dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
-            reward += self._config.MARKER_DIST_REWARD * dist_diff
-
         if cur_has_grasped and not self._prev_has_grasped:
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
-                # Grasped wrong object
+                # Grasped wrong marker
                 reward -= self._config.WRONG_GRASP_PEN
                 if self._config.WRONG_GRASP_END:
                     task.should_end = True
             else:
-                # Grasped right object
+                # Grasped right marker
                 reward += self._config.GRASP_REWARD
+
+        if is_art_obj_state_succ:
+            if not self._any_at_desired_state:
+                reward += self._config.ART_AT_DESIRED_STATE_REWARD
+                self._any_at_desired_state = True
+            # Give the reward based on distance to the resting position.
+            ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
+            reward += self._config.EE_DIST_REWARD * ee_dist_change
+        elif not cur_has_grasped:
+            # Give the reward based on distance to the handle
+            dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
+            reward += self._config.MARKER_DIST_REWARD * dist_diff
+
+        self._prev_ee_to_rest = ee_to_rest_distance
 
         self._prev_ee_dist_to_marker = cur_ee_dist_to_marker
         self._prev_art_state = link_state

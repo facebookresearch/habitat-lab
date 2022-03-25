@@ -89,7 +89,6 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
-
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15

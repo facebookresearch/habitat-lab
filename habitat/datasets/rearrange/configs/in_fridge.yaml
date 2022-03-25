@@ -24,7 +24,7 @@ receptacle_sets:
       - ""
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - "receptacle_aabb_middlefrl_apartment_refrigerator"
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
     excluded_receptacle_substrings: []
 
 scene_sampler:

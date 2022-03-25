@@ -77,7 +77,7 @@ def get_input_vel_ctlr(
     skip_pygame, arm_action, g_args, prev_obs, env, not_block_input
 ):
     if skip_pygame:
-        return step_env(env, "EMPTY", {}, g_args), None
+        return step_env(env, "EMPTY", {}, g_args), None, False
 
     if "ARM_ACTION" in env.action_space.spaces:
         arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
@@ -102,7 +102,7 @@ def get_input_vel_ctlr(
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_ESCAPE]:
-        return None, None
+        return None, None, False
     elif keys[pygame.K_m]:
         end_ep = True
 
@@ -210,15 +210,12 @@ def get_input_vel_ctlr(
         else:
             args = {"arm_action": arm_action, "grip_action": magic_grasp}
 
-    if end_ep:
-        env.reset()
-
     if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
     else:
         arm_action = [*arm_action, magic_grasp]
 
-    return step_env(env, name, args, g_args), arm_action
+    return step_env(env, name, args, g_args), arm_action, end_ep
 
 
 def get_wrapped_prop(venv, prop):
@@ -337,7 +334,7 @@ def play_env(env, args, config):
         if render_steps_limit is not None and update_idx > render_steps_limit:
             break
 
-        step_result, arm_action = get_input_vel_ctlr(
+        step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
             if use_arm_actions is not None
@@ -349,6 +346,10 @@ def play_env(env, args, config):
         )
         if step_result is None:
             break
+
+        if end_ep:
+            total_reward = 0
+            env.reset()
 
         if not args.no_render:
             step_result = free_cam.update(env, step_result, update_idx)

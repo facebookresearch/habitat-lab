@@ -24,7 +24,6 @@ def append_text_to_image(
     h, w, c = image.shape
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    text_image = np.zeros_like(image, dtype=np.uint8)
 
     y = 0
     for line in text:
@@ -32,7 +31,18 @@ def append_text_to_image(
         y += textsize[1] + 10
         x = 10
         cv2.putText(
-            text_image,
+            image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (0, 0, 0),
+            font_thickness * 2,
+            lineType=cv2.LINE_AA,
+        )
+
+        cv2.putText(
+            image,
             line,
             (x, y),
             font,
@@ -41,14 +51,17 @@ def append_text_to_image(
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    return np.clip(image + text_image, 0, 255)
+    return np.clip(image, 0, 255)
 
 
 def overlay_frame(frame, info, additional=None):
     lines = []
     flattened_info = flatten_dict(info)
     for k, v in flattened_info.items():
-        lines.append(f"{k}: {v:.2f}")
+        if isinstance(v, str):
+            lines.append(f"{k}: {v}")
+        else:
+            lines.append(f"{k}: {v:.2f}")
     if additional is not None:
         lines.extend(additional)
 

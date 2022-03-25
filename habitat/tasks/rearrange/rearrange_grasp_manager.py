@@ -130,6 +130,7 @@ class RearrangeGraspManager:
 
         self._snapped_obj_id = None
         self._snapped_marker_id = None
+        self._sim.robot.close_gripper()
 
     @property
     def snap_idx(self) -> int:
@@ -174,6 +175,7 @@ class RearrangeGraspManager:
             ),
         ]
         self._snapped_marker_id = marker_name
+        self._sim.robot.open_gripper()
 
     def create_hold_constraint(
         self,
@@ -251,6 +253,8 @@ class RearrangeGraspManager:
                 self._snapped_obj_id,
             ),
         ]
+
+        self._sim.robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

@@ -13,7 +13,6 @@ VIDEO_RENDER_ALL_INFO: True
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 NUM_ENVIRONMENTS: 32
-WRITER_TYPE: 'tb'
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
@@ -27,6 +26,7 @@ FORCE_TORCH_SINGLE_THREADED: True
 EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
 GYM_AUTO_NAME: "Pick"
+
 EVAL:
   SPLIT: "eval"
 
@@ -37,6 +37,7 @@ RL:
       include_visual_keys: ["robot_head_depth"]
       ACTION_DIST:
          use_log_std: True
+         clamp_std: True
 
   REWARD_MEASURE: "rearrangepick_reward"
   SUCCESS_MEASURE: "rearrangepick_success"

@@ -92,7 +92,6 @@ class PlaceReward(RearrangeReward):
                 # Dropped at wrong location
                 reward -= self._config.DROP_PEN
                 if self._config.WRONG_DROP_SHOULD_END:
-                    print("Dropped it at the wrong location")
                     self._task.should_end = True
                     self._metric = reward
                     return

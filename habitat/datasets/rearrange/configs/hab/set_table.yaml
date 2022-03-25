@@ -104,8 +104,6 @@ object_samplers:
       receptacle_sets: ["drawer"]
       num_samples: [1, 1]
       orientation_sampling: "up"
-      sample_region_ratio:
-        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
       nav_to_min_distance: 1.5
   -
     name: "fruit"
@@ -128,8 +126,6 @@ object_target_samplers:
       receptacle_sets: ["table"]
       num_samples: [1, 1]
       orientation_sampling: "up"
-      sample_region_ratio:
-        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
       nav_to_min_distance: 1.5
   -
     name: "fruit_target"
@@ -139,8 +135,6 @@ object_target_samplers:
       receptacle_sets: ["table"]
       num_samples: [1, 1]
       orientation_sampling: "up"
-      sample_region_ratio:
-        "receptacle_aabb_middle_topfrl_apartment_refrigerator": 0.5
       nav_to_min_distance: 1.5
 
 markers:

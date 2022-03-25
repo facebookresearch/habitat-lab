@@ -115,6 +115,8 @@ class ObjectSampler:
         # receptacle instances should be scraped for every new scene
         self.receptacle_instances = None
         self.receptacle_candidates = None
+        # number of objects in the range should be reset each time
+        self.set_num_samples()
 
     def sample_receptacle(
         self,

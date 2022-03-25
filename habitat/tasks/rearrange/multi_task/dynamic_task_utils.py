@@ -27,6 +27,7 @@ def load_task_object(
     should_super_reset: bool,
     task_kwargs: Dict[str, Any],
     episode: Episode,
+    task_config_args: Dict[str, Any],
 ) -> RearrangeTask:
     """
     Loads a task. Used when a task needs to be simulated within another task. For example, this is used to get the starting state of another task as a navigation goal in the Habitat 2.0 navigation task. The loaded task uses the information and dataset from the main task (which is also passed into this function).
@@ -41,8 +42,11 @@ def load_task_object(
     config = copy.copy(cur_config)
     config.defrost()
     if task_config_path is not None:
+        pass_args = []
+        for k, v in task_config_args.items():
+            pass_args.extend((k, v))
         task_config = habitat.get_config(
-            osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml")
+            osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"), pass_args
         )
         config.merge_from_other_cfg(task_config.TASK)
     config.freeze()
