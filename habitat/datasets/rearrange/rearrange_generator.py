@@ -371,6 +371,7 @@ class RearrangeEpisodeGenerator:
         Return the generated scene's handle.
         """
         cur_scene_name = self._scene_sampler.sample()
+        logger.info(f"Initializing scene {cur_scene_name}")
         self.initialize_sim(cur_scene_name, self.cfg.dataset_path)
 
         return cur_scene_name
@@ -508,7 +509,7 @@ class RearrangeEpisodeGenerator:
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
-        for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
+        for _sampler_name, ao_state_sampler in self._ao_state_samplers.items():
             sampler_states = ao_state_sampler.sample(
                 self.sim, [*all_target_receptacles, *all_goal_receptacles]
             )
@@ -732,12 +733,14 @@ class RearrangeEpisodeGenerator:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
-                # we need to force a reset, so change the internal config scene name
+                # we need to force a reset, so reload the NONE scene
                 # TODO: we should fix this to provide an appropriate reset method
-                assert (
-                    self.sim.config.sim_cfg.scene_id != "NONE"
-                ), "Should never generate episodes in an empty scene. Mistake?"
-                self.sim.config.sim_cfg.scene_id = "NONE"
+                proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
+                proxy_backend_cfg.scene_id = "NONE"
+                proxy_hab_cfg = habitat_sim.Configuration(
+                    proxy_backend_cfg, [agent_cfg]
+                )
+                self.sim.reconfigure(proxy_hab_cfg)
             self.sim.reconfigure(hab_cfg)
 
         # setup the debug camera state to the center of the scene bounding box
