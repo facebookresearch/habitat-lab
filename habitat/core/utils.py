@@ -143,10 +143,12 @@ class DatasetFloatJSONEncoder(json.JSONEncoder):
         else:
             _encoder = encode_basestring
 
+        default_repr = lambda x: format(x, ".5f")
+
         def floatstr(
             o,
             allow_nan=self.allow_nan,
-            _repr=lambda x: format(x, ".5f"),
+            _repr=default_repr,
             _inf=math.inf,
             _neginf=-math.inf,
         ):

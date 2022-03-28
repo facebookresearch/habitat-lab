@@ -70,7 +70,7 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
-    EXCESSIVE_FORCE_SHOULD_END:
+    FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 0.0
     PICK_REWARD:
@@ -98,7 +98,7 @@ TASK:
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "ROBOT_COLLS"
-        - "EXCESSIVE_FORCE_SHOULD_END"
+        - "FORCE_TERMINATE"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "PICK_SUCCESS"
