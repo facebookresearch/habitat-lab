@@ -42,7 +42,7 @@ RL:
   SUCCESS_MEASURE: "nav_to_obj_success"
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
-  GYM_OBS_KEYS: ['obj_start_sensor']
+  GYM_OBS_KEYS: ["object_to_agent_gps_compass", 'joint']
   END_ON_SUCCESS: True
 
   PPO:

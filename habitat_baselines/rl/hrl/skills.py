@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat.core.logging import logger
+from habitat_baselines.common.logging import logger
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     AbsGoalSensor,

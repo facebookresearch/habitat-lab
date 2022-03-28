@@ -17,13 +17,13 @@ from habitat.tasks.utils import get_angle
 
 
 @registry.register_sensor
-class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
+class TargetStartPointGoalSensor(PointGoalSensor):
     """
     GPS and compass sensor relative to the starting target position. Only for
     the first target object.
     """
 
-    cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
+    cls_uuid: str = "object_to_agent_gps_compass"
 
     def __init__(self, *args, task, **kwargs):
         self._sim: RearrangeSim
@@ -35,9 +35,9 @@ class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
 
-        target_position = self._sim.get_target_objs_start()[0]
+        start_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
         return self._compute_pointgoal(
-            agent_position, rotation_world_agent, target_position
+            agent_position, rotation_world_agent, start_pos
         )
 
 

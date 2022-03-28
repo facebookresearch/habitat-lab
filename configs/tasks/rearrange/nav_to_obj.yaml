@@ -30,11 +30,12 @@ TASK:
     REWARD_MEASUREMENT: "nav_to_obj_reward"
     SUCCESS_MEASUREMENT: "nav_to_obj_success"
 
-    TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-        GOAL_FORMAT: "POLAR"
-        DIMENSIONALITY: 2
-    SENSORS: ["TARGET_START_SENSOR"]
+    TARGET_START_POINT_GOAL_SENSOR:
+        TYPE: "TargetStartPointGoalSensor"
+    JOINT_SENSOR:
+        TYPE: "JointSensor"
+        DIMENSIONALITY: 7
+    SENSORS: ["TARGET_START_POINT_GOAL_SENSOR", "JOINT_SENSOR"]
 
     ROBOT_FORCE:
         TYPE: "RobotForce"

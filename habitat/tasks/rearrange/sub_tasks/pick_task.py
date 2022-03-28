@@ -39,10 +39,6 @@ class RearrangePickTaskV1(RearrangeTask):
         self.prev_colls = None
         self.force_set_idx = None
 
-    @property
-    def target_idx(self) -> int:
-        return self._targ_idx
-
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
 

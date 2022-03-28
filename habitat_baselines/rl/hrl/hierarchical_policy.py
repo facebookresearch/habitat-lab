@@ -7,6 +7,7 @@ import torch.nn as nn
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.actions import RearrangeStopAction
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.logging import logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
     GtHighLevelPolicy,
@@ -40,6 +41,9 @@ class HierarchicalPolicy(Policy):
         for i, (skill_id, use_skill_name) in enumerate(
             config.USE_SKILLS.items()
         ):
+            if use_skill_name == "":
+                # Skip loading this skill if no name is provided
+                continue
             skill_config = config.DEFINED_SKILLS[use_skill_name]
 
             cls = eval(skill_config.skill_name)
@@ -133,10 +137,12 @@ class HierarchicalPolicy(Policy):
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
+        hl_terminate = torch.zeros(self._num_envs, device=prev_actions.device)
         if self._call_high_level.sum() > 0:
             (
                 new_skills,
                 new_skill_args,
+                hl_terminate,
             ) = self._high_level_policy.get_next_skill(
                 observations,
                 rnn_hidden_states,
@@ -164,6 +170,7 @@ class HierarchicalPolicy(Policy):
                 (1.0 - self._call_high_level) * self._cur_skills
             ) + (self._call_high_level * new_skills)
 
+        # Compute the actions from the current skills
         actions = torch.zeros(
             self._num_envs, get_num_actions(self._action_space)
         )
@@ -179,9 +186,13 @@ class HierarchicalPolicy(Policy):
             )
             actions[batch_idx] = action
 
-        if bad_should_terminate.sum() > 0:
+        should_terminate = bad_should_terminate + hl_terminate
+        if should_terminate.sum() > 0:
             # End the episode where requested.
-            for batch_idx in torch.nonzero(bad_should_terminate):
+            for batch_idx in torch.nonzero(should_terminate):
+                logger.info(
+                    f"Calling stop action for batch {batch_idx}, {bad_should_terminate}, {hl_terminate}"
+                )
                 actions[batch_idx, self._stop_action_idx] = 1.0
 
         return (
