@@ -55,6 +55,10 @@ class BatchedEnv:
         # include_gps = "GPS_SENSOR" in config.SENSORS
         # include_compass = "COMPASS_SENSOR" in config.SENSORS
         self.include_point_goal_gps_compass = "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
+        
+        # This key is a hard_coded_string. Will not work with any value:
+        # see this line : https://github.com/eundersander/habitat-lab/blob/eundersander/gala_kinematic/habitat_baselines/rl/ppo/policy.py#L206
+        self.gps_compass_key = "pointgoal_with_gps_compass" 
         gps_compass_sensor_shape= 4
         assert include_depth or include_rgb
 
@@ -82,7 +86,7 @@ class BatchedEnv:
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
             bsim_config.sensor0.hfov = 60.0
-            bsim_config.force_random_actions = True
+            bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.max_episode_length = 100
             bsim_config.num_physics_substeps = self._config.NUM_PHYSICS_SUBSTEPS
@@ -121,7 +125,7 @@ class BatchedEnv:
         # if include_compass:
         #     observations["compass"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
         if self.include_point_goal_gps_compass:
-            observations["goal_gps_compass"] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
+            observations[self.gps_compass_key] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
         self._observations = observations
 
         # print('observations["rgb"].shape: ', observations["rgb"].shape)
@@ -163,7 +167,7 @@ class BatchedEnv:
         # if include_gps:
         # if include_compass:
         if self.include_point_goal_gps_compass:
-            obs_dict["goal_gps_compass"] = spaces.Box(
+            obs_dict[self.gps_compass_key] = spaces.Box(
                 low=0.0,
                 high=np.inf,  # todo: investigate depth min/max
                 shape=(gps_compass_sensor_shape,),
@@ -223,10 +227,10 @@ class BatchedEnv:
                 # rho, phi = cartesian_to_polar(
                 #         -direction_vector_agent[2], direction_vector_agent[0]
                 #     )
-                observations["goal_gps_compass"] [b, 0] = robot_pos[0]
-                observations["goal_gps_compass"] [b, 1] = robot_pos[1]
-                observations["goal_gps_compass"] [b, 2] = robot_pos[2]
-                observations["goal_gps_compass"] [b, 3] = robot_yaw
+                observations[self.gps_compass_key] [b, 0] = robot_pos[0]
+                observations[self.gps_compass_key] [b, 1] = robot_pos[1]
+                observations[self.gps_compass_key] [b, 2] = robot_pos[2]
+                observations[self.gps_compass_key] [b, 3] = robot_yaw
             
 
 

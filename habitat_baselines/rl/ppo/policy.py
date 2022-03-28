@@ -264,7 +264,7 @@ class PointNavBaselineNet(Net):
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed]
-            if target_encoding:
+            if target_encoding is not None:
                 x += [target_encoding]
 
         x_out = torch.cat(x, dim=1)
