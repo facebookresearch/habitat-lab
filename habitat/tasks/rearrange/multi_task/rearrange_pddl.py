@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
+from enum import Enum
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -24,25 +25,45 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 def parse_func(x: str) -> Tuple[str, List[str]]:
     """
     Parses out the components of a function string.
+    :returns: First element is the name of the function, second argument are the function arguments.
     """
-    name = x.split("(")[0]
-    args = x.split("(")[1].split(")")[0]
+    try:
+        name = x.split("(")[0]
+        args = x.split("(")[1].split(")")[0]
+    except IndexError as e:
+        raise ValueError(f"Cannot parse '{x}'") from e
+
     return name, args
 
 
-def search_for_id(k: str, name_to_id: Dict[str, int]) -> str:
+class RearrangeObjectTypes(Enum):
+    ARTICULATED_OBJECT = "articulated"
+    RIGID_OBJECT = "rigid"
+    GOAL_POSITION = "goal"
+
+
+def search_for_id(
+    k: str, name_to_id: Dict[str, int]
+) -> Tuple[str, RearrangeObjectTypes]:
     """
     Checks if an object exists in the name to ID conversion. This automatically
     checks for ART prefixes as well.
     """
+    ret_id = k
+    ret_type = RearrangeObjectTypes.RIGID_OBJECT
     if isinstance(k, str):
         if k not in name_to_id and "ART_" + k in name_to_id:
-            return name_to_id["ART_" + k]
+            ret_id = name_to_id["ART_" + k]
+            ret_type = RearrangeObjectTypes.ARTICULATED_OBJECT
         else:
             if k not in name_to_id:
                 raise ValueError(f"Cannot find {k} in {name_to_id}")
-            return name_to_id[k]
-    return k
+            ret_id = name_to_id[k]
+            if k.startswith("TARGET"):
+                ret_type = RearrangeObjectTypes.GOAL_POSITION
+            else:
+                ret_type = RearrangeObjectTypes.RIGID_OBJECT
+    return ret_id, ret_type
 
 
 class Predicate:
@@ -88,6 +109,11 @@ class Predicate:
 
 
 class Action:
+    """
+    :property task: The name of the associated task class.
+    :property name: The unique identifier for this action.
+    """
+
     def __init__(
         self,
         load_config: Dict[str, Any],
@@ -156,10 +182,12 @@ class Action:
         if self.applied_func_args[0] == "":
             self.applied_func_args = []
         for i, k in enumerate(self.applied_func_args):
-            self.applied_func_args[i] = search_for_id(k, self.name_to_id)
+            self.applied_func_args[i], _ = search_for_id(k, self.name_to_id)
 
         if len(args) != len(self.parameters):
-            raise ValueError()
+            raise ValueError(
+                f"The number of arguments {args} does not match the parameters {self.parameters}"
+            )
 
         def convert_arg_str(effect_arg):
             for place_arg, set_arg in zip(self.parameters, args):
@@ -193,6 +221,7 @@ class Action:
             k: v for k, v in zip(self.parameters, self.applied_func_args)
         }
         task_kwargs = {
+            "task_name": load_config["task"],
             **func_kwargs,
             **self.add_args,
             **{
@@ -438,7 +467,7 @@ class SetState:
             obj_name = sim.ep_info["static_objs"][obj_idx][0]
 
         for art_obj_id, set_art in self.art_states.items():
-            art_obj_id = search_for_id(art_obj_id, name_to_id)
+            art_obj_id, _ = search_for_id(art_obj_id, name_to_id)
             art_obj = sim.art_objs[art_obj_id]
 
             art_obj.clear_joint_states()

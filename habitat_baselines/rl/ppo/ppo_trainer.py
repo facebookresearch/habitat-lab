@@ -902,7 +902,12 @@ class PPOTrainer(BaseRLTrainer):
             raise RuntimeError("Evaluation does not support distributed mode")
 
         # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
+        if self.config.EVAL.SHOULD_LOAD_CKPT:
+            ckpt_dict = self.load_checkpoint(
+                checkpoint_path, map_location="cpu"
+            )
+        else:
+            ckpt_dict = {}
 
         if self.config.EVAL.USE_CKPT_CONFIG:
             config = self._setup_eval_config(ckpt_dict["config"])

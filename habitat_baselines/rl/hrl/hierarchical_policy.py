@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.actions import RearrangeStopAction
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
@@ -61,6 +62,15 @@ class HierarchicalPolicy(Policy):
             num_envs,
             self._name_to_idx,
         )
+        self._stop_action_idx = 0
+        found = False
+        for k in action_space:
+            if k == "REARRANGE_STOP":
+                found = True
+                break
+            self._stop_action_idx += get_num_actions(action_space[k])
+        if not found:
+            raise ValueError(f"Could not find STOP action in {action_space}")
 
     def eval(self):
         pass
@@ -101,14 +111,19 @@ class HierarchicalPolicy(Policy):
         batched_prev_actions = prev_actions.unsqueeze(1)
         batched_masks = masks.unsqueeze(1)
 
+        batched_bad_should_terminate = torch.zeros(self._num_envs)
+
         # Check if skills should terminate.
         for batch_idx, skill_idx in enumerate(self._cur_skills):
-            should_terminate = self._skills[skill_idx.item()].should_terminate(
+            should_terminate, bad_should_terminate = self._skills[
+                skill_idx.item()
+            ].should_terminate(
                 batched_observations[batch_idx],
                 batched_rnn_hidden_states[batch_idx],
                 batched_prev_actions[batch_idx],
                 batched_masks[batch_idx],
             )
+            batched_bad_should_terminate[batch_idx] = bad_should_terminate
             self._call_high_level[batch_idx] = should_terminate
 
         # Always call high-level if the episode is over.
@@ -163,6 +178,11 @@ class HierarchicalPolicy(Policy):
                 batch_idx,
             )
             actions[batch_idx] = action
+
+        if bad_should_terminate.sum() > 0:
+            # End the episode where requested.
+            for batch_idx in torch.nonzero(bad_should_terminate):
+                actions[batch_idx, self._stop_action_idx] = 1.0
 
         return (
             None,

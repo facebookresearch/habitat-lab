@@ -88,7 +88,7 @@ class TargetCurrentSensor(MultiObjSensor):
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
 
-        return pos[self._task.targ_idx]
+        return pos.reshape(-1)
 
 
 @registry.register_sensor
@@ -99,14 +99,6 @@ class TargetStartSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_start_sensor"
 
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
@@ -115,7 +107,7 @@ class TargetStartSensor(MultiObjSensor):
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
 
-        return pos[self._task.targ_idx]
+        return pos.reshape(-1)
 
 
 @registry.register_sensor
@@ -128,7 +120,7 @@ class AbsTargetStartSensor(MultiObjSensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
-        return np.hstack(pos)  # type: ignore
+        return np.hstack(pos).reshape(-1)
 
 
 @registry.register_sensor
@@ -146,7 +138,7 @@ class GoalSensor(MultiObjSensor):
         _, pos = self._sim.get_targets()
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
-        return np.hstack(pos)  # type: ignore
+        return np.hstack(pos).reshape(-1)
 
 
 @registry.register_sensor
@@ -155,7 +147,7 @@ class AbsGoalSensor(MultiObjSensor):
 
     def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
-        return np.hstack(pos)  # type: ignore
+        return np.hstack(pos).reshape(-1)
 
 
 @registry.register_sensor

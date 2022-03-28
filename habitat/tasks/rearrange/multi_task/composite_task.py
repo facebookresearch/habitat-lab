@@ -187,7 +187,7 @@ class CompositeTask(RearrangeTask):
         self._inferred_cur_task = None
         self._increment_solution_subtask(episode)
         self.cached_tasks = {}
-        return super().reset(episode)
+        return self._get_observations(episode)
 
     def get_inferred_node_idx(self) -> int:
         return self._inferred_cur_node_idx

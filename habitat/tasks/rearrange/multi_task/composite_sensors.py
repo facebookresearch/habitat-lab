@@ -6,6 +6,7 @@
 
 
 from habitat.core.embodied_task import Measure
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 
 
@@ -30,7 +31,7 @@ class CompositeReward(Measure):
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
-            [CompositeNodeIdx.cls_uuid, CompositeSuccess.cls_uuid],
+            [CompositeNodeIdx.cls_uuid],
         )
 
         self.update_metric(
@@ -63,12 +64,6 @@ class CompositeReward(Measure):
             cur_task_cfg.REWARD_MEASUREMENT
         ].get_metric()
         reward += cur_task_reward
-
-        is_succ = task.measurements.measures[
-            CompositeSuccess.cls_uuid
-        ].get_metric()
-        if is_succ:
-            reward += self._config.SUCCESS_REWARD
 
         self._metric = cur_task_reward
         self._prev_node_idx = node_idx
@@ -154,6 +149,9 @@ class CompositeNodeIdx(Measure):
                 inf_cur_task_cfg.SUCCESS_MEASUREMENT
             ].get_metric()
             if is_succ:
+                logger.info(
+                    f"Completed {inf_cur_task_cfg.TYPE}, incrementing node."
+                )
                 task.increment_inferred_solution_idx(episode)
             node_idx = task.get_inferred_node_idx()
             for i in range(task.get_num_nodes()):

@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 5000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -77,7 +77,19 @@ TASK:
     NAV_GOAL_SENSOR:
       TYPE: "NavGoalSensor"
 
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "DIST_TO_NAV_GOAL", "ORACLE_NAV_ACTION_SENSOR", "ABS_TARGET_START_SENSOR", "LOCALIZATION_SENSOR", "NAV_GOAL_SENSOR"]
+    SENSORS: 
+      - "TARGET_START_SENSOR"
+      - "GOAL_SENSOR"
+      - "ABS_GOAL_SENSOR"
+      - "JOINT_SENSOR"
+      - "IS_HOLDING_SENSOR"
+      - "END_EFFECTOR_SENSOR"
+      - "RELATIVE_RESTING_POS_SENSOR"
+      - "DIST_TO_NAV_GOAL"
+      - "ORACLE_NAV_ACTION_SENSOR"
+      - "ABS_TARGET_START_SENSOR"
+      - "LOCALIZATION_SENSOR"
+      - "NAV_GOAL_SENSOR"
 
     ########################
     # General measures
@@ -95,6 +107,9 @@ TASK:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
+    OBJ_AT_GOAL:
+        TYPE: "ObjAtGoal"
+        SUCC_THRESH: 0.15
 
     ########################
     # Navigation measures
@@ -125,7 +140,7 @@ TASK:
         TYPE: "NavToObjSuccess"
         MUST_LOOK_AT_TARG: True
         # Distance in radians.
-        SUCCESS_ANGLE_DIST: 0.15
+        SUCCESS_ANGLE_DIST: 0.3
         HEURISTIC_STOP: False
 
     ########################
@@ -153,6 +168,27 @@ TASK:
         TYPE: "RearrangePickSuccess"
         SUCC_THRESH: 0.15
     ########################
+    
+    ########################
+    # Place measurements
+    PLACE_REWARD:
+        TYPE: "PlaceReward"
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PLACE_REWARD: 20.0
+        DROP_PEN: 0.0
+        USE_DIFF: True
+        WRONG_DROP_SHOULD_END: False
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+    PLACE_SUCCESS:
+        TYPE: "PlaceSuccess"
+        SUCC_THRESH: 0.15
+    ########################
 
     ########################
     # Composite task measurements
@@ -176,6 +212,7 @@ TASK:
         - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "OBJ_AT_GOAL"
         # Navigate measure
         - "ROT_DIST_TO_GOAL"
         - "DIST_TO_GOAL"
@@ -186,6 +223,9 @@ TASK:
         # Pick measure
         - "PICK_SUCCESS"
         - "PICK_REWARD"
+        # Place measure
+        - "PLACE_SUCCESS"
+        - "PLACE_REWARD"
         # Composite measure
         - "COMPOSITE_NODE_IDX"
         - "COMPOSITE_SUCCESS"
@@ -212,9 +252,12 @@ TASK:
             MIN_ABS_ANG_SPEED: 1.0
         EMPTY:
             TYPE: "EmptyAction"
+        REARRANGE_STOP:
+            TYPE: "RearrangeStopAction"
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - BASE_VELOCITY
+        - REARRANGE_STOP
 
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0

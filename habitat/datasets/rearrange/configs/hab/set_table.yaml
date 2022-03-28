@@ -40,9 +40,6 @@ receptacle_sets:
       - ""
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
-      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
       - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
     excluded_receptacle_substrings: []
   -

@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 4000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train

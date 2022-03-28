@@ -4,6 +4,32 @@ types:
 art_objs:
     cab: 0
     fridge: 1
+
+# Matches a string to the START of the entity ID.
+action_to_entity_mapping:
+  "cab":
+    match_entity_type: ""
+    match_id_str: "cab"
+    matching_skills:
+      - "open_cab"
+      - "close_cab"
+  "fridge":
+    match_entity_type: ""
+    match_id_str: "fridge"
+    matching_skills:
+      - "open_fridge"
+      - "close_fridge"
+  "goal":
+    match_entity_type: "goal"
+    match_id_str: ""
+    matching_skills:
+    - "place"
+  "rigid":
+    match_entity_type: "rigid"
+    match_id_str: ""
+    matching_skills:
+    - "pick"
+
 markers:
     cab_top_left: cab_push_point_7
 actions:
@@ -14,6 +40,18 @@ actions:
       precondition: []
       postcondition:
         - "at(robot,obj_to)"
+      task_args:
+        TASK.FORCE_REGENERATE: True
+
+    - name: nav_to_receptacle
+      parameters: [recep_to,obj_to]
+      task: RearrangeNavToRecepTask-v0
+      task_def: "nav_to_obj"
+      precondition: []
+      postcondition:
+        - "at(robot,recep_to)"
+      task_args:
+        TASK.FORCE_REGENERATE: True
 
     - name: pick
       parameters: [obj]
@@ -30,6 +68,7 @@ actions:
         TASK.FORCE_REGENERATE: True
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.BASE_NOISE: 0.0
+
     - name: place
       parameters: [obj, targ]
       task: RearrangePlaceTask-v0

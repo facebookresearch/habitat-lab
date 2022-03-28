@@ -51,6 +51,16 @@ class EmptyAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
+class RearrangeStopAction(SimulatorTaskAction):
+    name: str = "rearrange_stop"
+
+    def step(self, task, *args, **kwargs):
+        if kwargs["REARRANGE_STOP"][0] > 0:
+            task.should_end = True
+        return self._sim.get_observations_at()
+
+
+@registry.register_task_action
 class ArmAction(SimulatorTaskAction):
     """An arm control and grip control into one action space."""
 

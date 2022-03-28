@@ -6,14 +6,26 @@
 
 import copy
 import itertools
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import yaml
 
 from habitat import Config
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import Action, Predicate
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    Action,
+    Predicate,
+    RearrangeObjectTypes,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
+
+@dataclass(frozen=True)
+class EntityToActionsMapping:
+    match_entity_type: Optional[RearrangeObjectTypes]
+    match_id_str: str
+    matching_skills: List[str]
 
 
 class PddlDomain:
@@ -30,6 +42,7 @@ class PddlDomain:
     ):
         with open(load_file_path, "r") as f:
             self.domain_def = yaml.safe_load(f)
+        self._create_action_to_entity_mapping()
 
         self._sim = sim
 
@@ -45,6 +58,25 @@ class PddlDomain:
         self.actions = {}
         self.reset()
 
+    def _create_action_to_entity_mapping(self):
+        self._match_groups = []
+        for _, group_cfg in self.domain_def[
+            "action_to_entity_mapping"
+        ].items():
+
+            if group_cfg["match_entity_type"] != "":
+                use_type = RearrangeObjectTypes(group_cfg["match_entity_type"])
+            else:
+                use_type = None
+
+            self._match_groups.append(
+                EntityToActionsMapping(
+                    match_entity_type=use_type,
+                    match_id_str=group_cfg["match_id_str"],
+                    matching_skills=group_cfg["matching_skills"],
+                )
+            )
+
     def reset(self):
         self._name_to_id = self.get_name_id_conversions(self.domain_def)
         for action_d in self.domain_def["actions"]:
@@ -58,14 +90,8 @@ class PddlDomain:
             )
             self.actions[action.name] = action
 
-    def get_task_match_for_name(self, task_name_cls: str) -> Action:
-        matches = []
-        for action in self.actions.values():
-            if action.task == task_name_cls:
-                matches.append(action)
-        if len(matches) != 1:
-            raise ValueError("Invalid or too many matches for task name")
-        return matches[0]
+    def get_task_match_for_name(self, task_name: str) -> Action:
+        return self.actions[task_name]
 
     def predicate_lookup(self, pred_key: str) -> Optional[Predicate]:
         """
@@ -144,3 +170,23 @@ class PddlDomain:
             name_to_id["ART_" + art_obj.handle] = i
 
         return name_to_id
+
+    def get_matching_skills(
+        self, entity_type: RearrangeObjectTypes, entity_id: str
+    ) -> List[str]:
+        matching_skills = None
+        for match_group in self._match_groups:
+            if (
+                match_group.match_entity_type is not None
+                and match_group.match_entity_type != entity_type
+            ):
+                continue
+            if not entity_id.startswith(match_group.match_id_str):
+                continue
+
+            if matching_skills is not None:
+                raise ValueError(
+                    f"Multiple matching skills for {entity_type}, {entity_id}"
+                )
+            matching_skills = match_group.matching_skills
+        return matching_skills

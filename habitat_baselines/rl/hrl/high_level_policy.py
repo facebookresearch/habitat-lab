@@ -31,17 +31,15 @@ class GtHighLevelPolicy:
         self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
     ):
         next_skill = torch.zeros(self._num_envs, device=prev_actions.device)
-        skill_args_tensor = torch.zeros(self._num_envs, dtype=torch.int32)
+        skill_args_data = [None for _ in range(self._num_envs)]
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
                 skill_name, skill_args = self._solution_actions[
                     self._next_sol_idxs[batch_idx].item()
                 ]
                 next_skill[batch_idx] = self._skill_name_to_idx[skill_name]
-                # Need to convert the name into the corresponding target index.
-                # For now use a hack and assume the name correctly indexes
-                if len(skill_args) > 0:
-                    targ_idx = int(skill_args.split("|")[1])
-                    skill_args_tensor[batch_idx] = targ_idx
+                skill_args = skill_args.split(",")
+                skill_args_data[batch_idx] = skill_args
+
                 self._next_sol_idxs[batch_idx] += 1
-        return next_skill, skill_args_tensor
+        return next_skill, skill_args_data

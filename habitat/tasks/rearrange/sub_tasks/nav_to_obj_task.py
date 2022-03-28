@@ -6,16 +6,22 @@
 
 import os.path as osp
 import random
+from typing import List
 
 import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
     load_task_object,
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    Action,
+    search_for_id,
+)
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
 
@@ -26,9 +32,9 @@ DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 class DynNavRLEnv(RearrangeTask):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
-        self.force_obj_idx = None
+        self.force_obj_to_idx = None
+        self.force_recep_to_name = None
         self._prev_measure = 1.0
-        self.nav_obj_name = None
 
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
         fname = data_path.split("/")[-1].split(".")[0]
@@ -51,10 +57,12 @@ class DynNavRLEnv(RearrangeTask):
     def nav_target_angle(self):
         return self._nav_target_angle
 
-    def set_args(self, obj_to, orig_applied_args, **kwargs):
-        self.force_obj_idx = obj_to
-
-        self.nav_obj_name = orig_applied_args.get("obj_to", None)
+    def set_args(self, obj_to, **kwargs):
+        if "recep_to" in kwargs:
+            self.force_recep_to_name = kwargs["orig_applied_args"]["recep_to"]
+        self.force_obj_to_idx = obj_to
+        self.force_obj_to_name = kwargs["orig_applied_args"]["obj_to"]
+        self.force_kwargs = kwargs
 
     def _get_agent_pos(self):
         sim = self._env._sim
@@ -70,7 +78,7 @@ class DynNavRLEnv(RearrangeTask):
         )
         return distance_to_target
 
-    def _determine_nav_pos(self, episode):
+    def _get_allowed_tasks(self) -> List[Action]:
         cur_preds = self.domain.get_true_predicates()
         # Get all actions which can be actively applied.
         allowed_tasks = [
@@ -83,23 +91,31 @@ class DynNavRLEnv(RearrangeTask):
                 or action.name in self._config.FILTER_NAV_TO_TASKS
             )
         ]
+        return allowed_tasks
+
+    def _determine_nav_pos(self, episode):
+        allowed_tasks = self._get_allowed_tasks()
 
         use_task = random.choice(allowed_tasks)
-        task_cls_name = use_task.task
+        task_name = use_task.name
 
         nav_point, targ_angle = self._get_nav_targ(
-            task_cls_name, {"obj": 0}, episode
+            task_name, {"obj": 0}, episode
         )
 
-        return nav_point, targ_angle, task_cls_name
+        return nav_point, targ_angle
 
-    def _get_nav_targ(self, task_cls_name, task_args, episode):
+    def _internal_log(self, s):
+        logger.info(f"NavToObjTask: {s}")
+
+    def _get_nav_targ(self, task_name: str, task_args, episode):
+        self._internal_log(f"Getting nav target for {task_name}")
         # Get the config for this task
-        action = self.domain.get_task_match_for_name(task_cls_name)
+        action = self.domain.get_task_match_for_name(task_name)
 
         orig_state = self._sim.capture_state(with_robot_js=True)
         load_task_object(
-            task_cls_name,
+            action.task,
             action.task_def,
             self._config.clone(),
             self,
@@ -117,7 +133,7 @@ class DynNavRLEnv(RearrangeTask):
         return robo_pos, heading_angle
 
     def _generate_nav_start_goal(self, episode):
-        targ_pos, targ_angle, _ = self._determine_nav_pos(episode)
+        targ_pos, targ_angle = self._determine_nav_pos(episode)
         self._nav_target_pos = np.array(self._sim.safe_snap_point(targ_pos))
 
         start_pos, start_rot = get_robo_start_pos(
@@ -147,19 +163,60 @@ class DynNavRLEnv(RearrangeTask):
 
         episode_id = sim.ep_info["episode_id"]
 
-        if self.force_obj_idx is not None:
-            full_key = f"{episode_id}_{self.force_obj_idx}"
-            if full_key in self.start_states:
+        if self.force_obj_to_idx is not None:
+            full_key = (
+                f"{episode_id}_{self.force_obj_to_idx}_{self.force_kwargs}"
+            )
+            if (
+                full_key in self.start_states
+                and not self._config.FORCE_REGENERATE
+            ):
                 (
                     self._nav_target_pos,
                     self._nav_target_angle,
                 ) = self.start_states[full_key]
             else:
-                abs_true_point, task_cls_name, task_args = get_nav_from_obj_to(
-                    self.nav_obj_name, self.force_obj_idx, sim
+                self._internal_log(
+                    f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
                 )
+                name_to_id = self.domain.get_name_to_id_mapping()
+
+                if self.force_recep_to_name is not None:
+                    _, entity_type = search_for_id(
+                        self.force_recep_to_name, name_to_id
+                    )
+                    use_name = self.force_recep_to_name
+
+                else:
+                    _, entity_type = search_for_id(
+                        self.force_obj_to_name, name_to_id
+                    )
+                    use_name = self.force_obj_to_name
+
+                matching_skills = self.domain.get_matching_skills(
+                    entity_type, use_name
+                )
+
+                allowed_tasks = self._get_allowed_tasks()
+                allowed_tasks = [
+                    task
+                    for task in allowed_tasks
+                    if task.name in matching_skills
+                ]
+                self._internal_log(f"Got allowed tasks {allowed_tasks}")
+                task_args = {"obj": self.force_obj_to_idx}
+
+                if len(allowed_tasks) != 1:
+                    raise ValueError(
+                        f"Got multiple possible tasks {allowed_tasks}"
+                    )
+                nav_to_task = allowed_tasks[0]
+                self._internal_log(
+                    f"Navigating to {nav_to_task.name} with arguments {task_args}"
+                )
+
                 targ_pos, self._nav_target_angle = self._get_nav_targ(
-                    task_cls_name, task_args, episode
+                    nav_to_task.name, task_args, episode
                 )
                 self._nav_target_pos = np.array(
                     self._sim.safe_snap_point(targ_pos)
@@ -221,23 +278,6 @@ class DynNavRLEnv(RearrangeTask):
             )
 
         return self._get_observations(episode)
-
-
-def get_nav_from_obj_to(nav_name, obj_to, sim):
-    task_args = {}
-
-    if nav_name.startswith("TARG"):
-        raise ValueError("Place task not supported yet")
-    else:
-        task_cls_name = "RearrangePickTask-v0"
-        task_args = {"obj": obj_to}
-        obj_id = sim.scene_obj_ids[obj_to]
-        rom = sim.get_rigid_object_manager()
-        abs_true_point = rom.get_object_by_id(
-            obj_id
-        ).transformation.translation
-
-    return abs_true_point, task_cls_name, task_args
 
 
 def get_robo_start_pos(sim, nav_targ_pos):

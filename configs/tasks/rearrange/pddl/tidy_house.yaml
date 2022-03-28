@@ -6,7 +6,6 @@ start:
             "fridge_:0000": [0,2.35619]
         robo:
             pos: 'rnd'
-
 goal:
     - "at(any_targets|0,TARGET_any_targets|0)"
     - "at(any_targets|1,TARGET_any_targets|1)"

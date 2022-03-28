@@ -190,13 +190,16 @@ class RearrangePickTaskV1(RearrangeTask):
         super().reset(episode)
 
         self.prev_colls = 0
-        episode_id = sim.ep_info["episode_id"]
+        cache_lookup_k = sim.ep_info["episode_id"]
+
+        if self.force_set_idx is not None:
+            cache_lookup_k += str(self.force_set_idx)
 
         if (
-            episode_id in self.start_states
+            cache_lookup_k in self.start_states
             and not self._config.FORCE_REGENERATE
         ):
-            start_pos, start_rot, sel_idx = self.start_states[episode_id]
+            start_pos, start_rot, sel_idx = self.start_states[cache_lookup_k]
         else:
             mgr = sim.get_articulated_object_manager()
             sel_idx = self._sample_idx(sim)
@@ -237,7 +240,7 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos, start_rot = self._gen_start_pos(
                 sim, self._config.EASY_INIT, episode, sel_idx, start_pos
             )
-            self.start_states[episode_id] = (start_pos, start_rot, sel_idx)
+            self.start_states[cache_lookup_k] = (start_pos, start_rot, sel_idx)
             self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos
