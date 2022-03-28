@@ -69,6 +69,41 @@ class NavGoalSensor(Sensor):
 
 
 @registry.register_sensor
+class NavRotToGoalSensor(Sensor):
+    """
+    Warning: This represents priviledged information in the task.
+    """
+
+    cls_uuid: str = "nav_rot_to_goal_sensor"
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavRotToGoalSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        heading_angle = float(self._sim.robot.base_rot)
+        angle_dist = np.arctan2(
+            np.sin(heading_angle - task.nav_target_angle),
+            np.cos(heading_angle - task.nav_target_angle),
+        )
+        return np.abs(angle_dist)
+
+
+@registry.register_sensor
 class OracleNavigationActionSensor(Sensor):
     cls_uuid: str = "oracle_nav_actions"
 

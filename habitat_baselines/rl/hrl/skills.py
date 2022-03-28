@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat_baselines.common.logging import logger
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     AbsGoalSensor,
@@ -19,10 +18,12 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToNavGoalSensor,
     NavGoalSensor,
+    NavRotToGoalSensor,
     OracleNavigationActionSensor,
 )
 from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.logging import logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.hrl.high_level_policy import (
     GtHighLevelPolicy,
@@ -398,9 +399,15 @@ class NavSkillPolicy(NnSkillPolicy):
     ) -> torch.Tensor:
         if self._config.ORACLE_STOP:
             dist_to_nav_goal = observations[DistToNavGoalSensor.cls_uuid]
-            should_stop = dist_to_nav_goal < self._config.ORACLE_STOP_DIST
+            rot_to_nav_goal = observations[NavRotToGoalSensor.cls_uuid]
+            should_stop = (
+                dist_to_nav_goal < self._config.ORACLE_STOP_DIST
+            ) * (rot_to_nav_goal < self._config.ORACLE_STOP_ANGLE_DIST)
             return should_stop.float()
         return torch.zeros(masks.shape[0]).to(masks.device)
+
+    def _parse_skill_arg(self, skill_arg):
+        return int(skill_arg[0].split("|")[1])
 
 
 class OracleNavPolicy(NnSkillPolicy):

@@ -4,134 +4,118 @@ DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/prepare_groceries_10k_1k.json.gz
-    SCENES_DIR: "data/replica_cad/"
+    SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
     MAX_COLLISIONS: -1.0
-    COUNT_OBJ_COLLISIONS: True
-    COUNT_ROBOT_OBJ_COLLS: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
-
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
-
-    # In radians
+    COUNT_OBJ_COLLISIONS: true
+    COUNT_ROBOT_OBJ_COLLS: false
+    DESIRED_RESTING_POSITION:
+    - 0.5
+    - 0.0
+    - 1.0
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-
-    # If true, does not care about navigability or collisions with objects when spawning
-    # robot
-    EASY_INIT: False
-
-    ########################
-    # Composite task config
-    ########################
-    TASK_SPEC_BASE_PATH: "configs/tasks/rearrange/pddl/"
-    TASK_SPEC: "prepare_groceries"
-
-    # PDDL domain params
-    PDDL_DOMAIN_DEF: "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    EASY_INIT: false
+    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
+    TASK_SPEC: prepare_groceries
+    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-
-    # -1 means no forcing any node evaluation.
     SINGLE_EVAL_NODE: -1
     LIMIT_TASK_NODE: -1
     LIMIT_TASK_LEN_SCALING: 0.0
     DEBUG_SKIP_TO_NODE: -1
-    SKIP_NODES: ["move_obj"]
-    ########################
-
+    SKIP_NODES:
+    - move_obj
     TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
+        TYPE: TargetStartSensor
+        GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
     GOAL_SENSOR:
-        TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
+        TYPE: GoalSensor
+        GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
     ABS_TARGET_START_SENSOR:
-        TYPE: "AbsTargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
+        TYPE: AbsTargetStartSensor
+        GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
     ABS_GOAL_SENSOR:
-        TYPE: "AbsGoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
+        TYPE: AbsGoalSensor
+        GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
     DIST_TO_NAV_GOAL:
-        TYPE: "DistToNavGoalSensor"
+        TYPE: DistToNavGoalSensor
     LOCALIZATION_SENSOR:
-        TYPE: "LocalizationSensor"
+        TYPE: LocalizationSensor
     JOINT_SENSOR:
-        TYPE: "JointSensor"
+        TYPE: JointSensor
         DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
-        TYPE: "EEPositionSensor"
+        TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
-        TYPE: "IsHoldingSensor"
+        TYPE: IsHoldingSensor
     RELATIVE_RESTING_POS_SENSOR:
-        TYPE: "RelativeRestingPositionSensor"
-
+        TYPE: RelativeRestingPositionSensor
     ORACLE_NAV_ACTION_SENSOR:
-      TYPE: "OracleNavigationActionSensor"
-
+        TYPE: OracleNavigationActionSensor
     NAV_GOAL_SENSOR:
-      TYPE: "NavGoalSensor"
-
-    SENSORS: ["TARGET_START_SENSOR", "GOAL_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "DIST_TO_NAV_GOAL", "ORACLE_NAV_ACTION_SENSOR", "ABS_TARGET_START_SENSOR", "LOCALIZATION_SENSOR", "NAV_GOAL_SENSOR"]
-
-    ########################
-    # General measures
+        TYPE: NavGoalSensor
+    SENSORS:
+    - TARGET_START_SENSOR
+    - GOAL_SENSOR
+    - ABS_GOAL_SENSOR
+    - JOINT_SENSOR
+    - IS_HOLDING_SENSOR
+    - END_EFFECTOR_SENSOR
+    - RELATIVE_RESTING_POS_SENSOR
+    - DIST_TO_NAV_GOAL
+    - ROT_DIST_TO_NAV_GOAL
+    - ORACLE_NAV_ACTION_SENSOR
+    - ABS_TARGET_START_SENSOR
+    - LOCALIZATION_SENSOR
+    - NAV_GOAL_SENSOR
     EXCESSIVE_FORCE_SHOULD_END:
-        TYPE: "ForceTerminate"
+        TYPE: ForceTerminate
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_FORCE:
-        TYPE: "RobotForce"
+        TYPE: RobotForce
         MIN_FORCE: 20.0
     ROBOT_COLLS:
-      TYPE: "RobotCollisions"
+        TYPE: RobotCollisions
     OBJECT_TO_GOAL_DISTANCE:
-        TYPE: "ObjectToGoalDistance"
+        TYPE: ObjectToGoalDistance
     END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: "EndEffectorToObjectDistance"
+        TYPE: EndEffectorToObjectDistance
     END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: "EndEffectorToRestDistance"
-
-    ########################
-    # Navigation measures
+        TYPE: EndEffectorToRestDistance
     ROT_DIST_TO_GOAL:
-      TYPE: "RotDistToGoal"
+        TYPE: RotDistToGoal
     DIST_TO_GOAL:
-      TYPE: "DistToGoal"
+        TYPE: DistToGoal
     BAD_CALLED_TERMINATE:
-      TYPE: "BadCalledTerminate"
-      BAD_TERM_PEN: 0.0
-      DECAY_BAD_TERM: False
+        TYPE: BadCalledTerminate
+        BAD_TERM_PEN: 0.0
+        DECAY_BAD_TERM: false
     NAV_TO_POS_SUCC:
-      TYPE: "NavToPosSucc"
-      SUCCESS_DISTANCE: 0.2
+        TYPE: NavToPosSucc
+        SUCCESS_DISTANCE: 0.2
     REARRANGE_NAV_TO_OBJ_REWARD:
-        TYPE: "NavToObjReward"
-        # Negative means a penalty
+        TYPE: NavToObjReward
         SLACK: 0.0
         SUCCESS_REWARD: 10.0
-        # Reward the agent for facing the object?
-        SHOULD_REWARD_TURN: True
-        # What distance do we start giving the reward for facing the object?
+        SHOULD_REWARD_TURN: true
         TURN_REWARD_DIST: 0.1
-        # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
         SLACK_REWARD: 0.0
     REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: "NavToObjSuccess"
-        MUST_LOOK_AT_TARG: True
-        # Distance in radians.
-        SUCCESS_ANGLE_DIST: 0.15
-        HEURISTIC_STOP: False
-
-    ########################
-    # Pick specific measurements
+        TYPE: NavToObjSuccess
+        MUST_LOOK_AT_TARG: true
+        SUCCESS_ANGLE_DIST: 0.3
+        HEURISTIC_STOP: false
     PICK_REWARD:
-        TYPE: "RearrangePickReward"
+        TYPE: RearrangePickReward
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PICK_REWARD: 20.0
@@ -141,98 +125,120 @@ TASK:
         COLL_PEN: 1.0
         ROBOT_OBJ_COLL_PEN: 0.0
         MAX_ACCUM_FORCE: 5000.0
-
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-        USE_DIFF: True
-
-        DROP_OBJ_SHOULD_END: False
-        WRONG_PICK_SHOULD_END: False
+        USE_DIFF: true
+        DROP_OBJ_SHOULD_END: false
+        WRONG_PICK_SHOULD_END: false
     PICK_SUCCESS:
-        TYPE: "RearrangePickSuccess"
+        TYPE: RearrangePickSuccess
         SUCC_THRESH: 0.15
-    ########################
-
-    ########################
-    # Composite task measurements
     COMPOSITE_NODE_IDX:
-        TYPE: "CompositeNodeIdx"
+        TYPE: CompositeNodeIdx
     COMPOSITE_SUCCESS:
-        TYPE: "CompositeSuccess"
+        TYPE: CompositeSuccess
     COMPOSITE_REWARD:
-        TYPE: "CompositeReward"
+        TYPE: CompositeReward
         STAGE_COMPLETE_REWARD: 10.0
         SUCCESS_REWARD: 10.0
-    ########################
     NUM_STEPS:
-        TYPE: "NumStepsMeasure"
-
+        TYPE: NumStepsMeasure
     MEASUREMENTS:
-        # General measure
-        - "OBJECT_TO_GOAL_DISTANCE"
-        - "ROBOT_FORCE"
-        - "EXCESSIVE_FORCE_SHOULD_END"
-        - "ROBOT_COLLS"
-        - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
-        # Navigate measure
-        - "ROT_DIST_TO_GOAL"
-        - "DIST_TO_GOAL"
-        - "BAD_CALLED_TERMINATE"
-        - "NAV_TO_POS_SUCC"
-        - "REARRANGE_NAV_TO_OBJ_SUCCESS"
-        - "REARRANGE_NAV_TO_OBJ_REWARD"
-        # Pick measure
-        - "PICK_SUCCESS"
-        - "PICK_REWARD"
-        # Composite measure
-        - "COMPOSITE_NODE_IDX"
-        - "COMPOSITE_SUCCESS"
-        - "COMPOSITE_REWARD"
-        - "NUM_STEPS"
+    - OBJECT_TO_GOAL_DISTANCE
+    - ROBOT_FORCE
+    - EXCESSIVE_FORCE_SHOULD_END
+    - ROBOT_COLLS
+    - END_EFFECTOR_TO_REST_DISTANCE
+    - END_EFFECTOR_TO_OBJECT_DISTANCE
+    - OBJ_AT_GOAL
+    - ROT_DIST_TO_GOAL
+    - DIST_TO_GOAL
+    - BAD_CALLED_TERMINATE
+    - NAV_TO_POS_SUCC
+    - REARRANGE_NAV_TO_OBJ_SUCCESS
+    - REARRANGE_NAV_TO_OBJ_REWARD
+    - PICK_SUCCESS
+    - PICK_REWARD
+    - PLACE_SUCCESS
+    - PLACE_REWARD
+    - COMPOSITE_NODE_IDX
+    - COMPOSITE_SUCCESS
+    - COMPOSITE_REWARD
+    - NUM_STEPS
     ACTIONS:
         ARM_ACTION:
-            TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
+            TYPE: ArmAction
+            ARM_CONTROLLER: ArmRelPosAction
+            GRIP_CONTROLLER: MagicGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: False
+            DISABLE_GRIP: false
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
-            TYPE: "BaseVelAction"
+            TYPE: BaseVelAction
             LIN_SPEED: 10.0
             ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: True
-            END_ON_STOP: False
-            ALLOW_BACK: True
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
         EMPTY:
-            TYPE: "EmptyAction"
+            TYPE: EmptyAction
+        REARRANGE_STOP:
+            TYPE: RearrangeStopAction
     POSSIBLE_ACTIONS:
-        - ARM_ACTION
-        - BASE_VELOCITY
-
+    - ARM_ACTION
+    - BASE_VELOCITY
+    - REARRANGE_STOP
+    OBJ_AT_GOAL:
+        TYPE: ObjAtGoal
+        SUCC_THRESH: 0.15
+    PLACE_REWARD:
+        TYPE: PlaceReward
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PLACE_REWARD: 20.0
+        DROP_PEN: 0.0
+        USE_DIFF: true
+        WRONG_DROP_SHOULD_END: false
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+    PLACE_SUCCESS:
+        TYPE: PlaceSuccess
+        SUCC_THRESH: 0.15
+    ROT_DIST_TO_NAV_GOAL:
+        TYPE: NavRotToGoalSensor
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
     HOLD_THRESH: 0.09
     AC_FREQ_RATIO: 4
-    DEBUG_RENDER: False
-    DEBUG_RENDER_GOAL: True
-    AGENTS: ['AGENT_0']
-    CONCUR_RENDER: True
-    AUTO_SLEEP: True
+    DEBUG_RENDER: false
+    DEBUG_RENDER_GOAL: true
+    AGENTS:
+    - AGENT_0
+    CONCUR_RENDER: true
+    AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: False
+        IS_SET_START_STATE: false
         RADIUS: 0.3
-        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
-        START_POSITION: [0, 0, 0]
-        START_ROTATION: [0, 0, 0, 1]
+        SENSORS:
+        - HEAD_DEPTH_SENSOR
+        START_POSITION:
+        - 0
+        - 0
+        - 0
+        START_ROTATION:
+        - 0
+        - 0
+        - 0
+        - 1
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -241,35 +247,44 @@ SIMULATOR:
         HEIGHT: 128
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: True
+        NORMALIZE_DEPTH: true
     ARM_DEPTH_SENSOR:
         HEIGHT: 128
         MAX_DEPTH: 10.0
         MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: True
+        NORMALIZE_DEPTH: true
         WIDTH: 128
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    ARM_REST: [0.6, 0.0, 0.9]
+    ARM_REST:
+    - 0.6
+    - 0.0
+    - 0.9
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
-        ENABLE_PHYSICS: True
+        ALLOW_SLIDING: true
+        ENABLE_PHYSICS: true
         GPU_DEVICE_ID: 0
-        GPU_GPU: False
+        GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: "FetchRobot"
+    ROBOT_TYPE: FetchRobot
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480
         HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
+        ORIENTATION:
+        - 0.0
+        - 0.0
+        - 0.0
+        POSITION:
+        - 0
+        - 1.25
+        - 0
         TYPE: HabitatSimSemanticSensor
         WIDTH: 640
     TILT_ANGLE: 15
