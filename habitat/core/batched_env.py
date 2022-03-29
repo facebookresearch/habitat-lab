@@ -4,12 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from turtle import shape
 from typing import (
     Dict,
     Optional,
     List,
     Any,
 )
+import uuid
 
 from gym.spaces import Box
 import numpy as np
@@ -52,14 +54,17 @@ class BatchedEnv:
 
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
-        # include_gps = "GPS_SENSOR" in config.SENSORS
-        # include_compass = "COMPASS_SENSOR" in config.SENSORS
+
         self.include_point_goal_gps_compass = "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
-        
         # This key is a hard_coded_string. Will not work with any value:
         # see this line : https://github.com/eundersander/habitat-lab/blob/eundersander/gala_kinematic/habitat_baselines/rl/ppo/policy.py#L206
         self.gps_compass_key = "pointgoal_with_gps_compass" 
         gps_compass_sensor_shape= 4
+        self.include_ee_pos = "EE_POS_SENSOR" in config.SENSORS
+        self.ee_pos_key = "ee_pos"
+        ee_pos_shape = 3
+
+
         assert include_depth or include_rgb
 
         self._num_envs = config.NUM_ENVIRONMENTS
@@ -126,6 +131,9 @@ class BatchedEnv:
         #     observations["compass"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
         if self.include_point_goal_gps_compass:
             observations[self.gps_compass_key] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
+        if self.include_ee_pos:
+            observations[self.ee_pos_key] = torch.empty([self._num_envs, ee_pos_shape], dtype=torch.float32)
+        
         self._observations = observations
 
         # print('observations["rgb"].shape: ', observations["rgb"].shape)
@@ -164,13 +172,18 @@ class BatchedEnv:
                 dtype=np.float32,
             )
             obs_dict["depth"] = depth_obs
-        # if include_gps:
-        # if include_compass:
         if self.include_point_goal_gps_compass:
             obs_dict[self.gps_compass_key] = spaces.Box(
                 low=0.0,
                 high=np.inf,  # todo: investigate depth min/max
                 shape=(gps_compass_sensor_shape,),
+                dtype=np.float32,
+            )
+        if self.include_ee_pos:
+            obs_dict[self.ee_pos_key] = spaces.Box(
+                low=0.0,
+                high=np.inf,  # todo: investigate depth min/max
+                shape=(ee_pos_shape,),
                 dtype=np.float32,
             )
 
@@ -231,6 +244,9 @@ class BatchedEnv:
                 observations[self.gps_compass_key] [b, 1] = robot_pos[1]
                 observations[self.gps_compass_key] [b, 2] = robot_pos[2]
                 observations[self.gps_compass_key] [b, 3] = robot_yaw
+            if self.include_ee_pos:
+                for i in range(3):
+                    observations[self.ee_pos_key][b, i] = state.ee_pos[i]
             
 
 
