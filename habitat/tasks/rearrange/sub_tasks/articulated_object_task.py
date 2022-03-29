@@ -42,8 +42,11 @@ class SetArticulatedObjectTask(RearrangeTask):
         """
         return self._sim.get_marker(self._use_marker)
 
-    def set_args(self, marker, **kwargs):
+    def set_args(self, marker, obj, **kwargs):
         self._force_use_marker = marker
+        # The object in the container we are trying to reach and using as the
+        # position of the container.
+        self._targ_idx = obj
 
     @property
     def success_js_state(self) -> float:
@@ -74,12 +77,17 @@ class SetArticulatedObjectTask(RearrangeTask):
         Returns the start face direction and the starting position of the robot.
         """
         spawn_region = self._get_spawn_region()
-        spawn_region = mn.Range2D.from_center(
-            spawn_region.center(),
-            self._config.SPAWN_REGION_SCALE * spawn_region.size() / 2,
-        )
 
-        start_pos = np.random.uniform(spawn_region.min, spawn_region.max)
+        if self._config.SPAWN_REGION_SCALE == 0.0:
+            # No randomness in the base position spawn
+            start_pos = spawn_region.center()
+        else:
+            spawn_region = mn.Range2D.from_center(
+                spawn_region.center(),
+                self._config.SPAWN_REGION_SCALE * spawn_region.size() / 2,
+            )
+
+            start_pos = np.random.uniform(spawn_region.min, spawn_region.max)
 
         start_pos = np.array([start_pos[0], 0.0, start_pos[1]])
         targ_pos = np.array(self._get_look_pos())

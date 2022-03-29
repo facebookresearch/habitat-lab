@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import hashlib
+import logging
 import os
 import os.path as osp
 import pickle
@@ -18,7 +19,16 @@ import numpy as np
 import quaternion
 
 import habitat_sim
+from habitat.core.logging import HabitatLogger
 from habitat_sim.physics import MotionType
+
+logger = HabitatLogger(
+    name="rearrange_task",
+    level=logging.INFO
+    if os.environ.get("HABITAT_REARRANGE_LOG", 0)
+    else logging.ERROR,
+    format_str="%(asctime)-15s %(module)s: %(message)s",
+)
 
 
 def make_render_only(obj, sim):

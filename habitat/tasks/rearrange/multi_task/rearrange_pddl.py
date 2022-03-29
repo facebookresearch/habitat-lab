@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -20,6 +21,7 @@ from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+from habitat.tasks.rearrange.utils import logger
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -38,6 +40,7 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
 
 class RearrangeObjectTypes(Enum):
     ARTICULATED_OBJECT = "articulated"
+    ARTICULATED_LINK = "articulated_link"
     RIGID_OBJECT = "rigid"
     GOAL_POSITION = "goal"
 
@@ -50,19 +53,24 @@ def search_for_id(
     checks for ART prefixes as well.
     """
     ret_id = k
-    ret_type = RearrangeObjectTypes.RIGID_OBJECT
     if isinstance(k, str):
         if k not in name_to_id and "ART_" + k in name_to_id:
-            ret_id = name_to_id["ART_" + k]
-            ret_type = RearrangeObjectTypes.ARTICULATED_OBJECT
-        else:
-            if k not in name_to_id:
-                raise ValueError(f"Cannot find {k} in {name_to_id}")
-            ret_id = name_to_id[k]
-            if k.startswith("TARGET"):
-                ret_type = RearrangeObjectTypes.GOAL_POSITION
-            else:
-                ret_type = RearrangeObjectTypes.RIGID_OBJECT
+            k = "ART_" + k
+        elif k not in name_to_id and "MARKER_" + k in name_to_id:
+            k = "MARKER_" + k
+
+        if k not in name_to_id:
+            raise ValueError(f"Cannot find {k} in {name_to_id}")
+        ret_id = name_to_id[k]
+
+    if k.startswith("TARGET_"):
+        ret_type = RearrangeObjectTypes.GOAL_POSITION
+    elif k.startswith("MARKER_"):
+        ret_type = RearrangeObjectTypes.ARTICULATED_LINK
+    elif k.startswith("ART_"):
+        ret_type = RearrangeObjectTypes.ARTICULATED_OBJECT
+    else:
+        ret_type = RearrangeObjectTypes.RIGID_OBJECT
     return ret_id, ret_type
 
 
@@ -233,6 +241,9 @@ class Action:
                 }
             },
         }
+        logger.info(
+            f"Loading task {load_config['task']} with definition {load_config['task_def']}"
+        )
         return load_task_object(
             load_config["task"],
             load_config["task_def"],
@@ -327,6 +338,24 @@ class RoboState:
                 self.pos = self.pos.replace(k, v)
 
 
+@dataclass(frozen=True)
+class SetStateArgSpec:
+    name_match: str
+    type_match: Optional[List[str]] = None
+
+    def argument_matches(self, arg_name: Any, arg_type: RearrangeObjectTypes):
+        if not isinstance(arg_name, str):
+            return False
+        if not arg_name.startswith(self.name_match):
+            return False
+        if (
+            self.type_match is not None
+            and arg_type.value not in self.type_match
+        ):
+            return False
+        return True
+
+
 class SetState:
     """
     A partially specified state of the simulator. First this object needs to be
@@ -340,6 +369,10 @@ class SetState:
         self.obj_states = load_config.get("obj_states", {})
         self.robo_state = RoboState(load_config.get("robo", {}))
         self.load_config = load_config
+
+        self.arg_spec: Optional[SetStateArgSpec] = None
+        if "arg_spec" in load_config:
+            self.arg_spec = SetStateArgSpec(**load_config["arg_spec"])
 
     def bind(self, arg_k: List[str], arg_v: List[str]) -> None:
         """
@@ -367,12 +400,13 @@ class SetState:
                 ].replace(k, v)
 
         self.robo_state.bind(arg_k, arg_v)
+        self._set_args = arg_v
 
     def _is_id_rigid_object(self, id_str: str) -> bool:
         """
         Used to check if an identifier can be used to look up the object ID in the scene_ojbs_id list of the simulator.
         """
-        return not id_str.startswith("ART_")
+        return not (id_str.startswith("ART_") or id_str.startswith("MARKER_"))
 
     def is_satisfied(
         self,
@@ -383,7 +417,14 @@ class SetState:
     ) -> bool:
         """
         Returns True if the grounded state is present in the current simulator state.
+        Also returns False if the arguments are incompatible. For example if input argument is supposed to be a cabinet, but the passed argument is a rigid object name.
         """
+
+        if self.arg_spec is not None:
+            for arg_name in self._set_args:
+                match_name, match_type = search_for_id(arg_name, name_to_id)
+                if not self.arg_spec.argument_matches(match_name, match_type):
+                    return False
 
         rom = sim.get_rigid_object_manager()
         for obj_name, target in self.obj_states.items():
@@ -409,16 +450,28 @@ class SetState:
             if dist >= obj_thresh:
                 return False
 
-        for art_obj_id, set_art in self.art_states.items():
-            abs_id = sim.art_obj_ids[art_obj_id]
-            prev_art_pos = sim.get_articulated_object_positions(abs_id)
+        for art_name, set_art in self.art_states.items():
+            match_name, match_type = search_for_id(art_name, name_to_id)
+            if match_type == RearrangeObjectTypes.ARTICULATED_OBJECT:
+                art_obj = sim.art_objs[match_name]
+                prev_art_pos = art_obj.joint_positions
+            elif match_type == RearrangeObjectTypes.ARTICULATED_LINK:
+                marker = sim.get_marker(match_name)
+                prev_art_pos = marker.get_targ_js()
+            else:
+                # This is not a compatible argument type to the function
+                return False
+
             if isinstance(set_art, str):
                 art_sampler = eval(set_art)
                 did_sat = art_sampler.is_satisfied(prev_art_pos)
             else:
-                art_dist = np.linalg.norm(
-                    np.array(prev_art_pos) - np.array(set_art)
-                )
+                prev_art_pos = np.array(prev_art_pos)
+                set_art = np.array(set_art)
+                if prev_art_pos.shape != set_art.shape:
+                    # This type of receptacle is not a compatible input
+                    return False
+                art_dist = np.linalg.norm(prev_art_pos - set_art)
                 did_sat = art_dist < art_thresh
 
             if not did_sat:
@@ -434,6 +487,11 @@ class SetState:
                     f"Cannot find {self.robo_state.holding} in {name_to_id}"
                 )
             obj_idx = name_to_id[self.robo_state.holding]
+            if isinstance(obj_idx, str):
+                raise ValueError(
+                    f"Current holding object {obj_idx} is not a scene object index"
+                )
+
             abs_obj_id = sim.scene_obj_ids[obj_idx]
             if sim.grasp_mgr.snap_idx != abs_obj_id:
                 return False
@@ -466,12 +524,20 @@ class SetState:
             sim.reset_obj_T(abs_obj_id, set_T)
             obj_name = sim.ep_info["static_objs"][obj_idx][0]
 
-        for art_obj_id, set_art in self.art_states.items():
-            art_obj_id, _ = search_for_id(art_obj_id, name_to_id)
-            art_obj = sim.art_objs[art_obj_id]
+        for art_name, set_art in self.art_states.items():
+            match_name, match_type = search_for_id(art_name, name_to_id)
+            if match_type == RearrangeObjectTypes.ARTICULATED_OBJECT:
+                art_obj = sim.art_objs[match_name]
 
-            art_obj.clear_joint_states()
-            art_obj.joint_positions = set_art
+                art_obj.clear_joint_states()
+                art_obj.joint_positions = set_art
+            elif match_type == RearrangeObjectTypes.ARTICULATED_LINK:
+                marker = sim.get_marker(match_name)
+                marker.set_targ_js(set_art)
+            else:
+                raise ValueError(
+                    f"Unrecognized type {match_type} and name {match_name} from {art_name}"
+                )
 
             sim.internal_step(-1)
 

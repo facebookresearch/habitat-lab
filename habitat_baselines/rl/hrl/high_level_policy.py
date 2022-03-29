@@ -52,6 +52,10 @@ class GtHighLevelPolicy:
                 logger.info(
                     f"Got next element of the plan with {skill_name}, {skill_args}"
                 )
+                if skill_name not in self._skill_name_to_idx:
+                    raise ValueError(
+                        f"Could not find skill named {skill_name} in {self._skill_name_to_idx}"
+                    )
                 next_skill[batch_idx] = self._skill_name_to_idx[skill_name]
                 skill_args = skill_args.split(",")
                 skill_args_data[batch_idx] = skill_args

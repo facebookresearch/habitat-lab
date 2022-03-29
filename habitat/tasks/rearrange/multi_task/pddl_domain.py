@@ -23,7 +23,7 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 @dataclass(frozen=True)
 class EntityToActionsMapping:
-    match_entity_type: Optional[RearrangeObjectTypes]
+    match_entity_type: Optional[List[RearrangeObjectTypes]]
     match_id_str: str
     matching_skills: List[str]
 
@@ -50,7 +50,6 @@ class PddlDomain:
         for pred_d in self.domain_def["predicates"]:
             pred = Predicate(pred_d)
             self.predicates.append(pred)
-        self.types: List[str] = self.domain_def["types"]
 
         self._config = cur_task_config
 
@@ -64,8 +63,11 @@ class PddlDomain:
             "action_to_entity_mapping"
         ].items():
 
-            if group_cfg["match_entity_type"] != "":
-                use_type = RearrangeObjectTypes(group_cfg["match_entity_type"])
+            if len(group_cfg["match_entity_type"]) != 0:
+                use_type = [
+                    RearrangeObjectTypes(x)
+                    for x in group_cfg["match_entity_type"]
+                ]
             else:
                 use_type = None
 
@@ -108,13 +110,7 @@ class PddlDomain:
 
             if len(pred_args) != len(pred.args):
                 continue
-            is_match = True
-            for q_arg, k_arg in zip(pred_args, pred.args):
-                if k_arg in self.types and q_arg not in self.types:
-                    is_match = False
-                    break
-            if is_match:
-                return pred
+            return pred
         return None
 
     def is_pred_true(self, bound_pred: Predicate) -> bool:
@@ -140,6 +136,12 @@ class PddlDomain:
             for entity_input in itertools.combinations(
                 all_entities, pred.get_n_args()
             ):
+                # if pred.name == "closed_cab" and entity_input[0].startswith(
+                #    "MARKER_"
+                # ):
+                #    import ipdb
+
+                #    ipdb.set_trace()
                 if self.is_pred_true_args(pred, entity_input):
                     true_preds.append(pred)
         return true_preds
@@ -169,6 +171,9 @@ class PddlDomain:
         for i, art_obj in enumerate(self._sim.art_objs):
             name_to_id["ART_" + art_obj.handle] = i
 
+        for k in self._sim.get_all_markers():
+            name_to_id["MARKER_" + k] = k
+
         return name_to_id
 
     def get_matching_skills(
@@ -178,7 +183,7 @@ class PddlDomain:
         for match_group in self._match_groups:
             if (
                 match_group.match_entity_type is not None
-                and match_group.match_entity_type != entity_type
+                and entity_type not in match_group.match_entity_type
             ):
                 continue
             if not entity_id.startswith(match_group.match_id_str):

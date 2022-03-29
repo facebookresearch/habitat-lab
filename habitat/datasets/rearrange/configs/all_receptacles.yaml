@@ -1,33 +1,33 @@
 ---
-## To use the baked scenes
-#dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
-#additional_object_paths:
-#  - "data/objects/ycb/"
-#scene_sets:
-#  -
-#    name: "scene_train_split"
-#    included_substrings:
-#      - "Baked_sc0_staging"
-#      - "Baked_sc1_staging"
-#      - "Baked_sc2_staging"
-#      - "Baked_sc3_staging"
-#    excluded_substrings: []
-#    comment: "sc4_staging saved for evaluation"
-
-# To use the non-baked scenes
-dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+# To use the baked scenes
+dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/"
 scene_sets:
   -
     name: "scene_train_split"
     included_substrings:
-      - "v3_sc0_staging"
-      - "v3_sc1_staging"
-      - "v3_sc2_staging"
-      - "v3_sc3_staging"
+      - "Baked_sc0_staging"
+      - "Baked_sc1_staging"
+      - "Baked_sc2_staging"
+      - "Baked_sc3_staging"
     excluded_substrings: []
     comment: "sc4_staging saved for evaluation"
+
+## To use the non-baked scenes
+#dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+#additional_object_paths:
+#  - "data/objects/ycb/"
+#scene_sets:
+#  -
+#    name: "scene_train_split"
+#    included_substrings:
+#      - "v3_sc0_staging"
+#      - "v3_sc1_staging"
+#      - "v3_sc2_staging"
+#      - "v3_sc3_staging"
+#    excluded_substrings: []
+#    comment: "sc4_staging saved for evaluation"
 
 object_sets:
   -

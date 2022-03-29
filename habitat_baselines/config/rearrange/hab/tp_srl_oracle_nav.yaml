@@ -89,8 +89,8 @@ RL:
       USE_SKILLS:
         pick: "NN_PICK"
         place: "NN_PLACE"
-        nav: "NN_NAV"
-        nav_to_receptacle: "NN_NAV"
+        nav: "GT_NAV"
+        nav_to_receptacle: "GT_NAV"
 
   REWARD_MEASURE: "composite_reward"
   SUCCESS_MEASURE: "composite_success"

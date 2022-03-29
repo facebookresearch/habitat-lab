@@ -23,6 +23,9 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
+ADD_CACHE_KEY = "add_cache_key"
+
+
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """

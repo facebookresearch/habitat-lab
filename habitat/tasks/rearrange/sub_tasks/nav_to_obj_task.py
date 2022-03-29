@@ -6,13 +6,12 @@
 
 import os.path as osp
 import random
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
-from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
     load_task_object,
@@ -22,8 +21,12 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     Action,
     search_for_id,
 )
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
+from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
+from habitat.tasks.rearrange.utils import (
+    CacheHelper,
+    logger,
+    rearrange_collision,
+)
 
 DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
@@ -93,25 +96,31 @@ class DynNavRLEnv(RearrangeTask):
         ]
         return allowed_tasks
 
-    def _determine_nav_pos(self, episode):
+    def _determine_nav_pos(self, episode: Episode) -> Tuple[mn.Vector3, float]:
         allowed_tasks = self._get_allowed_tasks()
 
         use_task = random.choice(allowed_tasks)
         task_name = use_task.name
 
         nav_point, targ_angle = self._get_nav_targ(
-            task_name, {"obj": 0}, episode
+            task_name,
+            {"obj": None, "marker": None, ADD_CACHE_KEY: "nav"},
+            episode,
         )
 
         return nav_point, targ_angle
 
-    def _internal_log(self, s):
-        logger.info(f"NavToObjTask: {s}")
-
-    def _get_nav_targ(self, task_name: str, task_args, episode):
-        self._internal_log(f"Getting nav target for {task_name}")
+    def _get_nav_targ(
+        self, task_name: str, task_args: Dict[str, Any], episode: Episode
+    ) -> Tuple[mn.Vector3, float]:
+        logger.info(
+            f"Getting nav target for {task_name} with arguments {task_args}"
+        )
         # Get the config for this task
         action = self.domain.get_task_match_for_name(task_name)
+        logger.info(
+            f"Corresponding action with task={action.task}, task_def={action.task_def}, config_task_args={action.config_task_args}"
+        )
 
         orig_state = self._sim.capture_state(with_robot_js=True)
         load_task_object(
@@ -176,18 +185,23 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_target_angle,
                 ) = self.start_states[full_key]
             else:
-                self._internal_log(
+                logger.info(
                     f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
                 )
                 name_to_id = self.domain.get_name_to_id_mapping()
+                task_args = {"obj": self.force_obj_to_idx}
 
                 if self.force_recep_to_name is not None:
+                    logger.info(
+                        f"Forcing receptacle {self.force_recep_to_name}"
+                    )
                     _, entity_type = search_for_id(
                         self.force_recep_to_name, name_to_id
                     )
                     use_name = self.force_recep_to_name
-
+                    task_args["marker"] = self.force_recep_to_name
                 else:
+                    logger.info(f"Search object name {self.force_obj_to_name}")
                     _, entity_type = search_for_id(
                         self.force_obj_to_name, name_to_id
                     )
@@ -198,20 +212,19 @@ class DynNavRLEnv(RearrangeTask):
                 )
 
                 allowed_tasks = self._get_allowed_tasks()
-                allowed_tasks = [
+                filtered_allowed_tasks = [
                     task
                     for task in allowed_tasks
                     if task.name in matching_skills
                 ]
-                self._internal_log(f"Got allowed tasks {allowed_tasks}")
-                task_args = {"obj": self.force_obj_to_idx}
+                logger.info(f"Got allowed tasks {filtered_allowed_tasks}")
 
-                if len(allowed_tasks) != 1:
+                if len(filtered_allowed_tasks) != 1:
                     raise ValueError(
-                        f"Got multiple possible tasks {allowed_tasks}"
+                        f"Got {[x.name for x in filtered_allowed_tasks]} tasks out of {[x.name for x in allowed_tasks]} with entity_type={entity_type}, use_name={use_name}"
                     )
-                nav_to_task = allowed_tasks[0]
-                self._internal_log(
+                nav_to_task = filtered_allowed_tasks[0]
+                logger.info(
                     f"Navigating to {nav_to_task.name} with arguments {task_args}"
                 )
 

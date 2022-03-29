@@ -12,8 +12,12 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import CacheHelper, rearrange_collision
+from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
+from habitat.tasks.rearrange.utils import (
+    CacheHelper,
+    logger,
+    rearrange_collision,
+)
 from habitat.tasks.utils import get_angle
 
 
@@ -38,9 +42,12 @@ class RearrangePickTaskV1(RearrangeTask):
         self.start_states = self.cache.load()
         self.prev_colls = None
         self.force_set_idx = None
+        self._add_cache_key: str = ""
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
+        if ADD_CACHE_KEY in kwargs:
+            self._add_cache_key = kwargs[ADD_CACHE_KEY]
 
     def _get_targ_pos(self, sim):
         scene_pos = sim.get_scene_pos()
@@ -187,9 +194,11 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = 0
         cache_lookup_k = sim.ep_info["episode_id"]
+        cache_lookup_k += self._add_cache_key
 
         if self.force_set_idx is not None:
             cache_lookup_k += str(self.force_set_idx)
+        logger.info(f"Using cache key {cache_lookup_k}")
 
         if (
             cache_lookup_k in self.start_states

@@ -1,14 +1,18 @@
 ---
-dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+dataset_path: "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/"
 scene_sets:
   -
-    name: "v3_sc"
+    name: "scene_train_split"
     included_substrings:
-      - "v3_sc"
+      - "Baked_sc0_staging"
+      - "Baked_sc1_staging"
+      - "Baked_sc2_staging"
+      - "Baked_sc3_staging"
     excluded_substrings: []
-    comment: "This set (v3_sc) selects all 105 ReplicaCAD variations with static furniture."
+    comment: "sc4_staging saved for evaluation"
+
 
 object_sets:
   -
@@ -30,7 +34,7 @@ receptacle_sets:
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["v3_sc"]
+    scene_sets: ["scene_train_split"]
 
 
 object_samplers:

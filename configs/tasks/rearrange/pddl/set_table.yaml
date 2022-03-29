@@ -31,6 +31,8 @@ solution:
     - "nav(TARGET_bowl_target|0)"
     - "place(bowl_target|0,TARGET_bowl_target|0)"
 
+    - "nav_to_receptacle(fridge_push_point,fruit_target|1)"
+    - "open_fridge(fruit_target|1)"
     - "nav(fruit_target|1)"
     - "pick(fruit_target|1)"
     - "nav(TARGET_fruit_target|1)"

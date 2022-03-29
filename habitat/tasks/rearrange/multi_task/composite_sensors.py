@@ -6,8 +6,8 @@
 
 
 from habitat.core.embodied_task import Measure
-from habitat.core.logging import logger
 from habitat.core.registry import registry
+from habitat.tasks.rearrange.utils import logger
 
 
 @registry.register_measure

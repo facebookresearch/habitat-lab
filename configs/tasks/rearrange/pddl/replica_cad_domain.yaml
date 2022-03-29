@@ -1,31 +1,31 @@
-types:
-    - robot
-    - fridge
-art_objs:
-    cab: 0
-    fridge: 1
+#types:
+#    - robot
+#    - fridge
+#art_objs:
+#    cab: 0
+#    fridge: 1
 
 # Matches a string to the START of the entity ID.
 action_to_entity_mapping:
   "cab":
-    match_entity_type: ""
+    match_entity_type: []
     match_id_str: "cab"
     matching_skills:
       - "open_cab"
       - "close_cab"
   "fridge":
-    match_entity_type: ""
+    match_entity_type: []
     match_id_str: "fridge"
     matching_skills:
       - "open_fridge"
       - "close_fridge"
   "goal":
-    match_entity_type: "goal"
+    match_entity_type: ["goal"]
     match_id_str: ""
     matching_skills:
     - "place"
   "rigid":
-    match_entity_type: "rigid"
+    match_entity_type: ["rigid"]
     match_id_str: ""
     matching_skills:
     - "pick"
@@ -45,7 +45,7 @@ actions:
 
     - name: nav_to_receptacle
       parameters: [recep_to,obj_to]
-      task: RearrangeNavToRecepTask-v0
+      task: RearrangeNavToObjTask-v0
       task_def: "nav_to_obj"
       precondition: []
       postcondition:
@@ -84,34 +84,47 @@ actions:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.BASE_NOISE: 0.0
 
-    ## Fridge
-    #- name: open_fridge
-    #  parameters: [obj]
-    #  task_def: ""
-    #  task: RearrangeOpenFridgeTask-v0
-    #  precondition: ["at(robot,fridge)","closed_fridge()"]
-    #  effect: ["opened_fridge()"]
-    #- name: close_fridge
-    #  parameters: [obj]
-    #  task_def: ""
-    #  task: RearrangeCloseFridgeTask-v0
-    #  precondition: ["at(robot,fridge)","opened_fridge()"]
-    #  effect: ["closed_fridge()"]
+    # Fridge
+    - name: open_fridge
+      parameters: [obj]
+      task_def: "open_fridge"
+      task: RearrangeOpenFridgeTask-v0
+      precondition: ["at(robot,fridge)","closed_fridge()"]
+      postcondition: ["opened_fridge()"]
+      task_args:
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.SPAWN_REGION_SCALE: 0.0
 
-    ## Cab
-    #- name: open_cab
-    #  parameters: [cab_id]
-    #  task_def: ""
-    #  task: RearrangeOpenDrawerTask-v0
-    #  precondition: ["at(robot,cab_id)","closed_cab(cab_id)"]
-    #  effect: ["opened_cab(cab_id)"]
+    - name: close_fridge
+      parameters: [obj]
+      task_def: "close_fridge"
+      task: RearrangeCloseFridgeTask-v0
+      precondition: ["at(robot,fridge)","opened_fridge()"]
+      postcondition: ["closed_fridge()"]
+      task_args:
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.SPAWN_REGION_SCALE: 0.0
 
-    #- name: close_cab
-    #  parameters: [cab_id]
-    #  task_def: ""
-    #  task: RearrangeCloseDrawerTask-v0
-    #  precondition: ["at(robot,cab_id)","opened_cab(cab_id)"]
-    #  effect: ["closed_cab(cab_id)"]
+    # Cab
+    - name: open_cab
+      parameters: [cab_id, obj]
+      task_def: "open_cab"
+      task: RearrangeOpenDrawerTask-v0
+      precondition: ["at(robot,cab_id)","closed_cab(cab_id)"]
+      postcondition: ["opened_cab(cab_id)"]
+      task_args:
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.SPAWN_REGION_SCALE: 0.0
+
+    - name: close_cab
+      parameters: [cab_id, obj]
+      task_def: "close_cab"
+      task: RearrangeCloseDrawerTask-v0
+      precondition: ["at(robot,cab_id)","opened_cab(cab_id)"]
+      postcondition: ["closed_cab(cab_id)"]
+      task_args:
+        TASK.BASE_ANGLE_NOISE: 0.0
+        TASK.SPAWN_REGION_SCALE: 0.0
 predicates:
     - name: in
       args: [X, Y]
@@ -125,6 +138,32 @@ predicates:
       state:
         robo:
             holding: 'NONE'
+    - name: opened_cab
+      args: [cab_id]
+      state:
+        arg_spec:
+          name_match: "cab"
+        art_states:
+          cab_id: 0.45
+
+    - name: closed_cab
+      args: [cab_id]
+      state:
+        arg_spec:
+          name_match: "cab"
+        art_states:
+          cab_id: 0.0
+
+    - name: opened_fridge
+      state:
+        art_states:
+          fridge_push_point: 1.22
+
+    - name: closed_fridge
+      state:
+        art_states:
+          fridge_push_point: 0.0
+
     - name: at
       args: [robot,Y]
       state:

@@ -407,7 +407,7 @@ class NavSkillPolicy(NnSkillPolicy):
         return torch.zeros(masks.shape[0]).to(masks.device)
 
     def _parse_skill_arg(self, skill_arg):
-        return int(skill_arg[0].split("|")[1])
+        return int(skill_arg[-1].split("|")[1])
 
 
 class OracleNavPolicy(NnSkillPolicy):
@@ -498,7 +498,7 @@ class OracleNavPolicy(NnSkillPolicy):
         return robot_forward
 
     def _parse_skill_arg(self, skill_arg):
-        targ_name, targ_idx = skill_arg[0].split("|")
+        targ_name, targ_idx = skill_arg[-1].split("|")
         return OracleNavPolicy.OracleNavArgs(
             obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")
         )

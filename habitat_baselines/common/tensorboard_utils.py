@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Any, List
 
 import numpy as np
@@ -100,7 +101,13 @@ class WeightsAndBiasesWriter:
             wb_kwargs["entity"] = config.WB.ENTITY
         if config.WB.GROUP != "":
             wb_kwargs["group"] = config.WB.GROUP
-        self.run = wandb.init(config=config, **wb_kwargs)
+        slurm_info_dict = {
+            k: v for k, v in os.environ.items() if k.startswith("SLURM_")
+        }
+
+        self.run = wandb.init(
+            config={**slurm_info_dict, **config}, **wb_kwargs
+        )
 
     def __getattr__(self, item):
         if self.writer:
