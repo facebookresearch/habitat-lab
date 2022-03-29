@@ -76,6 +76,8 @@ class BatchedEnv:
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.max_episode_length = 100
             bsim_config.num_physics_substeps = self._config.NUM_PHYSICS_SUBSTEPS
+            bsim_config.do_procedural_episode_set = True
+            # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
         else:
             self._bsim = None
