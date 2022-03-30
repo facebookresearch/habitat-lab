@@ -322,6 +322,7 @@ class PickSkillPolicy(NnSkillPolicy):
         return is_holding * is_within_thresh.float()
 
     def _parse_skill_arg(self, skill_arg):
+        self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 
     def _mask_pick(self, action, observations):

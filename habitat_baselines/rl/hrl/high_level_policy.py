@@ -44,11 +44,11 @@ class GtHighLevelPolicy:
                         f"Calling for immediate end with {self._next_sol_idxs[batch_idx]}"
                     )
                     immediate_end[batch_idx] = 1.0
-                    continue
+                    use_idx = len(self._solution_actions) - 1
+                else:
+                    use_idx = self._next_sol_idxs[batch_idx].item()
 
-                skill_name, skill_args = self._solution_actions[
-                    self._next_sol_idxs[batch_idx].item()
-                ]
+                skill_name, skill_args = self._solution_actions[use_idx]
                 logger.info(
                     f"Got next element of the plan with {skill_name}, {skill_args}"
                 )
