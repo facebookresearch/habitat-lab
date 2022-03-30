@@ -258,7 +258,6 @@ class PointNavBaselineNet(Net):
         #### [gala_kinematic] Manually adding sensors in there
         x = []
         if "pointgoal_with_gps_compass" in self.observation_space.spaces:
-            self._n_input_goal += 4
             x += [observations["pointgoal_with_gps_compass"]]
         if "ee_pos" in self.observation_space.spaces:
             x += [observations["ee_pos"]]
