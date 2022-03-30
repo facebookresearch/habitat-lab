@@ -4,29 +4,21 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from turtle import shape
 from typing import (
     Dict,
     Optional,
     List,
     Any,
 )
-import uuid
 
 from gym.spaces import Box
 import numpy as np
-import quaternion
 from gym import spaces
 from habitat.utils import profiling_wrapper
 from collections import OrderedDict
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
-
-from habitat.utils.geometry_utils import (
-    quaternion_rotate_vector,
-)
-from habitat.tasks.utils import cartesian_to_polar
 
 class BatchedEnv:
     r"""Todo
@@ -126,18 +118,12 @@ class BatchedEnv:
         else:
             observations["rgb"] = torch.rand([self._num_envs, sensor_height, sensor_width, 3], dtype=torch.float32) * 255
             observations["depth"] = torch.rand([self._num_envs, sensor_height, sensor_width, 1], dtype=torch.float32) * 255
-        # if include_gps:
-        #     observations["gps"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
-        # if include_compass:
-        #     observations["compass"] = torch.empty([self._num_envs, 3], dtype=torch.float32)
         if self.include_point_goal_gps_compass:
             observations[self.gps_compass_key] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
         if self.include_ee_pos:
             observations[self.ee_pos_key] = torch.empty([self._num_envs, ee_pos_shape], dtype=torch.float32)
         
         self._observations = observations
-
-        # print('observations["rgb"].shape: ', observations["rgb"].shape)
 
         self._is_closed = False
 
@@ -175,14 +161,14 @@ class BatchedEnv:
             obs_dict["depth"] = depth_obs
         if self.include_point_goal_gps_compass:
             obs_dict[self.gps_compass_key] = spaces.Box(
-                low=0.0,
+                low=-np.inf,
                 high=np.inf,  # todo: investigate depth min/max
                 shape=(gps_compass_sensor_shape,),
                 dtype=np.float32,
             )
         if self.include_ee_pos:
             obs_dict[self.ee_pos_key] = spaces.Box(
-                low=0.0,
+                low=-np.inf,
                 high=np.inf,  # todo: investigate depth min/max
                 shape=(ee_pos_shape,),
                 dtype=np.float32,
@@ -233,14 +219,6 @@ class BatchedEnv:
                 robot_pos = state.robot_position
                 robot_yaw = state.robot_yaw
             
-                # direction_vector = state.goal_pos - robot_pos
-                # source_rotation = quaternion.quaternion(0, 0, 0, 0) #TODO:get actual rotation
-                # direction_vector_agent = quaternion_rotate_vector(
-                #     source_rotation.inverse(), direction_vector
-                # )
-                # rho, phi = cartesian_to_polar(
-                #         -direction_vector_agent[2], direction_vector_agent[0]
-                #     )
                 observations[self.gps_compass_key] [b, 0] = robot_pos[0]
                 observations[self.gps_compass_key] [b, 1] = robot_pos[1]
                 observations[self.gps_compass_key] [b, 2] = robot_pos[2]

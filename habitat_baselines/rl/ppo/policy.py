@@ -202,7 +202,7 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        #### Manually adding sensors in there
+        #### [gala_kinematic] Manually adding sensors in there
         self.observation_space = observation_space
         self._n_input_goal = 0
         if "pointgoal_with_gps_compass" in self.observation_space.spaces:
@@ -229,6 +229,7 @@ class PointNavBaselineNet(Net):
         #         goal_observation_space, hidden_size
         #     )
         #     self._n_input_goal = hidden_size
+        #### [gala_kinematic] End of manually adding sensors in there
 
         self._hidden_size = hidden_size
 
@@ -254,7 +255,7 @@ class PointNavBaselineNet(Net):
         return self.state_encoder.num_recurrent_layers
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        #### Manually adding sensors in there
+        #### [gala_kinematic] Manually adding sensors in there
         x = []
         if "pointgoal_with_gps_compass" in self.observation_space.spaces:
             self._n_input_goal += 4
@@ -273,6 +274,7 @@ class PointNavBaselineNet(Net):
         #     target_encoding = self.goal_visual_encoder({"rgb": image_goal})
 
         # x = [target_encoding]
+        #### [gala_kinematic] End of manually adding sensors in there
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             target_encoding = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
