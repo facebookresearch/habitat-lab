@@ -46,6 +46,17 @@ class BatchedEnv:
 
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
+
+        self.include_point_goal_gps_compass = "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
+        # This key is a hard_coded_string. Will not work with any value:
+        # see this line : https://github.com/eundersander/habitat-lab/blob/eundersander/gala_kinematic/habitat_baselines/rl/ppo/policy.py#L206
+        self.gps_compass_key = "pointgoal_with_gps_compass" 
+        gps_compass_sensor_shape= 4
+        self.include_ee_pos = "EE_POS_SENSOR" in config.SENSORS
+        self.ee_pos_key = "ee_pos"
+        ee_pos_shape = 3
+
+
         assert include_depth or include_rgb
 
         self._num_envs = config.NUM_ENVIRONMENTS
@@ -72,7 +83,7 @@ class BatchedEnv:
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
             bsim_config.sensor0.hfov = 60.0
-            bsim_config.force_random_actions = True
+            bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.num_physics_substeps = self._config.NUM_PHYSICS_SUBSTEPS
             bsim_config.do_procedural_episode_set = True
@@ -107,9 +118,12 @@ class BatchedEnv:
         else:
             observations["rgb"] = torch.rand([self._num_envs, sensor_height, sensor_width, 3], dtype=torch.float32) * 255
             observations["depth"] = torch.rand([self._num_envs, sensor_height, sensor_width, 1], dtype=torch.float32) * 255
+        if self.include_point_goal_gps_compass:
+            observations[self.gps_compass_key] = torch.empty([self._num_envs, gps_compass_sensor_shape], dtype=torch.float32)
+        if self.include_ee_pos:
+            observations[self.ee_pos_key] = torch.empty([self._num_envs, ee_pos_shape], dtype=torch.float32)
+        
         self._observations = observations
-
-        # print('observations["rgb"].shape: ', observations["rgb"].shape)
 
         self._is_closed = False
 
@@ -145,6 +159,20 @@ class BatchedEnv:
                 dtype=np.float32,
             )
             obs_dict["depth"] = depth_obs
+        if self.include_point_goal_gps_compass:
+            obs_dict[self.gps_compass_key] = spaces.Box(
+                low=-np.inf,
+                high=np.inf,  # todo: investigate depth min/max
+                shape=(gps_compass_sensor_shape,),
+                dtype=np.float32,
+            )
+        if self.include_ee_pos:
+            obs_dict[self.ee_pos_key] = spaces.Box(
+                low=-np.inf,
+                high=np.inf,  # todo: investigate depth min/max
+                shape=(ee_pos_shape,),
+                dtype=np.float32,
+            )
 
         self.observation_spaces = [obs_dict] * 1  # config.NUM_ENVIRONMENTS  # note we only ever read element #0 of this array
 
@@ -156,6 +184,7 @@ class BatchedEnv:
         self.action_spaces = [action_space] * 1  # note we only ever read element #0 of this array
         # self.number_of_episodes = []
         self._paused: List[int] = []
+
 
     @property
     def num_envs(self):
@@ -184,10 +213,20 @@ class BatchedEnv:
         return results
 
     def get_nonpixel_observations(self, env_states, observations):
-        for state in env_states:
-            robot_pos = state.robot_position
-            robot_yaw = state.robot_yaw
-            # todo: update observations here
+        # TODO: update observations here
+        for (b, state) in enumerate(env_states):
+            if self.include_point_goal_gps_compass:
+                robot_pos = state.robot_position
+                robot_yaw = state.robot_yaw
+            
+                observations[self.gps_compass_key] [b, 0] = robot_pos[0]
+                observations[self.gps_compass_key] [b, 1] = robot_pos[1]
+                observations[self.gps_compass_key] [b, 2] = robot_pos[2]
+                observations[self.gps_compass_key] [b, 3] = robot_yaw
+            if self.include_ee_pos:
+                for i in range(3):
+                    observations[self.ee_pos_key][b, i] = state.ee_pos[i]
+            
 
 
     def get_dones_rewards_resets(self, env_states, actions):
@@ -236,8 +275,11 @@ class BatchedEnv:
                 self._bsim.wait_step_physics_or_reset()
                 self._bsim.start_render()
                 env_states = self._bsim.get_environment_states()
+
+                self.get_nonpixel_observations(env_states, self._observations)
                 self.get_dones_rewards_resets(env_states, actions_flat_list)
                 self._bsim.start_step_physics_or_reset(actions_flat_list, self.resets)
+
             else:
                 # note: this path is untested
                 self._bsim.start_step_physics_or_reset(actions_flat_list, self.resets)
@@ -255,6 +297,7 @@ class BatchedEnv:
             # this updates self._observations["depth"] (and rgb) tensors
             # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
             self._bsim.wait_render()
+
 
             # these are "one frame behind" like the observations (i.e. computed from
             # the same earlier env state).

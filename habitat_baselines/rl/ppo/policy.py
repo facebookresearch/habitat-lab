@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
+from re import X
 
 import torch
 from gym import spaces
@@ -202,34 +203,41 @@ class PointNavBaselineNet(Net):
     ):
         super().__init__()
 
-        if (
-            IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            in observation_space.spaces
-        ):
-            self._n_input_goal = observation_space.spaces[
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            ].shape[0]
-        elif PointGoalSensor.cls_uuid in observation_space.spaces:
-            self._n_input_goal = observation_space.spaces[
-                PointGoalSensor.cls_uuid
-            ].shape[0]
-        elif ImageGoalSensor.cls_uuid in observation_space.spaces:
-            goal_observation_space = spaces.Dict(
-                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
-            )
-            self.goal_visual_encoder = SimpleCNN(
-                goal_observation_space, hidden_size
-            )
-            self._n_input_goal = hidden_size
-        else:
-            self._n_input_goal = 0
+        #### [gala_kinematic] Manually adding sensors in there
+        self.observation_space = observation_space
+        self._n_state = 0
+        if "pointgoal_with_gps_compass" in self.observation_space.spaces:
+            self._n_state += 4
+        if "ee_pos" in self.observation_space.spaces:
+            self._n_state += 3
+
+        # if (
+        #     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+        #     in observation_space.spaces
+        # ):
+        #     self._n_input_goal = observation_space.spaces[
+        #         IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+        #     ].shape[0]
+        # elif PointGoalSensor.cls_uuid in observation_space.spaces:
+        #     self._n_input_goal = observation_space.spaces[
+        #         PointGoalSensor.cls_uuid
+        #     ].shape[0]
+        # elif ImageGoalSensor.cls_uuid in observation_space.spaces:
+        #     goal_observation_space = spaces.Dict(
+        #         {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
+        #     )
+        #     self.goal_visual_encoder = SimpleCNN(
+        #         goal_observation_space, hidden_size
+        #     )
+        #     self._n_input_goal = hidden_size
+        #### [gala_kinematic] End of manually adding sensors in there
 
         self._hidden_size = hidden_size
 
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
         self.state_encoder = build_rnn_state_encoder(
-            (0 if self.is_blind else self._hidden_size) + self._n_input_goal,
+            (0 if self.is_blind else self._hidden_size) + self._n_state,
             self._hidden_size,
         )
 
@@ -248,24 +256,31 @@ class PointNavBaselineNet(Net):
         return self.state_encoder.num_recurrent_layers
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
-            target_encoding = observations[
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            ]
+        #### [gala_kinematic] Manually adding sensors in there
+        x = [self.visual_encoder(observations)]
+        if "pointgoal_with_gps_compass" in self.observation_space.spaces:
+            x += [observations["pointgoal_with_gps_compass"]]
+        if "ee_pos" in self.observation_space.spaces:
+            x += [observations["ee_pos"]]
+        # if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
+        #     target_encoding = observations[
+        #         IntegratedPointGoalGPSAndCompassSensor.cls_uuid
+        #     ]
 
-        elif PointGoalSensor.cls_uuid in observations:
-            target_encoding = observations[PointGoalSensor.cls_uuid]
-        elif ImageGoalSensor.cls_uuid in observations:
-            image_goal = observations[ImageGoalSensor.cls_uuid]
-            target_encoding = self.goal_visual_encoder({"rgb": image_goal})
-        else:
-            target_encoding = None
+        # elif PointGoalSensor.cls_uuid in observations:
+        #     target_encoding = observations[PointGoalSensor.cls_uuid]
+        # elif ImageGoalSensor.cls_uuid in observations:
+        #     image_goal = observations[ImageGoalSensor.cls_uuid]
+        #     target_encoding = self.goal_visual_encoder({"rgb": image_goal})
+        # else:
+        #     target_encoding = None
+        # if not self.is_blind:
+        #     perception_embed = self.visual_encoder(observations)
+        #     x = [perception_embed]
+        #     if target_encoding is not None:
+        #         x += [target_encoding]
+        #### [gala_kinematic] End of manually adding sensors in there
 
-        if not self.is_blind:
-            perception_embed = self.visual_encoder(observations)
-            x = [perception_embed]
-            if target_encoding:
-                x += [target_encoding]
 
         x_out = torch.cat(x, dim=1)
         x_out, rnn_hidden_states = self.state_encoder(
