@@ -1,5 +1,5 @@
-TENSORBOARD_DIR: "data/ckpt/gala_kinematic_ddppo"
-CHECKPOINT_FOLDER: "data/ckpt/gala_kinematic_ddppo"
+TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
+CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
 VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
 NUM_CHECKPOINTS: 0
