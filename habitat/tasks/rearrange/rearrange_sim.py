@@ -530,6 +530,7 @@ class RearrangeSim(HabitatSim):
         Sets the simulation state from a cached state info dict. See capture_state().
 
           :param set_hold: If true this will set the snapped object from the `state`.
+
           TODO: This should probably be True by default, but I am not sure the effect
           it will have.
         """

@@ -18,6 +18,7 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     Action,
     Predicate,
+    RearrangeObjectTypes,
     SetState,
     parse_func,
 )
@@ -119,7 +120,8 @@ class CompositeTask(RearrangeTask):
                 break
             name, args = parse_func(action)
             args = args.split(",")
-            ac_instance = copy.deepcopy(self.domain.actions[name])
+
+            ac_instance = self.domain.actions[name].copy_new()
 
             ac_instance.bind(
                 args, self.task_def.get("add_args", {}).get(i, {})
@@ -279,6 +281,16 @@ class CompositeTask(RearrangeTask):
     @property
     def targ_idx(self):
         return self._try_get_subtask_prop("targ_idx", self._targ_idx)
+
+    @property
+    def nav_to_task_name(self):
+        return self._try_get_subtask_prop("nav_to_task_name", None)
+
+    @property
+    def nav_to_obj_type(self) -> RearrangeObjectTypes:
+        return self._try_get_subtask_prop(
+            "nav_to_obj_type", RearrangeObjectTypes.RIGID_OBJECT
+        )
 
     @property
     def nav_target_pos(self):

@@ -12,33 +12,8 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails
+from habitat.tasks.rearrange.utils import CollisionDetails, logger
 from habitat.tasks.utils import get_angle
-
-
-@registry.register_sensor
-class TargetStartPointGoalSensor(PointGoalSensor):
-    """
-    GPS and compass sensor relative to the starting target position. Only for
-    the first target object.
-    """
-
-    cls_uuid: str = "object_to_agent_gps_compass"
-
-    def __init__(self, *args, task, **kwargs):
-        self._sim: RearrangeSim
-        self._task = task
-        super().__init__(*args, task=task, **kwargs)
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        agent_state = self._sim.get_agent_state()
-        agent_position = agent_state.position
-        rotation_world_agent = agent_state.rotation
-
-        start_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
-        return self._compute_pointgoal(
-            agent_position, rotation_world_agent, start_pos
-        )
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -411,7 +386,7 @@ class ObjAtGoal(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -549,7 +524,7 @@ class RobotCollisions(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -591,7 +566,7 @@ class RobotForce(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     @property
@@ -671,7 +646,7 @@ class ForceTerminate(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -682,6 +657,9 @@ class ForceTerminate(Measure):
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
         ):
+            logger.info(
+                f"Force threshold={self._config.MAX_ACCUM_FORCE} exceeded with {accum_force}, ending episode"
+            )
             self._task.should_end = True
             self._metric = True
         else:
@@ -707,7 +685,7 @@ class DidViolateHoldConstraintMeasure(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, **kwargs):
@@ -741,7 +719,7 @@ class RearrangeReward(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):

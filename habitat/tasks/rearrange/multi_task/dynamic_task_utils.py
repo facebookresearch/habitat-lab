@@ -39,7 +39,7 @@ def load_task_object(
     """
     task_cls = registry.get_task(task_cls_name)
 
-    config = copy.copy(cur_config)
+    config = copy.deepcopy(cur_config)
     config.defrost()
     if task_config_path is not None:
         pass_args = []
@@ -49,6 +49,9 @@ def load_task_object(
             osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"), pass_args
         )
         config.merge_from_other_cfg(task_config.TASK)
+    # New task should not recreate any sensors
+    config.MEASUREMENTS = []
+    config.SENSORS = []
     config.freeze()
     task = task_cls(config=config, dataset=cur_dataset, sim=cur_env._sim)
 

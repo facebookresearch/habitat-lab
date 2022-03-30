@@ -6,7 +6,8 @@
 
 import os.path as osp
 import random
-from typing import Any, Dict, List, Tuple
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -19,6 +20,7 @@ from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     Action,
+    RearrangeObjectTypes,
     search_for_id,
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
@@ -33,6 +35,10 @@ DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
 @registry.register_task(name=DYN_NAV_TASK_NAME)
 class DynNavRLEnv(RearrangeTask):
+    """
+    :property _nav_to_task_name: The name of the task we are navigating to.
+    """
+
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         self.force_obj_to_idx = None
@@ -51,6 +57,18 @@ class DynNavRLEnv(RearrangeTask):
         self.domain = None
         self._nav_target_pos = mn.Vector3(0.0, 0.0, 0.0)
         self._nav_target_angle = 0.0
+        self._nav_to_task_name: Optional[str] = None
+        self._nav_to_obj_type: RearrangeObjectTypes = (
+            RearrangeObjectTypes.RIGID_OBJECT
+        )
+
+    @property
+    def nav_to_obj_type(self):
+        return self._nav_to_obj_type
+
+    @property
+    def nav_to_task_name(self):
+        return self._nav_to_task_name
 
     @property
     def nav_target_pos(self):
@@ -60,11 +78,11 @@ class DynNavRLEnv(RearrangeTask):
     def nav_target_angle(self):
         return self._nav_target_angle
 
-    def set_args(self, obj_to, **kwargs):
-        if "recep_to" in kwargs:
-            self.force_recep_to_name = kwargs["orig_applied_args"]["recep_to"]
-        self.force_obj_to_idx = obj_to
-        self.force_obj_to_name = kwargs["orig_applied_args"]["obj_to"]
+    def set_args(self, obj, **kwargs):
+        if "marker" in kwargs:
+            self.force_recep_to_name = kwargs["orig_applied_args"]["marker"]
+        self.force_obj_to_idx = obj
+        self.force_obj_to_name = kwargs["orig_applied_args"]["obj"]
         self.force_kwargs = kwargs
 
     def _get_agent_pos(self):
@@ -81,38 +99,58 @@ class DynNavRLEnv(RearrangeTask):
         )
         return distance_to_target
 
-    def _get_allowed_tasks(self) -> List[Action]:
+    def _get_allowed_tasks(
+        self, filter_actions: Optional[List[str]] = None
+    ) -> Dict[str, List[Action]]:
         cur_preds = self.domain.get_true_predicates()
         # Get all actions which can be actively applied.
-        allowed_tasks = [
-            action
-            for action in self.domain.actions.values()
-            if action.task != DYN_NAV_TASK_NAME
-            and action.are_preconditions_true(cur_preds)
-            and (
-                len(self._config.FILTER_NAV_TO_TASKS) == 0
-                or action.name in self._config.FILTER_NAV_TO_TASKS
-            )
-        ]
-        return allowed_tasks
+        logger.info(f"Current true predicates {cur_preds}")
 
-    def _determine_nav_pos(self, episode: Episode) -> Tuple[mn.Vector3, float]:
+        allowed_actions = defaultdict(list)
+        for action in self.domain.actions.values():
+            if (
+                filter_actions is not None
+                and action.name not in filter_actions
+            ):
+                continue
+            if action.task == DYN_NAV_TASK_NAME or (
+                len(self._config.FILTER_NAV_TO_TASKS) != 0
+                and action.name not in self._config.FILTER_NAV_TO_TASKS
+            ):
+                continue
+
+            consistent_actions = action.get_consistent_action_copies(
+                cur_preds, self.domain.get_name_to_id_mapping()
+            )
+            logger.info(f"For {action.name} got consistent actions:")
+            for action in consistent_actions:
+                logger.info(f"- {action}")
+                allowed_actions[action.name].append(action)
+
+        return allowed_actions
+
+    def _determine_nav_pos(
+        self, episode: Episode
+    ) -> Tuple[mn.Vector3, float, str, RearrangeObjectTypes]:
         allowed_tasks = self._get_allowed_tasks()
 
-        use_task = random.choice(allowed_tasks)
-        task_name = use_task.name
+        task_name = random.choice(list(allowed_tasks.keys()))
+        task = random.choice(allowed_tasks[task_name])
 
-        nav_point, targ_angle = self._get_nav_targ(
+        nav_point, targ_angle, obj_type = self._get_nav_targ(
             task_name,
-            {"obj": None, "marker": None, ADD_CACHE_KEY: "nav"},
+            {
+                **task.task_args,
+                ADD_CACHE_KEY: "nav",
+            },
             episode,
         )
 
-        return nav_point, targ_angle
+        return nav_point, targ_angle, task_name, obj_type
 
     def _get_nav_targ(
         self, task_name: str, task_args: Dict[str, Any], episode: Episode
-    ) -> Tuple[mn.Vector3, float]:
+    ) -> Tuple[mn.Vector3, float, RearrangeObjectTypes]:
         logger.info(
             f"Getting nav target for {task_name} with arguments {task_args}"
         )
@@ -139,10 +177,19 @@ class DynNavRLEnv(RearrangeTask):
 
         self._sim.set_state(orig_state, set_hold=True)
 
-        return robo_pos, heading_angle
+        _, obj_to_type = search_for_id(
+            task_args["orig_obj"], self.domain.get_name_to_id_mapping()
+        )
+
+        return robo_pos, heading_angle, obj_to_type
 
     def _generate_nav_start_goal(self, episode):
-        targ_pos, targ_angle = self._determine_nav_pos(episode)
+        (
+            targ_pos,
+            targ_angle,
+            nav_to_task_name,
+            obj_type,
+        ) = self._determine_nav_pos(episode)
         self._nav_target_pos = np.array(self._sim.safe_snap_point(targ_pos))
 
         start_pos, start_rot = get_robo_start_pos(
@@ -154,6 +201,76 @@ class DynNavRLEnv(RearrangeTask):
             float(targ_angle),
             start_pos,
             float(start_rot),
+            nav_to_task_name,
+            obj_type,
+        )
+
+    def _get_force_nav_start_info(
+        self, episode: Episode
+    ) -> Tuple[np.ndarray, float, str, RearrangeObjectTypes]:
+        """
+        :returns: The target position and the target angle.
+        """
+        logger.info(
+            f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
+        )
+        name_to_id = self.domain.get_name_to_id_mapping()
+
+        if self.force_recep_to_name is not None:
+            logger.info(f"Forcing receptacle {self.force_recep_to_name}")
+            _, entity_type = search_for_id(
+                self.force_recep_to_name, name_to_id
+            )
+            use_name = self.force_recep_to_name
+        else:
+            logger.info(f"Search object name {self.force_obj_to_name}")
+            _, entity_type = search_for_id(self.force_obj_to_name, name_to_id)
+            use_name = self.force_obj_to_name
+
+        matching_skills = self.domain.get_matching_skills(
+            entity_type, use_name
+        )
+
+        allowed_tasks = self._get_allowed_tasks(matching_skills)
+
+        task_name = random.choice(list(allowed_tasks.keys()))
+        filtered_allowed_tasks = []
+        orig_args = self.force_kwargs["orig_applied_args"]
+        for task_name in allowed_tasks:
+            sub_allowed_tasks = allowed_tasks[task_name]
+            for task in sub_allowed_tasks:
+                assigned_args = {
+                    k: v
+                    for k, v in zip(
+                        task.parameters, task.orig_applied_func_args
+                    )
+                }
+                # Check that `orig_args` is a SUBSET of `assigned_args`
+                is_orig_args_subset = all(
+                    [k in assigned_args for k in orig_args]
+                )
+                if is_orig_args_subset:
+                    filtered_allowed_tasks.append(task)
+        logger.info(f"Got allowed tasks {filtered_allowed_tasks}")
+
+        if len(filtered_allowed_tasks) == 0:
+            raise ValueError(
+                f"Got no tasks out of {[x.name for x in allowed_tasks]} with entity_type={entity_type}, use_name={use_name}"
+            )
+        nav_to_task = filtered_allowed_tasks[0]
+
+        logger.info(
+            f"Navigating to {nav_to_task.name} with arguments {nav_to_task.task_args}"
+        )
+
+        targ_pos, self._nav_target_angle, obj_type = self._get_nav_targ(
+            nav_to_task.name, nav_to_task.task_args, episode
+        )
+        return (
+            np.array(self._sim.safe_snap_point(targ_pos)),
+            float(self._nav_target_angle),
+            nav_to_task.name,
+            obj_type,
         )
 
     def reset(self, episode: Episode):
@@ -183,62 +300,22 @@ class DynNavRLEnv(RearrangeTask):
                 (
                     self._nav_target_pos,
                     self._nav_target_angle,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
                 ) = self.start_states[full_key]
             else:
-                logger.info(
-                    f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
-                )
-                name_to_id = self.domain.get_name_to_id_mapping()
-                task_args = {"obj": self.force_obj_to_idx}
-
-                if self.force_recep_to_name is not None:
-                    logger.info(
-                        f"Forcing receptacle {self.force_recep_to_name}"
-                    )
-                    _, entity_type = search_for_id(
-                        self.force_recep_to_name, name_to_id
-                    )
-                    use_name = self.force_recep_to_name
-                    task_args["marker"] = self.force_recep_to_name
-                else:
-                    logger.info(f"Search object name {self.force_obj_to_name}")
-                    _, entity_type = search_for_id(
-                        self.force_obj_to_name, name_to_id
-                    )
-                    use_name = self.force_obj_to_name
-
-                matching_skills = self.domain.get_matching_skills(
-                    entity_type, use_name
-                )
-
-                allowed_tasks = self._get_allowed_tasks()
-                filtered_allowed_tasks = [
-                    task
-                    for task in allowed_tasks
-                    if task.name in matching_skills
-                ]
-                logger.info(f"Got allowed tasks {filtered_allowed_tasks}")
-
-                if len(filtered_allowed_tasks) != 1:
-                    raise ValueError(
-                        f"Got {[x.name for x in filtered_allowed_tasks]} tasks out of {[x.name for x in allowed_tasks]} with entity_type={entity_type}, use_name={use_name}"
-                    )
-                nav_to_task = filtered_allowed_tasks[0]
-                logger.info(
-                    f"Navigating to {nav_to_task.name} with arguments {task_args}"
-                )
-
-                targ_pos, self._nav_target_angle = self._get_nav_targ(
-                    nav_to_task.name, task_args, episode
-                )
-                self._nav_target_pos = np.array(
-                    self._sim.safe_snap_point(targ_pos)
-                )
-                self._nav_target_angle = float(self._nav_target_angle)
+                (
+                    self._nav_target_pos,
+                    self._nav_target_angle,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
+                ) = self._get_force_nav_start_info(episode)
 
                 self.start_states[full_key] = (
                     self._nav_target_pos,
                     self._nav_target_angle,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
                 )
                 self.cache.save(self.start_states)
             start_pos, start_rot = get_robo_start_pos(
@@ -254,6 +331,8 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_target_angle,
                     start_pos,
                     start_rot,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
                 ) = self.start_states[episode_id]
 
                 sim.robot.base_pos = mn.Vector3(
@@ -268,12 +347,16 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_target_angle,
                     start_pos,
                     start_rot,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
                 ) = self._generate_nav_start_goal(episode)
                 self.start_states[episode_id] = (
                     self._nav_target_pos,
                     self._nav_target_angle,
                     start_pos,
                     start_rot,
+                    self._nav_to_task_name,
+                    self._nav_to_obj_type,
                 )
                 self.cache.save(self.start_states)
 

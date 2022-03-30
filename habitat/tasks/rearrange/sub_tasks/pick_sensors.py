@@ -98,7 +98,7 @@ class RearrangePickReward(RearrangeReward):
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
-        did_pick = cur_picked and (not self._task.prev_picked)
+        did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 reward += self._config.PICK_REWARD
@@ -111,7 +111,7 @@ class RearrangePickReward(RearrangeReward):
                 if self._config.WRONG_PICK_SHOULD_END:
                     self._task.should_end = True
                 self._metric = reward
-                self._task.prev_picked = cur_picked
+                self._prev_picked = cur_picked
                 self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
                 self.cur_dist = -1
                 return
@@ -135,12 +135,12 @@ class RearrangePickReward(RearrangeReward):
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
             self._metric = reward
-            self._task.prev_picked = cur_picked
+            self._prev_picked = cur_picked
             self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
             self.cur_dist = -1
             return
 
-        self._task.prev_picked = cur_picked
+        self._prev_picked = cur_picked
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
         self._metric = reward

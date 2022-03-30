@@ -7,7 +7,7 @@
 import copy
 import itertools
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -57,6 +57,10 @@ class PddlDomain:
         self.actions = {}
         self.reset()
 
+    @property
+    def action_names(self):
+        return self._action_names
+
     def _create_action_to_entity_mapping(self):
         self._match_groups = []
         for _, group_cfg in self.domain_def[
@@ -87,10 +91,10 @@ class PddlDomain:
                 self._config,
                 self.dataset,
                 self._name_to_id,
-                self,
                 self.predicate_lookup,
             )
             self.actions[action.name] = action
+        self._action_names = [action_name for action_name in self.actions]
 
     def get_task_match_for_name(self, task_name: str) -> Action:
         return self.actions[task_name]
@@ -110,7 +114,7 @@ class PddlDomain:
 
             if len(pred_args) != len(pred.args):
                 continue
-            return pred
+            return copy.deepcopy(pred)
         return None
 
     def is_pred_true(self, bound_pred: Predicate) -> bool:
@@ -125,7 +129,7 @@ class PddlDomain:
         if pred.set_state is not None:
             bound_pred = copy.deepcopy(pred)
             bound_pred.bind(input_args)
-            return self.is_pred_true(bound_pred)
+            return self.is_pred_true(bound_pred), bound_pred
 
         return False
 
@@ -136,23 +140,21 @@ class PddlDomain:
             for entity_input in itertools.combinations(
                 all_entities, pred.get_n_args()
             ):
-                # if pred.name == "closed_cab" and entity_input[0].startswith(
-                #    "MARKER_"
-                # ):
-                #    import ipdb
+                is_pred_true, bound_pred = self.is_pred_true_args(
+                    pred, entity_input
+                )
 
-                #    ipdb.set_trace()
-                if self.is_pred_true_args(pred, entity_input):
-                    true_preds.append(pred)
+                if is_pred_true:
+                    true_preds.append(bound_pred)
         return true_preds
 
     def get_all_entities(self) -> List[str]:
         return list(self._name_to_id.keys())
 
-    def get_name_to_id_mapping(self) -> Dict[str, int]:
+    def get_name_to_id_mapping(self) -> Dict[str, Any]:
         return self._name_to_id
 
-    def get_name_id_conversions(self, domain_def) -> Dict[str, int]:
+    def get_name_id_conversions(self, domain_def) -> Dict[str, Any]:
         """
         Returns a map of constant scene identifiers, such as `kitchen_counter_targets|0`, to the scene ID. If the scene identifier starts with "TARGET_" it is the goal position and refers to an index in the targets array. If it begins with "ART_" it is an articulated object and refers to an index in `self._sim.art_objs`.
         """
@@ -179,6 +181,9 @@ class PddlDomain:
     def get_matching_skills(
         self, entity_type: RearrangeObjectTypes, entity_id: str
     ) -> List[str]:
+        """
+        Gets the skills that have arguments compatible with an entity
+        """
         matching_skills = None
         for match_group in self._match_groups:
             if (

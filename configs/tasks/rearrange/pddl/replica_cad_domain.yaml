@@ -34,23 +34,31 @@ markers:
     cab_top_left: cab_push_point_7
 actions:
     - name: nav
-      parameters: [obj_to]
+      parameters: [obj]
       task: RearrangeNavToObjTask-v0
       task_def: "nav_to_obj"
       precondition: []
       postcondition:
-        - "at(robot,obj_to)"
-      task_args:
+        - "robot_at(obj)"
+      arg_specs:
+        obj:
+          type_match: ["rigid", "goal"]
+      config_args:
         TASK.FORCE_REGENERATE: True
 
     - name: nav_to_receptacle
-      parameters: [recep_to,obj_to]
+      parameters: [marker,obj]
       task: RearrangeNavToObjTask-v0
       task_def: "nav_to_obj"
       precondition: []
       postcondition:
-        - "at(robot,recep_to)"
-      task_args:
+        - "robot_at(marker)"
+      arg_specs:
+        marker:
+          type_match: ["articulated_link"]
+        obj:
+          type_match: ["rigid", "goal"]
+      config_args:
         TASK.FORCE_REGENERATE: True
 
     - name: pick
@@ -58,12 +66,13 @@ actions:
       task: RearrangePickTask-v0
       task_def: "pick"
       precondition:
-          - "at(robot,obj)"
-          #- "!in(obj,cab_top_left) OR opened_cab(cab_top_left)"
-          #- "!in(obj,fridge) OR opened_fridge()"
+          - "robot_at(obj)"
       postcondition:
         - "holding(obj)"
-      task_args:
+      arg_specs:
+        obj:
+          type_match: ["rigid"]
+      config_args:
         TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
         TASK.FORCE_REGENERATE: True
         TASK.BASE_ANGLE_NOISE: 0.0
@@ -78,7 +87,12 @@ actions:
       postcondition:
           - "not_holding()"
           - "at(obj,targ)"
-      task_args:
+      arg_specs:
+        obj:
+          type_match: ["rigid"]
+        targ:
+          type_match: ["goal"]
+      config_args:
         TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
         TASK.FORCE_REGENERATE: True
         TASK.BASE_ANGLE_NOISE: 0.0
@@ -89,9 +103,14 @@ actions:
       parameters: [obj]
       task_def: "open_fridge"
       task: RearrangeOpenFridgeTask-v0
-      precondition: ["at(robot,fridge)","closed_fridge()"]
+      precondition: ["robot_at(fridge_push_point)", "closed_fridge()", "in(obj,fridge_push_point)"]
       postcondition: ["opened_fridge()"]
-      task_args:
+      arg_specs:
+        obj:
+          type_match: ["rigid", "goal"]
+      add_task_args:
+        marker: "fridge_push_point"
+      config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
 
@@ -99,35 +118,53 @@ actions:
       parameters: [obj]
       task_def: "close_fridge"
       task: RearrangeCloseFridgeTask-v0
-      precondition: ["at(robot,fridge)","opened_fridge()"]
+      precondition: ["robot_at(fridge_push_point)","opened_fridge()", "in(obj,fridge_push_point)"]
       postcondition: ["closed_fridge()"]
-      task_args:
+      arg_specs:
+        obj:
+          type_match: ["rigid", "goal"]
+      add_task_args:
+        marker: "fridge_push_point"
+      config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
 
     # Cab
     - name: open_cab
-      parameters: [cab_id, obj]
+      parameters: [marker, obj]
       task_def: "open_cab"
       task: RearrangeOpenDrawerTask-v0
-      precondition: ["at(robot,cab_id)","closed_cab(cab_id)"]
-      postcondition: ["opened_cab(cab_id)"]
-      task_args:
+      precondition: ["robot_at(marker)","closed_cab(marker)", "in(obj,marker)"]
+      postcondition: ["opened_cab(marker)"]
+      arg_specs:
+        marker:
+          name_match: "cab_push_point_5"
+        obj:
+          type_match: ["rigid", "goal"]
+      config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
 
     - name: close_cab
-      parameters: [cab_id, obj]
+      parameters: [marker, obj]
       task_def: "close_cab"
       task: RearrangeCloseDrawerTask-v0
-      precondition: ["at(robot,cab_id)","opened_cab(cab_id)"]
-      postcondition: ["closed_cab(cab_id)"]
-      task_args:
+      precondition: ["robot_at(marker)","opened_cab(marker)", "in(obj,marker)"]
+      postcondition: ["closed_cab(marker)"]
+      arg_specs:
+        marker:
+          name_match: "cab_push_point_5"
+        obj:
+          type_match: ["rigid", "goal"]
+      config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
 predicates:
     - name: in
       args: [X, Y]
+      state:
+        obj_states:
+          X: Y
 
     - name: holding
       args: [X]
@@ -144,7 +181,7 @@ predicates:
         arg_spec:
           name_match: "cab"
         art_states:
-          cab_id: 0.45
+          cab_id: "ArtSampler(value=0.45, cmp='greater')"
 
     - name: closed_cab
       args: [cab_id]
@@ -157,15 +194,15 @@ predicates:
     - name: opened_fridge
       state:
         art_states:
-          fridge_push_point: 1.22
+          fridge_push_point: "ArtSampler(value=1.22, cmp='greater')"
 
     - name: closed_fridge
       state:
         art_states:
           fridge_push_point: 0.0
 
-    - name: at
-      args: [robot,Y]
+    - name: robot_at
+      args: [Y]
       state:
         robo:
             pos: Y

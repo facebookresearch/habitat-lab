@@ -13,7 +13,11 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails, rearrange_collision
+from habitat.tasks.rearrange.utils import (
+    CollisionDetails,
+    logger,
+    rearrange_collision,
+)
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -46,6 +50,7 @@ class RearrangeTask(NavigationTask):
         self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
         self._sim_reset = True
         self._targ_idx: int = 0
+        self._episode_id: int = 0
 
     @property
     def targ_idx(self):
@@ -68,6 +73,7 @@ class RearrangeTask(NavigationTask):
         self._sim_reset = sim_reset
 
     def reset(self, episode: Episode):
+        self._episode_id = episode.episode_id
         self._ignore_collisions = []
         if self._sim_reset:
             super().reset(episode)
@@ -117,6 +123,11 @@ class RearrangeTask(NavigationTask):
             and self._config.CONSTRAINT_VIOLATION_ENDS_EPISODE
         ):
             done = True
+
+        if done:
+            logger.info("-" * 10)
+            logger.info("------ Episode Over --------")
+            logger.info("-" * 10)
 
         return not done
 
@@ -181,3 +192,9 @@ class RearrangeTask(NavigationTask):
         self._is_episode_active = (
             not self._should_end
         ) and self._is_episode_active
+        if new_val:
+            logger.info("-" * 40)
+            logger.info(
+                f"-----Episode {self._episode_id} requested to end.-----"
+            )
+            logger.info("-" * 40)

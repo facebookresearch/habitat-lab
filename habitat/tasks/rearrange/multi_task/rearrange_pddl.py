@@ -4,7 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import copy
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from functools import partial
@@ -46,7 +49,7 @@ class RearrangeObjectTypes(Enum):
 
 
 def search_for_id(
-    k: str, name_to_id: Dict[str, int]
+    k: str, name_to_id: Dict[str, Any]
 ) -> Tuple[str, RearrangeObjectTypes]:
     """
     Checks if an object exists in the name to ID conversion. This automatically
@@ -127,31 +130,58 @@ class Action:
         load_config: Dict[str, Any],
         config: Config,
         dataset: RearrangeDatasetV0,
-        name_to_id: Dict[str, int],
-        env: RearrangeTask,
+        name_to_id: Dict[str, Any],
         predicate_lookup_fn: Callable[[str], Optional[Predicate]],
     ):
         """
         :param predicate_lookup_fn: A function that takes as input a predicate
             identifier and returns a predicate if one was found.
         """
+        self._orig_load_config = load_config
+        self._orig_config = config
+        self._orig_dataset = dataset
+        self._orig_pred_lookup_fn = predicate_lookup_fn
+
         self.name = load_config["name"]
         self.parameters = load_config["parameters"]
         self.name_to_id = name_to_id
         self.task = load_config["task"]
         self.task_def = load_config["task_def"]
-        self._config_task_args = load_config.get("task_args", {})
+        self._config_task_args = load_config.get("config_args", {})
+        self._add_task_args = load_config.get("add_task_args", {})
+        self._arg_specs: Dict[str, SetStateArgSpec] = {}
+        for param_name, arg_spec in load_config.get("arg_specs", {}).items():
+            if param_name not in self.parameters:
+                raise ValueError(
+                    f"Could not find {param_name} in {self.parameters}"
+                )
+            self._arg_specs[param_name] = SetStateArgSpec(**arg_spec)
 
         self.load_task_fn = partial(
             self._load_task, load_config, config, dataset, name_to_id
         )
+
         self.precond = []
         self.precond_strs = []
+        self._precond_arg_to_action_arg: Dict[str, str] = {}
+        self._action_arg_to_precond_arg: Dict[str, str] = {}
 
         for precond_str in load_config["precondition"]:
             precond = copy.deepcopy(predicate_lookup_fn(precond_str))
             self.precond.append(precond)
-            self.precond_strs.append(parse_func(precond_str)[1])
+            parsed_precond_args = parse_func(precond_str)[1]
+            self.precond_strs.append(parsed_precond_args)
+            sep_precond_args = self._convert_arg_str(parsed_precond_args, [])
+            assert len(precond.args) == len(sep_precond_args)
+            for precond_arg_param_name, precond_action_arg_name in zip(
+                precond.args, sep_precond_args
+            ):
+                self._precond_arg_to_action_arg[
+                    precond_arg_param_name
+                ] = precond_action_arg_name
+                self._action_arg_to_precond_arg[
+                    precond_action_arg_name
+                ] = precond_arg_param_name
 
         self.postcond = []
         self.postcond_args = []
@@ -165,12 +195,47 @@ class Action:
             self.postcond.append(postcond)
         self.is_bound = False
 
+    def copy_new(self) -> Action:
+        return Action(
+            self._orig_load_config,
+            self._orig_config,
+            self._orig_dataset,
+            self.name_to_id,
+            self._orig_pred_lookup_fn,
+        )
+
+    def _convert_arg_str(self, effect_arg: str, args: List[str]) -> List[str]:
+        for place_arg, set_arg in zip(self.parameters, args):
+            effect_arg = effect_arg.replace(place_arg, set_arg)
+        effect_arg = effect_arg.split(",")
+        if effect_arg[0] == "":
+            effect_arg = []
+        return effect_arg
+
+    @property
+    def task_args(self):
+        if not self.is_bound:
+            raise ValueError(
+                "Trying to fetch task arguments when task is not yet bound"
+            )
+        return {
+            **{k: v for k, v in zip(self.parameters, self.applied_func_args)},
+            **self._add_task_args,
+            **{
+                f"orig_{k}": v
+                for k, v in zip(self.parameters, self.orig_applied_func_args)
+            },
+        }
+
     @property
     def config_task_args(self):
         return self._config_task_args
 
     def __repr__(self):
-        return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
+        if self.is_bound:
+            return f"<Action: {self.name}, paras: {self.parameters} -> {self.applied_func_args}, preconds: {self.precond}, effects: {self.postcond}>"
+        else:
+            return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
 
     def bind(
         self, args: List[str], add_args: Optional[Dict[str, str]] = None
@@ -197,19 +262,15 @@ class Action:
                 f"The number of arguments {args} does not match the parameters {self.parameters}"
             )
 
-        def convert_arg_str(effect_arg):
-            for place_arg, set_arg in zip(self.parameters, args):
-                effect_arg = effect_arg.replace(place_arg, set_arg)
-            effect_arg = effect_arg.split(",")
-            if effect_arg[0] == "":
-                effect_arg = []
-            return effect_arg
-
         for i in range(len(self.postcond_args)):
-            self.postcond[i].bind(convert_arg_str(self.postcond_args[i]))
+            self.postcond[i].bind(
+                self._convert_arg_str(self.postcond_args[i], args)
+            )
 
         for i in range(len(self.precond_strs)):
-            self.precond[i].bind(convert_arg_str(self.precond_strs[i]))
+            self.precond[i].bind(
+                self._convert_arg_str(self.precond_strs[i], args)
+            )
 
         self.is_bound = True
 
@@ -218,7 +279,7 @@ class Action:
         load_config: Dict[str, Any],
         config: Config,
         dataset: RearrangeDatasetV0,
-        name_to_id: Dict[str, int],
+        name_to_id: Dict[str, Any],
         env: RearrangeTask,
         episode: Episode,
         should_reset: bool = True,
@@ -261,15 +322,128 @@ class Action:
     ) -> RearrangeTask:
         return self.load_task_fn(env, episode, should_reset=should_reset)
 
-    def are_preconditions_true(self, preds: List[Predicate]) -> bool:
+    def _get_consistent_preds(
+        self,
+        all_matches,
+        name_to_id,
+        cur_pred_list=None,
+        already_bound=None,
+        cur_i=0,
+    ):
+        if cur_pred_list is None:
+            cur_pred_list = []
+        if already_bound is None:
+            already_bound = {}
+
+        if len(cur_pred_list) == len(self.precond):
+            return [cur_pred_list], [already_bound]
+
+        cur_pred_cp: Predicate = copy.deepcopy(self.precond[cur_i])
+        all_consistent_preds = []
+        all_bound_args = []
+        for match in all_matches[cur_i]:
+            args_match = True
+            # Does this predicate conflict with any already set arguments?
+            for i, arg in enumerate(cur_pred_cp.args):
+                if (
+                    arg in already_bound
+                    and already_bound[arg] != match.set_args[i]
+                ):
+                    args_match = False
+                    break
+            if not args_match:
+                continue
+            new_set_args = {
+                k: v for k, v in zip(cur_pred_cp.args, match.set_args)
+            }
+
+            # Do these predicates work with this action?
+            all_arg_spec_match = True
+            for param_name, assign_name in new_set_args.items():
+                action_param_name = self._precond_arg_to_action_arg[param_name]
+                assign_name, assign_type = search_for_id(
+                    assign_name, name_to_id
+                )
+                if (
+                    action_param_name in self._arg_specs
+                    and not self._arg_specs[
+                        action_param_name
+                    ].argument_matches(assign_name, assign_type)
+                ):
+                    all_arg_spec_match = False
+                    break
+            if not all_arg_spec_match:
+                continue
+
+            pred_result, bound_args = self._get_consistent_preds(
+                all_matches,
+                name_to_id,
+                [*cur_pred_list, match],
+                {**already_bound, **new_set_args},
+                cur_i + 1,
+            )
+            all_consistent_preds.extend(pred_result)
+            all_bound_args.extend(bound_args)
+        return all_consistent_preds, all_bound_args
+
+    def get_consistent_action_copies(
+        self, preds: List[Predicate], name_to_id: Dict[str, Any]
+    ) -> List[Action]:
         """
         :param preds: List of currently True predicates.
+        :returns: List of bound actions that can currently be applied.
         """
+        all_matches = []
+        for precond in self.precond:
+            all_matches.append(
+                [
+                    other_pred
+                    for other_pred in preds
+                    if other_pred.name == precond.name
+                ]
+            )
 
-        def has_match(pred):
-            return any([other_pred.is_equal(pred) for other_pred in preds])
+        consistent_preds, all_bound_args = self._get_consistent_preds(
+            all_matches,
+            name_to_id,
+        )
+        consistent_actions = []
 
-        return all(has_match(precond_pred) for precond_pred in self.precond)
+        for bound_args, match_preds in zip(all_bound_args, consistent_preds):
+            # Extract out the set arguments from consistent_preds
+            all_set_args = [[]]
+
+            for action_param_name in self.parameters:
+                if action_param_name in self._action_arg_to_precond_arg:
+                    # Assign the predicate
+                    precond_arg = self._action_arg_to_precond_arg[
+                        action_param_name
+                    ]
+                    for i in range(len(all_set_args)):
+                        all_set_args[i].append(bound_args[precond_arg])
+                else:
+                    # Assign all possible values to to the empty action
+                    # parameter.
+                    ok_entities = []
+                    for entity_name, entity_id in name_to_id.items():
+                        entity_type = search_for_id(entity_name, name_to_id)[1]
+                        if (
+                            action_param_name in self._arg_specs
+                            and self._arg_specs[
+                                action_param_name
+                            ].argument_matches(entity_name, entity_type)
+                        ):
+                            ok_entities.append(entity_name)
+                    for entity in ok_entities:
+                        for i in range(len(all_set_args)):
+                            all_set_args[i] = [*all_set_args[i], entity]
+            if len(all_set_args[0]) != len(self.parameters):
+                continue
+            for set_args in all_set_args:
+                action = self.copy_new()
+                action.bind(set_args)
+                consistent_actions.append(action)
+        return consistent_actions
 
     def apply_postconditions(self, preds: List[Predicate]) -> List[Predicate]:
         """
@@ -309,7 +483,7 @@ class Action:
                 new_preds.append(pred)
         return new_preds
 
-    def apply(self, name_to_id: Dict[str, int], sim: RearrangeSim) -> None:
+    def apply(self, name_to_id: Dict[str, Any], sim: RearrangeSim) -> None:
         """
         Applies the effects of all the post conditions.
         """
@@ -337,21 +511,51 @@ class RoboState:
             if self.pos is not None:
                 self.pos = self.pos.replace(k, v)
 
+    def is_satisfied(self, name_to_id: Dict[str, Any], sim) -> bool:
+        if self.holding != "NONE" and self.holding is not None:
+            # Robot must be holding desired object.
+            match_name, match_type = search_for_id(self.holding, name_to_id)
 
-@dataclass(frozen=True)
+            if match_type != RearrangeObjectTypes.RIGID_OBJECT:
+                # We can only hold rigid objects.
+                return False
+
+            if self.holding not in name_to_id:
+                raise ValueError(f"Cannot find {self.holding} in {name_to_id}")
+            obj_idx = name_to_id[self.holding]
+            if isinstance(obj_idx, str):
+                raise ValueError(
+                    f"Current holding object {obj_idx} is not a scene object index"
+                )
+
+            abs_obj_id = sim.scene_obj_ids[obj_idx]
+            if sim.grasp_mgr.snap_idx != abs_obj_id:
+                return False
+        elif self.holding == "NONE" and sim.grasp_mgr.snap_idx != None:
+            # For predicate to be true, robot must be holding nothing
+            return False
+        return True
+
+
 class SetStateArgSpec:
-    name_match: str
-    type_match: Optional[List[str]] = None
+    def __init__(
+        self, name_match: str = "", type_match: Optional[List[str]] = None
+    ):
+        self.name_match: str = name_match
+        self.type_match: Optional[List[RearrangeObjectTypes]] = None
+        if type_match is not None:
+            self.type_match = [RearrangeObjectTypes(x) for x in type_match]
+
+    def __repr__(self):
+        return f"SetStateArgSpec {id(self)}: name_match={self.name_match}, type_match={self.type_match}"
 
     def argument_matches(self, arg_name: Any, arg_type: RearrangeObjectTypes):
-        if not isinstance(arg_name, str):
-            return False
-        if not arg_name.startswith(self.name_match):
-            return False
-        if (
-            self.type_match is not None
-            and arg_type.value not in self.type_match
-        ):
+        if self.name_match != "":
+            if not isinstance(arg_name, str):
+                return False
+            if not arg_name.startswith(self.name_match):
+                return False
+        if self.type_match is not None and arg_type not in self.type_match:
             return False
         return True
 
@@ -408,9 +612,26 @@ class SetState:
         """
         return not (id_str.startswith("ART_") or id_str.startswith("MARKER_"))
 
+    def _is_object_inside(self, obj_name, target, name_to_id, sim):
+        obj_name, obj_type = search_for_id(obj_name, name_to_id)
+        if obj_type == RearrangeObjectTypes.GOAL_POSITION:
+            use_receps = sim.ep_info["goal_receptacles"]
+        elif obj_type == RearrangeObjectTypes.RIGID_OBJECT:
+            use_receps = sim.ep_info["target_receptacles"]
+        else:
+            return False
+
+        target_name, target_type = search_for_id(target, name_to_id)
+        if target_type != RearrangeObjectTypes.ARTICULATED_LINK:
+            return False
+        check_link = sim.get_marker(target_name).link_id
+
+        _, recep_link_id = use_receps[obj_name]
+        return recep_link_id == check_link
+
     def is_satisfied(
         self,
-        name_to_id: Dict[str, int],
+        name_to_id: Dict[str, Any],
         sim: RearrangeSim,
         obj_thresh: float,
         art_thresh: float,
@@ -419,7 +640,6 @@ class SetState:
         Returns True if the grounded state is present in the current simulator state.
         Also returns False if the arguments are incompatible. For example if input argument is supposed to be a cabinet, but the passed argument is a rigid object name.
         """
-
         if self.arg_spec is not None:
             for arg_name in self._set_args:
                 match_name, match_type = search_for_id(arg_name, name_to_id)
@@ -428,6 +648,16 @@ class SetState:
 
         rom = sim.get_rigid_object_manager()
         for obj_name, target in self.obj_states.items():
+            if self._is_id_rigid_object(
+                obj_name
+            ) and not self._is_id_rigid_object(target):
+                # object is rigid and target is receptacle, we are checking if
+                # an object is inside of a receptacle.
+                if self._is_object_inside(obj_name, target, name_to_id, sim):
+                    continue
+                else:
+                    return False
+
             if not self._is_id_rigid_object(obj_name):
                 # Invalid predicate
                 return False
@@ -437,10 +667,6 @@ class SetState:
             cur_pos = rom.get_object_by_id(
                 abs_obj_id
             ).transformation.translation
-
-            if not self._is_id_rigid_object(target):
-                # Invalid predicate
-                return False
 
             targ_idx = name_to_id[target]
             idxs, pos_targs = sim.get_targets()
@@ -464,6 +690,10 @@ class SetState:
 
             if isinstance(set_art, str):
                 art_sampler = eval(set_art)
+                if not isinstance(art_sampler, ArtSampler):
+                    raise ValueError(
+                        f"Set art state is not an ArtSampler: {set_art}"
+                    )
                 did_sat = art_sampler.is_satisfied(prev_art_pos)
             else:
                 prev_art_pos = np.array(prev_art_pos)
@@ -476,35 +706,13 @@ class SetState:
 
             if not did_sat:
                 return False
-        if (
-            self.robo_state.holding != "NONE"
-            and self.robo_state.holding is not None
-            and self._is_id_rigid_object(self.robo_state.holding)
-        ):
-            # Robot must be holding right object.
-            if self.robo_state.holding not in name_to_id:
-                raise ValueError(
-                    f"Cannot find {self.robo_state.holding} in {name_to_id}"
-                )
-            obj_idx = name_to_id[self.robo_state.holding]
-            if isinstance(obj_idx, str):
-                raise ValueError(
-                    f"Current holding object {obj_idx} is not a scene object index"
-                )
 
-            abs_obj_id = sim.scene_obj_ids[obj_idx]
-            if sim.grasp_mgr.snap_idx != abs_obj_id:
-                return False
-        elif (
-            self.robo_state.holding == "NONE"
-            and sim.grasp_mgr.snap_idx != None
-        ):
-            # Robot must be holding nothing
+        if not self.robo_state.is_satisfied(name_to_id, sim):
             return False
 
         return True
 
-    def set_state(self, name_to_id: Dict[str, int], sim: RearrangeSim) -> None:
+    def set_state(self, name_to_id: Dict[str, Any], sim: RearrangeSim) -> None:
         """
         Set this state in the simulator. Warning, this steps the simulator.
         """
@@ -530,10 +738,19 @@ class SetState:
                 art_obj = sim.art_objs[match_name]
 
                 art_obj.clear_joint_states()
+
                 art_obj.joint_positions = set_art
             elif match_type == RearrangeObjectTypes.ARTICULATED_LINK:
                 marker = sim.get_marker(match_name)
-                marker.set_targ_js(set_art)
+                if isinstance(set_art, str):
+                    art_sampler = eval(set_art)
+                    if not isinstance(art_sampler, ArtSampler):
+                        raise ValueError(
+                            f"Set art state is not an ArtSampler: {set_art}"
+                        )
+                    marker.set_targ_js(art_sampler.sample())
+                else:
+                    marker.set_targ_js(set_art)
             else:
                 raise ValueError(
                     f"Unrecognized type {match_type} and name {match_name} from {art_name}"
@@ -550,9 +767,26 @@ class SetState:
         elif self.robo_state.holding is not None:
             rel_obj_idx = name_to_id[self.robo_state.holding]
             sim.internal_step(-1)
-            sim.full_snap(rel_obj_idx)
+            sim.grasp_mgr.snap_to_obj(sim.scene_obj_ids[rel_obj_idx])
             sim.internal_step(-1)
 
         # Set the robot starting position
         if self.robo_state.pos == "rnd":
             sim.set_robot_base_to_random_point()
+
+
+class ArtSampler:
+    def __init__(self, value, cmp):
+        self.value = value
+        self.cmp = cmp
+
+    def is_satisfied(self, cur_value):
+        if self.cmp == "greater":
+            return cur_value > self.value
+        elif self.cmp == "less":
+            return cur_value < self.value
+        else:
+            raise ValueError(f"Unrecognized cmp {self.cmp}")
+
+    def sample(self):
+        return self.value

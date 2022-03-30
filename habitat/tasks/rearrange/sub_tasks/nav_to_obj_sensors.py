@@ -11,8 +11,77 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    RearrangeObjectTypes,
+)
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
+
+
+@registry.register_sensor
+class TargetOrGoalStartPointGoalSensor(PointGoalSensor):
+    """
+    GPS and compass sensor relative to the starting target position. Only for
+    the first target object.
+    """
+
+    cls_uuid: str = "object_to_agent_gps_compass"
+
+    def __init__(self, *args, task, **kwargs):
+        self._task = task
+        super().__init__(*args, task=task, **kwargs)
+
+    def get_observation(self, task, *args, **kwargs):
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+        rotation_world_agent = agent_state.rotation
+
+        if task.nav_to_obj_type == RearrangeObjectTypes.GOAL_POSITION:
+            to_pos = self._sim.get_targets()[1][self._task.targ_idx]
+        elif task.nav_to_obj_type == RearrangeObjectTypes.RIGID_OBJECT:
+            to_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
+        else:
+            raise ValueError(
+                f"Got navigate to object type {RearrangeObjectTypes.RIGID_OBJECT}"
+            )
+
+        return self._compute_pointgoal(
+            agent_position, rotation_world_agent, to_pos
+        )
+
+
+@registry.register_sensor
+class NavToSkillSensor(Sensor):
+    cls_uuid: str = "nav_to_skill"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavToSkillSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(self._config.NUM_SKILLS,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        ret = np.zeros(self._config.NUM_SKILLS)
+        if task.nav_to_task_name is None or task.domain is None:
+            return ret
+        skills = task.domain.action_names
+
+        cur_idx = skills.index(task.nav_to_task_name)
+        ret[cur_idx] = 1.0
+        return ret
 
 
 @registry.register_sensor
@@ -155,7 +224,7 @@ class GeoMeasure(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def _get_agent_pos(self):
@@ -200,7 +269,7 @@ class NavToObjReward(GeoMeasure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -260,7 +329,7 @@ class SPLToObj(GeoMeasure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -317,7 +386,7 @@ class BadCalledTerminate(GeoMeasure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -359,7 +428,7 @@ class NavToPosSucc(GeoMeasure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -388,7 +457,7 @@ class NavToObjSuccess(GeoMeasure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):

@@ -14,7 +14,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_collision
+from habitat.tasks.rearrange.utils import logger, rearrange_collision
 from habitat.tasks.utils import get_angle
 
 
@@ -111,6 +111,13 @@ class SetArticulatedObjectTask(RearrangeTask):
     def step(self, action: Dict[str, Any], episode: Episode):
         return super().step(action, episode)
 
+    @property
+    def _is_there_spawn_noise(self):
+        return (
+            self._config.BASE_ANGLE_NOISE != 0.0
+            or self._config.SPAWN_REGION_SCALE != 0.0
+        )
+
     def reset(self, episode: Episode):
         super().reset(episode)
         if self._force_use_marker is not None:
@@ -145,6 +152,10 @@ class SetArticulatedObjectTask(RearrangeTask):
             rel_targ_pos = robot_T.inverted().transform_point(
                 marker.current_transform.translation
             )
+            if not self._is_there_spawn_noise:
+                logger.info("No spawn noise, returning first found position")
+                break
+
             eps = 1e-2
             upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
             is_within_bounds = (rel_targ_pos < upper_bound).all()
