@@ -93,8 +93,9 @@ class BatchedEnv:
             bsim_config.sensor0.hfov = 60.0
             bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
-            bsim_config.max_episode_length = 100
             bsim_config.num_physics_substeps = self._config.NUM_PHYSICS_SUBSTEPS
+            bsim_config.do_procedural_episode_set = True
+            # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
         else:
             self._bsim = None
@@ -250,20 +251,17 @@ class BatchedEnv:
             
 
 
-    def get_dones_and_rewards_and_fix_actions(self, env_states, actions):
+    def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
-            if state.did_finish_episode_and_reset:
+            max_episode_len = 500
+            if state.did_collide or state.episode_step_idx >= max_episode_len:
                 self.dones[b] = True
-                self.rewards[b] = 100.0 if state.finished_episode_success else 0.0
-                # The previously-computed action shouldn't be used for the next step because
-                # it was computed from a stale observation from the just-ended episode.
-                for i in range(self.action_dim):
-                    actions[b * self.action_dim + i] = 0.0
-            else:            
-                self.dones[b] = False
-                self.rewards[b] = -1.0 if state.did_collide else 0.0
-        
-        return actions
+                # for now, if we want to reset an env, we must reset it to the same 
+                # episode index (this is a temporary restriction)
+                self.resets[b] = state.episode_idx
+                self.rewards[b] = 100.0 if not state.did_collide else 0.0
+            else:
+                self.resets[b] = -1
 
     def reset(self):
         r"""Reset all the vectorized environments
@@ -275,10 +273,11 @@ class BatchedEnv:
             self._bsim.start_render()
             env_states = self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
-            self._bsim.wait_for_frame()
+            self._bsim.wait_render()
 
         self.rewards = [0.0] * self._num_envs
         self.dones = [True] * self._num_envs
+        self.resets = [-1] * self._num_envs
 
         return self._observations
         
@@ -295,18 +294,21 @@ class BatchedEnv:
         assert len(actions_flat_list) == self.num_envs * self.action_dim
         if self._bsim:
             if self._config.OVERLAP_PHYSICS:
-                self._bsim.wait_async_step_physics()
+                self._bsim.wait_step_physics_or_reset()
                 self._bsim.start_render()
                 env_states = self._bsim.get_environment_states()
-                # todo: decide if Python gets a copy of env_states vs direct access to C++ memory,
-                # and then decide whether to start async physics step *before* processing env_states
+
                 self.get_nonpixel_observations(env_states, self._observations)
-                actions_flat_list = self.get_dones_and_rewards_and_fix_actions(env_states, actions_flat_list)
-                self._bsim.start_async_step_physics(actions_flat_list)
+                self.get_dones_rewards_resets(env_states, actions_flat_list)
+                self._bsim.start_step_physics_or_reset(actions_flat_list, self.resets)
+
             else:
-                self._bsim.set_actions(actions_flat_list)  # note possible wasted (unused) actions
-                self._bsim.auto_reset_or_step_physics()
+                # note: this path is untested
+                self._bsim.start_step_physics_or_reset(actions_flat_list, self.resets)
+                self._bsim.wait_step_physics_or_reset()
                 self._bsim.start_render()
+                env_states = self._bsim.get_environment_states()
+                self.get_dones_rewards_resets(env_states, actions_flat_list)
 
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Any]:
@@ -316,8 +318,8 @@ class BatchedEnv:
 
             # this updates self._observations["depth"] (and rgb) tensors
             # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
-            
-            self._bsim.wait_for_frame()
+            self._bsim.wait_render()
+
 
             # these are "one frame behind" like the observations (i.e. computed from
             # the same earlier env state).
