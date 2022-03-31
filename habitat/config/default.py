@@ -42,10 +42,15 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
+_C.TASK = CN()
+_C.TASK.REWARD_MEASURE= "rearrangepick_reward"
+_C.TASK.SUCCESS_MEASURE= "rearrangepick_success"
+_C.TASK.SUCCESS_REWARD= 1.0
+_C.TASK.SLACK_REWARD= -0.01
+_C.TASK.END_ON_SUCCESS= True
 # -----------------------------------------------------------------------------
 # # NAVIGATION TASK
 # -----------------------------------------------------------------------------
-_C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
