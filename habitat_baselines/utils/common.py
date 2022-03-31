@@ -86,6 +86,10 @@ class CustomNormal(torch.distributions.normal.Normal):
         ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
         return ret
 
+    def entropy(self) -> Tensor:
+        ret = super().entropy().sum(-1).unsqueeze(-1)
+        return ret
+
 
 class GaussianNet(nn.Module):
     def __init__(
