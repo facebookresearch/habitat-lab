@@ -1,3 +1,11 @@
+GYM:
+    AUTO_NAME: "Pick"
+    OBS_KEYS: ['joint', 'ee_pos']
+    DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
+    ACHIEVED_GOAL_KEYS: []
+    FIX_INFO_DICT: True
+    ACTION_KEYS: ['ARM_ACTION']
+ENV_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:

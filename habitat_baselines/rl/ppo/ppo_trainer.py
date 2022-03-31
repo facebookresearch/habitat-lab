@@ -62,7 +62,7 @@ from habitat_baselines.utils.common import (
     get_num_actions,
     is_continuous_action_space,
 )
-from habitat_baselines.utils.env_utils import construct_envs
+from habitat.utils.env_utils import construct_envs
 from habitat_baselines.utils.render_wrapper import overlay_frame
 
 

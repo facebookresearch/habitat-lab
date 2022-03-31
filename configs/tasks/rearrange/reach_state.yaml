@@ -1,3 +1,8 @@
+GYM:
+    AUTO_NAME: "ReachState"
+    OBS_KEYS: ['joint', 'relative_resting_position']
+    ACTION_KEYS: ['ARM_ACTION']
+ENV_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 20
 DATASET:

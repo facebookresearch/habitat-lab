@@ -23,8 +23,6 @@ NUM_CHECKPOINTS: 100
 FORCE_TORCH_SINGLE_THREADED: True
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
-GYM_AUTO_NAME: "ReachState"
-ENV_NAME: "RearrangeRLEnv"
 
 EVAL:
   SPLIT: "eval"
@@ -40,8 +38,6 @@ RL:
   REWARD_MEASURE: "rearrange_reach_reward"
   SUCCESS_MEASURE: "rearrange_reach_success"
   SUCCESS_REWARD: 10.0
-  GYM_OBS_KEYS: ['joint', 'relative_resting_position']
-  GYM_ACTION_KEYS: ['ARM_ACTION']
 
   PPO:
     # ppo params

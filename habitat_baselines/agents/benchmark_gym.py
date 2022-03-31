@@ -34,7 +34,7 @@ from habitat_baselines.utils.common import (
     generate_video,
     get_num_actions,
 )
-from habitat_baselines.utils.env_utils import make_env_fn
+from habitat.utils.env_utils import make_env_fn
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
 
 

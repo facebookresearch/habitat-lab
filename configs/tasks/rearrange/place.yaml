@@ -1,3 +1,7 @@
+GYM:
+    AUTO_NAME: "Place"
+    OBS_KEYS: ['obj_goal_sensor', 'joint', 'is_holding', 'relative_resting_position']
+ENV_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 100
 DATASET:

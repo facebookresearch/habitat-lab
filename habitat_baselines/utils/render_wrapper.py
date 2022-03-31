@@ -91,7 +91,7 @@ class HabRenderWrapper(gym.Wrapper):
     config = baselines_get_config(self.args.hab_cfg, config_args)
     env_class = get_env_class(config.ENV_NAME)
 
-    env = habitat_baselines.utils.env_utils.make_env_fn(
+    env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
     env = HabGymWrapper(env)
