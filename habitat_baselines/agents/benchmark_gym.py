@@ -35,7 +35,7 @@ from habitat_baselines.utils.common import (
     get_num_actions,
 )
 from habitat.utils.env_utils import make_env_fn
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
+from habitat.utils.gym_adapter import HabGymWrapper
 
 
 def compress_action(action):

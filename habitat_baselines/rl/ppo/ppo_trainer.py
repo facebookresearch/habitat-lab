@@ -63,7 +63,7 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat.utils.env_utils import construct_envs
-from habitat_baselines.utils.render_wrapper import overlay_frame
+from habitat.utils.render_wrapper import overlay_frame
 
 
 @baseline_registry.register_trainer(name="ddppo")

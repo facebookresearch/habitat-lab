@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
@@ -15,8 +15,8 @@ import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
-from habitat_baselines.utils.render_wrapper import HabRenderWrapper
+from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.utils.render_wrapper import HabRenderWrapper
 
 
 @pytest.mark.parametrize(
