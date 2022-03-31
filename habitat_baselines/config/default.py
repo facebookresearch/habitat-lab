@@ -63,6 +63,14 @@ _C.NUM_PHYSICS_SUBSTEPS = 1
 # set it to true and yours likely should too
 _C.FORCE_TORCH_SINGLE_THREADED = False
 # -----------------------------------------------------------------------------
+# Weights and Biases config
+# -----------------------------------------------------------------------------
+_C.WB = CN()
+_C.WB.PROJECT_NAME = ""
+_C.WB.ENTITY = ""
+_C.WB.GROUP = ""
+_C.WB.RUN_NAME = ""
+# -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
 _C.EVAL = CN()
