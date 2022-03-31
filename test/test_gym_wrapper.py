@@ -11,8 +11,8 @@ import gym.spaces as spaces
 import numpy as np
 import pytest
 
-import habitat_baselines.utils.env_utils
-import habitat_baselines.utils.gym_definitions
+import habitat.utils.env_utils
+import habitat.utils.gym_definitions
 from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
@@ -54,7 +54,7 @@ def test_gym_wrapper_contract(
     config = baselines_get_config(config_file, overrides)
     env_class = get_env_class(config.ENV_NAME)
 
-    env = habitat_baselines.utils.env_utils.make_env_fn(
+    env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
     env = HabGymWrapper(env)

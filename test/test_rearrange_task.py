@@ -15,7 +15,7 @@ import habitat
 import habitat.datasets.rearrange.rearrange_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
-import habitat_baselines.utils.env_utils
+import habitat.utils.env_utils
 from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
@@ -77,7 +77,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 
     env_class = get_env_class(config.ENV_NAME)
 
-    env = habitat_baselines.utils.env_utils.make_env_fn(
+    env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
 

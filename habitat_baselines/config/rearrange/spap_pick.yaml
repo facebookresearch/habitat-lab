@@ -27,12 +27,6 @@ RL:
     SUCCESS_REWARD: 2000.0
     SLACK_REWARD: -0.01
 
-    GYM_OBS_KEYS: ['joint', 'ee_pos']
-    GYM_DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
-
-    GYM_ACHIEVED_GOAL_KEYS: []
-    GYM_FIX_INFO_DICT: True
-    GYM_ACTION_KEYS: ['ARM_ACTION']
     END_ON_SUCCESS: False
 
     DIST_REWARD: 20.0
