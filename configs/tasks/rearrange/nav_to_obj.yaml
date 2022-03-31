@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: "NavToObj"
     OBS_KEYS: ["object_to_agent_gps_compass", 'joint']
-ENV_NAME: "RearrangeRLEnv"
+    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
 DATASET:
