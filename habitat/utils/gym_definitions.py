@@ -14,8 +14,8 @@ from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
-from habitat_baselines.common.environments import get_env_class
-from habitat.config.default import Config
+from habitat.core.environments import get_env_class
+from habitat.config.default import _C, Config
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
@@ -35,6 +35,11 @@ def _get_gym_name(cfg:Config) -> Optional[str]:
             return cfg["GYM"]["AUTO_NAME"]
     return None
 
+def _get_env_name(cfg:Config) -> Optional[str]:
+    if "GYM" in cfg:
+        if "AUTO_NAME" in cfg["GYM"]:
+            return cfg["GYM"]["CLASS_NAME"]
+    return None
 
 
 def _make_habitat_gym_env(
@@ -57,7 +62,8 @@ def _make_habitat_gym_env(
             ]
         )
 
-    env_class = get_env_class(config.ENV_NAME)
+    env_class_name = _get_env_name(config)
+    env_class = get_env_class(env_class_name)
 
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config

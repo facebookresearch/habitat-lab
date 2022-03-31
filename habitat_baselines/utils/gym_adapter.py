@@ -89,13 +89,11 @@ class HabGymWrapper(gym.Env):
     """
 
     def __init__(self, env, save_orig_obs: bool = False):
-        self._gym_goal_keys = env._rl_config.get("GYM_DESIRED_GOAL_KEYS", [])
-        self._gym_achieved_goal_keys = env._rl_config.get(
-            "GYM_ACHIEVED_GOAL_KEYS", []
-        )
-        self._fix_info_dict = env._rl_config.get("GYM_FIX_INFO_DICT", True)
-        self._gym_action_keys = env._rl_config.get("GYM_ACTION_KEYS", None)
-        self._gym_obs_keys = env._rl_config.get("GYM_OBS_KEYS", None)
+        self._gym_goal_keys = env.config.GYM.DESIRED_GOAL_KEYS
+        self._gym_achieved_goal_keys = env.config.GYM.ACHIEVED_GOAL_KEYS
+        self._fix_info_dict = env.config.GYM.FIX_INFO_DICT
+        self._gym_action_keys = env.config.GYM.ACTION_KEYS
+        self._gym_obs_keys = env.config.GYM.OBS_KEYS
 
         if self._gym_obs_keys is None:
             self._gym_obs_keys = list(env.observation_space.spaces.keys())

@@ -13,7 +13,7 @@ import pytest
 
 import habitat.utils.env_utils
 import habitat.utils.gym_definitions
-from habitat_baselines.common.environments import get_env_class
+from habitat.core.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.utils.render_wrapper import HabRenderWrapper
