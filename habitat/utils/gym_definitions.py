@@ -14,8 +14,8 @@ import habitat
 import habitat.utils.env_utils
 from habitat.core.environments import get_env_class
 from habitat.config.default import _C, Config
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
-from habitat_baselines.utils.render_wrapper import HabRenderWrapper
+from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.utils.render_wrapper import HabRenderWrapper
 
 HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
 

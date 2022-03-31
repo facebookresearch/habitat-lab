@@ -626,6 +626,12 @@ class SetState:
             return False
         check_link = sim.get_marker(target_name).link_id
 
+        print(use_receps)
+        print(obj_name)
+        print(obj_type)
+        print(sim.ep_info["goal_receptacles"])
+        print(name_to_id)
+        print("\n\n\n\n")
         _, recep_link_id = use_receps[obj_name]
         return recep_link_id == check_link
 

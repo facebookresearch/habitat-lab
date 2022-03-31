@@ -10,7 +10,7 @@ import cv2
 import gym
 import numpy as np
 
-from habitat_baselines.utils.gym_adapter import flatten_dict
+from habitat.utils.gym_adapter import flatten_dict
 
 
 def append_text_to_image(
