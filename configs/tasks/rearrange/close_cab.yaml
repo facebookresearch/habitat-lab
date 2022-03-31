@@ -27,9 +27,12 @@ TASK:
     USE_MARKER_T: True
     SUCCESS_STATE: 0.0
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "art_obj_reward"
-    SUCCESS_MEASUREMENT: "art_obj_success"
+    REWARD_MEASURE: "art_obj_reward"
+    SUCCESS_MEASURE: "art_obj_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: 0.0
+    END_ON_SUCCESS: True
+
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot

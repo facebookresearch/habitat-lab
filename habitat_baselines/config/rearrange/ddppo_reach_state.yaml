@@ -35,10 +35,6 @@ RL:
       ACTION_DIST:
         use_log_std: True
 
-  REWARD_MEASURE: "rearrange_reach_reward"
-  SUCCESS_MEASURE: "rearrange_reach_success"
-  SUCCESS_REWARD: 10.0
-
   PPO:
     # ppo params
     clip_param: 0.2

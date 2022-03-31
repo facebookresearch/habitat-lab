@@ -28,9 +28,11 @@ TASK:
     CONSTRAINT_VIOLATION_ENDS_EPISODE: True
     FORCE_REGENERATE: False
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "rearrangepick_reward"
-    SUCCESS_MEASUREMENT: "rearrangepick_success"
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot

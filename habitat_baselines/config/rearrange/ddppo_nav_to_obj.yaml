@@ -36,12 +36,6 @@ RL:
       ACTION_DIST:
          use_log_std: True
 
-  REWARD_MEASURE: "nav_to_obj_reward"
-  SUCCESS_MEASURE: "nav_to_obj_success"
-  SUCCESS_REWARD: 10.0
-  SLACK_REWARD: 0.0
-  END_ON_SUCCESS: True
-
   PPO:
     # ppo params
     clip_param: 0.2
