@@ -7,7 +7,7 @@ r"""
 This file hosts task-specific or trainer-specific environments for trainers.
 All environments here should be a (direct or indirect ) subclass of Env class
 in habitat. Customized environments should be registered using
-``@baseline_registry.register_env(name="myEnv")` for reusability
+``@habitat.registry.register_env(name="myEnv")` for reusability
 """
 
 from typing import Optional, Type
@@ -16,7 +16,6 @@ import numpy as np
 
 import habitat
 from habitat import Config, Dataset
-from habitat_baselines.common.baseline_registry import baseline_registry
 
 
 def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
@@ -28,19 +27,18 @@ def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
     Returns:
         Type[habitat.RLEnv]: env class.
     """
-    return baseline_registry.get_env(env_name)
+    return habitat.registry.get_env(env_name)
 
 
-@baseline_registry.register_env(name="RearrangeRLEnv")
+@habitat.registry.register_env(name="RearrangeRLEnv")
 class RearrangeRLEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
-        self._rl_config = config.RL
-        self._core_env_config = config.TASK_CONFIG
-        self._reward_measure_name = self._rl_config.REWARD_MEASURE
-        self._success_measure_name = self._rl_config.SUCCESS_MEASURE
+        super().__init__(config, dataset)
+        self._reward_measure_name = self.config.TASK.REWARD_MEASURE
+        self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
         self._previous_action = None
-        super().__init__(self._core_env_config, dataset)
+        
 
     def reset(self):
         self._previous_action = None
@@ -57,12 +55,12 @@ class RearrangeRLEnv(habitat.RLEnv):
 
     def get_reward(self, observations):
         current_measure = self._env.get_metrics()[self._reward_measure_name]
-        reward = self._rl_config.SLACK_REWARD
+        reward = self.config.TASK.SLACK_REWARD
 
         reward += current_measure
 
         if self._episode_success():
-            reward += self._rl_config.SUCCESS_REWARD
+            reward += self.config.TASK.SUCCESS_REWARD
 
         return reward
 
@@ -74,7 +72,7 @@ class RearrangeRLEnv(habitat.RLEnv):
         if self._env.episode_over:
             done = True
         if (
-            self._rl_config.get("END_ON_SUCCESS", True)
+            self.config.TASK.END_ON_SUCCESS
             and self._episode_success()
         ):
             done = True
@@ -84,17 +82,16 @@ class RearrangeRLEnv(habitat.RLEnv):
         return self.habitat_env.get_metrics()
 
 
-@baseline_registry.register_env(name="NavRLEnv")
+@habitat.registry.register_env(name="NavRLEnv")
 class NavRLEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
-        self._rl_config = config.RL
-        self._core_env_config = config.TASK_CONFIG
-        self._reward_measure_name = self._rl_config.REWARD_MEASURE
-        self._success_measure_name = self._rl_config.SUCCESS_MEASURE
+        super().__init__(config, dataset)
+        self._reward_measure_name = self.config.TASK.REWARD_MEASURE
+        self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
         self._previous_measure = None
         self._previous_action = None
-        super().__init__(self._core_env_config, dataset)
+        
 
     def reset(self):
         self._previous_action = None
@@ -110,12 +107,12 @@ class NavRLEnv(habitat.RLEnv):
 
     def get_reward_range(self):
         return (
-            self._rl_config.SLACK_REWARD - 1.0,
-            self._rl_config.SUCCESS_REWARD + 1.0,
+            self.config.TASK.SLACK_REWARD - 1.0,
+            self.config.TASK.SUCCESS_REWARD + 1.0,
         )
 
     def get_reward(self, observations):
-        reward = self._rl_config.SLACK_REWARD
+        reward = self.config.TASK.SLACK_REWARD
 
         current_measure = self._env.get_metrics()[self._reward_measure_name]
 
@@ -123,7 +120,7 @@ class NavRLEnv(habitat.RLEnv):
         self._previous_measure = current_measure
 
         if self._episode_success():
-            reward += self._rl_config.SUCCESS_REWARD
+            reward += self.config.TASK.SUCCESS_REWARD
 
         return reward
 

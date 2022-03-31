@@ -25,6 +25,7 @@ Various decorators for registry different kind of classes with unique keys
 -   Register a sensor: ``@registry.register_sensor``
 -   Register a measure: ``@registry.register_measure``
 -   Register a dataset: ``@registry.register_dataset``
+-   Register a environment: ``@registry.register_env``
 """
 
 import collections
@@ -195,6 +196,20 @@ class Registry(metaclass=Singleton):
         )
 
     @classmethod
+    def register_env(cls, to_register=None, *, name: Optional[str] = None):
+        r"""Register a environment to registry with key 'name'
+            currently only support subclass of RLEnv.
+
+        Args:
+            name: Key with which the env will be registered.
+                If None will use the name of the class.
+
+        """
+        from habitat import RLEnv
+
+        return cls._register_impl("env", to_register, name, assert_type=RLEnv)
+
+    @classmethod
     def _get_impl(cls, _type: str, name: str) -> Type:
         return cls.mapping[_type].get(name, None)
 
@@ -227,6 +242,10 @@ class Registry(metaclass=Singleton):
         cls, name: str
     ) -> Type[ActionSpaceConfiguration]:
         return cls._get_impl("action_space_config", name)
+
+    @classmethod
+    def get_env(cls, name):
+        return cls._get_impl("env", name)
 
 
 registry = Registry()

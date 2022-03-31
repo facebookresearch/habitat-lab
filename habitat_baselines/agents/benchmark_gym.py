@@ -25,7 +25,7 @@ from habitat_baselines.agents.mp_agents import (
     SpaResetModule,
 )
 from habitat_baselines.agents.ppo_agents import PPOAgent
-from habitat_baselines.common.environments import get_env_class
+from habitat.core.environments import get_env_class
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import (

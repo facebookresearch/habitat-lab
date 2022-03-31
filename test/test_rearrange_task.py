@@ -20,7 +20,7 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat_baselines.common.environments import get_env_class
+from habitat.core.environments import get_env_class
 from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "configs/tasks/rearrange/pick.yaml"
