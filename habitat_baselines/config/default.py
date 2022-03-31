@@ -73,7 +73,7 @@ _C.EVAL = CN()
 # The split to evaluate on
 _C.EVAL.SPLIT = "val"
 _C.EVAL.USE_CKPT_CONFIG = True
-_C.EVAL.LOAD_CKPT_FILE = True
+_C.EVAL.SHOULD_LOAD_CKPT = True
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
