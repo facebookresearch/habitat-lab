@@ -27,18 +27,11 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/close_cab.yaml
 EVAL:
   SPLIT: "eval"
 
-
 RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
       include_visual_keys: ["robot_head_depth"]
-
-  REWARD_MEASURE: "art_obj_reward"
-  SUCCESS_MEASURE: "art_obj_success"
-  SUCCESS_REWARD: 10.0
-  SLACK_REWARD: 0.0
-  END_ON_SUCCESS: True
 
   PPO:
     # ppo params

@@ -258,6 +258,14 @@ def get_config(
                 config.BASE_TASK_CONFIG_PATH = v
 
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
+
+    # In case the config specifies overrides for the TASK_CONFIG, we
+    # remerge the files here
+    if config_paths:
+        for config_path in config_paths:
+            config.merge_from_file(config_path)
+
+
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)
