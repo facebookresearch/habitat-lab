@@ -216,11 +216,19 @@ class BatchedEnv:
         ] * 1  # note we only ever read element #0 of this array
         # self.number_of_episodes = []
         self._paused: List[int] = []
+        self._num_episodes = self._bsim.get_num_episodes()
+        self._next_episode_idx = 0
 
     @property
     def num_envs(self):
         r"""number of individual environments."""
         return self._num_envs - len(self._paused)
+
+    def get_next_episode(self):
+        assert self._num_episodes > 0
+        retval = self._next_episode_idx
+        self._next_episode_idx = (self._next_episode_idx + 1) % self._num_episodes
+        return retval
 
     def current_episodes(self):
         # todo: get current episode name from envs
@@ -263,9 +271,7 @@ class BatchedEnv:
             max_episode_len = 500
             if state.did_collide or state.episode_step_idx >= max_episode_len:
                 self.dones[b] = True
-                # for now, if we want to reset an env, we must reset it to the same
-                # episode index (this is a temporary restriction)
-                self.resets[b] = state.episode_idx
+                self.resets[b] = self.get_next_episode()
                 self.rewards[b] = 100.0 if not state.did_collide else 0.0
             else:
                 self.resets[b] = -1
@@ -275,8 +281,11 @@ class BatchedEnv:
 
         :return: list of outputs from the reset method of envs.
         """
+
+        self.resets = [self.get_next_episode() for _ in range(self._num_envs)]
+
         if self._bsim:
-            self._bsim.reset()
+            self._bsim.reset(self.resets)
             self._bsim.start_render()
             env_states = self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
