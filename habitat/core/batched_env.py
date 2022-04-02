@@ -227,7 +227,9 @@ class BatchedEnv:
     def get_next_episode(self):
         assert self._num_episodes > 0
         retval = self._next_episode_idx
-        self._next_episode_idx = (self._next_episode_idx + 1) % self._num_episodes
+        self._next_episode_idx = (
+            self._next_episode_idx + 1
+        ) % self._num_episodes
         return retval
 
     def current_episodes(self):
@@ -302,9 +304,6 @@ class BatchedEnv:
         scale = self._config.HACK_ACTION_SCALE
         if self._config.HACK_ACTION_SCALE != 1.0:
             actions = torch.mul(actions, scale)
-        import ipdb
-
-        ipdb.set_trace()
 
         actions_flat_list = actions.flatten().tolist()
         assert len(actions_flat_list) == self.num_envs * self.action_dim
