@@ -44,12 +44,6 @@ class RearrangeSim(HabitatSim):
 
         agent_cfg = self._get_agent_config()
 
-        self.navmesh_settings = NavMeshSettings()
-        self.navmesh_settings.set_defaults()
-        self.navmesh_settings.agent_radius = agent_cfg.RADIUS
-        self.navmesh_settings.agent_height = agent_cfg.HEIGHT
-        self.navmesh_settings.agent_max_climb = 0.15
-
         self.first_setup = True
         self.ep_info: Optional[Config] = None
         self.prev_loaded_navmesh = None

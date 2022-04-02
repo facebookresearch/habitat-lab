@@ -294,7 +294,7 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
-                    if not self.is_accessible(sim, new_object):
+                    if not self._is_accessible(sim, new_object):
                         continue
                     return new_object
 
@@ -302,7 +302,7 @@ class ObjectSampler:
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
-                if not self.is_accessible(sim, new_object):
+                if not self._is_accessible(sim, new_object):
                     continue
                 return new_object
 
@@ -316,7 +316,16 @@ class ObjectSampler:
 
         return None
 
-    def is_accessible(self, sim, new_object):
+    def _is_accessible(self, sim, new_object) -> bool:
+        """
+        Return if the object is within a threshold distance of the nearest
+        navigable point and that the nearest navigable point is on the same
+        navigation mesh.
+
+        Note that this might not catch all edge cases since the distance is
+        based on Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle.
+        """
         if self.nav_to_min_distance == -1:
             return True
         snapped = sim.pathfinder.snap_point(new_object.translation)
