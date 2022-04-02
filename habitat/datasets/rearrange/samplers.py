@@ -226,6 +226,7 @@ class ObjectSampler:
         navmesh_vertices = np.stack(
             sim.pathfinder.build_navmesh_vertices(), axis=0
         )
+        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
         self.largest_island_size = max(
             [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
         )
