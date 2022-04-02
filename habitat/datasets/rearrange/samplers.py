@@ -597,7 +597,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                 )
 
     def sample(
-        self, sim: habitat_sim.Simulator, receptacles
+        self, sim: habitat_sim.Simulator, receptacles: List[Receptacle]
     ) -> Optional[
         Dict[habitat_sim.physics.ManagedArticulatedObject, Dict[int, float]]
     ]:
