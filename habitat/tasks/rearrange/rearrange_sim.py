@@ -25,6 +25,7 @@ from habitat.tasks.rearrange.utils import (
     IkHelper,
     get_aabb,
     is_pb_installed,
+    logger,
     make_render_only,
     rearrange_collision,
 )
@@ -241,7 +242,7 @@ class RearrangeSim(HabitatSim):
             self.sleep_all_objects()
 
         if new_scene:
-            self._recompute_navmesh()
+            self._load_navmesh()
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
@@ -271,7 +272,8 @@ class RearrangeSim(HabitatSim):
             }
 
     def set_robot_base_to_random_point(self):
-        for _ in range(50):
+        MAX_ATTEMPTS = 50
+        for attempt_i in range(MAX_ATTEMPTS):
             start_pos = self.pathfinder.get_random_navigable_point()
 
             start_pos = self.safe_snap_point(start_pos)
@@ -279,8 +281,7 @@ class RearrangeSim(HabitatSim):
 
             self.robot.base_pos = start_pos
             self.robot.base_rot = start_rot
-
-            self.internal_step(-1)
+            self.perform_discrete_collision_detection()
             did_collide, details = rearrange_collision(
                 self,
                 True,
@@ -288,6 +289,10 @@ class RearrangeSim(HabitatSim):
             )
             if not did_collide:
                 break
+        if attempt_i == MAX_ATTEMPTS - 1:
+            logger.warning(
+                f"Could not find a collision free start for {self.ep_info['episode_id']}"
+            )
 
     def _setup_targets(self):
         self._targets = {}
@@ -296,7 +301,7 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    def _recompute_navmesh(self):
+    def _load_navmesh(self):
         scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
         base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
 
@@ -597,14 +602,12 @@ class RearrangeSim(HabitatSim):
 
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1)
-            # self.internal_step(0.008 * self.ac_freq_ratio)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1)
-            # self.internal_step(0.008 * self.ac_freq_ratio)
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 

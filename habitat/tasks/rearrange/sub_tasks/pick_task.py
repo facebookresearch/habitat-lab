@@ -168,7 +168,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 sim, True, episode, sel_idx
             )
         elif not is_within_bounds or attempt == timeout or did_collide:
-            print(f"Episode {episode.episode_id} failed to place robot")
+            logger.error(f"Episode {episode.episode_id} failed to place robot")
 
         sim.set_state(state)
 
