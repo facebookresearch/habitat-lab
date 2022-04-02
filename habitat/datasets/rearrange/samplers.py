@@ -81,7 +81,7 @@ class ObjectSampler:
         nav_to_min_distance: float = -1.0,
     ) -> None:
         """
-        :param nav_to_min_distance: -1.0 means there will be accessibility constraint.
+        :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         """
         self.object_set = object_set
         self.receptacle_sets = receptacle_sets
