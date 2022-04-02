@@ -345,7 +345,7 @@ class ObjectSampler:
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         fixed_target_receptacle=None,
-        fixed_obj_handle=None,
+        fixed_obj_handle: Optional[str]=None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
         if fixed_obj_handle is None:
