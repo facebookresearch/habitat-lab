@@ -25,6 +25,40 @@ class BatchedEnv:
     _num_envs: int
     _auto_reset_done: bool
 
+    @staticmethod
+    def create_fetch_action_map():
+        from habitat_sim._ext.habitat_sim_bindings import ActionMap
+        map = ActionMap()
+
+        # you can optionally have actions that are ignored by the sim (e.g. a stop
+        # action implemented purely in Python)
+        num_ignored_actions = 0
+
+        map.grasp_release = num_ignored_actions + 0
+        map.base_rotate = num_ignored_actions + 1
+        map.base_move = num_ignored_actions + 2
+        
+        # reference code to drive all 15 fetch joint degrees from actions
+        # action_joint_degree_pairs = []
+        # num_joint_degrees = 15
+        # for i in range(num_joint_degrees):
+        #     action_joint_degree_pairs.append((num_ignored_actions + 3 + i, i))
+
+        # 2 is torso up/down
+        # 7 shoulder, + is down
+        # 8 twist, + is twist to right
+        # 9 elbow, + is down
+        # 10 elbow twist, + is twst to right
+        # 11 wrist, + is down
+        # 12 wrist twise, + is right
+        # example joint pairs: only control 8-twist and 9-elbow
+        action_joint_degree_pairs = [(num_ignored_actions + 3, 8), (num_ignored_actions + 4, 9)]
+
+        map.action_joint_degree_pairs = action_joint_degree_pairs
+
+        map.num_actions = 3 + len(action_joint_degree_pairs)
+        return map
+
     def __init__(
         self,
         config,
@@ -94,9 +128,14 @@ class BatchedEnv:
             )
             bsim_config.do_procedural_episode_set = True
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
+            bsim_config.action_map = BatchedEnv.create_fetch_action_map()
             self._bsim = BatchedSimulator(bsim_config)
+
+            self.action_dim = bsim_config.action_map.num_actions
+
         else:
             self._bsim = None
+            self.action_dim = 10  # arbitrary
 
         double_buffered = False
         buffer_index = 0
@@ -150,13 +189,6 @@ class BatchedEnv:
         self._observations = observations
 
         self._is_closed = False
-
-        num_other_actions = 1  # doAttemptGrip/doAttemptDrop
-        num_base_degrees = 2  # rotate and move-forward/back
-        num_joint_degrees = 15  # hard-coded to match Fetch
-        self.action_dim = (
-            num_other_actions + num_base_degrees + num_joint_degrees
-        )
 
         obs_dict = spaces.Dict({})
         if include_rgb:
