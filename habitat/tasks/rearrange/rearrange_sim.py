@@ -566,7 +566,8 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        self._update_markers()
+        if self.habitat_config.NEEDS_MARKERS:
+            self._update_markers()
 
         if self.habitat_config.DEBUG_RENDER:
             rom = self.get_rigid_object_manager()

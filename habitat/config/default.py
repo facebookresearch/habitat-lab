@@ -523,6 +523,7 @@ _C.SIMULATOR.AUTO_SLEEP = False
 _C.SIMULATOR.STEP_PHYSICS = True
 _C.SIMULATOR.UPDATE_ROBOT = True
 _C.SIMULATOR.CONCUR_RENDER = False
+_C.SIMULATOR.NEEDS_MARKERS = True
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )

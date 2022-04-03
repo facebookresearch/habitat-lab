@@ -18,7 +18,7 @@ def generate_inits(cfg_path, opts):
             if i % 100 == 0:
                 # Print the dataset we are generating initializations for. This
                 # is useful when this script runs for a long time and we don't
-                # know which dataset the run is for.
+                # know which dataset the job is for.
                 print(cfg_path, config.DATASET.DATA_PATH)
             env.reset()
 

@@ -60,8 +60,6 @@ TASK:
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
-    ROBOT_COLLS:
-        TYPE: "RobotCollisions"
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
@@ -96,7 +94,6 @@ TASK:
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
-        - "ROBOT_COLLS"
         - "END_EFFECTOR_TO_REST_DISTANCE"
         - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "DID_PICK_OBJECT"
@@ -125,6 +122,7 @@ SIMULATOR:
     CONCUR_RENDER: True
     AUTO_SLEEP: True
     ROBOT_JOINT_START_NOISE: 0.0
+    NEEDS_MARKERS: False
     AGENT_0:
         HEIGHT: 1.5
         IS_SET_START_STATE: False

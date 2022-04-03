@@ -83,24 +83,24 @@ def try_register(id_name, entry_point, kwargs):
     )
 
 
-if "HabitatGym-v0" not in registry.env_specs:
+if "Habitat-v0" not in registry.env_specs:
     # Generic supporting general configs
     try_register(
-        id_name="HabitatGym-v0",
+        id_name="Habitat-v0",
         entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
         kwargs={},
     )
 
     try_register(
-        id_name="HabitatGymRender-v0",
+        id_name="HabitatRender-v0",
         entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
         kwargs={"use_render_mode": True},
     )
 
     hab_baselines_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
     rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
-    gym_template_handle = "HabitatGym%s-v0"
-    render_gym_template_handle = "HabitatGymRender%s-v0"
+    gym_template_handle = "Habitat%s-v0"
+    render_gym_template_handle = "HabitatRender%s-v0"
     for fname in os.listdir(rearrange_configs_dir):
         full_path = osp.join(rearrange_configs_dir, fname)
         if not fname.endswith(".yaml"):
