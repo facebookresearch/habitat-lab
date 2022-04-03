@@ -100,7 +100,7 @@ def _worker_fn(
         batch["observations"],
         batch["recurrent_hidden_states"],
         batch["prev_actions"],
-        batch["masks"],
+        batch["not_done_mask_0"],
         batch["actions"],
     )
     # Backprop on things

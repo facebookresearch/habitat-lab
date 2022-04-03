@@ -289,8 +289,8 @@ class BatchedEnv:
         # TODO: update observations here
         for (b, state) in enumerate(env_states):
             if self.include_point_goal_gps_compass:
-                robot_pos = state.robot_position
-                robot_yaw = state.robot_yaw
+                robot_pos = state.robot_pos
+                robot_yaw = 0.0 # state.robot_yaw
 
                 observations[self.gps_compass_key][b, 0] = robot_pos[0]
                 observations[self.gps_compass_key][b, 1] = robot_pos[1]
@@ -309,6 +309,7 @@ class BatchedEnv:
                 self.rewards[b] = 100.0 if not state.did_collide else 0.0
             else:
                 self.resets[b] = -1
+                self.dones[b] = False
 
     def reset(self):
         r"""Reset all the vectorized environments

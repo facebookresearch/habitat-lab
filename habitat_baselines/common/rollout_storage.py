@@ -77,8 +77,11 @@ class RolloutStorage:
             self.buffers["actions"] = self.buffers["actions"].long()
             self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
 
-        self.buffers["masks"] = torch.zeros(
+        self.buffers["not_done_mask_0"] = torch.ones(
             numsteps + 1, num_envs, 1, dtype=torch.bool
+        )
+        self.buffers["not_done_mask_1"] = torch.ones(
+            numsteps + 2, num_envs, 1, dtype=torch.bool
         )
 
         self.is_double_buffered = is_double_buffered
@@ -115,11 +118,16 @@ class RolloutStorage:
         if not self.is_double_buffered:
             assert buffer_index == 0
 
+
+        next_next_step = dict(
+            not_done_mask_1=next_masks,
+        )
+
         next_step = dict(
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
             prev_actions=actions,
-            masks=next_masks,
+            not_done_mask_0=next_masks,
         )
 
         current_step = dict(
@@ -129,6 +137,7 @@ class RolloutStorage:
             rewards=rewards,
         )
 
+        next_next_step = {k: v for k, v in next_next_step.items() if v is not None}
         next_step = {k: v for k, v in next_step.items() if v is not None}
         current_step = {k: v for k, v in current_step.items() if v is not None}
 
@@ -136,6 +145,13 @@ class RolloutStorage:
             int(buffer_index * self._num_envs / self._nbuffers),
             int((buffer_index + 1) * self._num_envs / self._nbuffers),
         )
+
+        if len(next_next_step) > 0:
+            self.buffers.set(
+                (self.current_rollout_step_idxs[buffer_index] + 2, env_slice),
+                next_next_step,
+                strict=False,
+            )
 
         if len(next_step) > 0:
             self.buffers.set(
@@ -161,6 +177,9 @@ class RolloutStorage:
             0 for _ in self.current_rollout_step_idxs
         ]
 
+        self.buffers["not_done_mask_0"] = torch.ones_like(self.buffers["not_done_mask_0"])
+        self.buffers["not_done_mask_1"] = torch.ones_like(self.buffers["not_done_mask_1"])
+
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
             self.buffers["value_preds"][
@@ -172,11 +191,12 @@ class RolloutStorage:
                     self.buffers["rewards"][step]
                     + gamma
                     * self.buffers["value_preds"][step + 1]
-                    * self.buffers["masks"][step + 1]
+                    * self.buffers["not_done_mask_0"][step + 1]
+                    * self.buffers["not_done_mask_1"][step + 1]
                     - self.buffers["value_preds"][step]
                 )
                 gae = (
-                    delta + gamma * tau * gae * self.buffers["masks"][step + 1]
+                    delta + gamma * tau * gae * self.buffers["not_done_mask_0"][step + 1] * self.buffers["not_done_mask_1"][step + 1]
                 )
                 self.buffers["returns"][step] = (
                     gae + self.buffers["value_preds"][step]
@@ -187,7 +207,8 @@ class RolloutStorage:
                 self.buffers["returns"][step] = (
                     gamma
                     * self.buffers["returns"][step + 1]
-                    * self.buffers["masks"][step + 1]
+                    * self.buffers["not_done_mask_0"][step + 1]
+                    * self.buffers["not_done_mask_1"][step + 1]
                     + self.buffers["rewards"][step]
                 )
 

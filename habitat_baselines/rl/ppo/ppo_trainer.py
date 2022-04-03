@@ -466,7 +466,7 @@ class PPOTrainer(BaseRLTrainer):
                     step_batch["observations"],
                     step_batch["recurrent_hidden_states"],
                     step_batch["prev_actions"],
-                    step_batch["masks"],
+                    torch.logical_and(step_batch["not_done_mask_0"], step_batch["not_done_mask_1"]),
                     deterministic = False  # temp force determinism?
                 )
 
@@ -619,7 +619,7 @@ class PPOTrainer(BaseRLTrainer):
                     step_batch["observations"],
                     step_batch["recurrent_hidden_states"],
                     step_batch["prev_actions"],
-                    step_batch["masks"],
+                    torch.logical_and(step_batch["not_done_mask_0"], step_batch["not_done_mask_1"]),
                 )
 
             self.rollouts.compute_returns(
