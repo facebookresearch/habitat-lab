@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from turtle import shape
 from typing import Any, Dict, List, Optional
 
 import numpy as np
