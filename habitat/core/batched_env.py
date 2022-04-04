@@ -183,8 +183,11 @@ class BatchedEnv:
             bsim_config.num_physics_substeps = (
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
-            bsim_config.do_procedural_episode_set = False
-            bsim_config.episode_set_filepath = self._config.EPISODES_FILE
+            bsim_config.do_procedural_episode_set = (
+                self._config.PROCEDURAL_EPISODE_GENERATION
+            )
+            if not self._config.PROCEDURAL_EPISODE_GENERATION:
+                bsim_config.episode_set_filepath = self._config.EPISODES_FILE
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
