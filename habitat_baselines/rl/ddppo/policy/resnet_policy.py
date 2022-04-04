@@ -264,7 +264,7 @@ class PointNavResNetNet(Net):
         ]
         if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
-                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+                (observation_space.spaces[k].shape[0] for k in self._fuse_keys)
             )
 
         if (
