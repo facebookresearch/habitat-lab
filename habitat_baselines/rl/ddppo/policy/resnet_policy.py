@@ -92,7 +92,7 @@ class PointNavResNetPolicy(Policy):
         observation_space: spaces.Dict,
         action_space,
     ):
-        any_rgb = any(["rgb" in k for k in observation_space.spaces])
+        any_rgb = any(("rgb" in k for k in observation_space.spaces))
         return cls(
             observation_space=observation_space,
             action_space=action_space,
