@@ -172,13 +172,11 @@ class RolloutStorage:
 
     def after_update(self):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
+        self.buffers['not_done_mask_1'][1] = self.buffers['not_done_mask_1'][self.current_rollout_step_idx + 1]
 
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs
         ]
-
-        self.buffers["not_done_mask_0"] = torch.ones_like(self.buffers["not_done_mask_0"])
-        self.buffers["not_done_mask_1"] = torch.ones_like(self.buffers["not_done_mask_1"])
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
