@@ -36,7 +36,6 @@ def _get_spherical_coordinates(source_position, goal_position, source_rotation):
         # source_rotation.inverse(), direction_vector
         source_rotation.inverse(), direction_vector
     )
-    
     _, phi = cartesian_to_polar(
             -direction_vector_agent[2], direction_vector_agent[0]
         )
@@ -45,8 +44,6 @@ def _get_spherical_coordinates(source_position, goal_position, source_rotation):
         / np.linalg.norm(direction_vector_agent)
     )
     rho = np.linalg.norm(direction_vector_agent)
-
-
     if direction_vector.length() == 0.0:
         # The source is at the same place as the target, theta cannot be calculated
         theta = 0.0
@@ -90,9 +87,9 @@ class EETargetSensorConfig(StateSensorConfig):
 
 class JointSensorConfig(StateSensorConfig):
     def __init__(self):
-        super().__init__("JOINT_SENSOR", 15, "joint_pos")
+        super().__init__("JOINT_SENSOR", 7, "joint_pos")
     def get_obs(self, state):
-        return state.robot_joint_positions
+        return state.robot_joint_positions[-9:-2]
 
 
 class BatchedEnv:
