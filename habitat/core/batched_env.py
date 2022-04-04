@@ -15,6 +15,11 @@ from habitat.utils import profiling_wrapper
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
+from habitat.utils.geometry_utils import (
+    quaternion_rotate_vector,
+)
+from habitat.tasks.utils import cartesian_to_polar
+
 
 class BatchedEnv:
     r"""Todo"""
@@ -285,12 +290,46 @@ class BatchedEnv:
         results = []
         return results
 
+    @staticmethod
+    def _get_spherical_coordinates(source_position, goal_position, source_rotation):
+        direction_vector = goal_position - source_position
+        direction_vector_agent = quaternion_rotate_vector(
+            source_rotation.inverse(), direction_vector
+        )
+        _, phi = cartesian_to_polar(
+                -direction_vector_agent[2], direction_vector_agent[0]
+            )
+        theta = np.arccos(
+            direction_vector_agent[1]
+            / np.linalg.norm(direction_vector_agent)
+        )
+        rho = np.linalg.norm(direction_vector_agent)
+        return rho, theta, phi
+        
+
     def get_nonpixel_observations(self, env_states, observations):
         # TODO: update observations here
         for (b, state) in enumerate(env_states):
+            robot_pos = state.robot_pos
+            robot_rot = state.robot_rotation
+
+            start_pos = state.robot_start_pos
+            start_rot = state.robot_start_rotation
+
+            target_pos = state.target_obj_start_pos
+            target_rot = state.target_obj_start_rotation
+
+            ee_pos= state.ee_pos
+            ee_rot= state.ee_rotation
+
+
+            # direction_vector_agent = quaternion_rotate_vector(
+            #     source_rotation.inverse(), direction_vector
+            # )
+            # rho, phi = cartesian_to_polar(
+            #         -direction_vector_agent[2], direction_vector_agent[0]
             if self.include_point_goal_gps_compass:
-                robot_pos = state.robot_position
-                robot_yaw = state.robot_yaw
+
 
                 observations[self.gps_compass_key][b, 0] = robot_pos[0]
                 observations[self.gps_compass_key][b, 1] = robot_pos[1]
