@@ -83,6 +83,8 @@ class PointNavBpsResNetPolicy(Policy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 use_avg_pool=use_avg_pool,
+                include_inputs=policy_config.include_inputs,
+                state_projection_dim=policy_config.state_projection_dim,
                 obs_transform=obs_transform,
                 discrete_actions=discrete_actions,
             ),
@@ -334,6 +336,8 @@ class ResNetNet(Net):
         backbone,
         resnet_baseplanes,
         use_avg_pool,
+        include_inputs: List[str],
+        state_projection_dim: int,
         obs_transform=None,
         discrete_actions: bool = True,
     ):
@@ -350,10 +354,23 @@ class ResNetNet(Net):
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
 
-        if "pointgoal_with_gps_compass" in observation_space.spaces:
-            n_input_goal = 3
-            self.tgt_embeding = nn.Linear(n_input_goal, 32)
-            rnn_input_size += 32
+        self._include_inputs: List[str] = [
+            k
+            for k in include_inputs
+            if len(observation_space.spaces[k].shape) == 1
+        ]
+        add_include_dim = sum(
+            [
+                observation_space.spaces[k].shape[0]
+                for k in self._include_inputs
+            ]
+        )
+
+        if add_include_dim != 0:
+            self.tgt_embeding = nn.Linear(
+                add_include_dim, state_projection_dim
+            )
+            rnn_input_size += state_projection_dim
         else:
             self.tgt_embeding = nn.Sequential()
 
@@ -409,14 +426,20 @@ class ResNetNet(Net):
         prev_actions,
         masks,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        if len(self._include_inputs) != 0:
+            input_states = torch.cat(
+                [observations[k] for k in self._include_inputs], dim=-1
+            )
+        else:
+            input_states = None
+
         return self.rnn_forward(
             self.visual_forward(observations),
             rnn_hidden_states,
             prev_actions,
             masks,
-            observations["pointgoal_with_gps_compass"]
-            if "pointgoal_with_gps_compass" in observations
-            else None,
+            input_states,
         )
 
     @torch.jit.export
@@ -435,20 +458,12 @@ class ResNetNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
-        goal_observations: Optional[torch.Tensor] = None,
+        state_observations: Optional[torch.Tensor] = None,
     ):
         inputs: List[torch.Tensor] = [tensorrt_output]
-        if goal_observations is not None:
-            goal_observations = torch.stack(
-                [
-                    goal_observations[:, 0],
-                    torch.cos(-goal_observations[:, 1]),
-                    torch.sin(-goal_observations[:, 1]),
-                ],
-                -1,
-            )
-            goal_observations = self.tgt_embeding(goal_observations)
-            inputs.append(goal_observations)
+        if state_observations is not None:
+            state_observations = self.tgt_embeding(state_observations)
+            inputs.append(state_observations)
 
         # prev_actions = torch.where(masks, prev_actions + 1, prev_actions.new_zeros(()))
         # prev_actions = self.prev_action_embedding(prev_actions.view(-1))

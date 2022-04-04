@@ -378,7 +378,7 @@ class BatchedEnv:
             actions = torch.mul(actions, scale)
 
         actions_flat_list = actions.flatten().tolist()
-        # assert len(actions_flat_list) == self.num_envs * self.action_dim
+        assert len(actions_flat_list) == self.num_envs * self.action_dim
         if self._bsim:
             if self._config.OVERLAP_PHYSICS:
                 self._bsim.wait_step_physics_or_reset()
