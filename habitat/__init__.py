@@ -6,6 +6,7 @@
 
 from habitat.config import Config, get_config
 from habitat.core.agent import Agent
+from habitat.core.batched_env import BatchedEnv
 from habitat.core.benchmark import Benchmark
 from habitat.core.challenge import Challenge
 from habitat.core.dataset import Dataset
@@ -15,7 +16,6 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry  # noqa : F401
 from habitat.core.simulator import Sensor, SensorSuite, SensorTypes, Simulator
 from habitat.core.vector_env import ThreadedVectorEnv, VectorEnv
-from habitat.core.batched_env import BatchedEnv
 from habitat.datasets import make_dataset
 from habitat.version import VERSION as __version__  # noqa
 

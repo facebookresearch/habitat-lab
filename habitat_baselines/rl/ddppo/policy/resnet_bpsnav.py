@@ -6,11 +6,11 @@
 
 from functools import partial
 
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.utils.checkpoint
 import torch.nn.functional as F
-import numpy as np
+import torch.utils.checkpoint
 
 
 def standardize_weights(w):
@@ -94,7 +94,9 @@ class Dropblock(nn.Module):
 
         block_mask = 1 - block_mask
 
-        scaling = (block_mask.numel() / block_mask.float().sum()).to(dtype=x.dtype)
+        scaling = (block_mask.numel() / block_mask.float().sum()).to(
+            dtype=x.dtype
+        )
         return (scaling * block_mask) * x
 
 
@@ -107,7 +109,11 @@ class BlurPool(nn.Module):
         self.channels = channels
 
         if self.kernel_size == 1:
-            a = torch.tensor([1.0,])
+            a = torch.tensor(
+                [
+                    1.0,
+                ]
+            )
         elif self.kernel_size == 2:
             a = torch.tensor([1.0, 1.0])
         elif self.kernel_size == 3:
@@ -125,7 +131,9 @@ class BlurPool(nn.Module):
         kernel = kernel / torch.sum(kernel)
         self.register_buffer(
             "kernel",
-            kernel.view(1, 1, kernel_size, kernel_size).repeat(self.channels, 1, 1, 1),
+            kernel.view(1, 1, kernel_size, kernel_size).repeat(
+                self.channels, 1, 1, 1
+            ),
         )
 
     def forward(self, inp):
@@ -153,7 +161,9 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1):
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=1, stride=stride, bias=False
+    )
 
 
 def gn_relu(ngroups, in_planes, use_normalization=True):
@@ -223,7 +233,12 @@ class FixupBasicBlock(nn.Module):
 
         self.conv2 = conv3x3(planes, planes)
         self.downsample = build_downsample(
-            stride, inplanes, planes, self.expansion, ngroups, use_normalization=False,
+            stride,
+            inplanes,
+            planes,
+            self.expansion,
+            ngroups,
+            use_normalization=False,
         )
         if use_dropblock:
             self.dropblock = Dropblock()
@@ -235,7 +250,11 @@ class FixupBasicBlock(nn.Module):
             self.conv1.weight,
             mean=0,
             std=np.sqrt(
-                2 / (self.conv1.weight.shape[0] * int(np.prod(self.conv1.weight.shape[2:])))
+                2
+                / (
+                    self.conv1.weight.shape[0]
+                    * int(np.prod(self.conv1.weight.shape[2:]))
+                )
             )
             * num_fixups ** (-0.5),
         )
@@ -247,7 +266,11 @@ class FixupBasicBlock(nn.Module):
                         l.weight,
                         mean=0,
                         std=np.sqrt(
-                            2 / (l.weight.shape[0] * int(np.prod(l.weight.shape[2:])))
+                            2
+                            / (
+                                l.weight.shape[0]
+                                * int(np.prod(l.weight.shape[2:]))
+                            )
                         ),
                     )
 
@@ -321,7 +344,10 @@ class BasicBlock(nn.Module):
 
         convs.append(
             conv3x3(
-                inplanes, planes, groups=cardinality, stride=1 if use_aa else stride
+                inplanes,
+                planes,
+                groups=cardinality,
+                stride=1 if use_aa else stride,
             )
         )
         convs += gn_relu(ngroups, planes)
@@ -531,7 +557,7 @@ class SEBottleneck(Bottleneck):
             downsample,
             cardinality,
             se,
-            use_normalization=use_checkpoint,
+            use_checkpoint=use_checkpoint,
         )
 
 
@@ -549,7 +575,7 @@ class SpaceToDepth(nn.Module):
     def forward(self, x):
         N, C, H, W = x.size()
         # depth-only, RGB, or RGBD
-        assert C == 1 or C == 3 or C == 4
+        assert C in [1, 3, 4]
         x = x.view(N, C, H // 4, 4, W // 4, 4)
         x = x.permute(0, 3, 5, 1, 2, 4)
         x = x.reshape(N, C * 16, H // 4, W // 4)
@@ -576,7 +602,9 @@ class ResNet(nn.Module):
         super().__init__()
         stem = [
             SpaceToDepth(),
-            nn.Conv2d(in_channels * 16, base_planes, kernel_size=1, bias=False),
+            nn.Conv2d(
+                in_channels * 16, base_planes, kernel_size=1, bias=False
+            ),
         ]
         stem += gn_relu(ngroups, base_planes, use_normalization)
 
@@ -629,7 +657,7 @@ class ResNet(nn.Module):
             )
         )
         self.inplanes = planes * layers[-1].expansion
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             layers.append(
                 block(
                     self.inplanes,
@@ -654,7 +682,12 @@ class ResNet(nn.Module):
 def se_resnet7_fixup_aa(in_channels, base_planes, ngroups):
     aa_block = partial(SEFixupBasicBlock, use_aa=True)
     return ResNet(
-        in_channels, base_planes, ngroups, aa_block, [1, 1, 1], use_normalization=False
+        in_channels,
+        base_planes,
+        ngroups,
+        aa_block,
+        [1, 1, 1],
+        use_normalization=False,
     )
 
 
@@ -707,7 +740,13 @@ def resnet9(in_channels, base_planes, ngroups):
 def se_resnet9_aa(in_channels, base_planes, ngroups):
     aa_block = partial(SEBasicBlock, use_aa=True)
 
-    return ResNet(in_channels, base_planes, ngroups, aa_block, [1, 1, 1, 1],)
+    return ResNet(
+        in_channels,
+        base_planes,
+        ngroups,
+        aa_block,
+        [1, 1, 1, 1],
+    )
 
 
 def se_resnet9_aa_dropblock(in_channels, base_planes, ngroups):
@@ -724,7 +763,9 @@ def se_resnet9_aa_dropblock(in_channels, base_planes, ngroups):
 
 
 def se_resnet9(in_channels, base_planes, ngroups):
-    return ResNet(in_channels, base_planes, ngroups, SEBasicBlock, [1, 1, 1, 1])
+    return ResNet(
+        in_channels, base_planes, ngroups, SEBasicBlock, [1, 1, 1, 1]
+    )
 
 
 def resnet9_fixup(in_channels, base_planes, ngroups):
@@ -820,7 +861,9 @@ def resnet18(in_channels, base_planes, ngroups):
 
 
 def resnet18_fixup(in_channels, base_planes, ngroups):
-    model = ResNet(in_channels, base_planes, ngroups, FixupBasicBlock, [2, 2, 2, 2])
+    model = ResNet(
+        in_channels, base_planes, ngroups, FixupBasicBlock, [2, 2, 2, 2]
+    )
 
     return model
 
@@ -852,7 +895,9 @@ def resneXt50(in_channels, base_planes, ngroups):
 
 
 def se_resnet50(in_channels, base_planes, ngroups):
-    model = ResNet(in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3])
+    model = ResNet(
+        in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3]
+    )
 
     return model
 

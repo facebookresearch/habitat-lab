@@ -4,19 +4,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from re import X
 
 import torch
 from gym import spaces
 from torch import nn as nn
 
-from habitat.utils import profiling_wrapper
-
 from habitat.config import Config
-from habitat.tasks.nav.nav import (
-    ImageGoalSensor,
-    IntegratedPointGoalGPSAndCompassSensor,
-    PointGoalSensor,
+from habitat.core.batched_env import (
+    EEStartSensorConfig,
+    EETargetSensorConfig,
+    JointSensorConfig,
+    RobotStartSensorConfig,
+    RobotTargetSensorConfig,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import (
@@ -24,8 +23,6 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 )
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet
-
-from habitat.core.batched_env import RobotStartSensorConfig, RobotTargetSensorConfig, EEStartSensorConfig, EETargetSensorConfig, JointSensorConfig
 
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
@@ -147,7 +144,7 @@ class PointNavBaselinePolicy(Policy):
                 **kwargs,
             ),
             dim_actions,
-            policy_config=policy_config
+            policy_config=policy_config,
         )
 
     @classmethod
@@ -160,15 +157,17 @@ class PointNavBaselinePolicy(Policy):
             policy_config.action_distribution_type == "categorical"
         )
         if not discrete_actions:
-            assert(len(action_space.shape) == 1)
+            assert len(action_space.shape) == 1
 
-        dim_actions = action_space.n if discrete_actions else action_space.shape[0]
+        dim_actions = (
+            action_space.n if discrete_actions else action_space.shape[0]
+        )
 
         return cls(
             observation_space=observation_space,
             dim_actions=dim_actions,
             hidden_size=config.RL.PPO.hidden_size,
-            policy_config=policy_config
+            policy_config=policy_config,
         )
 
 
@@ -209,14 +208,17 @@ class PointNavBaselineNet(Net):
         self.observation_space = observation_space
         self._n_state = 0
 
-        self.ssc_dict = {x.obs_key: x for x in [
+        self.ssc_dict = {
+            x.obs_key: x
+            for x in [
                 RobotStartSensorConfig(),
                 RobotTargetSensorConfig(),
                 EEStartSensorConfig(),
                 EETargetSensorConfig(),
                 JointSensorConfig(),
-            ]}
-        for k, v  in  self.ssc_dict.items():
+            ]
+        }
+        for k, v in self.ssc_dict.items():
             if k in self.observation_space.spaces:
                 self._n_state += v.shape
 
@@ -270,7 +272,7 @@ class PointNavBaselineNet(Net):
         for k in self.ssc_dict.keys():
             if k in self.observation_space.spaces:
                 x += [observations[k]]
-        
+
         # if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
         #     target_encoding = observations[
         #         IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -289,7 +291,6 @@ class PointNavBaselineNet(Net):
         #     if target_encoding is not None:
         #         x += [target_encoding]
         #### [gala_kinematic] End of manually adding sensors in there
-
 
         x_out = torch.cat(x, dim=1)
         x_out, rnn_hidden_states = self.state_encoder(
