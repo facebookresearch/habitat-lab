@@ -8,7 +8,7 @@ import random
 from typing import List, Type, Union
 
 import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, make_dataset, BatchedEnv
+from habitat import BatchedEnv, Config, Env, RLEnv, VectorEnv, make_dataset
 
 
 def make_env_fn(
@@ -33,7 +33,6 @@ def make_env_fn(
     return env
 
 
-
 def construct_batched_envs(config: Config):
 
     # num_environments = config.NUM_ENVIRONMENTS
@@ -45,7 +44,7 @@ def construct_batched_envs(config: Config):
 
     envs = BatchedEnv(config)
 
-    return envs    
+    return envs
 
 
 def construct_envs(

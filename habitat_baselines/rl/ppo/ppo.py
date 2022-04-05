@@ -17,13 +17,16 @@ from habitat_baselines.rl.ppo.policy import Policy
 
 use_mixed_precision = True
 
-from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler 
-class dummy_context_mgr():
+from torch.cuda.amp import GradScaler, autocast
+
+
+class dummy_context_mgr:
     def __enter__(self):
         return None
+
     def __exit__(self, exc_type, exc_value, traceback):
         return False
+
 
 EPS_PPO = 1e-5
 
@@ -63,7 +66,7 @@ class PPO(nn.Module):
             lr=lr,
             eps=eps,
         )
-        
+
         for p in actor_critic.parameters():
             if not p.is_cuda:
                 print("error: param with shape ", p.shape, " is not cuda")
@@ -102,7 +105,9 @@ class PPO(nn.Module):
             )
 
             for batch in data_generator:
-                precision_context = autocast if use_mixed_precision else dummy_context_mgr
+                precision_context = (
+                    autocast if use_mixed_precision else dummy_context_mgr
+                )
                 with precision_context():
                     profiling_wrapper.range_push("PPO mini batch")
                     (
@@ -114,11 +119,15 @@ class PPO(nn.Module):
                         batch["observations"],
                         batch["recurrent_hidden_states"],
                         batch["prev_actions"],
-                        torch.logical_and(batch["not_done_mask_0"], batch["not_done_mask_1"]),
+                        torch.logical_and(
+                            batch["not_done_mask_0"], batch["not_done_mask_1"]
+                        ),
                         batch["actions"],
                     )
 
-                    ratio = torch.exp(action_log_probs - batch["action_log_probs"])
+                    ratio = torch.exp(
+                        action_log_probs - batch["action_log_probs"]
+                    )
                     surr1 = ratio * batch["advantages"]
                     surr2 = (
                         torch.clamp(
@@ -142,14 +151,12 @@ class PPO(nn.Module):
                     else:
                         value_loss = 0.5 * (batch["returns"] - values).pow(2)
 
-
                     # Mask the loss. The mask corresponds to the transition right
                     # after a reset. This first observation needs to be ignored
                     # because its observation is actually part of the previous episode
                     action_loss = action_loss * batch["not_done_mask_0"]
                     value_loss = value_loss * batch["not_done_mask_0"]
                     dist_entropy = dist_entropy * batch["not_done_mask_0"]
-
 
                     action_loss = action_loss.mean()
                     value_loss = value_loss.mean()
@@ -213,10 +220,11 @@ class PPO(nn.Module):
         pass
 
     def before_step(self) -> None:
-        if False:
-            nn.utils.clip_grad_norm_(
-                self.actor_critic.parameters(), self.max_grad_norm
-            )
+        pass
+        # if False:
+        #    nn.utils.clip_grad_norm_(
+        #        self.actor_critic.parameters(), self.max_grad_norm
+        #    )
 
     def after_step(self) -> None:
         pass

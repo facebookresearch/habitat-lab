@@ -4,31 +4,30 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from gym import spaces
 
 from habitat.config import Config
-from habitat_baselines.rl.ddppo.policy import resnet_bpsnav as resnet
-from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
-from habitat_baselines.rl.ppo import Net, Policy
-from habitat_baselines.rl.ddppo.policy.resnet_bpsnav import FixupBasicBlock
 from habitat_baselines.common.baseline_registry import baseline_registry
-
+from habitat_baselines.rl.ddppo.policy import resnet_bpsnav as resnet
+from habitat_baselines.rl.ddppo.policy.resnet_bpsnav import FixupBasicBlock
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
+from habitat_baselines.rl.ppo import Net, Policy
 
 try:
     from tensorrt_policy import TensorRTPolicy
-except:
+except Exception:
     TensorRTPolicy = None
     print("Failed to import TensorRT, no inference acceleration")
 
 
 def standardize_weights(w):
-    orig_size = w.size()
     w = w.view(w.size(0), -1)
 
     w_mean = w.mean(1, keepdim=True)
@@ -38,6 +37,7 @@ def standardize_weights(w):
     w = w * torch.rsqrt(w_var + 1e-5)
 
     return w
+
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(Policy):
@@ -59,12 +59,14 @@ class PointNavResNetPolicy(Policy):
                 policy_config.action_distribution_type == "categorical"
             )
             if not discrete_actions:
-                assert(len(action_space.shape) == 1)
+                assert len(action_space.shape) == 1
 
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
-            dim_actions = action_space.n if discrete_actions else action_space.shape[0]
+            dim_actions = (
+                action_space.n if discrete_actions else action_space.shape[0]
+            )
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
@@ -80,7 +82,7 @@ class PointNavResNetPolicy(Policy):
                 resnet_baseplanes=resnet_baseplanes,
                 use_avg_pool=use_avg_pool,
                 obs_transform=obs_transform,
-                discrete_actions=discrete_actions
+                discrete_actions=discrete_actions,
             ),
             dim_actions=dim_actions,  # for action distribution
             policy_config=policy_config,
@@ -123,7 +125,7 @@ class PointNavResNetPolicy(Policy):
             ResNetNet.visual_weights_cpu(self.ac.net),
         )
 
-        import bps_pytorch 
+        import bps_pytorch
 
         self.accel_out = bps_pytorch.make_fcout_tensor(
             self.accelerated_net.get_result_device_ptr(),
@@ -160,18 +162,23 @@ class ResNetEncoder(nn.Module):
         elif "regne" in backbone:
             # todo: get regnetx.py from bpsnav and import at top of file
             import regnetx
+
             make_backbone = getattr(regnetx, backbone)
 
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
-            self.spatial_size = observation_space.spaces["rgb"].shape[0:2]  # todo: decide whether to divide by 2
+            self.spatial_size = observation_space.spaces["rgb"].shape[
+                0:2
+            ]  # todo: decide whether to divide by 2
         else:
             self._n_input_rgb = 0
 
         if "depth" in observation_space.spaces:
             # todo: figure out why bpsnav code is adding 10 for _n_input_depth
             self._n_input_depth = observation_space.spaces["depth"].shape[2]
-            self.spatial_size = observation_space.spaces["depth"].shape[0:2]  # todo: decide whether to divide by 2
+            self.spatial_size = observation_space.spaces["depth"].shape[
+                0:2
+            ]  # todo: decide whether to divide by 2
 
             # self._n_input_depth = observation_space.spaces["depth"].shape[0] + 10
             # self.spatial_size = observation_space.spaces["depth"].shape[1:]
@@ -185,14 +192,15 @@ class ResNetEncoder(nn.Module):
 
             flat_size = 1024
             if not use_avg_pool:
-                initial_pool_size = 0
                 self.spatial_size = tuple(s // 4 for s in self.spatial_size)
                 for _ in range(self.backbone.num_compression_stages - 2):
                     self.spatial_size = tuple(
                         int((s + 2 - 2 - 1) / 2 + 1) for s in self.spatial_size
                     )
 
-                final_compression_channels = flat_size / np.prod(self.spatial_size)
+                final_compression_channels = flat_size / np.prod(
+                    self.spatial_size
+                )
                 final_compression_channels = int(
                     round(final_compression_channels / ngroups) * ngroups
                 )
@@ -209,14 +217,20 @@ class ResNetEncoder(nn.Module):
 
                 if self.backbone.use_normalization:
                     compression_layers.append(
-                        nn.GroupNorm(ngroups, final_compression_channels,),
+                        nn.GroupNorm(
+                            ngroups,
+                            final_compression_channels,
+                        ),
                     )
 
                 compression_layers.append(nn.ReLU(True))
 
                 self.compression = nn.Sequential(*compression_layers)
 
-                self.output_shape = (final_compression_channels, *self.spatial_size)
+                self.output_shape = (
+                    final_compression_channels,
+                    *self.spatial_size,
+                )
             else:
                 compression_layers = [
                     nn.Conv2d(
@@ -265,13 +279,17 @@ class ResNetEncoder(nn.Module):
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
 
             # convert to desired float format
-            autocast_type = torch.float16 if torch.is_autocast_enabled() else torch.float32
+            autocast_type = (
+                torch.float16 if torch.is_autocast_enabled() else torch.float32
+            )
             rgb_observations = rgb_observations.to(dtype=autocast_type)
 
             # normalize RGB
             rgb_observations = rgb_observations / 255.0
 
-            assert(rgb_observations.shape[1] == 3)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
+            assert (
+                rgb_observations.shape[1] == 3
+            )  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
             cnn_input.append(rgb_observations)
 
         if "depth" in observations:
@@ -279,7 +297,9 @@ class ResNetEncoder(nn.Module):
 
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-            assert(depth_observations.shape[1] == 1)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
+            assert (
+                depth_observations.shape[1] == 1
+            )  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
 
             cnn_input.append(depth_observations)
 
@@ -287,8 +307,6 @@ class ResNetEncoder(nn.Module):
             x = cnn_input[0]
         else:
             x = torch.cat(cnn_input, 1)
-
-        cnn_input = []
 
         x = self.backbone(x)
         x = self.compression(x)
@@ -315,13 +333,12 @@ class ResNetNet(Net):
         discrete_actions: bool = True,
     ):
         super().__init__()
-        self.extra_sensor_names = []
 
         self.discrete_actions = discrete_actions
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            assert(len(action_space.shape) == 1)
+            assert len(action_space.shape) == 1
             self.prev_action_embedding = nn.Linear(action_space.shape[0], 32)
 
         self._n_prev_action = 32
@@ -398,7 +415,8 @@ class ResNetNet(Net):
 
     @torch.jit.export
     def visual_forward(
-        self, observations: Dict[str, torch.Tensor],
+        self,
+        observations: Dict[str, torch.Tensor],
     ):
         visual_feats = self.visual_encoder(observations)
 

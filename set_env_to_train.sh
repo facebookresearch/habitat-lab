@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 module load anaconda3
 module load cuda/10.2
 module load cudnn/v7.6.5.32-cuda.10.2

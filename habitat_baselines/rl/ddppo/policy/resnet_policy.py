@@ -56,12 +56,14 @@ class PointNavResNetPolicy(Policy):
                 policy_config.action_distribution_type == "categorical"
             )
             if not discrete_actions:
-                assert(len(action_space.shape) == 1)
+                assert len(action_space.shape) == 1
 
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
-            dim_actions = action_space.n if discrete_actions else action_space.shape[0]
+            dim_actions = (
+                action_space.n if discrete_actions else action_space.shape[0]
+            )
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
@@ -137,7 +139,10 @@ class ResNetEncoder(nn.Module):
             final_spatial = int(
                 spatial_size * self.backbone.final_spatial_compress
             )
-            assert int(final_spatial / self.backbone.final_spatial_compress) == spatial_size
+            assert (
+                int(final_spatial / self.backbone.final_spatial_compress)
+                == spatial_size
+            )
             after_compression_flat_size = 2048
             num_compression_channels = int(
                 round(after_compression_flat_size / (final_spatial ** 2))
@@ -186,7 +191,9 @@ class ResNetEncoder(nn.Module):
             rgb_observations = (
                 rgb_observations.float() / 255.0
             )  # normalize RGB
-            assert(rgb_observations.shape[1] == 3)  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
+            assert (
+                rgb_observations.shape[1] == 3
+            )  # assert that we're [BATCH x CHANNEL x HEIGHT X WIDTH]
             cnn_input.append(rgb_observations)
 
         if self._n_input_depth > 0:
@@ -230,7 +237,7 @@ class PointNavResNetNet(Net):
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            assert(len(action_space.shape) == 1)
+            assert len(action_space.shape) == 1
             self.prev_action_embedding = nn.Linear(action_space.shape[0], 32)
 
         self._n_prev_action = 32
