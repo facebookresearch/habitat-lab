@@ -60,20 +60,26 @@ TASK:
         DECAY_BAD_TERM: False
     NAV_TO_POS_SUCC:
         TYPE: "NavToPosSucc"
-        SUCCESS_DISTANCE: 0.2
+        SUCCESS_DISTANCE: 0.3
     NUM_STEPS:
         TYPE: "NumStepsMeasure"
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: "NavToObjReward"
-        SUCCESS_REWARD: 10.0
         # Reward the agent for facing the object?
         SHOULD_REWARD_TURN: True
         # What distance do we start giving the reward for facing the object?
         TURN_REWARD_DIST: 0.1
         # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
+        DIST_REWARD: 10.0
         # Negative means a penalty
         SLACK_REWARD: 0.0
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.0001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 5.0
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: "NavToObjSuccess"
         MUST_LOOK_AT_TARG: True
@@ -95,8 +101,8 @@ TASK:
     ACTIONS:
       BASE_VELOCITY:
         TYPE: "BaseVelAction"
-        LIN_SPEED: 10.0
-        ANG_SPEED: 10.0
+        LIN_SPEED: 15.0
+        ANG_SPEED: 15.0
         ALLOW_DYN_SLIDE: True
         ALLOW_BACK: True
         END_ON_STOP: True
@@ -110,6 +116,7 @@ SIMULATOR:
     DEBUG_RENDER_GOAL: True
     CONCUR_RENDER: True
     AUTO_SLEEP: True
+
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5

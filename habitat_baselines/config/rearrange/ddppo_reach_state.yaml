@@ -42,6 +42,7 @@ RL:
   SUCCESS_REWARD: 10.0
   GYM_OBS_KEYS: ['joint', 'relative_resting_position']
   GYM_ACTION_KEYS: ['ARM_ACTION']
+  END_ON_SUCCESS: True
 
   PPO:
     # ppo params

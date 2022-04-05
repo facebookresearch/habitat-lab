@@ -112,8 +112,8 @@ TASK:
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
+            LIN_SPEED: 15.0
+            ANG_SPEED: 15.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True

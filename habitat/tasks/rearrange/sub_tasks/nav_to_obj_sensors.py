@@ -15,6 +15,7 @@ from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     RearrangeObjectTypes,
 )
+from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 
@@ -74,7 +75,7 @@ class NavToSkillSensor(Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        ret = np.zeros(self._config.NUM_SKILLS)
+        ret = np.zeros(self._config.NUM_SKILLS, dtype=np.float32)
         if task.nav_to_task_name is None or task.domain is None:
             return ret
         skills = task.domain.action_names
@@ -245,7 +246,7 @@ class GeoMeasure(Measure):
 
 
 @registry.register_measure
-class NavToObjReward(GeoMeasure):
+class NavToObjReward(RearrangeReward):
     cls_uuid: str = "nav_to_obj_reward"
 
     @staticmethod
@@ -264,6 +265,7 @@ class NavToObjReward(GeoMeasure):
         )
         self._cur_angle_dist = -1.0
         self._give_turn_reward = False
+        self._prev_dist = -1.0
         super().reset_metric(
             *args,
             episode=episode,
@@ -275,8 +277,12 @@ class NavToObjReward(GeoMeasure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = self._config.SLACK_REWARD
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+        if self._prev_dist < 0.0:
+            dist_diff = 0.0
+        else:
+            dist_diff = self._prev_dist - cur_dist
 
-        reward += self._prev_dist - cur_dist
+        reward += self._config.DIST_REWARD * dist_diff
         self._prev_dist = cur_dist
 
         success = task.measurements.measures[
@@ -288,10 +294,6 @@ class NavToObjReward(GeoMeasure):
         ].reward_pen
         reward -= bad_terminate_pen
 
-        if success:
-            reward += self._config.SUCCESS_REWARD
-
-        # if self._give_turn_reward:
         if (
             self._config.SHOULD_REWARD_TURN
             and cur_dist < self._config.TURN_REWARD_DIST

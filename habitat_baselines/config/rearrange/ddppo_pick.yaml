@@ -44,6 +44,7 @@ RL:
   SUCCESS_REWARD: 100.0
   SLACK_REWARD: -0.01
   GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+  END_ON_SUCCESS: True
 
   PPO:
     # ppo params

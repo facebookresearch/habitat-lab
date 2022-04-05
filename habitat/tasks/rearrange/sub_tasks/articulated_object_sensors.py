@@ -325,7 +325,8 @@ class ArtObjReward(RearrangeReward):
 
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
-        reward += self._config.ART_DIST_REWARD * dist_diff
+        if not is_art_obj_state_succ:
+            reward += self._config.ART_DIST_REWARD * dist_diff
 
         cur_has_grasped = task._sim.grasp_mgr.is_grasped
 

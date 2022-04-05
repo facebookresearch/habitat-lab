@@ -43,6 +43,7 @@ RL:
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
   GYM_OBS_KEYS: ['obj_goal_sensor', 'joint', 'is_holding', 'relative_resting_position']
+  END_ON_SUCCESS: True
 
   PPO:
     # ppo params
