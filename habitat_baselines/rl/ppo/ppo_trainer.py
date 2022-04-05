@@ -10,12 +10,12 @@ import random
 import time
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional
-from PIL import Image
 
 import numpy as np
 import torch
 import tqdm
 from gym import spaces
+from PIL import Image
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -44,7 +44,12 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
-from habitat_baselines.rl.ddppo.policy.resnet_policy_bpsnav import PointNavResNetPolicy
+from habitat_baselines.rl.ddppo.policy.resnet_policy import (
+    PointNavResNetPolicy,
+)
+from habitat_baselines.rl.ddppo.policy.resnet_policy_bpsnav import (
+    PointNavBpsResNetPolicy,
+)
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import (
@@ -53,20 +58,26 @@ from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
 )
-from habitat_baselines.utils.env_utils import construct_envs, construct_batched_envs
+from habitat_baselines.utils.env_utils import (
+    construct_batched_envs,
+    construct_envs,
+)
 
 try:
     from habitat_sim.utils import viz_utils as vut
 except ImportError:
     vut = None
 
-from torch.cuda.amp import autocast
-from torch.cuda.amp import GradScaler 
-class dummy_context_mgr():
+from torch.cuda.amp import GradScaler, autocast
+
+
+class dummy_context_mgr:
     def __enter__(self):
         return None
+
     def __exit__(self, exc_type, exc_value, traceback):
         return False
+
 
 @baseline_registry.register_trainer(name="ddppo")
 @baseline_registry.register_trainer(name="ppo")
@@ -210,7 +221,7 @@ class PPOTrainer(BaseRLTrainer):
                 config,
                 get_env_class(config.ENV_NAME),
                 workers_ignore_signals=is_slurm_batch_job(),
-        )
+            )
 
     def _init_train(self):
         resume_state = load_resume_state(self.config)
@@ -335,9 +346,11 @@ class PPOTrainer(BaseRLTrainer):
             batch = observations
         else:
             batch = batch_obs(
-                observations, device=self.device, cache=self._obs_batching_cache
+                observations,
+                device=self.device,
+                cache=self._obs_batching_cache,
             )
-            print("batch['rgb'].shape: ", batch['rgb'].shape)
+            print("batch['rgb'].shape: ", batch["rgb"].shape)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         if self._static_encoder:
@@ -453,8 +466,12 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice,
             ]
 
-            use_mixed_precision = True if hasattr(self.agent, "grad_scaler") else False
-            precision_context = autocast if use_mixed_precision else dummy_context_mgr
+            use_mixed_precision = (
+                True if hasattr(self.agent, "grad_scaler") else False
+            )
+            precision_context = (
+                autocast if use_mixed_precision else dummy_context_mgr
+            )
             with precision_context():
                 profiling_wrapper.range_push("compute actions")
                 (
@@ -467,7 +484,7 @@ class PPOTrainer(BaseRLTrainer):
                     step_batch["recurrent_hidden_states"],
                     step_batch["prev_actions"],
                     step_batch["masks"],
-                    deterministic = False  # temp force determinism?
+                    deterministic=False,  # temp force determinism?
                 )
 
         if not self.config.BATCHED_ENV:
@@ -505,7 +522,7 @@ class PPOTrainer(BaseRLTrainer):
             value_preds=values,
             buffer_index=buffer_index,
         )
-        profiling_wrapper.range_pop() # save to rollout storage
+        profiling_wrapper.range_pop()  # save to rollout storage
 
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -535,7 +552,9 @@ class PPOTrainer(BaseRLTrainer):
             batch = batched_observations
         else:
             batch = batch_obs(
-                observations, device=self.device, cache=self._obs_batching_cache
+                observations,
+                device=self.device,
+                cache=self._obs_batching_cache,
             )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
@@ -607,8 +626,12 @@ class PPOTrainer(BaseRLTrainer):
     def _update_agent(self):
         ppo_cfg = self.config.RL.PPO
         t_update_model = time.time()
-        use_mixed_precision = True if hasattr(self.agent, "grad_scaler") else False
-        precision_context = autocast if use_mixed_precision else dummy_context_mgr
+        use_mixed_precision = (
+            True if hasattr(self.agent, "grad_scaler") else False
+        )
+        precision_context = (
+            autocast if use_mixed_precision else dummy_context_mgr
+        )
         with precision_context():
             with torch.no_grad():
                 step_batch = self.rollouts.buffers[
@@ -889,7 +912,7 @@ class PPOTrainer(BaseRLTrainer):
                 if self._is_distributed:
                     self.num_rollouts_done_store.add("num_done", 1)
 
-                # do this before _update_agent, which resets some rollout storage state  
+                # do this before _update_agent, which resets some rollout storage state
                 self._check_save_rollouts()
 
                 (
@@ -923,7 +946,10 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_pop()  # train update
 
             logger.info(
-                "batched_sim stats: {}".format(self.envs._bsim.get_recent_stats_and_reset()))
+                "batched_sim stats: {}".format(
+                    self.envs._bsim.get_recent_stats_and_reset()
+                )
+            )
 
             self.envs.close()
 
@@ -932,14 +958,35 @@ class PPOTrainer(BaseRLTrainer):
         # save episodes periodically
         num_updates_to_save = 5
         num_updates_minus_one = self.num_updates_done
-        if self.config.SAVE_VIDEOS_INTERVAL != -1 and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL < num_updates_to_save:
-            is_first_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
-            if_last_update_of_save = num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == num_updates_to_save - 1
+        if (
+            self.config.SAVE_VIDEOS_INTERVAL != -1
+            and num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL
+            < num_updates_to_save
+        ):
+            is_first_update_of_save = (
+                num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL == 0
+            )
+            if_last_update_of_save = (
+                num_updates_minus_one % self.config.SAVE_VIDEOS_INTERVAL
+                == num_updates_to_save - 1
+            )
 
             if self.envs.num_envs >= 19:
-                envs_to_save = [0, 1, 10, self.envs.num_envs - 8, self.envs.num_envs - 2, self.envs.num_envs - 1]
+                envs_to_save = [
+                    0,
+                    1,
+                    10,
+                    self.envs.num_envs - 8,
+                    self.envs.num_envs - 2,
+                    self.envs.num_envs - 1,
+                ]
             elif self.envs.num_envs >= 4:
-                envs_to_save = [0, 1, self.envs.num_envs - 2, self.envs.num_envs - 1]
+                envs_to_save = [
+                    0,
+                    1,
+                    self.envs.num_envs - 2,
+                    self.envs.num_envs - 1,
+                ]
             else:
                 envs_to_save = range(self.envs.num_envs)
 
@@ -955,23 +1002,29 @@ class PPOTrainer(BaseRLTrainer):
                 obs_types_to_save.append("depth")
             if include_rgb:
                 obs_types_to_save.append("rgb")
-            
+
             assert self.rollouts.current_rollout_step_idx > 0
             for frame_index in range(self.rollouts.current_rollout_step_idx):
-                
+
                 if include_rgb:
-                    rgb_obs = self.rollouts.buffers["observations"]["rgb"][frame_index]
+                    rgb_obs = self.rollouts.buffers["observations"]["rgb"][
+                        frame_index
+                    ]
                     assert len(rgb_obs) == self.envs.num_envs
                     if not isinstance(rgb_obs, np.ndarray):
                         rgb_obs = rgb_obs.cpu().numpy()
                 if include_depth:
-                    depth_obs = self.rollouts.buffers["observations"]["depth"][frame_index]
+                    depth_obs = self.rollouts.buffers["observations"]["depth"][
+                        frame_index
+                    ]
                     assert len(depth_obs) == self.envs.num_envs
                     if not isinstance(depth_obs, np.ndarray):
                         depth_obs = depth_obs.cpu().numpy()
 
                 for env_index in envs_to_save:
-                    env_saved_observations = self.debug_video_observations[env_index]
+                    env_saved_observations = self.debug_video_observations[
+                        env_index
+                    ]
                     new_dict = {}
                     if include_rgb:
                         new_dict["rgb"] = rgb_obs[env_index, ...]
@@ -987,27 +1040,43 @@ class PPOTrainer(BaseRLTrainer):
                     #     str(env_index) + "_update_" + str(self.num_updates_done) +
                     #     "_frame" + str(frame_index) + "_rgb.png")
 
-
             if if_last_update_of_save:
                 if not vut:
-                    print("vut (viz utils) unavailable, so we can't save videos")
+                    print(
+                        "vut (viz utils) unavailable, so we can't save videos"
+                    )
                 else:
                     video_folder = self.config.VIDEO_DIR
                     print("saving videos to ", video_folder)
-                    rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+                    rank = (
+                        torch.distributed.get_rank()
+                        if torch.distributed.is_initialized()
+                        else 0
+                    )
                     for primary_obs_name in obs_types_to_save:
                         for env_index in envs_to_save:
-                            env_saved_observations = self.debug_video_observations[env_index]
+                            env_saved_observations = (
+                                self.debug_video_observations[env_index]
+                            )
                             vut.make_video(
                                 env_saved_observations,
                                 primary_obs_name,
-                                "color" if primary_obs_name == "rgb" else "depth",
-                                video_folder + "/rank" + str(rank) + "_update_" + str(self.num_updates_done) + "_env" + str(env_index) + "_" + primary_obs_name,
+                                "color"
+                                if primary_obs_name == "rgb"
+                                else "depth",
+                                video_folder
+                                + "/rank"
+                                + str(rank)
+                                + "_update_"
+                                + str(self.num_updates_done)
+                                + "_env"
+                                + str(env_index)
+                                + "_"
+                                + primary_obs_name,
                                 fps=2,  # very slow fps
                                 open_vid=False,
                             )
                     print("done saving videos!")
-                    
 
     def _eval_checkpoint(
         self,

@@ -8,17 +8,18 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+import torch.nn.functional as F
 from gym import spaces
 from gym.spaces import Box
 
+from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils import profiling_wrapper
+from habitat.utils.geometry_utils import quaternion_rotate_vector
+from habitat_sim.utils.common import quat_from_magnum
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
-from habitat.utils.geometry_utils import  quaternion_rotate_vector 
-from habitat.tasks.utils import cartesian_to_polar
 
-from habitat_sim.utils.common import  quat_from_magnum
 
 
 class StateSensorConfig:
@@ -26,22 +27,26 @@ class StateSensorConfig:
         self.config_key = config_key
         self.shape = shape
         self.obs_key = obs_key
+
     def get_obs(self, state):
         pass
 
-def _get_spherical_coordinates(source_position, goal_position, source_rotation):
+
+def _get_spherical_coordinates(
+    source_position, goal_position, source_rotation
+):
     direction_vector = goal_position - source_position
     source_rotation = quat_from_magnum(source_rotation)
     direction_vector_agent = quaternion_rotate_vector(
         # source_rotation.inverse(), direction_vector
-        source_rotation.inverse(), direction_vector
+        source_rotation.inverse(),
+        direction_vector,
     )
     _, phi = cartesian_to_polar(
-            -direction_vector_agent[2], direction_vector_agent[0]
-        )
+        -direction_vector_agent[2], direction_vector_agent[0]
+    )
     theta = np.arccos(
-        direction_vector_agent[1]
-        / np.linalg.norm(direction_vector_agent)
+        direction_vector_agent[1] / np.linalg.norm(direction_vector_agent)
     )
     rho = np.linalg.norm(direction_vector_agent)
     if direction_vector.length() == 0.0:
@@ -49,45 +54,55 @@ def _get_spherical_coordinates(source_position, goal_position, source_rotation):
         theta = 0.0
     return rho, theta, phi
 
+
 class RobotStartSensorConfig(StateSensorConfig):
     def __init__(self):
         super().__init__("ROBOT_START_RELATIVE", 3, "robot_start_relative")
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
         start_pos = state.robot_start_pos
         return _get_spherical_coordinates(robot_pos, start_pos, robot_rot)
 
+
 class RobotTargetSensorConfig(StateSensorConfig):
     def __init__(self):
-        super().__init__( "ROBOT_TARGET_RELATIVE", 3, "robot_target_relative")
+        super().__init__("ROBOT_TARGET_RELATIVE", 3, "robot_target_relative")
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
         target_pos = state.target_obj_start_pos
         return _get_spherical_coordinates(robot_pos, target_pos, robot_rot)
 
+
 class EEStartSensorConfig(StateSensorConfig):
     def __init__(self):
-        super().__init__( "EE_START_RELATIVE", 3, "ee_start_relative")
+        super().__init__("EE_START_RELATIVE", 3, "ee_start_relative")
+
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
         start_pos = state.robot_start_pos
         return _get_spherical_coordinates(ee_pos, start_pos, ee_rot)
 
+
 class EETargetSensorConfig(StateSensorConfig):
     def __init__(self):
-        super().__init__( "EE_TARGET_RELATIVE", 3, "ee_target_relative")
+        super().__init__("EE_TARGET_RELATIVE", 3, "ee_target_relative")
+
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
         target_pos = state.target_obj_start_pos
         return _get_spherical_coordinates(ee_pos, target_pos, ee_rot)
 
+
 class JointSensorConfig(StateSensorConfig):
     def __init__(self):
         super().__init__("JOINT_SENSOR", 7, "joint_pos")
+
     def get_obs(self, state):
         return state.robot_joint_positions[-9:-2]
 
@@ -117,18 +132,16 @@ class BatchedEnv:
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
 
-
-        self.state_sensor_config:List[StateSensorConfig] = []
+        self.state_sensor_config: List[StateSensorConfig] = []
         for ssc in [
-                RobotStartSensorConfig(),
-                RobotTargetSensorConfig(),
-                EEStartSensorConfig(),
-                EETargetSensorConfig(),
-                JointSensorConfig(),
-            ]:
+            RobotStartSensorConfig(),
+            RobotTargetSensorConfig(),
+            EEStartSensorConfig(),
+            EETargetSensorConfig(),
+            JointSensorConfig(),
+        ]:
             if ssc.config_key in config.SENSORS:
                 self.state_sensor_config.append(ssc)
-
 
         assert include_depth or include_rgb
 
@@ -170,8 +183,8 @@ class BatchedEnv:
             bsim_config.num_physics_substeps = (
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
-            bsim_config.do_procedural_episode_set = True
-            # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
+            bsim_config.do_procedural_episode_set = False
+            bsim_config.episode_set_filepath = self._config.EPISODES_FILE
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
@@ -256,7 +269,7 @@ class BatchedEnv:
                 dtype=np.float32,
             )
             obs_dict["depth"] = depth_obs
-        
+
         for ssc in self.state_sensor_config:
             obs_dict[ssc.obs_key] = spaces.Box(
                 low=-np.inf,
@@ -317,7 +330,6 @@ class BatchedEnv:
         assert False
         results = []
         return results
-        
 
     def get_nonpixel_observations(self, env_states, observations):
         for (b, state) in enumerate(env_states):
@@ -363,7 +375,7 @@ class BatchedEnv:
             actions = torch.mul(actions, scale)
 
         actions_flat_list = actions.flatten().tolist()
-        assert len(actions_flat_list) == self.num_envs * self.action_dim
+        # assert len(actions_flat_list) == self.num_envs * self.action_dim
         if self._bsim:
             if self._config.OVERLAP_PHYSICS:
                 self._bsim.wait_step_physics_or_reset()

@@ -1,5 +1,7 @@
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
+EPISODES_FILE: "data/datasets/train/all_receptacles_10k_1k.json"
+#EPISODES_FILE: "generated.episode_set.json"
 VIDEO_DIR: "../videos"
 REWARD_SCALE: 0.01
 NUM_CHECKPOINTS: 0
@@ -25,8 +27,10 @@ RL:
     use_linear_lr_decay: False
     max_grad_norm: 1.0
   POLICY:
-    name: "PointNavBaselinePolicy"
-    action_distribution_type: "gaussian"
-  DDPPO:
-    backbone: "PointNavResNetPolicy"
+      name: "PointNavResNetPolicy"
+      action_distribution_type: "gaussian"
+      include_visual_keys: ["rgb"]
+      ACTION_DIST:
+         use_log_std: True
+         clamp_std: True
 FORCE_BLIND_POLICY: False
