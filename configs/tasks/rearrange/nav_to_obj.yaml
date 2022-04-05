@@ -1,5 +1,5 @@
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 400
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -58,9 +58,6 @@ TASK:
         TYPE: "BadCalledTerminate"
         BAD_TERM_PEN: 0.0
         DECAY_BAD_TERM: False
-    NAV_TO_POS_SUCC:
-        TYPE: "NavToPosSucc"
-        SUCCESS_DISTANCE: 0.3
     NUM_STEPS:
         TYPE: "NumStepsMeasure"
     REARRANGE_NAV_TO_OBJ_REWARD:
@@ -68,23 +65,24 @@ TASK:
         # Reward the agent for facing the object?
         SHOULD_REWARD_TURN: True
         # What distance do we start giving the reward for facing the object?
-        TURN_REWARD_DIST: 0.1
+        TURN_REWARD_DIST: 0.6
         # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
         DIST_REWARD: 10.0
-        # Negative means a penalty
-        SLACK_REWARD: 0.0
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0001
+        FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 5.0
+    NAV_TO_POS_SUCC:
+        TYPE: "NavToPosSucc"
+        SUCCESS_DISTANCE: 0.3
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: "NavToObjSuccess"
         MUST_LOOK_AT_TARG: True
         # Distance in radians.
-        SUCCESS_ANGLE_DIST: 0.15
+        SUCCESS_ANGLE_DIST: 0.3
         HEURISTIC_STOP: False
     MEASUREMENTS:
         - "OBJECT_TO_GOAL_DISTANCE"

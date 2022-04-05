@@ -102,11 +102,13 @@ class WeightsAndBiasesWriter:
         if config.WB.GROUP != "":
             wb_kwargs["group"] = config.WB.GROUP
         slurm_info_dict = {
-            k: v for k, v in os.environ.items() if k.startswith("SLURM_")
+            k[len("SLURM_") :]: v
+            for k, v in os.environ.items()
+            if k.startswith("SLURM_")
         }
 
         self.run = wandb.init(
-            config={**slurm_info_dict, **config}, **wb_kwargs
+            config={"slurm": slurm_info_dict, **config}, **wb_kwargs
         )
 
     def __getattr__(self, item):

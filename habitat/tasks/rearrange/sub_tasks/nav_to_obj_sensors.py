@@ -275,7 +275,7 @@ class NavToObjReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        reward = self._config.SLACK_REWARD
+        reward = 0.0
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
         if self._prev_dist < 0.0:
             dist_diff = 0.0
@@ -401,11 +401,11 @@ class BadCalledTerminate(GeoMeasure):
                 remaining = (
                     self._config.ENVIRONMENT.MAX_EPISODE_STEPS - self._n_steps
                 )
-                self.reward_pen -= -self._config.BAD_TERM_PEN * (
+                self.reward_pen -= self._config.BAD_TERM_PEN * (
                     remaining / self._config.ENVIRONMENT.MAX_EPISODE_STEPS
                 )
             else:
-                self.reward_pen = -self._config.BAD_TERM_PEN
+                self.reward_pen = self._config.BAD_TERM_PEN
             self._metric = 1.0
         else:
             self._metric = 0.0
