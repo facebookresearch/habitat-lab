@@ -119,7 +119,7 @@ class PPO(nn.Module):
                         batch["observations"],
                         batch["recurrent_hidden_states"],
                         batch["prev_actions"],
-                        batch["masks"],
+                        torch.logical_and(batch["not_done_mask_0"], batch["not_done_mask_1"]),
                         batch["actions"],
                     )
 
@@ -152,9 +152,9 @@ class PPO(nn.Module):
                     # Mask the loss. The mask corresponds to the transition right
                     # after a reset. This first observation needs to be ignored
                     # because its observation is actually part of the previous episode
-                    action_loss = action_loss * batch["masks"]
-                    value_loss = value_loss * batch["masks"]
-                    dist_entropy = dist_entropy * batch["masks"]
+                    action_loss = action_loss * batch["not_done_mask_0"]
+                    value_loss = value_loss * batch["not_done_mask_0"]
+                    dist_entropy = dist_entropy * batch["not_done_mask_0"]
 
                     action_loss = action_loss.mean()
                     value_loss = value_loss.mean()

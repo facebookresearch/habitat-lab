@@ -335,6 +335,7 @@ class BatchedEnv:
                 self.rewards[b] = 100.0 if not state.did_collide else 0.0
             else:
                 self.resets[b] = -1
+                self.dones[b] = False
 
     def reset(self):
         r"""Reset all the vectorized environments
