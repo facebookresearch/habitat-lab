@@ -25,6 +25,8 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
+from habitat.core.batched_env import RobotStartSensorConfig, RobotTargetSensorConfig, EEStartSensorConfig, EETargetSensorConfig, JointSensorConfig
+
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
     def __init__(self, net, dim_actions, policy_config=None):
@@ -206,10 +208,17 @@ class PointNavBaselineNet(Net):
         #### [gala_kinematic] Manually adding sensors in there
         self.observation_space = observation_space
         self._n_state = 0
-        if "pointgoal_with_gps_compass" in self.observation_space.spaces:
-            self._n_state += 4
-        if "ee_pos" in self.observation_space.spaces:
-            self._n_state += 3
+
+        self.ssc_dict = {x.obs_key: x for x in [
+                RobotStartSensorConfig(),
+                RobotTargetSensorConfig(),
+                EEStartSensorConfig(),
+                EETargetSensorConfig(),
+                JointSensorConfig(),
+            ]}
+        for k, v  in  self.ssc_dict.items():
+            if k in self.observation_space.spaces:
+                self._n_state += v.shape
 
         # if (
         #     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -258,10 +267,10 @@ class PointNavBaselineNet(Net):
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         #### [gala_kinematic] Manually adding sensors in there
         x = [self.visual_encoder(observations)]
-        if "pointgoal_with_gps_compass" in self.observation_space.spaces:
-            x += [observations["pointgoal_with_gps_compass"]]
-        if "ee_pos" in self.observation_space.spaces:
-            x += [observations["ee_pos"]]
+        for k in self.ssc_dict.keys():
+            if k in self.observation_space.spaces:
+                x += [observations[k]]
+        
         # if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
         #     target_encoding = observations[
         #         IntegratedPointGoalGPSAndCompassSensor.cls_uuid

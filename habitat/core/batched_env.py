@@ -15,6 +15,82 @@ from habitat.utils import profiling_wrapper
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
+from habitat.utils.geometry_utils import  quaternion_rotate_vector 
+from habitat.tasks.utils import cartesian_to_polar
+
+from habitat_sim.utils.common import  quat_from_magnum
+
+
+class StateSensorConfig:
+    def __init__(self, config_key, shape, obs_key):
+        self.config_key = config_key
+        self.shape = shape
+        self.obs_key = obs_key
+    def get_obs(self, state):
+        pass
+
+def _get_spherical_coordinates(source_position, goal_position, source_rotation):
+    direction_vector = goal_position - source_position
+    source_rotation = quat_from_magnum(source_rotation)
+    direction_vector_agent = quaternion_rotate_vector(
+        # source_rotation.inverse(), direction_vector
+        source_rotation.inverse(), direction_vector
+    )
+    _, phi = cartesian_to_polar(
+            -direction_vector_agent[2], direction_vector_agent[0]
+        )
+    theta = np.arccos(
+        direction_vector_agent[1]
+        / np.linalg.norm(direction_vector_agent)
+    )
+    rho = np.linalg.norm(direction_vector_agent)
+    if direction_vector.length() == 0.0:
+        # The source is at the same place as the target, theta cannot be calculated
+        theta = 0.0
+    return rho, theta, phi
+
+class RobotStartSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__("ROBOT_START_RELATIVE", 3, "robot_start_relative")
+    def get_obs(self, state):
+        robot_pos = state.robot_pos
+        robot_rot = state.robot_rotation
+        start_pos = state.robot_start_pos
+        return _get_spherical_coordinates(robot_pos, start_pos, robot_rot)
+
+class RobotTargetSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__( "ROBOT_TARGET_RELATIVE", 3, "robot_target_relative")
+    def get_obs(self, state):
+        robot_pos = state.robot_pos
+        robot_rot = state.robot_rotation
+        target_pos = state.target_obj_start_pos
+        return _get_spherical_coordinates(robot_pos, target_pos, robot_rot)
+
+class EEStartSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__( "EE_START_RELATIVE", 3, "ee_start_relative")
+    def get_obs(self, state):
+        ee_pos = state.ee_pos
+        ee_rot = state.ee_rotation
+        start_pos = state.robot_start_pos
+        return _get_spherical_coordinates(ee_pos, start_pos, ee_rot)
+
+class EETargetSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__( "EE_TARGET_RELATIVE", 3, "ee_target_relative")
+    def get_obs(self, state):
+        ee_pos = state.ee_pos
+        ee_rot = state.ee_rotation
+        target_pos = state.target_obj_start_pos
+        return _get_spherical_coordinates(ee_pos, target_pos, ee_rot)
+
+class JointSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__("JOINT_SENSOR", 7, "joint_pos")
+    def get_obs(self, state):
+        return state.robot_joint_positions[-9:-2]
+
 
 class BatchedEnv:
     r"""Todo"""
@@ -24,40 +100,6 @@ class BatchedEnv:
     # action_spaces: List[spaces.Dict]
     _num_envs: int
     _auto_reset_done: bool
-
-    @staticmethod
-    def create_fetch_action_map():
-        from habitat_sim._ext.habitat_sim_bindings import ActionMap
-        map = ActionMap()
-
-        # you can optionally have actions that are ignored by the sim (e.g. a stop
-        # action implemented purely in Python)
-        num_ignored_actions = 0
-
-        map.grasp_release = num_ignored_actions + 0
-        map.base_rotate = num_ignored_actions + 1
-        map.base_move = num_ignored_actions + 2
-        
-        # reference code to drive all 15 fetch joint degrees from actions
-        # action_joint_degree_pairs = []
-        # num_joint_degrees = 15
-        # for i in range(num_joint_degrees):
-        #     action_joint_degree_pairs.append((num_ignored_actions + 3 + i, i))
-
-        # 2 is torso up/down
-        # 7 shoulder, + is down
-        # 8 twist, + is twist to right
-        # 9 elbow, + is down
-        # 10 elbow twist, + is twst to right
-        # 11 wrist, + is down
-        # 12 wrist twise, + is right
-        # example joint pairs: only control 8-twist and 9-elbow
-        action_joint_degree_pairs = [(num_ignored_actions + 3, 8), (num_ignored_actions + 4, 9)]
-
-        map.action_joint_degree_pairs = action_joint_degree_pairs
-
-        map.num_actions = 3 + len(action_joint_degree_pairs)
-        return map
 
     def __init__(
         self,
@@ -75,16 +117,18 @@ class BatchedEnv:
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
 
-        self.include_point_goal_gps_compass = (
-            "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in config.SENSORS
-        )
-        # This key is a hard_coded_string. Will not work with any value:
-        # see this line : https://github.com/eundersander/habitat-lab/blob/eundersander/gala_kinematic/habitat_baselines/rl/ppo/policy.py#L206
-        self.gps_compass_key = "pointgoal_with_gps_compass"
-        gps_compass_sensor_shape = 4
-        self.include_ee_pos = "EE_POS_SENSOR" in config.SENSORS
-        self.ee_pos_key = "ee_pos"
-        ee_pos_shape = 3
+
+        self.state_sensor_config:List[StateSensorConfig] = []
+        for ssc in [
+                RobotStartSensorConfig(),
+                RobotTargetSensorConfig(),
+                EEStartSensorConfig(),
+                EETargetSensorConfig(),
+                JointSensorConfig(),
+            ]:
+            if ssc.config_key in config.SENSORS:
+                self.state_sensor_config.append(ssc)
+
 
         assert include_depth or include_rgb
 
@@ -128,10 +172,9 @@ class BatchedEnv:
             )
             bsim_config.do_procedural_episode_set = True
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
-            bsim_config.action_map = BatchedEnv.create_fetch_action_map()
             self._bsim = BatchedSimulator(bsim_config)
 
-            self.action_dim = bsim_config.action_map.num_actions
+            self.action_dim = self._bsim.get_num_actions()
 
         else:
             self._bsim = None
@@ -177,13 +220,9 @@ class BatchedEnv:
                 )
                 * 255
             )
-        if self.include_point_goal_gps_compass:
-            observations[self.gps_compass_key] = torch.empty(
-                [self._num_envs, gps_compass_sensor_shape], dtype=torch.float32
-            )
-        if self.include_ee_pos:
-            observations[self.ee_pos_key] = torch.empty(
-                [self._num_envs, ee_pos_shape], dtype=torch.float32
+        for ssc in self.state_sensor_config:
+            observations[ssc.obs_key] = torch.empty(
+                [self._num_envs, ssc.shape], dtype=torch.float32
             )
 
         self._observations = observations
@@ -217,18 +256,12 @@ class BatchedEnv:
                 dtype=np.float32,
             )
             obs_dict["depth"] = depth_obs
-        if self.include_point_goal_gps_compass:
-            obs_dict[self.gps_compass_key] = spaces.Box(
+        
+        for ssc in self.state_sensor_config:
+            obs_dict[ssc.obs_key] = spaces.Box(
                 low=-np.inf,
                 high=np.inf,  # todo: investigate depth min/max
-                shape=(gps_compass_sensor_shape,),
-                dtype=np.float32,
-            )
-        if self.include_ee_pos:
-            obs_dict[self.ee_pos_key] = spaces.Box(
-                low=-np.inf,
-                high=np.inf,  # todo: investigate depth min/max
-                shape=(ee_pos_shape,),
+                shape=(ssc.shape,),
                 dtype=np.float32,
             )
 
@@ -284,21 +317,13 @@ class BatchedEnv:
         assert False
         results = []
         return results
+        
 
     def get_nonpixel_observations(self, env_states, observations):
-        # TODO: update observations here
         for (b, state) in enumerate(env_states):
-            if self.include_point_goal_gps_compass:
-                robot_pos = state.robot_pos
-                robot_yaw = 0.0 # state.robot_yaw
-
-                observations[self.gps_compass_key][b, 0] = robot_pos[0]
-                observations[self.gps_compass_key][b, 1] = robot_pos[1]
-                observations[self.gps_compass_key][b, 2] = robot_pos[2]
-                observations[self.gps_compass_key][b, 3] = robot_yaw
-            if self.include_ee_pos:
-                for i in range(3):
-                    observations[self.ee_pos_key][b, i] = state.ee_pos[i]
+            for ssc in self.state_sensor_config:
+                sensor_data = torch.tensor(ssc.get_obs(state))
+                observations[ssc.obs_key][b, :] = sensor_data
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
