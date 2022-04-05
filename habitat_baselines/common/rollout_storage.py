@@ -118,7 +118,6 @@ class RolloutStorage:
         if not self.is_double_buffered:
             assert buffer_index == 0
 
-
         next_next_step = dict(
             not_done_mask_1=next_masks,
         )
@@ -137,7 +136,9 @@ class RolloutStorage:
             rewards=rewards,
         )
 
-        next_next_step = {k: v for k, v in next_next_step.items() if v is not None}
+        next_next_step = {
+            k: v for k, v in next_next_step.items() if v is not None
+        }
         next_step = {k: v for k, v in next_step.items() if v is not None}
         current_step = {k: v for k, v in current_step.items() if v is not None}
 
@@ -172,7 +173,9 @@ class RolloutStorage:
 
     def after_update(self):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
-        self.buffers['not_done_mask_1'][1] = self.buffers['not_done_mask_1'][self.current_rollout_step_idx + 1]
+        self.buffers["not_done_mask_1"][1] = self.buffers["not_done_mask_1"][
+            self.current_rollout_step_idx + 1
+        ]
 
         self.current_rollout_step_idxs = [
             0 for _ in self.current_rollout_step_idxs
@@ -194,7 +197,12 @@ class RolloutStorage:
                     - self.buffers["value_preds"][step]
                 )
                 gae = (
-                    delta + gamma * tau * gae * self.buffers["not_done_mask_0"][step + 1] * self.buffers["not_done_mask_1"][step + 1]
+                    delta
+                    + gamma
+                    * tau
+                    * gae
+                    * self.buffers["not_done_mask_0"][step + 1]
+                    * self.buffers["not_done_mask_1"][step + 1]
                 )
                 self.buffers["returns"][step] = (
                     gae + self.buffers["value_preds"][step]

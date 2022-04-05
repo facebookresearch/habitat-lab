@@ -119,7 +119,9 @@ class PPO(nn.Module):
                         batch["observations"],
                         batch["recurrent_hidden_states"],
                         batch["prev_actions"],
-                        torch.logical_and(batch["not_done_mask_0"], batch["not_done_mask_1"]),
+                        torch.logical_and(
+                            batch["not_done_mask_0"], batch["not_done_mask_1"]
+                        ),
                         batch["actions"],
                     )
 
