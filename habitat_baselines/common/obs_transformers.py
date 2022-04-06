@@ -84,6 +84,11 @@ class ResizeShortestEdge(ObservationTransformer):
         self._size: int = size
         self.channels_last: bool = channels_last
         self.trans_keys: Tuple[str, ...] = trans_keys
+        self.interpolation_mode = {
+            "rgb": "area",
+            "depth": "area",
+            "semantic": "nearest-exact",
+        }
 
     def transform_observation_space(
         self,
@@ -113,9 +118,9 @@ class ResizeShortestEdge(ObservationTransformer):
                     )
         return observation_space
 
-    def _transform_obs(self, obs: torch.Tensor) -> torch.Tensor:
+    def _transform_obs(self, obs: torch.Tensor, interpolation_mode: str) -> torch.Tensor:
         return image_resize_shortest_edge(
-            obs, self._size, channels_last=self.channels_last
+            obs, self._size, channels_last=self.channels_last, interpolation_mode=interpolation_mode
         )
 
     @torch.no_grad()
@@ -125,7 +130,7 @@ class ResizeShortestEdge(ObservationTransformer):
         if self._size is not None:
             observations.update(
                 {
-                    sensor: self._transform_obs(observations[sensor])
+                    sensor: self._transform_obs(observations[sensor], self.interpolation_mode[sensor])
                     for sensor in self.trans_keys
                     if sensor in observations
                 }
