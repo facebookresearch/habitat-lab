@@ -16,6 +16,8 @@ from habitat.utils import profiling_wrapper
 from habitat.utils.geometry_utils import quaternion_rotate_vector
 from habitat_sim.utils.common import quat_from_magnum
 
+import magnum as mn
+
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
 
@@ -95,6 +97,15 @@ class EETargetSensorConfig(StateSensorConfig):
         target_pos = state.target_obj_start_pos
         return _get_spherical_coordinates(ee_pos, target_pos, ee_rot)
 
+class RobotEESensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__("ROBOT_EE_RELATIVE", 3, "robot_ee_relative")
+
+    def get_obs(self, state):
+        robot_pos = state.robot_pos
+        robot_rot = state.robot_rotation
+        ee_pos = state.ee_pos
+        return _get_spherical_coordinates(robot_pos, ee_pos, robot_rot)
 
 class JointSensorConfig(StateSensorConfig):
     def __init__(self):
@@ -136,6 +147,7 @@ class BatchedEnv:
             EEStartSensorConfig(),
             EETargetSensorConfig(),
             JointSensorConfig(),
+            RobotEESensorConfig(),
         ]:
             if ssc.config_key in config.SENSORS:
                 self.state_sensor_config.append(ssc)
@@ -185,7 +197,6 @@ class BatchedEnv:
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
-
         else:
             self._bsim = None
             self.action_dim = 10  # arbitrary
@@ -284,7 +295,10 @@ class BatchedEnv:
         )
 
         self.rewards = [0.0] * self._num_envs
-        self.dones = [True] * self._num_envs
+        self.dones = [False] * self._num_envs
+        self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
+        self._previous_state = [None] * self._num_envs
+        self._previous_target_position = [None] * self._num_envs
 
         self.action_spaces = [
             action_space
@@ -329,13 +343,33 @@ class BatchedEnv:
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
             max_episode_len = 500
-            if state.did_collide or state.episode_step_idx >= max_episode_len:
+
+
+            # Target position is arbitrarily fixed
+            local_target_position = mn.Vector3(1, 1, 1)
+
+            global_target_position = quaternion_rotate_vector(quat_from_magnum(state.robot_rotation), local_target_position)
+            global_target_position = state.robot_pos + mn.Vector3(global_target_position[0], global_target_position[1], global_target_position[2])
+
+            curr_dist = (global_target_position - state.ee_pos).length()
+            success_dist = 0.2
+            success = curr_dist < success_dist
+            if success or state.episode_step_idx >= max_episode_len:
                 self.dones[b] = True
                 self.resets[b] = self.get_next_episode()
-                self.rewards[b] = 100.0 if not state.did_collide else 0.0
+                self.rewards[b] = 10.0 if success else 0.0
+                self.infos[b] = {"success" : float(success)}
+                self._previous_state[b] = None
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
+                self.rewards[b] = 0
+                self.infos[b] = {"success" : 0.0}
+                if self._previous_state[b] is not None:
+                    last_dist = (self._previous_target_position[b] - self._previous_state[b].ee_pos).length()
+                    self.rewards[b] = - (curr_dist - last_dist)
+                self._previous_state[b] = state
+                self._previous_target_position[b] = global_target_position
 
     def reset(self):
         r"""Reset all the vectorized environments
@@ -353,7 +387,7 @@ class BatchedEnv:
             self._bsim.wait_render()
 
         self.rewards = [0.0] * self._num_envs
-        self.dones = [True] * self._num_envs
+        self.dones = [False] * self._num_envs
         self.resets = [-1] * self._num_envs
 
         return self._observations
@@ -418,12 +452,13 @@ class BatchedEnv:
             # torch.mul(rgb_observations, 255, out=rgb_observations)
             rewards = [0.0] * self._num_envs
             dones = [False] * self._num_envs
+            infos = [{}] * self._num_envs
 
         observations = self._observations
 
         # temp stub for infos
         # infos = [{"distance_to_goal": 0.0, "success":0.0, "spl":0.0}] * self._num_envs
-        infos: List[Dict[str, Any]] = [{}] * self._num_envs
+        infos=self.infos
         return (observations, rewards, dones, infos)
 
     def step(
