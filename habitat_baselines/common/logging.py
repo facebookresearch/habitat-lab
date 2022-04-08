@@ -14,5 +14,5 @@ logger = HabitatLogger(
     level=logging.INFO
     if os.environ.get("HABITAT_BASELINES_LOG", 0)
     else logging.ERROR,
-    format_str="%(asctime)-15s %(module)s: %(message)s",
+    format_str="[%(levelname)s,%(name)s] %(asctime)-15s %(filename)s:%(lineno)d %(message)s",
 )

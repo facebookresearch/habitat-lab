@@ -330,9 +330,11 @@ class ObjectSampler:
         if self.nav_to_min_distance == -1:
             return True
         snapped = sim.pathfinder.snap_point(new_object.translation)
-        island_radius = sim.pathfinder.island_radius(snapped)
-        dist = np.linalg.norm(
-            np.array((snapped - new_object.translation))[[0, 2]]
+        island_radius: float = sim.pathfinder.island_radius(snapped)
+        dist = float(
+            np.linalg.norm(
+                np.array((snapped - new_object.translation))[[0, 2]]
+            )
         )
         return (
             dist < self.nav_to_min_distance
@@ -345,7 +347,7 @@ class ObjectSampler:
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         fixed_target_receptacle=None,
-        fixed_obj_handle: Optional[str]=None,
+        fixed_obj_handle: Optional[str] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         # draw a new pairing
         if fixed_obj_handle is None:

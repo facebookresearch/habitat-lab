@@ -15,8 +15,19 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.8.12
 # ---
 
 # %% [markdown]
@@ -93,13 +104,21 @@ env.close()
 # # Environment Options
 # To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `HabitatGym[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be included.
 #
-# * `HabitatGymCloseCab-v0`
-# * `HabitatGymCloseFridge-v0`
-# * `HabitatGymNavToObj-v0`
-# * `HabitatGymOpenCab-v0`
-# * `HabitatGymPick-v0`
-# * `HabitatGymPlace-v0`
-# * `HabitatGymReachState-v0`
+# * Skills:
+#     * `HabitatGymPick-v0`
+#     * `HabitatGymPlace-v0`
+#     * `HabitatGymCloseCab-v0`
+#     * `HabitatGymCloseFridge-v0`
+#     * `HabitatGymOpenCab-v0`
+#     * `HabitatGymOpenFridge-v0`
+#     * `HabitatGymNavToObj-v0`
+#     * `HabitatGymReachState-v0`
+# * Home Assistant Benchmark (HAB) tasks:
+#     * `HabitatGymTidyHouse-v0`
+#     * `HabitatGymPrepareGroceries-v0`
+#     * `HabitatGymSetTable-v0`
+#     * `HabitatGymNavPick-v0`
+#     * `HabitatGymNavPickNavPlace-v0`
 #
 # The Gym environments are automatically registered from the RL training configurations under ["habitat_baselines/config/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_dev/habitat_baselines/config/rearrange). The `GYM_AUTO_NAME` key in the YAML file determines the `[Task Name]`. The observation keys in `RL.GYM_OBS_KEYS` are what is returned in the observation space. If the the observations are a set of 1D arrays, then the observation space is automatically flattened. For example, in `HabitatGymReachState-v0` the observation space is `RL.GYM_OBS_KEYS = ['joint', 'relative_resting_position']`. `joint` is a 7D array and `relative_resting_position` is a 3D array. These two arrays are concatenated automatically to give a `10D` observation space. On the other hand, in environments with image observations, the observation is returned as a dictionary.
 #

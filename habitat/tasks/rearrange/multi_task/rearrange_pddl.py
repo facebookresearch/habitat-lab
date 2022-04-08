@@ -7,8 +7,6 @@
 from __future__ import annotations
 
 import copy
-from collections import defaultdict
-from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -407,9 +405,10 @@ class Action:
             all_matches,
             name_to_id,
         )
+        logger.info(f"Got consistent preds {consistent_preds}")
         consistent_actions = []
 
-        for bound_args, match_preds in zip(all_bound_args, consistent_preds):
+        for bound_args in zip(all_bound_args):
             # Extract out the set arguments from consistent_preds
             all_set_args = [[]]
 
@@ -425,7 +424,7 @@ class Action:
                     # Assign all possible values to to the empty action
                     # parameter.
                     ok_entities = []
-                    for entity_name, entity_id in name_to_id.items():
+                    for entity_name in name_to_id.keys():
                         entity_type = search_for_id(entity_name, name_to_id)[1]
                         if (
                             action_param_name in self._arg_specs

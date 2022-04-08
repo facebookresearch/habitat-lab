@@ -38,7 +38,7 @@ class RearrangeGraspManager:
         self._snapped_obj_id: Optional[int] = None
         self._snapped_marker_id: Optional[str] = None
         self._snap_constraints: List[int] = []
-        self._leave_info: Optional[Tuple[mn.Vector3, float, int]] = None
+        self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
 
     def reconfigure(self) -> None:

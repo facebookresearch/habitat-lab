@@ -202,8 +202,6 @@ class ArtObjSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.success_js_state - task.get_use_marker().get_targ_js()
-
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()

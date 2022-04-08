@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import hashlib
 import logging
 import os
 import os.path as osp
@@ -27,7 +26,7 @@ logger = HabitatLogger(
     level=logging.INFO
     if os.environ.get("HABITAT_REARRANGE_LOG", 0)
     else logging.ERROR,
-    format_str="%(asctime)-15s %(module)s: %(message)s",
+    format_str="[%(levelname)s,%(name)s] %(asctime)-15s %(filename)s:%(lineno)d %(message)s",
 )
 
 

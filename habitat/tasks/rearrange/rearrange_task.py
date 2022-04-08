@@ -50,7 +50,7 @@ class RearrangeTask(NavigationTask):
         self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
         self._sim_reset = True
         self._targ_idx: int = 0
-        self._episode_id: int = 0
+        self._episode_id: str = ""
 
     @property
     def targ_idx(self):

@@ -232,6 +232,10 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         allowed_tasks = self._get_allowed_tasks(matching_skills)
+        if len(allowed_tasks) == 0:
+            raise ValueError(
+                f"Got no allowed tasks {allowed_tasks} from {matching_skills}, {entity_type}, {use_name}"
+            )
 
         task_name = random.choice(list(allowed_tasks.keys()))
         filtered_allowed_tasks = []
@@ -276,6 +280,7 @@ class DynNavRLEnv(RearrangeTask):
     def reset(self, episode: Episode):
         sim = self._sim
         super().reset(episode)
+        logger.info("Resetting navigation task")
 
         if self.domain is None:
             self.domain = PddlDomain(
@@ -361,6 +366,8 @@ class DynNavRLEnv(RearrangeTask):
                 self.cache.save(self.start_states)
 
             targ_idxs, goal_pos = sim.get_targets()
+
+        logger.info(f"Got nav target position {self._nav_target_pos}")
 
         if not sim.pathfinder.is_navigable(self._nav_target_pos):
             print("Goal is not navigable")

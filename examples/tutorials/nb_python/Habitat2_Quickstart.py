@@ -15,8 +15,19 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3
-#     name: python3
+#     display_name: Python [conda env:habitat] *
+#     language: python
+#     name: conda-env-habitat-py
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.8.12
 # ---
 
 # %% [markdown]
@@ -89,8 +100,13 @@ def insert_render_options(config):
     return config
 
 
-# If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
+import importlib
+
+# If the import block fails due to an error like "'PIL.TiffTags' has no attribute
 # 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
+import PIL
+
+importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 
 
 # %% [markdown]
@@ -108,7 +124,6 @@ def insert_render_options(config):
 # Start with a minimal environment interaction loop using the Habitat API.
 
 # %%
-
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
@@ -146,7 +161,7 @@ with habitat.Env(
 
 # %% [markdown]
 # ## Gym API
-# You can also import environments through the Gym API.
+# You can also import environments through the Gym API. For more information about how to use the Gym API, see [this tutorial](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb).
 
 # %%
 env = gym.make("HabitatGymRenderPick-v0")
@@ -184,6 +199,15 @@ if vut.is_notebook():
 # Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
 #
 # See [here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines) for more information on how to run with Habitat Baselines.
+#
+# To run the HAB tasks, use any of the training configurations here: [here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange/hab). For example, to run monolithic RL training on the Tidy House task run:
+# ```
+# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/ddppo_tidy_house.yaml --run-type train
+# ```
+# To run the TP-SRL baseline, specify the config and the name of the task to run. For example, to run TP-SRL on the `set_table` task, run the following. This will automatically download the pre-trained skills needed to run the TP-SRL baseline:
+# ```
+# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH configs/tasks/rearrange/set_table.yaml
+# ```
 
 # %% [markdown]
 # # Defining New Tasks
@@ -394,7 +418,7 @@ TASK:
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
-    EXCESSIVE_FORCE_SHOULD_END:
+    FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
     ROBOT_COLLS:
@@ -416,7 +440,7 @@ TASK:
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
-        - "EXCESSIVE_FORCE_SHOULD_END"
+        - "FORCE_TERMINATE"
         - "ROBOT_COLLS"
         - "DISTANCE_TO_TARGET_OBJECT"
         - "NAV_PICK_REWARD"
@@ -456,27 +480,12 @@ SIMULATOR:
         HEIGHT: 1.5
         IS_SET_START_STATE: False
         RADIUS: 0.1
-        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
+        SENSORS: ['HEAD_RGB_SENSOR']
         START_POSITION: [0, 0, 0]
         START_ROTATION: [0, 0, 0, 1]
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
-    HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
-        MIN_DEPTH: 0.0
-        MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: True
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: True
-        WIDTH: 128
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
 
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
@@ -490,23 +499,12 @@ SIMULATOR:
     HOLD_THRESH: 0.09
     GRASP_IMPULSE: 1000.0
 
-    DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
         ALLOW_SLIDING: True
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0
 """
 nav_pick_cfg_path = "data/nav_pick_demo.yaml"

@@ -32,12 +32,12 @@ from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo import Net, NetPolicy
+from habitat_baselines.rl.ppo import Net, Policy
 from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
-class PointNavResNetPolicy(NetPolicy):
+class PointNavResNetPolicy(Policy):
     def __init__(
         self,
         observation_space: spaces.Dict,

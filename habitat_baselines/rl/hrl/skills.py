@@ -5,7 +5,6 @@ import gym.spaces as spaces
 import magnum as mn
 import numpy as np
 import torch
-import torch.nn as nn
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -25,10 +24,6 @@ from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import logger
 from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.rl.hrl.high_level_policy import (
-    GtHighLevelPolicy,
-    HighLevelPolicy,
-)
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions
 
@@ -75,12 +70,14 @@ class NnSkillPolicy(Policy):
             else:
                 break
 
-        logger.info(
+        self._internal_log(
             f"Skill {self._config.skill_name}: action offset {self._ac_start}, action length {self._ac_len}"
         )
 
-    def _internal_log(self, s):
-        logger.info(f"Skill {self._config.skill_name}: {s}")
+    def _internal_log(self, s, observations=None):
+        logger.info(
+            f"Skill {self._config.skill_name} @ {self._cur_skill_step}: {s}"
+        )
 
     def _select_obs(self, obs, cur_batch_idx):
         """
@@ -122,7 +119,8 @@ class NnSkillPolicy(Policy):
         bad_terminate = self._cur_skill_step > self._config.MAX_SKILL_STEPS
         if bad_terminate.sum() > 0:
             self._internal_log(
-                f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}"
+                f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}",
+                observations,
             )
 
         return is_skill_done, bad_terminate
@@ -159,7 +157,8 @@ class NnSkillPolicy(Policy):
         """
         self._cur_skill_args[batch_idx] = self._parse_skill_arg(skill_arg)
         self._internal_log(
-            f"Entering skill with arguments {skill_arg} parsed to {self._cur_skill_args[batch_idx]}"
+            f"Entering skill with arguments {skill_arg} parsed to {self._cur_skill_args[batch_idx]}",
+            observations,
         )
 
         self._cur_skill_step[batch_idx] = 0
@@ -265,7 +264,7 @@ class NnSkillPolicy(Policy):
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)
         logger.info(
-            f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}"
+            f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
         filtered_action_space = ActionSpace(
@@ -275,7 +274,7 @@ class NnSkillPolicy(Policy):
             }
         )
         logger.info(
-            f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
+            f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
 
         actor_critic = policy.from_config(
@@ -326,10 +325,11 @@ class PickSkillPolicy(NnSkillPolicy):
         return int(skill_arg[0].split("|")[1])
 
     def _mask_pick(self, action, observations):
+        # Mask out the release if the object is already held.
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_holding):
             # Do not release the object once it is held
-            action[i, self._ac_start + self._ac_len] = 1.0
+            action[i, self._ac_start + self._ac_len - 1] = 1.0
         return action
 
     def _internal_act(
@@ -350,11 +350,10 @@ class PickSkillPolicy(NnSkillPolicy):
             deterministic,
         )
         action = self._mask_pick(action, observations)
-        # Mask out the release if the object is already held.
         return action, hxs
 
 
-class PlaceSkillPolicy(NnSkillPolicy):
+class PlaceSkillPolicy(PickSkillPolicy):
     @dataclass(frozen=True)
     class PlaceSkillArgs:
         obj: int
@@ -362,6 +361,14 @@ class PlaceSkillPolicy(NnSkillPolicy):
 
     def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
         return self._cur_skill_args[batch_idx].targ
+
+    def _mask_pick(self, action, observations):
+        # Mask out the grasp if the object is already released.
+        is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
+        for i in torch.nonzero(is_not_holding):
+            # Do not regrasp the object once it is released.
+            action[i, self._ac_start + self._ac_len - 1] = -1.0
+        return action
 
     def _is_skill_done(
         self,
@@ -380,7 +387,8 @@ class PlaceSkillPolicy(NnSkillPolicy):
         is_done = is_not_holding * is_within_thresh.float()
         if is_done.sum() > 0:
             self._internal_log(
-                f"Terminating with {rel_resting_pos} and {is_not_holding}"
+                f"Terminating with {rel_resting_pos} and {is_not_holding}",
+                observations,
             )
         return is_done
 
@@ -434,12 +442,11 @@ class OracleNavPolicy(NnSkillPolicy):
             filtered_action_space,
             batch_size,
         )
+        self._nav_targs = [None for _ in range(batch_size)]
         self._is_at_targ = torch.zeros(batch_size)
-        self._nav_targs = torch.zeros(batch_size, 3)
 
     def to(self, device):
         self._is_at_targ = self._is_at_targ.to(device)
-        self._nav_targs = self._nav_targs.to(device)
         self._cur_skill_step = self._cur_skill_step.to(device)
         return self
 
@@ -458,6 +465,9 @@ class OracleNavPolicy(NnSkillPolicy):
         self._nav_targs[batch_idx] = observations[NavGoalSensor.cls_uuid][
             batch_idx
         ]
+        self._internal_log(
+            f"Got nav target {self._nav_targs} on enter", observations
+        )
         return super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
@@ -539,6 +549,17 @@ class OracleNavPolicy(NnSkillPolicy):
                 self._nav_targs,
             )
         ):
+            if (
+                final_nav_goal.sum() == 0
+                and observations[NavGoalSensor.cls_uuid][i].sum() != 0
+            ):
+                # All zeros is a stable nav goal sensor. Update it to recent.
+                self._nav_targs[i] = observations[NavGoalSensor.cls_uuid][i]
+                final_nav_goal = self._nav_targs[i]
+                self._internal_log(
+                    f"Updated nav target {i} to {self._nav_targs}",
+                    observations,
+                )
             robot_pos = localization[:3]
 
             robot_forward = self._compute_forward(localization)
@@ -577,7 +598,7 @@ class OracleNavPolicy(NnSkillPolicy):
                 # Move towards the target
                 vel = [for_vel, 0]
             else:
-                # Look at the target.
+                # Look at the target waypoint.
                 vel = compute_turn(rel_angle, rel_targ)
 
             if (

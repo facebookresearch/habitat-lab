@@ -94,7 +94,7 @@ class PddlDomain:
                 self.predicate_lookup,
             )
             self.actions[action.name] = action
-        self._action_names = [action_name for action_name in self.actions]
+        self._action_names = list(self.actions.keys())
 
     def get_task_match_for_name(self, task_name: str) -> Action:
         return self.actions[task_name]

@@ -648,11 +648,10 @@ def is_continuous_action_space(action_space) -> bool:
 def get_num_actions(action_space) -> int:
     queue = [action_space]
     num_actions = 0
-    while queue:
+    while len(queue) != 0:
         v = queue.pop()
         if isinstance(v, spaces.Dict):
-            for v in v.spaces.values():
-                queue.append(v)
+            queue.extend(v.spaces.values())
         elif isinstance(v, spaces.Box):
             num_actions += v.shape[0]
         else:

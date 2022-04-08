@@ -1,4 +1,3 @@
-import os.path as osp
 from typing import Any, List, Tuple
 
 import torch

@@ -57,7 +57,7 @@ class RearrangeStopAction(SimulatorTaskAction):
     def step(self, task, *args, **kwargs):
         if kwargs["REARRANGE_STOP"][0] > 0:
             task.should_end = True
-        return self._sim.get_observations_at()
+        return self._sim.step(HabitatSimActions.REARRANGE_STOP)
 
 
 @registry.register_task_action

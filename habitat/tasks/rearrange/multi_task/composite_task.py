@@ -8,7 +8,6 @@ import copy
 import os.path as osp
 from typing import Any, Dict, List, Optional
 
-import magnum as mn
 import numpy as np
 import yaml
 
@@ -156,7 +155,7 @@ class CompositeTask(RearrangeTask):
             self._cur_task = task
 
     def reset(self, episode: Episode):
-        result = super().reset(episode)
+        super().reset(episode)
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
@@ -203,7 +202,8 @@ class CompositeTask(RearrangeTask):
     def increment_inferred_solution_idx(self, episode: Episode) -> None:
         """
         Increment to the next index in the solution list. If the solution is
-        exhausted then stay at the last index.
+        exhausted then stay at the last index. This will update both
+        `inferred_node_idx` and `inferrred_cur_task`.
         """
         prev_inf_cur_node = self._inferred_cur_node_idx
         self._inferred_cur_node_idx += 1

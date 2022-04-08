@@ -149,10 +149,11 @@ class CompositeNodeIdx(Measure):
                 inf_cur_task_cfg.SUCCESS_MEASUREMENT
             ].get_metric()
             if is_succ:
-                logger.info(
-                    f"Completed {inf_cur_task_cfg.TYPE}, incrementing node."
-                )
                 task.increment_inferred_solution_idx(episode)
+                logger.info(
+                    f"Completed {inf_cur_task_cfg.TYPE}, incremented node to {task.get_inferrred_node_task()}"
+                )
+
             node_idx = task.get_inferred_node_idx()
             for i in range(task.get_num_nodes()):
                 self._metric[f"reached_{i}"] = (

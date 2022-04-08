@@ -102,13 +102,20 @@ TASK:
         TYPE: NavToPosSucc
         SUCCESS_DISTANCE: 0.2
     REARRANGE_NAV_TO_OBJ_REWARD:
-        TYPE: NavToObjReward
-        SLACK: 0.0
-        SUCCESS_REWARD: 10.0
-        SHOULD_REWARD_TURN: true
-        TURN_REWARD_DIST: 0.1
+        TYPE: "NavToObjReward"
+        # Reward the agent for facing the object?
+        SHOULD_REWARD_TURN: True
+        # What distance do we start giving the reward for facing the object?
+        TURN_REWARD_DIST: 0.6
+        # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
-        SLACK_REWARD: 0.0
+        DIST_REWARD: 10.0
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.0
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 5.0
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
         MUST_LOOK_AT_TARG: true

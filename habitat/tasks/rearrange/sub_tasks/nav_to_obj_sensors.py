@@ -285,10 +285,6 @@ class NavToObjReward(RearrangeReward):
         reward += self._config.DIST_REWARD * dist_diff
         self._prev_dist = cur_dist
 
-        success = task.measurements.measures[
-            NavToObjSuccess.cls_uuid
-        ].get_metric()
-
         bad_terminate_pen = task.measurements.measures[
             BadCalledTerminate.cls_uuid
         ].reward_pen

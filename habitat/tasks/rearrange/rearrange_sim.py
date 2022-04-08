@@ -709,7 +709,7 @@ class RearrangeSim(HabitatSim):
 
     def get_target_objs_start(self) -> np.ndarray:
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""
-        return np.array(self.target_start_pos)
+        return self.target_start_pos
 
     def get_scene_pos(self) -> np.ndarray:
         """Get the positions of all clutter RigidObjects in the scene as a numpy array."""

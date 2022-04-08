@@ -29,11 +29,10 @@ from habitat.datasets.rearrange.receptacle import (
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
-from habitat_sim.nav import NavMeshSettings
 
 
-def get_sample_region_ratios(load_dict):
-    sample_region_ratios = defaultdict(lambda: 1.0)
+def get_sample_region_ratios(load_dict) -> Dict[str, float]:
+    sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
     sample_region_ratios.update(
         load_dict["params"].get("sample_region_ratio", {})
     )

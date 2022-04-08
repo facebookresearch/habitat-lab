@@ -13,7 +13,7 @@ from torch import optim as optim
 
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.policy import Policy
 
 EPS_PPO = 1e-5
 
@@ -21,7 +21,7 @@ EPS_PPO = 1e-5
 class PPO(nn.Module):
     def __init__(
         self,
-        actor_critic: NetPolicy,
+        actor_critic: Policy,
         clip_param: float,
         ppo_epoch: int,
         num_mini_batch: int,
@@ -155,7 +155,7 @@ class PPO(nn.Module):
     def _evaluate_actions(
         self, observations, rnn_hidden_states, prev_actions, masks, action
     ):
-        r"""Internal method that calls NetPolicy.evaluate_actions.  This is used instead of calling
+        r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
         that directly so that that call can be overrided with inheritance
         """
         return self.actor_critic.evaluate_actions(

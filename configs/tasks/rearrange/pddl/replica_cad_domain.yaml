@@ -43,8 +43,8 @@ actions:
       arg_specs:
         obj:
           type_match: ["rigid", "goal"]
-      config_args:
-        TASK.FORCE_REGENERATE: True
+      #config_args:
+      #  TASK.FORCE_REGENERATE: True
 
     - name: nav_to_receptacle
       parameters: [marker,obj]
@@ -58,8 +58,8 @@ actions:
           type_match: ["articulated_link"]
         obj:
           type_match: ["rigid", "goal"]
-      config_args:
-        TASK.FORCE_REGENERATE: True
+      #config_args:
+      #  TASK.FORCE_REGENERATE: True
 
     - name: pick
       parameters: [obj]
@@ -74,7 +74,7 @@ actions:
           type_match: ["rigid"]
       config_args:
         TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
-        TASK.FORCE_REGENERATE: True
+        #TASK.FORCE_REGENERATE: True
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.BASE_NOISE: 0.0
 
@@ -84,6 +84,7 @@ actions:
       task_def: "place"
       precondition:
           - "holding(obj)"
+          - "robot_at(targ)"
       postcondition:
           - "not_holding()"
           - "at(obj,targ)"
@@ -94,7 +95,7 @@ actions:
           type_match: ["goal"]
       config_args:
         TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
-        TASK.FORCE_REGENERATE: True
+        #TASK.FORCE_REGENERATE: True
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.BASE_NOISE: 0.0
 

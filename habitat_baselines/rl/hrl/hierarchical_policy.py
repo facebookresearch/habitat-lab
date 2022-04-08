@@ -1,14 +1,9 @@
 import os.path as osp
 
-import gym.spaces as spaces
 import torch
-import torch.nn as nn
 
-from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.actions import RearrangeStopAction
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import logger
-from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
     GtHighLevelPolicy,
     HighLevelPolicy,
@@ -161,7 +156,7 @@ class HierarchicalPolicy(Policy):
                     batched_prev_actions[new_skill_batch_idx],
                 ) = skill.on_enter(
                     new_skill_args[new_skill_batch_idx],
-                    new_skill_batch_idx,
+                    new_skill_batch_idx.item(),
                     batched_observations[new_skill_batch_idx],
                     batched_rnn_hidden_states[new_skill_batch_idx],
                     batched_prev_actions[new_skill_batch_idx],

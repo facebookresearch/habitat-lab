@@ -45,3 +45,5 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("ARM_EE")
     if not HabitatSimActions.has_action("EMPTY"):
         HabitatSimActions.extend_action_space("EMPTY")
+    if not HabitatSimActions.has_action("REARRANGE_STOP"):
+        HabitatSimActions.extend_action_space("REARRANGE_STOP")

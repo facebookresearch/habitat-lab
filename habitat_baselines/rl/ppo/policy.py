@@ -24,35 +24,7 @@ from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
 
-class Policy(metaclass=abc.ABCMeta):
-    def __init__(self):
-        pass
-
-    def act(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        deterministic=False,
-    ):
-        pass
-
-    @property
-    def should_load_agent_state(self) -> bool:
-        return True
-
-    @property
-    def num_recurrent_layers(self) -> int:
-        raise NotImplementedError()
-
-    @classmethod
-    @abc.abstractmethod
-    def from_config(cls, config, observation_space, action_space):
-        pass
-
-
-class NetPolicy(nn.Module, Policy):
+class Policy(nn.Module, metaclass=abc.ABCMeta):
     action_distribution: nn.Module
 
     def __init__(self, net, dim_actions, policy_config=None):
@@ -85,6 +57,10 @@ class NetPolicy(nn.Module, Policy):
             )
 
         self.critic = CriticHead(self.net.output_size)
+
+    @property
+    def should_load_agent_state(self):
+        return True
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -157,7 +133,7 @@ class CriticHead(nn.Module):
 
 
 @baseline_registry.register_policy
-class PointNavBaselinePolicy(NetPolicy):
+class PointNavBaselinePolicy(Policy):
     def __init__(
         self,
         observation_space: spaces.Dict,
