@@ -408,7 +408,7 @@ class Action:
         logger.info(f"Got consistent preds {consistent_preds}")
         consistent_actions = []
 
-        for bound_args in zip(all_bound_args):
+        for bound_args in all_bound_args:
             # Extract out the set arguments from consistent_preds
             all_set_args = [[]]
 
