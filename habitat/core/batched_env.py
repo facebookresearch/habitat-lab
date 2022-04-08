@@ -346,25 +346,25 @@ class BatchedEnv:
 
 
             # Target position is arbitrarily fixed
-            local_target_position = mn.Vector3(1, 1, 1)
+            local_target_position = mn.Vector3(0.6, 1, 0.6)
 
             global_target_position = quaternion_rotate_vector(quat_from_magnum(state.robot_rotation), local_target_position)
             global_target_position = state.robot_pos + mn.Vector3(global_target_position[0], global_target_position[1], global_target_position[2])
 
             curr_dist = (global_target_position - state.ee_pos).length()
-            success_dist = 0.2
+            success_dist = 0.05
             success = curr_dist < success_dist
             if success or state.episode_step_idx >= max_episode_len:
                 self.dones[b] = True
                 self.resets[b] = self.get_next_episode()
                 self.rewards[b] = 10.0 if success else 0.0
-                self.infos[b] = {"success" : float(success)}
+                self.infos[b] = {"success" : float(success), "episode_steps": state.episode_step_idx}
                 self._previous_state[b] = None
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
                 self.rewards[b] = 0
-                self.infos[b] = {"success" : 0.0}
+                self.infos[b] = {"success" : 0.0, "episode_steps": state.episode_step_idx}
                 if self._previous_state[b] is not None:
                     last_dist = (self._previous_target_position[b] - self._previous_state[b].ee_pos).length()
                     self.rewards[b] = - (curr_dist - last_dist)
