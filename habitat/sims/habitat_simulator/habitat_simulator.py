@@ -200,13 +200,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
-        # make semantic observation a 3D array
-        if isinstance(obs, np.ndarray):
-            obs = np.expand_dims(
-                obs, axis=2
-            ).astype(np.int32)
-        else:
-            obs = obs.unsqueeze(-1)
+        obs = obs[..., None].astype(np.int32)
         return obs
 
 
