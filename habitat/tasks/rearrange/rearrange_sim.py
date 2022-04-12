@@ -38,6 +38,12 @@ from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
+    """
+    :property ref_handle_to_rigid_obj_id: maps a handle name to the relative position of an object in `self.scene_obj_ids`.
+    """
+
+    ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
+
     def __init__(self, config: Config):
         super().__init__(config)
 
@@ -66,7 +72,7 @@ class RearrangeSim(HabitatSim):
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
-        self.ref_handle_to_rigid_obj_id: Optional[Dict[str, int]] = None
+        self.ref_handle_to_rigid_obj_id = None
         robot_cls = eval(self.habitat_config.ROBOT_TYPE)
         self.robot = robot_cls(self.habitat_config.ROBOT_URDF, self)
         self._orig_robot_js_start = np.array(self.robot.params.arm_init_params)

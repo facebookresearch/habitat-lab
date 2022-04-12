@@ -85,6 +85,7 @@ class PddlDomain:
 
     def reset(self):
         self._name_to_id = self.get_name_id_conversions(self.domain_def)
+
         for action_d in self.domain_def["actions"]:
             action = Action(
                 action_d,

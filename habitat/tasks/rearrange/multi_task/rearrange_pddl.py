@@ -48,7 +48,7 @@ class RearrangeObjectTypes(Enum):
 
 def search_for_id(
     k: str, name_to_id: Dict[str, Any]
-) -> Tuple[str, RearrangeObjectTypes]:
+) -> Tuple[Any, RearrangeObjectTypes]:
     """
     Checks if an object exists in the name to ID conversion. This automatically
     checks for ART prefixes as well.
@@ -617,15 +617,21 @@ class SetState:
             use_receps = sim.ep_info["goal_receptacles"]
         elif obj_type == RearrangeObjectTypes.RIGID_OBJECT:
             use_receps = sim.ep_info["target_receptacles"]
+            obj_name = list(sim.get_targets()[0]).index(int(obj_name))
         else:
             return False
+        obj_idx = int(obj_name)
 
         target_name, target_type = search_for_id(target, name_to_id)
         if target_type != RearrangeObjectTypes.ARTICULATED_LINK:
             return False
         check_link = sim.get_marker(target_name).link_id
 
-        _, recep_link_id = use_receps[obj_name]
+        if obj_idx >= len(use_receps):
+            logger.info(f"Could not find object {obj_name} in {use_receps}")
+            return False
+
+        _, recep_link_id = use_receps[obj_idx]
         return recep_link_id == check_link
 
     def is_satisfied(

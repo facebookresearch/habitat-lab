@@ -6,6 +6,7 @@
 
 import os
 import os.path as osp
+from glob import glob
 from typing import Any, List
 
 from gym.envs.registration import register, registry
@@ -101,7 +102,10 @@ if "Habitat-v0" not in registry.env_specs:
     rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
     gym_template_handle = "Habitat%s-v0"
     render_gym_template_handle = "HabitatRender%s-v0"
-    for fname in os.listdir(rearrange_configs_dir):
+
+    for fname in glob(
+        osp.join(rearrange_configs_dir, "**/*.yaml"), recursive=True
+    ):
         full_path = osp.join(rearrange_configs_dir, fname)
         if not fname.endswith(".yaml"):
             continue

@@ -55,9 +55,8 @@ class RearrangeStopAction(SimulatorTaskAction):
     name: str = "rearrange_stop"
 
     def step(self, task, *args, **kwargs):
-        if kwargs["REARRANGE_STOP"][0] > 0:
-            logger.info("Requesting episode stop.")
-            task.should_end = True
+        logger.info("Requesting episode stop.")
+        task.should_end = True
         return self._sim.step(HabitatSimActions.REARRANGE_STOP)
 
 

@@ -95,7 +95,7 @@ def test_full_gym_wrapper(config_file, override_options):
     Test the Gym wrapper and its Render wrapper work
     """
     hab_gym = gym.make(
-        "HabitatGym-v0",
+        "Habitat-v0",
         cfg_file_path=config_file,
         override_options=override_options,
         use_render_mode=True,
@@ -105,7 +105,7 @@ def test_full_gym_wrapper(config_file, override_options):
     hab_gym.close()
 
     hab_gym = gym.make(
-        "HabitatGymRender-v0",
+        "HabitatRender-v0",
         cfg_file_path=config_file,
     )
     hab_gym.reset()
@@ -117,7 +117,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/*"),
+        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
@@ -127,7 +127,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = baselines_get_config(test_cfg_path)
     if "GYM_AUTO_NAME" not in config:
         return
-    full_gym_name = f"HabitatGym{config['GYM_AUTO_NAME']}-v0"
+    full_gym_name = f"Habitat{config['GYM_AUTO_NAME']}-v0"
 
     hab_gym = gym.make(full_gym_name)
     hab_gym.reset()
