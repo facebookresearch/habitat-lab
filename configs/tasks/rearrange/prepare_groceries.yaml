@@ -65,20 +65,13 @@ TASK:
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
-    - ABS_GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
-    - DIST_TO_NAV_GOAL
-    - ROT_DIST_TO_NAV_GOAL
-    - ORACLE_NAV_ACTION_SENSOR
-    - ABS_TARGET_START_SENSOR
-    - LOCALIZATION_SENSOR
-    - NAV_GOAL_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: 100000.0
+        MAX_ACCUM_FORCE: 50000.0
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
@@ -102,16 +95,11 @@ TASK:
         TYPE: NavToPosSucc
         SUCCESS_DISTANCE: 0.2
     REARRANGE_NAV_TO_OBJ_REWARD:
-        TYPE: "NavToObjReward"
-        # Reward the agent for facing the object?
-        SHOULD_REWARD_TURN: True
-        # What distance do we start giving the reward for facing the object?
+        TYPE: NavToObjReward
+        SHOULD_REWARD_TURN: true
         TURN_REWARD_DIST: 0.6
-        # Multiplier on the angle distance to the goal.
         ANGLE_DIST_REWARD: 1.0
         DIST_REWARD: 10.0
-
-        # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0

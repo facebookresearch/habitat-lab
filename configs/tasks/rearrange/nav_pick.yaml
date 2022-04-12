@@ -37,20 +37,6 @@ TASK:
         TYPE: GoalSensor
         GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
-    ABS_TARGET_START_SENSOR:
-        TYPE: AbsTargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    ABS_GOAL_SENSOR:
-        TYPE: AbsGoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    DIST_TO_NAV_GOAL:
-        TYPE: DistToNavGoalSensor
-    ROT_DIST_TO_NAV_GOAL:
-        TYPE: NavRotToGoalSensor
-    LOCALIZATION_SENSOR:
-        TYPE: LocalizationSensor
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
@@ -60,27 +46,16 @@ TASK:
         TYPE: IsHoldingSensor
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: RelativeRestingPositionSensor
-    ORACLE_NAV_ACTION_SENSOR:
-        TYPE: OracleNavigationActionSensor
-    NAV_GOAL_SENSOR:
-        TYPE: NavGoalSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
-    - ABS_GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
-    - DIST_TO_NAV_GOAL
-    - ROT_DIST_TO_NAV_GOAL
-    - ORACLE_NAV_ACTION_SENSOR
-    - ABS_TARGET_START_SENSOR
-    - LOCALIZATION_SENSOR
-    - NAV_GOAL_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: 5000.0
+        MAX_ACCUM_FORCE: 50000.0
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
