@@ -51,7 +51,6 @@ SIMULATOR:
         ENABLE_PHYSICS: True
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
         GPU_DEVICE_ID: 0
-        SCENE_LIGHT_SETUP: ""
         FRUSTUM_CULLING: True
         LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER: True
 
