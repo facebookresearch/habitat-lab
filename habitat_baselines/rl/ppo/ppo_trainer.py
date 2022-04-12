@@ -1074,6 +1074,7 @@ class PPOTrainer(BaseRLTrainer):
                                 + primary_obs_name,
                                 fps=2,  # very slow fps
                                 open_vid=False,
+                                include_frame_number=True,
                             )
                     print("done saving videos!")
 

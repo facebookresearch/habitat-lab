@@ -7,6 +7,7 @@
 from collections import OrderedDict
 from typing import Any, Dict, List, Tuple
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 from gym.spaces import Box
@@ -19,6 +20,14 @@ from habitat_sim.utils.common import quat_from_magnum
 import magnum as mn
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
+
+
+class Camera:  # noqa: SIM119
+    def __init__(self, attach_link_name, pos, rotation, hfov):
+        self._attach_link_name = attach_link_name
+        self._pos = pos
+        self._rotation = rotation
+        self._hfov = hfov
 
 
 class StateSensorConfig:
@@ -186,7 +195,6 @@ class BatchedEnv:
             bsim_config.num_envs = self._num_envs
             bsim_config.sensor0.width = sensor_width
             bsim_config.sensor0.height = sensor_height
-            bsim_config.sensor0.hfov = 60.0
             bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.num_physics_substeps = (
@@ -197,6 +205,24 @@ class BatchedEnv:
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
+
+            self._main_camera = Camera(
+                "torso_lift_link",
+                mn.Vector3(-0.536559, 1.16173, 0.568379),
+                mn.Quaternion(
+                    mn.Vector3(-0.26714, -0.541109, -0.186449), 0.775289
+                ),
+                60,
+            )
+
+            # reference code for wide-angle camera
+            # self._main_camera = Camera("torso_lift_link",
+            #     mn.Vector3(-0.536559, 2.16173, 0.568379),
+            #     mn.Quaternion(mn.Vector3(-0.26714, -0.541109, -0.186449), 0.775289),
+            #     75)
+
+            self.set_camera(self._main_camera)
+
         else:
             self._bsim = None
             self.action_dim = 10  # arbitrary
@@ -307,6 +333,14 @@ class BatchedEnv:
         self._paused: List[int] = []
         self._num_episodes = self._bsim.get_num_episodes()
         self._next_episode_idx = 0
+
+    def set_camera(self, camera):
+        self._bsim.set_robot_camera(
+            camera._attach_link_name,
+            camera._pos,
+            camera._rotation,
+            camera._hfov,
+        )
 
     @property
     def num_envs(self):
