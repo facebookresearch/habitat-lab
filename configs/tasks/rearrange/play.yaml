@@ -55,7 +55,7 @@ TASK:
 
     ########################
     # General measures
-    EXCESSIVE_FORCE_SHOULD_END:
+    FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
     ROBOT_FORCE:

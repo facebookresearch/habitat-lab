@@ -48,6 +48,7 @@ repos:
     hooks:
     - id: black
       exclude: ^examples/tutorials/(nb_python|colabs)
+      additional_dependencies: ['click==8.0.4']
 
 -   repo: https://github.com/myint/autoflake
     rev: v1.4
