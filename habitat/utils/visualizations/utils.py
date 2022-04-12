@@ -104,6 +104,7 @@ def images_to_video(
     fps: int = 10,
     quality: Optional[float] = 5,
     verbose: bool = True,
+    include_frame_number: bool = False,
     **kwargs,
 ):
     r"""Calls imageio to run FFMPEG on a list of images. For more info on
@@ -124,10 +125,20 @@ def images_to_video(
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
+    output_params = (
+        [
+            "-vf",
+            "drawtext=fontfile=Arial.ttf: text='%{frame_num}': start_number=0: x=0: y=1: fontcolor=black: fontsize=10: box=1: boxcolor=white: boxborderw=1",
+        ]
+        if include_frame_number
+        else None
+    )
+
     writer = imageio.get_writer(
         os.path.join(output_dir, video_name),
         fps=fps,
         quality=quality,
+        output_params=output_params,
         **kwargs,
     )
     logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
