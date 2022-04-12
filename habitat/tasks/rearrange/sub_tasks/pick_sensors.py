@@ -14,6 +14,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
+from habitat.tasks.rearrange.utils import logger
 
 
 @registry.register_measure
@@ -109,6 +110,7 @@ class RearrangePickReward(RearrangeReward):
                 # picked the wrong object
                 reward -= self._config.WRONG_PICK_PEN
                 if self._config.WRONG_PICK_SHOULD_END:
+                    logger.info("Grasped wrong object, ending episode.")
                     self._task.should_end = True
                 self._metric = reward
                 self._prev_picked = cur_picked

@@ -37,6 +37,8 @@ class RearrangeTask(NavigationTask):
     all rearrangement tasks.
     """
 
+    _cur_episode_step: int
+
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
 
@@ -51,6 +53,7 @@ class RearrangeTask(NavigationTask):
         self._sim_reset = True
         self._targ_idx: int = 0
         self._episode_id: str = ""
+        self._cur_episode_step = 0
 
     @property
     def targ_idx(self):
@@ -104,6 +107,7 @@ class RearrangeTask(NavigationTask):
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
+        self._cur_episode_step += 1
 
         return obs
 
@@ -195,6 +199,6 @@ class RearrangeTask(NavigationTask):
         if new_val:
             logger.info("-" * 40)
             logger.info(
-                f"-----Episode {self._episode_id} requested to end.-----"
+                f"-----Episode {self._episode_id} requested to end after {self._cur_episode_step} steps.-----"
             )
             logger.info("-" * 40)

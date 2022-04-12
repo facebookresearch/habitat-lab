@@ -308,6 +308,9 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_to_task_name,
                     self._nav_to_obj_type,
                 ) = self.start_states[full_key]
+                logger.info(
+                    f"Forcing episode, loaded `{full_key}` from cache {self.cache.cache_id}."
+                )
             else:
                 (
                     self._nav_target_pos,
@@ -322,7 +325,11 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_to_task_name,
                     self._nav_to_obj_type,
                 )
-                self.cache.save(self.start_states)
+                if self._config.SHOULD_SAVE_TO_CACHE:
+                    self.cache.save(self.start_states)
+                    logger.info(
+                        f"Forcing episode, saved key `{full_key}` to cache {self.cache.cache_id}."
+                    )
             start_pos, start_rot = get_robo_start_pos(
                 sim, self._nav_target_pos
             )
@@ -339,6 +346,9 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_to_task_name,
                     self._nav_to_obj_type,
                 ) = self.start_states[episode_id]
+                logger.info(
+                    f"Loaded episode from cache {self.cache.cache_id}."
+                )
 
                 sim.robot.base_pos = mn.Vector3(
                     start_pos[0],
@@ -363,7 +373,11 @@ class DynNavRLEnv(RearrangeTask):
                     self._nav_to_task_name,
                     self._nav_to_obj_type,
                 )
-                self.cache.save(self.start_states)
+                if self._config.SHOULD_SAVE_TO_CACHE:
+                    self.cache.save(self.start_states)
+                    logger.info(
+                        f"Saved episode to cache {self.cache.cache_id}."
+                    )
 
             targ_idxs, goal_pos = sim.get_targets()
 

@@ -59,7 +59,10 @@ _C.TASK.COUNT_OBJ_COLLISIONS = True
 _C.TASK.COUNT_ROBOT_OBJ_COLLS = False
 _C.TASK.SETTLE_STEPS = 5
 _C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = False
-_C.TASK.FORCE_REGENERATE = False
+_C.TASK.FORCE_REGENERATE = (
+    False  # Forced to regenerate the starts even if they are already cached.
+)
+_C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.DEBUG_GOAL_POINT = True
 _C.TASK.RENDER_TARGET = True
@@ -80,7 +83,6 @@ _C.TASK.SUCCESS_MEASUREMENT = ""
 # If true, does not care about navigability or collisions with objects when spawning
 # robot
 _C.TASK.EASY_INIT = False
-_C.TASK.FORCE_RECACHE = False
 _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG

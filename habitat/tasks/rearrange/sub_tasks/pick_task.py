@@ -263,7 +263,8 @@ class RearrangePickTaskV1(RearrangeTask):
             )
             logger.info(f"Finished creating init for {self}")
             self.start_states[cache_lookup_k] = (start_pos, start_rot, sel_idx)
-            self.cache.save(self.start_states)
+            if self._config.SHOULD_SAVE_TO_CACHE:
+                self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot

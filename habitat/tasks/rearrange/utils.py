@@ -241,17 +241,14 @@ class CacheHelper:
         try:
             with open(self.cache_id, "rb") as f:
                 if self.verbose:
-                    print("Loading cache @", self.cache_id)
+                    logger.info(f"Loading cache @{self.cache_id}")
                 return pickle.load(f)
         except EOFError as e:
             if load_depth == 32:
                 raise e
             # try again soon
-            print(
-                "Cache size is ",
-                osp.getsize(self.cache_id),
-                "for ",
-                self.cache_id,
+            logger.warning(
+                f"Cache size is {osp.getsize(self.cache_id)} for {self.cache_id}"
             )
             time.sleep(1.0 + np.random.uniform(0.0, 1.0))
             return self.load(load_depth + 1)
@@ -259,7 +256,7 @@ class CacheHelper:
     def save(self, val):
         with open(self.cache_id, "wb") as f:
             if self.verbose:
-                print("Saving cache @", self.cache_id)
+                logger.info(f"Saving cache @ {self.cache_id}")
             pickle.dump(val, f)
 
 

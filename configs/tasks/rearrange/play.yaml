@@ -24,7 +24,7 @@ TASK:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     EASY_INIT: False
-    FORCE_RECACHE: True
+    FORCE_REGENERATE: True
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
