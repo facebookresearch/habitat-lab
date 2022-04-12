@@ -81,6 +81,7 @@ _C.TASK.SUCCESS_MEASUREMENT = "art_obj_success"
 # robot
 _C.TASK.EASY_INIT = False
 _C.TASK.FORCE_RECACHE = False
+_C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
