@@ -199,6 +199,9 @@ if vut.is_notebook():
 # Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
 #
 # See [here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines) for more information on how to run with Habitat Baselines.
+
+# %% [markdown]
+# ## Home Assistant Benchmark (HAB) Tasks
 #
 # To run the HAB tasks, use any of the training configurations here: [here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange/hab). For example, to run monolithic RL training on the Tidy House task run:
 # ```
@@ -208,6 +211,7 @@ if vut.is_notebook():
 # ```
 # python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH configs/tasks/rearrange/set_table.yaml
 # ```
+# These tasks are also accessible via the Gym interface (tutorial [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb)).
 
 # %% [markdown]
 # # Defining New Tasks
@@ -621,7 +625,3 @@ with open(nav_pick_cfg_path, "w") as f:
 
 # %% [markdown]
 # To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
-
-# %% [markdown]
-# # Home Assistant Benchmark
-# Tutorial for the home assistant benchmark and how to setup new tasks in a [PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) like task specification is coming soon!

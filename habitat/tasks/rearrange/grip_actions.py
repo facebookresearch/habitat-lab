@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Union
+
 import numpy as np
 from gym import spaces
 
@@ -101,7 +103,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
     def step(self, _, should_step=True, *args, **kwargs):
         if self._sim.grasp_mgr.is_grasped:
             return
-        attempt_snap_idx = None
+        attempt_snap_entity: Union[str, int] = None
         contacts = self._sim.get_physics_contact_points()
 
         robot_id = self._sim.robot.sim_obj.object_id
@@ -115,10 +117,10 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 c for c in robot_contacts if coll_name_matches(c, scene_obj_id)
             )
             if has_robot_match:
-                attempt_snap_idx = scene_obj_id
+                attempt_snap_entity = scene_obj_id
 
-        if attempt_snap_idx is not None:
-            self._sim.grasp_mgr.snap_to_obj(attempt_snap_idx)
+        if attempt_snap_entity is not None:
+            self._sim.grasp_mgr.snap_to_obj(int(attempt_snap_entity))
             return
 
         # Contacted any markers?
@@ -131,7 +133,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 and coll_link_name_matches(c, marker.link_id)
             )
             if has_match:
-                attempt_snap_idx = marker_name
+                attempt_snap_entity = marker_name
 
-        if attempt_snap_idx is not None:
-            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_idx))
+        if attempt_snap_entity is not None:
+            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_entity))

@@ -15,9 +15,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: Python [conda env:habitat] *
 #     language: python
-#     name: python3
+#     name: conda-env-habitat-py
 #   language_info:
 #     codemirror_mode:
 #       name: ipython
@@ -83,7 +83,7 @@ import habitat_baselines.utils.gym_definitions
 # This example sets up the Pick task in render mode which includes a high resolution camera in the scene for visualization.
 
 # %%
-env = gym.make("HabitatGymRenderPick-v0")
+env = gym.make("HabitatRenderPick-v0")
 
 video_file_path = "data/example_interact.mp4"
 video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
@@ -102,23 +102,23 @@ env.close()
 
 # %% [markdown]
 # # Environment Options
-# To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `HabitatGym[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be included.
+# To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `Habitat[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be included.
 #
 # * Skills:
-#     * `HabitatGymPick-v0`
-#     * `HabitatGymPlace-v0`
-#     * `HabitatGymCloseCab-v0`
-#     * `HabitatGymCloseFridge-v0`
-#     * `HabitatGymOpenCab-v0`
-#     * `HabitatGymOpenFridge-v0`
-#     * `HabitatGymNavToObj-v0`
-#     * `HabitatGymReachState-v0`
+#     * `HabitatPick-v0`
+#     * `HabitatPlace-v0`
+#     * `HabitatCloseCab-v0`
+#     * `HabitatCloseFridge-v0`
+#     * `HabitatOpenCab-v0`
+#     * `HabitatOpenFridge-v0`
+#     * `HabitatNavToObj-v0`
+#     * `HabitatReachState-v0`
 # * Home Assistant Benchmark (HAB) tasks:
-#     * `HabitatGymTidyHouse-v0`
-#     * `HabitatGymPrepareGroceries-v0`
-#     * `HabitatGymSetTable-v0`
-#     * `HabitatGymNavPick-v0`
-#     * `HabitatGymNavPickNavPlace-v0`
+#     * `HabitatTidyHouse-v0`
+#     * `HabitatPrepareGroceries-v0`
+#     * `HabitatSetTable-v0`
+#     * `HabitatNavPick-v0`
+#     * `HabitatNavPickNavPlace-v0`
 #
 # The Gym environments are automatically registered from the RL training configurations under ["habitat_baselines/config/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_dev/habitat_baselines/config/rearrange). The `GYM_AUTO_NAME` key in the YAML file determines the `[Task Name]`. The observation keys in `RL.GYM_OBS_KEYS` are what is returned in the observation space. If the the observations are a set of 1D arrays, then the observation space is automatically flattened. For example, in `HabitatGymReachState-v0` the observation space is `RL.GYM_OBS_KEYS = ['joint', 'relative_resting_position']`. `joint` is a 7D array and `relative_resting_position` is a 3D array. These two arrays are concatenated automatically to give a `10D` observation space. On the other hand, in environments with image observations, the observation is returned as a dictionary.
 #
@@ -126,12 +126,12 @@ env.close()
 
 # %%
 # Dictionary observation space
-env = gym.make("HabitatGymPick-v0")
+env = gym.make("HabitatPick-v0")
 print({k: v.shape for k, v in env.observation_space.spaces.items()})
 env.close()
 
 # Array observation space
-env = gym.make("HabitatGymReachState-v0")
+env = gym.make("HabitatReachState-v0")
 print(env.observation_space)
 env.close()
 
@@ -142,7 +142,7 @@ env.close()
 
 # %%
 env = gym.make(
-    "HabitatGymPick-v0",
+    "HabitatPick-v0",
     override_options=[
         "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
         "SuctionGraspAction",

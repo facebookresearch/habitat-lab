@@ -75,8 +75,8 @@ _C.TASK.DESIRED_RESTING_POSITION = []
 _C.TASK.USE_MARKER_T = True
 _C.TASK.SUCCESS_STATE = 0.0
 # Measurements for composite tasks.
-_C.TASK.REWARD_MEASUREMENT = "art_obj_reward"
-_C.TASK.SUCCESS_MEASUREMENT = "art_obj_success"
+_C.TASK.REWARD_MEASUREMENT = ""
+_C.TASK.SUCCESS_MEASUREMENT = ""
 # If true, does not care about navigability or collisions with objects when spawning
 # robot
 _C.TASK.EASY_INIT = False
@@ -523,8 +523,12 @@ _C.SIMULATOR.AUTO_SLEEP = False
 _C.SIMULATOR.STEP_PHYSICS = True
 _C.SIMULATOR.UPDATE_ROBOT = True
 _C.SIMULATOR.CONCUR_RENDER = False
-_C.SIMULATOR.NEEDS_MARKERS = True
-_C.SIMULATOR.UPDATE_ROBOT = True
+_C.SIMULATOR.NEEDS_MARKERS = (
+    True  # If markers should be updated at every step.
+)
+_C.SIMULATOR.UPDATE_ROBOT = (
+    True  # If the robot camera positions should be updated at every step.
+)
 _C.SIMULATOR.SCENE = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
