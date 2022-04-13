@@ -87,6 +87,7 @@ class RearrangeTask(NavigationTask):
         self.prev_coll_accum = CollisionDetails()
         self.should_end = False
         self._done = False
+        self._cur_episode_step = 0
 
         self._sim.set_robot_base_to_random_point()
 

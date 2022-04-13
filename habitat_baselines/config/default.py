@@ -257,7 +257,9 @@ def get_config(
             if k == "BASE_TASK_CONFIG_PATH":
                 config.BASE_TASK_CONFIG_PATH = v
 
+    old_task_config = config.get("TASK_CONFIG", {})
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
+    config.TASK_CONFIG.merge_from_other_cfg(old_task_config)
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)

@@ -301,6 +301,7 @@ class EmbodiedTask:
         action_name: Any,
         action: Dict[str, Any],
         episode: Episode,
+        is_last_action=True,
     ):
         if isinstance(action_name, (int, np.integer)):
             action_name = self.get_action_name(action_name)
@@ -309,7 +310,11 @@ class EmbodiedTask:
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
         observations.update(
-            task_action.step(**action["action_args"], task=self)
+            task_action.step(
+                **action["action_args"],
+                task=self,
+                is_last_action=is_last_action,
+            )
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
@@ -318,8 +323,14 @@ class EmbodiedTask:
             action["action_args"] = {}
         observations: Any = {}
         if isinstance(action_name, tuple):  # there are multiple actions
-            for a_name in action_name:
-                self._step_single_action(observations, a_name, action, episode)
+            for i, a_name in enumerate(action_name):
+                self._step_single_action(
+                    observations,
+                    a_name,
+                    action,
+                    episode,
+                    i == len(action_name) - 1,
+                )
         else:
             self._step_single_action(
                 observations, action_name, action, episode

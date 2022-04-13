@@ -37,6 +37,20 @@ TASK:
         TYPE: GoalSensor
         GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
+    ABS_TARGET_START_SENSOR:
+        TYPE: AbsTargetStartSensor
+        GOAL_FORMAT: CARTESIAN
+        DIMENSIONALITY: 3
+    ABS_GOAL_SENSOR:
+        TYPE: AbsGoalSensor
+        GOAL_FORMAT: CARTESIAN
+        DIMENSIONALITY: 3
+    DIST_TO_NAV_GOAL:
+        TYPE: DistToNavGoalSensor
+    ROT_DIST_TO_NAV_GOAL:
+        TYPE: NavRotToGoalSensor
+    LOCALIZATION_SENSOR:
+        TYPE: LocalizationSensor
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
@@ -46,6 +60,10 @@ TASK:
         TYPE: IsHoldingSensor
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: RelativeRestingPositionSensor
+    ORACLE_NAV_ACTION_SENSOR:
+        TYPE: OracleNavigationActionSensor
+    NAV_GOAL_SENSOR:
+        TYPE: NavGoalSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR

@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Union
+from typing import Any, Union
 
 import torch
 from gym import spaces
@@ -24,7 +24,47 @@ from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
 
-class Policy(nn.Module, metaclass=abc.ABCMeta):
+class Policy(abc.ABC):
+    action_distribution: nn.Module
+
+    def __init__(self):
+        self.net: Any = None
+        self.critic: Any = None
+        self.parameters: Any = None
+        self.get_value: Any = None
+        self.load_state_dict: Any = None
+        self.evaluate_actions: Any = None
+        self.to: Any = None
+        self.eval: Any = None
+
+    @property
+    def should_load_agent_state(self):
+        return True
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        return self.net.num_recurrent_layers
+
+    def forward(self, *x):
+        raise NotImplementedError
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        deterministic=False,
+    ):
+        raise NotImplementedError
+
+    @classmethod
+    @abc.abstractmethod
+    def from_config(cls, config, observation_space, action_space):
+        pass
+
+
+class NetPolicy(nn.Module, Policy):
     action_distribution: nn.Module
 
     def __init__(self, net, dim_actions, policy_config=None):
@@ -133,7 +173,7 @@ class CriticHead(nn.Module):
 
 
 @baseline_registry.register_policy
-class PointNavBaselinePolicy(Policy):
+class PointNavBaselinePolicy(NetPolicy):
     def __init__(
         self,
         observation_space: spaces.Dict,
