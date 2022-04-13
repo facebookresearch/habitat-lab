@@ -53,7 +53,7 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo import PPO
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
     action_array_to_dict,
@@ -79,7 +79,7 @@ class PPOTrainer(BaseRLTrainer):
     _obs_batching_cache: ObservationBatchingCache
     envs: VectorEnv
     agent: PPO
-    actor_critic: Policy
+    actor_critic: NetPolicy
 
     def __init__(self, config=None):
         super().__init__(config)

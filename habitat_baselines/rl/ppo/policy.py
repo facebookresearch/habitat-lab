@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Any, Union
+from typing import Union
 
 import torch
 from gym import spaces
@@ -28,14 +28,7 @@ class Policy(abc.ABC):
     action_distribution: nn.Module
 
     def __init__(self):
-        self.net: Any = None
-        self.critic: Any = None
-        self.parameters: Any = None
-        self.get_value: Any = None
-        self.load_state_dict: Any = None
-        self.evaluate_actions: Any = None
-        self.to: Any = None
-        self.eval: Any = None
+        pass
 
     @property
     def should_load_agent_state(self):
@@ -43,7 +36,7 @@ class Policy(abc.ABC):
 
     @property
     def num_recurrent_layers(self) -> int:
-        return self.net.num_recurrent_layers
+        return 0
 
     def forward(self, *x):
         raise NotImplementedError
