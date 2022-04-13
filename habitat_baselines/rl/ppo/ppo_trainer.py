@@ -1126,27 +1126,43 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
-        if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
-            action_shape = (2,)
+        if self.config.BATCHED_ENV:
+            self.policy_action_space = self.envs.action_spaces[0]
+            action_shape = self.policy_action_space.shape
             action_type = torch.float
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = (1,)
-            action_type = torch.long
+            if self.using_velocity_ctrl:
+                self.policy_action_space = self.envs.action_spaces[0][
+                    "VELOCITY_CONTROL"
+                ]
+                action_shape = (2,)
+                action_type = torch.float
+            else:
+                self.policy_action_space = self.envs.action_spaces[0]
+                action_shape = (1,)
+                action_type = torch.long
 
         self._setup_actor_critic_agent(ppo_cfg)
 
         self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
-        assert not self.config.BATCHED_ENV  # todo: eval for batched env
+        if self.config.BATCHED_ENV:
+            self.envs.is_eval = True  # todo: move to bsim init
+            self.envs._bsim.enable_debug_sensor(True)  # todo: encapsulate
+
         observations = self.envs.reset()
-        batch = batch_obs(
-            observations, device=self.device, cache=self._obs_batching_cache
-        )
+        if self.config.BATCHED_ENV:
+            batch = observations
+            # sloppy: move to correct device
+            for obs_name in batch:
+                batch[obs_name] = batch[obs_name].to(self.device)
+        else:
+            batch = batch_obs(
+                observations,
+                device=self.device,
+                cache=self._obs_batching_cache,
+            )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
         current_episode_reward = torch.zeros(
@@ -1217,29 +1233,37 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
-            # NB: Move actions to CPU.  If CUDA tensors are
-            # sent in to env.step(), that will create CUDA contexts
-            # in the subprocesses.
-            # For backwards compatibility, we also call .item() to convert to
-            # an int
-            if self.using_velocity_ctrl:
-                step_data = [
-                    action_to_velocity_control(a)
-                    for a in actions.to(device="cpu")
-                ]
+
+            if self.config.BATCHED_ENV:
+                step_data = actions
             else:
-                step_data = [a.item() for a in actions.to(device="cpu")]
+                # NB: Move actions to CPU.  If CUDA tensors are
+                # sent in to env.step(), that will create CUDA contexts
+                # in the subprocesses.
+                # For backwards compatibility, we also call .item() to convert to
+                # an int
+                if self.using_velocity_ctrl:
+                    step_data = [
+                        action_to_velocity_control(a)
+                        for a in actions.to(device="cpu")
+                    ]
+                else:
+                    step_data = [a.item() for a in actions.to(device="cpu")]
 
             outputs = self.envs.step(step_data)
 
-            observations, rewards_l, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
-            batch = batch_obs(
-                observations,
-                device=self.device,
-                cache=self._obs_batching_cache,
-            )
+            if self.config.BATCHED_ENV:
+                batched_observations, rewards_l, dones, infos = outputs
+                batch = batched_observations
+            else:
+                observations, rewards_l, dones, infos = [
+                    list(x) for x in zip(*outputs)
+                ]
+                batch = batch_obs(
+                    observations,
+                    device=self.device,
+                    cache=self._obs_batching_cache,
+                )
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
             not_done_masks = torch.tensor(
@@ -1271,6 +1295,7 @@ class PPOTrainer(BaseRLTrainer):
                         self._extract_scalars_from_info(infos[i])
                     )
                     current_episode_reward[i] = 0
+                    assert current_episodes[i].episode_id >= 0
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[
                         (
@@ -1288,6 +1313,7 @@ class PPOTrainer(BaseRLTrainer):
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
+                            include_frame_number=True,
                         )
 
                         rgb_frames[i] = []
@@ -1301,6 +1327,8 @@ class PPOTrainer(BaseRLTrainer):
                     rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)
+            if self.config.BATCHED_ENV:
+                assert len(envs_to_pause) == 0  # pausing not supported
             (
                 self.envs,
                 test_recurrent_hidden_states,
