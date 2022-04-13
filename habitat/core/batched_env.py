@@ -376,7 +376,7 @@ class BatchedEnv:
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
-            max_episode_len = 500
+            max_episode_len = 50
 
             # Target position is arbitrarily fixed
             local_target_position = mn.Vector3(0.6, 1, 0.6)

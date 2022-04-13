@@ -220,11 +220,9 @@ class PPO(nn.Module):
         pass
 
     def before_step(self) -> None:
-        pass
-        # if False:
-        #    nn.utils.clip_grad_norm_(
-        #        self.actor_critic.parameters(), self.max_grad_norm
-        #    )
+        nn.utils.clip_grad_norm_(
+            self.actor_critic.parameters(), self.max_grad_norm
+        )
 
     def after_step(self) -> None:
         pass
