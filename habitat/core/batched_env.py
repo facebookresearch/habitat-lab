@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -124,6 +125,23 @@ class JointSensorConfig(StateSensorConfig):
         return state.robot_joint_positions[-9:-2]
 
 
+# Note this class must match an API expected by PPOTrainer (episode_id and scene_id).
+# Beware adding extra state to this class as we often make deep copies of these objects.
+class EnvironmentEpisodeState:
+    def __init__(self, episode_id):
+        self.episode_id = episode_id
+
+    @property
+    def scene_id(self):
+        return 0  # unused
+
+    def is_disabled(self):
+        return self.episode_id == -1
+
+    def set_disabled(self):
+        self.episode_id = -1
+
+
 class BatchedEnv:
     r"""Todo"""
 
@@ -173,10 +191,13 @@ class BatchedEnv:
         agent_0_config = getattr(config.SIMULATOR, agent_0_name)
         sensor_0_name = agent_0_config.SENSORS[0]
         agent_0_sensor_0_config = getattr(config.SIMULATOR, sensor_0_name)
-        sensor_width, sensor_height = (
+        sensor0_width, sensor0_height = (
             agent_0_sensor_0_config.WIDTH,
             agent_0_sensor_0_config.HEIGHT,
         )
+        include_debug_sensor = "DEBUG_RGB_SENSOR" in config.SENSORS
+        debug_width = 512
+        debug_height = 512
 
         if not config.STUB_BATCH_SIMULATOR:
             # require CUDA 11.0+ (lower versions will work but runtime perf will be bad!)
@@ -193,18 +214,26 @@ class BatchedEnv:
             bsim_config.include_depth = include_depth
             bsim_config.include_color = include_rgb
             bsim_config.num_envs = self._num_envs
-            bsim_config.sensor0.width = sensor_width
-            bsim_config.sensor0.height = sensor_height
+            bsim_config.sensor0.width = sensor0_width
+            bsim_config.sensor0.height = sensor0_height
+            bsim_config.num_debug_envs = (
+                self._num_envs if include_debug_sensor else 0
+            )
+            bsim_config.debug_sensor.width = debug_width
+            bsim_config.debug_sensor.height = debug_height
             bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
             bsim_config.num_physics_substeps = (
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
             bsim_config.do_procedural_episode_set = True
+            bsim_config.num_procedural_episodes = 100
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
+
+            self._bsim.enable_debug_sensor(False)
 
             self._main_camera = Camera(
                 "torso_lift_link",
@@ -214,6 +243,23 @@ class BatchedEnv:
                 ),
                 60,
             )
+            self.set_camera("sensor0", self._main_camera)
+
+            if include_debug_sensor:
+                self._debug_camera = Camera(
+                    "base_link",
+                    mn.Vector3(
+                        -0.8, 1.8, -0.8
+                    ),  # place behind, above, and to the left of the base
+                    mn.Quaternion.rotation(
+                        mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
+                    )  # face 30 degs to the right
+                    * mn.Quaternion.rotation(
+                        mn.Deg(-45.0), mn.Vector3(1.0, 0.0, 0.0)
+                    ),  # tilt down
+                    60,
+                )
+                self.set_camera("debug", self._debug_camera)
 
             # reference code for wide-angle camera
             # self._main_camera = Camera("torso_lift_link",
@@ -221,13 +267,12 @@ class BatchedEnv:
             #     mn.Quaternion(mn.Vector3(-0.26714, -0.541109, -0.186449), 0.775289),
             #     75)
 
-            self.set_camera(self._main_camera)
+            self.is_eval = False
 
         else:
             self._bsim = None
             self.action_dim = 10  # arbitrary
 
-        double_buffered = False
         buffer_index = 0
 
         observations = OrderedDict()
@@ -238,31 +283,37 @@ class BatchedEnv:
                 observations["rgb"] = bps_pytorch.make_color_tensor(
                     self._bsim.rgba(buffer_index),
                     SIMULATOR_GPU_ID,
-                    self._num_envs // (2 if double_buffered else 1),
-                    [sensor_height, sensor_width],
-                )[..., 0:3].permute(
-                    0, 1, 2, 3
-                )  # todo: get rid of no-op permute
+                    self._num_envs,
+                    [sensor0_height, sensor0_width],
+                )[..., 0:3]
 
             if include_depth:
                 observations["depth"] = bps_pytorch.make_depth_tensor(
                     self._bsim.depth(buffer_index),
                     SIMULATOR_GPU_ID,
-                    self._num_envs // (2 if double_buffered else 1),
-                    [sensor_height, sensor_width],
+                    self._num_envs,
+                    [sensor0_height, sensor0_width],
                 ).unsqueeze(3)
+
+            if include_debug_sensor:
+                observations["debug_rgb"] = bps_pytorch.make_color_tensor(
+                    self._bsim.debug_rgba(buffer_index),
+                    SIMULATOR_GPU_ID,
+                    self._num_envs,
+                    [debug_height, debug_width],
+                )[..., 0:3]
 
         else:
             observations["rgb"] = (
                 torch.rand(
-                    [self._num_envs, sensor_height, sensor_width, 3],
+                    [self._num_envs, sensor0_height, sensor0_width, 3],
                     dtype=torch.float32,
                 )
                 * 255
             )
             observations["depth"] = (
                 torch.rand(
-                    [self._num_envs, sensor_height, sensor_width, 1],
+                    [self._num_envs, sensor0_height, sensor0_width, 1],
                     dtype=torch.float32,
                 )
                 * 255
@@ -304,6 +355,20 @@ class BatchedEnv:
             )
             obs_dict["depth"] = depth_obs
 
+        if include_debug_sensor:
+            RGBSENSOR_DIMENSION = 3
+            debug_rgb_obs = spaces.Box(
+                low=0,
+                high=255,
+                shape=(
+                    debug_height,
+                    debug_width,
+                    RGBSENSOR_DIMENSION,
+                ),
+                dtype=np.uint8,
+            )
+            obs_dict["debug_rgb"] = debug_rgb_obs
+
         for ssc in self.state_sensor_config:
             obs_dict[ssc.obs_key] = spaces.Box(
                 low=-np.inf,
@@ -334,30 +399,46 @@ class BatchedEnv:
         self._num_episodes = self._bsim.get_num_episodes()
         self._next_episode_idx = 0
 
-    def set_camera(self, camera):
-        self._bsim.set_robot_camera(
-            camera._attach_link_name,
+    def set_camera(self, sensor_name, camera):
+        self._bsim.set_camera(
+            sensor_name,
             camera._pos,
             camera._rotation,
             camera._hfov,
+            camera._attach_link_name,
         )
 
     @property
     def num_envs(self):
         r"""number of individual environments."""
-        return self._num_envs - len(self._paused)
+        return self._num_envs
+
+    @property
+    def number_of_episodes(self):
+        return [self._num_episodes]  # user code wants a list of counts
 
     def get_next_episode(self):
         assert self._num_episodes > 0
         retval = self._next_episode_idx
-        self._next_episode_idx = (
-            self._next_episode_idx + 1
-        ) % self._num_episodes
+
+        if self.is_eval:
+            # for eval, we launch all episodes once, then return -1
+            if self._next_episode_idx == -1:
+                pass
+            elif self._next_episode_idx + 1 == self._num_episodes:
+                self._next_episode_idx = -1
+            else:
+                self._next_episode_idx += 1
+        else:
+            self._next_episode_idx = (
+                self._next_episode_idx + 1
+            ) % self._num_episodes
+
         return retval
 
     def current_episodes(self):
-        # todo: get current episode name from envs
-        raise NotImplementedError()
+        # make deep copy of _current_episodes
+        return copy.deepcopy(self._current_episodes)
 
     def count_episodes(self):
         raise NotImplementedError()
@@ -377,6 +458,13 @@ class BatchedEnv:
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
             max_episode_len = 50
+            if self._current_episodes[b].is_disabled():
+                # let this episode continue in the sim; ignore the results
+                assert self.resets[b] == -1
+                self.dones[b] = False
+                self.rewards[b] = 0
+                self.infos[b] = {}
+                continue
 
             # Target position is arbitrarily fixed
             local_target_position = mn.Vector3(0.6, 1, 0.6)
@@ -395,13 +483,25 @@ class BatchedEnv:
             success = curr_dist < success_dist
             if success or state.episode_step_idx >= max_episode_len:
                 self.dones[b] = True
-                self.resets[b] = self.get_next_episode()
                 self.rewards[b] = 10.0 if success else 0.0
                 self.infos[b] = {
                     "success": float(success),
                     "episode_steps": state.episode_step_idx,
                 }
                 self._previous_state[b] = None
+
+                next_episode = self.get_next_episode()
+                if next_episode != -1:
+                    self.resets[b] = next_episode
+                    self._current_episodes[b].episode_id = next_episode
+                else:
+                    # There are no more episodes to launch, so disable this env. We'll
+                    # hit this case during eval.
+                    # Note we don't yet communicate a disabled env to the sim; the
+                    # sim continues simulating this episode and we'll ignore the result.
+                    self.resets[b] = -1  # don't reset env
+                    self._current_episodes[b].set_disabled()
+
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
@@ -425,7 +525,23 @@ class BatchedEnv:
         :return: list of outputs from the reset method of envs.
         """
 
-        self.resets = [self.get_next_episode() for _ in range(self._num_envs)]
+        self.resets = [-1] * self._num_envs
+        self._current_episodes = [
+            EnvironmentEpisodeState(-1) for _ in range(self._num_envs)
+        ]
+
+        for b in range(self._num_envs):
+            next_episode = self.get_next_episode()
+            if next_episode != -1:
+                self.resets[b] = next_episode
+                self._current_episodes[b].episode_id = next_episode
+            else:
+                # There are no more episodes to launch, so disable this env. We'll
+                # hit this case during eval.
+                # Note we don't yet communicate a disabled env to the sim; the
+                # sim is assigned an arbitrary episode and we'll ignore the result.
+                self.resets[b] = 0  # arbitrary episode
+                self._current_episodes[b].set_disabled()
 
         if self._bsim:
             self._bsim.reset(self.resets)
