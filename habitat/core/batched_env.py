@@ -470,7 +470,7 @@ class BatchedEnv:
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
-            max_episode_len = 500
+            max_episode_len = 50
             if self._current_episodes[b].is_disabled():
                 # let this episode continue in the sim; ignore the results
                 assert self.resets[b] == -1

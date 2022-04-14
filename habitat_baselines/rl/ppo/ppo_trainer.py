@@ -30,7 +30,10 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_writer,
+)
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -825,9 +828,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.RL.PPO
 
         with (
-            TensorboardWriter(
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
-            )
+            get_writer(self.config, flush_secs=self.flush_secs)
             if rank0_only()
             else contextlib.suppress()
         ) as writer:

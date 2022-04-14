@@ -9,7 +9,7 @@ SAVE_VIDEOS_INTERVAL: 500
 LOG_INTERVAL: 1
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 20000000.0
-NUM_ENVIRONMENTS: 64
+NUM_ENVIRONMENTS: 512
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
@@ -18,6 +18,12 @@ SIMULATOR:
   HEAD_RGB_SENSOR:
     WIDTH: 128
     HEIGHT: 128
+WRITER_TYPE: "wb"
+WB:
+  PROJECT_NAME: "gala"
+  ENTITY: "vincentpierre"
+  GROUP: ""
+  RUN_NAME: ""
 RL:
   PPO:
     ppo_epoch: 1
@@ -26,7 +32,7 @@ RL:
     lr: 2.5e-4
     use_normalized_advantage: True
     use_linear_lr_decay: False
-    max_grad_norm: 1.0
+    max_grad_norm: 100.0
   POLICY:
     name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
