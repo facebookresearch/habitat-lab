@@ -207,7 +207,19 @@ class BatchedEnv:
             from habitat_sim._ext.habitat_sim_bindings import (
                 BatchedSimulator,
                 BatchedSimulatorConfig,
+                EpisodeGeneratorConfig,
             )
+
+            generator_config = EpisodeGeneratorConfig()
+            # defaults:
+            # generator_config.numEpisodes = 100
+            # generator_config.seed = 3
+            # generator_config.num_stage_variations = 12
+            # generator_config.num_object_variations = 6
+            # generator_config.min_nontarget_objects = 27
+            # generator_config.max_nontarget_objects = 32
+            # generator_config.used_fixed_robot_start_pos = True
+            # generator_config.use_fixed_robot_start_yaw = False
 
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
@@ -227,7 +239,8 @@ class BatchedEnv:
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
             bsim_config.do_procedural_episode_set = True
-            bsim_config.num_procedural_episodes = 100
+            bsim_config.episode_generator_config = generator_config
+
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
 
