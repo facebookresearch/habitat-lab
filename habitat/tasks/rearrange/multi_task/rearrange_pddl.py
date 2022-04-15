@@ -17,8 +17,8 @@ import numpy as np
 from habitat import Config
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
-    load_task_object,
+from habitat.tasks.rearrange.multi_task.task_creator_utils import (
+    create_task_object,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
@@ -79,7 +79,7 @@ class Predicate:
     def __init__(self, load_config: Dict[str, Any]):
         self.name = load_config["name"]
         if "state" in load_config:
-            self.set_state = SetState(load_config["state"])
+            self.set_state = PddlSetState(load_config["state"])
         else:
             self.set_state = None
         self.args = load_config.get("args", [])
@@ -117,7 +117,7 @@ class Predicate:
         return str(self)
 
 
-class Action:
+class PddlAction:
     """
     :property task: The name of the associated task class.
     :property name: The unique identifier for this action.
@@ -193,8 +193,8 @@ class Action:
             self.postcond.append(postcond)
         self.is_bound = False
 
-    def copy_new(self) -> Action:
-        return Action(
+    def copy_new(self) -> PddlAction:
+        return PddlAction(
             self._orig_load_config,
             self._orig_config,
             self._orig_dataset,
@@ -231,9 +231,9 @@ class Action:
 
     def __repr__(self):
         if self.is_bound:
-            return f"<Action: {self.name}, paras: {self.parameters} -> {self.applied_func_args}, preconds: {self.precond}, effects: {self.postcond}>"
+            return f"<PddlAction: {self.name}, paras: {self.parameters} -> {self.applied_func_args}, preconds: {self.precond}, effects: {self.postcond}>"
         else:
-            return f"<Action: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
+            return f"<PddlAction: {self.name}, paras: {self.parameters}, preconds: {self.precond}, effects: {self.postcond}>"
 
     def bind(
         self, args: List[str], add_args: Optional[Dict[str, str]] = None
@@ -303,7 +303,7 @@ class Action:
         logger.info(
             f"Loading task {load_config['task']} with definition {load_config['task_def']}"
         )
-        return load_task_object(
+        return create_task_object(
             load_config["task"],
             load_config["task_def"],
             config,
@@ -384,10 +384,11 @@ class Action:
             all_bound_args.extend(bound_args)
         return all_consistent_preds, all_bound_args
 
-    def get_consistent_action_copies(
+    def get_possible_actions(
         self, preds: List[Predicate], name_to_id: Dict[str, Any]
-    ) -> List[Action]:
+    ) -> List[PddlAction]:
         """
+        Returns grounded actions that are possible in the current predicate state.
         :param preds: List of currently True predicates.
         :returns: List of bound actions that can currently be applied.
         """
@@ -444,8 +445,12 @@ class Action:
                 consistent_actions.append(action)
         return consistent_actions
 
-    def apply_postconditions(self, preds: List[Predicate]) -> List[Predicate]:
+    def calculate_postconditions(
+        self, preds: List[Predicate]
+    ) -> List[Predicate]:
         """
+        Applies the post-conditons of the action to the list of currently true predicates.
+
         :param preds: Set of all True predicates.
         :returns: Set of all true predicates after applying post conditions.
         """
@@ -494,7 +499,7 @@ class Action:
         set_state.set_state(name_to_id, sim)
 
 
-class RoboState:
+class PddlRobotState:
     """
     Specifies the configuration of the robot. Only used as a data structure. Not used to set the simulator state.
     """
@@ -511,6 +516,9 @@ class RoboState:
                 self.pos = self.pos.replace(k, v)
 
     def is_satisfied(self, name_to_id: Dict[str, Any], sim) -> bool:
+        """
+        Returns if the desired robot state is currently true in the simulator state.
+        """
         if self.holding != "NONE" and self.holding is not None:
             # Robot must be holding desired object.
             match_name, match_type = search_for_id(self.holding, name_to_id)
@@ -537,6 +545,10 @@ class RoboState:
 
 
 class SetStateArgSpec:
+    """
+    The input types for a PDDL state. Used to limit what entities predicates can take as input.
+    """
+
     def __init__(
         self, name_match: str = "", type_match: Optional[List[str]] = None
     ):
@@ -548,7 +560,9 @@ class SetStateArgSpec:
     def __repr__(self):
         return f"SetStateArgSpec {id(self)}: name_match={self.name_match}, type_match={self.type_match}"
 
-    def argument_matches(self, arg_name: Any, arg_type: RearrangeObjectTypes):
+    def argument_matches(
+        self, arg_name: Any, arg_type: RearrangeObjectTypes
+    ) -> bool:
         if self.name_match != "":
             if not isinstance(arg_name, str):
                 return False
@@ -559,7 +573,7 @@ class SetStateArgSpec:
         return True
 
 
-class SetState:
+class PddlSetState:
     """
     A partially specified state of the simulator. First this object needs to be
     bound to a specific set of arguments specifying scene entities
@@ -570,7 +584,7 @@ class SetState:
     def __init__(self, load_config: Dict[str, Any]):
         self.art_states = load_config.get("art_states", {})
         self.obj_states = load_config.get("obj_states", {})
-        self.robo_state = RoboState(load_config.get("robo", {}))
+        self.robo_state = PddlRobotState(load_config.get("robo", {}))
         self.load_config = load_config
 
         self.arg_spec: Optional[SetStateArgSpec] = None

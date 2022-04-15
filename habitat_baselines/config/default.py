@@ -62,9 +62,13 @@ _C.FORCE_TORCH_SINGLE_THREADED = False
 # Weights and Biases config
 # -----------------------------------------------------------------------------
 _C.WB = CN()
+# The name of the project on W&B.
 _C.WB.PROJECT_NAME = ""
+# Logging entity (like your username or team name)
 _C.WB.ENTITY = ""
+# The group ID to assign to the run. Optional to specify.
 _C.WB.GROUP = ""
+# The run name to assign to the run. If not specified, W&B will randomly assign a name.
 _C.WB.RUN_NAME = ""
 # -----------------------------------------------------------------------------
 # EVAL CONFIG

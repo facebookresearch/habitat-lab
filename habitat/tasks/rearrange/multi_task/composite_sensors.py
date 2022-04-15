@@ -52,7 +52,7 @@ class CompositeReward(Measure):
         elif node_idx > self._prev_node_idx:
             reward += self._config.STAGE_COMPLETE_REWARD
 
-        cur_task = task.get_cur_task()
+        cur_task = task.cur_task
         if cur_task is None:
             cur_task_cfg = task.get_inferrred_node_task()._config
         else:
@@ -96,7 +96,7 @@ class CompositeSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        if task.get_cur_task() is not None:
+        if task.cur_task is not None:
             # Don't check success when we are evaluating a subtask.
             self._metric = False
         else:
@@ -138,7 +138,7 @@ class CompositeNodeIdx(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_task = task.get_cur_task()
+        cur_task = task.cur_task
         self._metric = {}
         if cur_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
@@ -155,23 +155,23 @@ class CompositeNodeIdx(Measure):
                 )
 
             node_idx = task.get_inferred_node_idx()
-            for i in range(task.get_num_nodes()):
+            for i in range(task.num_solution_subtasks()):
                 self._metric[f"reached_{i}"] = (
                     task.get_inferred_node_idx() >= i
                 )
         else:
-            node_idx = task.get_cur_node()
+            node_idx = task.cur_node
         self._metric["node_idx"] = node_idx
         self._update_info_stage_succ(task, self._metric)
 
     def _update_info_stage_succ(self, task, info):
-        stage_goals = task.get_stage_goals()
+        stage_goals = task.stage_goals
         for k, preds in stage_goals.items():
             succ_k = f"{k}_success"
             if k in self._stage_succ:
                 info[succ_k] = 1.0
             else:
-                if task.is_pred_list_sat(preds):
+                if task.are_predicates_satisfied(preds):
                     info[succ_k] = 1.0
                     self._stage_succ.append(k)
                 else:

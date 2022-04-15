@@ -14,14 +14,14 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.multi_task.dynamic_task_utils import (
-    load_task_object,
-)
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    Action,
+    PddlAction,
     RearrangeObjectTypes,
     search_for_id,
+)
+from habitat.tasks.rearrange.multi_task.task_creator_utils import (
+    create_task_object,
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import (
@@ -101,7 +101,7 @@ class DynNavRLEnv(RearrangeTask):
 
     def _get_allowed_tasks(
         self, filter_actions: Optional[List[str]] = None
-    ) -> Dict[str, List[Action]]:
+    ) -> Dict[str, List[PddlAction]]:
         cur_preds = self.domain.get_true_predicates()
         # Get all actions which can be actively applied.
         logger.info(f"Current true predicates {cur_preds}")
@@ -119,7 +119,7 @@ class DynNavRLEnv(RearrangeTask):
             ):
                 continue
 
-            consistent_actions = action.get_consistent_action_copies(
+            consistent_actions = action.get_possible_actions(
                 cur_preds, self.domain.get_name_to_id_mapping()
             )
             logger.info(f"For {action.name} got consistent actions:")
@@ -161,7 +161,7 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         orig_state = self._sim.capture_state(with_robot_js=True)
-        load_task_object(
+        create_task_object(
             action.task,
             action.task_def,
             self._config.clone(),

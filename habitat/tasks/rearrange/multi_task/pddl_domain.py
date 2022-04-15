@@ -14,7 +14,7 @@ import yaml
 from habitat import Config
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    Action,
+    PddlAction,
     Predicate,
     RearrangeObjectTypes,
 )
@@ -87,7 +87,7 @@ class PddlDomain:
         self._name_to_id = self.get_name_id_conversions(self.domain_def)
 
         for action_d in self.domain_def["actions"]:
-            action = Action(
+            action = PddlAction(
                 action_d,
                 self._config,
                 self.dataset,
@@ -97,7 +97,7 @@ class PddlDomain:
             self.actions[action.name] = action
         self._action_names = list(self.actions.keys())
 
-    def get_task_match_for_name(self, task_name: str) -> Action:
+    def get_task_match_for_name(self, task_name: str) -> PddlAction:
         return self.actions[task_name]
 
     def predicate_lookup(self, pred_key: str) -> Optional[Predicate]:
@@ -184,6 +184,8 @@ class PddlDomain:
     ) -> List[str]:
         """
         Gets the skills that have arguments compatible with an entity
+        :entity_type: One of the inputs to the action must match this type.
+        :entity_id: One of the inputs to the action must match this name.
         """
         matching_skills = None
         for match_group in self._match_groups:

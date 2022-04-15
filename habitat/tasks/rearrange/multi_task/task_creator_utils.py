@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 TASK_CONFIGS_DIR = "configs/tasks/rearrange/"
 
 
-def load_task_object(
+def create_task_object(
     task_cls_name: str,
     task_config_path: str,
     cur_config: Config,
@@ -30,7 +30,7 @@ def load_task_object(
     task_config_args: Dict[str, Any],
 ) -> RearrangeTask:
     """
-    Loads a task. Used when a task needs to be simulated within another task. For example, this is used to get the starting state of another task as a navigation goal in the Habitat 2.0 navigation task. The loaded task uses the information and dataset from the main task (which is also passed into this function).
+    Creates a task to be used within another task. Used when a task needs to be simulated within another task. For example, this is used to get the starting state of another task as a navigation goal in the Habitat 2.0 navigation task. The loaded task uses the information and dataset from the main task (which is also passed into this function).
 
     :param task_cls_name: The name of the task to load.
     :param task_config_path: The path to the config for the task to load.

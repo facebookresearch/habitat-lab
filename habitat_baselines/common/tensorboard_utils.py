@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 try:
     import wandb
 except ImportError:
-    pass
+    wandb = None
 
 
 def get_writer(config, **kwargs):
@@ -106,6 +106,10 @@ class WeightsAndBiasesWriter:
             for k, v in os.environ.items()
             if k.startswith("SLURM_")
         }
+        if wandb is None:
+            raise ValueError(
+                "Requested to log with wandb, but wandb is not installed."
+            )
 
         self.run = wandb.init(
             config={"slurm": slurm_info_dict, **config}, **wb_kwargs

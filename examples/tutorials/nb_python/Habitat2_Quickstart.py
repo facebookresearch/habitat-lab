@@ -164,7 +164,7 @@ with habitat.Env(
 # You can also import environments through the Gym API. For more information about how to use the Gym API, see [this tutorial](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb).
 
 # %%
-env = gym.make("HabitatGymRenderPick-v0")
+env = gym.make("HabitatRenderPick-v0")
 
 video_file_path = "data/example_interact.mp4"
 video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
