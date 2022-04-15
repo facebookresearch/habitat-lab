@@ -737,6 +737,12 @@ class PPOTrainer(BaseRLTrainer):
             self.num_steps_done,
         )
 
+        writer.add_scalars(
+            "num_updates",
+            {"updates": float(self.num_updates_done)},
+            self.num_steps_done,
+        )
+
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
             t_curr = time.time()
