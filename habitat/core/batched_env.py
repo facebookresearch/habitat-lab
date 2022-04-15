@@ -29,7 +29,7 @@ class Camera:  # noqa: SIM119
         self._hfov = hfov
 
 
-MAX_EPISODE_LENGTH = 500
+MAX_EPISODE_LENGTH = -1
 
 
 class StateSensorConfig:
@@ -181,6 +181,9 @@ class BatchedEnv:
 
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
+
+        global MAX_EPISODE_LENGTH
+        MAX_EPISODE_LENGTH = config.MAX_EPISODE_LENGTH
 
         self.state_sensor_config: List[StateSensorConfig] = []
         for ssc in [
@@ -495,7 +498,7 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
-            # Target position is arbitrarily fixed
+            # Target position is arbitrarily fixed relative to base of robot
             # local_target_position = mn.Vector3(0.6, 1, 0.6)
 
             # global_target_position = quaternion_rotate_vector(
@@ -507,9 +510,17 @@ class BatchedEnv:
             #     global_target_position[2],
             # )
 
+            # target position is a fixed point in global space
+            # global_target_position = mn.Vector3(1, 1, 1)
+
+            # target is nav_reach target
             global_target_position = (
                 state.target_obj_start_pos
             )  # mn.Vector3(1, 1, 1)
+
+            # target is a reachable nav_reach target
+            # to_target = (state.target_obj_start_pos - state.robot_start_pos)
+            # global_target_position = state.robot_start_pos + to_target / to_target.length()
 
             curr_dist = (global_target_position - state.ee_pos).length()
             success_dist = 0.05
@@ -520,6 +531,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": float(success),
                     "episode_steps": state.episode_step_idx,
+                    "distance_to_taget": curr_dist,
                 }
                 self._previous_state[b] = None
 
@@ -542,6 +554,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": 0.0,
                     "episode_steps": state.episode_step_idx,
+                    "distance_to_taget": curr_dist,
                 }
                 if self._previous_state[b] is not None:
                     last_dist = (
