@@ -1,16 +1,18 @@
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
-VIDEO_DIR: "../videos"
+VIDEO_DIR: "../videos2"
+VIDEO_OPTION: ["disk"]
 REWARD_SCALE: 1.0 # 0.01
-NUM_CHECKPOINTS: 0
+NUM_CHECKPOINTS: 10
 BATCHED_ENV: True
 OVERLAP_PHYSICS: True
 SAVE_VIDEOS_INTERVAL: 500
 LOG_INTERVAL: 1
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 20000000.0
+TOTAL_NUM_STEPS: 50000000.0
 NUM_ENVIRONMENTS: 512
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR"]
+# SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR", "DEBUG_RGB_SENSOR"]
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR", "STEP_COUNT_SENSOR"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
@@ -27,12 +29,13 @@ WB:
 RL:
   PPO:
     ppo_epoch: 1
+    num_mini_batch: 2
     num_steps: 32
-    entropy_coef: 0.0 # 001
+    entropy_coef: 0.0001
     lr: 2.5e-4
     use_normalized_advantage: True
     use_linear_lr_decay: False
-    max_grad_norm: 100.0
+    max_grad_norm: 1.0e+32
   POLICY:
     name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"

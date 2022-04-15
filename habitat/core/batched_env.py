@@ -29,6 +29,9 @@ class Camera:  # noqa: SIM119
         self._hfov = hfov
 
 
+MAX_EPISODE_LENGTH = 500
+
+
 class StateSensorConfig:
     def __init__(self, config_key, shape, obs_key):
         self.config_key = config_key
@@ -125,6 +128,18 @@ class JointSensorConfig(StateSensorConfig):
         return state.robot_joint_positions[-9:-2]
 
 
+class StepCountSensorConfig(StateSensorConfig):
+    def __init__(self):
+        super().__init__("STEP_COUNT_SENSOR", 3, "step_count")
+
+    def get_obs(self, state):
+        return (
+            min(1.0, state.episode_step_idx * 1.0 / MAX_EPISODE_LENGTH),
+            min(1.0, state.episode_step_idx * 5.0 / MAX_EPISODE_LENGTH),
+            min(1.0, state.episode_step_idx * 50.0 / MAX_EPISODE_LENGTH),
+        )
+
+
 # Note this class must match an API expected by PPOTrainer (episode_id and scene_id).
 # Beware adding extra state to this class as we often make deep copies of these objects.
 class EnvironmentEpisodeState:
@@ -175,6 +190,7 @@ class BatchedEnv:
             EETargetSensorConfig(),
             JointSensorConfig(),
             RobotEESensorConfig(),
+            StepCountSensorConfig(),
         ]:
             if ssc.config_key in config.SENSORS:
                 self.state_sensor_config.append(ssc)
@@ -218,7 +234,7 @@ class BatchedEnv:
             # generator_config.num_object_variations = 6
             # generator_config.min_nontarget_objects = 27
             # generator_config.max_nontarget_objects = 32
-            # generator_config.used_fixed_robot_start_pos = True
+            # generator_config.used_fixed_robot_start_pos = False #True
             # generator_config.use_fixed_robot_start_yaw = False
 
             bsim_config = BatchedSimulatorConfig()
@@ -470,7 +486,7 @@ class BatchedEnv:
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
-            max_episode_len = 50
+            max_episode_len = MAX_EPISODE_LENGTH
             if self._current_episodes[b].is_disabled():
                 # let this episode continue in the sim; ignore the results
                 assert self.resets[b] == -1
@@ -480,16 +496,20 @@ class BatchedEnv:
                 continue
 
             # Target position is arbitrarily fixed
-            local_target_position = mn.Vector3(0.6, 1, 0.6)
+            # local_target_position = mn.Vector3(0.6, 1, 0.6)
 
-            global_target_position = quaternion_rotate_vector(
-                quat_from_magnum(state.robot_rotation), local_target_position
-            )
-            global_target_position = state.robot_pos + mn.Vector3(
-                global_target_position[0],
-                global_target_position[1],
-                global_target_position[2],
-            )
+            # global_target_position = quaternion_rotate_vector(
+            #     quat_from_magnum(state.robot_rotation), local_target_position
+            # )
+            # global_target_position = state.robot_pos + mn.Vector3(
+            #     global_target_position[0],
+            #     global_target_position[1],
+            #     global_target_position[2],
+            # )
+
+            global_target_position = (
+                state.target_obj_start_pos
+            )  # mn.Vector3(1, 1, 1)
 
             curr_dist = (global_target_position - state.ee_pos).length()
             success_dist = 0.05

@@ -16,6 +16,7 @@ from habitat.core.batched_env import (
     JointSensorConfig,
     RobotStartSensorConfig,
     RobotTargetSensorConfig,
+    StepCountSensorConfig,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import (
@@ -216,6 +217,7 @@ class PointNavBaselineNet(Net):
                 EEStartSensorConfig(),
                 EETargetSensorConfig(),
                 JointSensorConfig(),
+                StepCountSensorConfig(),
             ]
         }
         for k, v in self.ssc_dict.items():
