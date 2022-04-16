@@ -133,10 +133,15 @@ class StepCountSensorConfig(StateSensorConfig):
         super().__init__("STEP_COUNT_SENSOR", 3, "step_count")
 
     def get_obs(self, state):
+        fraction_steps_left = (
+            (MAX_EPISODE_LENGTH - state.episode_step_idx)
+            * 1.0
+            / MAX_EPISODE_LENGTH
+        )
         return (
-            min(1.0, state.episode_step_idx * 1.0 / MAX_EPISODE_LENGTH),
-            min(1.0, state.episode_step_idx * 5.0 / MAX_EPISODE_LENGTH),
-            min(1.0, state.episode_step_idx * 50.0 / MAX_EPISODE_LENGTH),
+            min(1.0, fraction_steps_left * 1.0),
+            min(1.0, fraction_steps_left * 5.0),
+            min(1.0, fraction_steps_left * 50.0),
         )
 
 
@@ -422,6 +427,9 @@ class BatchedEnv:
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
         self._previous_target_position = [None] * self._num_envs
+        self._stagger_agents = [
+            i % MAX_EPISODE_LENGTH for i in range(self._num_envs)
+        ]
 
         self.action_spaces = [
             action_space
@@ -525,7 +533,10 @@ class BatchedEnv:
             curr_dist = (global_target_position - state.ee_pos).length()
             success_dist = 0.05
             success = curr_dist < success_dist
-            if success or state.episode_step_idx >= max_episode_len:
+            if success or state.episode_step_idx >= (
+                max_episode_len - self._stagger_agents[b]
+            ):
+                self._stagger_agents[b] = 0
                 self.dones[b] = True
                 self.rewards[b] = 10.0 if success else 0.0
                 self.infos[b] = {

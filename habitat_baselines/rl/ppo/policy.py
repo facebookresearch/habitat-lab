@@ -14,6 +14,7 @@ from habitat.core.batched_env import (
     EEStartSensorConfig,
     EETargetSensorConfig,
     JointSensorConfig,
+    RobotEESensorConfig,
     RobotStartSensorConfig,
     RobotTargetSensorConfig,
     StepCountSensorConfig,
@@ -217,12 +218,14 @@ class PointNavBaselineNet(Net):
                 EEStartSensorConfig(),
                 EETargetSensorConfig(),
                 JointSensorConfig(),
+                RobotEESensorConfig(),
                 StepCountSensorConfig(),
             ]
         }
         for k, v in self.ssc_dict.items():
             if k in self.observation_space.spaces:
                 self._n_state += v.shape
+                print(f"adding sensor {k} : {v.shape} ")
 
         # if (
         #     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
