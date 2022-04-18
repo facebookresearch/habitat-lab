@@ -99,6 +99,8 @@ TASK:
         FORCE_END_PEN: 10.0
     NUM_STEPS:
         TYPE: "NumStepsMeasure"
+    DID_VIOLATE_HOLD_CONSTRAINT:
+        TYPE: "DidViolateHoldConstraintMeasure"
 
     MEASUREMENTS:
         - "ROBOT_FORCE"
@@ -111,6 +113,7 @@ TASK:
         - "ART_OBJ_SUCCESS"
         - "ART_OBJ_REWARD"
         - "NUM_STEPS"
+        - "DID_VIOLATE_HOLD_CONSTRAINT"
 
     ACTIONS:
         ARM_ACTION:

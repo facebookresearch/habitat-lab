@@ -379,7 +379,7 @@ class Simulator:
     def render(self, mode: str = "rgb") -> Any:
         raise NotImplementedError
 
-    def close(self) -> None:
+    def close(self, destroy: bool = True) -> None:
         pass
 
     def previous_step_collided(self) -> bool:

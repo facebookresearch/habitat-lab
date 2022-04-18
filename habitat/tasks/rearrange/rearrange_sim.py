@@ -572,9 +572,6 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        if self.habitat_config.NEEDS_MARKERS:
-            self._update_markers()
-
         if self.habitat_config.DEBUG_RENDER:
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -619,6 +616,9 @@ class RearrangeSim(HabitatSim):
                 self.internal_step(-1, update_robot=False)
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+
+        if self.habitat_config.NEEDS_MARKERS:
+            self._update_markers()
 
         # TODO: Make debug cameras more flexible
         if "robot_third_rgb" in obs and self.habitat_config.DEBUG_RENDER:
