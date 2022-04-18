@@ -218,7 +218,7 @@ class BenchmarkGym:
         return avg_metrics
 
 
-class AdaptedPPOAgent(PPOAgent):
+class RearrangePPOAgent(PPOAgent):
     def __init__(self, config, obs_space, action_space) -> None:
         self.device = (
             torch.device("cuda:{}".format(config.PTH_GPU_ID))
@@ -367,7 +367,7 @@ def main():
         config.PTH_GPU_ID = 0
         config.freeze()
 
-        use_skill = AdaptedPPOAgent(
+        use_skill = RearrangePPOAgent(
             config, benchmark.observation_space, env.action_space
         )
     else:

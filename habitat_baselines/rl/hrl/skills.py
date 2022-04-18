@@ -40,6 +40,10 @@ def truncate_obs_space(space: spaces.Box, truncate_len: int) -> spaces.Box:
 
 
 class NnSkillPolicy(Policy):
+    """
+    Defines a skill to be used in the TP+SRL baseline.
+    """
+
     def __init__(
         self,
         wrap_policy,
