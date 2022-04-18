@@ -12,7 +12,11 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails, logger
+from habitat.tasks.rearrange.utils import (
+    CollisionDetails,
+    batch_transform_point,
+    logger,
+)
 from habitat.tasks.utils import get_angle
 
 
@@ -79,10 +83,7 @@ class TargetStartSensor(MultiObjSensor):
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
-
-        return pos.reshape(-1)
+        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
 @registry.register_sensor
@@ -111,9 +112,7 @@ class GoalSensor(MultiObjSensor):
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
-        return pos.reshape(-1)
+        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
 @registry.register_sensor

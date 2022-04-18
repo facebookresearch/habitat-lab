@@ -155,8 +155,6 @@ TASK:
         SUCCESS_REWARD: 10.0
     NUM_STEPS:
         TYPE: NumStepsMeasure
-    ROT_DIST_TO_NAV_GOAL:
-        TYPE: NavRotToGoalSensor
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE

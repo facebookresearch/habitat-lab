@@ -88,7 +88,7 @@ TASK:
         ART_AT_DESIRED_STATE_REWARD: 5.0
 
         MARKER_DIST_REWARD: 1.0
-        EE_DIST_REWARD: 1.0
+        EE_DIST_REWARD: 10.0
         ART_DIST_REWARD: 10.0
 
         # General Rearrange Reward config

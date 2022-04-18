@@ -45,8 +45,6 @@ TASK:
         DIMENSIONALITY: 3
     DIST_TO_NAV_GOAL:
         TYPE: DistToNavGoalSensor
-    LOCALIZATION_SENSOR:
-        TYPE: LocalizationSensor
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
@@ -56,10 +54,6 @@ TASK:
         TYPE: IsHoldingSensor
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: RelativeRestingPositionSensor
-    ORACLE_NAV_ACTION_SENSOR:
-        TYPE: OracleNavigationActionSensor
-    NAV_GOAL_SENSOR:
-        TYPE: NavGoalSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
@@ -204,8 +198,6 @@ TASK:
     PLACE_SUCCESS:
         TYPE: PlaceSuccess
         SUCC_THRESH: 0.15
-    ROT_DIST_TO_NAV_GOAL:
-        TYPE: NavRotToGoalSensor
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0

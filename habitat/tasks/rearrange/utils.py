@@ -12,7 +12,6 @@ import time
 from typing import List, Optional, Tuple
 
 import attr
-import gym
 import magnum as mn
 import numpy as np
 import quaternion
@@ -260,14 +259,13 @@ class CacheHelper:
             pickle.dump(val, f)
 
 
-def reshape_obs_space(obs_space, new_shape):
-    assert isinstance(obs_space, gym.spaces.Box)
-    return gym.spaces.Box(
-        shape=new_shape,
-        high=obs_space.low.reshape(-1)[0],
-        low=obs_space.high.reshape(-1)[0],
-        dtype=obs_space.dtype,
-    )
+def batch_transform_point(
+    points: np.ndarray, transform_matrix: mn.Matrix4, dtype
+) -> np.ndarray:
+    transformed_points = []
+    for point in points:
+        transformed_points.append(transform_matrix.transform_point(point))
+    return np.array(transformed_points, dtype=dtype)
 
 
 try:

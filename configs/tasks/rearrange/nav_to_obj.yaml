@@ -45,7 +45,7 @@ TASK:
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
-        MAX_ACCUM_FORCE: 50000.0
+        MAX_ACCUM_FORCE: -1.0
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
@@ -91,9 +91,9 @@ TASK:
         - "ROBOT_COLLS"
         - "ROT_DIST_TO_GOAL"
         - "DIST_TO_GOAL"
-        - "BAD_CALLED_TERMINATE"
         - "NAV_TO_POS_SUCC"
         - "REARRANGE_NAV_TO_OBJ_SUCCESS"
+        - "BAD_CALLED_TERMINATE"
         - "REARRANGE_NAV_TO_OBJ_REWARD"
         - "NUM_STEPS"
     ACTIONS:

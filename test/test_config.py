@@ -77,5 +77,7 @@ def test_no_core_config_has_non_default_keys(config_path):
     _C.set_new_allowed(False)
     try:
         habitat.get_config(config_path)
+    except KeyError as e:
+        raise KeyError(f"Failed for config {config_path}") from e
     finally:
         _C.set_new_allowed(True)

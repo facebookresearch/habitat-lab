@@ -204,8 +204,6 @@ TASK:
     PLACE_SUCCESS:
         TYPE: PlaceSuccess
         SUCC_THRESH: 0.15
-    ROT_DIST_TO_NAV_GOAL:
-        TYPE: NavRotToGoalSensor
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
