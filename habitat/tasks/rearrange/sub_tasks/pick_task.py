@@ -15,8 +15,8 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
-    logger,
     rearrange_collision,
+    rearrange_logger,
 )
 from habitat.tasks.utils import get_angle
 
@@ -112,7 +112,9 @@ class RearrangePickTaskV1(RearrangeTask):
                 angle_to_obj *= -1.0
 
             if not self._is_there_spawn_noise:
-                logger.info("No spawn noise, returning first found position")
+                rearrange_logger.debug(
+                    "No spawn noise, returning first found position"
+                )
                 break
 
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
@@ -168,7 +170,9 @@ class RearrangePickTaskV1(RearrangeTask):
                 sim, True, episode, sel_idx
             )
         elif not is_within_bounds or attempt == timeout or did_collide:
-            logger.error(f"Episode {episode.episode_id} failed to place robot")
+            rearrange_logger.error(
+                f"Episode {episode.episode_id} failed to place robot"
+            )
 
         sim.set_state(state)
 
@@ -210,7 +214,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
         if self.force_set_idx is not None:
             cache_lookup_k += str(self.force_set_idx)
-        logger.info(
+        rearrange_logger.debug(
             f"Using cache key {cache_lookup_k}, force_regenerate={self._config.FORCE_REGENERATE}"
         )
 
@@ -223,7 +227,7 @@ class RearrangePickTaskV1(RearrangeTask):
             mgr = sim.get_articulated_object_manager()
             sel_idx = self._sample_idx(sim)
 
-            logger.info(f"Generating init for {self}")
+            rearrange_logger.debug(f"Generating init for {self}")
 
             receptacle_handle, receptacle_link_idx = self.get_receptacle_info(
                 episode, sel_idx
@@ -261,7 +265,7 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos, start_rot = self._gen_start_pos(
                 sim, self._config.EASY_INIT, episode, sel_idx, start_pos
             )
-            logger.info(f"Finished creating init for {self}")
+            rearrange_logger.debug(f"Finished creating init for {self}")
             self.start_states[cache_lookup_k] = (start_pos, start_rot, sel_idx)
             if self._config.SHOULD_SAVE_TO_CACHE:
                 self.cache.save(self.start_states)

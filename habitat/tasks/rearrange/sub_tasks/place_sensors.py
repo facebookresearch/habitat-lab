@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.utils import logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_measure
@@ -93,7 +93,9 @@ class PlaceReward(RearrangeReward):
                 # Dropped at wrong location
                 reward -= self._config.DROP_PEN
                 if self._config.WRONG_DROP_SHOULD_END:
-                    logger.info("Dropped to wrong place, ending episode.")
+                    rearrange_logger.debug(
+                        "Dropped to wrong place, ending episode."
+                    )
                     self._task.should_end = True
                     self._metric = reward
                     return

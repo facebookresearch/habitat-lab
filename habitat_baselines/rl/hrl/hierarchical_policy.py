@@ -3,7 +3,7 @@ import os.path as osp
 import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.logging import logger
+from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
     GtHighLevelPolicy,
     HighLevelPolicy,
@@ -185,7 +185,7 @@ class HierarchicalPolicy(Policy):
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):
-                logger.info(
+                baselines_logger.info(
                     f"Calling stop action for batch {batch_idx}, {bad_should_terminate}, {hl_terminate}"
                 )
                 actions[batch_idx, self._stop_action_idx] = 1.0

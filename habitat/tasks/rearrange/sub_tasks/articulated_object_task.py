@@ -14,7 +14,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import logger, rearrange_collision
+from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 from habitat.tasks.utils import get_angle
 
 
@@ -153,7 +153,9 @@ class SetArticulatedObjectTask(RearrangeTask):
                 marker.current_transform.translation
             )
             if not self._is_there_spawn_noise:
-                logger.info("No spawn noise, returning first found position")
+                rearrange_logger.debug(
+                    "No spawn noise, returning first found position"
+                )
                 break
 
             eps = 1e-2

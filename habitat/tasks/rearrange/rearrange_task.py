@@ -15,8 +15,8 @@ from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
-    logger,
     rearrange_collision,
+    rearrange_logger,
 )
 
 
@@ -130,9 +130,9 @@ class RearrangeTask(NavigationTask):
             done = True
 
         if done:
-            logger.info("-" * 10)
-            logger.info("------ Episode Over --------")
-            logger.info("-" * 10)
+            rearrange_logger.debug("-" * 10)
+            rearrange_logger.debug("------ Episode Over --------")
+            rearrange_logger.debug("-" * 10)
 
         return not done
 
@@ -198,8 +198,8 @@ class RearrangeTask(NavigationTask):
             not self._should_end
         ) and self._is_episode_active
         if new_val:
-            logger.info("-" * 40)
-            logger.info(
+            rearrange_logger.debug("-" * 40)
+            rearrange_logger.debug(
                 f"-----Episode {self._episode_id} requested to end after {self._cur_episode_step} steps.-----"
             )
-            logger.info("-" * 40)
+            rearrange_logger.debug("-" * 40)

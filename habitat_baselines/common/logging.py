@@ -9,10 +9,8 @@ import os
 
 from habitat.core.logging import HabitatLogger
 
-logger = HabitatLogger(
+baselines_logger = HabitatLogger(
     name="habitat_baselines",
-    level=logging.INFO
-    if os.environ.get("HABITAT_BASELINES_LOG", 0)
-    else logging.ERROR,
+    level=os.environ.get("HABITAT_BASELINES_LOG", logging.ERROR),
     format_str="[%(levelname)s,%(name)s] %(asctime)-15s %(filename)s:%(lineno)d %(message)s",
 )

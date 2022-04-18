@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
     batch_transform_point,
-    logger,
+    rearrange_logger,
 )
 from habitat.tasks.utils import get_angle
 
@@ -656,7 +656,7 @@ class ForceTerminate(Measure):
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
         ):
-            logger.info(
+            rearrange_logger.debug(
                 f"Force threshold={self._config.MAX_ACCUM_FORCE} exceeded with {accum_force}, ending episode"
             )
             self._task.should_end = True

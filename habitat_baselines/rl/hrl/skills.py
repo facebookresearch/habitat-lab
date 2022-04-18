@@ -22,7 +22,7 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
 )
 from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.logging import logger
+from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions
@@ -75,7 +75,7 @@ class NnSkillPolicy(Policy):
         )
 
     def _internal_log(self, s, observations=None):
-        logger.info(
+        baselines_logger.info(
             f"Skill {self._config.skill_name} @ {self._cur_skill_step}: {s}"
         )
 
@@ -263,7 +263,7 @@ class NnSkillPolicy(Policy):
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)
-        logger.info(
+        baselines_logger.info(
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
@@ -273,7 +273,7 @@ class NnSkillPolicy(Policy):
                 for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
             }
         )
-        logger.info(
+        baselines_logger.info(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
 
@@ -477,7 +477,7 @@ class OracleNavPolicy(NnSkillPolicy):
         filtered_action_space = ActionSpace(
             {config.NAV_ACTION_NAME: action_space[config.NAV_ACTION_NAME]}
         )
-        logger.info(
+        baselines_logger.info(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
         )
         return cls(

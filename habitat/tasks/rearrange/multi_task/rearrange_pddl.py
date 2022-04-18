@@ -22,7 +22,7 @@ from habitat.tasks.rearrange.multi_task.task_creator_utils import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -300,7 +300,7 @@ class PddlAction:
                 }
             },
         }
-        logger.info(
+        rearrange_logger.debug(
             f"Loading task {load_config['task']} with definition {load_config['task_def']}"
         )
         return create_task_object(
@@ -406,7 +406,7 @@ class PddlAction:
             all_matches,
             name_to_id,
         )
-        logger.info(f"Got consistent preds {consistent_preds}")
+        rearrange_logger.debug(f"Got consistent preds {consistent_preds}")
         consistent_actions = []
 
         for bound_args in all_bound_args:
@@ -642,7 +642,9 @@ class PddlSetState:
         check_link = sim.get_marker(target_name).link_id
 
         if obj_idx >= len(use_receps):
-            logger.info(f"Could not find object {obj_name} in {use_receps}")
+            rearrange_logger.debug(
+                f"Could not find object {obj_name} in {use_receps}"
+            )
             return False
 
         _, recep_link_id = use_receps[obj_idx]

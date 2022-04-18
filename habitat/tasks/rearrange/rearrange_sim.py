@@ -25,9 +25,9 @@ from habitat.tasks.rearrange.utils import (
     IkHelper,
     get_aabb,
     is_pb_installed,
-    logger,
     make_render_only,
     rearrange_collision,
+    rearrange_logger,
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import JointMotorSettings, MotionType
@@ -296,7 +296,7 @@ class RearrangeSim(HabitatSim):
             if not did_collide:
                 break
         if attempt_i == MAX_ATTEMPTS - 1:
-            logger.warning(
+            rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
 

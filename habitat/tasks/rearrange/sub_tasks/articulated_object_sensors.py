@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToRestDistance,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_sensor
@@ -337,7 +337,9 @@ class ArtObjReward(RearrangeReward):
                 # Grasped wrong marker
                 reward -= self._config.WRONG_GRASP_PEN
                 if self._config.WRONG_GRASP_END:
-                    logger.info("Grasped wrong marker, ending episode.")
+                    rearrange_logger.debug(
+                        "Grasped wrong marker, ending episode."
+                    )
                     task.should_end = True
             else:
                 # Grasped right marker

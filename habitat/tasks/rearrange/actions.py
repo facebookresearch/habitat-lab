@@ -24,7 +24,7 @@ from habitat.tasks.rearrange.grip_actions import (
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import logger, rearrange_collision
+from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 
 @registry.register_task_action
@@ -55,7 +55,7 @@ class RearrangeStopAction(SimulatorTaskAction):
     def step(self, task, *args, is_last_action, **kwargs):
         should_stop = kwargs.get("REARRANGE_STOP", [1.0])
         if should_stop[0] == 1.0:
-            logger.info("Requesting episode stop.")
+            rearrange_logger.debug("Requesting episode stop.")
             task.should_end = True
 
         if is_last_action:

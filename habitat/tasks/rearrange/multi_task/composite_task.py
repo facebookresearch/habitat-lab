@@ -22,7 +22,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     parse_func,
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_task(name="RearrangeCompositeTask-v0")
@@ -109,7 +109,9 @@ class CompositeTask(RearrangeTask):
         including the solution action at index `node_idx`.
         """
 
-        logger.info("Jumping to node {node_idx}, is_full_task={is_full_task}")
+        rearrange_logger.debug(
+            "Jumping to node {node_idx}, is_full_task={is_full_task}"
+        )
         # We don't want to reset to this node if we are in full task mode.
         if not is_full_task:
             self._cur_node = node_idx

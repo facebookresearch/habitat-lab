@@ -7,7 +7,7 @@
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.utils import logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_measure
@@ -150,7 +150,7 @@ class CompositeNodeIdx(Measure):
             ].get_metric()
             if is_succ:
                 task.increment_inferred_solution_idx(episode)
-                logger.info(
+                rearrange_logger.debug(
                     f"Completed {inf_cur_task_cfg.TYPE}, incremented node to {task.get_inferrred_node_task()}"
                 )
 
