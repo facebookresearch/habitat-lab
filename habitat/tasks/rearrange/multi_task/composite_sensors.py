@@ -155,7 +155,7 @@ class CompositeNodeIdx(Measure):
                 )
 
             node_idx = task.get_inferred_node_idx()
-            for i in range(task.num_solution_subtasks()):
+            for i in range(task.num_solution_subtasks):
                 self._metric[f"reached_{i}"] = (
                     task.get_inferred_node_idx() >= i
                 )
