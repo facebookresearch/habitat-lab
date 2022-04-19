@@ -227,7 +227,9 @@ class RearrangePickTaskV1(RearrangeTask):
             mgr = sim.get_articulated_object_manager()
             sel_idx = self._sample_idx(sim)
 
-            rearrange_logger.debug(f"Generating init for {self}")
+            rearrange_logger.debug(
+                f"Generating init for {self} and force set idx {self.force_set_idx} with selected object idx {sel_idx}"
+            )
 
             receptacle_handle, receptacle_link_idx = self.get_receptacle_info(
                 episode, sel_idx

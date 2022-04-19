@@ -207,7 +207,13 @@ class CompositeTask(RearrangeTask):
                 self._inferred_cur_node_idx
             ]
             self._inferred_cur_task.reset(episode)
+            rearrange_logger.debug(
+                f"Incrementing solution to {self._inferred_cur_node_idx}. Loading next task from cached"
+            )
         else:
+            rearrange_logger.debug(
+                f"Incrementing solution to {self._inferred_cur_node_idx}. Loading next task."
+            )
             task = task_solution[self._inferred_cur_node_idx].init_task(
                 self, episode, should_reset=False
             )
@@ -273,6 +279,15 @@ class CompositeTask(RearrangeTask):
     @property
     def targ_idx(self):
         return self._try_get_subtask_prop("targ_idx", self._targ_idx)
+
+    @property
+    def abs_targ_idx(self):
+        if self._targ_idx is None:
+            abs_targ_idx = None
+        else:
+            abs_targ_idx = self._sim.get_targets()[0][self._targ_idx]
+
+        return self._try_get_subtask_prop("abs_targ_idx", abs_targ_idx)
 
     @property
     def nav_to_task_name(self):

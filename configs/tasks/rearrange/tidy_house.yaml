@@ -108,7 +108,7 @@ TASK:
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
         MUST_LOOK_AT_TARG: true
-        SUCCESS_ANGLE_DIST: 0.3
+        SUCCESS_ANGLE_DIST: 0.7
         HEURISTIC_STOP: false
     PICK_REWARD:
         TYPE: RearrangePickReward
