@@ -98,7 +98,7 @@ class NnSkillPolicy(Policy):
 
     def _internal_log(self, s, observations=None):
         baselines_logger.debug(
-            f"Skill {self._config.skill_name} @ {self._cur_skill_step}: {s}"
+            f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
 
     def _select_obs(self, obs, cur_batch_idx):
@@ -153,6 +153,12 @@ class NnSkillPolicy(Policy):
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks
         )
+        if is_skill_done:
+            self._internal_log(
+                "Requested skill termination",
+                observations,
+            )
+
         bad_terminate = self._cur_skill_step > self._config.MAX_SKILL_STEPS
         if bad_terminate.sum() > 0:
             self._internal_log(
@@ -192,13 +198,13 @@ class NnSkillPolicy(Policy):
         Passes in the data at the current `batch_idx`
         :returns: The new hidden state and prev_actions ONLY at the batch_idx.
         """
+        self._cur_skill_step[batch_idx] = 0
         self._cur_skill_args[batch_idx] = self._parse_skill_arg(skill_arg)
+
         self._internal_log(
             f"Entering skill with arguments {skill_arg} parsed to {self._cur_skill_args[batch_idx]}",
             observations,
         )
-
-        self._cur_skill_step[batch_idx] = 0
 
         return (
             rnn_hidden_states[batch_idx] * 0.0,
@@ -519,6 +525,9 @@ class OracleNavPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
     ):
+        ret = super().on_enter(
+            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+        )
         self._is_at_targ[batch_idx] = 0.0
         self._nav_targs[batch_idx] = observations[NavGoalSensor.cls_uuid][
             batch_idx
@@ -526,9 +535,7 @@ class OracleNavPolicy(NnSkillPolicy):
         self._internal_log(
             f"Got nav target {self._nav_targs} on enter", observations
         )
-        return super().on_enter(
-            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
-        )
+        return ret
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, batch_size):
