@@ -1,5 +1,5 @@
-==============================
-### Habitat 2.0 Benchmarking
+Habitat 2.0 Benchmarking
+============================
 
 The utilities in this directory are intended to assist with user system benchmarking for comparison to results reported in Table 2 with the release of Habitat 2.0:
 
