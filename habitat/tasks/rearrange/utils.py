@@ -22,7 +22,7 @@ from habitat_sim.physics import MotionType
 
 rearrange_logger = HabitatLogger(
     name="rearrange_task",
-    level=os.environ.get("HABITAT_REARRANGE_LOG", logging.ERROR),
+    level=int(os.environ.get("HABITAT_REARRANGE_LOG", logging.ERROR)),
     format_str="[%(levelname)s,%(name)s] %(asctime)-15s %(filename)s:%(lineno)d %(message)s",
 )
 

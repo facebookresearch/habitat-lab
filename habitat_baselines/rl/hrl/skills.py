@@ -48,11 +48,15 @@ class NnSkillPolicy(Policy):
         self,
         wrap_policy,
         config,
-        action_space,
-        filtered_obs_space,
-        filtered_action_space,
+        action_space: spaces.Space,
+        filtered_obs_space: spaces.Space,
+        filtered_action_space: spaces.Space,
         batch_size,
+        should_keep_hold_state: bool = False,
     ):
+        """
+        :param action_space: The overall action space of the entire task, not task specific.
+        """
         self._wrap_policy = wrap_policy
         self._action_space = action_space
         self._config = config
@@ -63,23 +67,37 @@ class NnSkillPolicy(Policy):
         self._ac_len = get_num_actions(filtered_action_space)
 
         self._cur_skill_step = torch.zeros(self._batch_size)
+        self._should_keep_hold_state = should_keep_hold_state
 
         self._cur_skill_args: List[Any] = [
             None for _ in range(self._batch_size)
         ]
 
-        for k in action_space:
+        for k, space in action_space.items():
             if k not in filtered_action_space.spaces.keys():
-                self._ac_start += get_num_actions(action_space[k])
+                self._ac_start += get_num_actions(space)
             else:
                 break
+
+        self._grip_ac_idx = 0
+        found_grip = False
+        for k, space in action_space.items():
+            if k != "ARM_ACTION":
+                self._grip_ac_idx += get_num_actions(space)
+            else:
+                # The last actioin in the arm action is the grip action.
+                self._grip_ac_idx += get_num_actions(space) - 1
+                found_grip = True
+                break
+        if not found_grip:
+            raise ValueError(f"Could not find grip action in {action_space}")
 
         self._internal_log(
             f"Skill {self._config.skill_name}: action offset {self._ac_start}, action length {self._ac_len}"
         )
 
     def _internal_log(self, s, observations=None):
-        baselines_logger.info(
+        baselines_logger.debug(
             f"Skill {self._config.skill_name} @ {self._cur_skill_step}: {s}"
         )
 
@@ -106,6 +124,21 @@ class NnSkillPolicy(Policy):
         multiple objects to possibly rearrange.
         """
         return self._cur_skill_args[batch_idx]
+
+    def _keep_holding_state(
+        self, full_action: torch.Tensor, observations
+    ) -> torch.Tensor:
+        """
+        Makes the action so it does not result in dropping or picking up an
+        object. Used in navigation and other skills which are not supposed to
+        interact through the gripper.
+        """
+        # Keep the same grip state as the previous action.
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        # If it is not holding (0) want to keep releasing -> output -1.
+        # If it is holding (1) want to keep grasping -> output +1.
+        full_action[:, self._grip_ac_idx] = is_holding + (is_holding - 1.0)
+        return full_action
 
     def should_terminate(
         self,
@@ -219,6 +252,8 @@ class NnSkillPolicy(Policy):
             deterministic,
         )
         full_action = torch.zeros(prev_actions.shape)
+        if self._should_keep_hold_state:
+            full_action = self._keep_holding_state(full_action, observations)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
         return full_action, rnn_hidden_states
 
@@ -267,7 +302,7 @@ class NnSkillPolicy(Policy):
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)
-        baselines_logger.info(
+        baselines_logger.debug(
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
@@ -277,7 +312,7 @@ class NnSkillPolicy(Policy):
                 for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
             }
         )
-        baselines_logger.info(
+        baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
 
@@ -403,6 +438,25 @@ class PlaceSkillPolicy(PickSkillPolicy):
 
 
 class NavSkillPolicy(NnSkillPolicy):
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space: spaces.Space,
+        filtered_obs_space: spaces.Space,
+        filtered_action_space: spaces.Space,
+        batch_size,
+    ):
+        super().__init__(
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+            should_keep_hold_state=True,
+        )
+
     def _is_skill_done(
         self,
         observations,
@@ -481,7 +535,7 @@ class OracleNavPolicy(NnSkillPolicy):
         filtered_action_space = ActionSpace(
             {config.NAV_ACTION_NAME: action_space[config.NAV_ACTION_NAME]}
         )
-        baselines_logger.info(
+        baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
         )
         return cls(
@@ -540,6 +594,8 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_obj_targ_pos = observations[AbsTargetStartSensor.cls_uuid]
 
         full_action = torch.zeros(prev_actions.shape, device=masks.device)
+        full_action = self._keep_holding_state(full_action, observations)
+
         for i, (
             nav_targ,
             localization,

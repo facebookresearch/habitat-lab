@@ -183,9 +183,9 @@ class PddlDomain:
         self, entity_type: RearrangeObjectTypes, entity_id: str
     ) -> List[str]:
         """
-        Gets the skills that have arguments compatible with an entity
-        :entity_type: One of the inputs to the action must match this type.
-        :entity_id: One of the inputs to the action must match this name.
+        Gets the skills that have argument types compatible with an entity.
+        :entity_type: One of the inputs types to the action must match this type.
+        :entity_id: One of the input names to the action must match this name.
         """
         matching_skills = None
         for match_group in self._match_groups:

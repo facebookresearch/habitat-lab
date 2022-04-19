@@ -102,6 +102,9 @@ class DynNavRLEnv(RearrangeTask):
     def _get_allowed_tasks(
         self, filter_actions: Optional[List[str]] = None
     ) -> Dict[str, List[PddlAction]]:
+        """
+        :returns: Mapping the action name to the grounded instances of the action that are possible in the current state.
+        """
         cur_preds = self.domain.get_true_predicates()
         # Get all actions which can be actively applied.
         rearrange_logger.debug(f"Current true predicates {cur_preds}")
@@ -227,11 +230,11 @@ class DynNavRLEnv(RearrangeTask):
             )
             use_name = self.force_recep_to_name
         else:
-            rearrange_logger.debug(
-                f"Search object name {self.force_obj_to_name}"
-            )
             _, entity_type = search_for_id(self.force_obj_to_name, name_to_id)
             use_name = self.force_obj_to_name
+            rearrange_logger.debug(
+                f"Search object name {use_name} with type {entity_type}"
+            )
 
         matching_skills = self.domain.get_matching_skills(
             entity_type, use_name
@@ -243,11 +246,9 @@ class DynNavRLEnv(RearrangeTask):
                 f"Got no allowed tasks {allowed_tasks} from {matching_skills}, {entity_type}, {use_name}"
             )
 
-        task_name = random.choice(list(allowed_tasks.keys()))
         filtered_allowed_tasks = []
         orig_args = self.force_kwargs["orig_applied_args"]
-        for task_name in allowed_tasks:
-            sub_allowed_tasks = allowed_tasks[task_name]
+        for sub_allowed_tasks in allowed_tasks.values():
             for task in sub_allowed_tasks:
                 assigned_args = {
                     k: v
@@ -255,9 +256,13 @@ class DynNavRLEnv(RearrangeTask):
                         task.parameters, task.orig_applied_func_args
                     )
                 }
-                # Check that `orig_args` is a SUBSET of `assigned_args`
+                # Check that `orig_args` is a SUBSET of `assigned_args` meaning
+                # the keys and values match something in assigned args.
                 is_orig_args_subset = all(
-                    [k in assigned_args for k in orig_args]
+                    [
+                        (k in assigned_args) and (assigned_args[k] == v)
+                        for k, v in orig_args.items()
+                    ]
                 )
                 if is_orig_args_subset:
                     filtered_allowed_tasks.append(task)
@@ -265,7 +270,7 @@ class DynNavRLEnv(RearrangeTask):
 
         if len(filtered_allowed_tasks) == 0:
             raise ValueError(
-                f"Got no tasks out of {[x.name for x in allowed_tasks]} with entity_type={entity_type}, use_name={use_name}"
+                f"Got no tasks out of {allowed_tasks} with entity_type={entity_type}, use_name={use_name}"
             )
         nav_to_task = filtered_allowed_tasks[0]
 

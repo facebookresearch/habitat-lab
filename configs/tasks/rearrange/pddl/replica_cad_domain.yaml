@@ -82,19 +82,19 @@ actions:
         TASK.SHOULD_SAVE_TO_CACHE: False
 
     - name: place
-      parameters: [obj, targ]
+      parameters: [place_obj, obj]
       task: RearrangePlaceTask-v0
       task_def: "place"
       precondition:
-          - "holding(obj)"
-          - "robot_at(targ)"
+          - "holding(place_obj)"
+          - "robot_at(obj)"
       postcondition:
           - "not_holding()"
-          - "at(obj,targ)"
+          - "at(place_obj,obj)"
       arg_specs:
-        obj:
+        place_obj:
           type_match: ["rigid"]
-        targ:
+        obj:
           type_match: ["goal"]
       config_args:
         TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True

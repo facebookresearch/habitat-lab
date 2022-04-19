@@ -14,7 +14,7 @@ TASK:
     - 0.5
     - 0.0
     - 1.0
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
@@ -170,8 +170,6 @@ TASK:
             ALLOW_BACK: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
-        EMPTY:
-            TYPE: EmptyAction
         REARRANGE_STOP:
             TYPE: RearrangeStopAction
     POSSIBLE_ACTIONS:

@@ -96,11 +96,18 @@ class CompositeSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        does_action_want_stop = task.actions[
+            "REARRANGE_STOP"
+        ].does_want_terminate
         if task.cur_task is not None:
             # Don't check success when we are evaluating a subtask.
             self._metric = False
         else:
-            self._metric = task.is_goal_state_satisfied()
+            self._metric = (
+                task.is_goal_state_satisfied() and does_action_want_stop
+            )
+        if does_action_want_stop:
+            task.should_end = True
 
 
 @registry.register_measure
@@ -155,7 +162,7 @@ class CompositeNodeIdx(Measure):
                 )
 
             node_idx = task.get_inferred_node_idx()
-            for i in range(task.num_solution_subtasks()):
+            for i in range(task.num_solution_subtasks):
                 self._metric[f"reached_{i}"] = (
                     task.get_inferred_node_idx() >= i
                 )

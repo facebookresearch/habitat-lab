@@ -52,11 +52,15 @@ class EmptyAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class RearrangeStopAction(SimulatorTaskAction):
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.does_want_terminate = False
+
     def step(self, task, *args, is_last_action, **kwargs):
         should_stop = kwargs.get("REARRANGE_STOP", [1.0])
         if should_stop[0] == 1.0:
             rearrange_logger.debug("Requesting episode stop.")
-            task.should_end = True
+            self.does_want_terminate = True
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.REARRANGE_STOP)

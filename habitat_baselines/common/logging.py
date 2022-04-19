@@ -11,6 +11,6 @@ from habitat.core.logging import HabitatLogger
 
 baselines_logger = HabitatLogger(
     name="habitat_baselines",
-    level=os.environ.get("HABITAT_BASELINES_LOG", logging.ERROR),
+    level=int(os.environ.get("HABITAT_BASELINES_LOG", logging.ERROR)),
     format_str="[%(levelname)s,%(name)s] %(asctime)-15s %(filename)s:%(lineno)d %(message)s",
 )

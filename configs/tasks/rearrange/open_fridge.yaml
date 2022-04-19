@@ -18,7 +18,7 @@ TASK:
     SPAWN_REGION_SCALE: 0.2
     # -1 does not change the max impulse
     JOINT_MAX_IMPULSE: -1.0
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
 
     USE_MARKER_T: False
 
@@ -92,7 +92,7 @@ TASK:
         EE_DIST_REWARD: 1.0
 
         # General Rearrange Reward config
-        CONSTRAINT_VIOLATE_PEN: 0.0
+        CONSTRAINT_VIOLATE_PEN: 1.0
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
