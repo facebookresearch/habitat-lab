@@ -244,6 +244,7 @@ class BatchedEnv:
             # generator_config.max_nontarget_objects = 32
             # generator_config.used_fixed_robot_start_pos = False #True
             # generator_config.use_fixed_robot_start_yaw = False
+            # generator_config.use_fixed_robot_joint_start_positions = False
 
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
@@ -427,9 +428,11 @@ class BatchedEnv:
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
         self._previous_target_position = [None] * self._num_envs
-        self._stagger_agents = [
-            i % MAX_EPISODE_LENGTH for i in range(self._num_envs)
-        ]
+        self._stagger_agents = [0] * self._num_envs
+        if self._config.get("STAGGER", True):
+            self._stagger_agents = [
+                i % MAX_EPISODE_LENGTH for i in range(self._num_envs)
+            ]
 
         self.action_spaces = [
             action_space
@@ -522,9 +525,7 @@ class BatchedEnv:
             # global_target_position = mn.Vector3(1, 1, 1)
 
             # target is nav_reach target
-            global_target_position = (
-                state.target_obj_start_pos
-            )  # mn.Vector3(1, 1, 1)
+            global_target_position = state.target_obj_start_pos
 
             # target is a reachable nav_reach target
             # to_target = (state.target_obj_start_pos - state.robot_start_pos)
@@ -542,7 +543,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": float(success),
                     "episode_steps": state.episode_step_idx,
-                    "distance_to_taget": curr_dist,
+                    "distance_to_target": curr_dist,
                 }
                 self._previous_state[b] = None
 
@@ -565,7 +566,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": 0.0,
                     "episode_steps": state.episode_step_idx,
-                    "distance_to_taget": curr_dist,
+                    "distance_to_target": curr_dist,
                 }
                 if self._previous_state[b] is not None:
                     last_dist = (
