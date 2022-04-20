@@ -266,6 +266,13 @@ class BatchedEnv:
             bsim_config.do_procedural_episode_set = True
             bsim_config.episode_generator_config = generator_config
 
+            bsim_config.enable_robot_collision = self._config.get(
+                "ENABLE_ROBOT_COLLISION", True
+            )
+            bsim_config.enable_held_object_collision = self._config.get(
+                "ENABLE_HELD_OBJECT_COLLISION", True
+            )
+
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
 
@@ -287,7 +294,7 @@ class BatchedEnv:
                 self._debug_camera = Camera(
                     "base_link",
                     mn.Vector3(
-                        -0.8, 1.8, -0.8
+                        -0.8, 2.5, -0.8
                     ),  # place behind, above, and to the left of the base
                     mn.Quaternion.rotation(
                         mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
