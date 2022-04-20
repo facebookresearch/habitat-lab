@@ -15,6 +15,7 @@ TASK_CONFIG:
       - ABS_TARGET_START_SENSOR
       - LOCALIZATION_SENSOR
       - NAV_GOAL_SENSOR
+      - TARGET_START_POINT_GOAL_SENSOR
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -72,20 +73,6 @@ RL:
              use_log_std: True
           LOAD_CKPT_FILE: "data/models/place.pth"
           MAX_SKILL_STEPS: 200
-
-        NN_NAV:
-          skill_name: "NavSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          ORACLE_STOP: False
-          ORACLE_STOP_ANGLE_DIST: 0.2
-          ORACLE_STOP_DIST: 0.2
-          ACTION_DIST:
-             use_log_std: True
-          LOAD_CKPT_FILE: "data/models/nav.pth"
-          MAX_SKILL_STEPS: 300
 
         GT_NAV:
           skill_name: "OracleNavPolicy"

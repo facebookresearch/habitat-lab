@@ -15,9 +15,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
-    DistToNavGoalSensor,
     NavGoalSensor,
-    NavRotToGoalSensor,
     OracleNavigationActionSensor,
 )
 from habitat.tasks.utils import get_angle
@@ -325,6 +323,7 @@ class NnSkillPolicy(Policy):
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )
+
         try:
             actor_critic.load_state_dict(
                 {  # type: ignore
@@ -335,7 +334,7 @@ class NnSkillPolicy(Policy):
 
         except Exception as e:
             raise ValueError(
-                f"Could not load checkpoint for skill {config.skill_name}"
+                f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
             ) from e
 
         return cls(
@@ -470,14 +469,19 @@ class NavSkillPolicy(NnSkillPolicy):
         prev_actions,
         masks,
     ) -> torch.Tensor:
-        if self._config.ORACLE_STOP:
-            dist_to_nav_goal = observations[DistToNavGoalSensor.cls_uuid]
-            rot_to_nav_goal = observations[NavRotToGoalSensor.cls_uuid]
-            should_stop = (
-                dist_to_nav_goal < self._config.ORACLE_STOP_DIST
-            ) * (rot_to_nav_goal < self._config.ORACLE_STOP_ANGLE_DIST)
-            return should_stop.float()
-        return torch.zeros(masks.shape[0]).to(masks.device)
+        filtered_prev_actions = prev_actions[
+            :, self._ac_start : self._ac_start + self._ac_len
+        ]
+
+        lin_vel, ang_vel = (
+            filtered_prev_actions[:, 0],
+            filtered_prev_actions[:, 1],
+        )
+        should_stop = (
+            torch.abs(lin_vel) < self._config.LIN_SPEED_STOP
+            and torch.abs(ang_vel) < self._config.ANG_SPEED_STOP
+        )
+        return should_stop.float()
 
     def _parse_skill_arg(self, skill_arg):
         return int(skill_arg[-1].split("|")[1])

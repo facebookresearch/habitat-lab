@@ -1,5 +1,16 @@
 VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
+TASK_CONFIG:
+  TASK:
+    SENSORS:
+      - TARGET_START_SENSOR
+      - GOAL_SENSOR
+      - JOINT_SENSOR
+      - IS_HOLDING_SENSOR
+      - END_EFFECTOR_SENSOR
+      - RELATIVE_RESTING_POS_SENSOR
+      - TARGET_START_POINT_GOAL_SENSOR
+      - NAV_TO_SKILL_SENSOR
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -63,28 +74,14 @@ RL:
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
           include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          ORACLE_STOP: False
-          ORACLE_STOP_ANGLE_DIST: 0.2
-          ORACLE_STOP_DIST: 0.2
+          OBS_SKILL_INPUTS: []
+          LIN_SPEED_STOP: 0.067
+          ANG_SPEED_STOP: 0.067
           ACTION_DIST:
              use_log_std: True
-          LOAD_CKPT_FILE: "data/models/nav.pth"
+          #LOAD_CKPT_FILE: "data/models/nav.pth"
+          LOAD_CKPT_FILE: "/srv/share/aszot3/habitat2/checkpoints/416-869JTZ/ckpt.13.pth"
           MAX_SKILL_STEPS: 300
-
-        GT_NAV:
-          skill_name: "OracleNavPolicy"
-          include_visual_keys: ["robot_head_depth"]
-          OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-          GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
-          # GT nav
-          TURN_THRESH: 0.1
-          DIST_THRESH: 0.2
-          LOOK_AT_OBJ_THRESH: 0.2
-          TURN_VELOCITY: 1.0
-          FORWARD_VELOCITY: 1.0
-          MAX_SKILL_STEPS: 300
-          NAV_ACTION_NAME: "BASE_VELOCITY"
 
       USE_SKILLS:
         pick: "NN_PICK"
@@ -96,7 +93,6 @@ RL:
   SUCCESS_MEASURE: "composite_success"
   SUCCESS_REWARD: 100.0
   SLACK_REWARD: -0.01
-  GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
 
   PPO:
     # ppo params
