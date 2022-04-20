@@ -169,7 +169,7 @@ jobs:
             ccache --zero-stats
             ccache --max-size=10.0G
       - run:
-          name: Build, install habitat-sim and run benchmark
+          name: Build and install habitat-sim
           no_output_timeout: 30m
           command: |
               if [ ! -d ./habitat-sim ]
@@ -253,6 +253,14 @@ jobs:
               python setup.py test --addopts "--cov-report=xml --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Run Hab2.0 benchmark
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              bash scripts/hab2_bench/bench_runner.sh
+              python scripts/hab2_bench/plot_bench.py
       - run:
           name: Build api documentation
           command: |

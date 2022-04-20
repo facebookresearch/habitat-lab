@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path as osp
 
 import matplotlib
@@ -70,6 +74,9 @@ for i in [1, 16]:
             "idle_single_camera_noconcur": "[Idle (head-RGB) No Concurrent Rendering]",
             "idle_single_camera_nosleep": "[Idle (head-RGB) No Auto-sleep]",
             # "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
+            "interact_all": "[Interact]",
+            "interact_noconcur": "[Interact No Concurrent Rendering]",
+            "interact_nosleep": "[Interact No Auto-sleep]",
         },
         "opts_%i" % i,
         "ReplicaCAD: 200 Steps %i Processes" % i,
