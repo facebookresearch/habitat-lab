@@ -1,17 +1,16 @@
-TENSORBOARD_DIR: "tb/reward_0p01"
-CHECKPOINT_FOLDER: "data/checkpoints/reward_0p01"
+TENSORBOARD_DIR: "../data/tb/gala_kinematic_ddppo"
+WRITER_TYPE: "tb"
+CHECKPOINT_FOLDER: "../data/ckpt/gala_kinematic_ddppo"
 VIDEO_DIR: "../videos"
-REWARD_SCALE: 0.01
-HACK_ACTION_SCALE: 1.0
+REWARD_SCALE: 1.0 # 0.01
 NUM_CHECKPOINTS: 0
 BATCHED_ENV: True
-STUB_BATCH_SIMULATOR: False
 OVERLAP_PHYSICS: True
-NUM_PHYSICS_SUBSTEPS: 1
 SAVE_VIDEOS_INTERVAL: -1
-NUM_UPDATES: 60
+LOG_INTERVAL: 1
+NUM_UPDATES: 61
 NUM_ENVIRONMENTS: 512
-# SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:
@@ -23,11 +22,11 @@ RL:
   PPO:
     ppo_epoch: 1
     num_steps: 32
-    entropy_coef: 0.0025
+    entropy_coef: 0.0 # 001
     lr: 2.5e-4
+    use_normalized_advantage: True
     use_linear_lr_decay: False
-    max_grad_norm: 0.5
-    num_mini_batch: 2
+    max_grad_norm: 1.0
   POLICY:
     name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
