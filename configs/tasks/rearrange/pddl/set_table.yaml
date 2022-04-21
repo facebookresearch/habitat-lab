@@ -25,13 +25,13 @@ stage_goals:
     - "at(fruit_target|1,TARGET_fruit_target|1)"
 
 solution:
-    - "nav_to_receptacle(cab_push_point_5,bowl_target|0)"
-    - "open_cab(cab_push_point_5,bowl_target|0)"
+    - "nav_to_receptacle(MARKER_cab_push_point_5,bowl_target|0)"
+    - "open_cab(MARKER_cab_push_point_5,bowl_target|0)"
     - "pick(bowl_target|0)"
     - "nav(TARGET_bowl_target|0)"
     - "place(bowl_target|0,TARGET_bowl_target|0)"
 
-    - "nav_to_receptacle(fridge_push_point,fruit_target|1)"
+    - "nav_to_receptacle(MARKER_fridge_push_point,fruit_target|1)"
     - "open_fridge(fruit_target|1)"
     - "nav(fruit_target|1)"
     - "pick(fruit_target|1)"
