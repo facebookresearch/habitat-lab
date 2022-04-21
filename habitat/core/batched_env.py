@@ -40,17 +40,13 @@ class StateSensorConfig:
     def get_obs(self, state):
         pass
 
-    def get_batch_obs(self, states, output_list):
-        assert output_list.shape[0] == len(states)
-        assert output_list.shape[1] == self.shape
-        new_list = np.empty(
-            (output_list.shape[0], output_list.shape[1]), dtype=np.float32
-        )
-        for i in range(output_list.shape[0]):
+    def get_batch_obs(self, states):
+        new_list = np.empty((len(states), self.shape), dtype=np.float32)
+        for i in range(len(states)):
             item = self.get_obs(states[i])
-            for j in range(output_list.shape[1]):
+            for j in range(self.shape):
                 new_list[i][j] = item[j]
-        output_list = torch.tensor(new_list)
+        return new_list
 
 
 def _get_spherical_coordinates_ref(
@@ -524,7 +520,7 @@ class BatchedEnv:
         #         sensor_data = torch.tensor(ssc.get_obs(state))
         #         observations[ssc.obs_key][b, :] = sensor_data
         for ssc in self.state_sensor_config:
-            ssc.get_batch_obs(env_states, observations[ssc.obs_key])
+            observations[ssc.obs_key] = ssc.get_batch_obs(env_states)
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
