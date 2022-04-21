@@ -3,7 +3,7 @@ CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_
 VIDEO_DIR: "../videos2"
 VIDEO_OPTION: ["disk"]
 REWARD_SCALE: 1.0 # 0.01
-NUM_CHECKPOINTS: 10
+NUM_CHECKPOINTS: 50
 BATCHED_ENV: True
 OVERLAP_PHYSICS: True
 SAVE_VIDEOS_INTERVAL: 500
@@ -16,31 +16,31 @@ STAGGER: True
 ENABLE_ROBOT_COLLISION: True
 ENABLE_HELD_OBJECT_COLLISION: True
 REACH_SUCCESS_REWARD: 10.0
-REACH_SUCCESS_THRESH: 0.05
+REACH_SUCCESS_THRESH: 0.3
 STATE_SENSORS:
   ROBOT_START_RELATIVE:
     TYPE: "RobotStartSensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_start_relative"
     shape: 3
   ROBOT_TARGET_RELATIVE:
     TYPE: "RobotTargetSensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_target_relative"
     shape: 3
   EE_START_RELATIVE:
     TYPE: "EEStartSensorConfig"
-    polar: True
+    polar: False
     obs_key: "ee_start_relative"
     shape: 3
   EE_TARGET_RELATIVE:
     TYPE: "EETargetSensorConfig"
-    polar: True
+    polar: False
     obs_key: "ee_target_relative"
     shape: 3
   ROBOT_EE_RELATIVE:
     TYPE: "RobotEESensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_ee_relative"
     shape: 3
   JOINT_SENSOR:
@@ -51,8 +51,8 @@ STATE_SENSORS:
     TYPE: "StepCountSensorConfig"
     obs_key: "step_count"
     shape: 3
-# SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR", "STEP_COUNT_SENSOR", "DEBUG_RGB_SENSOR"]
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR", "STEP_COUNT_SENSOR"]
+# SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR", "DEBUG_RGB_SENSOR"]
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "JOINT_SENSOR"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
   AGENT_0:

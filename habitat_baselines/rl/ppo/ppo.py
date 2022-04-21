@@ -15,7 +15,7 @@ from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import Policy
 
-use_mixed_precision = True
+use_mixed_precision = False
 
 from torch.cuda.amp import GradScaler, autocast
 
