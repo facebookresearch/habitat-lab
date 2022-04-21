@@ -275,7 +275,7 @@ _C.TASK.TARGET_START_SENSOR.DIMENSIONALITY = 3
 # OBJECT SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.OBJECT_SENSOR = CN()
-_C.TASK.OBJECT_SENSOR.TYPE = "ObjectGoalPositionSensor"
+_C.TASK.OBJECT_SENSOR.TYPE = "TargetCurrentSensor"
 _C.TASK.OBJECT_SENSOR.GOAL_FORMAT = "CARTESIAN"
 _C.TASK.OBJECT_SENSOR.DIMENSIONALITY = 3
 
