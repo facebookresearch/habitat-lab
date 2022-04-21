@@ -553,7 +553,27 @@ class BatchedEnv:
         #         sensor_data = torch.tensor(ssc.get_obs(state))
         #         observations[ssc.obs_key][b, :] = sensor_data
         for ssc in self.state_sensor_config:
-            observations[ssc.obs_key] = ssc.get_batch_obs(env_states)
+            observations[ssc.obs_key] = torch.tensor(
+                ssc.get_batch_obs(env_states)
+            )
+            if not torch.isfinite(observations[ssc.obs_key]).all():
+                print(ssc.obs_key, "nan")
+                for b, s in enumerate(env_states):
+                    print(observations[ssc.obs_key][b, :])
+                    print(
+                        s.robot_pos,
+                        s.robot_rotation,
+                        s.robot_start_pos,
+                        s.robot_start_rotation,
+                        s.ee_pos,
+                        s.ee_rotation,
+                        s.robot_start_pos,
+                        s.robot_start_rotation,
+                        s.target_obj_start_pos,
+                    )
+                observations[ssc.obs_key] = torch.nan_to_num(
+                    observations[ssc.obs_key], 0.0
+                )
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
@@ -585,7 +605,8 @@ class BatchedEnv:
             # global_target_position = state.robot_start_pos + to_target / to_target.length()
 
             curr_dist = (global_target_position - state.ee_pos).length()
-            success = curr_dist < self._config.REACH_SUCCESS_THRESH
+            # success = curr_dist < self._config.REACH_SUCCESS_THRESH
+            success = state.target_obj_idx == state.held_obj_idx
             if success or state.episode_step_idx >= (
                 max_episode_len - self._stagger_agents[b]
             ):
@@ -616,7 +637,7 @@ class BatchedEnv:
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
-                self.rewards[b] = 0
+                self.rewards[b] = -1.0 / MAX_EPISODE_LENGTH
                 self.infos[b] = {
                     "success": 0.0,
                     "episode_steps": state.episode_step_idx,

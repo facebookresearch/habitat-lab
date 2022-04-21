@@ -552,6 +552,8 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.config.BATCHED_ENV:
             batch = batched_observations
+            for obs_name in batch:
+                batch[obs_name] = batch[obs_name].to(self.device)
         else:
             batch = batch_obs(
                 observations,
@@ -1263,6 +1265,8 @@ class PPOTrainer(BaseRLTrainer):
             if self.config.BATCHED_ENV:
                 batched_observations, rewards_l, dones, infos = outputs
                 batch = batched_observations
+                for obs_name in batch:
+                    batch[obs_name] = batch[obs_name].to(self.device)
             else:
                 observations, rewards_l, dones, infos = [
                     list(x) for x in zip(*outputs)
