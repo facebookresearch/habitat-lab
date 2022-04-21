@@ -16,6 +16,8 @@ from gym.spaces import Box
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils import profiling_wrapper
 from habitat.utils.geometry_utils import quaternion_rotate_vector
+from habitat_sim import build_type
+from habitat_sim._ext.habitat_sim_bindings import get_spherical_coordinates
 from habitat_sim.utils.common import quat_from_magnum
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
@@ -38,8 +40,20 @@ class StateSensorConfig:
     def get_obs(self, state):
         pass
 
+    def get_batch_obs(self, states, output_list):
+        assert output_list.shape[0] == len(states)
+        assert output_list.shape[1] == self.shape
+        new_list = np.empty(
+            (output_list.shape[0], output_list.shape[1]), dtype=np.float32
+        )
+        for i in range(output_list.shape[0]):
+            item = self.get_obs(states[i])
+            for j in range(output_list.shape[1]):
+                new_list[i][j] = item[j]
+        output_list = torch.tensor(new_list)
 
-def _get_spherical_coordinates(
+
+def _get_spherical_coordinates_ref(
     source_position, goal_position, source_rotation
 ):
     direction_vector = goal_position - source_position
@@ -60,6 +74,44 @@ def _get_spherical_coordinates(
         # The source is at the same place as the target, theta cannot be calculated
         theta = 0.0
     return rho, theta, phi
+
+
+def test_get_spherical_coordinates():
+
+    for _ in range(100):
+
+        source_pos = mn.Vector3(
+            np.random.uniform(-10, 10),
+            np.random.uniform(-10, 10),
+            np.random.uniform(-10, 10),
+        )
+        goal_pos = mn.Vector3(
+            np.random.uniform(-10, 10),
+            np.random.uniform(-10, 10),
+            np.random.uniform(-10, 10),
+        )
+        source_rotation = mn.Quaternion.rotation(
+            mn.Deg(np.random.uniform(0, 360)), mn.Vector3(0, 1, 0)
+        )
+
+        result0 = _get_spherical_coordinates_ref(
+            source_pos, goal_pos, source_rotation
+        )
+        result1 = get_spherical_coordinates(
+            source_pos, goal_pos, source_rotation
+        )
+
+        dist = np.linalg.norm(result1 - result0)
+        assert dist < 1e-4
+
+
+def _get_spherical_coordinates(
+    source_position, goal_position, source_rotation
+):
+    return get_spherical_coordinates(
+        source_position, goal_position, source_rotation
+    )
+    # return _get_spherical_coordinates_ref(source_position, goal_position, source_rotation)
 
 
 class RobotStartSensorConfig(StateSensorConfig):
@@ -204,6 +256,10 @@ class BatchedEnv:
             assert torch.cuda.is_available() and torch.version.cuda.startswith(
                 "11"
             )
+            # you can disable this assert if you really need to test the debug build
+            assert (
+                build_type == "release"
+            ), "Ensure habitat-sim release build for training!"
             from habitat_sim._ext.habitat_sim_bindings import (
                 BatchedSimulator,
                 BatchedSimulatorConfig,
@@ -463,10 +519,12 @@ class BatchedEnv:
         raise NotImplementedError()
 
     def get_nonpixel_observations(self, env_states, observations):
-        for (b, state) in enumerate(env_states):
-            for ssc in self.state_sensor_config:
-                sensor_data = torch.tensor(ssc.get_obs(state))
-                observations[ssc.obs_key][b, :] = sensor_data
+        # for (b, state) in enumerate(env_states):
+        #     for ssc in self.state_sensor_config:
+        #         sensor_data = torch.tensor(ssc.get_obs(state))
+        #         observations[ssc.obs_key][b, :] = sensor_data
+        for ssc in self.state_sensor_config:
+            ssc.get_batch_obs(env_states, observations[ssc.obs_key])
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
@@ -482,13 +540,9 @@ class BatchedEnv:
             # Target position is arbitrarily fixed
             local_target_position = mn.Vector3(0.6, 1, 0.6)
 
-            global_target_position = quaternion_rotate_vector(
-                quat_from_magnum(state.robot_rotation), local_target_position
-            )
-            global_target_position = state.robot_pos + mn.Vector3(
-                global_target_position[0],
-                global_target_position[1],
-                global_target_position[2],
+            global_target_position = (
+                state.robot_pos
+                + state.robot_rotation.transform_vector(local_target_position)
             )
 
             curr_dist = (global_target_position - state.ee_pos).length()
