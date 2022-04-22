@@ -137,7 +137,8 @@ TASK:
     # Articulated object measures
     ART_OBJ_STATE:
         TYPE: "ArtObjState"
-
+    MARKER_REL_POS_SENSOR:
+        TYPE: "MarkerRelPosSensor"
     EE_DIST_TO_MARKER:
         TYPE: "EndEffectorDistToMarker"
 
@@ -191,6 +192,7 @@ TASK:
     - COMPOSITE_REWARD
     - NUM_STEPS
     # Articulated task measures
+    - MARKER_REL_POS_SENSOR
     - EE_DIST_TO_MARKER
     - ART_OBJ_AT_DESIRED_STATE
     - ART_OBJ_STATE
