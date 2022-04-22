@@ -11,39 +11,39 @@ LOG_INTERVAL: 1
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 50000000.0
 NUM_ENVIRONMENTS: 2
-MAX_EPISODE_LENGTH: 50
-STAGGER: True
+MAX_EPISODE_LENGTH: 500
+STAGGER: False
 TEST_EPISODE_COUNT: 10
 ENABLE_ROBOT_COLLISION: True
 ENABLE_HELD_OBJECT_COLLISION: True
 STATE_SENSORS:
   ROBOT_START_RELATIVE:
     TYPE: "RobotStartSensorConfig"
-    polar: False
+    polar: True
     obs_key: "robot_start_relative"
     shape: 3
   ROBOT_TARGET_RELATIVE:
     TYPE: "RobotTargetSensorConfig"
-    polar: False
+    polar: True
     obs_key: "robot_target_relative"
     shape: 3
   EE_START_RELATIVE:
     TYPE: "EEStartSensorConfig"
-    polar: False
+    polar: True
     obs_key: "ee_start_relative"
     shape: 3
   EE_TARGET_RELATIVE:
     TYPE: "EETargetSensorConfig"
-    polar: False
+    polar: True
     obs_key: "ee_target_relative"
     shape: 3
   ROBOT_EE_RELATIVE:
     TYPE: "RobotEESensorConfig"
-    polar: False
+    polar: True
     obs_key: "robot_ee_relative"
     shape: 3
   JOINT_SENSOR:
-    TYPE: "RobotEESensorConfig"
+    TYPE: "JointSensorConfig"
     obs_key: "joint_pos"
     shape: 7
   STEP_COUNT_SENSOR:
