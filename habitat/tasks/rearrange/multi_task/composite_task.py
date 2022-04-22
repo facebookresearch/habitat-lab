@@ -313,16 +313,19 @@ class CompositeTask(RearrangeTask):
     def success_js_state(self) -> float:
         return 0.0
 
-    def get_use_marker(self) -> MarkerInfo:
-        subtask_get_marker_fn = self._try_get_subtask_prop(
-            "get_use_marker", None
+    @property
+    def use_marker_name(self) -> str:
+        subtask_marker_name = self._try_get_subtask_prop(
+            "use_marker_name", None
         )
-        if subtask_get_marker_fn is not None:
-            return subtask_get_marker_fn()
+        if subtask_marker_name is not None:
+            return subtask_marker_name
         else:
             all_markers = self._sim.get_all_markers()
-            first_k = list(all_markers.keys())[0]
-            return all_markers[first_k]
+            return list(all_markers.keys())[0]
+
+    def get_use_marker(self) -> MarkerInfo:
+        return self._sim.get_marker(self.use_marker_name)
 
     #########################################################################
     # END Sub-task property overrides

@@ -316,6 +316,19 @@ class NnSkillPolicy(Policy):
                 for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
             }
         )
+
+        if "ARM_ACTION" in filtered_action_space.spaces and (
+            policy_cfg.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER
+            is None
+        ):
+            filtered_action_space["ARM_ACTION"] = spaces.Dict(
+                {
+                    k: v
+                    for k, v in filtered_action_space["ARM_ACTION"].items()
+                    if k != "grip_action"
+                }
+            )
+
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )

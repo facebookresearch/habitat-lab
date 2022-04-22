@@ -46,6 +46,8 @@ TASK:
         TYPE: IsHoldingSensor
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: RelativeRestingPositionSensor
+    MARKER_REL_POS_SENSOR:
+        TYPE: "MarkerRelPosSensor"
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
@@ -54,6 +56,7 @@ TASK:
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_POINT_GOAL_SENSOR
+    - MARKER_REL_POS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: 50000.0
@@ -137,8 +140,6 @@ TASK:
     # Articulated object measures
     ART_OBJ_STATE:
         TYPE: "ArtObjState"
-    MARKER_REL_POS_SENSOR:
-        TYPE: "MarkerRelPosSensor"
     EE_DIST_TO_MARKER:
         TYPE: "EndEffectorDistToMarker"
 
@@ -192,7 +193,6 @@ TASK:
     - COMPOSITE_REWARD
     - NUM_STEPS
     # Articulated task measures
-    - MARKER_REL_POS_SENSOR
     - EE_DIST_TO_MARKER
     - ART_OBJ_AT_DESIRED_STATE
     - ART_OBJ_STATE

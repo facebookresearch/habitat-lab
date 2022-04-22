@@ -102,6 +102,7 @@ class HierarchicalPolicy(Policy):
     ):
 
         self._high_level_policy.apply_mask(masks)
+        use_device = prev_actions.device
 
         batched_observations = [
             {k: v[batch_idx].unsqueeze(0) for k, v in observations.items()}
@@ -111,10 +112,15 @@ class HierarchicalPolicy(Policy):
         batched_prev_actions = prev_actions.unsqueeze(1)
         batched_masks = masks.unsqueeze(1)
 
-        batched_bad_should_terminate = torch.zeros(self._num_envs)
+        batched_bad_should_terminate = torch.zeros(
+            self._num_envs, device=use_device
+        )
 
         # Check if skills should terminate.
         for batch_idx, skill_idx in enumerate(self._cur_skills):
+            if masks[batch_idx] == 0.0:
+                # Don't check if the skill is done if the episode ended.
+                continue
             should_terminate, bad_should_terminate = self._skills[
                 skill_idx.item()
             ].should_terminate(
@@ -133,7 +139,7 @@ class HierarchicalPolicy(Policy):
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
-        hl_terminate = torch.zeros(self._num_envs, device=prev_actions.device)
+        hl_terminate = torch.zeros(self._num_envs, device=use_device)
         if self._call_high_level.sum() > 0:
             (
                 new_skills,
@@ -182,7 +188,7 @@ class HierarchicalPolicy(Policy):
             )
             actions[batch_idx] = action
 
-        should_terminate = bad_should_terminate + hl_terminate
+        should_terminate = batched_bad_should_terminate + hl_terminate
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):
