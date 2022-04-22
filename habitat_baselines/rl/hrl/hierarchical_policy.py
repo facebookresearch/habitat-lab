@@ -9,6 +9,7 @@ from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
     HighLevelPolicy,
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
+    ArtObjSkillPolicy,
     NavSkillPolicy,
     NnSkillPolicy,
     OracleNavPolicy,

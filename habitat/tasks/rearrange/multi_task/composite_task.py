@@ -13,6 +13,7 @@ import yaml
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlAction,
@@ -271,17 +272,18 @@ class CompositeTask(RearrangeTask):
             return getattr(self._inferred_cur_task, prop_name)
         return def_val
 
-    ###############################
-    # Sub-task property overrides
+    #########################################################################
+    # START Sub-task property overrides
     # These will emulate properties from sub-tasks needed to compute sub-task
     # sensors and measurements.
-    ###############################
+    #########################################################################
+
     @property
-    def targ_idx(self):
+    def targ_idx(self) -> int:
         return self._try_get_subtask_prop("targ_idx", self._targ_idx)
 
     @property
-    def abs_targ_idx(self):
+    def abs_targ_idx(self) -> int:
         if self._targ_idx is None:
             abs_targ_idx = None
         else:
@@ -290,7 +292,7 @@ class CompositeTask(RearrangeTask):
         return self._try_get_subtask_prop("abs_targ_idx", abs_targ_idx)
 
     @property
-    def nav_to_task_name(self):
+    def nav_to_task_name(self) -> str:
         return self._try_get_subtask_prop("nav_to_task_name", None)
 
     @property
@@ -300,9 +302,28 @@ class CompositeTask(RearrangeTask):
         )
 
     @property
-    def nav_target_pos(self):
+    def nav_target_pos(self) -> np.ndarray:
         return self._try_get_subtask_prop("nav_target_pos", np.zeros((3,)))
 
     @property
-    def nav_target_angle(self):
+    def nav_target_angle(self) -> float:
         return self._try_get_subtask_prop("nav_target_angle", 0.0)
+
+    @property
+    def success_js_state(self) -> float:
+        return 0.0
+
+    def get_use_marker(self) -> MarkerInfo:
+        subtask_get_marker_fn = self._try_get_subtask_prop(
+            "get_use_marker", None
+        )
+        if subtask_get_marker_fn is not None:
+            return subtask_get_marker_fn()
+        else:
+            all_markers = self._sim.get_all_markers()
+            first_k = list(all_markers.keys())[0]
+            return all_markers[first_k]
+
+    #########################################################################
+    # END Sub-task property overrides
+    #########################################################################

@@ -49,7 +49,7 @@ class MarkerRelPosSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        marker = self._sim.get_marker(self._task.use_marker_name)
+        marker = self._task.get_use_marker()
         ee_trans = self._sim.robot.ee_transform
         rel_marker_pos = ee_trans.inverted().transform_point(
             marker.get_current_position()

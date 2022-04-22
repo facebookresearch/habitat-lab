@@ -50,6 +50,50 @@ RL:
       high_level_policy:
         name: "GtHighLevelPolicy"
       DEFINED_SKILLS:
+        NN_OPEN_CAB:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          include_visual_keys: ["robot_head_depth"]
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/open_cab.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+
+        NN_CLOSE_CAB:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          include_visual_keys: ["robot_head_depth"]
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/close_cab.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+
+        NN_OPEN_FRIDGE:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          include_visual_keys: ["robot_head_depth"]
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/open_fridge.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+
+        NN_CLOSE_FRIDGE:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          include_visual_keys: ["robot_head_depth"]
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/close_fridge.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+
         NN_PICK:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
