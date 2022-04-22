@@ -232,6 +232,10 @@ class EndEffectorDistToMarker(Measure):
         return EndEffectorDistToMarker.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [MarkerRelPosSensor.cls_uuid],
+        )
         self.update_metric(
             *args,
             episode=episode,
