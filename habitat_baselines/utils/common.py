@@ -440,7 +440,10 @@ def tensor_to_bgr_images(
 
 
 def image_resize_shortest_edge(
-    img: Tensor, size: int, channels_last: bool = False, interpolation_mode="area"
+    img: Tensor,
+    size: int,
+    channels_last: bool = False,
+    interpolation_mode="area",
 ) -> torch.Tensor:
     """Resizes an img so that the shortest side is length of size while
         preserving aspect ratio.
