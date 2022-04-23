@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -307,9 +308,11 @@ class RearrangeSim(HabitatSim):
             )
 
     def _load_navmesh(self):
-        assert (
-            self.pathfinder.is_loaded
-        ), "NavMeshes should be provided or computed automatically by Simulator."
+        scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
+        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
+
+        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
