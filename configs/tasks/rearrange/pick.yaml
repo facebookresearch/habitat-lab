@@ -89,7 +89,7 @@ TASK:
 
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
-        SUCC_THRESH: 0.15
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
 
     MEASUREMENTS:
         - "ROBOT_FORCE"

@@ -124,7 +124,7 @@ TASK:
         WRONG_PICK_SHOULD_END: false
     PICK_SUCCESS:
         TYPE: RearrangePickSuccess
-        SUCC_THRESH: 0.15
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
     COMPOSITE_NODE_IDX:
         TYPE: CompositeNodeIdx
     COMPOSITE_SUCCESS:
@@ -152,11 +152,11 @@ TASK:
 
     ART_OBJ_SUCCESS:
         TYPE: "ArtObjSuccess"
-        REST_DIST_THRESHOLD: 0.15
+        REST_DIST_THRESHOLD: 0.2
 
     ART_OBJ_REWARD:
         TYPE: "ArtObjReward"
-        WRONG_GRASP_END: True
+        WRONG_GRASP_END: False
         WRONG_GRASP_PEN: 5.0
         GRASP_REWARD: 5.0
         ART_AT_DESIRED_STATE_REWARD: 5.0

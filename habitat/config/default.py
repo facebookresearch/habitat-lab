@@ -499,7 +499,7 @@ _C.TASK.PICK_REWARD.COLLISION_PENALTY = 0.0
 _C.TASK.PICK_REWARD.ROBOT_OBJ_COLLISION_PENALTY = 0.0
 _C.TASK.PICK_SUCCESS = CN()
 _C.TASK.PICK_SUCCESS.TYPE = "RearrangePickSuccess"
-_C.TASK.PICK_SUCCESS.SUCC_THRESH = 0.15
+_C.TASK.PICK_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 # PLACE MEASUREMENT
 # -----------------------------------------------------------------------------

@@ -35,7 +35,7 @@ TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
-EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['composite_reward', 'force', 'composite_success']
 EVAL:
   SPLIT: "eval"
   USE_CKPT_CONFIG: False
