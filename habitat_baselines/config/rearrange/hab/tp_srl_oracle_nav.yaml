@@ -136,11 +136,16 @@ RL:
           MAX_SKILL_STEPS: 300
           NAV_ACTION_NAME: "BASE_VELOCITY"
 
+        WAIT_SKILL:
+          skill_name: "WaitSkillPolicy"
+          MAX_SKILL_STEPS: -1.0
+
       USE_SKILLS:
         pick: "NN_PICK"
         place: "NN_PLACE"
         nav: "GT_NAV"
         nav_to_receptacle: "GT_NAV"
+        wait: "WAIT_SKILL"
 
   REWARD_MEASURE: "composite_reward"
   SUCCESS_MEASURE: "composite_success"

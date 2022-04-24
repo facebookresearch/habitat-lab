@@ -122,6 +122,10 @@ RL:
           LOAD_CKPT_FILE: "data/models/nav.pth"
           MAX_SKILL_STEPS: 300
 
+        WAIT_SKILL:
+          skill_name: "WaitSkillPolicy"
+          MAX_SKILL_STEPS: -1.0
+
       USE_SKILLS:
         open_cab: "NN_OPEN_CAB"
         close_cab: "NN_CLOSE_CAB"

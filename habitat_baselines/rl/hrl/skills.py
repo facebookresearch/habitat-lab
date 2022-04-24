@@ -37,32 +37,20 @@ def truncate_obs_space(space: spaces.Box, truncate_len: int) -> spaces.Box:
     )
 
 
-class NnSkillPolicy(Policy):
-    """
-    Defines a skill to be used in the TP+SRL baseline.
-    """
-
+class SkillPolicy(Policy):
     def __init__(
         self,
-        wrap_policy,
         config,
         action_space: spaces.Space,
-        filtered_obs_space: spaces.Space,
-        filtered_action_space: spaces.Space,
         batch_size,
         should_keep_hold_state: bool = False,
     ):
         """
         :param action_space: The overall action space of the entire task, not task specific.
         """
-        self._wrap_policy = wrap_policy
         self._action_space = action_space
         self._config = config
         self._batch_size = batch_size
-        self._filtered_obs_space = filtered_obs_space
-        self._filtered_action_space = filtered_action_space
-        self._ac_start = 0
-        self._ac_len = get_num_actions(filtered_action_space)
 
         self._cur_skill_step = torch.zeros(self._batch_size)
         self._should_keep_hold_state = should_keep_hold_state
@@ -70,12 +58,6 @@ class NnSkillPolicy(Policy):
         self._cur_skill_args: List[Any] = [
             None for _ in range(self._batch_size)
         ]
-
-        for k, space in action_space.items():
-            if k not in filtered_action_space.spaces.keys():
-                self._ac_start += get_num_actions(space)
-            else:
-                break
 
         self._grip_ac_idx = 0
         found_grip = False
@@ -90,30 +72,10 @@ class NnSkillPolicy(Policy):
         if not found_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
 
-        self._internal_log(
-            f"Skill {self._config.skill_name}: action offset {self._ac_start}, action length {self._ac_len}"
-        )
-
     def _internal_log(self, s, observations=None):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
-
-    def _select_obs(self, obs, cur_batch_idx):
-        """
-        Selects out the part of the observation that corresponds to the current goal of the skill.
-        """
-        for k in self._config.OBS_SKILL_INPUTS:
-            cur_multi_sensor_index = self._get_multi_sensor_index(
-                cur_batch_idx, k
-            )
-            if k not in obs:
-                raise ValueError(
-                    f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
-                )
-            entity_positions = obs[k].view(1, -1, 3)
-            obs[k] = entity_positions[:, cur_multi_sensor_index]
-        return obs
 
     def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
         """
@@ -157,7 +119,12 @@ class NnSkillPolicy(Policy):
                 observations,
             )
 
-        bad_terminate = self._cur_skill_step > self._config.MAX_SKILL_STEPS
+        if self._config.MAX_SKILL_STEPS > 0:
+            bad_terminate = self._cur_skill_step > self._config.MAX_SKILL_STEPS
+        else:
+            bad_terminate = torch.zeros(
+                self._cur_skill_step.shape, device=self._cur_skill_step.device
+            )
         if bad_terminate.sum() > 0:
             self._internal_log(
                 f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}",
@@ -165,24 +132,6 @@ class NnSkillPolicy(Policy):
             )
 
         return is_skill_done, bad_terminate
-
-    def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-    ) -> torch.Tensor:
-        """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
-        """
-        return torch.zeros(observations.shape[0]).to(masks.device)
-
-    def _parse_skill_arg(self, skill_arg: str) -> Any:
-        """
-        Parses the skill argument string identifier and returns parsed skill argument information.
-        """
-        return skill_arg
 
     def on_enter(
         self,
@@ -209,6 +158,122 @@ class NnSkillPolicy(Policy):
             prev_actions[batch_idx] * 0.0,
         )
 
+    @classmethod
+    def from_config(cls, config, observation_space, action_space, batch_size):
+        return cls(config, action_space, batch_size)
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        """
+        :returns: Predicted action and next rnn hidden state.
+        """
+        self._cur_skill_step[cur_batch_idx] += 1
+        action, hxs = self._internal_act(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+
+        if self._should_keep_hold_state:
+            action = self._keep_holding_state(action, observations)
+        return action, hxs
+
+    def to(self, device):
+        self._cur_skill_step = self._cur_skill_step.to(device)
+
+    def _select_obs(self, obs, cur_batch_idx):
+        """
+        Selects out the part of the observation that corresponds to the current goal of the skill.
+        """
+        for k in self._config.OBS_SKILL_INPUTS:
+            cur_multi_sensor_index = self._get_multi_sensor_index(
+                cur_batch_idx, k
+            )
+            if k not in obs:
+                raise ValueError(
+                    f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
+                )
+            entity_positions = obs[k].view(1, -1, 3)
+            obs[k] = entity_positions[:, cur_multi_sensor_index]
+        return obs
+
+    def _is_skill_done(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> torch.Tensor:
+        """
+        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        """
+        return torch.zeros(observations.shape[0]).to(masks.device)
+
+    def _parse_skill_arg(self, skill_arg: str) -> Any:
+        """
+        Parses the skill argument string identifier and returns parsed skill argument information.
+        """
+        return skill_arg
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        raise NotImplementedError()
+
+
+class NnSkillPolicy(SkillPolicy):
+    """
+    Defines a skill to be used in the TP+SRL baseline.
+    """
+
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space: spaces.Space,
+        filtered_obs_space: spaces.Space,
+        filtered_action_space: spaces.Space,
+        batch_size,
+        should_keep_hold_state: bool = False,
+    ):
+        """
+        :param action_space: The overall action space of the entire task, not task specific.
+        """
+        super().__init__(
+            config, action_space, batch_size, should_keep_hold_state
+        )
+        self._wrap_policy = wrap_policy
+        self._filtered_obs_space = filtered_obs_space
+        self._filtered_action_space = filtered_action_space
+        self._ac_start = 0
+        self._ac_len = get_num_actions(filtered_action_space)
+
+        for k, space in action_space.items():
+            if k not in filtered_action_space.spaces.keys():
+                self._ac_start += get_num_actions(space)
+            else:
+                break
+
+        self._internal_log(
+            f"Skill {self._config.skill_name}: action offset {self._ac_start}, action length {self._ac_len}"
+        )
+
     def parameters(self):
         if self._wrap_policy is not None:
             return self._wrap_policy.parameters()
@@ -223,9 +288,9 @@ class NnSkillPolicy(Policy):
             return 0
 
     def to(self, device):
+        super().to(device)
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
-        self._cur_skill_step = self._cur_skill_step.to(device)
 
     def _internal_act(
         self,
@@ -256,29 +321,8 @@ class NnSkillPolicy(Policy):
             deterministic,
         )
         full_action = torch.zeros(prev_actions.shape)
-        if self._should_keep_hold_state:
-            full_action = self._keep_holding_state(full_action, observations)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
         return full_action, rnn_hidden_states
-
-    def act(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        cur_batch_idx,
-        deterministic=False,
-    ):
-        self._cur_skill_step[cur_batch_idx] += 1
-        return self._internal_act(
-            observations,
-            rnn_hidden_states,
-            prev_actions,
-            masks,
-            cur_batch_idx,
-            deterministic,
-        )
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, batch_size):
@@ -358,6 +402,43 @@ class NnSkillPolicy(Policy):
             filtered_action_space,
             batch_size,
         )
+
+
+class WaitSkillPolicy(SkillPolicy):
+    def __init__(
+        self,
+        config,
+        action_space: spaces.Space,
+        batch_size,
+    ):
+        super().__init__(config, action_space, batch_size, True)
+        self._wait_time = -1
+
+    def _parse_skill_arg(self, skill_arg: str) -> Any:
+        self._wait_time = int(skill_arg[0])
+        self._internal_log(f"Requested wait time {self._wait_time}")
+
+    def _is_skill_done(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+    ) -> torch.Tensor:
+        assert self._wait_time > 0
+        return (self._cur_skill_step >= self._wait_time).float()
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = torch.zeros(prev_actions.shape, device=prev_actions.device)
+        return action, rnn_hidden_states
 
 
 class PickSkillPolicy(NnSkillPolicy):

@@ -21,6 +21,9 @@ class GtHighLevelPolicy:
         self._solution_actions = [
             parse_func(sol_step) for sol_step in task_spec["solution"]
         ]
+        # Add a wait action at the end.
+        self._solution_actions.append(parse_func("wait(30)"))
+
         self._next_sol_idxs = torch.zeros(num_envs, dtype=torch.int32)
         self._num_envs = num_envs
         self._skill_name_to_idx = skill_name_to_idx

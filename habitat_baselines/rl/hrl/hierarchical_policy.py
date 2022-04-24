@@ -1,5 +1,7 @@
 import os.path as osp
+from typing import Dict
 
+import gym.spaces as spaces
 import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -11,10 +13,11 @@ from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
-    NnSkillPolicy,
     OracleNavPolicy,
     PickSkillPolicy,
     PlaceSkillPolicy,
+    SkillPolicy,
+    WaitSkillPolicy,
 )
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions
@@ -23,16 +26,21 @@ from habitat_baselines.utils.common import get_num_actions
 @baseline_registry.register_policy
 class HierarchicalPolicy(Policy):
     def __init__(
-        self, config, full_config, observation_space, action_space, num_envs
+        self,
+        config,
+        full_config,
+        observation_space: spaces.Space,
+        action_space: spaces.Space,
+        num_envs: int,
     ):
         super().__init__()
 
         self._action_space = action_space
-        self._num_envs = num_envs
+        self._num_envs: int = num_envs
 
         # Maps (skill idx -> skill)
-        self._skills = {}
-        self._name_to_idx = {}
+        self._skills: Dict[int, SkillPolicy] = {}
+        self._name_to_idx: Dict[str, int] = {}
 
         for i, (skill_id, use_skill_name) in enumerate(
             config.USE_SKILLS.items()
@@ -49,7 +57,7 @@ class HierarchicalPolicy(Policy):
             self._skills[i] = skill_policy
             self._name_to_idx[skill_id] = i
 
-        self._call_high_level = torch.ones(self._num_envs)
+        self._call_high_level: torch.Tensor = torch.ones(self._num_envs)
         self._cur_skills: torch.Tensor = torch.zeros(self._num_envs)
 
         high_level_cls = eval(config.high_level_policy.name)
