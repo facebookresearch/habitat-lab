@@ -244,7 +244,7 @@ jobs:
             - ~/miniconda
       - run:
           name: Run api tests
-          no_output_timeout: 60m
+          no_output_timeout: 120m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
