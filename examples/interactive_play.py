@@ -105,6 +105,8 @@ def get_input_vel_ctlr(
         return None, None, False
     elif keys[pygame.K_m]:
         end_ep = True
+    elif keys[pygame.K_n]:
+        env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
     if not_block_input:
         # Base control
