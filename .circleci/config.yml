@@ -259,6 +259,8 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
+              python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
+              cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
               bash scripts/hab2_bench/bench_runner.sh
               python scripts/hab2_bench/plot_bench.py
       - run:
