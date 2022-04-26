@@ -18,7 +18,6 @@ jobs:
               sudo pip install black --progress-bar off
               sudo pip install "isort[pyproject]" numpy --progress-bar off
               sudo pip install mypy==0.931 --progress-bar off
-              sudo pip install psutil --progress-bar off
               sudo pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
@@ -137,7 +136,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.7
                 . activate habitat
-                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
+                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
                 pip install pytest-sugar
               fi
       - run:
