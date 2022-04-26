@@ -64,6 +64,8 @@ _C.TASK.FORCE_REGENERATE = (
 )
 _C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
+_C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
+_C.TASK.USING_SUBTASKS = False
 _C.TASK.DEBUG_GOAL_POINT = True
 _C.TASK.RENDER_TARGET = True
 _C.TASK.EE_SAMPLE_FACTOR = 0.2
@@ -475,6 +477,19 @@ _C.TASK.DID_PICK_OBJECT.TYPE = "DidPickObjectMeasure"
 # -----------------------------------------------------------------------------
 _C.TASK.DID_VIOLATE_HOLD_CONSTRAINT = CN()
 _C.TASK.DID_VIOLATE_HOLD_CONSTRAINT.TYPE = "DidViolateHoldConstraintMeasure"
+# -----------------------------------------------------------------------------
+# MOVE OBJECTS REWARD
+# -----------------------------------------------------------------------------
+_C.TASK.MOVE_OBJECTS_REWARD = CN()
+_C.TASK.MOVE_OBJECTS_REWARD.TYPE = "MoveObjectsReward"
+_C.TASK.MOVE_OBJECTS_REWARD.PICK_REWARD = 1.0
+_C.TASK.MOVE_OBJECTS_REWARD.SUCCESS_DIST = 0.15
+_C.TASK.MOVE_OBJECTS_REWARD.SINGLE_REARRANGE_REWARD = 1.0
+_C.TASK.MOVE_OBJECTS_REWARD.DIST_REWARD = 1.0
+_C.TASK.MOVE_OBJECTS_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
+_C.TASK.MOVE_OBJECTS_REWARD.FORCE_PEN = 0.001
+_C.TASK.MOVE_OBJECTS_REWARD.MAX_FORCE_PEN = 1.0
+_C.TASK.MOVE_OBJECTS_REWARD.FORCE_END_PEN = 10.0
 # -----------------------------------------------------------------------------
 # PICK MEASUREMENT
 # -----------------------------------------------------------------------------

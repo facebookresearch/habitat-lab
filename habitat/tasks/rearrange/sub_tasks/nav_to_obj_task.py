@@ -137,6 +137,14 @@ class DynNavRLEnv(RearrangeTask):
     def _determine_nav_pos(
         self, episode: Episode
     ) -> Tuple[mn.Vector3, float, str, RearrangeObjectTypes]:
+
+        # Only change the scene if this skill is not running as a sub-task
+        if random.random() < self._config.OBJECT_IN_HAND_SAMPLE_PROB:
+            # Snap the target object to the robot hand.
+            target_idxs, _ = self._sim.get_targets()
+            abs_targ_idx = self._sim.scene_obj_ids[target_idxs[0]]
+            self._sim.grasp_mgr.snap_to_obj(abs_targ_idx, force=True)
+
         allowed_tasks = self._get_allowed_tasks()
 
         task_name = random.choice(list(allowed_tasks.keys()))

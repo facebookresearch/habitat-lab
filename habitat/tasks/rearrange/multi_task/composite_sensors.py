@@ -7,7 +7,113 @@
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.tasks.rearrange.rearrange_sensors import (
+    EndEffectorToObjectDistance,
+    ObjectToGoalDistance,
+    RearrangeReward,
+)
 from habitat.tasks.rearrange.utils import rearrange_logger
+
+
+@registry.register_measure
+class MoveObjectsReward(RearrangeReward):
+    """
+    A reward based on L2 distances to object/goal.
+    """
+
+    cls_uuid: str = "pickplace_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return MoveObjectsReward.cls_uuid
+
+    def __init__(self, *args, **kwargs):
+        self._cur_rearrange_step = 0
+        super().__init__(*args, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._cur_rearrange_step = 0
+        self._prev_holding_obj = False
+        self._did_give_pick_reward = {}
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                ObjectToGoalDistance.cls_uuid,
+                EndEffectorToObjectDistance.cls_uuid,
+            ],
+        )
+
+        to_goal = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+        to_obj = task.measurements.measures[
+            EndEffectorToObjectDistance.cls_uuid
+        ].get_metric()
+        self._prev_measures = (to_obj, to_goal)
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+        idxs, _ = self._sim.get_targets()
+        targ_obj_idx = idxs[self._cur_rearrange_step]
+        abs_targ_obj_idx = self._sim.scene_obj_ids[targ_obj_idx]
+        targ_obj_idx = str(targ_obj_idx)
+        num_targs = len(idxs)
+
+        to_goal = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+        to_obj = task.measurements.measures[
+            EndEffectorToObjectDistance.cls_uuid
+        ].get_metric()
+
+        is_holding_obj = self._sim.grasp_mgr.snap_idx == abs_targ_obj_idx
+        if is_holding_obj:
+            dist = to_goal[targ_obj_idx]
+            dist_diff = (
+                self._prev_measures[1][targ_obj_idx] - to_goal[targ_obj_idx]
+            )
+        else:
+            dist = to_obj[targ_obj_idx]
+            dist_diff = (
+                self._prev_measures[0][targ_obj_idx] - to_obj[targ_obj_idx]
+            )
+
+        if (
+            is_holding_obj
+            and not self._prev_holding_obj
+            and self._cur_rearrange_step not in self._did_give_pick_reward
+        ):
+            self._metric += self._config.PICK_REWARD
+            self._did_give_pick_reward[self._cur_rearrange_step] = True
+
+        if (
+            dist < self._config.SUCCESS_DIST
+            and not is_holding_obj
+            and self._cur_rearrange_step < num_targs
+        ):
+            self._metric += self._config.SINGLE_REARRANGE_REWARD
+            self._cur_rearrange_step += 1
+            self._cur_rearrange_step = min(
+                self._cur_rearrange_step, num_targs - 1
+            )
+
+        self._metric += self._config.DIST_REWARD * dist_diff
+        self._prev_measures = (to_obj, to_goal)
+        self._prev_holding_obj = is_holding_obj
 
 
 @registry.register_measure
@@ -43,14 +149,14 @@ class CompositeReward(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        reward = 0.0
+        self._metric = 0.0
         node_measure = task.measurements.measures[CompositeNodeIdx.cls_uuid]
 
         node_idx = node_measure.get_metric()["node_idx"]
         if self._prev_node_idx is None:
             self._prev_node_idx = node_idx
         elif node_idx > self._prev_node_idx:
-            reward += self._config.STAGE_COMPLETE_REWARD
+            self._metric += self._config.STAGE_COMPLETE_REWARD
 
         cur_task = task.cur_task
         if cur_task is None:
@@ -63,9 +169,8 @@ class CompositeReward(Measure):
         cur_task_reward = task.measurements.measures[
             cur_task_cfg.REWARD_MEASUREMENT
         ].get_metric()
-        reward += cur_task_reward
+        self._metric += cur_task_reward
 
-        self._metric = cur_task_reward
         self._prev_node_idx = node_idx
 
 
@@ -99,13 +204,7 @@ class CompositeSuccess(Measure):
         does_action_want_stop = task.actions[
             "REARRANGE_STOP"
         ].does_want_terminate
-        if task.cur_task is not None:
-            # Don't check success when we are evaluating a subtask.
-            self._metric = False
-        else:
-            self._metric = (
-                task.is_goal_state_satisfied() and does_action_want_stop
-            )
+        self._metric = task.is_goal_state_satisfied() and does_action_want_stop
         if does_action_want_stop:
             task.should_end = True
 

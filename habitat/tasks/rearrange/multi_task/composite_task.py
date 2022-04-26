@@ -165,7 +165,8 @@ class CompositeTask(RearrangeTask):
 
         self._inferred_cur_node_idx = 0
         self._inferred_cur_task = None
-        self._increment_solution_subtask(episode)
+        if self._config.USING_SUBTASKS:
+            self._increment_solution_subtask(episode)
         self.cached_tasks = {}
         return self._get_observations(episode)
 

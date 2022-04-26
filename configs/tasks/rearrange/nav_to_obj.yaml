@@ -13,6 +13,7 @@ TASK:
     # If true, will always regenerate the cache
     FORCE_REGENERATE: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+    OBJECT_IN_HAND_SAMPLE_PROB: 0.167
 
     # Collision related
     COUNT_OBJ_COLLISIONS: True

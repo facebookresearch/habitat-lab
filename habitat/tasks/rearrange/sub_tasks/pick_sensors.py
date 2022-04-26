@@ -81,7 +81,6 @@ class RearrangePickReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        reward = self._metric
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
@@ -102,19 +101,19 @@ class RearrangePickReward(RearrangeReward):
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
-                reward += self._config.PICK_REWARD
+                self._metric += self._config.PICK_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self.cur_dist = -1
             else:
                 # picked the wrong object
-                reward -= self._config.WRONG_PICK_PEN
+                self._metric -= self._config.WRONG_PICK_PEN
                 if self._config.WRONG_PICK_SHOULD_END:
                     rearrange_logger.debug(
                         "Grasped wrong object, ending episode."
                     )
                     self._task.should_end = True
-                self._metric = reward
+                self._metric = self._metric
                 self._prev_picked = cur_picked
                 self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
                 self.cur_dist = -1
@@ -128,17 +127,17 @@ class RearrangePickReward(RearrangeReward):
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
-            reward += self._config.DIST_REWARD * dist_diff
+            self._metric += self._config.DIST_REWARD * dist_diff
         else:
-            reward -= self._config.DIST_REWARD * dist_to_goal
+            self._metric -= self._config.DIST_REWARD * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
             # Dropped the object
-            reward -= self._config.DROP_PEN
+            self._metric -= self._config.DROP_PEN
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
-            self._metric = reward
+            self._metric = self._metric
             self._prev_picked = cur_picked
             self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
             self.cur_dist = -1
@@ -146,8 +145,6 @@ class RearrangePickReward(RearrangeReward):
 
         self._prev_picked = cur_picked
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
-
-        self._metric = reward
 
 
 @registry.register_measure
