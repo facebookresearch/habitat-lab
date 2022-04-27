@@ -9,20 +9,22 @@ from __future__ import annotations
 import copy
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
 from habitat import Config
 from habitat.core.dataset import Episode
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.task_creator_utils import (
     create_task_object,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
+
+if TYPE_CHECKING:
+    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -127,7 +129,7 @@ class PddlAction:
         self,
         load_config: Dict[str, Any],
         config: Config,
-        dataset: RearrangeDatasetV0,
+        dataset: "RearrangeDatasetV0",
         name_to_id: Dict[str, Any],
         predicate_lookup_fn: Callable[[str], Optional[Predicate]],
     ):
@@ -276,7 +278,7 @@ class PddlAction:
         self,
         load_config: Dict[str, Any],
         config: Config,
-        dataset: RearrangeDatasetV0,
+        dataset: "RearrangeDatasetV0",
         name_to_id: Dict[str, Any],
         env: RearrangeTask,
         episode: Episode,

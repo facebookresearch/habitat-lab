@@ -18,9 +18,13 @@ class GtHighLevelPolicy:
     def __init__(self, config, task_spec_file, num_envs, skill_name_to_idx):
         with open(task_spec_file, "r") as f:
             task_spec = yaml.safe_load(f)
-        self._solution_actions = [
-            parse_func(sol_step) for sol_step in task_spec["solution"]
-        ]
+
+        self._solution_actions = []
+        for i, sol_step in enumerate(task_spec["solution"]):
+            sol_action = parse_func(sol_step)
+            self._solution_actions.append(sol_action)
+            if i < (len(task_spec["solution"]) - 1):
+                self._solution_actions.append(parse_func("reset_arm(0)"))
         # Add a wait action at the end.
         self._solution_actions.append(parse_func("wait(30)"))
 

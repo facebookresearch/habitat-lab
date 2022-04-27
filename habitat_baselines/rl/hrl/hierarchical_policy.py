@@ -16,6 +16,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     OracleNavPolicy,
     PickSkillPolicy,
     PlaceSkillPolicy,
+    ResetArmSkill,
     SkillPolicy,
     WaitSkillPolicy,
 )
