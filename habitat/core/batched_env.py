@@ -150,6 +150,14 @@ class RobotTargetSensorConfig(StateSensorConfig):
         return self._get_relative_coordinate(robot_pos, target_pos, robot_rot)
 
 
+class RobotGoalSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        robot_pos = state.robot_pos
+        robot_rot = state.robot_rotation
+        target_pos = state.goal_pos
+        return self._get_relative_coordinate(robot_pos, target_pos, robot_rot)
+
+
 class EEStartSensorConfig(StateSensorConfig):
     def get_obs(self, state):
         ee_pos = state.ee_pos
@@ -166,6 +174,14 @@ class EETargetSensorConfig(StateSensorConfig):
         return self._get_relative_coordinate(ee_pos, target_pos, ee_rot)
 
 
+class EEGoalSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        ee_pos = state.ee_pos
+        ee_rot = state.ee_rotation
+        target_pos = state.goal_pos
+        return self._get_relative_coordinate(ee_pos, target_pos, ee_rot)
+
+
 class RobotEESensorConfig(StateSensorConfig):
     def get_obs(self, state):
         robot_pos = state.robot_pos
@@ -177,6 +193,11 @@ class RobotEESensorConfig(StateSensorConfig):
 class JointSensorConfig(StateSensorConfig):
     def get_obs(self, state):
         return state.robot_joint_positions[-9:-2]
+
+
+class HoldingSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        return float(state.target_obj_idx == state.held_obj_idx)
 
 
 class StepCountSensorConfig(StateSensorConfig):
@@ -482,7 +503,6 @@ class BatchedEnv:
         self.dones = [False] * self._num_envs
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
-        self._previous_target_position = [None] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
             self._stagger_agents = [
@@ -586,39 +606,52 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
-            # Target position is arbitrarily fixed relative to base of robot
-            # local_target_position = mn.Vector3(0.6, 1, 0.6)
-
-            # global_target_position = (
-            #     state.robot_pos
-            #     + state.robot_rotation.transform_vector(local_target_position)
-            # )
-
-            # target position is a fixed point in global space
-            # global_target_position = mn.Vector3(1, 1, 1)
-
-            # target is nav_reach target
-            global_target_position = state.target_obj_start_pos
-
-            # target is a reachable nav_reach target
-            # to_target = (state.target_obj_start_pos - state.robot_start_pos)
-            # global_target_position = state.robot_start_pos + to_target / to_target.length()
-
-            curr_dist = (global_target_position - state.ee_pos).length()
+            prev_state = self._previous_state[b]
+            ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
             # success = curr_dist < self._config.REACH_SUCCESS_THRESH
-            success = state.target_obj_idx == state.held_obj_idx
-            if success or state.episode_step_idx >= (
-                max_episode_len - self._stagger_agents[b]
+            # success = state.target_obj_idx == state.held_obj_idx
+
+            is_holding_correct = state.target_obj_idx == state.held_obj_idx
+            was_holding_correct = False
+            if prev_state is not None:
+                was_holding_correct = (
+                    prev_state.target_obj_idx == prev_state.held_obj_idx
+                )
+
+            obj_pos = state.obj_positions[state.target_obj_idx]
+            obj_to_goal = (state.goal_pos - obj_pos).length()
+            success = was_holding_correct and (
+                obj_to_goal < self._config.NPNP_SUCCESS_THRESH
+            )
+
+            if self._config.get("TASK_IS_PLACE", False):
+                success = success and state.did_drop
+
+            failure = (state.did_drop and not success) or (
+                state.target_obj_idx != state.held_obj_idx
+                and state.held_obj_idx != -1
+            )
+
+            if (
+                success
+                or failure
+                or state.episode_step_idx
+                >= (max_episode_len - self._stagger_agents[b])
             ):
                 self._stagger_agents[b] = 0
                 self.dones[b] = True
-                self.rewards[b] = (
-                    self._config.REACH_SUCCESS_REWARD if success else 0.0
-                )
+                _rew = 0.0
+                _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
+                _rew -= self._config.NPNP_FAILURE_PENALTY if success else 0.0
+                self.rewards[b] = _rew
                 self.infos[b] = {
                     "success": float(success),
+                    "failure": float(failure),
                     "episode_steps": state.episode_step_idx,
-                    "distance_to_target": curr_dist,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
                 }
                 self._previous_state[b] = None
 
@@ -640,17 +673,31 @@ class BatchedEnv:
                 self.rewards[b] = -1.0 / MAX_EPISODE_LENGTH
                 self.infos[b] = {
                     "success": 0.0,
+                    "failure": 0.0,
                     "episode_steps": state.episode_step_idx,
-                    "distance_to_target": curr_dist,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
                 }
                 if self._previous_state[b] is not None:
-                    last_dist = (
-                        self._previous_target_position[b]
-                        - self._previous_state[b].ee_pos
-                    ).length()
-                    self.rewards[b] = -(curr_dist - last_dist)
+                    if not is_holding_correct:
+                        prev_dist = (
+                            prev_state.target_obj_start_pos - prev_state.ee_pos
+                        ).length()
+                        self.rewards[b] += -(ee_to_start - prev_dist)
+                    else:
+                        prev_obj_pos = prev_state.obj_positions[
+                            prev_state.target_obj_idx
+                        ]
+                        prev_obj_to_goal = (
+                            prev_state.goal_pos - prev_obj_pos
+                        ).length()
+                        self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
+
+                    if is_holding_correct and (prev_state.held_obj_idx == -1):
+                        self.rewards[b] += self._config.PICK_REWARD
                 self._previous_state[b] = state
-                self._previous_target_position[b] = global_target_position
 
     def reset(self):
         r"""Reset all the vectorized environments

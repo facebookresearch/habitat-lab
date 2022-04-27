@@ -656,7 +656,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.agent.train()
 
-        value_loss, action_loss, dist_entropy = self.agent.update(
+        value_loss, action_loss, dist_entropy, grad_norm = self.agent.update(
             self.rollouts
         )
 
@@ -667,6 +667,7 @@ class PPOTrainer(BaseRLTrainer):
             value_loss,
             action_loss,
             dist_entropy,
+            grad_norm,
         )
 
     def _coalesce_post_step(
@@ -928,6 +929,7 @@ class PPOTrainer(BaseRLTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    grad_norm,
                 ) = self._update_agent()
 
                 if ppo_cfg.use_linear_lr_decay:
@@ -939,6 +941,7 @@ class PPOTrainer(BaseRLTrainer):
                         value_loss=value_loss,
                         action_loss=action_loss,
                         entropy_loss=dist_entropy,
+                        grad_norm=grad_norm,
                     ),
                     count_steps_delta,
                 )

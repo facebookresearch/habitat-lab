@@ -30,6 +30,7 @@ _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.TENSORBOARD_DIR = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.TEST_EPISODE_COUNT = -1
+_C.VIDEO_RENDER_ALL_INFO = False
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_ENVIRONMENTS = 16
 _C.NUM_PROCESSES = -1  # depricated

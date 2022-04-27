@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -29,6 +29,31 @@ class dummy_context_mgr:
 
 
 EPS_PPO = 1e-5
+
+
+def get_grad_norm(
+    parameters: Union[torch.Tensor, Iterable[torch.Tensor]],
+    norm_type: float = 2.0,
+) -> float:
+    r"""
+    Calculates the norm of the gradient
+    """
+    if isinstance(parameters, torch.Tensor):
+        parameters = [parameters]
+    parameters = [p for p in parameters if p.grad is not None]
+    if len(parameters) == 0:
+        return torch.tensor(0.0)
+    device = parameters[0].grad.device
+    total_norm = torch.norm(
+        torch.stack(
+            [
+                torch.norm(p.grad.detach(), norm_type).to(device)
+                for p in parameters
+            ]
+        ),
+        norm_type,
+    )
+    return total_norm.item()
 
 
 class PPO(nn.Module):
@@ -91,12 +116,15 @@ class PPO(nn.Module):
 
         return (advantages - advantages.mean()) / (advantages.std() + EPS_PPO)
 
-    def update(self, rollouts: RolloutStorage) -> Tuple[float, float, float]:
+    def update(
+        self, rollouts: RolloutStorage
+    ) -> Tuple[float, float, float, float]:
         advantages = self.get_advantages(rollouts)
 
         value_loss_epoch = 0.0
         action_loss_epoch = 0.0
         dist_entropy_epoch = 0.0
+        grad_norm_epoch = 0.0
 
         for _e in range(self.ppo_epoch):
             # profiling_wrapper.range_push("PPO.update epoch")
@@ -179,6 +207,11 @@ class PPO(nn.Module):
                 self.after_backward(total_loss)
 
                 self.before_step()
+
+                grad_norm_epoch += get_grad_norm(
+                    self.actor_critic.parameters()
+                )
+
                 profiling_wrapper.range_push("optimizer.step")
                 if use_mixed_precision:
                     self.grad_scaler.step(self.optimizer)
@@ -200,8 +233,14 @@ class PPO(nn.Module):
         value_loss_epoch /= num_updates
         action_loss_epoch /= num_updates
         dist_entropy_epoch /= num_updates
+        grad_norm_epoch /= num_updates
 
-        return value_loss_epoch, action_loss_epoch, dist_entropy_epoch
+        return (
+            value_loss_epoch,
+            action_loss_epoch,
+            dist_entropy_epoch,
+            grad_norm_epoch,
+        )
 
     def _evaluate_actions(
         self, observations, rnn_hidden_states, prev_actions, masks, action
@@ -220,10 +259,9 @@ class PPO(nn.Module):
         pass
 
     def before_step(self) -> None:
-        pass
-        # nn.utils.clip_grad_norm_(
-        #     self.actor_critic.parameters(), self.max_grad_norm
-        # )
+        nn.utils.clip_grad_norm_(
+            self.actor_critic.parameters(), self.max_grad_norm
+        )
 
     def after_step(self) -> None:
         pass
