@@ -7,18 +7,20 @@
 import copy
 import itertools
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import yaml
 
 from habitat import Config
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlAction,
     Predicate,
     RearrangeObjectTypes,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
+if TYPE_CHECKING:
+    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 
 @dataclass(frozen=True)
@@ -36,7 +38,7 @@ class PddlDomain:
     def __init__(
         self,
         load_file_path: str,
-        dataset: RearrangeDatasetV0,
+        dataset: "RearrangeDatasetV0",
         cur_task_config: Config,
         sim: RearrangeSim,
     ):

@@ -107,9 +107,18 @@ class SuctionGraspAction(GripSimulatorTaskAction):
         contacts = self._sim.get_physics_contact_points()
 
         robot_id = self._sim.robot.sim_obj.object_id
-        robot_contacts = [
-            c for c in contacts if coll_name_matches(c, robot_id)
+        all_gripper_links = list(self._sim.robot.params.gripper_joints) + [
+            self._sim.robot.params.ee_link
         ]
+        robot_contacts = [
+            c
+            for c in contacts
+            if coll_name_matches(c, robot_id)
+            and any(coll_link_name_matches(c, l) for l in all_gripper_links)
+        ]
+
+        if len(robot_contacts) == 0:
+            return
 
         # Contacted any objects?
         for scene_obj_id in self._sim.scene_obj_ids:

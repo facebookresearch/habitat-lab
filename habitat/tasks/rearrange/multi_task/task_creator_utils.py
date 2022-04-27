@@ -6,14 +6,16 @@
 
 import copy
 import os.path as osp
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 import habitat
 from habitat import Config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+
+if TYPE_CHECKING:
+    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 TASK_CONFIGS_DIR = "configs/tasks/rearrange/"
 
@@ -23,7 +25,7 @@ def create_task_object(
     task_config_path: str,
     cur_config: Config,
     cur_env: RearrangeTask,
-    cur_dataset: RearrangeDatasetV0,
+    cur_dataset: "RearrangeDatasetV0",
     should_super_reset: bool,
     task_kwargs: Dict[str, Any],
     episode: Episode,
