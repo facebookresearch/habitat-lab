@@ -449,17 +449,7 @@ class ResetArmSkill(SkillPolicy):
         batch_size,
     ):
         super().__init__(config, action_space, batch_size, True)
-        self._target = np.array(
-            [
-                -4.5003259e-01,
-                -1.0799699e00,
-                9.9526465e-02,
-                9.3869519e-01,
-                -7.8854430e-04,
-                1.5702540e00,
-                4.6168058e-03,
-            ]
-        )
+        self._target = np.array([float(x) for x in config.RESET_JOINT_STATE])
 
         self._ac_start = 0
         for k, space in action_space.items():
@@ -518,8 +508,8 @@ class ResetArmSkill(SkillPolicy):
         # Dividing by max initial delta means that the action will
         # always in [-1,1] and has the benefit of reducing the delta
         # amount was we converge to the target.
-        delta = delta / self._initial_delta.max(-1, keepdims=True).clamp(
-            min=1e-5
+        delta = delta / np.maximum(
+            self._initial_delta.max(-1, keepdims=True), 1e-5
         )
 
         action = torch.zeros_like(prev_actions)

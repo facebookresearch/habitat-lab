@@ -172,6 +172,7 @@ RL:
         RESET_ARM_SKILL:
           skill_name: "ResetArmSkill"
           MAX_SKILL_STEPS: -1.0
+          RESET_JOINT_STATE: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
 
       USE_SKILLS:
         pick: "NN_PICK"
