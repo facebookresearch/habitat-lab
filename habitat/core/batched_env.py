@@ -198,7 +198,7 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_obs(self, state):
-        return float(state.target_obj_idx == state.held_obj_idx)
+        return float(state.target_obj_idx != -1)
 
 
 class StepCountSensorConfig(StateSensorConfig):
