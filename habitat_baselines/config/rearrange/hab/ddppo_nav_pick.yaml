@@ -36,7 +36,7 @@ RL:
       ACTION_DIST:
          use_log_std: True
 
-  REWARD_MEASURE: "composite_reward"
+  REWARD_MEASURE: "move_obj_reward"
   SUCCESS_MEASURE: "composite_success"
   SUCCESS_REWARD: 100.0
   SLACK_REWARD: -0.01

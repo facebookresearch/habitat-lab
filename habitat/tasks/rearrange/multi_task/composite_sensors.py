@@ -21,7 +21,7 @@ class MoveObjectsReward(RearrangeReward):
     A reward based on L2 distances to object/goal.
     """
 
-    cls_uuid: str = "pickplace_reward"
+    cls_uuid: str = "move_obj_reward"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
