@@ -87,7 +87,7 @@ RL:
     ppo_epoch: 1
     num_mini_batch: 2
     num_steps: 64
-    entropy_coef: 0.0001
+    entropy_coef: 0.0005
     lr: 3.5e-4
     use_normalized_advantage: True
     use_linear_lr_decay: True
