@@ -91,7 +91,7 @@ RL:
     lr: 3.5e-4
     use_normalized_advantage: True
     use_linear_lr_decay: True
-    max_grad_norm: 1.0e+32
+    max_grad_norm: 2.0
   POLICY:
     name: "PointNavBaselinePolicy"
     action_distribution_type: "gaussian"
