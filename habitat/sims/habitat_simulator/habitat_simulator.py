@@ -203,8 +203,6 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
         # make semantic observation a 3D array
         if isinstance(obs, np.ndarray):
             obs = obs[..., None].astype(np.int32)
-        else:
-            obs = obs.unsqueeze(-1)
         return obs
 
 
