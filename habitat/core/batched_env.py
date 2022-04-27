@@ -13,6 +13,7 @@ import numpy as np
 from gym import spaces
 from gym.spaces import Box
 
+from habitat.core.logging import logger
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils import profiling_wrapper
 from habitat.utils.geometry_utils import quaternion_rotate_vector
@@ -577,19 +578,21 @@ class BatchedEnv:
                 ssc.get_batch_obs(env_states)
             )
             if not torch.isfinite(observations[ssc.obs_key]).all():
-                print(ssc.obs_key, "nan")
+                logger.info((ssc.obs_key, "nan"))
                 for b, s in enumerate(env_states):
-                    print(observations[ssc.obs_key][b, :])
-                    print(
-                        s.robot_pos,
-                        s.robot_rotation,
-                        s.robot_start_pos,
-                        s.robot_start_rotation,
-                        s.ee_pos,
-                        s.ee_rotation,
-                        s.robot_start_pos,
-                        s.robot_start_rotation,
-                        s.target_obj_start_pos,
+                    logger.info(observations[ssc.obs_key][b, :])
+                    logger.info(
+                        (
+                            s.robot_pos,
+                            s.robot_rotation,
+                            s.robot_start_pos,
+                            s.robot_start_rotation,
+                            s.ee_pos,
+                            s.ee_rotation,
+                            s.robot_start_pos,
+                            s.robot_start_rotation,
+                            s.target_obj_start_pos,
+                        )
                     )
                 observations[ssc.obs_key] = torch.nan_to_num(
                     observations[ssc.obs_key], 0.0

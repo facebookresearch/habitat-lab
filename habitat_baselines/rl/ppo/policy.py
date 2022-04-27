@@ -11,6 +11,7 @@ from gym import spaces
 from torch import nn as nn
 
 from habitat.config import Config
+from habitat.core.logging import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
@@ -207,7 +208,7 @@ class PointNavBaselineNet(Net):
             if len(v.shape) == 1:
                 self._n_state += v.shape[0]
                 self.ssc_keys.append(k)
-                print(f"adding sensor {k} : {v.shape} ")
+                logger.info(f"adding sensor {k} : {v.shape} ")
 
         # if (
         #     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
