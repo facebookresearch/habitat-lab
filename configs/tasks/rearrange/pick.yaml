@@ -131,8 +131,8 @@ SIMULATOR:
         START_POSITION: [0, 0, 0]
         START_ROTATION: [0, 0, 0, 1]
     HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 32
+        HEIGHT: 32
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
@@ -143,8 +143,8 @@ SIMULATOR:
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
     THIRD_RGB_SENSOR:
-        HEIGHT: 512
-        WIDTH: 512
+        HEIGHT: 64
+        WIDTH: 64
 
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
@@ -167,12 +167,12 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
     SEMANTIC_SENSOR:
-        HEIGHT: 480
+        HEIGHT: 64
         HFOV: 90
         ORIENTATION: [0.0, 0.0, 0.0]
         POSITION: [0, 1.25, 0]
         TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
+        WIDTH: 64
     TILT_ANGLE: 15
     TURN_ANGLE: 10
     TYPE: RearrangeSim-v0
