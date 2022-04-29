@@ -46,7 +46,7 @@ class StateSensorConfig:
             item = self.get_obs(states[i])
             for j in range(self.shape):
                 new_list[i][j] = item[j]
-        return new_list
+        return torch.tensor(new_list)
 
 
 def _get_spherical_coordinates_ref(
@@ -74,7 +74,7 @@ def _get_spherical_coordinates_ref(
 
 def test_get_spherical_coordinates():
 
-    for _ in range(100):
+    for _ in range(10000):
 
         source_pos = mn.Vector3(
             np.random.uniform(-10, 10),
@@ -97,8 +97,11 @@ def test_get_spherical_coordinates():
             source_pos, goal_pos, source_rotation
         )
 
+        assert not (
+            np.isnan(result1.x) or np.isnan(result1.y) or np.isnan(result1.z)
+        )
         dist = np.linalg.norm(result1 - result0)
-        assert dist < 1e-4
+        assert dist < 1e-3
 
 
 def _get_spherical_coordinates(
@@ -235,13 +238,17 @@ class BatchedEnv:
         self._config = config
 
         SIMULATOR_GPU_ID = self._config.SIMULATOR_GPU_ID
-        agent_0_name = config.SIMULATOR.AGENTS[0]
-        agent_0_config = getattr(config.SIMULATOR, agent_0_name)
-        sensor_0_name = agent_0_config.SENSORS[0]
+        sensor_0_name = "HEAD_RGB_SENSOR"
         agent_0_sensor_0_config = getattr(config.SIMULATOR, sensor_0_name)
         sensor0_width, sensor0_height = (
             agent_0_sensor_0_config.WIDTH,
             agent_0_sensor_0_config.HEIGHT,
+        )
+        depth_sensor_name = "HEAD_DEPTH_SENSOR"
+        self.depth_sensor_config = getattr(config.SIMULATOR, depth_sensor_name)
+        assert (
+            self.depth_sensor_config.WIDTH == sensor0_width
+            and self.depth_sensor_config.HEIGHT == sensor0_height
         )
         include_debug_sensor = "DEBUG_RGB_SENSOR" in config.SENSORS
         debug_width = 512
@@ -340,55 +347,37 @@ class BatchedEnv:
 
         buffer_index = 0
 
-        observations = OrderedDict()
-        if self._bsim:
-            import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
+        self.raw_rgb = None
+        self.raw_depth = None
+        self._raw_debug_rgb = None
+        assert self._bsim
+        import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
 
-            if include_rgb:
-                observations["rgb"] = bps_pytorch.make_color_tensor(
-                    self._bsim.rgba(buffer_index),
-                    SIMULATOR_GPU_ID,
-                    self._num_envs,
-                    [sensor0_height, sensor0_width],
-                )[..., 0:3]
+        if include_rgb:
+            self._raw_rgb = bps_pytorch.make_color_tensor(
+                self._bsim.rgba(buffer_index),
+                SIMULATOR_GPU_ID,
+                self._num_envs,
+                [sensor0_height, sensor0_width],
+            )[..., 0:3]
 
-            if include_depth:
-                observations["depth"] = bps_pytorch.make_depth_tensor(
-                    self._bsim.depth(buffer_index),
-                    SIMULATOR_GPU_ID,
-                    self._num_envs,
-                    [sensor0_height, sensor0_width],
-                ).unsqueeze(3)
-
-            if include_debug_sensor:
-                observations["debug_rgb"] = bps_pytorch.make_color_tensor(
-                    self._bsim.debug_rgba(buffer_index),
-                    SIMULATOR_GPU_ID,
-                    self._num_envs,
-                    [debug_height, debug_width],
-                )[..., 0:3]
-
-        else:
-            observations["rgb"] = (
-                torch.rand(
-                    [self._num_envs, sensor0_height, sensor0_width, 3],
-                    dtype=torch.float32,
-                )
-                * 255
-            )
-            observations["depth"] = (
-                torch.rand(
-                    [self._num_envs, sensor0_height, sensor0_width, 1],
-                    dtype=torch.float32,
-                )
-                * 255
-            )
-        for ssc in self.state_sensor_config:
-            observations[ssc.obs_key] = torch.empty(
-                [self._num_envs, ssc.shape], dtype=torch.float32
+        if include_depth:
+            self._raw_depth = bps_pytorch.make_depth_tensor(
+                self._bsim.depth(buffer_index),
+                SIMULATOR_GPU_ID,
+                self._num_envs,
+                [sensor0_height, sensor0_width],
             )
 
-        self._observations = observations
+        if include_debug_sensor:
+            self._raw_debug_rgb = bps_pytorch.make_color_tensor(
+                self._bsim.debug_rgba(buffer_index),
+                SIMULATOR_GPU_ID,
+                self._num_envs,
+                [debug_height, debug_width],
+            )[..., 0:3]
+
+        self._observations: OrderedDict = OrderedDict()
 
         self._is_closed = False
 
@@ -408,9 +397,16 @@ class BatchedEnv:
             obs_dict["rgb"] = rgb_obs
 
         if include_depth:
+            if self.depth_sensor_config.NORMALIZE_DEPTH:
+                min_depth_value = 0
+                max_depth_value = 1
+            else:
+                min_depth_value = config.MIN_DEPTH
+                max_depth_value = config.MAX_DEPTH
+
             depth_obs = spaces.Box(
-                low=0.0,
-                high=20.0,  # todo: investigate depth min/max
+                low=min_depth_value,
+                high=max_depth_value,
                 shape=(
                     agent_0_sensor_0_config.HEIGHT,
                     agent_0_sensor_0_config.WIDTH,
@@ -612,6 +608,7 @@ class BatchedEnv:
             env_states = self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
             self._bsim.wait_render()
+            self.get_pixel_observations(self._observations)
 
         self.rewards = [0.0] * self._num_envs
         self.dones = [False] * self._num_envs
@@ -649,6 +646,30 @@ class BatchedEnv:
                 env_states = self._bsim.get_environment_states()
                 self.get_dones_rewards_resets(env_states, actions_flat_list)
 
+    def fix_up_depth(self, raw_depth):
+        obs = raw_depth.clamp(self.depth_sensor_config.MIN_DEPTH, self.depth_sensor_config.MAX_DEPTH)  # type: ignore[attr-defined]
+
+        obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
+
+        if self.depth_sensor_config.NORMALIZE_DEPTH:
+            # normalize depth observation to [0, 1]
+            obs = (obs - self.depth_sensor_config.MIN_DEPTH) / (
+                self.depth_sensor_config.MAX_DEPTH
+                - self.depth_sensor_config.MIN_DEPTH
+            )
+
+        return obs
+
+    def get_pixel_observations(self, observations):
+        if self._raw_depth is not None:
+            observations["depth"] = self.fix_up_depth(self._raw_depth)
+
+        if self._raw_rgb is not None:
+            observations["rgb"] = self._raw_rgb
+
+        if self._raw_debug_rgb is not None:
+            observations["debug_rgb"] = self._raw_debug_rgb
+
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(
         self,
@@ -657,36 +678,27 @@ class BatchedEnv:
     ]:
         r"""Todo"""
 
-        if self._bsim:
+        assert self._bsim
 
-            # this updates self._observations["depth"] (and rgb) tensors
-            # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
-            self._bsim.wait_render()
+        # this updates self.raw_depth and self.raw_rgb
+        # perf todo: ensure we're getting here before rendering finishes (issue a warning otherwise)
+        self._bsim.wait_render()
+        self.get_pixel_observations(self._observations)
 
-            # these are "one frame behind" like the observations (i.e. computed from
-            # the same earlier env state).
-            rewards = self.rewards
-            assert len(rewards) == self._num_envs
-            dones = self.dones
-            assert len(dones) == self._num_envs
-            if self._config.REWARD_SCALE != 1.0:
-                # perf todo: avoid dynamic list construction
-                rewards = [r * self._config.REWARD_SCALE for r in rewards]
-
-        else:
-            # rgb_observations = self._observations["rgb"]
-            # torch.rand(rgb_observations.shape, dtype=torch.float32, out=rgb_observations)
-            # torch.mul(rgb_observations, 255, out=rgb_observations)
-            rewards = [0.0] * self._num_envs
-            dones = [False] * self._num_envs
-            infos: List[Dict[str, float]] = [{}] * self._num_envs
-
-        observations = self._observations
+        # these are "one frame behind" like the observations (i.e. computed from
+        # the same earlier env state).
+        rewards = self.rewards
+        assert len(rewards) == self._num_envs
+        dones = self.dones
+        assert len(dones) == self._num_envs
+        if self._config.REWARD_SCALE != 1.0:
+            # perf todo: avoid dynamic list construction
+            rewards = [r * self._config.REWARD_SCALE for r in rewards]
 
         # temp stub for infos
         # infos = [{"distance_to_goal": 0.0, "success":0.0, "spl":0.0}] * self._num_envs
         infos = self.infos
-        return (observations, rewards, dones, infos)
+        return (self._observations, rewards, dones, infos)
 
     def step(
         self, actions

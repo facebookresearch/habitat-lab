@@ -1086,6 +1086,7 @@ class PPOTrainer(BaseRLTrainer):
                                 fps=2,  # very slow fps
                                 open_vid=False,
                                 include_frame_number=True,
+                                depth_clip=1.0,
                             )
                     print("done saving videos!")
 
@@ -1262,6 +1263,8 @@ class PPOTrainer(BaseRLTrainer):
             if self.config.BATCHED_ENV:
                 batched_observations, rewards_l, dones, infos = outputs
                 batch = batched_observations
+                for obs_name in batch:
+                    batch[obs_name] = batch[obs_name].to(self.device)
             else:
                 observations, rewards_l, dones, infos = [
                     list(x) for x in zip(*outputs)
