@@ -834,6 +834,15 @@ class TopDownMap(Measure):
                     agent_position, episode.goals[0].position
                 )
             )
+            if self._config.SEQUENTIAL_GOALS:
+                for i in range(0, len(episode.goals) - 1):
+                    _shortest_path_points.extend(
+                        self._sim.get_straight_shortest_path_points(
+                            episode.goals[i].position,
+                            episode.goals[i + 1].position,
+                        )
+                    )
+
             self._shortest_path_points = [
                 maps.to_grid(
                     p[2],

@@ -138,3 +138,40 @@ class NavRLEnv(habitat.RLEnv):
 
     def get_info(self, observations):
         return self.habitat_env.get_metrics()
+
+
+@baseline_registry.register_env(name="MultiONNavRLEnv")
+class MultiONNavRLEnv(NavRLEnv):
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None):
+        self._rl_config = config.RL
+        self._current_goal_success_measure_name = (
+            self._rl_config.CURRENT_GOAL_SUCCESS_MEASURE
+        )
+        self._previous_step_success = False
+        super().__init__(config, dataset)
+
+    def get_reward(self, observations):
+        reward = self._rl_config.SLACK_REWARD
+
+        current_measure = self._env.get_metrics()[self._reward_measure_name]
+
+        if (
+            self._previous_step_success == False
+            or self._env._elapsed_steps == 1
+        ):
+            reward += self._previous_measure - current_measure
+        else:
+            reward += 0
+
+        self._previous_measure = current_measure
+
+        if self._episode_current_goal_success():
+            reward += self._rl_config.SUCCESS_REWARD
+            self._previous_step_success = True
+        else:
+            self._previous_step_success = False
+
+        return reward
+
+    def _episode_current_goal_success(self):
+        return self._env.get_metrics()[self._current_goal_success_measure_name]

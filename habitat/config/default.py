@@ -321,6 +321,7 @@ _C.TASK.TOP_DOWN_MAP.DRAW_VIEW_POINTS = True
 _C.TASK.TOP_DOWN_MAP.DRAW_GOAL_POSITIONS = True
 # Axes aligned bounding boxes
 _C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
+_C.TASK.TOP_DOWN_MAP.SEQUENTIAL_GOALS = False
 # -----------------------------------------------------------------------------
 # COLLISIONS MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -492,6 +493,48 @@ _C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
 # -----------------------------------------------------------------------------
 _C.TASK.EPISODE_INFO = CN()
 _C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+# -----------------------------------------------------------------------------
+# # MULTION TASK
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECTS_PATH = "data/multiON_objects"
+_C.TASK.ACTIONS.FOUND = CN()
+_C.TASK.ACTIONS.FOUND.TYPE = "FoundObjectAction"
+# # DISTANCE_TO_CURRENT_GOAL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_CURRENT_OBJECT_GOAL = CN()
+_C.TASK.DISTANCE_TO_CURRENT_OBJECT_GOAL.TYPE = "DistanceToCurrentObjectGoal"
+# -----------------------------------------------------------------------------
+# # CURRENT_GOAL_SUCCESS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.CURRENT_GOAL_SUCCESS = CN()
+_C.TASK.CURRENT_GOAL_SUCCESS.TYPE = "CurrentGoalSuccess"
+# -----------------------------------------------------------------------------
+# # PROGRESS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.PROGRESS = CN()
+_C.TASK.PROGRESS.TYPE = "Progress"
+# -----------------------------------------------------------------------------
+# # MULTION_SUCCESS MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.MULTION_SUCCESS = CN()
+_C.TASK.MULTION_SUCCESS.TYPE = "MultiONSuccess"
+_C.TASK.MULTION_SUCCESS.SUCCESS_DISTANCE = 0.2
+# -----------------------------------------------------------------------------
+# # MULTION_SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.MULTION_SPL = CN()
+_C.TASK.MULTION_SPL.TYPE = "MultiONSPL"
+# -----------------------------------------------------------------------------
+# # MULTION_PPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.MULTION_PPL = CN()
+_C.TASK.MULTION_PPL.TYPE = "MultiONPPL"
+# -----------------------------------------------------------------------------
+# MULTIOBJECTGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.MULTI_OBJECT_GOAL_SENSOR = CN()
+_C.TASK.MULTI_OBJECT_GOAL_SENSOR.TYPE = "MultiObjectGoalSensor"
+_C.TASK.MULTI_OBJECT_GOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
 # -----------------------------------------------------------------------------
 # # VLN TASK INSTRUCTION SENSOR
 # -----------------------------------------------------------------------------
