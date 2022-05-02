@@ -77,8 +77,8 @@ RL:
     use_linear_lr_decay: False
     # max_grad_norm: 1.0e+32
   POLICY:
-    name: "PointNavBaselinePolicy"
+    name: "PointNavResNetPolicy"
     action_distribution_type: "gaussian"
   DDPPO:
-    backbone: "PointNavResNetPolicy"
+    backbone: "resnet18"
 FORCE_BLIND_POLICY: False
