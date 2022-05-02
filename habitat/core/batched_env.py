@@ -13,6 +13,7 @@ import numpy as np
 from gym import spaces
 from gym.spaces import Box
 
+from habitat.core.logging import logger
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils import profiling_wrapper
 from habitat.utils.geometry_utils import quaternion_rotate_vector
@@ -32,13 +33,28 @@ class Camera:  # noqa: SIM119
 
 
 class StateSensorConfig:
-    def __init__(self, config_key, shape, obs_key):
-        self.config_key = config_key
+    def __init__(
+        self, shape, obs_key, max_episode_length, polar=False, **kwargs
+    ):
+        self.polar = polar
         self.shape = shape
         self.obs_key = obs_key
+        self.max_episode_length = max_episode_length
 
-    def get_obs(self, state):
-        pass
+    def get_obs(self, state) -> np.ndarray:
+        raise NotImplementedError()
+
+    def _get_relative_coordinate(
+        self, source_position, goal_position, source_rotation
+    ):
+        if self.polar:
+            return _get_spherical_coordinates(
+                source_position, goal_position, source_rotation
+            )
+        else:
+            return _get_cartesian_coordinates(
+                source_position, goal_position, source_rotation
+            )
 
     def get_batch_obs(self, states):
         new_list = np.empty((len(states), self.shape), dtype=np.float32)
@@ -47,6 +63,15 @@ class StateSensorConfig:
             for j in range(self.shape):
                 new_list[i][j] = item[j]
         return torch.tensor(new_list)
+
+
+def _get_cartesian_coordinates(
+    source_position, goal_position, source_rotation
+):
+    source_T = mn.Matrix4.from_(source_rotation.to_matrix(), goal_position)
+    inverted_source_T = source_T.inverted()
+    rel_pos = inverted_source_T.transform_point(goal_position)
+    return np.array(rel_pos)
 
 
 def _get_spherical_coordinates_ref(
@@ -114,66 +139,83 @@ def _get_spherical_coordinates(
 
 
 class RobotStartSensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("ROBOT_START_RELATIVE", 3, "robot_start_relative")
-
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
         start_pos = state.robot_start_pos
-        return _get_spherical_coordinates(robot_pos, start_pos, robot_rot)
+        return self._get_relative_coordinate(robot_pos, start_pos, robot_rot)
 
 
 class RobotTargetSensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("ROBOT_TARGET_RELATIVE", 3, "robot_target_relative")
-
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
         target_pos = state.target_obj_start_pos
-        return _get_spherical_coordinates(robot_pos, target_pos, robot_rot)
+        return self._get_relative_coordinate(robot_pos, target_pos, robot_rot)
+
+
+class RobotGoalSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        robot_pos = state.robot_pos
+        robot_rot = state.robot_rotation
+        target_pos = state.goal_pos
+        return self._get_relative_coordinate(robot_pos, target_pos, robot_rot)
 
 
 class EEStartSensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("EE_START_RELATIVE", 3, "ee_start_relative")
-
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
         start_pos = state.robot_start_pos
-        return _get_spherical_coordinates(ee_pos, start_pos, ee_rot)
+        return self._get_relative_coordinate(ee_pos, start_pos, ee_rot)
 
 
 class EETargetSensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("EE_TARGET_RELATIVE", 3, "ee_target_relative")
-
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
         target_pos = state.target_obj_start_pos
-        return _get_spherical_coordinates(ee_pos, target_pos, ee_rot)
+        return self._get_relative_coordinate(ee_pos, target_pos, ee_rot)
+
+
+class EEGoalSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        ee_pos = state.ee_pos
+        ee_rot = state.ee_rotation
+        target_pos = state.goal_pos
+        return self._get_relative_coordinate(ee_pos, target_pos, ee_rot)
 
 
 class RobotEESensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("ROBOT_EE_RELATIVE", 3, "robot_ee_relative")
-
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
         ee_pos = state.ee_pos
-        return _get_spherical_coordinates(robot_pos, ee_pos, robot_rot)
+        return self._get_relative_coordinate(robot_pos, ee_pos, robot_rot)
 
 
 class JointSensorConfig(StateSensorConfig):
-    def __init__(self):
-        super().__init__("JOINT_SENSOR", 7, "joint_pos")
-
     def get_obs(self, state):
         return state.robot_joint_positions[-9:-2]
+
+
+class HoldingSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        return float(state.target_obj_idx != -1)
+
+
+class StepCountSensorConfig(StateSensorConfig):
+    def get_obs(self, state):
+        fraction_steps_left = (
+            (self.max_episode_length - state.episode_step_idx)
+            * 1.0
+            / self.max_episode_length
+        )
+        return (
+            min(1.0, fraction_steps_left * 1.0),
+            min(1.0, fraction_steps_left * 5.0),
+            min(1.0, fraction_steps_left * 50.0),
+        )
 
 
 # Note this class must match an API expected by PPOTrainer (episode_id and scene_id).
@@ -218,17 +260,18 @@ class BatchedEnv:
         include_depth = "DEPTH_SENSOR" in config.SENSORS
         include_rgb = "RGB_SENSOR" in config.SENSORS
 
+        self._max_episode_length = config.MAX_EPISODE_LENGTH
+
         self.state_sensor_config: List[StateSensorConfig] = []
-        for ssc in [
-            RobotStartSensorConfig(),
-            RobotTargetSensorConfig(),
-            EEStartSensorConfig(),
-            EETargetSensorConfig(),
-            JointSensorConfig(),
-            RobotEESensorConfig(),
-        ]:
-            if ssc.config_key in config.SENSORS:
-                self.state_sensor_config.append(ssc)
+        for ssc_name in config.SENSORS:
+            if "RGB" in ssc_name or "DEPTH" in ssc_name:
+                continue
+            ssc_cfg = config.STATE_SENSORS[ssc_name]
+            ssc_cls = eval(ssc_cfg.TYPE)
+            ssc = ssc_cls(
+                max_episode_length=self._max_episode_length, **ssc_cfg
+            )
+            self.state_sensor_config.append(ssc)
 
         assert include_depth or include_rgb
 
@@ -277,8 +320,9 @@ class BatchedEnv:
             # generator_config.num_object_variations = 6
             # generator_config.min_nontarget_objects = 27
             # generator_config.max_nontarget_objects = 32
-            # generator_config.used_fixed_robot_start_pos = True
+            # generator_config.used_fixed_robot_start_pos = False #True
             # generator_config.use_fixed_robot_start_yaw = False
+            # generator_config.use_fixed_robot_joint_start_positions = False
 
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
@@ -299,6 +343,13 @@ class BatchedEnv:
             )
             bsim_config.do_procedural_episode_set = True
             bsim_config.episode_generator_config = generator_config
+
+            bsim_config.enable_robot_collision = self._config.get(
+                "ENABLE_ROBOT_COLLISION", True
+            )
+            bsim_config.enable_held_object_collision = self._config.get(
+                "ENABLE_HELD_OBJECT_COLLISION", True
+            )
 
             # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
@@ -321,7 +372,7 @@ class BatchedEnv:
                 self._debug_camera = Camera(
                     "base_link",
                     mn.Vector3(
-                        -0.8, 1.8, -0.8
+                        -0.8, 2.5, -0.8
                     ),  # place behind, above, and to the left of the base
                     mn.Quaternion.rotation(
                         mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
@@ -450,7 +501,11 @@ class BatchedEnv:
         self.dones = [False] * self._num_envs
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
-        self._previous_target_position = [None] * self._num_envs
+        self._stagger_agents = [0] * self._num_envs
+        if self._config.get("STAGGER", True):
+            self._stagger_agents = [
+                i % self._max_episode_length for i in range(self._num_envs)
+            ]
 
         self.action_spaces = [
             action_space
@@ -516,11 +571,32 @@ class BatchedEnv:
         #         sensor_data = torch.tensor(ssc.get_obs(state))
         #         observations[ssc.obs_key][b, :] = sensor_data
         for ssc in self.state_sensor_config:
-            observations[ssc.obs_key] = ssc.get_batch_obs(env_states)
+            observations[ssc.obs_key] = torch.tensor(
+                ssc.get_batch_obs(env_states)
+            )
+            if not torch.isfinite(observations[ssc.obs_key]).all():
+                logger.info((ssc.obs_key, "nan"))
+                for b, s in enumerate(env_states):
+                    logger.info(observations[ssc.obs_key][b, :])
+                    logger.info(
+                        (
+                            s.robot_pos,
+                            s.robot_rotation,
+                            s.robot_start_pos,
+                            s.robot_start_rotation,
+                            s.ee_pos,
+                            s.ee_rotation,
+                            s.robot_start_pos,
+                            s.robot_start_rotation,
+                            s.target_obj_start_pos,
+                        )
+                    )
+                observations[ssc.obs_key] = torch.nan_to_num(
+                    observations[ssc.obs_key], 0.0
+                )
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
-            max_episode_len = 50
             if self._current_episodes[b].is_disabled():
                 # let this episode continue in the sim; ignore the results
                 assert self.resets[b] == -1
@@ -529,23 +605,52 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
-            # Target position is arbitrarily fixed
-            local_target_position = mn.Vector3(0.6, 1, 0.6)
+            prev_state = self._previous_state[b]
+            ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
+            # success = curr_dist < self._config.REACH_SUCCESS_THRESH
+            # success = state.target_obj_idx == state.held_obj_idx
 
-            global_target_position = (
-                state.robot_pos
-                + state.robot_rotation.transform_vector(local_target_position)
+            is_holding_correct = state.target_obj_idx == state.held_obj_idx
+            was_holding_correct = False
+            if prev_state is not None:
+                was_holding_correct = (
+                    prev_state.target_obj_idx == prev_state.held_obj_idx
+                )
+
+            obj_pos = state.obj_positions[state.target_obj_idx]
+            obj_to_goal = (state.goal_pos - obj_pos).length()
+            success = was_holding_correct and (
+                obj_to_goal < self._config.NPNP_SUCCESS_THRESH
             )
 
-            curr_dist = (global_target_position - state.ee_pos).length()
-            success_dist = 0.05
-            success = curr_dist < success_dist
-            if success or state.episode_step_idx >= max_episode_len:
+            if self._config.get("TASK_IS_PLACE", False):
+                success = success and state.did_drop
+
+            failure = (state.did_drop and not success) or (
+                state.target_obj_idx != state.held_obj_idx
+                and state.held_obj_idx != -1
+            )
+
+            if (
+                success
+                or failure
+                or state.episode_step_idx
+                >= (self._max_episode_length - self._stagger_agents[b])
+            ):
+                self._stagger_agents[b] = 0
                 self.dones[b] = True
-                self.rewards[b] = 10.0 if success else 0.0
+                _rew = 0.0
+                _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
+                _rew -= self._config.NPNP_FAILURE_PENALTY if success else 0.0
+                self.rewards[b] = _rew
                 self.infos[b] = {
                     "success": float(success),
+                    "failure": float(failure),
                     "episode_steps": state.episode_step_idx,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
                 }
                 self._previous_state[b] = None
 
@@ -564,19 +669,34 @@ class BatchedEnv:
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
-                self.rewards[b] = 0
+                self.rewards[b] = -1.0 / self._max_episode_length
                 self.infos[b] = {
                     "success": 0.0,
+                    "failure": 0.0,
                     "episode_steps": state.episode_step_idx,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
                 }
                 if self._previous_state[b] is not None:
-                    last_dist = (
-                        self._previous_target_position[b]
-                        - self._previous_state[b].ee_pos
-                    ).length()
-                    self.rewards[b] = -(curr_dist - last_dist)
+                    if not is_holding_correct:
+                        prev_dist = (
+                            prev_state.target_obj_start_pos - prev_state.ee_pos
+                        ).length()
+                        self.rewards[b] += -(ee_to_start - prev_dist)
+                    else:
+                        prev_obj_pos = prev_state.obj_positions[
+                            prev_state.target_obj_idx
+                        ]
+                        prev_obj_to_goal = (
+                            prev_state.goal_pos - prev_obj_pos
+                        ).length()
+                        self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
+
+                    if is_holding_correct and (prev_state.held_obj_idx == -1):
+                        self.rewards[b] += self._config.PICK_REWARD
                 self._previous_state[b] = state
-                self._previous_target_position[b] = global_target_position
 
     def reset(self):
         r"""Reset all the vectorized environments

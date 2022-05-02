@@ -12,6 +12,7 @@ import torch.nn as nn
 from gym import spaces
 
 from habitat.config import Config
+from habitat.core.logging import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet_bpsnav as resnet
 from habitat_baselines.rl.ddppo.policy.resnet_bpsnav import FixupBasicBlock
@@ -344,12 +345,24 @@ class ResNetNet(Net):
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action
 
-        if "pointgoal_with_gps_compass" in observation_space.spaces:
-            n_input_goal = 3
-            self.tgt_embeding = nn.Linear(n_input_goal, 32)
-            rnn_input_size += 32
-        else:
-            self.tgt_embeding = nn.Sequential()
+        self.ssc_keys: List[str] = []
+        self._n_state = 0
+        for k, v in observation_space.spaces.items():
+            # All 1-dimension sensors are state sensors.
+            if len(v.shape) == 1:
+                self._n_state += v.shape[0]
+                self.ssc_keys.append(k)
+                logger.info(f"adding sensor {k} : {v.shape} ")
+
+        self.tgt_embeding = nn.Linear(self._n_state, hidden_size)
+        rnn_input_size += hidden_size
+
+        # if "pointgoal_with_gps_compass" in observation_space.spaces:
+        #    n_input_goal = 3
+        #    self.tgt_embeding = nn.Linear(n_input_goal, 32)
+        #    rnn_input_size += 32
+        # else:
+        #    self.tgt_embeding = nn.Sequential()
 
         self._hidden_size = hidden_size
 
@@ -408,9 +421,7 @@ class ResNetNet(Net):
             rnn_hidden_states,
             prev_actions,
             masks,
-            observations["pointgoal_with_gps_compass"]
-            if "pointgoal_with_gps_compass" in observations
-            else None,
+            {k: observations[k] for k in self.ssc_keys},
         )
 
     @torch.jit.export
@@ -432,17 +443,22 @@ class ResNetNet(Net):
         goal_observations: Optional[torch.Tensor] = None,
     ):
         inputs: List[torch.Tensor] = [tensorrt_output]
-        if goal_observations is not None:
-            goal_observations = torch.stack(
-                [
-                    goal_observations[:, 0],
-                    torch.cos(-goal_observations[:, 1]),
-                    torch.sin(-goal_observations[:, 1]),
-                ],
-                -1,
-            )
-            goal_observations = self.tgt_embeding(goal_observations)
-            inputs.append(goal_observations)
+        # if goal_observations is not None:
+        #    goal_observations = torch.stack(
+        #        [
+        #            goal_observations[:, 0],
+        #            torch.cos(-goal_observations[:, 1]),
+        #            torch.sin(-goal_observations[:, 1]),
+        #        ],
+        #        -1,
+        #    )
+        #    goal_observations = self.tgt_embeding(goal_observations)
+        #    inputs.append(goal_observations)
+        state_inputs = torch.cat(
+            [goal_observations[k] for k in self.ssc_keys], -1
+        )
+        state_inputs = self.tgt_embeding(state_inputs)
+        inputs.append(state_inputs)
 
         # prev_actions = torch.where(masks, prev_actions + 1, prev_actions.new_zeros(()))
         # prev_actions = self.prev_action_embedding(prev_actions.view(-1))

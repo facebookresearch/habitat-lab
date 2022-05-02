@@ -4,19 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
+from typing import List
 
 import torch
 from gym import spaces
 from torch import nn as nn
 
 from habitat.config import Config
-from habitat.core.batched_env import (
-    EEStartSensorConfig,
-    EETargetSensorConfig,
-    JointSensorConfig,
-    RobotStartSensorConfig,
-    RobotTargetSensorConfig,
-)
+from habitat.core.logging import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
@@ -207,20 +202,13 @@ class PointNavBaselineNet(Net):
         #### [gala_kinematic] Manually adding sensors in there
         self.observation_space = observation_space
         self._n_state = 0
-
-        self.ssc_dict = {
-            x.obs_key: x
-            for x in [
-                RobotStartSensorConfig(),
-                RobotTargetSensorConfig(),
-                EEStartSensorConfig(),
-                EETargetSensorConfig(),
-                JointSensorConfig(),
-            ]
-        }
-        for k, v in self.ssc_dict.items():
-            if k in self.observation_space.spaces:
-                self._n_state += v.shape
+        self.ssc_keys: List[str] = []
+        for k, v in self.observation_space.spaces.items():
+            # All 1-dimension sensors are state sensors.
+            if len(v.shape) == 1:
+                self._n_state += v.shape[0]
+                self.ssc_keys.append(k)
+                logger.info(f"adding sensor {k} : {v.shape} ")
 
         # if (
         #     IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -269,9 +257,8 @@ class PointNavBaselineNet(Net):
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         #### [gala_kinematic] Manually adding sensors in there
         x = [self.visual_encoder(observations)]
-        for k in self.ssc_dict.keys():
-            if k in self.observation_space.spaces:
-                x += [observations[k]]
+        for k in self.ssc_keys:
+            x += [observations[k]]
 
         # if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
         #     target_encoding = observations[

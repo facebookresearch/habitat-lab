@@ -61,6 +61,7 @@ from habitat_baselines.utils.env_utils import (
     construct_batched_envs,
     construct_envs,
 )
+from habitat_baselines.utils.render_wrapper import overlay_frame
 
 try:
     from habitat_sim.utils import viz_utils as vut
@@ -551,6 +552,8 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.config.BATCHED_ENV:
             batch = batched_observations
+            for obs_name in batch:
+                batch[obs_name] = batch[obs_name].to(self.device)
         else:
             batch = batch_obs(
                 observations,
@@ -653,7 +656,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.agent.train()
 
-        value_loss, action_loss, dist_entropy = self.agent.update(
+        value_loss, action_loss, dist_entropy, grad_norm = self.agent.update(
             self.rollouts
         )
 
@@ -664,6 +667,7 @@ class PPOTrainer(BaseRLTrainer):
             value_loss,
             action_loss,
             dist_entropy,
+            grad_norm,
         )
 
     def _coalesce_post_step(
@@ -742,16 +746,16 @@ class PPOTrainer(BaseRLTrainer):
             {"updates": float(self.num_updates_done)},
             self.num_steps_done,
         )
-
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
             t_curr = time.time()
+            fps = (self.num_steps_done - self.recent_num_steps_done) / (
+                (t_curr - self.t_recent)
+            )
+            writer.add_scalar("metrics/fps", fps, self.num_steps_done)
+
             logger.info(
-                "update: {}\tfps: {:.3f}\t".format(
-                    self.num_updates_done,
-                    (self.num_steps_done - self.recent_num_steps_done)
-                    / ((t_curr - self.t_recent)),
-                )
+                "update: {}\tfps: {:.3f}\t".format(self.num_updates_done, fps)
             )
             self.recent_num_steps_done = self.num_steps_done
             self.t_recent = t_curr
@@ -925,6 +929,7 @@ class PPOTrainer(BaseRLTrainer):
                     value_loss,
                     action_loss,
                     dist_entropy,
+                    grad_norm,
                 ) = self._update_agent()
 
                 if ppo_cfg.use_linear_lr_decay:
@@ -936,6 +941,7 @@ class PPOTrainer(BaseRLTrainer):
                         value_loss=value_loss,
                         action_loss=action_loss,
                         entropy_loss=dist_entropy,
+                        grad_norm=grad_norm,
                     ),
                     count_steps_delta,
                 )
@@ -1323,7 +1329,7 @@ class PPOTrainer(BaseRLTrainer):
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             tb_writer=writer,
-                            include_frame_number=True,
+                            include_frame_number=False,
                         )
 
                         rgb_frames[i] = []
@@ -1334,6 +1340,8 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    if self.config.VIDEO_RENDER_ALL_INFO:
+                        frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)
