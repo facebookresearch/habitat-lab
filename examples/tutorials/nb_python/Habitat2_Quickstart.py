@@ -15,27 +15,15 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python [conda env:habitat] *
-#     language: python
-#     name: conda-env-habitat-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
+#     display_name: Python 3
+#     name: python3
 # ---
 
 # %% [markdown]
 # # Overview
 # This tutorial covers the basics of using Habitat 2.0 including: setting up
 # the environment, creating custom environments, and creating new episode
-# datasets. Currently, to use Habitat 2.0, you **must use the
-# `hab_suite_baselines` development branch of Habitat Lab.**
+# datasets.
 
 # %%
 # Play a teaser video
@@ -55,6 +43,7 @@ except Exception:
 
 import os
 
+# Colab installation
 if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
@@ -62,6 +51,7 @@ if "COLAB_GPU" in os.environ:
     # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite_baselines' && git fetch -v && git checkout hab_suite_baselines && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
 
 # %%
+# Imports
 import os
 
 if "COLAB_GPU" in os.environ:
@@ -90,11 +80,17 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
+# Quiet the Habitat simulator logging
+os.environ["MAGNUM_LOG"] = "quiet"
+os.environ["HABITAT_SIM_LOG"] = "quiet"
+
 
 def insert_render_options(config):
+    # Added settings to make rendering higher resolution for better visualization
     config.defrost()
     config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
     config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
+    config.SIMULATOR.CONCUR_RENDER = False
     config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
     config.freeze()
     return config
@@ -112,16 +108,18 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 # %% [markdown]
 # # Local installation
 #
-# For Habitat 2.0 functionality, install the `hab_suite_baselines` branch of Habitat Lab. Complete installation steps:
+# For Habitat 2.0 functionality, install the `main` branch of Habitat Lab. Complete installation steps:
 #
 # 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
-# 2. Download the `hab_suite_baselines` branch of Habitat Lab: `git clone -b hab_suite_baselines https://github.com/facebookresearch/habitat-lab.git`
+# 2. Download the `main` branch of Habitat Lab: `git clone https://github.com/facebookresearch/habitat-lab.git`
 # 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
 
 # %% [markdown]
 # # Quickstart
 #
-# Start with a minimal environment interaction loop using the Habitat API.
+# Start with a minimal environment interaction loop using the Habitat API. This sets up the environment, takes random episodes, and then saves a video once the episode ends.
+#
+# If this is your first time running Habitat 2.0 code, the datasets will automatically download which include the ReplicaCAD scenes, episode datasets, and object assets. To manually download this data, run `python -m habitat_sim.utils.datasets_download --uids rearrange_task_assets`.
 
 # %%
 with habitat.Env(
@@ -161,7 +159,7 @@ with habitat.Env(
 
 # %% [markdown]
 # ## Gym API
-# You can also import environments through the Gym API. For more information about how to use the Gym API, see [this tutorial](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb).
+# You can also use environments through the Gym API. For more information about how to use the Gym API and the supported tasks, see [this tutorial](https://github.com/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb).
 
 # %%
 env = gym.make("HabitatRenderPick-v0")
@@ -196,36 +194,38 @@ if vut.is_notebook():
 # ```
 # python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/ddppo_pick.yaml --run-type train
 # ```
-# Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
+# Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
 #
 # See [here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines) for more information on how to run with Habitat Baselines.
 
 # %% [markdown]
 # ## Home Assistant Benchmark (HAB) Tasks
 #
-# To run the HAB tasks, use any of the training configurations here: [here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat_baselines/config/rearrange/hab). For example, to run monolithic RL training on the Tidy House task run:
+# To run the HAB tasks, use any of the training configurations here: [here](https://github.com/facebookresearch/habitat-lab/tree/main/main/config/rearrange/hab). For example, to run monolithic RL training on the Tidy House task run:
 # ```
 # python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/ddppo_tidy_house.yaml --run-type train
 # ```
-# To run the TP-SRL baseline, specify the config and the name of the task to run. For example, to run TP-SRL on the `set_table` task, run the following. This will automatically download the pre-trained skills needed to run the TP-SRL baseline:
+# To run the TP-SRL baseline use the [`tp_srl`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl.yaml`) config. You will first need trained models for each of the individual skills placed in `data/models/[skill_name].pt`. Then specify the name of the task to run. For example, to run TP-SRL on the `set_table` task, run the following:
 # ```
 # python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH configs/tasks/rearrange/set_table.yaml
 # ```
-# These tasks are also accessible via the Gym interface (tutorial [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb)).
+# [`tp_srl_oracle_nav`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl_oracle_nav.yaml) is the TP-SRL method with oracle navigation.
+#
+# The HAB tasks can also be used from the Gym interface (tutorial [here](https://github.com/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb)).
 
 # %% [markdown]
 # # Defining New Tasks
 #
-# We will define a new task for the robot to navigate to and then pick up a target object in the environment. To support a new task we need:
-# * A task of type `RearrangeTask` which implements the reset function. .
+# We will define a task for the robot to navigate to and then pick up a target object in the environment. To support a new task we need:
+# * A task of type `RearrangeTask` which implements the reset function.
 # * Sensor definitions to populate the observation space.
 # * Measurement definitions to define the reward, termination condition, and additional logging information.
 #
 # For other examples of task, sensor, and measurement definitions, [see here
-# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/habitat/tasks/rearrange/sub_tasks). As explained in the next part, tasks, sensors, and measurements are connected through a config file that defines the task.
+# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
 
 # %%
-@registry.register_task(name="RearrangeNavPickTask-v0")
+@registry.register_task(name="RearrangeDemoNavPickTask-v0")
 class NavPickTaskV1(RearrangeTask):
     """
     Primarily this is used to implement the episode reset functionality.
@@ -315,7 +315,7 @@ class DistanceToTargetObject(Measure):
 class NavPickReward(RearrangeReward):
     """
     For every new task, you NEED to implement a reward function.
-    `RearrangeReward` includes penalties for collisions into the reward function.
+    `RearrangeReward` automatically includes penalties for collisions into the reward function.
     """
 
     cls_uuid: str = "navpick_reward"
@@ -374,7 +374,7 @@ class NavPickSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        # Check that the agent is holding the object.
+        # Check that the agent is holding the correct object.
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.target_object_index]
         self._metric = abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
 
@@ -382,35 +382,30 @@ class NavPickSuccess(Measure):
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_baselines/configs/tasks/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/configs/tasks/rearrange).
 #
 # This config also defines the action space through the `TASK.ACTIONS` key. You
 # can substitute different base control actions from
-# [here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/actions.py),
+# [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/actions.py),
 # different arm control actions [from
-# here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/actions.py),
-# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/tasks/rearrange/grip_actions.py).
+# here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/actions.py),
+# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/grip_actions.py).
 
 # %%
 cfg_txt = """
 ENVIRONMENT:
+    # Number of steps within an episode.
     MAX_EPISODE_STEPS: 200
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
+    # The dataset to use. Later we will generate our own dataset.
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
-    TYPE: RearrangeNavPickTask-v0
-    MAX_COLLISIONS: -1.0
-    COUNT_OBJ_COLLISIONS: True
-    COUNT_ROBOT_OBJ_COLLS: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
+    TYPE: RearrangeDemoNavPickTask-v0
 
-    # In radians
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: True
-
-    # Sensors
+    # Sensors for the observation space.
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
     JOINT_SENSOR:
@@ -424,9 +419,8 @@ TASK:
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
+        # Maximum amount of allowed force in Newtons.
         MAX_ACCUM_FORCE: 5000.0
-    ROBOT_COLLS:
-        TYPE: "RobotCollisions"
     DISTANCE_TO_TARGET_OBJECT:
         TYPE: "DistanceToTargetObject"
     NAV_PICK_REWARD:
@@ -443,14 +437,14 @@ TASK:
         TYPE: "NavPickSuccess"
 
     MEASUREMENTS:
+        # The measurements returned in the info dictionary
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
-        - "ROBOT_COLLS"
         - "DISTANCE_TO_TARGET_OBJECT"
         - "NAV_PICK_REWARD"
         - "NAV_PICK_SUCCESS"
     ACTIONS:
-        # Defining the action space.
+        # Define the action space.
         ARM_ACTION:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosAction"
@@ -477,7 +471,6 @@ SIMULATOR:
     DEBUG_RENDER: False
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
-    ROBOT_JOINT_START_NOISE: 0.0
     CONCUR_RENDER: False
     AUTO_SLEEP: False
     AGENT_0:
@@ -549,10 +542,9 @@ with habitat.Env(
 
 # %% [markdown]
 # # Dataset Generation
-# The previously defined task uses the default `pick.json.gz` dataset. This
-# places objects on the counter. The episode `.json.gz` dataset defines where
+# The previously defined task uses an included default `all_receptacles_10k_1k.json.gz` dataset which places objects on any receptacle. The episode `.json.gz` dataset defines where
 # objects are placed and their rearrangement target positions. New episode
-# datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where object spawns on the table.
+# datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where a single object spawns on the table with its goal also on the table.
 
 # %%
 dataset_cfg_txt = """
@@ -604,7 +596,6 @@ object_samplers:
       receptacle_sets: ["table"]
       num_samples: [1, 1]
       orientation_sampling: "up"
-      sample_region_ratio: 0.5
 
 object_target_samplers:
   -

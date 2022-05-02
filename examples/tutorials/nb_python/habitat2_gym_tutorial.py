@@ -15,24 +15,13 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python [conda env:habitat] *
-#     language: python
-#     name: conda-env-habitat-py
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.8.12
+#     display_name: Python 3
+#     name: python3
 # ---
 
 # %% [markdown]
 # # Habitat 2.0 Gym API
-# This tutorial covers how to use Habitat 2.0 environments as standard gym environments. Currently, to use Habitat 2.0, you **must use the `hab_suite` development branch of Habitat Lab.**
+# This tutorial covers how to use Habitat 2.0 environments as standard gym environments.
 # See [here for Habitat 2.0 installation instructions](https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/hab_suite/examples/tutorials/colabs/Habitat2_Quickstart.ipynb#scrollTo=50rOVwceXvzL)
 
 # %%
@@ -102,7 +91,7 @@ env.close()
 
 # %% [markdown]
 # # Environment Options
-# To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `Habitat[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be included.
+# To create the environment in performance mode remove `Render` from the environment ID string. The environment ID follows the format: `Habitat[Render?][Task Name]-v0`. All the supported environment IDs are listed below. The `Render` option can always be added to include the higher resolution 3rd POV camera for visualization.
 #
 # * Skills:
 #     * `HabitatPick-v0`
@@ -120,19 +109,22 @@ env.close()
 #     * `HabitatNavPick-v0`
 #     * `HabitatNavPickNavPlace-v0`
 #
-# The Gym environments are automatically registered from the RL training configurations under ["habitat_baselines/config/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/hab_suite_dev/habitat_baselines/config/rearrange). The `GYM_AUTO_NAME` key in the YAML file determines the `[Task Name]`. The observation keys in `RL.GYM_OBS_KEYS` are what is returned in the observation space. If the the observations are a set of 1D arrays, then the observation space is automatically flattened. For example, in `HabitatGymReachState-v0` the observation space is `RL.GYM_OBS_KEYS = ['joint', 'relative_resting_position']`. `joint` is a 7D array and `relative_resting_position` is a 3D array. These two arrays are concatenated automatically to give a `10D` observation space. On the other hand, in environments with image observations, the observation is returned as a dictionary.
+# The Gym environments are automatically registered from the RL training configurations under ["habitat_baselines/config/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange). The `GYM_AUTO_NAME` key in the YAML file determines the `[Task Name]`. The observation keys in `RL.GYM_OBS_KEYS` are what is returned in the observation space. If the the observations are a set of 1D arrays, then the observation space is automatically flattened. For example, in `HabitatReachState-v0` the observation space is `RL.GYM_OBS_KEYS = ['joint', 'relative_resting_position']`. `joint` is a 7D array and `relative_resting_position` is a 3D array. These two arrays are concatenated automatically to give a `10D` observation space. On the other hand, in environments with image observations, the observation is returned as a dictionary.
 #
 # An example of these different observation spaces is demonstrated below:
 
 # %%
 # Dictionary observation space
 env = gym.make("HabitatPick-v0")
-print({k: v.shape for k, v in env.observation_space.spaces.items()})
+print(
+    "Pick observation space",
+    {k: v.shape for k, v in env.observation_space.spaces.items()},
+)
 env.close()
 
 # Array observation space
 env = gym.make("HabitatReachState-v0")
-print(env.observation_space)
+print("Reach observation space", env.observation_space)
 env.close()
 
 # %% [markdown]
@@ -148,5 +140,5 @@ env = gym.make(
         "SuctionGraspAction",
     ],
 )
-print(env.action_space)
+print("Action space with suction grip", env.action_space)
 env.close()
