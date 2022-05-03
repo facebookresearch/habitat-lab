@@ -31,6 +31,8 @@ TASK:
         TYPE: TargetStartSensor
         GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
+    TARGET_START_GPS_COMPASS_SENSOR:
+        TYPE: TargetStartGpsCompassSensor
     GOAL_SENSOR:
         TYPE: GoalSensor
         GOAL_FORMAT: CARTESIAN
@@ -42,17 +44,14 @@ TASK:
         TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: RelativeRestingPositionSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
-    - RELATIVE_RESTING_POS_SENSOR
-    - TARGET_START_POINT_GOAL_SENSOR
-    - MARKER_REL_POS_SENSOR
+    - TARGET_START_GPS_COMPASS_SENSOR
+    - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -65,23 +64,6 @@ TASK:
         TYPE: ObjectToGoalDistance
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: EndEffectorToObjectDistance
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: EndEffectorToRestDistance
-    PLACE_REWARD:
-        TYPE: PlaceReward
-        DIST_REWARD: 20.0
-        SUCC_REWARD: 10.0
-        PLACE_REWARD: 20.0
-        DROP_PEN: 0.0
-        USE_DIFF: true
-        WRONG_DROP_SHOULD_END: false
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        SUCC_THRESH: 0.15
     COMPOSITE_SUCCESS:
         TYPE: CompositeSuccess
     NUM_STEPS:
@@ -91,7 +73,6 @@ TASK:
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
-    - END_EFFECTOR_TO_REST_DISTANCE
     - END_EFFECTOR_TO_OBJECT_DISTANCE
     - COMPOSITE_SUCCESS
     - NUM_STEPS
@@ -122,10 +103,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    TARGET_START_POINT_GOAL_SENSOR:
-        TYPE: TargetOrGoalStartPointGoalSensor
-    MARKER_REL_POS_SENSOR:
-        TYPE: MarkerRelPosSensor
     DID_VIOLATE_HOLD_CONSTRAINT:
         TYPE: DidViolateHoldConstraintMeasure
     USING_SUBTASKS: false
@@ -139,6 +116,8 @@ TASK:
         FORCE_PEN: 0.001
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+    TARGET_GOAL_GPS_COMPASS_SENSOR:
+        TYPE: TargetGoalGpsCompassSensor
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0

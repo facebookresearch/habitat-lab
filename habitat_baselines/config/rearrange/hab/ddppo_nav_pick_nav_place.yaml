@@ -40,7 +40,7 @@ RL:
   SUCCESS_MEASURE: "composite_success"
   SUCCESS_REWARD: 100.0
   SLACK_REWARD: -0.01
-  GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'obj_goal_sensor']
+  GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'obj_start_gps_compass', 'joint', 'is_holding', 'obj_goal_sensor', 'obj_goal_gps_compass']
 
   PPO:
     # ppo params
