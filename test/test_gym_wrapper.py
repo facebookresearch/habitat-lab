@@ -1,4 +1,4 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
@@ -14,9 +14,9 @@ import pytest
 import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
-from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat.utils.gym_adapter import HabGymWrapper
 from habitat.utils.render_wrapper import HabRenderWrapper
+from habitat_baselines.config.default import get_config as baselines_get_config
 
 
 @pytest.mark.parametrize(
@@ -81,13 +81,13 @@ def test_gym_wrapper_contract(
     "config_file,override_options",
     [
         [
-            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            "configs/tasks/rearrange/pick.yaml",
             [
-                "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
         ],
-        ["habitat_baselines/config/rearrange/ddppo_pick.yaml", []],
+        ["configs/tasks/rearrange/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
@@ -117,7 +117,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
+        glob("configs/tasks/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):

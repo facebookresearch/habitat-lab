@@ -258,7 +258,6 @@ def get_config(
             if k == "BASE_TASK_CONFIG_PATH":
                 config.BASE_TASK_CONFIG_PATH = v
 
-    old_task_config = config.get("TASK_CONFIG", {})
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
 
     # In case the config specifies overrides for the TASK_CONFIG, we

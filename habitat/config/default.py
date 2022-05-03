@@ -43,11 +43,11 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # TASK
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
-_C.TASK.REWARD_MEASURE= "distance_to_goal"
-_C.TASK.SUCCESS_MEASURE= "spl"
-_C.TASK.SUCCESS_REWARD= 2.5
-_C.TASK.SLACK_REWARD= -0.01
-_C.TASK.END_ON_SUCCESS= False
+_C.TASK.REWARD_MEASURE = "distance_to_goal"
+_C.TASK.SUCCESS_MEASURE = "spl"
+_C.TASK.SUCCESS_REWARD = 2.5
+_C.TASK.SLACK_REWARD = -0.01
+_C.TASK.END_ON_SUCCESS = False
 # -----------------------------------------------------------------------------
 # # NAVIGATION TASK
 # -----------------------------------------------------------------------------

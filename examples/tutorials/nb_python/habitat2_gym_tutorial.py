@@ -136,7 +136,7 @@ env.close()
 env = gym.make(
     "HabitatPick-v0",
     override_options=[
-        "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+        "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
         "SuctionGraspAction",
     ],
 )

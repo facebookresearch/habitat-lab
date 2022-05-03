@@ -9,13 +9,12 @@ import os.path as osp
 from glob import glob
 from typing import Any, List, Optional
 
-
 from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
+from habitat.config.default import Config
 from habitat.core.environments import get_env_class
-from habitat.config.default import _C, Config
 from habitat.utils.gym_adapter import HabGymWrapper
 from habitat.utils.render_wrapper import HabRenderWrapper
 
@@ -29,17 +28,19 @@ base_dir = os.environ.get(
 gym_task_config_dir = osp.join(base_dir, "configs/tasks/rearrange/")
 
 
-def _get_gym_name(cfg:Config) -> Optional[str]:
-    if "GYM" in cfg:
-        if "AUTO_NAME" in cfg["GYM"]:
-            return cfg["GYM"]["AUTO_NAME"]
+def _get_gym_name(cfg: Config) -> Optional[str]:
+    if "GYM" in cfg and "AUTO_NAME" in cfg["GYM"]:
+        return cfg["GYM"]["AUTO_NAME"]
     return None
 
-def _get_env_name(cfg:Config) -> Optional[str]:
-    if "GYM" in cfg:
-        if "AUTO_NAME" in cfg["GYM"]:
-            if len(cfg["GYM"]["CLASS_NAME"]) > 1:
-                return cfg["GYM"]["CLASS_NAME"]
+
+def _get_env_name(cfg: Config) -> Optional[str]:
+    if (
+        "GYM" in cfg
+        and "AUTO_NAME" in cfg["GYM"]
+        and len(cfg["GYM"]["CLASS_NAME"]) > 1
+    ):
+        return cfg["GYM"]["CLASS_NAME"]
     return None
 
 
@@ -58,10 +59,13 @@ def _make_habitat_gym_env(
     if use_render_mode:
         override_options.extend(
             [
-                "TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS",
+                "SIMULATOR.AGENT_0.SENSORS",
                 [*sensors, "THIRD_RGB_SENSOR"],
             ]
         )
+
+    # Re-loading the config since we modified the override_options
+    config = habitat.get_config(cfg_file_path, override_options)
 
     env_class_name = _get_env_name(config)
     env_class = get_env_class(env_class_name)
@@ -121,8 +125,7 @@ if "Habitat-v0" not in registry.env_specs:
             )
 
             _try_register(
-                id_name=render_gym_template_handle
-                % gym_name,
+                id_name=render_gym_template_handle % gym_name,
                 entry_point="habitat.utils.gym_definitions:_make_habitat_gym_env",
                 kwargs={"cfg_file_path": full_path, "use_render_mode": True},
             )

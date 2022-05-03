@@ -1,10 +1,10 @@
 # The ONLY two lines you need to add to start importing Habitat 2.0 Gym environments.
 import gym
+import pytest
 
 # flake8: noqa
 import habitat.utils.gym_definitions
 
-import pytest
 
 @pytest.mark.parametrize(
     "name",

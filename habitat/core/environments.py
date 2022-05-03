@@ -38,7 +38,6 @@ class RearrangeRLEnv(habitat.RLEnv):
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
         self._previous_action = None
-        
 
     def reset(self):
         self._previous_action = None
@@ -71,10 +70,7 @@ class RearrangeRLEnv(habitat.RLEnv):
         done = False
         if self._env.episode_over:
             done = True
-        if (
-            self.config.TASK.END_ON_SUCCESS
-            and self._episode_success()
-        ):
+        if self.config.TASK.END_ON_SUCCESS and self._episode_success():
             done = True
         return done
 
@@ -91,7 +87,6 @@ class NavRLEnv(habitat.RLEnv):
 
         self._previous_measure = None
         self._previous_action = None
-        
 
     def reset(self):
         self._previous_action = None
