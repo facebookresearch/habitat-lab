@@ -82,11 +82,6 @@ _C.EVAL.SHOULD_LOAD_CKPT = True
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
-_C.RL.REWARD_MEASURE = "distance_to_goal"
-_C.RL.SUCCESS_MEASURE = "spl"
-_C.RL.END_ON_SUCCESS = False
-_C.RL.SUCCESS_REWARD = 2.5
-_C.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
 # preemption CONFIG
 # -----------------------------------------------------------------------------

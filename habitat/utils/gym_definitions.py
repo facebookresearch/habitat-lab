@@ -38,7 +38,8 @@ def _get_gym_name(cfg:Config) -> Optional[str]:
 def _get_env_name(cfg:Config) -> Optional[str]:
     if "GYM" in cfg:
         if "AUTO_NAME" in cfg["GYM"]:
-            return cfg["GYM"]["CLASS_NAME"]
+            if len(cfg["GYM"]["CLASS_NAME"]) > 1:
+                return cfg["GYM"]["CLASS_NAME"]
     return None
 
 
@@ -89,25 +90,24 @@ if "Habitat-v0" not in registry.env_specs:
     # Generic supporting general configs
     _try_register(
         id_name="Habitat-v0",
-        entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
+        entry_point="habitat.utils.gym_definitions:_make_habitat_gym_env",
         kwargs={},
     )
 
     _try_register(
         id_name="HabitatRender-v0",
-        entry_point="habitat_baselines.utils.gym_definitions:_make_habitat_gym_env",
+        entry_point="habitat.utils.gym_definitions:_make_habitat_gym_env",
         kwargs={"use_render_mode": True},
     )
 
     hab_baselines_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
-    rearrange_configs_dir = osp.join(hab_baselines_dir, "config/rearrange/")
     gym_template_handle = "Habitat%s-v0"
     render_gym_template_handle = "HabitatRender%s-v0"
 
     for fname in glob(
-        osp.join(rearrange_configs_dir, "**/*.yaml"), recursive=True
+        osp.join(gym_task_config_dir, "**/*.yaml"), recursive=True
     ):
-        full_path = osp.join(rearrange_configs_dir, fname)
+        full_path = osp.join(gym_task_config_dir, fname)
         if not fname.endswith(".yaml"):
             continue
         cfg_data = habitat.get_config(full_path)
