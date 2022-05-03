@@ -6,7 +6,7 @@
 
 import argparse
 
-from tqdm import trange
+from tqdm import tqdm
 
 import habitat
 
@@ -14,7 +14,12 @@ import habitat
 def generate_inits(cfg_path, opts):
     config = habitat.get_config(cfg_path, opts)
     with habitat.Env(config=config) as env:
-        for _ in trange(range(env.number_of_episodes)):
+        for i in tqdm(range(env.number_of_episodes)):
+            if i % 100 == 0:
+                # Print the dataset we are generating initializations for. This
+                # is useful when this script runs for a long time and we don't
+                # know which dataset the job is for.
+                print(cfg_path, config.DATASET.DATA_PATH)
             env.reset()
 
 

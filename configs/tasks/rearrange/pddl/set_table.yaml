@@ -1,0 +1,39 @@
+start:
+    precondition: []
+    state:
+        art_states:
+            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
+            "fridge_:0000": [0,2.35619]
+        robo:
+            pos: 'rnd'
+
+goal:
+    - "at(bowl_target|0,TARGET_bowl_target|0)"
+    - "at(fruit_target|1,TARGET_fruit_target|1)"
+    - "not_holding()"
+stage_goals:
+  stage_0_5:
+    - "holding(bowl_target|0)"
+  stage_1:
+    - "at(bowl_target|0,TARGET_bowl_target|0)"
+    - "not_holding()"
+  stage_1_5:
+    - "at(bowl_target|0,TARGET_bowl_target|0)"
+    - "holding(fruit_target|1)"
+  stage_2:
+    - "at(bowl_target|0,TARGET_bowl_target|0)"
+    - "at(fruit_target|1,TARGET_fruit_target|1)"
+
+solution:
+    - "nav_to_receptacle(MARKER_cab_push_point_5,bowl_target|0)"
+    - "open_cab(MARKER_cab_push_point_5,bowl_target|0)"
+    - "pick(bowl_target|0)"
+    - "nav(TARGET_bowl_target|0)"
+    - "place(bowl_target|0,TARGET_bowl_target|0)"
+
+    - "nav_to_receptacle(MARKER_fridge_push_point,fruit_target|1)"
+    - "open_fridge(fruit_target|1)"
+    - "nav(fruit_target|1)"
+    - "pick(fruit_target|1)"
+    - "nav(TARGET_fruit_target|1)"
+    - "place(fruit_target|1,TARGET_fruit_target|1)"

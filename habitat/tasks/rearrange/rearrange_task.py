@@ -13,7 +13,11 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails, rearrange_collision
+from habitat.tasks.rearrange.utils import (
+    CollisionDetails,
+    rearrange_collision,
+    rearrange_logger,
+)
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -23,12 +27,17 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
+ADD_CACHE_KEY = "add_cache_key"
+
+
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping shared between
     all rearrangement tasks.
     """
+
+    _cur_episode_step: int
 
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
@@ -43,6 +52,8 @@ class RearrangeTask(NavigationTask):
         self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
         self._sim_reset = True
         self._targ_idx: int = 0
+        self._episode_id: str = ""
+        self._cur_episode_step = 0
 
     @property
     def targ_idx(self):
@@ -65,35 +76,39 @@ class RearrangeTask(NavigationTask):
         self._sim_reset = sim_reset
 
     def reset(self, episode: Episode):
+        self._episode_id = episode.episode_id
         self._ignore_collisions = []
         if self._sim_reset:
-            observations = super().reset(episode)
-        else:
-            observations = None
-            self._sim._try_acquire_context()
-            prev_sim_obs = self._sim.get_sensor_observations()
-            observations = self._sim._sensor_suite.get_observations(
-                prev_sim_obs
-            )
-            task_obs = self.sensor_suite.get_observations(
-                observations=observations, episode=episode, task=self
-            )
-            observations.update(task_obs)
+            super().reset(episode)
 
         self.prev_measures = self.measurements.get_metrics()
-        self.n_succ_picks = 0
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
         self.should_end = False
         self._done = False
+        self._cur_episode_step = 0
 
+        self._sim.set_robot_base_to_random_point()
+
+        # Re-do the sensor readings after the new robot base position is set.
+        return self._get_observations(episode)
+
+    def _get_observations(self, episode):
+        self._sim._try_acquire_context()
+        prev_sim_obs = self._sim.get_sensor_observations()
+        observations = self._sim._sensor_suite.get_observations(prev_sim_obs)
+        task_obs = self.sensor_suite.get_observations(
+            observations=observations, episode=episode, task=self
+        )
+        observations.update(task_obs)
         return observations
 
     def step(self, action: Dict[str, Any], episode: Episode):
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
+        self._cur_episode_step += 1
 
         return obs
 
@@ -104,7 +119,6 @@ class RearrangeTask(NavigationTask):
         episode: Episode,
         **kwargs: Any,
     ) -> bool:
-
         done = False
         if self.should_end:
             done = True
@@ -114,6 +128,11 @@ class RearrangeTask(NavigationTask):
             and self._config.CONSTRAINT_VIOLATION_ENDS_EPISODE
         ):
             done = True
+
+        if done:
+            rearrange_logger.debug("-" * 10)
+            rearrange_logger.debug("------ Episode Over --------")
+            rearrange_logger.debug("-" * 10)
 
         return not done
 
@@ -161,3 +180,26 @@ class RearrangeTask(NavigationTask):
 
     def get_n_targets(self) -> int:
         return self.n_objs
+
+    @property
+    def should_end(self) -> bool:
+        return self._should_end
+
+    @should_end.setter
+    def should_end(self, new_val: bool):
+        self._should_end = new_val
+        ##
+        # NB: _check_episode_is_active is called after step() but
+        # before metrics are updated. Thus if should_end is set
+        # by a metric, the episode will end on the _next_
+        # step. This makes sure that the episode is ended
+        # on the correct step.
+        self._is_episode_active = (
+            not self._should_end
+        ) and self._is_episode_active
+        if new_val:
+            rearrange_logger.debug("-" * 40)
+            rearrange_logger.debug(
+                f"-----Episode {self._episode_id} requested to end after {self._cur_episode_step} steps.-----"
+            )
+            rearrange_logger.debug("-" * 40)

@@ -6,6 +6,8 @@
 
 import os
 import os.path as osp
+import random
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -27,6 +29,14 @@ from habitat.datasets.rearrange.receptacle import (
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+
+
+def get_sample_region_ratios(load_dict) -> Dict[str, float]:
+    sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
+    sample_region_ratios.update(
+        load_dict["params"].get("sample_region_ratio", {})
+    )
+    return sample_region_ratios
 
 
 class RearrangeEpisodeGenerator:
@@ -190,7 +200,7 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["object_sets"]
                     for x in self._obj_sets[y]
                 ]
-                object_handles = list(set(object_handles))
+                object_handles = sorted(set(object_handles))
                 receptacle_info = [
                     self._receptacle_sets[y]
                     for y in obj_sampler_info["params"]["receptacle_sets"]
@@ -206,7 +216,10 @@ class RearrangeEpisodeGenerator:
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
                     obj_sampler_info["params"]["orientation_sampling"],
-                    obj_sampler_info["params"].get("sample_region_ratio", 1.0),
+                    get_sample_region_ratios(obj_sampler_info),
+                    obj_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -218,6 +231,7 @@ class RearrangeEpisodeGenerator:
         """
         Initialize target samplers. Expects self.episode_data to be populated by object samples.
         """
+
         self._target_samplers: Dict[str, samplers.ObjectTargetSampler] = {}
         for target_sampler_info in self.cfg.object_target_samplers:
             assert "name" in target_sampler_info
@@ -227,12 +241,7 @@ class RearrangeEpisodeGenerator:
                 target_sampler_info["name"] not in self._target_samplers
             ), f"Duplicate target sampler name '{target_sampler_info['name']}' in config."
             if target_sampler_info["type"] == "uniform":
-                # merge and flatten object and receptacle sets
-                object_instances = [
-                    x
-                    for y in target_sampler_info["params"]["object_samplers"]
-                    for x in self.episode_data["sampled_objects"][y]
-                ]
+                # merge and flatten receptacle sets
                 receptacle_info = [
                     self._receptacle_sets[y]
                     for y in target_sampler_info["params"]["receptacle_sets"]
@@ -241,13 +250,18 @@ class RearrangeEpisodeGenerator:
                 self._target_samplers[
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
-                    object_instances,
+                    # Add object set later
+                    [],
                     receptacle_info,
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
                     ),
                     target_sampler_info["params"]["orientation_sampling"],
+                    get_sample_region_ratios(target_sampler_info),
+                    target_sampler_info["params"].get(
+                        "nav_to_min_distance", -1.0
+                    ),
                 )
             else:
                 logger.info(
@@ -274,7 +288,7 @@ class RearrangeEpisodeGenerator:
                 unified_scene_set += self._scene_sets[set_name]
 
             # cull duplicates
-            unified_scene_set = list(set(unified_scene_set))
+            unified_scene_set = sorted(set(unified_scene_set))
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
             logger.error(
@@ -307,10 +321,13 @@ class RearrangeEpisodeGenerator:
                 )
             elif ao_info["type"] == "composite":
                 composite_ao_sampler_params: Dict[
-                    str, Dict[str, Tuple[float, float]]
+                    str, Dict[str, Tuple[float, float, bool]]
                 ] = {}
                 for entry in ao_info["params"]:
                     ao_handle = entry["ao_handle"]
+                    should_sample_all_joints = entry.get(
+                        "should_sample_all_joints", False
+                    )
                     link_sample_params = entry["joint_states"]
                     assert (
                         ao_handle not in composite_ao_sampler_params
@@ -325,6 +342,7 @@ class RearrangeEpisodeGenerator:
                         composite_ao_sampler_params[ao_handle][link_name] = (
                             link_params[1],
                             link_params[2],
+                            should_sample_all_joints,
                         )
                 self._ao_state_samplers[
                     ao_info["name"]
@@ -352,6 +370,7 @@ class RearrangeEpisodeGenerator:
         Return the generated scene's handle.
         """
         cur_scene_name = self._scene_sampler.sample()
+        logger.info(f"Initializing scene {cur_scene_name}")
         self.initialize_sim(cur_scene_name, self.cfg.dataset_path)
 
         return cur_scene_name
@@ -421,15 +440,59 @@ class RearrangeEpisodeGenerator:
         }
 
         ep_scene_handle = self.generate_scene()
+        scene_base_dir = osp.dirname(osp.dirname(ep_scene_handle))
+
+        scene_name = ep_scene_handle.split(".")[0]
+        navmesh_path = osp.join(
+            scene_base_dir, "navmeshes", scene_name + ".navmesh"
+        )
+        self.sim.pathfinder.load_nav_mesh(navmesh_path)
+
+        self._get_object_target_samplers()
+        target_numbers = {
+            k: sampler.target_objects_number
+            for k, sampler in self._target_samplers.items()
+        }
+        targ_sampler_name_to_obj_sampler_names = {}
+        for targ_sampler_cfg in self.cfg.object_target_samplers:
+            sampler_name = targ_sampler_cfg["name"]
+            targ_sampler_name_to_obj_sampler_names[
+                sampler_name
+            ] = targ_sampler_cfg["params"]["object_samplers"]
+
+        target_receptacles = defaultdict(list)
+        all_target_receptacles = []
+        for sampler_name, num_targets in target_numbers.items():
+            obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
+                sampler_name
+            ][0]
+            sampler = self._obj_samplers[obj_sampler_name]
+            new_target_receptacles = [
+                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
+            ]
+            target_receptacles[obj_sampler_name].extend(new_target_receptacles)
+            all_target_receptacles.extend(new_target_receptacles)
+
+        goal_receptacles = {}
+        all_goal_receptacles = []
+        for sampler, (sampler_name, num_targets) in zip(
+            self._target_samplers.values(), target_numbers.items()
+        ):
+            new_goal_receptacles = [
+                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
+            ]
+            goal_receptacles[sampler_name] = new_goal_receptacles
+            all_goal_receptacles.extend(new_goal_receptacles)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
-        for sampler_name, ao_state_sampler in self._ao_state_samplers.items():
-            sampler_states = ao_state_sampler.sample(self.sim)
-            assert (
-                sampler_states is not None
-            ), f"AO sampler '{sampler_name}' failed"
+        for _sampler_name, ao_state_sampler in self._ao_state_samplers.items():
+            sampler_states = ao_state_sampler.sample(
+                self.sim, [*all_target_receptacles, *all_goal_receptacles]
+            )
+            if sampler_states is None:
+                return None
             for sampled_instance, link_states in sampler_states.items():
                 if sampled_instance.handle not in ao_states:
                     ao_states[sampled_instance.handle] = {}
@@ -442,12 +505,19 @@ class RearrangeEpisodeGenerator:
             self.vdb.make_debug_video(prefix="receptacles_")
 
         # sample object placements
+        object_to_containing_receptacle = {}
         for sampler_name, obj_sampler in self._obj_samplers.items():
-            new_objects = obj_sampler.sample(
+            object_sample_data = obj_sampler.sample(
                 self.sim,
+                target_receptacles[sampler_name],
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
             )
+            if len(object_sample_data) == 0:
+                return None
+            new_objects, receptacles = zip(*object_sample_data)
+            for obj, rec in zip(new_objects, receptacles):
+                object_to_containing_receptacle[obj.handle] = rec
             if sampler_name not in self.episode_data["sampled_objects"]:
                 self.episode_data["sampled_objects"][
                     sampler_name
@@ -474,20 +544,43 @@ class RearrangeEpisodeGenerator:
             )
             return None
 
-        # generate the target samplers
-        self._get_object_target_samplers()
+        for sampler, target_sampler_info in zip(
+            self._target_samplers.values(), self.cfg.object_target_samplers
+        ):
+            sampler.object_instance_set = [
+                x
+                for y in target_sampler_info["params"]["object_samplers"]
+                for x in self.episode_data["sampled_objects"][y]
+            ]
+            sampler.object_set = [
+                x.creation_attributes.handle
+                for x in sampler.object_instance_set
+            ]
 
-        target_refs = {}
+        target_refs: Dict[str, str] = {}
 
         # sample targets
-        for target_idx, (sampler_name, target_sampler) in enumerate(
-            self._target_samplers.items()
-        ):
+        for sampler_name, target_sampler in self._target_samplers.items():
+            obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
+                sampler_name
+            ][0]
             new_target_objects = target_sampler.sample(
-                self.sim, snap_down=True, vdb=self.vdb
+                self.sim,
+                snap_down=True,
+                vdb=self.vdb,
+                target_receptacles=target_receptacles[obj_sampler_name],
+                goal_receptacles=goal_receptacles[sampler_name],
+                object_to_containing_receptacle=object_to_containing_receptacle,
             )
+            if new_target_objects is None:
+                return None
+
             # cache transforms and add visualizations
-            for instance_handle, target_object in new_target_objects.items():
+            for i, (instance_handle, value) in enumerate(
+                new_target_objects.items()
+            ):
+                target_object, target_receptacle = value
+                target_receptacles[obj_sampler_name][i] = target_receptacle
                 assert (
                     instance_handle not in self.episode_data["sampled_targets"]
                 ), f"Duplicate target for instance '{instance_handle}'."
@@ -499,7 +592,9 @@ class RearrangeEpisodeGenerator:
                 self.episode_data["sampled_targets"][
                     instance_handle
                 ] = np.array(target_transform)
-                target_refs[instance_handle] = f"{sampler_name}|{target_idx}"
+                target_refs[
+                    instance_handle
+                ] = f"{sampler_name}|{len(target_refs)}"
                 rom.remove_object_by_handle(target_object.handle)
                 if self._render_debug_obs:
                     sutils.add_transformed_wire_box(
@@ -519,21 +614,31 @@ class RearrangeEpisodeGenerator:
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
-        sampled_rigid_object_states = [
-            (
-                x.creation_attributes.handle.split(
-                    x.creation_attributes.file_directory
-                )[-1].split("/")[-1],
-                np.array(x.transformation),
+        sampled_rigid_object_states = []
+        for sampled_obj in self.ep_sampled_objects:
+            creation_attrib = sampled_obj.creation_attributes
+            file_handle = creation_attrib.handle.split(
+                creation_attrib.file_directory
+            )[-1].split("/")[-1]
+            sampled_rigid_object_states.append(
+                (
+                    file_handle,
+                    np.array(sampled_obj.transformation),
+                )
             )
-            for x in self.ep_sampled_objects
-        ]
-        # sampled_rigid_object_states = [
-        #     (x.creation_attributes.handle, np.array(x.transformation))
-        #     for x in self.ep_sampled_objects
-        # ]
 
         self.num_ep_generated += 1
+
+        def extract_recep_info(recep):
+            return (recep.parent_object_handle, recep.parent_link)
+
+        save_target_receps = [
+            extract_recep_info(x) for x in all_target_receptacles
+        ]
+        save_goal_receps = [
+            extract_recep_info(x) for x in all_goal_receptacles
+        ]
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -549,6 +654,8 @@ class RearrangeEpisodeGenerator:
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
+            target_receptacles=save_target_receps,
+            goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
             info={"object_labels": target_refs},
         )
@@ -598,17 +705,20 @@ class RearrangeEpisodeGenerator:
         hab_cfg = habitat_sim.Configuration(backend_cfg, [agent_cfg])
         if self.sim is None:
             self.sim = habitat_sim.Simulator(hab_cfg)
+
             object_attr_mgr = self.sim.get_object_template_manager()
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
-                # we need to force a reset, so change the internal config scene name
+                # we need to force a reset, so reload the NONE scene
                 # TODO: we should fix this to provide an appropriate reset method
-                assert (
-                    self.sim.config.sim_cfg.scene_id != "NONE"
-                ), "Should never generate episodes in an empty scene. Mistake?"
-                self.sim.config.sim_cfg.scene_id = "NONE"
+                proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
+                proxy_backend_cfg.scene_id = "NONE"
+                proxy_hab_cfg = habitat_sim.Configuration(
+                    proxy_backend_cfg, [agent_cfg]
+                )
+                self.sim.reconfigure(proxy_hab_cfg)
             self.sim.reconfigure(hab_cfg)
 
         # setup the debug camera state to the center of the scene bounding box
@@ -828,7 +938,11 @@ def get_config_defaults() -> CN:
         #     "type": "uniform",
         #     "params": ["fridge", "top_door", 1.5, 1.5]}
         # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ]}, ]
+        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+        # for example, should_sample_all_joints should be true for the fridge since the joints (the door) angle need to be sampled when the object
+        # is inside. But for kitchen drawers, this should be false since the joints (all drawers) should not be sampled when the object is on the
+        # countertop (only need to sample for the drawer the object is in)
     ]
 
     # ----- marker definitions ------
@@ -900,8 +1014,13 @@ if __name__ == "__main__":
         default=1,
         help="The number of episodes to generate.",
     )
+    parser.add_argument("--seed", type=int)
 
     args, _ = parser.parse_known_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
 
     # merge the configuration from file with the default
     cfg = get_config_defaults()
@@ -934,41 +1053,40 @@ if __name__ == "__main__":
             logger.info(f" SceneDataset: {mm.active_dataset}\n")
             logger.info("--------")
             logger.info(" Scenes:")
-            logger.info(
-                "--------\n    " + (list_sep.join(mm.get_scene_handles()))
-            )
+            logger.info("--------\n    ")
+            logger.info("\n     ".join(mm.get_scene_handles()))
             logger.info("---------------")
             logger.info(" Rigid Objects:")
+            logger.info("---------------\n    ")
             logger.info(
-                "---------------\n    "
-                + (
-                    list_sep.join(
-                        mm.object_template_manager.get_template_handles()
-                    )
+                "\n     ".join(
+                    mm.object_template_manager.get_template_handles()
                 ),
             )
             logger.info("---------------------")
             logger.info(" Articulated Objects:")
-            logger.info(
-                "---------------------\n    " + (list_sep.join(mm.urdf_paths))
-            )
+            logger.info("---------------------\n    ")
+            logger.info("\n     ".join(mm.urdf_paths))
 
             logger.info("-------------------------")
             logger.info("Stage Global Receptacles:")
             logger.info("-------------------------")
             for handle, r_list in receptacles["stage"].items():
-                logger.info(f"  - {handle}\n    " + (list_sep.join(r_list)))
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
 
             logger.info("-------------------------")
             logger.info("Rigid Object Receptacles:")
             logger.info("-------------------------")
             for handle, r_list in receptacles["rigid"].items():
-                logger.info(f"  - {handle}\n    " + (list_sep.join(r_list)))
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
             logger.info("-------------------------------")
             logger.info("Articulated Object receptacles:")
             logger.info("-------------------------------")
             for handle, r_list in receptacles["articulated"].items():
-                logger.info(f"  - {handle}\n    " + (list_sep.join(r_list)))
+                logger.info(f"  - {handle}\n    ")
+                logger.info("\n     ".join(r_list))
 
             logger.info("==================================")
             logger.info("Done listing SceneDataset summary")

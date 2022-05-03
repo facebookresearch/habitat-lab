@@ -13,7 +13,7 @@ from torch import optim as optim
 
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 
 EPS_PPO = 1e-5
 
@@ -21,7 +21,7 @@ EPS_PPO = 1e-5
 class PPO(nn.Module):
     def __init__(
         self,
-        actor_critic: Policy,
+        actor_critic: NetPolicy,
         clip_param: float,
         ppo_epoch: int,
         num_mini_batch: int,

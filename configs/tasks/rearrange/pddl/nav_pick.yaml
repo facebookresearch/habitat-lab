@@ -1,0 +1,13 @@
+stage_goals: {}
+start:
+    precondition: []
+    state:
+        robo:
+            pos: 'rnd'
+
+goal:
+  - "holding(hab2|0)"
+
+solution:
+    - "nav(hab2|0)"
+    - "pick(hab2|0)"

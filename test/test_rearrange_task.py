@@ -66,10 +66,10 @@ def test_rearrange_dataset():
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/*"),
+        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
     ),
 )
-def test_rearrange_basline_envs(test_cfg_path):
+def test_rearrange_baseline_envs(test_cfg_path):
     """
     Test the Habitat Baseline environments
     """

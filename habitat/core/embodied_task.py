@@ -255,6 +255,8 @@ class EmbodiedTask:
         )
         self._action_keys = list(self.actions.keys())
 
+        self._is_episode_active = False
+
     def _init_entities(
         self, entity_names, register_func, entities_config=None
     ) -> OrderedDict:
@@ -264,6 +266,8 @@ class EmbodiedTask:
         entities = OrderedDict()
         for entity_name in entity_names:
             entity_cfg = getattr(entities_config, entity_name)
+            if "TYPE" not in entity_cfg:
+                raise ValueError(f"Could not find TYPE in {entity_cfg}")
             entity_type = register_func(entity_cfg.TYPE)
             assert (
                 entity_type is not None
@@ -287,20 +291,51 @@ class EmbodiedTask:
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
 
+        self._is_episode_active = True
+
         return observations
 
-    def step(self, action: Dict[str, Any], episode: Episode):
-        if "action_args" not in action or action["action_args"] is None:
-            action["action_args"] = {}
-        action_name = action["action"]
+    def _step_single_action(
+        self,
+        observations: Any,
+        action_name: Any,
+        action: Dict[str, Any],
+        episode: Episode,
+        is_last_action=True,
+    ):
         if isinstance(action_name, (int, np.integer)):
             action_name = self.get_action_name(action_name)
         assert (
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
-
         task_action = self.actions[action_name]
-        observations = task_action.step(**action["action_args"], task=self)
+        observations.update(
+            task_action.step(
+                **action["action_args"],
+                task=self,
+                is_last_action=is_last_action,
+            )
+        )
+
+    def step(self, action: Dict[str, Any], episode: Episode):
+        action_name = action["action"]
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
+        observations: Any = {}
+        if isinstance(action_name, tuple):  # there are multiple actions
+            for i, a_name in enumerate(action_name):
+                self._step_single_action(
+                    observations,
+                    a_name,
+                    action,
+                    episode,
+                    i == len(action_name) - 1,
+                )
+        else:
+            self._step_single_action(
+                observations, action_name, action, episode
+            )
+
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations,
@@ -309,11 +344,9 @@ class EmbodiedTask:
                 task=self,
             )
         )
-
         self._is_episode_active = self._check_episode_is_active(
             observations=observations, action=action, episode=episode
         )
-
         return observations
 
     def get_action_name(self, action_index: Union[int, np.integer]):

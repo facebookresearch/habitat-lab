@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -32,11 +32,12 @@ from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo import Net, Policy
+from habitat_baselines.rl.ppo import Net, NetPolicy
+from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
-class PointNavResNetPolicy(Policy):
+class PointNavResNetPolicy(NetPolicy):
     def __init__(
         self,
         observation_space: spaces.Dict,
@@ -49,6 +50,7 @@ class PointNavResNetPolicy(Policy):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
+        fuse_keys: Optional[List[str]] = None,
         **kwargs
     ):
         if policy_config is not None:
@@ -58,9 +60,15 @@ class PointNavResNetPolicy(Policy):
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
+            include_visual_keys = policy_config.include_visual_keys
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
+            include_visual_keys = None
+
+        if fuse_keys is None:
+            fuse_keys = []
+
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -71,16 +79,21 @@ class PointNavResNetPolicy(Policy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
+                fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
+                include_visual_keys=include_visual_keys,
             ),
-            dim_actions=action_space.n,  # for action distribution
+            dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
         )
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: spaces.Dict, action_space
+        cls,
+        config: Config,
+        observation_space: spaces.Dict,
+        action_space,
     ):
         return cls(
             observation_space=observation_space,
@@ -92,6 +105,7 @@ class PointNavResNetPolicy(Policy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
+            fuse_keys=config.RL.GYM_OBS_KEYS,
         )
 
 
@@ -107,17 +121,16 @@ class ResNetEncoder(nn.Module):
     ):
         super().__init__()
 
-        if "rgb" in observation_space.spaces:
-            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
-            spatial_size = observation_space.spaces["rgb"].shape[0] // 2
-        else:
-            self._n_input_rgb = 0
+        # Determine which visual observations are present
+        self.rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
+        self.depth_keys = [k for k in observation_space.spaces if "depth" in k]
 
-        if "depth" in observation_space.spaces:
-            self._n_input_depth = observation_space.spaces["depth"].shape[2]
-            spatial_size = observation_space.spaces["depth"].shape[0] // 2
-        else:
-            self._n_input_depth = 0
+        # Count total # of channels for rgb and for depth
+        self._n_input_rgb, self._n_input_depth = [
+            # sum() returns 0 for an empty list
+            sum([observation_space.spaces[k].shape[2] for k in keys])
+            for keys in [self.rgb_keys, self.depth_keys]
+        ]
 
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
@@ -127,15 +140,28 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
+            all_keys = self.rgb_keys + self.depth_keys
+            spatial_size_h = (
+                observation_space.spaces[all_keys[0]].shape[0] // 2
+            )
+            spatial_size_w = (
+                observation_space.spaces[all_keys[0]].shape[1] // 2
+            )
             input_channels = self._n_input_depth + self._n_input_rgb
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
-            final_spatial = int(
-                spatial_size * self.backbone.final_spatial_compress
+            final_spatial_h = int(
+                np.ceil(spatial_size_h * self.backbone.final_spatial_compress)
+            )
+            final_spatial_w = int(
+                np.ceil(spatial_size_w * self.backbone.final_spatial_compress)
             )
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial**2))
+                round(
+                    after_compression_flat_size
+                    / (final_spatial_h * final_spatial_w)
+                )
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
@@ -151,8 +177,8 @@ class ResNetEncoder(nn.Module):
 
             self.output_shape = (
                 num_compression_channels,
-                final_spatial,
-                final_spatial,
+                final_spatial_h,
+                final_spatial_w,
             )
 
     @property
@@ -173,8 +199,8 @@ class ResNetEncoder(nn.Module):
             return None
 
         cnn_input = []
-        if self._n_input_rgb > 0:
-            rgb_observations = observations["rgb"]
+        for k in self.rgb_keys:
+            rgb_observations = observations[k]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
@@ -182,12 +208,10 @@ class ResNetEncoder(nn.Module):
             )  # normalize RGB
             cnn_input.append(rgb_observations)
 
-        if self._n_input_depth > 0:
-            depth_observations = observations["depth"]
-
+        for k in self.depth_keys:
+            depth_observations = observations[k]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-
             cnn_input.append(depth_observations)
 
         x = torch.cat(cnn_input, dim=1)
@@ -216,8 +240,10 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
+        fuse_keys: List[str],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
+        include_visual_keys: Optional[List[str]] = None,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -225,10 +251,21 @@ class PointNavResNetNet(Net):
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            self.prev_action_embedding = nn.Linear(action_space.n, 32)
+            num_actions = get_num_actions(action_space)
+            self.prev_action_embedding = nn.Linear(num_actions, 32)
 
         self._n_prev_action = 32
-        rnn_input_size = self._n_prev_action
+        rnn_input_size = self._n_prev_action  # test
+
+        # Only fuse the 1D state inputs. Other inputs are processed by the
+        # visual encoder
+        self._fuse_keys: List[str] = [
+            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
+        ]
+        if len(self._fuse_keys) != 0:
+            rnn_input_size += sum(
+                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+            )
 
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -319,8 +356,21 @@ class PointNavResNetNet(Net):
 
         self._hidden_size = hidden_size
 
+        if force_blind_policy:
+            use_obs_space = spaces.Dict({})
+        elif include_visual_keys is not None and len(include_visual_keys) != 0:
+            use_obs_space = spaces.Dict(
+                {
+                    k: v
+                    for k, v in observation_space.spaces.items()
+                    if k in include_visual_keys
+                }
+            )
+        else:
+            use_obs_space = observation_space
+
         self.visual_encoder = ResNetEncoder(
-            observation_space if not force_blind_policy else spaces.Dict({}),
+            use_obs_space,
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
@@ -371,6 +421,12 @@ class PointNavResNetNet(Net):
             )
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
+
+        if len(self._fuse_keys) != 0:
+            fuse_states = torch.cat(
+                [observations[k] for k in self._fuse_keys], dim=-1
+            )
+            x.append(fuse_states)
 
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             goal_observations = observations[

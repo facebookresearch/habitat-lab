@@ -28,11 +28,15 @@ class RearrangeEpisode(Episode):
     :property rigid_objs: A list of objects to add to the scene, each with: (handle, transform)
     :property targets: Maps an object instance to a new target location for placement in the task. {instance_name -> target_transform}
     :property markers: Indicate points of interest in the scene such as grasp points like handles. {marker name -> (type, (params))}
+    :property target_receptacles: The names and link indices of the receptacles containing the target objects.
+    :property goal_receptacles: The names and link indices of the receptacles containing the goals.
     """
     ao_states: Dict[str, Dict[int, float]]
     rigid_objs: List[Tuple[str, np.ndarray]]
     targets: Dict[str, np.ndarray]
     markers: Dict[str, Tuple[str, Tuple]] = {}
+    target_receptacles: List[Tuple[str, int]] = []
+    goal_receptacles: List[Tuple[str, int]] = []
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")

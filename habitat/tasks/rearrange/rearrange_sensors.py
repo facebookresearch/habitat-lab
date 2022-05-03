@@ -12,30 +12,19 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import CollisionDetails
-
-
-@registry.register_sensor
-class TargetPointGoalGPSAndCompassSensor(PointGoalSensor):
-    cls_uuid: str = "target_point_goal_gps_and_compass_sensor"
-
-    def __init__(self, *args, task, **kwargs):
-        self._sim: RearrangeSim
-        self._task = task
-        super().__init__(*args, task=task, **kwargs)
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        agent_state = self._sim.get_agent_state()
-        agent_position = agent_state.position
-        rotation_world_agent = agent_state.rotation
-
-        target_position = self._sim.get_target_objs_start()[0]
-        return self._compute_pointgoal(
-            agent_position, rotation_world_agent, target_position
-        )
+from habitat.tasks.rearrange.utils import (
+    CollisionDetails,
+    batch_transform_point,
+    rearrange_logger,
+)
+from habitat.tasks.utils import get_angle
 
 
 class MultiObjSensor(PointGoalSensor):
+    """
+    Abstract parent class for a sensor that specifies the locations of all targets.
+    """
+
     def __init__(self, *args, task, **kwargs):
         self._task = task
         self._sim: RearrangeSim
@@ -44,7 +33,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         return spaces.Box(
-            shape=(n_targets, 3),
+            shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -52,24 +41,7 @@ class MultiObjSensor(PointGoalSensor):
 
 
 @registry.register_sensor
-class AbsObjectGoalPositionSensor(MultiObjSensor):
-    """
-    This is the ground truth object position sensor relative to the scene coordinate frame.
-    """
-
-    cls_uuid: str = "abs_obj_goal_pos_sensor"
-
-    def get_observation(self, observations, episode, *args, **kwargs):
-        self._sim: RearrangeSim
-        idxs, _ = self._sim.get_targets()
-        scene_pos = self._sim.get_scene_pos()
-        pos = scene_pos[idxs]
-
-        return pos
-
-
-@registry.register_sensor
-class ObjectGoalPositionSensor(MultiObjSensor):
+class TargetCurrentSensor(MultiObjSensor):
     """
     This is the ground truth object position sensor relative to the robot end-effector coordinate frame.
     """
@@ -95,7 +67,7 @@ class ObjectGoalPositionSensor(MultiObjSensor):
         for i in range(pos.shape[0]):
             pos[i] = T_inv.transform_point(pos[i])
 
-        return pos[self._task.targ_idx]
+        return pos.reshape(-1)
 
 
 @registry.register_sensor
@@ -106,23 +78,12 @@ class TargetStartSensor(MultiObjSensor):
 
     cls_uuid: str = "obj_start_sensor"
 
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
-
-        return pos[self._task.targ_idx]
+        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
 @registry.register_sensor
@@ -133,18 +94,9 @@ class AbsTargetStartSensor(MultiObjSensor):
 
     cls_uuid: str = "abs_obj_start_sensor"
 
-    def _get_observation_space(self, *args, **kwargs):
-        n_targets = self._task.get_n_targets()
-        return spaces.Box(
-            shape=(n_targets, 3),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
     def get_observation(self, observations, episode, *args, **kwargs):
         pos = self._sim.get_target_objs_start()
-        return pos
+        return pos.reshape(-1)
 
 
 @registry.register_sensor
@@ -160,9 +112,7 @@ class GoalSensor(MultiObjSensor):
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
-        return pos
+        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
 @registry.register_sensor
@@ -171,7 +121,7 @@ class AbsGoalSensor(MultiObjSensor):
 
     def get_observation(self, *args, observations, episode, **kwargs):
         _, pos = self._sim.get_targets()
-        return pos
+        return pos.reshape(-1)
 
 
 @registry.register_sensor
@@ -289,6 +239,10 @@ class RelativeRestingPositionSensor(Sensor):
 
 @registry.register_sensor
 class RestingPositionSensor(Sensor):
+    """
+    Desired resting position in the robot coordinate frame.
+    """
+
     cls_uuid: str = "resting_position"
 
     def _get_uuid(self, *args, **kwargs):
@@ -314,13 +268,55 @@ class RestingPositionSensor(Sensor):
 
 
 @registry.register_sensor
-class IsHoldingSensor(Sensor):
+class LocalizationSensor(Sensor):
+    cls_uuid = "localization_sensor"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
     def _get_uuid(self, *args, **kwargs):
-        return "is_holding"
+        return LocalizationSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(4,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        T = self._sim.robot.base_transformation
+        forward = np.array([1.0, 0, 0])
+        heading = np.array(T.transform_vector(forward))
+        forward = forward[[0, 2]]
+        heading = heading[[0, 2]]
+
+        heading_angle = get_angle(forward, heading)
+        c = np.cross(forward, heading) < 0
+        if not c:
+            heading_angle = -1.0 * heading_angle
+        return np.array([*T.translation, heading_angle], dtype=np.float32)
+
+
+@registry.register_sensor
+class IsHoldingSensor(Sensor):
+    """
+    Binary if the robot is holding an object or grasped onto an articulated object.
+    """
+
+    cls_uuid: str = "is_holding"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return IsHoldingSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -334,6 +330,10 @@ class IsHoldingSensor(Sensor):
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
+    """
+    Euclidean distance from the target object to the goal.
+    """
+
     cls_uuid: str = "object_to_goal_distance"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -353,7 +353,50 @@ class ObjectToGoalDistance(Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
-        self._metric = {idx: dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+
+
+@registry.register_measure
+class ObjAtGoal(Measure):
+    """
+    Returns if the target object is at the goal (binary) for each of the target
+    objects in the scene.
+    """
+
+    cls_uuid: str = "obj_at_goal"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjAtGoal.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                ObjectToGoalDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        obj_to_goal_dists = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+
+        self._metric = {
+            str(idx): dist < self._config.SUCC_THRESH
+            for idx, dist in obj_to_goal_dists.items()
+        }
 
 
 @registry.register_measure
@@ -385,7 +428,7 @@ class EndEffectorToObjectDistance(Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
-        self._metric = {idx: dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
 
 
 @registry.register_measure
@@ -456,22 +499,11 @@ class ReturnToRestDistance(Measure):
 
 
 @registry.register_measure
-class DummyMeasure(Measure):
-    cls_uuid: str = "dummy_measure"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return DummyMeasure.cls_uuid
-
-    def reset_metric(self, *args, episode, **kwargs):
-        self.update_metric(*args, episode=episode, **kwargs)
-
-    def update_metric(self, *args, episode, **kwargs):
-        self._metric = 0
-
-
-@registry.register_measure
 class RobotCollisions(Measure):
+    """
+    Returns a dictionary with the counts for different types of collisions.
+    """
+
     cls_uuid: str = "robot_collisions"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -491,7 +523,7 @@ class RobotCollisions(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -507,6 +539,10 @@ class RobotCollisions(Measure):
 
 @registry.register_measure
 class RobotForce(Measure):
+    """
+    The amount of force in newton's accumulatively applied by the robot.
+    """
+
     cls_uuid: str = "robot_force"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -529,7 +565,7 @@ class RobotForce(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     @property
@@ -560,7 +596,30 @@ class RobotForce(Measure):
 
 
 @registry.register_measure
+class NumStepsMeasure(Measure):
+    """
+    The number of steps elapsed in the current episode.
+    """
+
+    cls_uuid: str = "num_steps"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NumStepsMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = 0
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric += 1
+
+
+@registry.register_measure
 class ForceTerminate(Measure):
+    """
+    If the accumulated force throughout this episode exceeds the limit.
+    """
+
     cls_uuid: str = "force_terminate"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -586,7 +645,7 @@ class ForceTerminate(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -597,13 +656,47 @@ class ForceTerminate(Measure):
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
         ):
+            rearrange_logger.debug(
+                f"Force threshold={self._config.MAX_ACCUM_FORCE} exceeded with {accum_force}, ending episode"
+            )
             self._task.should_end = True
             self._metric = True
         else:
             self._metric = False
 
 
+@registry.register_measure
+class DidViolateHoldConstraintMeasure(Measure):
+    cls_uuid: str = "did_violate_hold_constraint"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DidViolateHoldConstraintMeasure.cls_uuid
+
+    def __init__(self, *args, sim, **kwargs):
+        self._sim = sim
+
+        super().__init__(*args, sim=sim, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, **kwargs):
+        self._metric = self._sim.grasp_mgr.is_violating_hold_constraint()
+
+
 class RearrangeReward(Measure):
+    """
+    An abstract class defining some measures that are always a part of any
+    reward function in the Habitat 2.0 tasks.
+    """
+
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config
@@ -625,7 +718,7 @@ class RearrangeReward(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):

@@ -66,6 +66,5 @@ RL:
 
     force_distributed: True
 
-  GYM_OBS_KEYS: [ 'rgb', 'pointgoal_with_gps_compass_sensor' ]
   GYM_FIX_INFO_DICT: True
   GYM_ACTION_KEYS: [ "STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT" ]

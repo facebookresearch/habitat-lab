@@ -30,7 +30,10 @@ from habitat_baselines.common.obs_transformers import (
     get_active_obs_transforms,
 )
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_writer,
+)
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -46,15 +49,21 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
     PointNavResNetPolicy,
 )
+from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
+    HierarchicalPolicy,
+)
 from habitat_baselines.rl.ppo import PPO
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
-    action_to_velocity_control,
+    action_array_to_dict,
     batch_obs,
     generate_video,
+    get_num_actions,
+    is_continuous_action_space,
 )
 from habitat_baselines.utils.env_utils import construct_envs
+from habitat_baselines.utils.render_wrapper import overlay_frame
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -70,7 +79,7 @@ class PPOTrainer(BaseRLTrainer):
     _obs_batching_cache: ObservationBatchingCache
     envs: VectorEnv
     agent: PPO
-    actor_critic: Policy
+    actor_critic: NetPolicy
 
     def __init__(self, config=None):
         super().__init__(config)
@@ -249,16 +258,23 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
+        action_space = self.envs.action_spaces[0]
         if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
+            # For navigation using a continuous action space for a task that
+            # may be asking for discrete actions
+            self.policy_action_space = action_space["VELOCITY_CONTROL"]
             action_shape = (2,)
             discrete_actions = False
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = None
-            discrete_actions = True
+            self.policy_action_space = action_space
+            if is_continuous_action_space(action_space):
+                # Assume ALL actions are NOT discrete
+                action_shape = (get_num_actions(action_space),)
+                discrete_actions = False
+            else:
+                # For discrete pointnav
+                action_shape = None
+                discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -380,7 +396,7 @@ class PPOTrainer(BaseRLTrainer):
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
-            if k in cls.METRICS_BLACKLIST:
+            if not isinstance(k, str) or k in cls.METRICS_BLACKLIST:
                 continue
 
             if isinstance(v, dict):
@@ -390,7 +406,8 @@ class PPOTrainer(BaseRLTrainer):
                         for subk, subv in cls._extract_scalars_from_info(
                             v
                         ).items()
-                        if (k + "." + subk) not in cls.METRICS_BLACKLIST
+                        if isinstance(subk, str)
+                        and k + "." + subk not in cls.METRICS_BLACKLIST
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -456,8 +473,10 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            if self.using_velocity_ctrl:
-                step_action = action_to_velocity_control(act)
+            if act.shape[0] > 1:
+                step_action = action_array_to_dict(
+                    self.policy_action_space, act
+                )
             else:
                 step_action = act.item()
             self.envs.async_step_at(index_env, step_action)
@@ -655,13 +674,15 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in losses.items():
             writer.add_scalar(f"losses/{k}", v, self.num_steps_done)
 
+        fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
+        writer.add_scalar("metrics/fps", fps, self.num_steps_done)
+
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
-                    self.num_steps_done
-                    / ((time.time() - self.t_start) + prev_time),
+                    fps,
                 )
             )
 
@@ -741,9 +762,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = self.config.RL.PPO
 
         with (
-            TensorboardWriter(  # type: ignore
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
-            )
+            get_writer(self.config, flush_secs=self.flush_secs)
             if rank0_only()
             else contextlib.suppress()
         ) as writer:
@@ -883,7 +902,12 @@ class PPOTrainer(BaseRLTrainer):
             raise RuntimeError("Evaluation does not support distributed mode")
 
         # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = self.load_checkpoint(checkpoint_path, map_location="cpu")
+        if self.config.EVAL.SHOULD_LOAD_CKPT:
+            ckpt_dict = self.load_checkpoint(
+                checkpoint_path, map_location="cpu"
+            )
+        else:
+            ckpt_dict = {}
 
         if self.config.EVAL.USE_CKPT_CONFIG:
             config = self._setup_eval_config(ckpt_dict["config"])
@@ -896,7 +920,10 @@ class PPOTrainer(BaseRLTrainer):
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
 
-        if len(self.config.VIDEO_OPTION) > 0:
+        if (
+            len(self.config.VIDEO_OPTION) > 0
+            and self.config.VIDEO_RENDER_TOP_DOWN
+        ):
             config.defrost()
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
@@ -907,20 +934,28 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
+        action_space = self.envs.action_spaces[0]
         if self.using_velocity_ctrl:
-            self.policy_action_space = self.envs.action_spaces[0][
-                "VELOCITY_CONTROL"
-            ]
+            # For navigation using a continuous action space for a task that
+            # may be asking for discrete actions
+            self.policy_action_space = action_space["VELOCITY_CONTROL"]
             action_shape = (2,)
-            action_type = torch.float
+            discrete_actions = False
         else:
-            self.policy_action_space = self.envs.action_spaces[0]
-            action_shape = (1,)
-            action_type = torch.long
+            self.policy_action_space = action_space
+            if is_continuous_action_space(action_space):
+                # Assume NONE of the actions are discrete
+                action_shape = (get_num_actions(action_space),)
+                discrete_actions = False
+            else:
+                # For discrete pointnav
+                action_shape = (1,)
+                discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
 
-        self.agent.load_state_dict(ckpt_dict["state_dict"])
+        if self.agent.actor_critic.should_load_agent_state:
+            self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
@@ -935,7 +970,7 @@ class PPOTrainer(BaseRLTrainer):
 
         test_recurrent_hidden_states = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
-            self.actor_critic.net.num_recurrent_layers,
+            self.actor_critic.num_recurrent_layers,
             ppo_cfg.hidden_size,
             device=self.device,
         )
@@ -943,7 +978,7 @@ class PPOTrainer(BaseRLTrainer):
             self.config.NUM_ENVIRONMENTS,
             *action_shape,
             device=self.device,
-            dtype=action_type,
+            dtype=torch.long if discrete_actions else torch.float,
         )
         not_done_masks = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
@@ -1002,9 +1037,9 @@ class PPOTrainer(BaseRLTrainer):
             # in the subprocesses.
             # For backwards compatibility, we also call .item() to convert to
             # an int
-            if self.using_velocity_ctrl:
+            if actions[0].shape[0] > 1:
                 step_data = [
-                    action_to_velocity_control(a)
+                    action_array_to_dict(self.policy_action_space, a)
                     for a in actions.to(device="cpu")
                 ]
             else:
@@ -1068,7 +1103,9 @@ class PPOTrainer(BaseRLTrainer):
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
+                            fps=self.config.VIDEO_FPS,
                             tb_writer=writer,
+                            keys_to_include_in_name=self.config.EVAL_KEYS_TO_INCLUDE_IN_NAME,
                         )
 
                         rgb_frames[i] = []
@@ -1079,6 +1116,9 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    if self.config.VIDEO_RENDER_ALL_INFO:
+                        frame = overlay_frame(frame, infos[i])
+
                     rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)

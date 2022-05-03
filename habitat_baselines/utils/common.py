@@ -26,7 +26,7 @@ from typing import (
 import attr
 import numpy as np
 import torch
-from gym.spaces import Box
+from gym import spaces
 from PIL import Image
 from torch import Size, Tensor
 from torch import nn as nn
@@ -34,6 +34,7 @@ from torch import nn as nn
 from habitat import logger
 from habitat.config import Config
 from habitat.core.dataset import Episode
+from habitat.core.spaces import EmptySpace
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
@@ -86,6 +87,9 @@ class CustomNormal(torch.distributions.normal.Normal):
         ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
         return ret
 
+    def entropy(self) -> Tensor:
+        return super().entropy().sum(-1).unsqueeze(-1)
+
 
 class GaussianNet(nn.Module):
     def __init__(
@@ -99,27 +103,42 @@ class GaussianNet(nn.Module):
         self.action_activation = config.action_activation
         self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
+        self.use_std_param = config.use_std_param
+        self.clamp_std = config.clamp_std
         if config.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
+            std_init = 0.0  # initialize std value so that exp(std) ~ 1
         else:
             self.min_std = config.min_std
             self.max_std = config.max_std
+            std_init = 1.0  # initialize std value so that std ~ 1
 
         self.mu = nn.Linear(num_inputs, num_outputs)
-        self.std = nn.Linear(num_inputs, num_outputs)
-
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
         nn.init.constant_(self.mu.bias, 0)
-        nn.init.orthogonal_(self.std.weight, gain=0.01)
-        nn.init.constant_(self.std.bias, 0)
+
+        if self.use_std_param:
+            self.std = torch.nn.parameter.Parameter(
+                torch.randn(num_outputs) * 0.01 + std_init
+            )
+        else:
+            self.std = nn.Linear(num_inputs, num_outputs)
+            nn.init.orthogonal_(self.std.weight, gain=0.01)
+            nn.init.constant_(self.std.bias, std_init)
 
     def forward(self, x: Tensor) -> CustomNormal:
         mu = self.mu(x)
         if self.action_activation == "tanh":
             mu = torch.tanh(mu)
 
-        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.use_std_param:
+            std = self.std
+        else:
+            std = self.std(x)
+
+        if self.clamp_std:
+            std = torch.clamp(std, min=self.min_std, max=self.max_std)
         if self.use_log_std:
             std = torch.exp(std)
         if self.use_softplus:
@@ -332,6 +351,7 @@ def generate_video(
     tb_writer: TensorboardWriter,
     fps: int = 10,
     verbose: bool = True,
+    keys_to_include_in_name: Optional[List[str]] = None,
 ) -> None:
     r"""Generate video according to specified information.
 
@@ -352,8 +372,22 @@ def generate_video(
         return
 
     metric_strs = []
-    for k, v in metrics.items():
-        metric_strs.append(f"{k}={v:.2f}")
+    if (
+        keys_to_include_in_name is not None
+        and len(keys_to_include_in_name) > 0
+    ):
+        use_metrics_k = [
+            k
+            for k in metrics
+            if any(
+                to_include_k in k for to_include_k in keys_to_include_in_name
+            )
+        ]
+    else:
+        use_metrics_k = list(metrics.keys())
+
+    for k in use_metrics_k:
+        metric_strs.append(f"{k}={metrics[k]:.2f}")
 
     video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
@@ -482,7 +516,8 @@ def center_crop(
 
 
 def get_image_height_width(
-    img: Union[Box, np.ndarray, torch.Tensor], channels_last: bool = False
+    img: Union[spaces.Box, np.ndarray, torch.Tensor],
+    channels_last: bool = False,
 ) -> Tuple[int, int]:
     if img.shape is None or len(img.shape) < 3 or len(img.shape) > 5:
         raise NotImplementedError()
@@ -495,13 +530,13 @@ def get_image_height_width(
     return h, w
 
 
-def overwrite_gym_box_shape(box: Box, shape) -> Box:
+def overwrite_gym_box_shape(box: spaces.Box, shape) -> spaces.Box:
     if box.shape == shape:
         return box
     shape = list(shape) + list(box.shape[len(shape) :])
     low = box.low if np.isscalar(box.low) else np.min(box.low)
     high = box.high if np.isscalar(box.high) else np.max(box.high)
-    return Box(low=low, high=high, shape=shape, dtype=box.dtype)
+    return spaces.Box(low=low, high=high, shape=shape, dtype=box.dtype)
 
 
 def get_scene_episode_dict(episodes: List[Episode]) -> Dict:
@@ -595,3 +630,71 @@ def action_to_velocity_control(
         }
     }
     return step_action
+
+
+def is_continuous_action_space(action_space) -> bool:
+    if not isinstance(action_space, spaces.Dict):
+        return False
+
+    for v in action_space.spaces.values():
+        if isinstance(v, spaces.Dict):
+            return is_continuous_action_space(v)
+        elif isinstance(v, spaces.Box):
+            return True
+
+    return False
+
+
+def get_num_actions(action_space) -> int:
+    queue = [action_space]
+    num_actions = 0
+    while len(queue) != 0:
+        v = queue.pop()
+        if isinstance(v, spaces.Dict):
+            queue.extend(v.spaces.values())
+        elif isinstance(v, spaces.Box):
+            num_actions += v.shape[0]
+        else:
+            num_actions += 1
+
+    return num_actions
+
+
+def action_array_to_dict(
+    action_space, action: torch.Tensor, clip: bool = True
+):
+    """We naively assume that all actions are 1D (len(shape) == 1)"""
+
+    # Assume that the action space only has one root SimulatorTaskAction
+    root_action_names = tuple(action_space.spaces.keys())
+    if len(root_action_names) == 1:
+        # No need for a tuple if there is only one action
+        root_action_names = root_action_names[0]
+    action_name_to_lengths = {}
+    for outer_k, act_dict in action_space.spaces.items():
+        if isinstance(act_dict, EmptySpace):
+            action_name_to_lengths[outer_k] = 1
+        else:
+            for k, v in act_dict.items():
+                # The only element in the action
+                action_name_to_lengths[k] = v.shape[0]
+
+    # Determine action arguments for root_action_name
+    action_args = {}
+    action_offset = 0
+    for action_name, action_length in action_name_to_lengths.items():
+        action_values = action[action_offset : action_offset + action_length]
+        if clip:
+            action_values = np.clip(
+                action_values.detach().cpu().numpy(), -1.0, 1.0
+            )
+        action_args[action_name] = action_values
+        action_offset += action_length
+
+    action_dict = {
+        "action": {
+            "action": root_action_names,
+            "action_args": action_args,
+        },
+    }
+    return action_dict

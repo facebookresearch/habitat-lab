@@ -11,7 +11,6 @@ import magnum as mn
 import numpy as np
 
 from habitat.config.default import Config
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -28,7 +27,7 @@ class RearrangeGraspManager:
 
     def __init__(
         self,
-        sim: RearrangeSim,
+        sim,
         config: Config,
     ) -> None:
         """Initialize a grasp manager for the simulator instance provided.
@@ -39,15 +38,13 @@ class RearrangeGraspManager:
         self._snapped_obj_id: Optional[int] = None
         self._snapped_marker_id: Optional[str] = None
         self._snap_constraints: List[int] = []
-        self._leave_info: Optional[Tuple[mn.Vector3, float, int]] = None
+        self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
         Called from _sim.reconfigure().
         """
-        for constraint_id in self._snap_constraints:
-            self._sim.remove_rigid_constraint(constraint_id)
         self._snap_constraints.clear()
 
     def reset(self) -> None:
@@ -97,15 +94,11 @@ class RearrangeGraspManager:
         """
         if self._leave_info is not None:
             ee_pos = self._sim.robot.ee_transform.translation
-            dist = np.linalg.norm(ee_pos - self._leave_info[0])
+            rigid_obj = self._leave_info[0]
+            dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
-                rigid_obj = (
-                    self._sim.get_rigid_object_manager().get_object_by_id(
-                        self._leave_info[2]
-                    )
-                )
                 rigid_obj.override_collision_group(CollisionGroups.Default)
-            self._leave_info = None
+                self._leave_info = None
 
     def desnap(self, force=False) -> None:
         """Removes any hold constraints currently active.
@@ -127,9 +120,8 @@ class RearrangeGraspManager:
                     )
                 else:
                     self._leave_info = (
-                        self.snap_rigid_obj.translation,
+                        self.snap_rigid_obj,
                         max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                        self._snapped_obj_id,
                     )
 
         for constraint_id in self._snap_constraints:
@@ -138,6 +130,7 @@ class RearrangeGraspManager:
 
         self._snapped_obj_id = None
         self._snapped_marker_id = None
+        self._sim.robot.close_gripper()
 
     @property
     def snap_idx(self) -> int:
@@ -182,6 +175,7 @@ class RearrangeGraspManager:
             ),
         ]
         self._snapped_marker_id = marker_name
+        self._sim.robot.open_gripper()
 
     def create_hold_constraint(
         self,
@@ -228,6 +222,9 @@ class RearrangeGraspManager:
             )
 
         self._snapped_obj_id = snap_obj_id
+        if force:
+            # Set the transformation to be in the robot's hand already.
+            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
 
         if force:
             # Set the transformation to be in the robot's hand already.
@@ -256,6 +253,8 @@ class RearrangeGraspManager:
                 self._snapped_obj_id,
             ),
         ]
+
+        self._sim.robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

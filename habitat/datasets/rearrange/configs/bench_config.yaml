@@ -1,0 +1,125 @@
+---
+dataset_path: "data/hab2_bench_assets/hab2_bench.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/"
+scene_sets:
+  -
+    name: "Baked_sc1_staging_00_bench"
+    included_substrings:
+      - "Baked_sc1_staging_00_bench"
+    excluded_substrings: []
+    comment: "Benchmarking test scene with no URDFs except fridge and counter."
+  -
+    name: "p_viz_bench_scene"
+    included_substrings:
+      - "frl_apartment_stage_pvizplan_empty"
+    excluded_substrings: []
+    comment: "Benchmarking test scene from p-viz-plan"
+
+object_sets:
+  -
+    name: "food"
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "fridge"
+    included_object_substrings:
+      - "fridge"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "refrigerator"
+    excluded_receptacle_substrings: []
+  -
+    name: "counter"
+    included_object_substrings:
+      - "kitchen_counter"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "counter"
+    excluded_receptacle_substrings: ["drawer", "sink"]
+  -
+    name: "global_table01"
+    included_object_substrings: []
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "table01"
+    excluded_receptacle_substrings: []
+  -
+    name: "global_table02"
+    included_object_substrings: []
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "table02"
+    excluded_receptacle_substrings: []
+
+
+scene_sampler:
+  type: "subset"
+  params:
+    scene_sets: ["p_viz_bench_scene"]
+  comment: ""
+
+ao_state_samplers:
+  -
+    name: "open_aos"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.0, 1.0]
+    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
+
+object_samplers:
+  -
+    name: "kitchen_counter"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["counter"]
+      num_samples: [10, 10]
+      orientation_sampling: "up"
+  -
+    name: "kitchen_fridge"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["fridge"]
+      num_samples: [8, 8]
+      orientation_sampling: "up"
+  -
+    name: "global_table01"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["global_table01"]
+      num_samples: [5, 5]
+      orientation_sampling: "up"
+  -
+    name: "global_table02"
+    type: "uniform"
+    params:
+      object_sets: ["food"]
+      receptacle_sets: ["global_table02"]
+      num_samples: [5, 5]
+      orientation_sampling: "up"
+
+object_target_samplers:
+  -
+    name: "kitchen_targets"
+    type: "uniform"
+    params:
+      object_samplers: ["kitchen_counter", "kitchen_fridge", global_table01, global_table02]
+      receptacle_sets: ["counter", "fridge", global_table01, global_table02]
+      num_samples: [1, 1]
+      orientation_sampling: "up"

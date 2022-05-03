@@ -14,7 +14,10 @@ from torch import Tensor
 
 from habitat import Config, logger
 from habitat.core.vector_env import VectorEnv
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+from habitat_baselines.common.tensorboard_utils import (
+    TensorboardWriter,
+    get_writer,
+)
 from habitat_baselines.rl.ddppo.ddp_utils import SAVE_STATE, is_slurm_batch_job
 from habitat_baselines.utils.common import (
     get_checkpoint_id,
@@ -94,9 +97,7 @@ class BaseTrainer:
                 len(self.config.VIDEO_DIR) > 0
             ), "Must specify a directory for storing videos on disk"
 
-        with TensorboardWriter(
-            self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
-        ) as writer:
+        with get_writer(self.config, flush_secs=self.flush_secs) as writer:
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
                 proposed_index = get_checkpoint_id(

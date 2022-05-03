@@ -872,12 +872,12 @@ class TopDownMap(Measure):
 
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
-        # draw source and target parts last to avoid overlap
-        self._draw_goals_view_points(episode)
-        self._draw_goals_aabb(episode)
-        self._draw_goals_positions(episode)
-
-        self._draw_shortest_path(episode, agent_position)
+        if hasattr(episode, "goal"):
+            # draw source and target parts last to avoid overlap
+            self._draw_goals_view_points(episode)
+            self._draw_goals_aabb(episode)
+            self._draw_goals_positions(episode)
+            self._draw_shortest_path(episode, agent_position)
 
         if self._config.DRAW_SOURCE:
             self._draw_point(

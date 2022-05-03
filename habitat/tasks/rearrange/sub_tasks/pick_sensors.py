@@ -14,6 +14,28 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
+from habitat.tasks.rearrange.utils import rearrange_logger
+
+
+@registry.register_measure
+class DidPickObjectMeasure(Measure):
+    cls_uuid: str = "did_pick_object"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DidPickObjectMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self._did_pick = False
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+        self._did_pick = self._did_pick or self._sim.grasp_mgr.is_grasped
+        self._metric = int(self._did_pick)
 
 
 @registry.register_measure
@@ -48,7 +70,7 @@ class RearrangePickReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -57,9 +79,8 @@ class RearrangePickReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
-        reward = self._metric
         ee_to_object_distance = task.measurements.measures[
             EndEffectorToObjectDistance.cls_uuid
         ].get_metric()
@@ -73,24 +94,29 @@ class RearrangePickReward(RearrangeReward):
         if cur_picked:
             dist_to_goal = ee_to_rest_distance
         else:
-            dist_to_goal = ee_to_object_distance[task.targ_idx]
+            dist_to_goal = ee_to_object_distance[str(task.abs_targ_idx)]
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
-        did_pick = cur_picked and (not self._task.prev_picked)
+        did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
-                task.n_succ_picks += 1
-                reward += self._config.PICK_REWARD
+                self._metric += self._config.PICK_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self.cur_dist = -1
             else:
                 # picked the wrong object
-                reward -= self._config.WRONG_PICK_PEN
+                self._metric -= self._config.WRONG_PICK_PEN
                 if self._config.WRONG_PICK_SHOULD_END:
+                    rearrange_logger.debug(
+                        "Grasped wrong object, ending episode."
+                    )
                     self._task.should_end = True
-                self._metric = reward
+                self._metric = self._metric
+                self._prev_picked = cur_picked
+                self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
+                self.cur_dist = -1
                 return
 
         if self._config.USE_DIFF:
@@ -101,35 +127,24 @@ class RearrangePickReward(RearrangeReward):
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
-            reward += self._config.DIST_REWARD * dist_diff
+            self._metric += self._config.DIST_REWARD * dist_diff
         else:
-            reward -= self._config.DIST_REWARD * dist_to_goal
+            self._metric -= self._config.DIST_REWARD * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
             # Dropped the object
-            reward -= self._config.DROP_PEN
+            self._metric -= self._config.DROP_PEN
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
-            self._metric = reward
+            self._metric = self._metric
+            self._prev_picked = cur_picked
+            self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
+            self.cur_dist = -1
             return
 
-        self._task.prev_picked = cur_picked
+        self._prev_picked = cur_picked
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
-
-        self._metric = reward
-
-    def _get_coll_reward(self):
-        reward = 0
-
-        force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
-        # Penalize the force that was added to the accumulated force at the
-        # last time step.
-        reward -= min(
-            self._config.FORCE_PEN * force_metric.add_force,
-            self._config.MAX_FORCE_PEN,
-        )
-        return reward
 
 
 @registry.register_measure
@@ -156,7 +171,7 @@ class RearrangePickSuccess(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -172,7 +187,7 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and ee_to_rest_distance < self._config.SUCC_THRESH
+            and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
         )
 
         self._prev_ee_pos = observations["ee_pos"]

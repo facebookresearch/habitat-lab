@@ -28,7 +28,11 @@ _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.TENSORBOARD_DIR = "tb"
+_C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
+_C.VIDEO_FPS = 10
+_C.VIDEO_RENDER_TOP_DOWN = True
+_C.VIDEO_RENDER_ALL_INFO = False
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
 _C.NUM_ENVIRONMENTS = 16
@@ -44,6 +48,7 @@ _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.FORCE_BLIND_POLICY = False
 _C.VERBOSE = True
+_C.EVAL_KEYS_TO_INCLUDE_IN_NAME = []
 # For our use case, the CPU side things are mainly memory copies
 # and nothing of substantive compute. PyTorch has been making
 # more and more memory copies parallel, but that just ends up
@@ -54,18 +59,32 @@ _C.VERBOSE = True
 # set it to true and yours likely should too
 _C.FORCE_TORCH_SINGLE_THREADED = False
 # -----------------------------------------------------------------------------
+# Weights and Biases config
+# -----------------------------------------------------------------------------
+_C.WB = CN()
+# The name of the project on W&B.
+_C.WB.PROJECT_NAME = ""
+# Logging entity (like your username or team name)
+_C.WB.ENTITY = ""
+# The group ID to assign to the run. Optional to specify.
+_C.WB.GROUP = ""
+# The run name to assign to the run. If not specified, W&B will randomly assign a name.
+_C.WB.RUN_NAME = ""
+# -----------------------------------------------------------------------------
 # EVAL CONFIG
 # -----------------------------------------------------------------------------
 _C.EVAL = CN()
 # The split to evaluate on
 _C.EVAL.SPLIT = "val"
 _C.EVAL.USE_CKPT_CONFIG = True
+_C.EVAL.SHOULD_LOAD_CKPT = True
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
 _C.RL.REWARD_MEASURE = "distance_to_goal"
 _C.RL.SUCCESS_MEASURE = "spl"
+_C.RL.END_ON_SUCCESS = False
 _C.RL.SUCCESS_REWARD = 2.5
 _C.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
@@ -87,10 +106,17 @@ _C.RL.preemption.save_state_batch_only = False
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
 _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
+# If the list is empty, all keys will be included.
+_C.RL.POLICY.include_visual_keys = []
+_C.RL.GYM_OBS_KEYS = []
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()
-_C.RL.POLICY.ACTION_DIST.use_log_std = False
+_C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
+# If True, the std will be a parameter not conditioned on state
+_C.RL.POLICY.ACTION_DIST.use_std_param = False
+# If True, the std will be clamped to the specified min and max std values
+_C.RL.POLICY.ACTION_DIST.clamp_std = True
 _C.RL.POLICY.ACTION_DIST.min_std = 1e-6
 _C.RL.POLICY.ACTION_DIST.max_std = 1
 _C.RL.POLICY.ACTION_DIST.min_log_std = -5
@@ -237,7 +263,9 @@ def get_config(
             if k == "BASE_TASK_CONFIG_PATH":
                 config.BASE_TASK_CONFIG_PATH = v
 
+    old_task_config = config.get("TASK_CONFIG", {})
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
+    config.TASK_CONFIG.merge_from_other_cfg(old_task_config)
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)

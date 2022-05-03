@@ -4,11 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import random
-from typing import List, Type, Union
+from typing import Any, List, Type, Union
 
 import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, make_dataset
+from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
 
 
 def make_env_fn(
@@ -58,28 +59,29 @@ def construct_envs(
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
 
-    if num_environments > 1:
-        if len(scenes) == 0:
-            raise RuntimeError(
-                "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
-            )
+    if num_environments < 1:
+        raise RuntimeError("NUM_ENVIRONMENTS must be strictly positive")
 
-        if len(scenes) < num_environments:
-            raise RuntimeError(
-                "reduce the number of environments as there "
-                "aren't enough number of scenes.\n"
-                "num_environments: {}\tnum_scenes: {}".format(
-                    num_environments, len(scenes)
-                )
-            )
+    if len(scenes) == 0:
+        raise RuntimeError(
+            "No scenes to load, multiple process logic relies on being able to split scenes uniquely between processes"
+        )
 
-        random.shuffle(scenes)
+    random.shuffle(scenes)
 
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
-    for idx, scene in enumerate(scenes):
-        scene_splits[idx % len(scene_splits)].append(scene)
-
-    assert sum(map(len, scene_splits)) == len(scenes)
+    if len(scenes) < num_environments:
+        logger.warn(
+            f"There are less scenes ({len(scenes)}) than environments ({num_environments}). "
+            "Each environment will use all the scenes instead of using a subset."
+        )
+        for scene in scenes:
+            for split in scene_splits:
+                split.append(scene)
+    else:
+        for idx, scene in enumerate(scenes):
+            scene_splits[idx % len(scene_splits)].append(scene)
+        assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_environments):
         proc_config = config.clone()
@@ -99,7 +101,16 @@ def construct_envs(
         proc_config.freeze()
         configs.append(proc_config)
 
-    envs = habitat.VectorEnv(
+    vector_env_cls: Type[Any]
+    if os.environ.get("HABITAT_ENV_DEBUG", 0):
+        logger.warn(
+            "Using the debug Vector environment interface. Expect slower performance."
+        )
+        vector_env_cls = habitat.ThreadedVectorEnv
+    else:
+        vector_env_cls = habitat.VectorEnv
+
+    envs = vector_env_cls(
         make_env_fn=make_env_fn,
         env_fn_args=tuple(zip(configs, env_classes)),
         workers_ignore_signals=workers_ignore_signals,

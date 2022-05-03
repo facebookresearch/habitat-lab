@@ -24,7 +24,40 @@ from habitat_baselines.rl.models.simple_cnn import SimpleCNN
 from habitat_baselines.utils.common import CategoricalNet, GaussianNet
 
 
-class Policy(nn.Module, metaclass=abc.ABCMeta):
+class Policy(abc.ABC):
+    action_distribution: nn.Module
+
+    def __init__(self):
+        pass
+
+    @property
+    def should_load_agent_state(self):
+        return True
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        return 0
+
+    def forward(self, *x):
+        raise NotImplementedError
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        deterministic=False,
+    ):
+        raise NotImplementedError
+
+    @classmethod
+    @abc.abstractmethod
+    def from_config(cls, config, observation_space, action_space):
+        pass
+
+
+class NetPolicy(nn.Module, Policy):
     action_distribution: nn.Module
 
     def __init__(self, net, dim_actions, policy_config=None):
@@ -57,6 +90,14 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
             )
 
         self.critic = CriticHead(self.net.output_size)
+
+    @property
+    def should_load_agent_state(self):
+        return True
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        return self.net.num_recurrent_layers
 
     def forward(self, *x):
         raise NotImplementedError
@@ -125,7 +166,7 @@ class CriticHead(nn.Module):
 
 
 @baseline_registry.register_policy
-class PointNavBaselinePolicy(Policy):
+class PointNavBaselinePolicy(NetPolicy):
     def __init__(
         self,
         observation_space: spaces.Dict,
@@ -234,7 +275,6 @@ class PointNavBaselineNet(Net):
             target_encoding = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             ]
-
         elif PointGoalSensor.cls_uuid in observations:
             target_encoding = observations[PointGoalSensor.cls_uuid]
         elif ImageGoalSensor.cls_uuid in observations:

@@ -73,10 +73,7 @@ class RearrangeRLEnv(habitat.RLEnv):
         done = False
         if self._env.episode_over:
             done = True
-        if (
-            self._rl_config.get("END_ON_SUCCESS", True)
-            and self._episode_success()
-        ):
+        if self._rl_config.END_ON_SUCCESS and self._episode_success():
             done = True
         return done
 

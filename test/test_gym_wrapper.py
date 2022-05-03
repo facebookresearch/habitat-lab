@@ -20,20 +20,34 @@ from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 
 @pytest.mark.parametrize(
-    "config_file,overrides,expected_action_dim",
+    "config_file,overrides,expected_action_dim,expected_obs_type",
     [
-        ("habitat_baselines/config/rearrange/rl_pick.yaml", [], 8),
         (
-            "habitat_baselines/config/rearrange/rl_pick.yaml",
+            "habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            [],
+            7,
+            np.ndarray,
+        ),
+        (
+            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            [],
+            8,
+            dict,
+        ),
+        (
+            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
             [
                 "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
             7,
+            dict,
         ),
     ],
 )
-def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
+def test_gym_wrapper_contract(
+    config_file, overrides, expected_action_dim, expected_obs_type
+):
     """
     Test the Gym wrapper returns the right things and works with overrides.
     """
@@ -50,11 +64,9 @@ def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
         env.action_space.shape[0] == expected_action_dim
     ), f"Has {env.action_space.shape[0]} action dim but expected {expected_action_dim}"
     obs = env.reset()
-    assert isinstance(obs, np.ndarray), f"Obs {obs}"
-    assert obs.shape == env.observation_space.shape
+    assert isinstance(obs, expected_obs_type), f"Obs {obs}"
     obs, _, _, info = env.step(env.action_space.sample())
-    assert isinstance(obs, np.ndarray), f"Obs {obs}"
-    assert obs.shape == env.observation_space.shape
+    assert isinstance(obs, expected_obs_type), f"Obs {obs}"
 
     frame = env.render()
     assert isinstance(frame, np.ndarray)
@@ -66,16 +78,26 @@ def test_gym_wrapper_contract(config_file, overrides, expected_action_dim):
 
 
 @pytest.mark.parametrize(
-    "config_file", ["habitat_baselines/config/rearrange/rl_pick.yaml"]
+    "config_file,override_options",
+    [
+        [
+            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            [
+                "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "SuctionGraspAction",
+            ],
+        ],
+        ["habitat_baselines/config/rearrange/ddppo_pick.yaml", []],
+    ],
 )
-def test_full_gym_wrapper(config_file):
+def test_full_gym_wrapper(config_file, override_options):
     """
     Test the Gym wrapper and its Render wrapper work
     """
     hab_gym = gym.make(
-        "HabitatGym-v0",
+        "Habitat-v0",
         cfg_file_path=config_file,
-        override_options=[],
+        override_options=override_options,
         use_render_mode=True,
     )
     hab_gym.reset()
@@ -83,18 +105,19 @@ def test_full_gym_wrapper(config_file):
     hab_gym.close()
 
     hab_gym = gym.make(
-        "HabitatGymRender-v0",
+        "HabitatRender-v0",
         cfg_file_path=config_file,
     )
     hab_gym.reset()
     hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.render("rgb_array")
     hab_gym.close()
 
 
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/*"),
+        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
@@ -104,7 +127,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = baselines_get_config(test_cfg_path)
     if "GYM_AUTO_NAME" not in config:
         return
-    full_gym_name = f"HabitatGym{config['GYM_AUTO_NAME']}-v0"
+    full_gym_name = f"Habitat{config['GYM_AUTO_NAME']}-v0"
 
     hab_gym = gym.make(full_gym_name)
     hab_gym.reset()

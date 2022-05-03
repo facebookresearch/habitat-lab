@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections import OrderedDict
 from typing import Any, Dict, Optional, Union
 
 import gym
@@ -43,7 +44,9 @@ def smash_observation_space(obs_space, limit_keys):
         return spaces.Box(
             shape=(total_dim,), low=-1.0, high=1.0, dtype=np.float32
         )
-    return obs_space
+    return spaces.Dict(
+        {k: v for k, v in obs_space.spaces.items() if k in limit_keys}
+    )
 
 
 class HabGymWrapper(gym.Env):
@@ -114,10 +117,6 @@ class HabGymWrapper(gym.Env):
         self.action_mapping = {}
         self._save_orig_obs = save_orig_obs
         self.orig_obs = None
-        if len(action_space.spaces) != 1:
-            raise ValueError(
-                "Cannot convert this action space, more than one action"
-            )
 
         self.orig_action_name = list(action_space.spaces.keys())[0]
         action_space = action_space.spaces[self.orig_action_name]
@@ -185,30 +184,33 @@ class HabGymWrapper(gym.Env):
         return obs, reward, done, info
 
     def _is_space_flat(self, space_name):
-        if isinstance(self.observation_space, spaces.Box):
-            return True
-        return isinstance(
-            self.observation_space.spaces[space_name], spaces.Box
-        )
+        return isinstance(self.observation_space, spaces.Box)
 
     def _transform_obs(self, obs):
         if self._save_orig_obs:
             self.orig_obs = obs
-        observation = {"observation": [obs[k] for k in self._gym_obs_keys]}
+
+        observation = {
+            "observation": OrderedDict(
+                [(k, obs[k]) for k in self._gym_obs_keys]
+            )
+        }
 
         if len(self._gym_goal_keys) > 0:
-            observation["desired_goal"] = [obs[k] for k in self._gym_goal_keys]
+            observation["desired_goal"] = OrderedDict(
+                [(k, obs[k]) for k in self._gym_goal_keys]
+            )
 
         if len(self._gym_achieved_goal_keys) > 0:
-            observation["achieved_goal"] = [
-                obs[k] for k in self._gym_achieved_goal_keys
-            ]
+            observation["achieved_goal"] = OrderedDict(
+                [(k, obs[k]) for k in self._gym_achieved_goal_keys]
+            )
 
         for k, v in observation.items():
             if self._is_space_flat(k):
-                observation[k] = np.concatenate(v)
+                observation[k] = np.concatenate(list(v.values()))
         if len(observation) == 1:
-            return observation["observation"]
+            observation = observation["observation"]
 
         return observation
 

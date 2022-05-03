@@ -136,7 +136,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.7
                 . activate habitat
-                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov
+                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
                 pip install pytest-sugar
               fi
       - run:
@@ -169,7 +169,7 @@ jobs:
             ccache --zero-stats
             ccache --max-size=10.0G
       - run:
-          name: Build, install habitat-sim and run benchmark
+          name: Build and install habitat-sim
           no_output_timeout: 30m
           command: |
               if [ ! -d ./habitat-sim ]
@@ -244,7 +244,7 @@ jobs:
             - ~/miniconda
       - run:
           name: Run api tests
-          no_output_timeout: 30m
+          no_output_timeout: 120m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
@@ -253,6 +253,17 @@ jobs:
               python setup.py test --addopts "--cov-report=xml --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Run Hab2.0 benchmark
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
+              mkdir -p data/ep_datasets/
+              cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
+              bash scripts/hab2_bench/bench_runner.sh
+              python scripts/hab2_bench/plot_bench.py
       - run:
           name: Build api documentation
           command: |

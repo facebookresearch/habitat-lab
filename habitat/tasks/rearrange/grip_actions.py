@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Union
 
 import numpy as np
 from gym import spaces
@@ -51,6 +52,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self._sim.grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx]
                 )
+                return
 
         # Get markers we are close to.
         markers = self._sim.get_all_markers()
@@ -59,12 +61,13 @@ class MagicGraspAction(GripSimulatorTaskAction):
             pos = np.array([markers[k].get_current_position() for k in names])
 
             closest_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+                np.linalg.norm(pos - ee_pos, ord=2, axis=-1)
             )
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
             if to_target < self._config.GRASP_THRESH_DIST:
+                self._sim.robot.open_gripper()
                 self._sim.grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
@@ -73,6 +76,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
+
         if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
@@ -99,13 +103,22 @@ class SuctionGraspAction(GripSimulatorTaskAction):
     def step(self, _, should_step=True, *args, **kwargs):
         if self._sim.grasp_mgr.is_grasped:
             return
-        attempt_snap_idx = None
+        attempt_snap_entity: Union[str, int] = None
         contacts = self._sim.get_physics_contact_points()
 
         robot_id = self._sim.robot.sim_obj.object_id
-        robot_contacts = [
-            c for c in contacts if coll_name_matches(c, robot_id)
+        all_gripper_links = list(self._sim.robot.params.gripper_joints) + [
+            self._sim.robot.params.ee_link
         ]
+        robot_contacts = [
+            c
+            for c in contacts
+            if coll_name_matches(c, robot_id)
+            and any(coll_link_name_matches(c, l) for l in all_gripper_links)
+        ]
+
+        if len(robot_contacts) == 0:
+            return
 
         # Contacted any objects?
         for scene_obj_id in self._sim.scene_obj_ids:
@@ -113,13 +126,12 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 c for c in robot_contacts if coll_name_matches(c, scene_obj_id)
             )
             if has_robot_match:
-                attempt_snap_idx = scene_obj_id
+                attempt_snap_entity = scene_obj_id
 
-        if attempt_snap_idx is not None:
-            self._sim.grasp_mgr.snap_to_obj(attempt_snap_idx)
+        if attempt_snap_entity is not None:
+            self._sim.grasp_mgr.snap_to_obj(int(attempt_snap_entity))
             return
 
-        attempt_marker_snap_name = None
         # Contacted any markers?
         markers = self._sim.get_all_markers()
         for marker_name, marker in markers.items():
@@ -130,7 +142,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
                 and coll_link_name_matches(c, marker.link_id)
             )
             if has_match:
-                attempt_marker_snap_name = marker_name
+                attempt_snap_entity = marker_name
 
-        if attempt_marker_snap_name is not None:
-            self._sim.grasp_mgr.snap_to_marker(attempt_marker_snap_name)
+        if attempt_snap_entity is not None:
+            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_entity))
