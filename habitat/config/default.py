@@ -296,7 +296,17 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
 # -----------------------------------------------------------------------------
-# TARGET START OR GOAL SENSOR
+# TARGET START GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR.TYPE = "TargetStartGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# TARGET GOAL GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR.TYPE = "TargetGoalGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# NAV TO SKILL ID SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.NAV_TO_SKILL_SENSOR = CN()
 _C.TASK.NAV_TO_SKILL_SENSOR.TYPE = "NavToSkillSensor"

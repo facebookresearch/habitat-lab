@@ -28,7 +28,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
 
     def reset(self, episode: Episode):
         sim = self._sim
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
 
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
 

@@ -34,6 +34,7 @@ from habitat_sim.physics import JointMotorSettings, MotionType
 
 # flake8: noqa
 from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
+from habitat_sim.sim import SimulatorBackend
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
@@ -160,6 +161,12 @@ class RearrangeSim(HabitatSim):
                 "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
             )
         return self._ik_helper
+
+    def reset(self):
+        SimulatorBackend.reset(self)
+        for i in range(len(self.agents)):
+            self.reset_agent(i)
+        return None
 
     def reconfigure(self, config: Config):
         ep_info = config["ep_info"][0]
