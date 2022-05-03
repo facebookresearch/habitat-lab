@@ -23,7 +23,7 @@ class RearrangeReachTaskV1(RearrangeTask):
         return obs
 
     def reset(self, episode):
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
 
         # Pick a random goal in the robot's workspace
 
