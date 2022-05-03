@@ -23,8 +23,8 @@ BASE_ACTION_NAME = "BASE_VELOCITY"
 @registry.register_sensor
 class TargetOrGoalStartPointGoalSensor(Sensor):
     """
-    GPS and compass sensor relative to the starting target position. Only for
-    the first target object.
+    GPS and compass sensor relative to the starting object position or goal
+    position. Only for the first target object.
     """
 
     cls_uuid: str = "object_to_agent_gps_compass"
