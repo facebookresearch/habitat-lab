@@ -98,6 +98,7 @@ class PositionGpsCompassSensor(Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         n_targets = self._task.get_n_targets()
+        self._polar_pos = np.zeros(n_targets * 2, dtype=np.float32)
         return spaces.Box(
             shape=(n_targets * 2,),
             low=np.finfo(np.float32).min,
@@ -114,13 +115,11 @@ class PositionGpsCompassSensor(Sensor):
 
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
 
-        polar_pos = []
-
-        for rel_obj_pos in rel_pos:
+        for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
-            polar_pos.extend([rho, phi])
+            self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, phi]
 
-        return np.array(polar_pos, dtype=np.float32).reshape(-1)
+        return self._polar_pos
 
 
 @registry.register_sensor
