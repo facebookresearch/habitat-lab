@@ -85,6 +85,23 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
+    # Overrides for measurements that are not used in monolithic RL but are
+    # used in TP-SRL
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: NavToObjSuccess
+        SUCCESS_ANGLE_DIST: 0.7
+        MUST_LOOK_AT_TARG: True
+        HEURISTIC_STOP: False
+    NAV_TO_POS_SUCC:
+        TYPE: NavToPosSucc
+        SUCCESS_DISTANCE: 0.2
+    PLACE_SUCCESS:
+        TYPE: PlaceSuccess
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+    PICK_SUCCESS:
+        TYPE: RearrangePickSuccess
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE

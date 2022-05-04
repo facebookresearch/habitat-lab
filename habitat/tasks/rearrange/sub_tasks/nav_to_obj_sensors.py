@@ -488,6 +488,7 @@ class NavToObjSuccess(GeoMeasure):
         else:
             self._metric = nav_pos_succ
         called_stop = self.does_action_want_stop(task, observations)
+
         if self._action_can_stop:
             if called_stop:
                 task.should_end = True

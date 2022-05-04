@@ -118,6 +118,20 @@ TASK:
         FORCE_END_PEN: 10.0
     TARGET_GOAL_GPS_COMPASS_SENSOR:
         TYPE: TargetGoalGpsCompassSensor
+    NAV_TO_POS_SUCC:
+        SUCCESS_DISTANCE: 0.2
+        TYPE: NavToPosSucc
+    PLACE_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: PlaceSuccess
+    PICK_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: RearrangePickSuccess
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: NavToObjSuccess
+        SUCCESS_ANGLE_DIST: 0.7
+        MUST_LOOK_AT_TARG: true
+        HEURISTIC_STOP: false
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0

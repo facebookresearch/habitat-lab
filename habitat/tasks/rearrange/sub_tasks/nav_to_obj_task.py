@@ -180,6 +180,7 @@ class DynNavRLEnv(RearrangeTask):
             self._config.clone(),
             self,
             self._dataset,
+            False,
             task_args,
             episode,
             action.config_task_args,

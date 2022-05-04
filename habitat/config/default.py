@@ -547,7 +547,7 @@ _C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
 
 _C.TASK.PLACE_SUCCESS = CN()
 _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
-_C.TASK.PLACE_SUCCESS.SUCC_THRESH = 0.15
+_C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
