@@ -196,7 +196,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
         )
 
     def get_observation(
-        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
+        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor", None]]
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
