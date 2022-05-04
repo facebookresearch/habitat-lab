@@ -9,16 +9,16 @@ gpu: &gpu
 jobs:
   python_lint:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7.13
     steps:
       - checkout
       - run:
           name: setup
           command: |
-              sudo pip install black --progress-bar off
-              sudo pip install "isort[pyproject]" numpy --progress-bar off
-              sudo pip install mypy==0.931 --progress-bar off
-              sudo pip install -r requirements.txt --progress-bar off
+              pip install black --progress-bar off
+              pip install "isort[pyproject]" numpy --progress-bar off
+              pip install mypy==0.950 --progress-bar off
+              pip install -r requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
@@ -37,7 +37,7 @@ jobs:
               mypy
   pre-commit:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7.13
     working_directory: ~/repo/
 
     steps:
@@ -54,7 +54,7 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            sudo pip install -U pip setuptools pre-commit
+            pip install -U pip setuptools pre-commit
             # Install the hooks now so that they'll be cached
             pre-commit install-hooks
 
