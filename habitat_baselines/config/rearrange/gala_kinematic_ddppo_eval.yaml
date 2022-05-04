@@ -24,37 +24,37 @@ NPNP_FAILURE_PENALTY: 10.0
 STATE_SENSORS:
   ROBOT_START_RELATIVE:
     TYPE: "RobotStartSensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_start_relative"
     shape: 3
   ROBOT_TARGET_RELATIVE:
     TYPE: "RobotTargetSensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_target_relative"
     shape: 3
   ROBOT_GOAL_RELATIVE:
     TYPE: "RobotGoalSensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_goal_relative"
     shape: 3
   EE_GOAL_RELATIVE:
     TYPE: "EEGoalSensorConfig"
-    polar: True
+    polar: False
     obs_key: "ee_goal_relative"
     shape: 3
   EE_START_RELATIVE:
     TYPE: "EEStartSensorConfig"
-    polar: True
+    polar: False
     obs_key: "ee_start_relative"
     shape: 3
   EE_TARGET_RELATIVE:
     TYPE: "EETargetSensorConfig"
-    polar: True
+    polar: False
     obs_key: "ee_target_relative"
     shape: 3
   ROBOT_EE_RELATIVE:
     TYPE: "RobotEESensorConfig"
-    polar: True
+    polar: False
     obs_key: "robot_ee_relative"
     shape: 3
   JOINT_SENSOR:
@@ -95,8 +95,8 @@ RL:
     use_linear_lr_decay: False
     # max_grad_norm: 1.0e+32
   POLICY:
-    name: "PointNavBaselinePolicy"
+    name: "PointNavResNetPolicy"
     action_distribution_type: "gaussian"
   DDPPO:
-    backbone: "PointNavResNetPolicy"
+    backbone: "resnet18"
 FORCE_BLIND_POLICY: False
