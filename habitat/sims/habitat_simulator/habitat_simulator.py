@@ -381,7 +381,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_obs = self.get_sensor_observations()
 
         self._prev_sim_obs = sim_obs
-        return self._sensor_suite.get_observations(sim_obs)
+        sensor_suite_obs = self._sensor_suite.get_observations(sim_obs)
+        self.check_add_sim_blob_observation(sensor_suite_obs)
+        return sensor_suite_obs
 
     def step(self, action: Union[str, np.ndarray, int]) -> Observations:
         sim_obs = super().step(action)

@@ -19,6 +19,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.core.batch_renderer import BatchRenderer
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
@@ -86,6 +87,8 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = None
         self.agent = None
         self.envs = None
+        # todo: refactor into generic "BatchHelper and/or move into VectorEnv (this class doesn't need to know about BatchRenderer)
+        self.batch_renderer = BatchRenderer(config)
         self.obs_transforms = []
 
         self._static_encoder = False
@@ -327,6 +330,8 @@ class PPOTrainer(BaseRLTrainer):
         self.rollouts.to(self.device)
 
         observations = self.envs.reset()
+        if self.batch_renderer:
+            observations = self.batch_renderer.post_step(observations)
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
@@ -507,6 +512,9 @@ class PPOTrainer(BaseRLTrainer):
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
         ]
+
+        if self.batch_renderer:
+            observations = self.batch_renderer.post_step(observations)
 
         self.env_time += time.time() - t_step_env
 
@@ -959,6 +967,9 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
+        if self.batch_renderer:
+            observations = self.batch_renderer.post_step(observations)
+
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )

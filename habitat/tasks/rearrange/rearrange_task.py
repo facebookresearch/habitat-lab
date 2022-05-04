@@ -98,6 +98,7 @@ class RearrangeTask(NavigationTask):
         self._sim._try_acquire_context()
         prev_sim_obs = self._sim.get_sensor_observations()
         observations = self._sim._sensor_suite.get_observations(prev_sim_obs)
+        self._sim.check_add_sim_blob_observation(observations)
         task_obs = self.sensor_suite.get_observations(
             observations=observations, episode=episode, task=self
         )

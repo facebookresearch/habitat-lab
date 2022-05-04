@@ -108,7 +108,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.habitat_config.CONCUR_RENDER:
+        if self.habitat_config.CONCUR_RENDER and self.renderer:
             self.renderer.acquire_gl_context()
 
     def sleep_all_objects(self):
@@ -603,7 +603,11 @@ class RearrangeSim(HabitatSim):
         if self.robot is not None and self.habitat_config.UPDATE_ROBOT:
             self.robot.update()
 
-        if self.habitat_config.CONCUR_RENDER:
+        if self.habitat_config.BATCH_RENDER:
+            # batch rendering happens elsewhere
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1, update_robot=False)
+        elif self.habitat_config.CONCUR_RENDER:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -636,9 +640,13 @@ class RearrangeSim(HabitatSim):
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
 
+        self.check_add_sim_blob_observation(obs)
+
         if self.habitat_config.HABITAT_SIM_V0.get(
             "ENABLE_GFX_REPLAY_SAVE", False
         ):
+            # sloppy: don't currently support both batch-render and save_keyframe
+            assert not self.habitat_config.BATCH_RENDER
             self.gfx_replay_manager.save_keyframe()
 
         return obs

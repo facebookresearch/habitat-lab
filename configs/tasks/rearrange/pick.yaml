@@ -119,7 +119,8 @@ SIMULATOR:
     AGENTS: ['AGENT_0']
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: False
-    CONCUR_RENDER: True
+    CONCUR_RENDER: False
+    BATCH_RENDER: True
     AUTO_SLEEP: True
     ROBOT_JOINT_START_NOISE: 0.0
     NEEDS_MARKERS: False
@@ -165,6 +166,8 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+        ENABLE_GFX_REPLAY_SAVE: True
+        CREATE_RENDERER: True
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 64
