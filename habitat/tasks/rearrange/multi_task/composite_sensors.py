@@ -165,7 +165,7 @@ class CompositeReward(Measure):
             cur_task_cfg = cur_task._config
 
         if "REWARD_MEASURE" not in cur_task_cfg:
-            raise ValueError("Cannot find REWARD_MEASURE key")
+            raise ValueError(f"Cannot find REWARD_MEASURE key in {list(cur_task_cfg.keys())}")
         cur_task_reward = task.measurements.measures[
             cur_task_cfg.REWARD_MEASURE
         ].get_metric()
