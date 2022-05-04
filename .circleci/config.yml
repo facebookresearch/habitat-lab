@@ -9,7 +9,7 @@ gpu: &gpu
 jobs:
   python_lint:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7.13
     steps:
       - checkout
       - run:
@@ -37,7 +37,7 @@ jobs:
               mypy
   pre-commit:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7.13
     working_directory: ~/repo/
 
     steps:
