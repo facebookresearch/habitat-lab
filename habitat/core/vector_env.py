@@ -547,7 +547,7 @@ class VectorEnv:
 
     def render(
         self, mode: str = "human", *args, **kwargs
-    ) -> Union[np.ndarray, None]:
+    ) -> Optional[np.ndarray]:
         r"""Render observations from all environments in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
