@@ -249,7 +249,7 @@ class CompositeNodeIdx(Measure):
         if cur_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
             if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
-                raise ValueError("SUCCESS_MEASURE key not found in config")
+                raise ValueError(f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}")
 
             is_succ = task.measurements.measures[
                 inf_cur_task_cfg.SUCCESS_MEASURE
