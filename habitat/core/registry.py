@@ -31,6 +31,7 @@ Various decorators for registry different kind of classes with unique keys
 import collections
 from typing import Any, Callable, DefaultDict, Optional, Type
 
+from habitat import RLEnv
 from habitat.core.dataset import Dataset
 from habitat.core.embodied_task import Action, EmbodiedTask, Measure
 from habitat.core.simulator import ActionSpaceConfiguration, Sensor, Simulator
@@ -205,8 +206,6 @@ class Registry(metaclass=Singleton):
                 If None will use the name of the class.
 
         """
-        from habitat import RLEnv
-
         return cls._register_impl("env", to_register, name, assert_type=RLEnv)
 
     @classmethod
@@ -244,7 +243,7 @@ class Registry(metaclass=Singleton):
         return cls._get_impl("action_space_config", name)
 
     @classmethod
-    def get_env(cls, name):
+    def get_env(cls, name: str) -> Type[RLEnv]:
         return cls._get_impl("env", name)
 
 

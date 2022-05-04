@@ -37,15 +37,11 @@ class RearrangeRLEnv(habitat.RLEnv):
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
-        self._previous_action = None
-
     def reset(self):
-        self._previous_action = None
         observations = super().reset()
         return observations
 
     def step(self, *args, **kwargs):
-        self._previous_action = kwargs["action"]
         return super().step(*args, **kwargs)
 
     def get_reward_range(self):
@@ -85,11 +81,9 @@ class NavRLEnv(habitat.RLEnv):
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
-        self._previous_measure = None
-        self._previous_action = None
+        self._previous_measure: Optional[float] = None
 
     def reset(self):
-        self._previous_action = None
         observations = super().reset()
         self._previous_measure = self._env.get_metrics()[
             self._reward_measure_name
@@ -97,7 +91,6 @@ class NavRLEnv(habitat.RLEnv):
         return observations
 
     def step(self, *args, **kwargs):
-        self._previous_action = kwargs["action"]
         return super().step(*args, **kwargs)
 
     def get_reward_range(self):

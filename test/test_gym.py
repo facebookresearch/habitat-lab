@@ -40,10 +40,7 @@ import habitat.utils.gym_definitions
 def test_gym(name):
     env = gym.make(name)
     done = False
-    cum_rew = 0.0
     env.reset()
     while not done:
-        _, reward, done, _ = env.step(env.action_space.sample())
-        cum_rew += reward
-    print(cum_rew)
+        _, _, done, _ = env.step(env.action_space.sample())
     env.close()
