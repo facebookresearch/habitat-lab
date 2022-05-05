@@ -605,6 +605,7 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
+            end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.9
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
             # success = curr_dist < self._config.REACH_SUCCESS_THRESH
@@ -619,16 +620,23 @@ class BatchedEnv:
 
             obj_pos = state.obj_positions[state.target_obj_idx]
             obj_to_goal = (state.goal_pos - obj_pos).length()
-            success = was_holding_correct and (
+            success = end_episode_action and (
                 obj_to_goal < self._config.NPNP_SUCCESS_THRESH
             )
 
             if self._config.get("TASK_IS_PLACE", False):
                 success = success and state.did_drop
 
-            failure = (state.did_drop and not success) or (
-                state.target_obj_idx != state.held_obj_idx
-                and state.held_obj_idx != -1
+            failure = (
+                (
+                    state.did_drop
+                    and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+                )
+                or (
+                    state.target_obj_idx != state.held_obj_idx
+                    and state.held_obj_idx != -1
+                )
+                or (end_episode_action and not success)
             )
 
             if (
