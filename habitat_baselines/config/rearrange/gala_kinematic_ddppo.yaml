@@ -1,5 +1,6 @@
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
+BASE_TASK_CONFIG_PATH: /private/home/vincentpierre/Documents/gala_kinematic/habitat-lab/configs/tasks/pointnav.yaml
 VIDEO_DIR: "../videos2"
 VIDEO_OPTION: ["disk"]
 REWARD_SCALE: 1.0 # 0.01
@@ -68,7 +69,7 @@ STATE_SENSORS:
     TYPE: "JointSensorConfig"
     obs_key: "is_holding"
     shape: 1
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_START_RELATIVE", "ROBOT_TARGET_RELATIVE", "EE_START_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "ROBOT_GOAL_RELATIVE", "EE_GOAL_RELATIVE", "IS_HOLDING_SENSOR", "JOINT_SENSOR", "STEP_COUNT_SENSOR"]
+SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR", "ROBOT_TARGET_RELATIVE", "EE_TARGET_RELATIVE", "ROBOT_EE_RELATIVE", "ROBOT_GOAL_RELATIVE", "EE_GOAL_RELATIVE", "IS_HOLDING_SENSOR", "JOINT_SENSOR", "STEP_COUNT_SENSOR"]
 SIMULATOR:
   AGENTS: ['AGENT_0']
   HEAD_RGB_SENSOR:

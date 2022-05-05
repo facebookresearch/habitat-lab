@@ -68,10 +68,15 @@ class StateSensorConfig:
 def _get_cartesian_coordinates(
     source_position, goal_position, source_rotation
 ):
-    source_T = mn.Matrix4.from_(source_rotation.to_matrix(), goal_position)
-    inverted_source_T = source_T.inverted()
-    rel_pos = inverted_source_T.transform_point(goal_position)
-    return np.array(rel_pos)
+    # source_T = mn.Matrix4.from_(source_rotation.to_matrix(), source_position)
+    # inverted_source_T = source_T.inverted()
+    # rel_pos = inverted_source_T.transform_point(goal_position)
+    # return np.array(rel_pos)
+    return np.array(
+        source_rotation.inverted().transform_vector(
+            goal_position - source_position
+        )
+    )
 
 
 def _get_spherical_coordinates_ref(
