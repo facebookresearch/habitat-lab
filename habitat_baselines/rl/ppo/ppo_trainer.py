@@ -909,6 +909,8 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {}
 
+        raw_cfg = ckpt_dict["config"].clone()
+
         if self.config.EVAL.USE_CKPT_CONFIG:
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
@@ -917,6 +919,35 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
 
         config.defrost()
+        #################################
+        # Gala specific options
+        if config.EVAL.SPLIT == "val":
+            config.EVAL.SPLIT = "eval"
+        config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+
+        self.config.defrost()
+        fuse_keys = []
+        map_sensors = {
+            "ROBOT_START_RELATIVE": "obj_start_sensor",
+            "ROBOT_TARGET_RELATIVE": "obj_goal_sensor",
+            "EE_START_RELATIVE": "",
+            "EE_TARGET_RELATIVE": "",
+            "ROBOT_EE_RELATIVE": "",
+            "ROBOT_GOAL_RELATIVE": "",
+            "EE_GOAL_RELATIVE": "",
+            "IS_HOLDING_SENSOR": "",
+            "JOINT_SENSOR": "",
+            "STEP_COUNT_SENSOR": "",
+        }
+        for sensor in raw_cfg.SENSORS:
+            if sensor in ["DEPTH_SENSOR", "RGB_SENSOR"]:
+                continue
+            fuse_keys.append(map_sensors[sensor])
+
+        self.config.RL.POLICY.fuse_keys = fuse_keys
+        self.config.freeze()
+
+        #################################
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
 
