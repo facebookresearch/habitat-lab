@@ -284,9 +284,13 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def set_robot_base_to_random_point(self):
-        MAX_ATTEMPTS = 50
-        for attempt_i in range(MAX_ATTEMPTS):
+    def set_robot_base_to_random_point(
+        self, max_attempts: int = 50
+    ) -> Tuple[np.ndarray, float]:
+        """
+        :returns: The set base position and rotation
+        """
+        for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
 
             start_pos = self.safe_snap_point(start_pos)
@@ -302,10 +306,11 @@ class RearrangeSim(HabitatSim):
             )
             if not did_collide:
                 break
-        if attempt_i == MAX_ATTEMPTS - 1:
+        if attempt_i == max_attempts - 1:
             rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
+        return start_pos, start_rot
 
     def _setup_targets(self):
         self._targets = {}

@@ -81,7 +81,7 @@ class RearrangeGraspManager:
 
     @property
     def is_grasped(self) -> bool:
-        """Returns whether or not an object is current grasped."""
+        """Returns whether or not an object or marker is currently grasped."""
         return (
             self._snapped_obj_id is not None
             or self._snapped_marker_id is not None
