@@ -632,17 +632,20 @@ class BatchedEnv:
             if self._config.get("TASK_IS_PLACE", False):
                 success = success and state.did_drop
 
-            failure = (
-                (
-                    state.did_drop
-                    and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+            if self._config.get("DROP_IS_FAIL", True):
+                failure = (
+                    (
+                        state.did_drop
+                        and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+                    )
+                    or (
+                        state.target_obj_idx != state.held_obj_idx
+                        and state.held_obj_idx != -1
+                    )
+                    or (end_episode_action and not success)
                 )
-                or (
-                    state.target_obj_idx != state.held_obj_idx
-                    and state.held_obj_idx != -1
-                )
-                or (end_episode_action and not success)
-            )
+            else:
+                failure = False
 
             if (
                 success
@@ -693,21 +696,27 @@ class BatchedEnv:
                     "was_holding_correct": float(was_holding_correct),
                 }
                 if self._previous_state[b] is not None:
+                    prev_obj_pos = prev_state.obj_positions[
+                        prev_state.target_obj_idx
+                    ]
                     if not is_holding_correct:
-                        prev_dist = (
-                            prev_state.target_obj_start_pos - prev_state.ee_pos
+                        curr_dist = (
+                            state.obj_positions[state.target_obj_idx]
+                            - state.ee_pos
                         ).length()
-                        self.rewards[b] += -(ee_to_start - prev_dist)
+                        prev_dist = (prev_obj_pos - prev_state.ee_pos).length()
+                        self.rewards[b] += -(curr_dist - prev_dist)
                     else:
-                        prev_obj_pos = prev_state.obj_positions[
-                            prev_state.target_obj_idx
-                        ]
                         prev_obj_to_goal = (
                             prev_state.goal_pos - prev_obj_pos
                         ).length()
                         self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
 
-                    if is_holding_correct and (prev_state.held_obj_idx == -1):
+                    if (
+                        self._config.get("DROP_IS_FAIL", True)
+                        and is_holding_correct
+                        and (prev_state.held_obj_idx == -1)
+                    ):
                         self.rewards[b] += self._config.PICK_REWARD
                 self._previous_state[b] = state
 
