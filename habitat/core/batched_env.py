@@ -654,7 +654,7 @@ class BatchedEnv:
                 self.dones[b] = True
                 _rew = 0.0
                 _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
-                _rew -= self._config.NPNP_FAILURE_PENALTY if success else 0.0
+                _rew -= self._config.NPNP_FAILURE_PENALTY if failure else 0.0
                 self.rewards[b] = _rew
                 self.infos[b] = {
                     "success": float(success),
