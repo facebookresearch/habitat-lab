@@ -88,7 +88,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
@@ -99,7 +98,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
@@ -110,7 +108,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
@@ -121,7 +118,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
@@ -132,7 +128,6 @@ RL:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           ACTION_DIST:
@@ -144,7 +139,6 @@ RL:
           skill_name: "PlaceSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_goal_sensor"]
           ACTION_DIST:
@@ -154,7 +148,6 @@ RL:
 
         GT_NAV:
           skill_name: "OracleNavPolicy"
-          include_visual_keys: ["robot_head_depth"]
           OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
           GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
           # GT nav

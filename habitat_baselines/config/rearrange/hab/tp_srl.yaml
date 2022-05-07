@@ -81,7 +81,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
@@ -92,7 +91,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
@@ -103,7 +101,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
@@ -114,7 +111,6 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
@@ -125,7 +121,6 @@ RL:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/pick.pth"
@@ -135,7 +130,6 @@ RL:
           skill_name: "PlaceSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: ["obj_goal_sensor"]
           LOAD_CKPT_FILE: "data/models/place.pth"
@@ -145,7 +139,6 @@ RL:
           skill_name: "NavSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           OBS_SKILL_INPUTS: []
           LIN_SPEED_STOP: 0.067
           ANG_SPEED_STOP: 0.067
