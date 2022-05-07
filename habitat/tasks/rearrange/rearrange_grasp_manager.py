@@ -133,13 +133,17 @@ class RearrangeGraspManager:
         self._sim.robot.close_gripper()
 
     @property
-    def snap_idx(self) -> int:
-        """The index of the grasped RigidObject."""
+    def snap_idx(self) -> Optional[int]:
+        """
+        The index of the grasped RigidObject. None if nothing is being grasped.
+        """
         return self._snapped_obj_id
 
     @property
-    def snapped_marker_id(self) -> str:
-        """The name of the marker for the grasp."""
+    def snapped_marker_id(self) -> Optional[str]:
+        """
+        The name of the marker for the grasp. None if nothing is being grasped.
+        """
         return self._snapped_marker_id
 
     @property
@@ -204,6 +208,12 @@ class RearrangeGraspManager:
         c.max_impulse = self._config.GRASP_IMPULSE
         return self._sim.create_rigid_constraint(c)
 
+    def update_object_to_grasp(self) -> None:
+        """
+        Kinematically update held object to be within robot's grasp.
+        """
+        self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+
     def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
 
@@ -224,11 +234,7 @@ class RearrangeGraspManager:
         self._snapped_obj_id = snap_obj_id
         if force:
             # Set the transformation to be in the robot's hand already.
-            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
-
-        if force:
-            # Set the transformation to be in the robot's hand already.
-            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+            self.update_object_to_grasp()
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.

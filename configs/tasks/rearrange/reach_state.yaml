@@ -54,7 +54,7 @@ TASK:
             GRIP_CONTROLLER: null
             GRASP_THRESH_DIST: 0.15
             SHOULD_CLIP: True
-            DELTA_POS_LIMIT: 0.025
+            DELTA_POS_LIMIT: 0.0125
             RENDER_EE_TARGET: True
             EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:

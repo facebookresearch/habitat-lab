@@ -299,6 +299,10 @@ class BaseVelAction(SimulatorTaskAction):
                 # Don't allow the step, revert back.
                 self._set_robot_state(self._sim, before_trans_state)
                 self._sim.robot.sim_obj.transformation = trans
+        if self._sim.grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            # object.
+            self._sim.grasp_mgr.update_object_to_grasp()
 
     def step(self, base_vel, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = base_vel

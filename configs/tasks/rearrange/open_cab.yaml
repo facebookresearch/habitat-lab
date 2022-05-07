@@ -122,7 +122,7 @@ TASK:
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
-            DELTA_POS_LIMIT: 0.025
+            DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
         - ARM_ACTION

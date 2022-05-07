@@ -179,7 +179,7 @@ if vut.is_notebook():
 # ## Interactive Play Script
 # On your local machine with a display connected, play the tasks using the keyboard to control the robot:
 # ```
-# python examples/interactive_play.py --cfg configs/tasks/rearrange/composite.yaml --play-task --never-end
+# python examples/interactive_play.py --play-task --never-end
 # ```
 # For more information about the interactive play script, see the
 # [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/interactive_play.py).
