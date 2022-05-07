@@ -93,6 +93,7 @@ RL:
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
           skill_name: "ArtObjSkillPolicy"
@@ -103,6 +104,7 @@ RL:
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
           skill_name: "ArtObjSkillPolicy"
@@ -113,6 +115,7 @@ RL:
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
           skill_name: "ArtObjSkillPolicy"
@@ -123,6 +126,7 @@ RL:
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
           skill_name: "PickSkillPolicy"
@@ -134,6 +138,7 @@ RL:
              use_log_std: True
           LOAD_CKPT_FILE: "data/models/pick.pth"
           MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"
@@ -145,6 +150,7 @@ RL:
              use_log_std: True
           LOAD_CKPT_FILE: "data/models/place.pth"
           MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
 
         GT_NAV:
           skill_name: "OracleNavPolicy"
@@ -158,15 +164,18 @@ RL:
           FORWARD_VELOCITY: 1.0
           MAX_SKILL_STEPS: 300
           NAV_ACTION_NAME: "BASE_VELOCITY"
+          FORCE_END_ON_TIMEOUT: False
 
         WAIT_SKILL:
           skill_name: "WaitSkillPolicy"
           MAX_SKILL_STEPS: -1.0
+          FORCE_END_ON_TIMEOUT: False
 
         RESET_ARM_SKILL:
           skill_name: "ResetArmSkill"
-          MAX_SKILL_STEPS: -1.0
+          MAX_SKILL_STEPS: 50
           RESET_JOINT_STATE: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+          FORCE_END_ON_TIMEOUT: False
 
       USE_SKILLS:
         pick: "NN_PICK"
