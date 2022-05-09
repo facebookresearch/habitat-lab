@@ -125,11 +125,16 @@ def test_auto_gym_wrapper(test_cfg_path):
     Test all defined automatic Gym wrappers work
     """
     config = baselines_get_config(test_cfg_path)
+
     if "GYM_AUTO_NAME" not in config:
         return
     full_gym_name = f"Habitat{config['GYM_AUTO_NAME']}-v0"
 
-    hab_gym = gym.make(full_gym_name)
+    hab_gym = gym.make(
+        full_gym_name,
+        # Test sometimes fails with concurrent rendering.
+        override_options=["TASK_CONFIG.SIMULATOR.CONCUR_RENDER", False],
+    )
     hab_gym.reset()
     hab_gym.step(hab_gym.action_space.sample())
     hab_gym.close()

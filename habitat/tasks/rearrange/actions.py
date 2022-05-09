@@ -236,7 +236,9 @@ class BaseVelAction(SimulatorTaskAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
 
-        self.end_on_stop = self._config.END_ON_STOP
+    @property
+    def end_on_stop(self):
+        return self._config.END_ON_STOP
 
     @property
     def action_space(self):

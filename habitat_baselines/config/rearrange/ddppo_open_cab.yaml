@@ -40,7 +40,7 @@ RL:
   SUCCESS_MEASURE: "art_obj_success"
   SUCCESS_REWARD: 10.0
   SLACK_REWARD: 0.0
-  GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
+  GYM_OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'relative_resting_position']
   END_ON_SUCCESS: True
 
   PPO:
