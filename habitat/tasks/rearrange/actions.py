@@ -312,11 +312,12 @@ class BaseVelAction(SimulatorTaskAction):
             lin_vel = np.maximum(lin_vel, 0)
 
         if (
-            self.end_on_stop
-            and abs(lin_vel) < self._config.MIN_ABS_LIN_SPEED
+            abs(lin_vel) < self._config.MIN_ABS_LIN_SPEED
             and abs(ang_vel) < self._config.MIN_ABS_ANG_SPEED
         ):
             self.does_want_terminate = True
+        else:
+            self.does_want_terminate = False
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
