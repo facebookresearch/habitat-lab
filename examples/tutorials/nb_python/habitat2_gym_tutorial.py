@@ -65,7 +65,7 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 import gym
 
 # flake8: noqa
-import habitat_baselines.utils.gym_definitions
+import habitat.utils.gym_definitions
 
 # %% [markdown]
 # # Simple Example
@@ -136,7 +136,7 @@ env.close()
 env = gym.make(
     "HabitatPick-v0",
     override_options=[
-        "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+        "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
         "SuctionGraspAction",
     ],
 )

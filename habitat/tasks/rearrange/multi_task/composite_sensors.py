@@ -164,10 +164,12 @@ class CompositeReward(Measure):
         else:
             cur_task_cfg = cur_task._config
 
-        if cur_task_cfg.REWARD_MEASUREMENT == "":
-            raise ValueError("REWARD_MEASUREMENT key not defined")
+        if "REWARD_MEASURE" not in cur_task_cfg:
+            raise ValueError(
+                f"Cannot find REWARD_MEASURE key in {list(cur_task_cfg.keys())}"
+            )
         cur_task_reward = task.measurements.measures[
-            cur_task_cfg.REWARD_MEASUREMENT
+            cur_task_cfg.REWARD_MEASURE
         ].get_metric()
         self._metric += cur_task_reward
 
@@ -248,11 +250,13 @@ class CompositeNodeIdx(Measure):
         self._metric = {}
         if cur_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
-            if inf_cur_task_cfg.SUCCESS_MEASUREMENT == "":
-                raise ValueError("SUCCESS_MEASUREMENT not defined")
+            if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
+                raise ValueError(
+                    f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}"
+                )
 
             is_succ = task.measurements.measures[
-                inf_cur_task_cfg.SUCCESS_MEASUREMENT
+                inf_cur_task_cfg.SUCCESS_MEASURE
             ].get_metric()
             if is_succ:
                 task.increment_inferred_solution_idx(episode)

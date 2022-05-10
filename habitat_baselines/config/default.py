@@ -82,11 +82,6 @@ _C.EVAL.SHOULD_LOAD_CKPT = True
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
-_C.RL.REWARD_MEASURE = "distance_to_goal"
-_C.RL.SUCCESS_MEASURE = "spl"
-_C.RL.END_ON_SUCCESS = False
-_C.RL.SUCCESS_REWARD = 2.5
-_C.RL.SLACK_REWARD = -0.01
 # -----------------------------------------------------------------------------
 # preemption CONFIG
 # -----------------------------------------------------------------------------
@@ -263,9 +258,14 @@ def get_config(
             if k == "BASE_TASK_CONFIG_PATH":
                 config.BASE_TASK_CONFIG_PATH = v
 
-    old_task_config = config.get("TASK_CONFIG", {})
     config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
-    config.TASK_CONFIG.merge_from_other_cfg(old_task_config)
+
+    # In case the config specifies overrides for the TASK_CONFIG, we
+    # remerge the files here
+    if config_paths:
+        for config_path in config_paths:
+            config.merge_from_file(config_path)
+
     if opts:
         config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
         config.merge_from_list(config.CMD_TRAILING_OPTS)

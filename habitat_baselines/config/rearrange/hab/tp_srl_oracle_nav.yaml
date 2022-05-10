@@ -1,7 +1,13 @@
 VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
 TASK_CONFIG:
+  GYM:
+    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
   TASK:
+    REWARD_MEASURE: "composite_reward"
+    SUCCESS_MEASURE: "composite_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
     USING_SUBTASKS: True
     SENSORS:
       - TARGET_START_SENSOR
@@ -182,11 +188,7 @@ RL:
         wait: "WAIT_SKILL"
         reset_arm: "RESET_ARM_SKILL"
 
-  REWARD_MEASURE: "composite_reward"
-  SUCCESS_MEASURE: "composite_success"
-  SUCCESS_REWARD: 100.0
-  SLACK_REWARD: -0.01
-  GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+
 
   PPO:
     # ppo params

@@ -42,10 +42,15 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # -----------------------------------------------------------------------------
 # TASK
 # -----------------------------------------------------------------------------
+_C.TASK = CN()
+_C.TASK.REWARD_MEASURE = "distance_to_goal"
+_C.TASK.SUCCESS_MEASURE = "spl"
+_C.TASK.SUCCESS_REWARD = 2.5
+_C.TASK.SLACK_REWARD = -0.01
+_C.TASK.END_ON_SUCCESS = False
 # -----------------------------------------------------------------------------
 # # NAVIGATION TASK
 # -----------------------------------------------------------------------------
-_C.TASK = CN()
 _C.TASK.TYPE = "Nav-v0"
 _C.TASK.SENSORS = []
 _C.TASK.MEASUREMENTS = []
@@ -841,6 +846,18 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+
+# -----------------------------------------------------------------------------
+# GYM
+# -----------------------------------------------------------------------------
+_C.GYM = CN()
+_C.GYM.AUTO_NAME = ""
+_C.GYM.CLASS_NAME = "RearrangeRLEnv"
+_C.GYM.OBS_KEYS = None
+_C.GYM.ACTION_KEYS = None
+_C.GYM.ACHIEVED_GOAL_KEYS = []
+_C.GYM.DESIRED_GOAL_KEYS = []
+_C.GYM.FIX_INFO_DICT = True
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

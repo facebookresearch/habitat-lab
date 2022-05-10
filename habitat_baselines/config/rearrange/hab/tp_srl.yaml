@@ -2,6 +2,10 @@ VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
 TASK_CONFIG:
   TASK:
+    REWARD_MEASURE: "composite_reward"
+    SUCCESS_MEASURE: "composite_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
     USING_SUBTASKS: True
     SENSORS:
       - TARGET_START_SENSOR
@@ -171,10 +175,7 @@ RL:
         nav_to_receptacle: "NN_NAV"
         reset_arm: "RESET_ARM_SKILL"
 
-  REWARD_MEASURE: "composite_reward"
-  SUCCESS_MEASURE: "composite_success"
-  SUCCESS_REWARD: 100.0
-  SLACK_REWARD: -0.01
+
 
   PPO:
     # ppo params
