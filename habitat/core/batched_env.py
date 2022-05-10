@@ -298,7 +298,9 @@ class BatchedEnv:
             self.depth_sensor_config.WIDTH == sensor0_width
             and self.depth_sensor_config.HEIGHT == sensor0_height
         )
-        include_debug_sensor = "DEBUG_RGB_SENSOR" in config.SENSORS
+        include_debug_sensor = config.get(
+            "DEBUG_RGB_SENSOR", False
+        )  # "DEBUG_RGB_SENSOR" in config.SENSORS
         debug_width = 512
         debug_height = 512
 
@@ -645,7 +647,7 @@ class BatchedEnv:
                     or (end_episode_action and not success)
                 )
             else:
-                failure = False
+                failure = end_episode_action and not success
 
             if (
                 success
