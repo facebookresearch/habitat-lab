@@ -42,7 +42,7 @@ receptacle_sets:
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["scene_train_split"]
+    scene_sets: ["scene_train_split", "scene_val_split"]
 
 object_samplers:
   -

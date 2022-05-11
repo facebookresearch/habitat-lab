@@ -115,11 +115,6 @@ class RearrangeEpisodeGenerator:
         # scene sets
         for scene_set in self.cfg.scene_sets:
             assert "name" in scene_set
-            if (
-                scene_set is not None
-                and scene_set["name"] != self._limit_scene_set
-            ):
-                continue
             assert (
                 scene_set["name"] not in self._scene_sets
             ), f"cfg.scene_sets - Duplicate name ('{scene_set['name']}') detected."
@@ -293,6 +288,11 @@ class RearrangeEpisodeGenerator:
             unified_scene_set: List[str] = []
             # concatenate all requested scene sets
             for set_name in self.cfg.scene_sampler.params.scene_sets:
+                if (
+                    self._limit_scene_set is not None
+                    and set_name != self._limit_scene_set
+                ):
+                    continue
                 assert (
                     set_name in self._scene_sets
                 ), f"'subset' SceneSampler requested scene_set name, '{set_name}', not found."
