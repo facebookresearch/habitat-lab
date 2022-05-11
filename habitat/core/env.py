@@ -145,7 +145,6 @@ class Env:
         assert self._current_episode is not None
         return self._current_episode
 
-    @property
     def current_episode_info(self) -> EpisodeInfo:
         assert self._current_episode is not None
         return EpisodeInfo(
@@ -408,7 +407,6 @@ class RLEnv(gym.Env):
     def current_episode(self) -> Episode:
         return self._env.current_episode
 
-    @property
     def current_episode_info(self) -> EpisodeInfo:
         return EpisodeInfo(
             episode_id=self._current_episode.episode_id,
