@@ -9,6 +9,7 @@ r"""Implements dataset functionality to be used ``habitat.EmbodiedTask``.
 of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
+from collections import namedtuple
 import json
 import os
 import random
@@ -35,6 +36,7 @@ from habitat.core.utils import not_none_validator
 
 ALL_SCENES_MASK = "*"
 
+EpisodeInfo = namedtuple("EpisodeInfo", ["episode_id", "scene_id"])
 
 @attr.s(auto_attribs=True, kw_only=True)
 class Episode:
