@@ -18,6 +18,9 @@ from tqdm import tqdm
 
 import habitat
 from habitat.core.agent import Agent
+from habitat.core.environments import get_env_class
+from habitat.utils.env_utils import make_env_fn
+from habitat.utils.gym_adapter import HabGymWrapper
 from habitat_baselines.agents.mp_agents import (
     AgentComposition,
     IkMoveArm,
@@ -25,7 +28,6 @@ from habitat_baselines.agents.mp_agents import (
     SpaResetModule,
 )
 from habitat_baselines.agents.ppo_agents import PPOAgent
-from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import (
@@ -34,8 +36,6 @@ from habitat_baselines.utils.common import (
     generate_video,
     get_num_actions,
 )
-from habitat_baselines.utils.env_utils import make_env_fn
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
 
 
 def compress_action(action):

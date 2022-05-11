@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 r"""BaselineRegistry is extended from habitat.Registry to provide
-registration for trainer and environments, while keeping Registry
+registration for trainer and policies, while keeping Registry
 in habitat core intact.
 
 Import the baseline registry object using
@@ -16,7 +16,6 @@ Import the baseline registry object using
 
 Various decorators for registry different kind of classes with unique keys
 
--   Register a environment: ``@baseline_registry.register_env``
 -   Register a trainer: ``@baseline_registry.register_trainer``
 -   Register a policy: ``@baseline_registry.register_policy``
 """
@@ -45,24 +44,6 @@ class BaselineRegistry(Registry):
     @classmethod
     def get_trainer(cls, name):
         return cls._get_impl("trainer", name)
-
-    @classmethod
-    def register_env(cls, to_register=None, *, name: Optional[str] = None):
-        r"""Register a environment to registry with key 'name'
-            currently only support subclass of RLEnv.
-
-        Args:
-            name: Key with which the env will be registered.
-                If None will use the name of the class.
-
-        """
-        from habitat import RLEnv
-
-        return cls._register_impl("env", to_register, name, assert_type=RLEnv)
-
-    @classmethod
-    def get_env(cls, name):
-        return cls._get_impl("env", name)
 
     @classmethod
     def register_policy(cls, to_register=None, *, name: Optional[str] = None):

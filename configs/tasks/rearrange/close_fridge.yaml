@@ -1,3 +1,7 @@
+GYM:
+    AUTO_NAME: "CloseFridge"
+    OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
+    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -22,9 +26,11 @@ TASK:
     USE_MARKER_T: False
     SUCCESS_STATE: 0.0
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "art_obj_reward"
-    SUCCESS_MEASUREMENT: "art_obj_success"
+    REWARD_MEASURE: "art_obj_reward"
+    SUCCESS_MEASURE: "art_obj_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: 0.0
+    END_ON_SUCCESS: True
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot

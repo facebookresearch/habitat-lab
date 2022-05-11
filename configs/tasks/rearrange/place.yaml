@@ -1,3 +1,7 @@
+GYM:
+    AUTO_NAME: "Place"
+    OBS_KEYS: ['obj_goal_sensor', 'joint', 'is_holding', 'relative_resting_position']
+    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -21,9 +25,10 @@ TASK:
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
     FORCE_REGENERATE: False
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "place_reward"
-    SUCCESS_MEASUREMENT: "place_success"
+    REWARD_MEASURE: "place_reward"
+    SUCCESS_MEASURE: "place_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: 0.0
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot

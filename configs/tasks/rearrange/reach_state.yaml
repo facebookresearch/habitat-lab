@@ -1,3 +1,8 @@
+GYM:
+    AUTO_NAME: "ReachState"
+    OBS_KEYS: ['joint', 'relative_resting_position']
+    ACTION_KEYS: ['ARM_ACTION']
+    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 20
 DATASET:
@@ -12,6 +17,10 @@ TASK:
     RENDER_TARGET: True
     EE_SAMPLE_FACTOR: 0.2
     EE_EXCLUDE_REGION: 0.0
+
+    REWARD_MEASURE: "rearrange_reach_reward"
+    SUCCESS_MEASURE: "rearrange_reach_success"
+    SUCCESS_REWARD: 10.0
 
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 

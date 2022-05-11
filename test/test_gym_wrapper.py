@@ -11,12 +11,12 @@ import gym.spaces as spaces
 import numpy as np
 import pytest
 
-import habitat_baselines.utils.env_utils
-import habitat_baselines.utils.gym_definitions
-from habitat_baselines.common.environments import get_env_class
+import habitat.utils.env_utils
+import habitat.utils.gym_definitions
+from habitat.core.environments import get_env_class
+from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.utils.render_wrapper import HabRenderWrapper
 from habitat_baselines.config.default import get_config as baselines_get_config
-from habitat_baselines.utils.gym_adapter import HabGymWrapper
-from habitat_baselines.utils.render_wrapper import HabRenderWrapper
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ def test_gym_wrapper_contract(
     config = baselines_get_config(config_file, overrides)
     env_class = get_env_class(config.ENV_NAME)
 
-    env = habitat_baselines.utils.env_utils.make_env_fn(
+    env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
     env = HabGymWrapper(env)
@@ -81,13 +81,13 @@ def test_gym_wrapper_contract(
     "config_file,override_options",
     [
         [
-            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            "configs/tasks/rearrange/pick.yaml",
             [
-                "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
         ],
-        ["habitat_baselines/config/rearrange/ddppo_pick.yaml", []],
+        ["configs/tasks/rearrange/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
@@ -117,7 +117,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
+        glob("configs/tasks/rearrange/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):

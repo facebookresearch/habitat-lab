@@ -19,11 +19,13 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
+from habitat.utils.env_utils import construct_envs
+from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
@@ -62,8 +64,6 @@ from habitat_baselines.utils.common import (
     get_num_actions,
     is_continuous_action_space,
 )
-from habitat_baselines.utils.env_utils import construct_envs
-from habitat_baselines.utils.render_wrapper import overlay_frame
 
 
 @baseline_registry.register_trainer(name="ddppo")

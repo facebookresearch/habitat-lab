@@ -1,3 +1,7 @@
+GYM:
+    AUTO_NAME: "NavToObj"
+    OBS_KEYS: ["object_to_agent_gps_compass", 'joint']
+    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
 DATASET:
@@ -27,9 +31,11 @@ TASK:
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
 
-    # Measurements for composite tasks.
-    REWARD_MEASUREMENT: "nav_to_obj_reward"
-    SUCCESS_MEASUREMENT: "nav_to_obj_success"
+    REWARD_MEASURE: "nav_to_obj_reward"
+    SUCCESS_MEASURE: "nav_to_obj_success"
+    SUCCESS_REWARD: 10.0
+    SLACK_REWARD: 0.0
+    END_ON_SUCCESS: True
 
     TARGET_START_POINT_GOAL_SENSOR:
         TYPE: "TargetOrGoalStartPointGoalSensor"
