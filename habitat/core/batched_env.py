@@ -299,7 +299,7 @@ class BatchedEnv:
             and self.depth_sensor_config.HEIGHT == sensor0_height
         )
         include_debug_sensor = config.get(
-            "DEBUG_RGB_SENSOR", False
+            "EVALUATION_MODE", False
         )  # "DEBUG_RGB_SENSOR" in config.SENSORS
         debug_width = 512
         debug_height = 512
@@ -321,13 +321,29 @@ class BatchedEnv:
 
             generator_config = EpisodeGeneratorConfig()
             # defaults:
-            # generator_config.numEpisodes = 100
+            generator_config.numEpisodes = self._config.get(
+                "NUM_EPISODES", 100
+            )
             # generator_config.seed = 3
-            # generator_config.num_stage_variations = 12
+            # # # generator_config.num_stage_variations = 12
+            generator_config.min_stage_number = (
+                9 if config.get("EVALUATION_MODE", False) else 0
+            )
+            generator_config.max_stage_number = (
+                11 if config.get("EVALUATION_MODE", False) else 8
+            )
+            # 0 to 8 is training setup and 9 to 11 is testing setup
+
             # generator_config.num_object_variations = 6
-            # generator_config.min_nontarget_objects = 27
-            # generator_config.max_nontarget_objects = 32
-            # generator_config.used_fixed_robot_start_pos = False #True
+            generator_config.min_nontarget_objects = self._config.get(
+                "MIN_NON_TARGET", 27
+            )
+            generator_config.max_nontarget_objects = self._config.get(
+                "MAX_NON_TARGET", 32
+            )
+            generator_config.used_fixed_robot_start_pos = self._config.get(
+                "FIXED_ROBOT_START_POSITION", True
+            )
             # generator_config.use_fixed_robot_start_yaw = False
             # generator_config.use_fixed_robot_joint_start_positions = False
 

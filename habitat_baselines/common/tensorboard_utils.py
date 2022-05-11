@@ -105,6 +105,11 @@ class WeightsAndBiasesWriter:
             k: v for k, v in os.environ.items() if k.startswith("SLURM_")
         }
 
+        if "WANDB_KEY" in os.environ:
+            wandb.login(
+                host="https://fairwandb.org/", key=os.environ["WANDB_KEY"]
+            )
+
         self.run = wandb.init(
             config={**slurm_info_dict, **config}, **wb_kwargs
         )
