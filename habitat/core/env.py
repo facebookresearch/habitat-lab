@@ -211,8 +211,8 @@ class Env:
     def current_episode_info(self) -> EpisodeInfo:
         assert self._current_episode is not None
         return EpisodeInfo(
-            episode_id=self._current_episode.episode_id,
-            scene_id=self._current_episode.scene_id,
+            episode_id=self._env._current_episode.episode_id,
+            scene_id=self._env._current_episode.scene_id,
         )
 
     def get_metrics(self) -> Metrics:
@@ -409,8 +409,8 @@ class RLEnv(gym.Env):
 
     def current_episode_info(self) -> EpisodeInfo:
         return EpisodeInfo(
-            episode_id=self._current_episode.episode_id,
-            scene_id=self._current_episode.scene_id,
+            episode_id=self._env.current_episode.episode_id,
+            scene_id=self._env.current_episode.scene_id,
         )
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
