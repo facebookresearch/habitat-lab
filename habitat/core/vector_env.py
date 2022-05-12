@@ -352,10 +352,7 @@ class VectorEnv:
     def current_episodes_info(self):
         for write_fn in self._connection_write_fns:
             write_fn((CALL_COMMAND, (CURRENT_EPISODE_INFO_NAME, None)))
-        results = []
-        for read_fn in self._connection_read_fns:
-            results.append(read_fn())
-        return results
+        return [read_fn() for read_fn in self._connection_read_fns]
 
     def count_episodes(self):
         for write_fn in self._connection_write_fns:
