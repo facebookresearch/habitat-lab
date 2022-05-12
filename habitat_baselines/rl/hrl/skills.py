@@ -13,10 +13,13 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     IsHoldingSensor,
     LocalizationSensor,
     RelativeRestingPositionSensor,
+    TargetGoalGpsCompassSensor,
+    TargetStartGpsCompassSensor,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavGoalSensor,
     OracleNavigationActionSensor,
+    TargetOrGoalStartPointGoalSensor,
 )
 from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -48,7 +51,6 @@ class SkillPolicy(Policy):
         """
         :param action_space: The overall action space of the entire task, not task specific.
         """
-        self._action_space = action_space
         self._config = config
         self._batch_size = batch_size
 
@@ -209,7 +211,9 @@ class SkillPolicy(Policy):
                 raise ValueError(
                     f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
                 )
-            entity_positions = obs[k].view(1, -1, 3)
+            entity_positions = obs[k].view(
+                1, -1, self._config.get("OBS_SKILL_INPUT_DIM", 3)
+            )
             obs[k] = entity_positions[:, cur_multi_sensor_index]
         return obs
 
@@ -300,6 +304,14 @@ class NnSkillPolicy(SkillPolicy):
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
 
+    def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
+        return TensorDict(
+            {
+                k: observations[k]
+                for k in self._filtered_obs_space.spaces.keys()
+            }
+        )
+
     def _internal_act(
         self,
         observations,
@@ -309,12 +321,7 @@ class NnSkillPolicy(SkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        filtered_obs = TensorDict(
-            {
-                k: observations[k]
-                for k in self._filtered_obs_space.spaces.keys()
-            }
-        )
+        filtered_obs = self._get_filtered_obs(observations, cur_batch_idx)
 
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len
@@ -682,6 +689,11 @@ class PlaceSkillPolicy(PickSkillPolicy):
 
 
 class NavSkillPolicy(NnSkillPolicy):
+    @dataclass(frozen=True)
+    class NavArgs:
+        obj_idx: int
+        is_target: bool
+
     def __init__(
         self,
         wrap_policy,
@@ -700,6 +712,22 @@ class NavSkillPolicy(NnSkillPolicy):
             batch_size,
             should_keep_hold_state=True,
         )
+
+    def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
+        ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
+
+        if TargetOrGoalStartPointGoalSensor.cls_uuid in ret_obs:
+            if self._cur_skill_args[cur_batch_idx].is_target:
+                replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
+            else:
+                replace_sensor = TargetStartGpsCompassSensor.cls_uuid
+            ret_obs[TargetOrGoalStartPointGoalSensor.cls_uuid] = observations[
+                replace_sensor
+            ]
+        return ret_obs
+
+    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
+        return self._cur_skill_args[batch_idx].obj_idx
 
     def _is_skill_done(
         self,
@@ -723,7 +751,10 @@ class NavSkillPolicy(NnSkillPolicy):
         return should_stop
 
     def _parse_skill_arg(self, skill_arg):
-        return int(skill_arg[-1].split("|")[1])
+        targ_name, targ_idx = skill_arg[-1].split("|")
+        return NavSkillPolicy.NavArgs(
+            obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")
+        )
 
 
 class OracleNavPolicy(NnSkillPolicy):

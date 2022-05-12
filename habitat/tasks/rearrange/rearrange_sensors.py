@@ -107,7 +107,7 @@ class PositionGpsCompassSensor(Sensor):
         )
 
     def _get_positions(self) -> np.ndarray:
-        pass
+        raise NotImplementedError("Must override _get_positions")
 
     def get_observation(self, task, *args, **kwargs):
         pos = self._get_positions()
@@ -117,7 +117,7 @@ class PositionGpsCompassSensor(Sensor):
 
         for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
-            self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, phi]
+            self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
 
         return self._polar_pos
 

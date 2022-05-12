@@ -24,7 +24,7 @@ BASE_ACTION_NAME = "BASE_VELOCITY"
 class TargetOrGoalStartPointGoalSensor(Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
-    position. Only for the first target object.
+    position.
     """
 
     cls_uuid: str = "object_to_agent_gps_compass"

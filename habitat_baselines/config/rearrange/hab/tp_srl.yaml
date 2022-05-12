@@ -18,6 +18,9 @@ TASK_CONFIG:
       - NAV_TO_SKILL_SENSOR
       - MARKER_REL_POS_SENSOR
       - ART_JOINT_SENSOR
+      # Needed to replace the TARGET_START_POINT_GOAL_SENSOR
+      - TARGET_START_GPS_COMPASS_SENSOR
+      - TARGET_GOAL_GPS_COMPASS_SENSOR
     MEASUREMENTS:
       - OBJECT_TO_GOAL_DISTANCE
       - ROBOT_FORCE
@@ -149,7 +152,8 @@ RL:
           skill_name: "NavSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          OBS_SKILL_INPUTS: []
+          OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
+          OBS_SKILL_INPUT_DIM: 2
           LIN_SPEED_STOP: 0.067
           ANG_SPEED_STOP: 0.067
           LOAD_CKPT_FILE: "data/models/nav.pth"

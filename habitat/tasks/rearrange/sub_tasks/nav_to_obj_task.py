@@ -104,9 +104,8 @@ class DynNavRLEnv(RearrangeTask):
         :returns: Mapping the action name to the grounded instances of the action that are possible in the current state.
         """
         cur_preds = self.domain.get_true_predicates()
-        # Get all actions which can be actively applied.
-        rearrange_logger.debug(f"Current true predicates {cur_preds}")
 
+        # Get all actions which can be actively applied.
         allowed_actions = defaultdict(list)
         for action in self.domain.actions.values():
             if (
