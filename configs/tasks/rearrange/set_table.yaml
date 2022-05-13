@@ -195,7 +195,7 @@ SIMULATOR:
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: true
+        ALLOW_SLIDING: false
         ENABLE_PHYSICS: true
         GPU_DEVICE_ID: 0
         GPU_GPU: false
