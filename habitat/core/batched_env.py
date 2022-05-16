@@ -659,7 +659,7 @@ class BatchedEnv:
             )
 
             if self._config.get("TASK_IS_PLACE", False):
-                success = success and (state.state.held_obj_idx == -1)
+                success = success and (state.held_obj_idx == -1)
 
             if self._config.get("DROP_IS_FAIL", True):
                 failure = (
