@@ -206,7 +206,7 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_obs(self, state):
-        return float(state.target_obj_idx != -1)
+        return float(state.held_obj_idx != -1)
 
 
 class StepCountSensorConfig(StateSensorConfig):
@@ -659,7 +659,7 @@ class BatchedEnv:
             )
 
             if self._config.get("TASK_IS_PLACE", False):
-                success = success and state.did_drop
+                success = success and (state.state.held_obj_idx == -1)
 
             if self._config.get("DROP_IS_FAIL", True):
                 failure = (
