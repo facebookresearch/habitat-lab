@@ -719,12 +719,6 @@ class PPOTrainer(BaseRLTrainer):
         }
         deltas["count"] = max(deltas["count"], 1.0)
 
-        writer.add_scalar(
-            "reward",
-            deltas["reward"] / deltas["count"],
-            self.num_steps_done,
-        )
-
         # Check to see if there are any metrics
         # that haven't been logged yet
         metrics = {
@@ -732,6 +726,16 @@ class PPOTrainer(BaseRLTrainer):
             for k, v in deltas.items()
             if k not in {"reward", "count"}
         }
+
+        if "success" in metrics and metrics["success"] < 0.0:
+            return
+
+        writer.add_scalar(
+            "reward",
+            deltas["reward"] / deltas["count"],
+            self.num_steps_done,
+        )
+
         if len(metrics) > 0:
             writer.add_scalars("metrics", metrics, self.num_steps_done)
 

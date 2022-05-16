@@ -262,8 +262,12 @@ class BatchedEnv:
             config.NUM_ENVIRONMENTS > 0
         ), "number of environments to be created should be greater than 0"
 
-        include_depth = "DEPTH_SENSOR" in config.SENSORS
-        include_rgb = "RGB_SENSOR" in config.SENSORS
+        if not config.get("BLIND", False):
+            include_depth = "DEPTH_SENSOR" in config.SENSORS
+            include_rgb = "RGB_SENSOR" in config.SENSORS
+        else:
+            include_depth = False
+            include_rgb = False
 
         self._max_episode_length = config.MAX_EPISODE_LENGTH
 
@@ -278,7 +282,7 @@ class BatchedEnv:
             )
             self.state_sensor_config.append(ssc)
 
-        assert include_depth or include_rgb
+        assert (include_depth or include_rgb) or config.get("BLIND", False)
 
         self._num_envs = config.NUM_ENVIRONMENTS
 
@@ -427,7 +431,9 @@ class BatchedEnv:
         buffer_index = 0
 
         self.raw_rgb = None
+        self._raw_rgb = None
         self.raw_depth = None
+        self._raw_depth = None
         self._raw_debug_rgb = None
         assert self._bsim
         import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
