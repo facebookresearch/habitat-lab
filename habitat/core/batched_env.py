@@ -313,16 +313,16 @@ class BatchedEnv:
             )
 
             generator_config = EpisodeGeneratorConfig()
-            # defaults:
-            # generator_config.numEpisodes = 100
-            # generator_config.seed = 3
-            # generator_config.num_stage_variations = 12
-            # generator_config.num_object_variations = 6
-            # generator_config.min_nontarget_objects = 27
-            # generator_config.max_nontarget_objects = 32
-            # generator_config.used_fixed_robot_start_pos = False #True
-            # generator_config.use_fixed_robot_start_yaw = False
-            # generator_config.use_fixed_robot_joint_start_positions = False
+            # see habitat-sim/src/esp/batched_sim/EpisodeGenerator.h for generator params and defaults
+            # generator_config.numEpisodes
+            # generator_config.seed
+            # generator_config.num_stage_variations
+            # generator_config.num_object_variations
+            # generator_config.min_nontarget_objects
+            # generator_config.max_nontarget_objects
+            # generator_config.used_fixed_robot_start_pos
+            # generator_config.use_fixed_robot_start_yaw
+            # generator_config.use_fixed_robot_joint_start_positions
 
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
