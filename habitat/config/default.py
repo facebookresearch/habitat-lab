@@ -792,6 +792,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
 _C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------

@@ -1110,6 +1110,24 @@ class PPOTrainer(BaseRLTrainer):
 
                         rgb_frames[i] = []
 
+                    # A gfx-replay list of keyframes for the episode. This is a JSON string that
+                    # should be saved to a file; the file can be read by visualization tools
+                    # (e.g. import into Blender for screenshots and videos).
+                    gfx_replay_uuid = "gfx_replay_keyframes_string"
+                    if (
+                        self.config.GFX_REPLAY_DIR
+                        and gfx_replay_uuid in infos[i]
+                    ):
+                        gfx_replay_keyframes_string = infos[i][gfx_replay_uuid]
+                        filepath = (
+                            self.config.GFX_REPLAY_DIR
+                            + "/episode{}.replay.json".format(
+                                current_episodes[i].episode_id
+                            )
+                        )
+                        with open(filepath, "w") as text_file:
+                            text_file.write(gfx_replay_keyframes_string)
+
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

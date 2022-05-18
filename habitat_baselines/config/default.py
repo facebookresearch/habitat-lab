@@ -30,6 +30,7 @@ _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.TENSORBOARD_DIR = "tb"
 _C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
+_C.GFX_REPLAY_DIR = ""
 _C.VIDEO_FPS = 10
 _C.VIDEO_RENDER_TOP_DOWN = True
 _C.VIDEO_RENDER_ALL_INFO = False

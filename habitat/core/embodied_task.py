@@ -389,3 +389,6 @@ class EmbodiedTask:
 
     def seed(self, seed: int) -> None:
         return
+
+    def get_metrics_at_episode_end(self):
+        return {}

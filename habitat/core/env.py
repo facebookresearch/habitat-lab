@@ -209,7 +209,12 @@ class Env:
         return time.time() - self._episode_start_time
 
     def get_metrics(self) -> Metrics:
-        return self._task.measurements.get_metrics()
+        metrics = self._task.measurements.get_metrics()
+
+        if self._episode_over:
+            metrics.update(self._task.get_metrics_at_episode_end())
+
+        return metrics
 
     def _past_limit(self) -> bool:
         return (

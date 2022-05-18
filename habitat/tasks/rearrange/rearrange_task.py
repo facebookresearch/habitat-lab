@@ -54,6 +54,7 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
+        self._gfx_replay_keyframes_string = None
 
     @property
     def targ_idx(self):
@@ -88,6 +89,7 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
         self._cur_episode_step = 0
+        self._gfx_replay_keyframes_string = None
 
         self._sim.set_robot_base_to_random_point()
 
@@ -203,3 +205,24 @@ class RearrangeTask(NavigationTask):
                 f"-----Episode {self._episode_id} requested to end after {self._cur_episode_step} steps.-----"
             )
             rearrange_logger.debug("-" * 40)
+
+    def get_metrics_at_episode_end(self):
+
+        metrics: Dict[str, Any] = {}
+
+        # Add a gfx-replay list of keyframes for the episode. This is a JSON string that
+        # should be saved to a file; the file can be read by visualization tools
+        # (e.g. import into Blender for screenshots and videos).
+        if (
+            self._episode_id
+            and self._sim.sim_config.sim_cfg.enable_gfx_replay_save
+        ):
+            if not self._gfx_replay_keyframes_string:
+                self._gfx_replay_keyframes_string = (
+                    self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
+                )
+            metrics[
+                "gfx_replay_keyframes_string"
+            ] = self._gfx_replay_keyframes_string
+
+        return metrics
