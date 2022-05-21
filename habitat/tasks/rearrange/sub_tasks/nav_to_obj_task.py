@@ -238,27 +238,28 @@ class DynNavRLEnv(RearrangeTask):
         orig_args = self.force_kwargs["orig_applied_args"]
         for sub_allowed_tasks in allowed_tasks.values():
             for task in sub_allowed_tasks:
-                assigned_args = {
-                    k: v
-                    for k, v in zip(
-                        task.parameters, task.orig_applied_func_args
-                    )
-                }
+                assigned_args = task.task_args
+
                 # Check that `orig_args` is a SUBSET of `assigned_args` meaning
                 # the keys and values match something in assigned args.
                 is_orig_args_subset = all(
                     [
-                        (k in assigned_args) and (assigned_args[k] == v)
+                        assigned_args.get(k, None) == v
+                        or assigned_args.get(f"orig_{k}", None) == v
                         for k, v in orig_args.items()
                     ]
                 )
                 if is_orig_args_subset:
                     filtered_allowed_tasks.append(task)
+
         rearrange_logger.debug(f"Got allowed tasks {filtered_allowed_tasks}")
 
         if len(filtered_allowed_tasks) == 0:
+            allowed_tasks_str = (
+                "".join(["\n   - " + x for x in allowed_tasks]) + "\n"
+            )
             raise ValueError(
-                f"Got no tasks out of {allowed_tasks} with entity_type={entity_type}, use_name={use_name}"
+                f"Got no tasks out of {allowed_tasks_str}. With entity_type={entity_type}, use_name={use_name} force kwargs={self.force_kwargs}"
             )
         nav_to_task = filtered_allowed_tasks[0]
 

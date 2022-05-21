@@ -101,7 +101,7 @@ class RearrangeGraspManager:
                 self._leave_info = None
 
     def desnap(self, force=False) -> None:
-        """Removes any hold constraints currently active.
+        """Removes any hold constraints currently active. Removes hold constraints for regular and articulated objects.
 
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """

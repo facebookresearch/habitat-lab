@@ -7,9 +7,19 @@
 from __future__ import annotations
 
 import copy
+from collections import defaultdict
 from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+)
 
 import magnum as mn
 import numpy as np
@@ -205,8 +215,16 @@ class PddlAction:
         )
 
     def _convert_arg_str(self, effect_arg: str, args: List[str]) -> List[str]:
-        for place_arg, set_arg in zip(self.parameters, args):
-            effect_arg = effect_arg.replace(place_arg, set_arg)
+        """
+        Substitutes the `args` into the `effect_arg` string. Works when `args`
+        is not the same size as `self.parameters` (meaning there are unbound
+        arguments).
+        """
+        # Substitute in format strings for the key words we want to replace
+        for i, param_name in enumerate(self.parameters[: len(args)]):
+            effect_arg = effect_arg.replace(param_name, "{" + str(i) + "}")
+
+        effect_arg = effect_arg.format(*args)
         effect_arg = effect_arg.split(",")
         if effect_arg[0] == "":
             effect_arg = []
@@ -293,6 +311,7 @@ class PddlAction:
             "task_name": load_config["task"],
             **func_kwargs,
             **self.add_args,
+            **self._add_task_args,
             **{
                 "orig_applied_args": {
                     k: v
@@ -586,6 +605,14 @@ class PddlSetState:
     def __init__(self, load_config: Dict[str, Any]):
         self.art_states = load_config.get("art_states", {})
         self.obj_states = load_config.get("obj_states", {})
+
+        self.check_for_art_link_match: DefaultDict[str, bool] = defaultdict(
+            lambda: False
+        )
+        self.check_for_art_link_match.update(
+            load_config.get("check_for_art_link_match", {})
+        )
+
         self.robo_state = PddlRobotState(load_config.get("robo", {}))
         self.load_config = load_config
 
@@ -641,7 +668,7 @@ class PddlSetState:
         target_name, target_type = search_for_id(target, name_to_id)
         if target_type != RearrangeObjectTypes.ARTICULATED_LINK:
             return False
-        check_link = sim.get_marker(target_name).link_id
+        check_marker = sim.get_marker(target_name)
 
         if obj_idx >= len(use_receps):
             rearrange_logger.debug(
@@ -649,8 +676,14 @@ class PddlSetState:
             )
             return False
 
-        _, recep_link_id = use_receps[obj_idx]
-        return recep_link_id == check_link
+        recep_name, recep_link_id = use_receps[obj_idx]
+        if self.check_for_art_link_match[target_name] and (
+            recep_link_id != check_marker.link_id
+        ):
+            return False
+        if recep_name != check_marker.ao_parent.handle:
+            return False
+        return True
 
     def is_satisfied(
         self,
@@ -745,15 +778,16 @@ class PddlSetState:
 
             if target in name_to_id:
                 targ_idx = name_to_id[target]
-                _, pos_targs = sim.get_targets()
-                targ_pos = pos_targs[targ_idx]
+                all_targ_idxs, pos_targs = sim.get_targets()
+                targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
                 set_T = mn.Matrix4.translation(targ_pos)
             else:
                 raise ValueError("Not supported")
 
             # Get the object id corresponding to this name
-            sim.reset_obj_T(abs_obj_id, set_T)
-            obj_name = sim.ep_info["static_objs"][obj_idx][0]
+            rom = sim.get_rigid_object_manager()
+            set_obj = rom.get_object_by_id(abs_obj_id)
+            set_obj.transformation = set_T
 
         for art_name, set_art in self.art_states.items():
             match_name, match_type = search_for_id(art_name, name_to_id)
@@ -782,13 +816,12 @@ class PddlSetState:
             sim.internal_step(-1)
 
         # Set the snapped object information
-        if (
-            self.robo_state.holding == "NONE"
-            and sim.snapped_obj_id is not None
-        ):
-            sim.desnap_object(force=True)
+        if self.robo_state.holding == "NONE" and sim.grasp_mgr.is_grasped:
+            sim.grasp_mgr.desnap(True)
         elif self.robo_state.holding is not None:
+            # Swap objects to the desired object.
             rel_obj_idx = name_to_id[self.robo_state.holding]
+            sim.grasp_mgr.desnap(True)
             sim.internal_step(-1)
             sim.grasp_mgr.snap_to_obj(sim.scene_obj_ids[rel_obj_idx])
             sim.internal_step(-1)

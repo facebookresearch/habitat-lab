@@ -158,11 +158,10 @@ class CompositeReward(Measure):
         elif node_idx > self._prev_node_idx:
             self._metric += self._config.STAGE_COMPLETE_REWARD
 
-        cur_task = task.cur_task
-        if cur_task is None:
+        if task.forced_node_task is None:
             cur_task_cfg = task.get_inferrred_node_task()._config
         else:
-            cur_task_cfg = cur_task._config
+            cur_task_cfg = task.forced_node_task._config
 
         if "REWARD_MEASURE" not in cur_task_cfg:
             raise ValueError(
@@ -246,9 +245,8 @@ class CompositeNodeIdx(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_task = task.cur_task
         self._metric = {}
-        if cur_task is None:
+        if task.forced_node_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
             if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
                 raise ValueError(
@@ -270,7 +268,7 @@ class CompositeNodeIdx(Measure):
                     task.get_inferred_node_idx() >= i
                 )
         else:
-            node_idx = task.cur_node
+            node_idx = task.forced_node_task_idx
         self._metric["node_idx"] = node_idx
         self._update_info_stage_succ(task, self._metric)
 
