@@ -60,11 +60,9 @@ class PointNavResNetPolicy(NetPolicy):
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
-            include_visual_keys = policy_config.include_visual_keys
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
-            include_visual_keys = None
 
         if fuse_keys is None:
             fuse_keys = []
@@ -82,7 +80,6 @@ class PointNavResNetPolicy(NetPolicy):
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
-                include_visual_keys=include_visual_keys,
             ),
             dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
@@ -105,7 +102,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            fuse_keys=config.RL.GYM_OBS_KEYS,
+            fuse_keys=config.TASK_CONFIG.GYM.OBS_KEYS,
         )
 
 
@@ -243,7 +240,6 @@ class PointNavResNetNet(Net):
         fuse_keys: List[str],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
-        include_visual_keys: Optional[List[str]] = None,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -358,16 +354,14 @@ class PointNavResNetNet(Net):
 
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
-        elif include_visual_keys is not None and len(include_visual_keys) != 0:
+        else:
             use_obs_space = spaces.Dict(
                 {
-                    k: v
-                    for k, v in observation_space.spaces.items()
-                    if k in include_visual_keys
+                    k: observation_space.spaces[k]
+                    for k in fuse_keys
+                    if len(observation_space.spaces[k].shape) == 3
                 }
             )
-        else:
-            use_obs_space = observation_space
 
         self.visual_encoder = ResNetEncoder(
             use_obs_space,

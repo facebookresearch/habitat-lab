@@ -102,8 +102,6 @@ _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
 _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
 # If the list is empty, all keys will be included.
-_C.RL.POLICY.include_visual_keys = []
-_C.RL.GYM_OBS_KEYS = []
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True

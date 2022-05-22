@@ -130,16 +130,16 @@ def test_composite_tasks(test_cfg_path):
     if "TASK_SPEC" not in config.TASK:
         return
 
+    env = habitat.Env(config=config)
+    if not isinstance(env.task, CompositeTask):
+        return
+
     pddl_path = osp.join(
         config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
     )
     with open(pddl_path, "r") as f:
         domain = yaml.safe_load(f)
     n_stages = len(domain["solution"])
-    env = habitat.Env(config=config)
-
-    if not isinstance(env.task, CompositeTask):
-        raise ValueError(f"Created env {env} is not CompositeTask as expected")
 
     for task_idx in range(n_stages):
         env.reset()

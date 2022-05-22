@@ -6,6 +6,7 @@ import magnum as mn
 import numpy as np
 import torch
 
+from habitat.config import Config as CN
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     AbsGoalSensor,
@@ -351,12 +352,21 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
         policy_cfg = ckpt_dict["config"]
 
-        expected_obs_keys = list(
-            set(
-                policy_cfg.RL.POLICY.include_visual_keys
-                + policy_cfg.RL.GYM_OBS_KEYS
+        if "GYM" not in policy_cfg.TASK_CONFIG:
+            # Support loading legacy policies
+            # TODO: Remove this eventually and drop support for policies
+            # trained on older version of codebase.
+            policy_cfg.defrost()
+            policy_cfg.TASK_CONFIG.GYM = CN()
+            policy_cfg.TASK_CONFIG.GYM.OBS_KEYS = list(
+                set(
+                    policy_cfg.RL.POLICY.include_visual_keys
+                    + policy_cfg.RL.GYM_OBS_KEYS
+                )
             )
-        )
+            policy_cfg.freeze()
+
+        expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )

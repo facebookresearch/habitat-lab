@@ -271,7 +271,7 @@ class CompositeTask(RearrangeTask):
         Try to get a property from the current inferred subtask. If the subtask
         is not valid, then return the supplied default value.
         """
-        if self.force_node_task is not None and hasattr(
+        if self.forced_node_task is not None and hasattr(
             self.cur_task, prop_name
         ):
             return getattr(self.cur_task, prop_name)
