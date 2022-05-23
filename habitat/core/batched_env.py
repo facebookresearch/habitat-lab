@@ -331,10 +331,10 @@ class BatchedEnv:
             # generator_config.seed = 3
             # # # generator_config.num_stage_variations = 12
             generator_config.min_stage_number = (
-                9 if config.get("EVALUATION_MODE", False) else 0
+                70 if config.get("EVALUATION_MODE", False) else 0
             )
             generator_config.max_stage_number = (
-                11 if config.get("EVALUATION_MODE", False) else 8
+                83 if config.get("EVALUATION_MODE", False) else 69
             )
             # 0 to 8 is training setup and 9 to 11 is testing setup
 
@@ -696,6 +696,7 @@ class BatchedEnv:
                     "distance_to_goal": obj_to_goal,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
                 }
                 self._previous_state[b] = None
 
@@ -723,6 +724,7 @@ class BatchedEnv:
                     "distance_to_goal": obj_to_goal,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
                 }
                 if self._previous_state[b] is not None:
                     prev_obj_pos = prev_state.obj_positions[
