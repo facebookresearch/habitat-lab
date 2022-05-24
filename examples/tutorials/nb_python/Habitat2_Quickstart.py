@@ -47,9 +47,6 @@ import os
 if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-    # Setup to use the hab_suite_baselines branch of Habitat Lab.
-    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite_baselines' && git fetch -v && git checkout hab_suite_baselines && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
-
 # %%
 # Imports
 import os
@@ -70,14 +67,14 @@ import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat_baselines.utils.gym_definitions as habitat_gym
+import habitat.utils.gym_definitions as habitat_gym
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
-from habitat_baselines.utils.render_wrapper import overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
 # Quiet the Habitat simulator logging
@@ -182,7 +179,7 @@ if vut.is_notebook():
 # ## Interactive Play Script
 # On your local machine with a display connected, play the tasks using the keyboard to control the robot:
 # ```
-# python examples/interactive_play.py --cfg configs/tasks/rearrange/composite.yaml --play-task --never-end
+# python examples/interactive_play.py --play-task --never-end
 # ```
 # For more information about the interactive play script, see the
 # [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/interactive_play.py).

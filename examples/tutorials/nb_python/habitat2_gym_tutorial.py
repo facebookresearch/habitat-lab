@@ -34,9 +34,6 @@ import os
 if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-    # Setup to use the hab_suite branch of Habitat Lab.
-    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
-
 # %%
 import os
 
@@ -65,7 +62,7 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 import gym
 
 # flake8: noqa
-import habitat_baselines.utils.gym_definitions
+import habitat.utils.gym_definitions
 
 # %% [markdown]
 # # Simple Example
@@ -136,7 +133,7 @@ env.close()
 env = gym.make(
     "HabitatPick-v0",
     override_options=[
-        "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+        "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
         "SuctionGraspAction",
     ],
 )

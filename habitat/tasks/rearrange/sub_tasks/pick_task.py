@@ -279,5 +279,4 @@ class RearrangePickTaskV1(RearrangeTask):
 
         if fetch_observations:
             return self._get_observations(episode)
-        else:
-            return None
+        return None

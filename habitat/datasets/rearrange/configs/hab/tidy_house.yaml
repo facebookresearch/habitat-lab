@@ -9,9 +9,17 @@ scene_sets:
       - "v3_sc0_staging"
       - "v3_sc1_staging"
       - "v3_sc2_staging"
+    excluded_substrings: []
+  -
+    name: "scene_val_split"
+    included_substrings:
       - "v3_sc3_staging"
     excluded_substrings: []
-    comment: "sc4_staging saved for evaluation"
+  -
+    name: "scene_test_split"
+    included_substrings:
+      - "v3_sc4_staging"
+    excluded_substrings: []
 
 object_sets:
   -
@@ -48,7 +56,7 @@ receptacle_sets:
 scene_sampler:
   type: "subset"
   params:
-    scene_sets: ["scene_train_split"]
+    scene_sets: ["scene_train_split", "scene_val_split", "scene_test_split"]
 
 object_samplers:
   -

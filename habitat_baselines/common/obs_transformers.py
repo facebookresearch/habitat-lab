@@ -75,6 +75,7 @@ class ResizeShortestEdge(ObservationTransformer):
         size: int,
         channels_last: bool = True,
         trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
+        semantic_key: str = "semantic",
     ):
         """Args:
         size: The size you want to resize the shortest edge to
@@ -84,6 +85,7 @@ class ResizeShortestEdge(ObservationTransformer):
         self._size: int = size
         self.channels_last: bool = channels_last
         self.trans_keys: Tuple[str, ...] = trans_keys
+        self.semantic_key = semantic_key
 
     def transform_observation_space(
         self,
@@ -113,9 +115,14 @@ class ResizeShortestEdge(ObservationTransformer):
                     )
         return observation_space
 
-    def _transform_obs(self, obs: torch.Tensor) -> torch.Tensor:
+    def _transform_obs(
+        self, obs: torch.Tensor, interpolation_mode: str
+    ) -> torch.Tensor:
         return image_resize_shortest_edge(
-            obs, self._size, channels_last=self.channels_last
+            obs,
+            self._size,
+            channels_last=self.channels_last,
+            interpolation_mode=interpolation_mode,
         )
 
     @torch.no_grad()
@@ -123,13 +130,14 @@ class ResizeShortestEdge(ObservationTransformer):
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         if self._size is not None:
-            observations.update(
-                {
-                    sensor: self._transform_obs(observations[sensor])
-                    for sensor in self.trans_keys
-                    if sensor in observations
-                }
-            )
+            for sensor in self.trans_keys:
+                if sensor in observations:
+                    interpolation_mode = "area"
+                    if self.semantic_key in sensor:
+                        interpolation_mode = "nearest"
+                    observations[sensor] = self._transform_obs(
+                        observations[sensor], interpolation_mode
+                    )
         return observations
 
     @classmethod

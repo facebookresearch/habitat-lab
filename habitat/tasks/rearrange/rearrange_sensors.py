@@ -112,7 +112,7 @@ class PositionGpsCompassSensor(Sensor):
         )
 
     def _get_positions(self) -> np.ndarray:
-        pass
+        raise NotImplementedError("Must override _get_positions")
 
     def get_observation(self, task, *args, **kwargs):
         pos = self._get_positions()

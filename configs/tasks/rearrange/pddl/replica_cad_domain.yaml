@@ -108,13 +108,13 @@ actions:
       parameters: [obj]
       task_def: "open_fridge"
       task: RearrangeOpenFridgeTask-v0
-      precondition: ["robot_at(fridge_push_point)", "closed_fridge()", "in(obj,fridge_push_point)"]
+      precondition: ["robot_at(MARKER_fridge_push_point)", "closed_fridge()", "in(obj,MARKER_fridge_push_point)"]
       postcondition: ["opened_fridge()"]
       arg_specs:
         obj:
           type_match: ["rigid", "goal"]
       add_task_args:
-        marker: "fridge_push_point"
+        marker: "MARKER_fridge_push_point"
       config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
@@ -123,13 +123,13 @@ actions:
       parameters: [obj]
       task_def: "close_fridge"
       task: RearrangeCloseFridgeTask-v0
-      precondition: ["robot_at(fridge_push_point)","opened_fridge()", "in(obj,fridge_push_point)"]
+      precondition: ["robot_at(MARKER_fridge_push_point)","opened_fridge()", "in(obj,MARKER_fridge_push_point)"]
       postcondition: ["closed_fridge()"]
       arg_specs:
         obj:
           type_match: ["rigid", "goal"]
       add_task_args:
-        marker: "fridge_push_point"
+        marker: "MARKER_fridge_push_point"
       config_args:
         TASK.BASE_ANGLE_NOISE: 0.0
         TASK.SPAWN_REGION_SCALE: 0.0
@@ -168,6 +168,8 @@ predicates:
     - name: in
       args: [X, Y]
       state:
+        check_for_art_link_match:
+          MARKER_fridge_push_point: False
         obj_states:
           X: Y
 
@@ -199,12 +201,12 @@ predicates:
     - name: opened_fridge
       state:
         art_states:
-          fridge_push_point: "ArtSampler(value=1.22, cmp='greater')"
+          MARKER_fridge_push_point: "ArtSampler(value=1.22, cmp='greater')"
 
     - name: closed_fridge
       state:
         art_states:
-          fridge_push_point: 0.0
+          MARKER_fridge_push_point: 0.0
 
     - name: robot_at
       args: [Y]

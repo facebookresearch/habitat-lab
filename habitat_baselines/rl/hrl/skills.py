@@ -6,6 +6,7 @@ import magnum as mn
 import numpy as np
 import torch
 
+from habitat.config import Config as CN
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     AbsGoalSensor,
@@ -13,10 +14,13 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     IsHoldingSensor,
     LocalizationSensor,
     RelativeRestingPositionSensor,
+    TargetGoalGpsCompassSensor,
+    TargetStartGpsCompassSensor,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavGoalSensor,
     OracleNavigationActionSensor,
+    TargetOrGoalStartPointGoalSensor,
 )
 from habitat.tasks.utils import get_angle
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -48,7 +52,6 @@ class SkillPolicy(Policy):
         """
         :param action_space: The overall action space of the entire task, not task specific.
         """
-        self._action_space = action_space
         self._config = config
         self._batch_size = batch_size
 
@@ -106,25 +109,31 @@ class SkillPolicy(Policy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.BoolTensor, torch.BoolTensor]:
         """
         :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks
         )
-        if is_skill_done:
+        if is_skill_done.sum() > 0:
             self._internal_log(
-                "Requested skill termination",
+                f"Requested skill termination {is_skill_done}",
                 observations,
             )
 
+        bad_terminate = torch.zeros(
+            self._cur_skill_step.shape,
+            device=self._cur_skill_step.device,
+            dtype=torch.bool,
+        )
         if self._config.MAX_SKILL_STEPS > 0:
-            bad_terminate = self._cur_skill_step > self._config.MAX_SKILL_STEPS
-        else:
-            bad_terminate = torch.zeros(
-                self._cur_skill_step.shape, device=self._cur_skill_step.device
-            )
+            over_max_len = self._cur_skill_step > self._config.MAX_SKILL_STEPS
+            if self._config.FORCE_END_ON_TIMEOUT:
+                bad_terminate = over_max_len
+            else:
+                is_skill_done = is_skill_done | over_max_len
+
         if bad_terminate.sum() > 0:
             self._internal_log(
                 f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}",
@@ -203,7 +212,9 @@ class SkillPolicy(Policy):
                 raise ValueError(
                     f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
                 )
-            entity_positions = obs[k].view(1, -1, 3)
+            entity_positions = obs[k].view(
+                1, -1, self._config.get("OBS_SKILL_INPUT_DIM", 3)
+            )
             obs[k] = entity_positions[:, cur_multi_sensor_index]
         return obs
 
@@ -213,11 +224,13 @@ class SkillPolicy(Policy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         """
         :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
         """
-        return torch.zeros(observations.shape[0]).to(masks.device)
+        return torch.zeros(observations.shape[0], dtype=torch.bool).to(
+            masks.device
+        )
 
     def _parse_skill_arg(self, skill_arg: str) -> Any:
         """
@@ -292,6 +305,14 @@ class NnSkillPolicy(SkillPolicy):
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
 
+    def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
+        return TensorDict(
+            {
+                k: observations[k]
+                for k in self._filtered_obs_space.spaces.keys()
+            }
+        )
+
     def _internal_act(
         self,
         observations,
@@ -301,12 +322,7 @@ class NnSkillPolicy(SkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        filtered_obs = TensorDict(
-            {
-                k: observations[k]
-                for k in self._filtered_obs_space.spaces.keys()
-            }
-        )
+        filtered_obs = self._get_filtered_obs(observations, cur_batch_idx)
 
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len
@@ -336,12 +352,21 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
         policy_cfg = ckpt_dict["config"]
 
-        expected_obs_keys = list(
-            set(
-                policy_cfg.RL.POLICY.include_visual_keys
-                + policy_cfg.RL.GYM_OBS_KEYS
+        if "GYM" not in policy_cfg.TASK_CONFIG:
+            # Support loading legacy policies
+            # TODO: Remove this eventually and drop support for policies
+            # trained on older version of codebase.
+            policy_cfg.defrost()
+            policy_cfg.TASK_CONFIG.GYM = CN()
+            policy_cfg.TASK_CONFIG.GYM.OBS_KEYS = list(
+                set(
+                    policy_cfg.RL.POLICY.include_visual_keys
+                    + policy_cfg.RL.GYM_OBS_KEYS
+                )
             )
-        )
+            policy_cfg.freeze()
+
+        expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
@@ -424,9 +449,9 @@ class WaitSkillPolicy(SkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         assert self._wait_time > 0
-        return (self._cur_skill_step >= self._wait_time).float()
+        return self._cur_skill_step >= self._wait_time
 
     def _internal_act(
         self,
@@ -491,7 +516,7 @@ class ResetArmSkill(SkillPolicy):
                 dtype=torch.float32,
             )
             < 5e-2
-        ).float()
+        )
 
     def _internal_act(
         self,
@@ -528,7 +553,7 @@ class PickSkillPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?
         rel_resting_pos = torch.norm(
@@ -536,7 +561,7 @@ class PickSkillPolicy(NnSkillPolicy):
         )
         is_within_thresh = rel_resting_pos < self._config.AT_RESTING_THRESHOLD
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
-        return is_holding * is_within_thresh.float()
+        return (is_holding * is_within_thresh).type(torch.bool)
 
     def _parse_skill_arg(self, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
@@ -596,7 +621,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
 
         cur_resting_pos = observations[RelativeRestingPositionSensor.cls_uuid]
 
@@ -614,14 +639,12 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = cur_resting_dist < self._config.AT_RESTING_THRESHOLD
-
-        is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
-
-        return (
-            is_not_holding
-            * is_within_thresh.float()
-            * self._did_leave_start_zone.float()
+        is_holding = (
+            observations[IsHoldingSensor.cls_uuid].view(-1).type(torch.bool)
         )
+
+        is_not_holding = ~is_holding
+        return is_not_holding & is_within_thresh & self._did_leave_start_zone
 
     def _parse_skill_arg(self, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
@@ -651,18 +674,20 @@ class PlaceSkillPolicy(PickSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         # Is the agent not holding an object and is the end-effector at the
         # resting position?
         rel_resting_pos = torch.norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = rel_resting_pos < self._config.AT_RESTING_THRESHOLD
-        is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
-        is_done = is_not_holding * is_within_thresh.float()
+        is_holding = (
+            observations[IsHoldingSensor.cls_uuid].view(-1).type(torch.bool)
+        )
+        is_done = is_within_thresh & (~is_holding)
         if is_done.sum() > 0:
             self._internal_log(
-                f"Terminating with {rel_resting_pos} and {is_not_holding}",
+                f"Terminating with {rel_resting_pos} and {is_holding}",
                 observations,
             )
         return is_done
@@ -674,6 +699,11 @@ class PlaceSkillPolicy(PickSkillPolicy):
 
 
 class NavSkillPolicy(NnSkillPolicy):
+    @dataclass(frozen=True)
+    class NavArgs:
+        obj_idx: int
+        is_target: bool
+
     def __init__(
         self,
         wrap_policy,
@@ -693,13 +723,29 @@ class NavSkillPolicy(NnSkillPolicy):
             should_keep_hold_state=True,
         )
 
+    def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
+        ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
+
+        if TargetOrGoalStartPointGoalSensor.cls_uuid in ret_obs:
+            if self._cur_skill_args[cur_batch_idx].is_target:
+                replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
+            else:
+                replace_sensor = TargetStartGpsCompassSensor.cls_uuid
+            ret_obs[TargetOrGoalStartPointGoalSensor.cls_uuid] = observations[
+                replace_sensor
+            ]
+        return ret_obs
+
+    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
+        return self._cur_skill_args[batch_idx].obj_idx
+
     def _is_skill_done(
         self,
         observations,
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len
         ]
@@ -712,10 +758,13 @@ class NavSkillPolicy(NnSkillPolicy):
             torch.abs(lin_vel) < self._config.LIN_SPEED_STOP
             and torch.abs(ang_vel) < self._config.ANG_SPEED_STOP
         )
-        return should_stop.float()
+        return should_stop
 
     def _parse_skill_arg(self, skill_arg):
-        return int(skill_arg[-1].split("|")[1])
+        targ_name, targ_idx = skill_arg[-1].split("|")
+        return NavSkillPolicy.NavArgs(
+            obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")
+        )
 
 
 class OracleNavPolicy(NnSkillPolicy):
@@ -742,7 +791,7 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
         self._nav_targs = [None for _ in range(batch_size)]
-        self._is_at_targ = torch.zeros(batch_size)
+        self._is_at_targ = torch.zeros(batch_size, dtype=torch.bool)
 
     def to(self, device):
         self._is_at_targ = self._is_at_targ.to(device)
@@ -763,7 +812,7 @@ class OracleNavPolicy(NnSkillPolicy):
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
-        self._is_at_targ[batch_idx] = 0.0
+        self._is_at_targ[batch_idx] = False
         self._nav_targs[batch_idx] = observations[NavGoalSensor.cls_uuid][
             batch_idx
         ]
@@ -795,7 +844,7 @@ class OracleNavPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
-    ) -> torch.Tensor:
+    ) -> torch.BoolTensor:
         return self._is_at_targ
 
     def _compute_forward(self, localization):

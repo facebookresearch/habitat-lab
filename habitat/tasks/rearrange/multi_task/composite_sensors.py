@@ -158,16 +158,17 @@ class CompositeReward(Measure):
         elif node_idx > self._prev_node_idx:
             self._metric += self._config.STAGE_COMPLETE_REWARD
 
-        cur_task = task.cur_task
-        if cur_task is None:
+        if task.forced_node_task is None:
             cur_task_cfg = task.get_inferrred_node_task()._config
         else:
-            cur_task_cfg = cur_task._config
+            cur_task_cfg = task.forced_node_task._config
 
-        if cur_task_cfg.REWARD_MEASUREMENT == "":
-            raise ValueError("REWARD_MEASUREMENT key not defined")
+        if "REWARD_MEASURE" not in cur_task_cfg:
+            raise ValueError(
+                f"Cannot find REWARD_MEASURE key in {list(cur_task_cfg.keys())}"
+            )
         cur_task_reward = task.measurements.measures[
-            cur_task_cfg.REWARD_MEASUREMENT
+            cur_task_cfg.REWARD_MEASURE
         ].get_metric()
         self._metric += cur_task_reward
 
@@ -244,15 +245,16 @@ class CompositeNodeIdx(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_task = task.cur_task
         self._metric = {}
-        if cur_task is None:
+        if task.forced_node_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
-            if inf_cur_task_cfg.SUCCESS_MEASUREMENT == "":
-                raise ValueError("SUCCESS_MEASUREMENT not defined")
+            if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
+                raise ValueError(
+                    f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}"
+                )
 
             is_succ = task.measurements.measures[
-                inf_cur_task_cfg.SUCCESS_MEASUREMENT
+                inf_cur_task_cfg.SUCCESS_MEASURE
             ].get_metric()
             if is_succ:
                 task.increment_inferred_solution_idx(episode)
@@ -266,7 +268,7 @@ class CompositeNodeIdx(Measure):
                     task.get_inferred_node_idx() >= i
                 )
         else:
-            node_idx = task.cur_node
+            node_idx = task.forced_node_task_idx
         self._metric["node_idx"] = node_idx
         self._update_info_stage_succ(task, self._metric)
 

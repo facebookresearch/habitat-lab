@@ -1,4 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
+
 EVAL:
   SPLIT: "eval"
 SENSE_PLAN_ACT:
@@ -19,19 +20,20 @@ SENSE_PLAN_ACT:
   GRASP_GEN_IS_VERBOSE: True
   IK_DIST_THRESH: 0.1
   IK_SPEED_FACTOR: 1.0
-RL:
+
+TASK_CONFIG:
     REWARD_MEASURE: "rearrange_reach_reward"
     SUCCESS_MEASURE: "rearrange_reach_success"
     SUCCESS_REWARD: 10.0
     SLACK_REWARD: -0.01
-    GYM_OBS_KEYS: ['joint', 'ee_pos']
-    GYM_DESIRED_GOAL_KEYS: ['resting_position']
-    GYM_FIX_INFO_DICT: True
-    GYM_ACTION_KEYS: ['ARM_ACTION']
     END_ON_SUCCESS: False
+    GYM:
+      OBS_KEYS: ['joint', 'ee_pos']
+      DESIRED_GOAL_KEYS: ['resting_position']
+      FIX_INFO_DICT: True
+      ACTION_KEYS: ['ARM_ACTION']
+      CLASS_NAME: "RearrangeRLEnv"
 
-    SUCC_THRESH: 0.15
-ENV_NAME: "RearrangeRLEnv"
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]
 
