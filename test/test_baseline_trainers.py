@@ -78,7 +78,7 @@ def _powerset(s):
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
     # For testing with world_size=1, -1 works as port in PyTorch
-    os.environ["MASTER_PORT"] = str(-1)
+    os.environ["MAIN_PORT"] = str(-1)
 
     if gpu2gpu:
         try:
