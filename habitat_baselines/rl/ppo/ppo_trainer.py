@@ -943,6 +943,8 @@ class PPOTrainer(BaseRLTrainer):
             fuse_keys.append(map_sensors[sensor])
 
         self.config.RL.POLICY.fuse_keys = fuse_keys
+        self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+        self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
         self.config.freeze()
 
         #################################
@@ -982,6 +984,17 @@ class PPOTrainer(BaseRLTrainer):
                 discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
+        cur_state_dict = self.agent.state_dict()
+        is_missing_any = False
+        for k in ckpt_dict["state_dict"]:
+            if k not in cur_state_dict:
+                print("Missing: ", k)
+                is_missing_any = True
+        if is_missing_any:
+            for k in cur_state_dict:
+                if k not in ckpt_dict["state_dict"]:
+                    print("Diff: ", k)
+            raise ValueError("Missing keys")
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])

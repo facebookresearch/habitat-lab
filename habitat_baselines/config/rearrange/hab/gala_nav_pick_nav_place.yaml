@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick_nav_place.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/gala.yaml
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -83,8 +83,3 @@ RL:
     train_encoder: True
     # Whether or not to reset the critic linear layer
     reset_critic: True
-
-    # Model parameters
-    backbone: "PointNavResNetPolicy"
-    rnn_type: LSTM
-    num_recurrent_layers: 2
