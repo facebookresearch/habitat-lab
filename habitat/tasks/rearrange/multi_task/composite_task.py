@@ -172,9 +172,17 @@ class CompositeTask(RearrangeTask):
         return self._get_observations(episode)
 
     def get_inferred_node_idx(self) -> int:
+        if not self._config.USING_SUBTASKS:
+            raise ValueError(
+                "Cannot get inferred sub-task when task is not configured to use sub-tasks. See `TASK.USING_SUBTASKS` key."
+            )
         return self._inferred_cur_node_idx
 
     def get_inferrred_node_task(self) -> RearrangeTask:
+        if not self._config.USING_SUBTASKS:
+            raise ValueError(
+                "Cannot get inferred sub-task when task is not configured to use sub-tasks. See `TASK.USING_SUBTASKS` key."
+            )
         return self._inferred_cur_task
 
     def increment_inferred_solution_idx(self, episode: Episode) -> None:
