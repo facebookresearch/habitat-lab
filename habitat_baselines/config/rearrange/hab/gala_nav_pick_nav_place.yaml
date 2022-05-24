@@ -32,7 +32,7 @@ RL:
   POLICY:
       name: "PointNavBaselinePolicy"
       action_distribution_type: "gaussian"
-      include_visual_keys: ["robot_head_depth"]
+      include_visual_keys: ["robot_head_depth", "robot_head_rgb"]
       ACTION_DIST:
          use_log_std: True
 
@@ -40,7 +40,7 @@ RL:
   SUCCESS_MEASURE: "composite_success"
   SUCCESS_REWARD: 100.0
   SLACK_REWARD: -0.01
-  GYM_OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+  GYM_OBS_KEYS: ['robot_head_depth', 'robot_head_rgb', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
 
   PPO:
     # ppo params

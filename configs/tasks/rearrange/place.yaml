@@ -93,7 +93,7 @@ TASK:
         FORCE_END_PEN: 10.0
     PLACE_SUCCESS:
         TYPE: "PlaceSuccess"
-        SUCC_THRESH: 0.15
+        EE_RESTING_SUCCESS_THRESHOLD : 0.15
     NUM_STEPS:
         TYPE: "NumStepsMeasure"
 

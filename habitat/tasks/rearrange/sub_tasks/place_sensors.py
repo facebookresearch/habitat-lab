@@ -158,5 +158,5 @@ class PlaceSuccess(Measure):
         self._metric = (
             not is_holding
             and is_obj_at_goal
-            and ee_to_rest_distance < self._config.SUCC_THRESH
+            and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
         )

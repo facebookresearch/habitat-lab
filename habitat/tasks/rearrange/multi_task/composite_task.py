@@ -131,7 +131,7 @@ class CompositeTask(RearrangeTask):
             self._cur_task = task
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,

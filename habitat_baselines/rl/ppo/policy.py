@@ -21,7 +21,11 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import CategoricalNet, GaussianNet
+from habitat_baselines.utils.common import (
+    CategoricalNet,
+    GaussianNet,
+    get_num_actions,
+)
 
 
 class Policy(abc.ABC):
@@ -172,6 +176,7 @@ class PointNavBaselinePolicy(NetPolicy):
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
+        policy_config=None,
         **kwargs,
     ):
         super().__init__(
@@ -180,7 +185,8 @@ class PointNavBaselinePolicy(NetPolicy):
                 hidden_size=hidden_size,
                 **kwargs,
             ),
-            action_space.n,
+            get_num_actions(action_space),
+            policy_config=policy_config,
         )
 
     @classmethod
@@ -192,6 +198,7 @@ class PointNavBaselinePolicy(NetPolicy):
             action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
             fuse_keys=config.RL.POLICY.fuse_keys,
+            policy_config=config.RL.POLICY,
         )
 
 
@@ -236,10 +243,10 @@ class PointNavBaselineNet(Net):
         self._n_state = 0
         self.ssc_keys: List[str] = []
         for k in fuse_keys:
-            obs_shape = observation_space[k]
+            obs_shape = observation_space[k].shape
             # All 1-dimension sensors are state sensors.
             assert len(obs_shape) == 1
-            self._n_state += obs_shape.shape[0]
+            self._n_state += obs_shape[0]
             self.ssc_keys.append(k)
             print(f"adding sensor {k} : {obs_shape} ")
 

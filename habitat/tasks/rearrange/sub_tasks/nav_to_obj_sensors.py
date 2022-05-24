@@ -23,8 +23,8 @@ BASE_ACTION_NAME = "BASE_VELOCITY"
 @registry.register_sensor
 class TargetOrGoalStartPointGoalSensor(Sensor):
     """
-    GPS and compass sensor relative to the starting target position. Only for
-    the first target object.
+    GPS and compass sensor relative to the starting object position or goal
+    position. Only for the first target object.
     """
 
     cls_uuid: str = "object_to_agent_gps_compass"
@@ -488,6 +488,7 @@ class NavToObjSuccess(GeoMeasure):
         else:
             self._metric = nav_pos_succ
         called_stop = self.does_action_want_stop(task, observations)
+
         if self._action_can_stop:
             if called_stop:
                 task.should_end = True

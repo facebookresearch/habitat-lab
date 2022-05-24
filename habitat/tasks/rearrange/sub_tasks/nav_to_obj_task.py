@@ -180,7 +180,7 @@ class DynNavRLEnv(RearrangeTask):
             self._config.clone(),
             self,
             self._dataset,
-            True,
+            False,
             task_args,
             episode,
             action.config_task_args,
@@ -298,7 +298,7 @@ class DynNavRLEnv(RearrangeTask):
 
     def reset(self, episode: Episode):
         sim = self._sim
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
         rearrange_logger.debug("Resetting navigation task")
 
         if self.domain is None:

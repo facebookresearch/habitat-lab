@@ -119,7 +119,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         )
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
         if self._force_use_marker is not None:
             self._use_marker = self._force_use_marker
 

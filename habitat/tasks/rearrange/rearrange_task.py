@@ -75,11 +75,16 @@ class RearrangeTask(NavigationTask):
     def set_sim_reset(self, sim_reset):
         self._sim_reset = sim_reset
 
-    def reset(self, episode: Episode):
+    def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
+
         if self._sim_reset:
-            super().reset(episode)
+            self._sim.reset()
+            for action_instance in self.actions.values():
+                action_instance.reset(episode=episode, task=self)
+            self._is_episode_active = True
+            self._sim.set_robot_base_to_random_point()
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
@@ -88,21 +93,20 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
         self._cur_episode_step = 0
-
-        self._sim.set_robot_base_to_random_point()
-
-        # Re-do the sensor readings after the new robot base position is set.
-        return self._get_observations(episode)
+        if fetch_observations:
+            return self._get_observations(episode)
+        else:
+            return None
 
     def _get_observations(self, episode):
-        self._sim._try_acquire_context()
-        prev_sim_obs = self._sim.get_sensor_observations()
-        observations = self._sim._sensor_suite.get_observations(prev_sim_obs)
+        obs = self._sim.get_sensor_observations()
+        obs = self._sim._sensor_suite.get_observations(obs)
+
         task_obs = self.sensor_suite.get_observations(
-            observations=observations, episode=episode, task=self
+            observations=obs, episode=episode, task=self
         )
-        observations.update(task_obs)
-        return observations
+        obs.update(task_obs)
+        return obs
 
     def step(self, action: Dict[str, Any], episode: Episode):
         obs = super().step(action=action, episode=episode)

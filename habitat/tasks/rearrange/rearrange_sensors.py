@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
 from gym import spaces
 
@@ -17,7 +18,7 @@ from habitat.tasks.rearrange.utils import (
     batch_transform_point,
     rearrange_logger,
 )
-from habitat.tasks.utils import get_angle
+from habitat.tasks.utils import cartesian_to_polar, get_angle
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -84,6 +85,75 @@ class TargetStartSensor(MultiObjSensor):
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
+
+
+class PositionGpsCompassSensor(Sensor):
+    def __init__(self, *args, sim, task, config, **kwargs):
+        self._task = task
+        self._config = config
+        self._sim = sim
+        super().__init__(*args, task=task, config=config, **kwargs)
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        n_targets = self._task.get_n_targets()
+        if self._config.INCLUDE_Z:
+            dim_per_obj = 3
+        else:
+            dim_per_obj = 2
+        self._polar_pos = np.zeros(n_targets * dim_per_obj, dtype=np.float32)
+        return spaces.Box(
+            shape=(n_targets * dim_per_obj,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_positions(self) -> np.ndarray:
+        pass
+
+    def get_observation(self, task, *args, **kwargs):
+        pos = self._get_positions()
+        robot_T = self._sim.robot.base_transformation
+
+        rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
+
+        if self._config.CARTESIAN:
+            if self._config.INCLUDE_Z:
+                return rel_pos
+            else:
+                return rel_pos[:, :2]
+        else:
+            for i, rel_obj_pos in enumerate(rel_pos):
+                rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
+                self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, phi]
+
+            return self._polar_pos
+
+
+@registry.register_sensor
+class TargetStartGpsCompassSensor(PositionGpsCompassSensor):
+    cls_uuid: str = "obj_start_gps_compass"
+
+    def _get_uuid(self, *args, **kwargs):
+        return TargetStartGpsCompassSensor.cls_uuid
+
+    def _get_positions(self) -> np.ndarray:
+        return self._sim.get_target_objs_start()
+
+
+@registry.register_sensor
+class TargetGoalGpsCompassSensor(PositionGpsCompassSensor):
+    cls_uuid: str = "obj_goal_gps_compass"
+
+    def _get_uuid(self, *args, **kwargs):
+        return TargetGoalGpsCompassSensor.cls_uuid
+
+    def _get_positions(self) -> np.ndarray:
+        _, pos = self._sim.get_targets()
+        return pos
 
 
 @registry.register_sensor
@@ -172,6 +242,26 @@ class JointVelocitySensor(Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.robot.arm_velocity
         return np.array(joints_pos, dtype=np.float32)
+
+
+@registry.register_sensor
+class StepCountSensor(Sensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "step_count_remaining"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        return np.array([0.0, 0.0, 0.0])
 
 
 @registry.register_sensor
