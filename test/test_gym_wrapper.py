@@ -129,13 +129,15 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
         return
-    full_gym_name = f"Habitat{config.GYM.AUTO_NAME}-v0"
 
-    hab_gym = gym.make(
-        full_gym_name,
-        # Test sometimes fails with concurrent rendering.
-        override_options=["SIMULATOR.CONCUR_RENDER", False],
-    )
-    hab_gym.reset()
-    hab_gym.step(hab_gym.action_space.sample())
-    hab_gym.close()
+    for prefix in ["", "Render"]:
+        full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
+
+        hab_gym = gym.make(
+            full_gym_name,
+            # Test sometimes fails with concurrent rendering.
+            override_options=["SIMULATOR.CONCUR_RENDER", False],
+        )
+        hab_gym.reset()
+        hab_gym.step(hab_gym.action_space.sample())
+        hab_gym.close()

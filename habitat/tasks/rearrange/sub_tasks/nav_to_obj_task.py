@@ -306,7 +306,13 @@ class DynNavRLEnv(RearrangeTask):
                 rearrange_logger.debug(
                     f"Forcing episode, loaded `{full_key}` from cache {self.cache.cache_id}."
                 )
-            else:
+                if not isinstance(self._nav_to_info, NavToInfo):
+                    rearrange_logger.warning(
+                        f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
+                    )
+                    self._nav_to_info = None
+
+            if self._nav_to_info is None:
                 self._nav_to_info = self._get_force_nav_start_info(episode)
 
                 self.start_states[full_key] = self._nav_to_info
@@ -321,17 +327,24 @@ class DynNavRLEnv(RearrangeTask):
                 and not self._config.FORCE_REGENERATE
             ):
                 self._nav_to_info = self.start_states[episode_id]
-                rearrange_logger.debug(
-                    f"Loaded episode from cache {self.cache.cache_id}."
-                )
-                if (
-                    self._nav_to_info.start_base_pos is None
-                    or self._nav_to_info.start_base_rot is None
-                ):
-                    raise ValueError(
-                        f"Incorrect nav to info {self._nav_to_info}"
+                if not isinstance(self._nav_to_info, NavToInfo):
+                    rearrange_logger.warning(
+                        f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
                     )
-            else:
+                    self._nav_to_info = None
+                else:
+                    rearrange_logger.debug(
+                        f"Loaded episode from cache {self.cache.cache_id}."
+                    )
+                    if (
+                        self._nav_to_info.start_base_pos is None
+                        or self._nav_to_info.start_base_rot is None
+                    ):
+                        raise ValueError(
+                            f"Incorrect nav to info {self._nav_to_info}"
+                        )
+
+            if self._nav_to_info is None:
                 self._nav_to_info = self._generate_nav_start_goal(episode)
                 self.start_states[episode_id] = self._nav_to_info
                 if self._config.SHOULD_SAVE_TO_CACHE:
