@@ -22,7 +22,7 @@
 # %% [markdown]
 # # Habitat 2.0 Gym API
 # This tutorial covers how to use Habitat 2.0 environments as standard gym environments.
-# See [here for Habitat 2.0 installation instructions](https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/hab_suite/examples/tutorials/colabs/Habitat2_Quickstart.ipynb#scrollTo=50rOVwceXvzL)
+# See [here for Habitat 2.0 installation instructions and more tutorials.](https://aihabitat.org/docs/habitat2/)
 
 # %%
 # %%capture

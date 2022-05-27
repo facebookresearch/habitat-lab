@@ -107,7 +107,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 #
 # For Habitat 2.0 functionality, install the `main` branch of Habitat Lab. Complete installation steps:
 #
-# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
+# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
 # 2. Download the `main` branch of Habitat Lab: `git clone https://github.com/facebookresearch/habitat-lab.git`
 # 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
 
@@ -182,7 +182,7 @@ if vut.is_notebook():
 # python examples/interactive_play.py --play-task --never-end
 # ```
 # For more information about the interactive play script, see the
-# [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/hab_suite_baselines/examples/interactive_play.py).
+# [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/main/examples/interactive_play.py).
 
 # %% [markdown]
 # ## Training with Habitat Baselines
