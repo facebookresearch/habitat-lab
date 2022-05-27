@@ -58,7 +58,7 @@ class RearrangeStopAction(SimulatorTaskAction):
 
     def step(self, task, *args, is_last_action, **kwargs):
         should_stop = kwargs.get("REARRANGE_STOP", [1.0])
-        if should_stop[0] == 1.0:
+        if should_stop[0] > 0.0:
             rearrange_logger.debug(
                 "Rearrange stop action requesting episode stop."
             )
