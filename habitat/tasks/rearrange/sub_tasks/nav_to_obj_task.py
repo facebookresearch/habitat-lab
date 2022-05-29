@@ -30,7 +30,7 @@ from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
 DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
 
-@dataclass(frozen=True)
+@dataclass
 class NavToInfo:
     """
     :property nav_target_pos: Where the robot should navigate to.
@@ -166,14 +166,17 @@ class DynNavRLEnv(RearrangeTask):
 
         return robo_pos, heading_angle, obj_to_type
 
+    def _generate_snap_to_obj(self) -> int:
+        # Snap the target object to the robot hand.
+        target_idxs, _ = self._sim.get_targets()
+        return self._sim.scene_obj_ids[target_idxs[0]]
+
     def _generate_nav_start_goal(self, episode) -> NavToInfo:
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
         if random.random() < self._config.OBJECT_IN_HAND_SAMPLE_PROB:
-            # Snap the target object to the robot hand.
-            target_idxs, _ = self._sim.get_targets()
-            start_hold_obj_idx = self._sim.scene_obj_ids[target_idxs[0]]
+            start_hold_obj_idx = self._generate_snap_to_obj()
 
         allowed_tasks = self._get_allowed_tasks()
 
@@ -327,7 +330,19 @@ class DynNavRLEnv(RearrangeTask):
                 and not self._config.FORCE_REGENERATE
             ):
                 self._nav_to_info = self.start_states[episode_id]
-                if not isinstance(self._nav_to_info, NavToInfo):
+
+                if self._nav_to_info.start_hold_obj_idx is not None:
+                    # The object to hold was generated from stale object IDs.
+                    # Reselect a new object to hold.
+                    self._nav_to_info.start_hold_obj_idx = (
+                        self._generate_snap_to_obj()
+                    )
+
+                if (
+                    not isinstance(self._nav_to_info, NavToInfo)
+                    or self._nav_to_info.start_base_pos is None
+                    or self._nav_to_info.start_base_rot is None
+                ):
                     rearrange_logger.warning(
                         f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
                     )
@@ -336,13 +351,6 @@ class DynNavRLEnv(RearrangeTask):
                     rearrange_logger.debug(
                         f"Loaded episode from cache {self.cache.cache_id}."
                     )
-                    if (
-                        self._nav_to_info.start_base_pos is None
-                        or self._nav_to_info.start_base_rot is None
-                    ):
-                        raise ValueError(
-                            f"Incorrect nav to info {self._nav_to_info}"
-                        )
 
             if self._nav_to_info is None:
                 self._nav_to_info = self._generate_nav_start_goal(episode)
@@ -359,6 +367,9 @@ class DynNavRLEnv(RearrangeTask):
                     raise ValueError(
                         f"Attempting to grasp {self._nav_to_info.start_hold_obj_idx} even though object is already grasped"
                     )
+                rearrange_logger.debug(
+                    f"Forcing to grasp object {self._nav_to_info.start_hold_obj_idx}"
+                )
                 self._sim.grasp_mgr.snap_to_obj(
                     self._nav_to_info.start_hold_obj_idx, force=True
                 )

@@ -16,6 +16,7 @@ TASK:
     SUCCESS_MEASURE: "composite_success"
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
 
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
@@ -71,18 +72,6 @@ TASK:
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
-    ROBOT_COLLS:
-        TYPE: RobotCollisions
-    OBJECT_TO_GOAL_DISTANCE:
-        TYPE: ObjectToGoalDistance
-    END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: EndEffectorToObjectDistance
-    COMPOSITE_SUCCESS:
-        TYPE: CompositeSuccess
-    NUM_STEPS:
-        TYPE: NumStepsMeasure
-    DID_VIOLATE_HOLD_CONSTRAINT:
-        TYPE: DidViolateHoldConstraintMeasure
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0
@@ -91,7 +80,7 @@ TASK:
         DIST_REWARD: 1.0
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
+        FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
@@ -102,6 +91,7 @@ TASK:
         SUCCESS_ANGLE_DIST: 0.7
         MUST_LOOK_AT_TARG: True
         HEURISTIC_STOP: False
+        MUST_CALL_STOP: False
     NAV_TO_POS_SUCC:
         TYPE: NavToPosSucc
         SUCCESS_DISTANCE: 0.2
@@ -118,7 +108,9 @@ TASK:
     - FORCE_TERMINATE
     - ROBOT_COLLS
     - END_EFFECTOR_TO_OBJECT_DISTANCE
+    - DOES_WANT_TERMINATE
     - COMPOSITE_SUCCESS
+    - COMPOSITE_BAD_CALLED_TERMINATE
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD

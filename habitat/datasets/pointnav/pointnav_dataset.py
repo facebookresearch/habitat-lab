@@ -40,10 +40,13 @@ class PointNavDatasetV1(Dataset):
         r"""Return list of scene ids for which dataset has separate files with
         episodes.
         """
-        assert cls.check_config_paths_exist(config)
         dataset_dir = os.path.dirname(
             config.DATA_PATH.format(split=config.SPLIT)
         )
+        if not cls.check_config_paths_exist(config):
+            raise FileNotFoundError(
+                f"Could not find dataset file `{dataset_dir}`"
+            )
 
         cfg = config.clone()
         cfg.defrost()
