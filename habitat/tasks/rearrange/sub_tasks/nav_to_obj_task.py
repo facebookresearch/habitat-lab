@@ -331,13 +331,6 @@ class DynNavRLEnv(RearrangeTask):
             ):
                 self._nav_to_info = self.start_states[episode_id]
 
-                if self._nav_to_info.start_hold_obj_idx is not None:
-                    # The object to hold was generated from stale object IDs.
-                    # Reselect a new object to hold.
-                    self._nav_to_info.start_hold_obj_idx = (
-                        self._generate_snap_to_obj()
-                    )
-
                 if (
                     not isinstance(self._nav_to_info, NavToInfo)
                     or self._nav_to_info.start_base_pos is None
@@ -350,6 +343,16 @@ class DynNavRLEnv(RearrangeTask):
                 else:
                     rearrange_logger.debug(
                         f"Loaded episode from cache {self.cache.cache_id}."
+                    )
+
+                if (
+                    self._nav_to_info is not None
+                    and self._nav_to_info.start_hold_obj_idx is not None
+                ):
+                    # The object to hold was generated from stale object IDs.
+                    # Reselect a new object to hold.
+                    self._nav_to_info.start_hold_obj_idx = (
+                        self._generate_snap_to_obj()
                     )
 
             if self._nav_to_info is None:
