@@ -15,29 +15,29 @@ import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.utils.gym_definitions import _get_env_name
 from habitat.utils.render_wrapper import HabRenderWrapper
-from habitat_baselines.config.default import get_config as baselines_get_config
 
 
 @pytest.mark.parametrize(
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            "configs/tasks/rearrange/reach_state.yaml",
             [],
             7,
             np.ndarray,
         ),
         (
-            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            "configs/tasks/rearrange/pick.yaml",
             [],
             8,
             dict,
         ),
         (
-            "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            "configs/tasks/rearrange/pick.yaml",
             [
-                "TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
             7,
@@ -51,12 +51,14 @@ def test_gym_wrapper_contract(
     """
     Test the Gym wrapper returns the right things and works with overrides.
     """
-    config = baselines_get_config(config_file, overrides)
-    env_class = get_env_class(config.ENV_NAME)
+    config = habitat.get_config(config_file, overrides)
+    env_class_name = _get_env_name(config)
+    env_class = get_env_class(env_class_name)
 
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
+
     env = HabGymWrapper(env)
     env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Box)
@@ -124,12 +126,18 @@ def test_auto_gym_wrapper(test_cfg_path):
     """
     Test all defined automatic Gym wrappers work
     """
-    config = baselines_get_config(test_cfg_path)
-    if "GYM_AUTO_NAME" not in config:
+    config = habitat.get_config(test_cfg_path)
+    if "GYM" not in config or config.GYM.AUTO_NAME == "":
         return
-    full_gym_name = f"Habitat{config['GYM_AUTO_NAME']}-v0"
 
-    hab_gym = gym.make(full_gym_name)
-    hab_gym.reset()
-    hab_gym.step(hab_gym.action_space.sample())
-    hab_gym.close()
+    for prefix in ["", "Render"]:
+        full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
+
+        hab_gym = gym.make(
+            full_gym_name,
+            # Test sometimes fails with concurrent rendering.
+            override_options=["SIMULATOR.CONCUR_RENDER", False],
+        )
+        hab_gym.reset()
+        hab_gym.step(hab_gym.action_space.sample())
+        hab_gym.close()

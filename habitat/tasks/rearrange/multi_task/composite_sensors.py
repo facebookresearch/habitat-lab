@@ -158,11 +158,10 @@ class CompositeReward(Measure):
         elif node_idx > self._prev_node_idx:
             self._metric += self._config.STAGE_COMPLETE_REWARD
 
-        cur_task = task.cur_task
-        if cur_task is None:
+        if task.forced_node_task is None:
             cur_task_cfg = task.get_inferrred_node_task()._config
         else:
-            cur_task_cfg = cur_task._config
+            cur_task_cfg = task.forced_node_task._config
 
         if "REWARD_MEASURE" not in cur_task_cfg:
             raise ValueError(
@@ -174,6 +173,47 @@ class CompositeReward(Measure):
         self._metric += cur_task_reward
 
         self._prev_node_idx = node_idx
+
+
+@registry.register_measure
+class DoesWantTerminate(Measure):
+    cls_uuid: str = "does_want_terminate"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DoesWantTerminate.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = task.actions["REARRANGE_STOP"].does_want_terminate
+
+
+@registry.register_measure
+class CompositeBadCalledTerminate(Measure):
+    cls_uuid: str = "composite_bad_called_terminate"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeBadCalledTerminate.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [DoesWantTerminate.cls_uuid, CompositeSuccess.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        does_action_want_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+        is_succ = task.measurements.measures[
+            CompositeSuccess.cls_uuid
+        ].get_metric()
+
+        self._metric = (not is_succ) and does_action_want_stop
 
 
 @registry.register_measure
@@ -193,19 +233,17 @@ class CompositeSuccess(Measure):
     def _get_uuid(*args, **kwargs):
         return CompositeSuccess.cls_uuid
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [DoesWantTerminate.cls_uuid],
         )
+        self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        does_action_want_stop = task.actions[
-            "REARRANGE_STOP"
-        ].does_want_terminate
+        does_action_want_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
         self._metric = task.is_goal_state_satisfied() and does_action_want_stop
         if does_action_want_stop:
             task.should_end = True
@@ -246,9 +284,8 @@ class CompositeNodeIdx(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_task = task.cur_task
         self._metric = {}
-        if cur_task is None:
+        if task.forced_node_task is None:
             inf_cur_task_cfg = task.get_inferrred_node_task()._config
             if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
                 raise ValueError(
@@ -270,7 +307,7 @@ class CompositeNodeIdx(Measure):
                     task.get_inferred_node_idx() >= i
                 )
         else:
-            node_idx = task.cur_node
+            node_idx = task.forced_node_task_idx
         self._metric["node_idx"] = node_idx
         self._update_info_stage_succ(task, self._metric)
 

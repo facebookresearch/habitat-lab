@@ -147,7 +147,7 @@ _C.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER = None
 _C.TASK.ACTIONS.ARM_ACTION.ARM_JOINT_DIMENSIONALITY = 7
 _C.TASK.ACTIONS.ARM_ACTION.GRASP_THRESH_DIST = 0.15
 _C.TASK.ACTIONS.ARM_ACTION.DISABLE_GRIP = False
-_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.025
+_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.0125
 _C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
 _C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
 _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
@@ -301,7 +301,17 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
 # -----------------------------------------------------------------------------
-# TARGET START OR GOAL SENSOR
+# TARGET START GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR.TYPE = "TargetStartGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# TARGET GOAL GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR.TYPE = "TargetGoalGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# NAV TO SKILL ID SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.NAV_TO_SKILL_SENSOR = CN()
 _C.TASK.NAV_TO_SKILL_SENSOR.TYPE = "NavToSkillSensor"
@@ -452,6 +462,7 @@ _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.FORCE_END_PEN = 10.0
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = True
 # Distance in radians.
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
@@ -542,7 +553,7 @@ _C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
 
 _C.TASK.PLACE_SUCCESS = CN()
 _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
-_C.TASK.PLACE_SUCCESS.SUCC_THRESH = 0.15
+_C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -554,6 +565,10 @@ _C.TASK.COMPOSITE_REWARD = CN()
 _C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
 _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
 _C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
+_C.TASK.DOES_WANT_TERMINATE = CN()
+_C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK

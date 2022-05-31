@@ -1,6 +1,6 @@
 GYM:
     AUTO_NAME: "NavToObj"
-    OBS_KEYS: ["object_to_agent_gps_compass", 'joint']
+    OBS_KEYS: ["robot_head_depth", "object_to_agent_gps_compass", 'joint', 'nav_to_skill']
     CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
@@ -160,7 +160,7 @@ SIMULATOR:
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
+        ALLOW_SLIDING: false
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

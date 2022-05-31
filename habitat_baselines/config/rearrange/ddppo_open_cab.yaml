@@ -25,14 +25,10 @@ EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/open_cab.yaml
 ENV_NAME: "RearrangeRLEnv"
-EVAL:
-  SPLIT: "eval"
-
 RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      include_visual_keys: ["robot_head_depth"]
 
   PPO:
     # ppo params

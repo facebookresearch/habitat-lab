@@ -10,13 +10,10 @@ Manually control the robot to interact with the environment. Run as
 python examples/interative_play.py
 ```
 
-To Run you need PyGame installed.
+To Run you need PyGame installed (to install run `pip install pygame==2.0.1`).
 
 By default this controls with velocity control (which makes controlling the
-robot hard). To use IK control instead: run with
-```
-python examples/interactive_play.py --cfg configs/tasks/rearrangepick_replica_cad_example_ik.yaml
-```
+robot hard). To use IK control instead add the `--add-ik` command line argument.
 
 Controls:
 - For velocity control
@@ -32,8 +29,12 @@ Controls:
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
 
+Change the task with `--cfg configs/tasks/rearrange/close_cab.yaml` (choose any task under the `configs/tasks/rearrange/` folder).
+
 Change the grip type:
 - Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
+
+To record a video: `--save-obs` This will save the video to file under `data/vids/` specified by `--save-obs-fname` (by default `vid.mp4`).
 
 Record and play back trajectories:
 - To record a trajectory add `--save-actions --save-actions-count 200` to
@@ -456,10 +457,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--play-cam-res", type=int, default=512)
     parser.add_argument(
-        "--play-task",
+        "--same-task",
         action="store_true",
         default=False,
-        help="If true, then change the config settings to make it easier to play and visualize the task.",
+        help="If true, then do not add the render camera for better visualization",
     )
     parser.add_argument(
         "--never-end",
@@ -489,7 +490,7 @@ if __name__ == "__main__":
 
     config = habitat.get_config(args.cfg, args.opts)
     config.defrost()
-    if args.play_task:
+    if not args.same_task:
         config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = args.play_cam_res
         config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
         config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")

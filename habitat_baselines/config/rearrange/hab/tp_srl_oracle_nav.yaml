@@ -1,8 +1,6 @@
 VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
 TASK_CONFIG:
-  GYM:
-    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
   TASK:
     REWARD_MEASURE: "composite_reward"
     SUCCESS_MEASURE: "composite_success"
@@ -46,7 +44,9 @@ TASK_CONFIG:
       - PLACE_SUCCESS
       - PLACE_REWARD
       - COMPOSITE_NODE_IDX
+      - DOES_WANT_TERMINATE
       - COMPOSITE_SUCCESS
+      - COMPOSITE_BAD_CALLED_TERMINATE
       - COMPOSITE_REWARD
       - NUM_STEPS
       - DID_VIOLATE_HOLD_CONSTRAINT
@@ -55,6 +55,7 @@ TASK_CONFIG:
       - ART_OBJ_STATE
       - ART_OBJ_SUCCESS
       - ART_OBJ_REWARD
+      - MOVE_OBJECTS_REWARD
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -79,7 +80,7 @@ NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
 EVAL_KEYS_TO_INCLUDE_IN_NAME: ['composite_reward', 'force', 'composite_success']
 EVAL:
-  SPLIT: "eval"
+  SPLIT: "val"
   USE_CKPT_CONFIG: False
   SHOULD_LOAD_CKPT: False
 
@@ -93,73 +94,72 @@ RL:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           ACTION_DIST:
              use_log_std: True
           LOAD_CKPT_FILE: "data/models/pick.pth"
           MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          include_visual_keys: ["robot_head_depth"]
           AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_goal_sensor"]
           ACTION_DIST:
              use_log_std: True
           LOAD_CKPT_FILE: "data/models/place.pth"
           MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
 
         GT_NAV:
           skill_name: "OracleNavPolicy"
-          include_visual_keys: ["robot_head_depth"]
           OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
           GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
           # GT nav
@@ -170,15 +170,18 @@ RL:
           FORWARD_VELOCITY: 1.0
           MAX_SKILL_STEPS: 300
           NAV_ACTION_NAME: "BASE_VELOCITY"
+          FORCE_END_ON_TIMEOUT: False
 
         WAIT_SKILL:
           skill_name: "WaitSkillPolicy"
           MAX_SKILL_STEPS: -1.0
+          FORCE_END_ON_TIMEOUT: False
 
         RESET_ARM_SKILL:
           skill_name: "ResetArmSkill"
-          MAX_SKILL_STEPS: -1.0
+          MAX_SKILL_STEPS: 50
           RESET_JOINT_STATE: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+          FORCE_END_ON_TIMEOUT: False
 
       USE_SKILLS:
         pick: "NN_PICK"

@@ -203,10 +203,10 @@ class RearrangePickTaskV1(RearrangeTask):
         """
         return episode.target_receptacles[sel_idx]
 
-    def reset(self, episode: Episode):
+    def reset(self, episode: Episode, fetch_observations: bool = True):
         sim = self._sim
 
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
 
         self.prev_colls = 0
         cache_lookup_k = sim.ep_info["episode_id"]
@@ -277,4 +277,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self._targ_idx = sel_idx
 
-        return self._get_observations(episode)
+        if fetch_observations:
+            return self._get_observations(episode)
+        return None

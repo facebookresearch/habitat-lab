@@ -43,6 +43,8 @@ class SetArticulatedObjectTask(RearrangeTask):
         return self._sim.get_marker(self._use_marker)
 
     def set_args(self, marker, obj, **kwargs):
+        if marker.startswith("MARKER_"):
+            marker = marker[len("MARKER_") :]
         self._force_use_marker = marker
         # The object in the container we are trying to reach and using as the
         # position of the container.
@@ -119,7 +121,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         )
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
         if self._force_use_marker is not None:
             self._use_marker = self._force_use_marker
 

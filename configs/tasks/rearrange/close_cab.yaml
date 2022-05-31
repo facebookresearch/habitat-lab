@@ -1,6 +1,6 @@
 GYM:
     AUTO_NAME: "CloseCab"
-    OBS_KEYS: ['joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
+    OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
     CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
@@ -129,7 +129,7 @@ TASK:
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: True
-            DELTA_POS_LIMIT: 0.025
+            DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
         - ARM_ACTION
@@ -182,7 +182,7 @@ SIMULATOR:
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
+        ALLOW_SLIDING: False
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

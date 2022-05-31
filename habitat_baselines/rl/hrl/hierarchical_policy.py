@@ -58,7 +58,9 @@ class HierarchicalPolicy(Policy):
             self._skills[i] = skill_policy
             self._name_to_idx[skill_id] = i
 
-        self._call_high_level: torch.Tensor = torch.ones(self._num_envs)
+        self._call_high_level: torch.Tensor = torch.ones(
+            self._num_envs, dtype=torch.bool
+        )
         self._cur_skills: torch.Tensor = torch.zeros(self._num_envs)
 
         high_level_cls = eval(config.high_level_policy.name)
@@ -122,7 +124,7 @@ class HierarchicalPolicy(Policy):
         batched_masks = masks.unsqueeze(1)
 
         batched_bad_should_terminate = torch.zeros(
-            self._num_envs, device=use_device
+            self._num_envs, device=use_device, dtype=torch.bool
         )
 
         # Check if skills should terminate.
@@ -142,13 +144,13 @@ class HierarchicalPolicy(Policy):
             self._call_high_level[batch_idx] = should_terminate
 
         # Always call high-level if the episode is over.
-        self._call_high_level = torch.clamp(
-            self._call_high_level + (~masks).float().view(-1), 0.0, 1.0
-        )
+        self._call_high_level = self._call_high_level | (~masks).view(-1)
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
-        hl_terminate = torch.zeros(self._num_envs, device=use_device)
+        hl_terminate = torch.zeros(
+            self._num_envs, device=use_device, dtype=torch.bool
+        )
         if self._call_high_level.sum() > 0:
             (
                 new_skills,
@@ -178,7 +180,7 @@ class HierarchicalPolicy(Policy):
                     batched_prev_actions[new_skill_batch_idx],
                 )
             self._cur_skills = (
-                (1.0 - self._call_high_level) * self._cur_skills
+                (~self._call_high_level) * self._cur_skills
             ) + (self._call_high_level * new_skills)
 
         # Compute the actions from the current skills
@@ -197,7 +199,7 @@ class HierarchicalPolicy(Policy):
             )
             actions[batch_idx] = action
 
-        should_terminate = batched_bad_should_terminate + hl_terminate
+        should_terminate = batched_bad_should_terminate | hl_terminate
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):

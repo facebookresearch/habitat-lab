@@ -1,7 +1,12 @@
 GYM:
-    CLASS_NAME: "RearrangeRLEnv"
-    AUTO_NAME: "PrepareGroceries"
-    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+    CLASS_NAME: RearrangeRLEnv
+    AUTO_NAME: NavPick
+    OBS_KEYS:
+    - robot_head_depth
+    - obj_start_sensor
+    - obj_start_gps_compass
+    - joint
+    - is_holding
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 4000
 DATASET:
@@ -11,12 +16,11 @@ DATASET:
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
-
-    REWARD_MEASURE: "move_obj_reward"
-    SUCCESS_MEASURE: "composite_success"
+    REWARD_MEASURE: move_obj_reward
+    SUCCESS_MEASURE: composite_success
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
-
+    END_ON_SUCCESS: true
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
@@ -52,43 +56,29 @@ TASK:
         TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: RelativeRestingPositionSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
-    - RELATIVE_RESTING_POS_SENSOR
-    - TARGET_START_POINT_GOAL_SENSOR
-    - MARKER_REL_POS_SENSOR
+    - TARGET_START_GPS_COMPASS_SENSOR
+    - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
-    ROBOT_COLLS:
-        TYPE: RobotCollisions
-    OBJECT_TO_GOAL_DISTANCE:
-        TYPE: ObjectToGoalDistance
-    END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: EndEffectorToObjectDistance
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: EndEffectorToRestDistance
-    COMPOSITE_SUCCESS:
-        TYPE: CompositeSuccess
-    NUM_STEPS:
-        TYPE: NumStepsMeasure
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
-    - END_EFFECTOR_TO_REST_DISTANCE
     - END_EFFECTOR_TO_OBJECT_DISTANCE
+    - DOES_WANT_TERMINATE
     - COMPOSITE_SUCCESS
+    - COMPOSITE_BAD_CALLED_TERMINATE
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
@@ -117,27 +107,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    PLACE_REWARD:
-        TYPE: PlaceReward
-        DIST_REWARD: 20.0
-        SUCC_REWARD: 10.0
-        PLACE_REWARD: 20.0
-        DROP_PEN: 0.0
-        USE_DIFF: true
-        WRONG_DROP_SHOULD_END: false
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        SUCC_THRESH: 0.15
-    TARGET_START_POINT_GOAL_SENSOR:
-        TYPE: TargetOrGoalStartPointGoalSensor
-    MARKER_REL_POS_SENSOR:
-        TYPE: MarkerRelPosSensor
-    DID_VIOLATE_HOLD_CONSTRAINT:
-        TYPE: DidViolateHoldConstraintMeasure
     USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
@@ -146,9 +115,28 @@ TASK:
         SINGLE_REARRANGE_REWARD: 1.0
         DIST_REWARD: 1.0
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
+        FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
+    TARGET_START_GPS_COMPASS_SENSOR:
+        TYPE: TargetStartGpsCompassSensor
+    TARGET_GOAL_GPS_COMPASS_SENSOR:
+        TYPE: TargetGoalGpsCompassSensor
+    NAV_TO_POS_SUCC:
+        SUCCESS_DISTANCE: 0.2
+        TYPE: NavToPosSucc
+    PLACE_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: PlaceSuccess
+    PICK_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: RearrangePickSuccess
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: NavToObjSuccess
+        SUCCESS_ANGLE_DIST: 0.7
+        MUST_LOOK_AT_TARG: true
+        HEURISTIC_STOP: false
+        MUST_CALL_STOP: false
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
@@ -201,7 +189,7 @@ SIMULATOR:
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: true
+        ALLOW_SLIDING: false
         ENABLE_PHYSICS: true
         GPU_DEVICE_ID: 0
         GPU_GPU: false

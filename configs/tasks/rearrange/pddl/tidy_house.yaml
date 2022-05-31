@@ -3,7 +3,7 @@ start:
     state:
         art_states:
             "kitchen_counter_:0000": [0,0,0,0,0,0,0]
-            "fridge_:0000": [0,2.35619]
+            "fridge_:0000": [0,0]
         robo:
             pos: 'rnd'
 goal:
@@ -11,6 +11,7 @@ goal:
     - "at(any_targets|1,TARGET_any_targets|1)"
     - "at(any_targets|2,TARGET_any_targets|2)"
     - "at(any_targets|3,TARGET_any_targets|3)"
+    - "at(any_targets|4,TARGET_any_targets|4)"
     - "not_holding()"
 stage_goals:
   stage_0_5:
@@ -39,6 +40,18 @@ stage_goals:
     - "at(any_targets|1,TARGET_any_targets|1)"
     - "at(any_targets|2,TARGET_any_targets|2)"
     - "holding(any_targets|3)"
+  stage_4:
+    - "at(any_targets|0,TARGET_any_targets|0)"
+    - "at(any_targets|1,TARGET_any_targets|1)"
+    - "at(any_targets|2,TARGET_any_targets|2)"
+    - "at(any_targets|3,TARGET_any_targets|3)"
+    - "not_holding()"
+  stage_4_5:
+    - "at(any_targets|0,TARGET_any_targets|0)"
+    - "at(any_targets|1,TARGET_any_targets|1)"
+    - "at(any_targets|2,TARGET_any_targets|2)"
+    - "at(any_targets|3,TARGET_any_targets|3)"
+    - "at(any_targets|4,TARGET_any_targets|4)"
 
 solution:
     - "nav(any_targets|0)"
@@ -60,3 +73,8 @@ solution:
     - "pick(any_targets|3)"
     - "nav(TARGET_any_targets|3)"
     - "place(any_targets|3,TARGET_any_targets|3)"
+
+    - "nav(any_targets|4)"
+    - "pick(any_targets|4)"
+    - "nav(TARGET_any_targets|4)"
+    - "place(any_targets|4,TARGET_any_targets|4)"

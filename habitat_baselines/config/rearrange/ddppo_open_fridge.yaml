@@ -15,7 +15,7 @@ NUM_ENVIRONMENTS: 32
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e7
+TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 10
 # Force PyTorch to be single threaded as
@@ -25,14 +25,10 @@ EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/open_fridge.yaml
 ENV_NAME: "RearrangeRLEnv"
-EVAL:
-  SPLIT: "eval"
-
 RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      include_visual_keys: ["robot_head_depth"]
 
   PPO:
     # ppo params
