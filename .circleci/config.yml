@@ -246,6 +246,7 @@ jobs:
           name: Run api tests
           no_output_timeout: 120m
           command: |
+              # change to trigger ci
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               python setup.py develop --all
