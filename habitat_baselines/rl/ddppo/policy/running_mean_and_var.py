@@ -13,6 +13,7 @@ from torch import nn as nn
 class RunningMeanAndVar(nn.Module):
     def __init__(self, n_channels: int) -> None:
         super().__init__()
+        assert n_channels > 0
         self.register_buffer("_mean", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_var", torch.zeros(1, n_channels, 1, 1))
         self.register_buffer("_count", torch.zeros(()))

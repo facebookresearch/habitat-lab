@@ -64,9 +64,6 @@ class PointNavResNetPolicy(NetPolicy):
             discrete_actions = True
             self.action_distribution_type = "categorical"
 
-        if fuse_keys is None:
-            fuse_keys = []
-
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,
@@ -237,7 +234,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
-        fuse_keys: List[str],
+        fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
     ):
@@ -255,9 +252,15 @@ class PointNavResNetNet(Net):
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys: List[str] = [
-            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
-        ]
+        self._fuse_keys: List[str] = (
+            [
+                k
+                for k in fuse_keys
+                if len(observation_space.spaces[k].shape) == 1
+            ]
+            if fuse_keys is not None
+            else []
+        )
         if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
                 [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
@@ -355,12 +358,16 @@ class PointNavResNetNet(Net):
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
         else:
-            use_obs_space = spaces.Dict(
-                {
-                    k: observation_space.spaces[k]
-                    for k in fuse_keys
-                    if len(observation_space.spaces[k].shape) == 3
-                }
+            use_obs_space = (
+                spaces.Dict(
+                    {
+                        k: observation_space.spaces[k]
+                        for k in fuse_keys
+                        if len(observation_space.spaces[k].shape) == 3
+                    }
+                )
+                if fuse_keys is not None
+                else observation_space
             )
 
         self.visual_encoder = ResNetEncoder(
