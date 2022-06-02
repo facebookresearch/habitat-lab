@@ -117,6 +117,28 @@ class MoveObjectsReward(RearrangeReward):
 
 
 @registry.register_measure
+class CompositeSparseReward(Measure):
+    cls_uuid: str = "composite_sparse_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeSparseReward.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = self._config.SLACK_REWARD
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._config = config
+
+
+@registry.register_measure
 class CompositeReward(Measure):
     """
     The reward based on where the agent currently is in the hand defined solution list.

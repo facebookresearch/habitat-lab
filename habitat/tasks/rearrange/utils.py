@@ -96,13 +96,15 @@ def rearrange_collision(
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
+    agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    robot_model = sim.robot
+    robot_model = sim.get_robot_data(agent_idx).robot
+    grasp_mgr = sim.get_robot_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
     robot_id = robot_model.get_robot_sim_id()
     added_objs = sim.scene_obj_ids
-    snapped_obj_id = sim.grasp_mgr.snap_idx
+    snapped_obj_id = grasp_mgr.snap_idx
 
     def should_keep(x):
         if ignore_base:
@@ -258,7 +260,7 @@ class CacheHelper:
 
 
 def batch_transform_point(
-    points: np.ndarray, transform_matrix: mn.Matrix4, dtype
+    points: np.ndarray, transform_matrix: mn.Matrix4, dtype=np.float32
 ) -> np.ndarray:
     transformed_points = []
     for point in points:
@@ -355,3 +357,8 @@ class IkHelper:
             self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
         )
         return js[: self._arm_len]
+
+
+class UsesRobotInterface:
+    def __init__(self, *args, **kwargs):
+        self.robot_id = None

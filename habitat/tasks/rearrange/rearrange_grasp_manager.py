@@ -25,11 +25,7 @@ class RearrangeGraspManager:
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(
-        self,
-        sim,
-        config: Config,
-    ) -> None:
+    def __init__(self, sim, config: Config, robot) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "SIMULATOR" subconfig node. Defines grasping parameters.
@@ -40,6 +36,7 @@ class RearrangeGraspManager:
         self._snap_constraints: List[int] = []
         self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
+        self._managed_robot = robot
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
@@ -63,7 +60,7 @@ class RearrangeGraspManager:
         Returns true if the object is too far away from the gripper, meaning
         the agent violated the hold constraint.
         """
-        ee_pos = self._sim.robot.ee_transform.translation
+        ee_pos = self._managed_robot.ee_transform.translation
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
             >= self._config.HOLD_THRESH
@@ -93,7 +90,7 @@ class RearrangeGraspManager:
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
         if self._leave_info is not None:
-            ee_pos = self._sim.robot.ee_transform.translation
+            ee_pos = self._managed_robot.ee_transform.translation
             rigid_obj = self._leave_info[0]
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
@@ -130,7 +127,7 @@ class RearrangeGraspManager:
 
         self._snapped_obj_id = None
         self._snapped_marker_id = None
-        self._sim.robot.close_gripper()
+        self._managed_robot.close_gripper()
 
     @property
     def snap_idx(self) -> Optional[int]:
@@ -184,7 +181,7 @@ class RearrangeGraspManager:
             ),
         ]
         self._snapped_marker_id = marker_name
-        self._sim.robot.open_gripper()
+        self._managed_robot.open_gripper()
 
     def create_hold_constraint(
         self,
@@ -203,8 +200,8 @@ class RearrangeGraspManager:
         :return: The id of the newly created constraint or -1 if failed.
         """
         c = RigidConstraintSettings()
-        c.object_id_a = self._sim.robot.get_robot_sim_id()
-        c.link_id_a = self._sim.robot.ee_link_id
+        c.object_id_a = self._managed_robot.get_robot_sim_id()
+        c.link_id_a = self._managed_robot.ee_link_id
         c.object_id_b = obj_id_b
         if link_id_b is not None:
             c.link_id_b = link_id_b
@@ -217,7 +214,7 @@ class RearrangeGraspManager:
         """
         Kinematically update held object to be within robot's grasp.
         """
-        self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+        self.snap_rigid_obj.transformation = self._managed_robot.ee_transform
 
     def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
@@ -265,7 +262,7 @@ class RearrangeGraspManager:
             ),
         ]
 
-        self._sim.robot.open_gripper()
+        self._managed_robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

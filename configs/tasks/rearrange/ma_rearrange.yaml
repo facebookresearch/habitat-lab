@@ -1,0 +1,202 @@
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 500
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    SCENES_DIR: data/replica_cad/
+TASK:
+    TYPE: RearrangeCompositeTask-v0
+
+    REWARD_MEASURE: "composite_sparse_reward"
+    SUCCESS_MEASURE: "composite_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
+
+    MAX_COLLISIONS: -1.0
+    COUNT_OBJ_COLLISIONS: true
+    COUNT_ROBOT_OBJ_COLLS: false
+    USING_SUBTASKS: False
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 0.05
+    EASY_INIT: false
+
+    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/ma_pddl/
+    TASK_SPEC: nav_pick
+    PDDL_DOMAIN_DEF: configs/tasks/rearrange/ma_pddl/replica_cad_domain.yaml
+    OBJ_SUCC_THRESH: 0.3
+    ART_SUCC_THRESH: 0.15
+    SENSORS: 
+      - TARGET_START_SENSOR
+      - GOAL_SENSOR
+      - JOINT_SENSOR
+      - IS_HOLDING_SENSOR
+      - END_EFFECTOR_SENSOR
+      - RELATIVE_RESTING_POS_SENSOR
+      - TARGET_START_POINT_GOAL_SENSOR
+      - NAV_TO_SKILL_SENSOR
+      - MARKER_REL_POS_SENSOR
+      - ART_JOINT_SENSOR
+      - TARGET_START_GPS_COMPASS_SENSOR
+      - TARGET_GOAL_GPS_COMPASS_SENSOR
+    FORCE_TERMINATE:
+        TYPE: ForceTerminate
+        MAX_ACCUM_FORCE: -1.0
+    COMPOSITE_SPARSE_REWARD:
+        TYPE: CompositeSparseReward
+        SLACK_REWARD: -0.1
+    ROBOT_FORCE:
+        TYPE: RobotForce
+        MIN_FORCE: 20.0
+    MOVE_OBJECTS_REWARD:
+        TYPE: MoveObjectsReward
+        PICK_REWARD: 1.0
+        SUCCESS_DIST: 0.15
+        SINGLE_REARRANGE_REWARD: 1.0
+        DIST_REWARD: 1.0
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.0
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+
+    # Overrides for measurements that are not used in monolithic RL but are
+    # used in TP-SRL
+    REARRANGE_NAV_TO_OBJ_SUCCESS:
+        TYPE: NavToObjSuccess
+        SUCCESS_ANGLE_DIST: 0.7
+        MUST_LOOK_AT_TARG: True
+        HEURISTIC_STOP: False
+        MUST_CALL_STOP: False
+    NAV_TO_POS_SUCC:
+        TYPE: NavToPosSucc
+        SUCCESS_DISTANCE: 0.2
+    PLACE_SUCCESS:
+        TYPE: PlaceSuccess
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+    PICK_SUCCESS:
+        TYPE: RearrangePickSuccess
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+
+    MEASUREMENTS:
+    - OBJECT_TO_GOAL_DISTANCE
+    - NUM_STEPS
+
+    ACTIONS:
+        AGENT_0_ARM_ACTION:
+            AGENT: 0
+            TYPE: ArmAction
+            ARM_CONTROLLER: ArmRelPosAction
+            GRIP_CONTROLLER: MagicGraspAction
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: false
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        AGENT_0_BASE_VELOCITY:
+            AGENT: 0
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+        AGENT_1_ARM_ACTION:
+            AGENT: 1
+            TYPE: ArmAction
+            ARM_CONTROLLER: ArmRelPosAction
+            GRIP_CONTROLLER: MagicGraspAction
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: false
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        AGENT_1_BASE_VELOCITY:
+            AGENT: 1
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+    POSSIBLE_ACTIONS:
+    - AGENT_0_ARM_ACTION
+    - AGENT_0_BASE_VELOCITY
+    - AGENT_1_ARM_ACTION
+    - AGENT_1_BASE_VELOCITY
+    - REARRANGE_STOP
+SIMULATOR:
+    ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.09
+    AC_FREQ_RATIO: 4
+    DEBUG_RENDER: false
+    DEBUG_RENDER_GOAL: true
+
+    AGENTS:
+    - AGENT_0
+    - AGENT_1
+    AGENT_0:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: False
+        RADIUS: 0.3
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: "FetchRobot"
+        JOINT_START_NOISE: 0.0
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
+    AGENT_1:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: False
+        RADIUS: 0.3
+        # Only sensors for AGENT_0 works.
+        # SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: "FetchRobot"
+        JOINT_START_NOISE: 0.0
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: true
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: true
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+
+    CTRL_FREQ: 120.0
+    DEFAULT_AGENT_ID: 0
+    FORWARD_STEP_SIZE: 0.25
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
+
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: false
+        ENABLE_PHYSICS: true
+        GPU_DEVICE_ID: 0
+        GPU_GPU: false
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    TYPE: RearrangeSim-v0

@@ -15,13 +15,14 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     RearrangeObjectTypes,
 )
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 
 
 @registry.register_sensor
-class TargetOrGoalStartPointGoalSensor(Sensor):
+class TargetOrGoalStartPointGoalSensor(Sensor, UsesRobotInterface):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -49,7 +50,9 @@ class TargetOrGoalStartPointGoalSensor(Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.robot.base_transformation
+        robot_T = self._sim.get_robot_data(
+            self.robot_id
+        ).robot.base_transformation
 
         if task.nav_to_obj_type == RearrangeObjectTypes.GOAL_POSITION:
             to_pos = self._sim.get_targets()[1][self._task.targ_idx]

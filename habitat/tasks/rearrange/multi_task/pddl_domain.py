@@ -179,6 +179,9 @@ class PddlDomain:
         for k in self._sim.get_all_markers():
             name_to_id["MARKER_" + k] = k
 
+        for robot_id in range(self._sim.num_robots):
+            name_to_id[f"ROBOT_{robot_id}"] = robot_id
+
         return name_to_id
 
     def get_matching_skills(

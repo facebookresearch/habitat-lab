@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from typing import (
@@ -56,6 +57,7 @@ class RearrangeObjectTypes(Enum):
     ARTICULATED_LINK = "articulated_link"
     RIGID_OBJECT = "rigid"
     GOAL_POSITION = "goal"
+    ROBOT = "robot"
 
 
 def search_for_id(
@@ -71,7 +73,6 @@ def search_for_id(
             k = "ART_" + k
         elif k not in name_to_id and "MARKER_" + k in name_to_id:
             k = "MARKER_" + k
-
         if k not in name_to_id:
             raise ValueError(f"Cannot find {k} in {name_to_id}")
         ret_id = name_to_id[k]
@@ -82,6 +83,8 @@ def search_for_id(
         ret_type = RearrangeObjectTypes.ARTICULATED_LINK
     elif k.startswith("ART_"):
         ret_type = RearrangeObjectTypes.ARTICULATED_OBJECT
+    elif k.startswith("ROBOT_"):
+        ret_type = RearrangeObjectTypes.ROBOT
     else:
         ret_type = RearrangeObjectTypes.RIGID_OBJECT
     return ret_id, ret_type
@@ -520,14 +523,15 @@ class PddlAction:
         set_state.set_state(name_to_id, sim)
 
 
+@dataclass
 class PddlRobotState:
     """
     Specifies the configuration of the robot. Only used as a data structure. Not used to set the simulator state.
     """
 
-    def __init__(self, load_config):
-        self.holding = load_config.get("holding", None)
-        self.pos = load_config.get("pos", None)
+    holding: Optional[bool] = None
+    pos: Optional[Any] = None
+    robot_id: Optional[int] = None
 
     def bind(self, arg_k, arg_v):
         for k, v in zip(arg_k, arg_v):
@@ -535,11 +539,16 @@ class PddlRobotState:
                 self.holding = self.holding.replace(k, v)
             if self.pos is not None:
                 self.pos = self.pos.replace(k, v)
+            if self.robot_id is not None:
+                self.robot_id = self.robot_id.replace(k, v)
 
     def is_satisfied(self, name_to_id: Dict[str, Any], sim) -> bool:
         """
         Returns if the desired robot state is currently true in the simulator state.
         """
+        robot_id, _ = search_for_id(self.robot_id, name_to_id)
+
+        grasp_mgr = sim.get_robot_data(robot_id).grasp_mgr
         if self.holding != "NONE" and self.holding is not None:
             # Robot must be holding desired object.
             match_name, match_type = search_for_id(self.holding, name_to_id)
@@ -557,12 +566,29 @@ class PddlRobotState:
                 )
 
             abs_obj_id = sim.scene_obj_ids[obj_idx]
-            if sim.grasp_mgr.snap_idx != abs_obj_id:
+            if grasp_mgr.snap_idx != abs_obj_id:
                 return False
-        elif self.holding == "NONE" and sim.grasp_mgr.snap_idx != None:
+        elif self.holding == "NONE" and grasp_mgr.snap_idx != None:
             # For predicate to be true, robot must be holding nothing
             return False
         return True
+
+    def set_state(self, name_to_id: Dict[str, Any], sim: RearrangeSim) -> None:
+        grasp_mgr = sim.get_robot_data(self.robot_id).grasp_mgr
+        # Set the snapped object information
+        if self.holding == "NONE" and grasp_mgr.is_grasped:
+            grasp_mgr.desnap(True)
+        elif self.holding is not None:
+            # Swap objects to the desired object.
+            rel_obj_idx = name_to_id[self.holding]
+            grasp_mgr.desnap(True)
+            sim.internal_step(-1)
+            grasp_mgr.snap_to_obj(sim.scene_obj_ids[rel_obj_idx])
+            sim.internal_step(-1)
+
+        # Set the robot starting position
+        if self.pos == "rnd":
+            sim.set_robot_base_to_random_point(agent_idx=self.robot_id)
 
 
 class SetStateArgSpec:
@@ -613,7 +639,10 @@ class PddlSetState:
             load_config.get("check_for_art_link_match", {})
         )
 
-        self.robo_state = PddlRobotState(load_config.get("robo", {}))
+        self.robot_states = [
+            PddlRobotState(**robot_config)
+            for robot_config in load_config.get("robot_states", [])
+        ]
         self.load_config = load_config
 
         self.arg_spec: Optional[SetStateArgSpec] = None
@@ -645,7 +674,8 @@ class PddlSetState:
                     "catch_ids"
                 ].replace(k, v)
 
-        self.robo_state.bind(arg_k, arg_v)
+        for robot_state in self.robot_states:
+            robot_state.bind(arg_k, arg_v)
         self._set_args = arg_v
 
     def _is_id_rigid_object(self, id_str: str) -> bool:
@@ -763,8 +793,9 @@ class PddlSetState:
             if not did_sat:
                 return False
 
-        if not self.robo_state.is_satisfied(name_to_id, sim):
-            return False
+        for robot_state in self.robot_states:
+            if not robot_state.is_satisfied(name_to_id, sim):
+                return False
 
         return True
 
@@ -814,21 +845,8 @@ class PddlSetState:
                 )
 
             sim.internal_step(-1)
-
-        # Set the snapped object information
-        if self.robo_state.holding == "NONE" and sim.grasp_mgr.is_grasped:
-            sim.grasp_mgr.desnap(True)
-        elif self.robo_state.holding is not None:
-            # Swap objects to the desired object.
-            rel_obj_idx = name_to_id[self.robo_state.holding]
-            sim.grasp_mgr.desnap(True)
-            sim.internal_step(-1)
-            sim.grasp_mgr.snap_to_obj(sim.scene_obj_ids[rel_obj_idx])
-            sim.internal_step(-1)
-
-        # Set the robot starting position
-        if self.robo_state.pos == "rnd":
-            sim.set_robot_base_to_random_point()
+        for robot_state in self.robot_states:
+            robot_state.set_state(name_to_id, sim)
 
 
 class ArtSampler:

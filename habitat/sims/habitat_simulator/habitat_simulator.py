@@ -316,6 +316,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "sensors",
                 "start_position",
                 "start_rotation",
+                "robot_urdf",
+                "robot_type",
+                "joint_start_noise",
+                "ik_arm_urdf",
             },
         )
 

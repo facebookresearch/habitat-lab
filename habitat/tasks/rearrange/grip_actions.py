@@ -18,7 +18,23 @@ from habitat.tasks.rearrange.utils import (
 )
 
 
-class GripSimulatorTaskAction(SimulatorTaskAction):
+class RobotAction(SimulatorTaskAction):
+    @property
+    def cur_robot(self):
+        return self._sim.robots_mgr[self._config.AGENT].robot
+
+    @property
+    def cur_grasp_mgr(self):
+        return self._sim.robots_mgr[self._config.AGENT].grasp_mgr
+
+    @property
+    def _action_arg_prefix(self) -> str:
+        if self._config.AGENT is not None:
+            return f"AGENT_{self._config.AGENT}_"
+        return ""
+
+
+class GripSimulatorTaskAction(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
@@ -36,7 +52,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self._sim.robot.ee_transform.translation
+        ee_pos = self.cur_robot.ee_transform.translation
         # Get objects we are close to.
         if len(scene_obj_pos) != 0:
             # Get the target the EE is closest to.
@@ -49,7 +65,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             )
 
             if to_target < self._config.GRASP_THRESH_DIST:
-                self._sim.grasp_mgr.snap_to_obj(
+                self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx]
                 )
                 return
@@ -67,19 +83,19 @@ class MagicGraspAction(GripSimulatorTaskAction):
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
             if to_target < self._config.GRASP_THRESH_DIST:
-                self._sim.robot.open_gripper()
-                self._sim.grasp_mgr.snap_to_marker(names[closest_idx])
+                self.cur_robot.open_gripper()
+                self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
-        self._sim.grasp_mgr.desnap()
+        self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
 
-        if grip_action >= 0 and not self._sim.grasp_mgr.is_grasped:
+        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
-        elif grip_action < 0 and self._sim.grasp_mgr.is_grasped:
+        elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
 
 

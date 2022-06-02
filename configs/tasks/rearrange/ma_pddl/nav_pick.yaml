@@ -1,0 +1,16 @@
+stage_goals: {}
+start:
+    precondition: []
+    state:
+        robot_states:
+          - pos: 'rnd'
+            robot_id: 0
+          - pos: 'rnd'
+            robot_id: 1
+
+goal:
+    - "holding(hab2|0,ROBOT_0)"
+
+solution:
+    - "nav(hab2|0,ROBOT_0)"
+    - "pick(hab2|0,ROBOT_0)"
