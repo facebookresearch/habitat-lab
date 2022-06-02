@@ -1,12 +1,17 @@
+objects:
+  - hab2|0
+  - ROBOT_0
+  - ROBOT_1
+
 stage_goals: {}
 start:
     precondition: []
     state:
         robot_states:
           - pos: 'rnd'
-            robot_id: 0
+            robot_id: "ROBOT_0"
           - pos: 'rnd'
-            robot_id: 1
+            robot_id: "ROBOT_1"
 
 goal:
     - "holding(hab2|0,ROBOT_0)"

@@ -105,6 +105,9 @@ TASK:
             ALLOW_BACK: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
+        AGENT_0_PDDL_APPLY_ACTION:
+            AGENT: 0
+            TYPE: PddlApplyAction
         AGENT_1_ARM_ACTION:
             AGENT: 1
             TYPE: ArmAction
@@ -125,11 +128,17 @@ TASK:
             ALLOW_BACK: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
+        AGENT_1_PDDL_APPLY_ACTION:
+            AGENT: 1
+            TYPE: PddlApplyAction
+
     POSSIBLE_ACTIONS:
     - AGENT_0_ARM_ACTION
     - AGENT_0_BASE_VELOCITY
+    - AGENT_0_PDDL_APPLY_ACTION
     - AGENT_1_ARM_ACTION
     - AGENT_1_BASE_VELOCITY
+    - AGENT_1_PDDL_APPLY_ACTION
     - REARRANGE_STOP
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0

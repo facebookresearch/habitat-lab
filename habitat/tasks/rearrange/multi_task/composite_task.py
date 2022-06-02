@@ -53,7 +53,12 @@ class CompositeTask(RearrangeTask):
         self._cur_state = None
 
         # None until loaded.
-        self.domain: Optional[PddlDomain] = None
+        self.domain: PddlDomain = PddlDomain(
+            self._config.PDDL_DOMAIN_DEF,
+            self._dataset,
+            self._config,
+            self._sim,
+        )
         self._stage_goals: Optional[Dict[str, List[Predicate]]] = {}
         self._goal_state: Optional[List[Predicate]] = None
         self._solution: Optional[List[PddlAction]] = None
@@ -133,15 +138,15 @@ class CompositeTask(RearrangeTask):
 
     def reset(self, episode: Episode):
         super().reset(episode, fetch_observations=False)
-        if self.domain is None:
-            self.domain = PddlDomain(
-                self._config.PDDL_DOMAIN_DEF,
-                self._dataset,
-                self._config,
-                self._sim,
-            )
-        else:
-            self.domain.reset()
+        # if self.domain is None:
+        #     self.domain = PddlDomain(
+        #         self._config.PDDL_DOMAIN_DEF,
+        #         self._dataset,
+        #         self._config,
+        #         self._sim,
+        #     )
+        # else:
+        self.domain.reset()
 
         self._solution = self.load_solution(self.task_def["solution"])
         self._goal_state = self._parse_precond_list(self.task_def["goal"])

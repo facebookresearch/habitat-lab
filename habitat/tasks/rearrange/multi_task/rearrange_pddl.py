@@ -74,7 +74,7 @@ def search_for_id(
         elif k not in name_to_id and "MARKER_" + k in name_to_id:
             k = "MARKER_" + k
         if k not in name_to_id:
-            raise ValueError(f"Cannot find {k} in {name_to_id}")
+            raise ValueError(f"Cannot find `{k}` in {name_to_id}")
         ret_id = name_to_id[k]
 
     if k.startswith("TARGET_"):
@@ -228,7 +228,7 @@ class PddlAction:
             effect_arg = effect_arg.replace(param_name, "{" + str(i) + "}")
 
         effect_arg = effect_arg.format(*args)
-        effect_arg = effect_arg.split(",")
+        effect_arg = [x.strip() for x in effect_arg.split(",")]
         if effect_arg[0] == "":
             effect_arg = []
         return effect_arg
@@ -574,7 +574,8 @@ class PddlRobotState:
         return True
 
     def set_state(self, name_to_id: Dict[str, Any], sim: RearrangeSim) -> None:
-        grasp_mgr = sim.get_robot_data(self.robot_id).grasp_mgr
+        robot_id, _ = search_for_id(self.robot_id, name_to_id)
+        grasp_mgr = sim.get_robot_data(robot_id).grasp_mgr
         # Set the snapped object information
         if self.holding == "NONE" and grasp_mgr.is_grasped:
             grasp_mgr.desnap(True)
@@ -588,7 +589,7 @@ class PddlRobotState:
 
         # Set the robot starting position
         if self.pos == "rnd":
-            sim.set_robot_base_to_random_point(agent_idx=self.robot_id)
+            sim.set_robot_base_to_random_point(agent_idx=robot_id)
 
 
 class SetStateArgSpec:

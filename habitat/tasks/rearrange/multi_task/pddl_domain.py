@@ -57,7 +57,7 @@ class PddlDomain:
 
         self.dataset = dataset
         self.actions = {}
-        self.reset()
+        # self.reset()
 
     @property
     def action_names(self):
