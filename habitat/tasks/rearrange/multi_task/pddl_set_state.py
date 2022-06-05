@@ -4,40 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from __future__ import annotations
-
-import copy
-from collections import defaultdict
-from dataclasses import dataclass, field
-from enum import Enum
-from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
 
-from habitat import Config
-from habitat.core.dataset import Episode
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    ExprType,
     PddlEntity,
     PddlSimInfo,
 )
-from habitat.tasks.rearrange.multi_task.task_creator_utils import (
-    create_task_object,
-)
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
 # Hardcoded pddl types needed for setting simulator states.
@@ -49,6 +25,26 @@ CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
 GOAL_TYPE = "goal_type"
 RIGID_OBJ_TYPE = "rigid_obj_type"
+
+
+class ArtSampler:
+    def __init__(self, value, cmp, thresh=0.05):
+        self.value = value
+        self.cmp = cmp
+        self._thresh = thresh
+
+    def is_satisfied(self, cur_value: float) -> bool:
+        if self.cmp == "greater":
+            return cur_value > self.value
+        elif self.cmp == "less":
+            return cur_value < self.value
+        elif self.cmp == "close":
+            return abs(cur_value - self.value) < self._thresh
+        else:
+            raise ValueError(f"Unrecognized cmp {self.cmp}")
+
+    def sample(self) -> float:
+        return self.value
 
 
 @dataclass
@@ -128,7 +124,7 @@ class PddlSetState:
         self._obj_states = obj_states
         self._robot_states = robot_states
 
-    def clone(self) -> PddlSetState:
+    def clone(self) -> "PddlSetState":
         return PddlSetState(
             self._art_states,
             self.obj_states,
@@ -171,11 +167,9 @@ class PddlSetState:
             use_receps = sim_info.sim.ep_info["goal_receptacles"]
         elif sim_info.check_type_matches(entity, RIGID_OBJ_TYPE):
             use_receps = sim_info.sim.ep_info["target_receptacles"]
-            obj_name = list(sim_info.sim.get_targets()[0]).index(int(obj_name))
         else:
             raise ValueError()
-
-        obj_idx = int(obj_name)
+        obj_idx = sim_info.search_for_entity(entity)
 
         if not sim_info.check_type_matches(target, ART_OBJ_TYPE):
             raise ValueError()
@@ -183,7 +177,7 @@ class PddlSetState:
 
         if obj_idx >= len(use_receps):
             rearrange_logger.debug(
-                f"Could not find object {obj_name} in {use_receps}"
+                f"Could not find object {entity} in {use_receps}"
             )
             return False
 
@@ -243,12 +237,10 @@ class PddlSetState:
             prev_art_pos = marker.get_targ_js()
             if not set_art.is_satisfied(prev_art_pos):
                 return False
-
-        for robot_entity, robot_state in self._robot_states.items():
-            if not robot_state.is_true(sim_info, robot_entity):
-                return False
-
-        return True
+        return all(
+            robot_state.is_true(sim_info, robot_entity)
+            for robot_entity, robot_state in self._robot_states.items()
+        )
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
         """
@@ -275,23 +267,3 @@ class PddlSetState:
             sim.internal_step(-1)
         for robot_entity, robot_state in self._robot_states.items():
             robot_state.set_state(sim_info, robot_entity)
-
-
-class ArtSampler:
-    def __init__(self, value, cmp, thresh=0.05):
-        self.value = value
-        self.cmp = cmp
-        self._thresh = thresh
-
-    def is_satisfied(self, cur_value: float) -> bool:
-        if self.cmp == "greater":
-            return cur_value > self.value
-        elif self.cmp == "less":
-            return cur_value < self.value
-        elif self.cmp == "close":
-            return abs(cur_value - self.value) < self._thresh
-        else:
-            raise ValueError(f"Unrecognized cmp {self.cmp}")
-
-    def sample(self) -> float:
-        return self.value

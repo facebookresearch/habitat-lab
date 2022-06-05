@@ -4,12 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import os.path as osp
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
-import yaml
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -17,12 +15,6 @@ from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlDomain,
     PddlProblem,
-)
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    PddlAction,
-    PddlSetState,
-    Predicate,
-    parse_func,
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger

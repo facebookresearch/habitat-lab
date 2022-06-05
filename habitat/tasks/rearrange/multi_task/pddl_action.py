@@ -4,30 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from __future__ import annotations
-
-import copy
-from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import Enum
-from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
-
-import magnum as mn
-import numpy as np
+from typing import Any, Dict, List, Optional
 
 from habitat import Config
-from habitat.core.dataset import Episode
 from habitat.tasks.rearrange.multi_task.logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -39,7 +19,6 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 from habitat.tasks.rearrange.multi_task.task_creator_utils import (
     create_task_object,
 )
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
@@ -108,7 +87,7 @@ class PddlAction:
         # Substitute into the post and pre conditions
         self._param_values = [p.sub_in(sub_dict) for p in self._param_values]
 
-    def clone(self) -> PddlAction:
+    def clone(self) -> "PddlAction":
         return PddlAction(
             self._name,
             [p.clone() for p in self._params],
@@ -130,8 +109,7 @@ class PddlAction:
         return self._param_values
 
     def get_task_kwargs(self, sim_info: PddlSimInfo) -> Dict[str, Any]:
-        task_kwargs = {}
-        task_kwargs["orig_applied_args"] = {}
+        task_kwargs = {"orig_applied_args": {}}
         for param, param_value in zip(self._params, self.param_values):
             task_kwargs[param.name] = sim_info.search_for_entity(param_value)
             task_kwargs["orig_applied_args"][param.name] = param_value.name

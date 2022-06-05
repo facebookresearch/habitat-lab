@@ -28,7 +28,7 @@ TASK:
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/ma_pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-    SENSORS: 
+    SENSORS:
       - TARGET_START_SENSOR
       - GOAL_SENSOR
       - JOINT_SENSOR

@@ -19,6 +19,8 @@ from habitat.tasks.rearrange.utils import (
 
 
 class RobotAction(SimulatorTaskAction):
+    _sim: RearrangeSim
+
     @property
     def cur_robot(self):
         return self._sim.robots_mgr[self._config.AGENT].robot

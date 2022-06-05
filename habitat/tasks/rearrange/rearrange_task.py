@@ -6,7 +6,6 @@
 
 import copy
 from collections import OrderedDict
-from copy import deepcopy
 from typing import Any, Dict, List, Union
 
 import gym.spaces as spaces

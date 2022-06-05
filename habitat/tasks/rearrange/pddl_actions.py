@@ -1,12 +1,10 @@
 import numpy as np
 from gym import spaces
 
-from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.grip_actions import RobotAction
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
-from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
+from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_task_action
@@ -17,8 +15,6 @@ class PddlApplyAction(RobotAction):
 
     @property
     def action_space(self):
-        n_objects = len(self._task.task_def["objects"])
-
         action_n_args = sum(
             [
                 len(action["parameters"])

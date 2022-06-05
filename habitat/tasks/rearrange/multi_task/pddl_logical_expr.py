@@ -4,7 +4,6 @@ from typing import List, Union
 
 from habitat.tasks.rearrange.multi_task.predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    ExprType,
     PddlEntity,
     PddlSimInfo,
 )

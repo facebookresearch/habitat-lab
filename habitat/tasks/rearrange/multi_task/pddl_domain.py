@@ -4,10 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import itertools
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import yaml
 
@@ -58,7 +56,7 @@ class PddlDomain:
         in_parent = []
         for parent_type, sub_types in domain_def["types"]:
             if parent_type not in self.expr_types:
-                self.expr_types[parent_type] = ExprType(sub_type, None)
+                self.expr_types[parent_type] = ExprType(parent_type, None)
             in_parent.append(parent_type)
             for sub_type in sub_types:
                 self.expr_types[sub_type] = ExprType(
@@ -121,7 +119,7 @@ class PddlDomain:
                 self.parse_predicate(p, name_to_param)
                 for p in action_d["postcondition"]
             ]
-            task_info_d = action["task_info"]
+            task_info_d = action_d["task_info"]
             add_task_args = {
                 k: self._constants[v]
                 for k, v in task_info_d["add_task_args"].items()

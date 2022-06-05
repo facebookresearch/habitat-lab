@@ -119,8 +119,8 @@ class RobotManager:
             ik_arm_urdf = robot_data.cfg.IK_ARM_URDF
             if ik_arm_urdf is not None and self._is_pb_installed:
                 robot_data._ik_helper = IkHelper(
-                    self.habitat_config.IK_ARM_URDF,
-                    np.array(self.robot.params.arm_init_params),
+                    robot_data.cfg.IK_ARM_URDF,
+                    robot_data.start_js,
                 )
 
     def update_robots(self):

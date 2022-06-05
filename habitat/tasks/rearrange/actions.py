@@ -336,3 +336,63 @@ class BaseVelAction(RobotAction):
             return self._sim.step(HabitatSimActions.BASE_VELOCITY)
         else:
             return {}
+
+
+@registry.register_task_action
+class ArmEEAction(RobotAction):
+    """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
+
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+
+    @property
+    def _ik_helper(self):
+        return self._sim.robots_mgr[self._config.AGENT].ik_helper
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        cur_ee = self._ik_helper.calc_fk(
+            np.array(self._sim.robot.arm_joint_pos)
+        )
+
+        self.ee_target = cur_ee
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+
+    def apply_ee_constraints(self):
+        self.ee_target = np.clip(
+            self.ee_target,
+            self._sim.robot.params.ee_constraint[:, 0],
+            self._sim.robot.params.ee_constraint[:, 1],
+        )
+
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+        self.ee_target += np.array(ee_pos)
+
+        self.apply_ee_constraints()
+
+        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_vel = np.zeros(joint_pos.shape)
+
+        self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+        des_joint_pos = list(des_joint_pos)
+        self._sim.robot.arm_motor_pos = des_joint_pos
+
+    def step(self, ee_pos, **kwargs):
+        ee_pos = np.clip(ee_pos, -1, 1)
+        ee_pos *= self._config.EE_CTRL_LIM
+        self.set_desired_ee_pos(ee_pos)
+
+        if self._config.get("RENDER_EE_TARGET", False):
+            global_pos = self._sim.robot.base_transformation.transform_point(
+                self.ee_target
+            )
+            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
+                global_pos, self._sim.viz_ids["ee_target"]
+            )

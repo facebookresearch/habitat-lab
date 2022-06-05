@@ -8,7 +8,6 @@ import os.path as osp
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from itertools import groupby
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -23,10 +22,6 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlAction,
     PddlEntity,
-    search_for_id,
-)
-from habitat.tasks.rearrange.multi_task.task_creator_utils import (
-    create_task_object,
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
@@ -110,8 +105,6 @@ class DynNavRLEnv(RearrangeTask):
         """
         :returns: Mapping the action name to the grounded instances of the action that are possible in the current state.
         """
-        cur_preds = self.pddl_problem.get_true_predicates()
-
         allowed_actions = None
         if len(self._config.FILTER_NAV_TO_TASKS) != 0:
             allowed_actions = self._config.FILTER_NAV_TO_TASKS
@@ -182,8 +175,6 @@ class DynNavRLEnv(RearrangeTask):
         allowed_tasks = self._get_allowed_tasks()
 
         nav_to_task_name = random.choice(list(allowed_tasks.keys()))
-        task = random.choice(allowed_tasks[nav_to_task_name])
-
         target_pos, target_angle, nav_to_entity_name = self._get_nav_targ(
             nav_to_task_name,
             {
@@ -209,7 +200,6 @@ class DynNavRLEnv(RearrangeTask):
         rearrange_logger.debug(
             f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
         )
-        name_to_id = self.pddl_problem.get_name_to_id_mapping()
 
         if self.force_recep_to_name is not None:
             use_entity = self.pddl_problem.get_entity(self.force_recep_to_name)
@@ -225,7 +215,7 @@ class DynNavRLEnv(RearrangeTask):
 
         allowed_tasks = self._get_allowed_tasks(must_include_entities)
         if len(allowed_tasks) == 0:
-            raise ValueError(f"Got no allowed tasks.")
+            raise ValueError("Got no allowed tasks.")
 
         nav_to_task = allowed_tasks[0]
 

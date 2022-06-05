@@ -4,37 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Union
 
-import copy
-from collections import defaultdict
-from dataclasses import dataclass, field
-from enum import Enum
-from functools import partial
-from typing import (
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
-
-import magnum as mn
-import numpy as np
-
-from habitat import Config
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.multi_task.task_creator_utils import (
-    create_task_object,
-)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -52,11 +29,11 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
 
 
 class ExprType:
-    def __init__(self, name: str, parent: ExprType):
+    def __init__(self, name: str, parent: "ExprType"):
         self.name = name
         self.parent = parent
 
-    def is_match(self, other_type: ExprType) -> bool:
+    def is_match(self, other_type: "ExprType") -> bool:
         # Check if this or any of the parents match
         all_types = [self.name]
         parent = self.parent
@@ -86,10 +63,10 @@ def do_entity_lists_match(
     if list1 is not None:
         return False
     # Check types are compatible
-    for arg, set_arg in zip(list1, list2):
-        if arg.expr_type != set_arg.expr_type:
-            return False
-    return True
+    return all(
+        arg.expr_type == set_arg.expr_type
+        for arg, set_arg in zip(list1, list2)
+    )
 
 
 def ensure_entity_lists_match(

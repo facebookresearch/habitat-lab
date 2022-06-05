@@ -93,11 +93,11 @@ def get_input_vel_ctlr(
         arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
             "arm_action"
         ]
-        arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
+        # arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
         base_action = None
     else:
         arm_action_space = np.zeros(7)
-        arm_ctrlr = None
+        # arm_ctrlr = None
         base_action = [0, 0]
 
     if arm_action is None:
