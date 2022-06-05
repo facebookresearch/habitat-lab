@@ -101,11 +101,6 @@ _C.TASK.PDDL_DOMAIN_DEF = (
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
-_C.TASK.SINGLE_EVAL_NODE = -1
-_C.TASK.LIMIT_TASK_NODE = -1  # delete
-_C.TASK.LIMIT_TASK_LEN_SCALING = 0.0  # delete
-_C.TASK.DEBUG_SKIP_TO_NODE = -1
-_C.TASK.SKIP_NODES = ["move_obj"]
 _C.TASK.FILTER_NAV_TO_TASKS = []
 # -----------------------------------------------------------------------------
 # # ACTIONS
@@ -559,6 +554,8 @@ _C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 _C.TASK.COMPOSITE_NODE_IDX = CN()
 _C.TASK.COMPOSITE_NODE_IDX.TYPE = "CompositeNodeIdx"
+_C.TASK.COMPOSITE_STAGE_GOALS = CN()
+_C.TASK.COMPOSITE_STAGE_GOALS.TYPE = "CompositeStageGoals"
 _C.TASK.COMPOSITE_SUCCESS = CN()
 _C.TASK.COMPOSITE_SUCCESS.TYPE = "CompositeSuccess"
 _C.TASK.COMPOSITE_REWARD = CN()

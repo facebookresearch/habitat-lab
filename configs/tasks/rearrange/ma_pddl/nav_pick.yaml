@@ -1,21 +1,67 @@
 objects:
-  - hab2|0
-  - ROBOT_0
-  - ROBOT_1
+  - name: bowl_target|0
+    expr_type: rigid_obj_type
+  - name: TARGET_bowl_target|0
+    expr_type: goal_type
+  - name: fruit_target|1
+    expr_type: rigid_obj_type
+  - name: TARGET_fruit_target|0
+    expr_type: goal_type
+  - name: ROBOT_0
+    expr_type: robot_type
+  - name: ROBOT_1
+    expr_type: robot_type
 
-stage_goals: {}
-start:
-    precondition: []
-    state:
-        robot_states:
-          - pos: 'rnd'
-            robot_id: "ROBOT_0"
-          - pos: 'rnd'
-            robot_id: "ROBOT_1"
+init:
+  - closed_fridge(fridge_push_point)
+  - closed_cab(cab_push_point_4)
+  - closed_cab(cab_push_point_5)
+  - closed_cab(cab_push_point_6)
+  - closed_cab(cab_push_point_7)
 
 goal:
-    - "holding(hab2|0,ROBOT_0)"
+  expr_type: AND
+  sub_exprs:
+    - at(bowl_target|0,TARGET_bowl_target|0)
+    - at(fruit_target|1,TARGET_fruit_target|1)
+    - expr_type: FORALL
+      inputs: 
+        name: robot
+        expr_type: robot_type
+      sub_exprs: 
+        - not_holding(robot)
+
+stage_goals:
+  stage_0_5:
+    expr_type: AND
+    sub_exprs: 
+      - holding(bowl_target|0)
+  stage_1:
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - not_holding()
+  stage_1_5:
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - holding(fruit_target|1)
+  stage_2:
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - at(fruit_target|1,TARGET_fruit_target|1)
 
 solution:
-    - "nav(hab2|0,ROBOT_0)"
-    - "pick(hab2|0,ROBOT_0)"
+  - nav_to_receptacle(cab_push_point_5,bowl_target|0)
+  - open_cab(cab_push_point_5,bowl_target|0)
+  - pick(bowl_target|0)
+  - nav(TARGET_bowl_target|0)
+  - place(bowl_target|0,TARGET_bowl_target|0)
+  - nav_to_receptacle(fridge_push_point,fruit_target|1)
+  - open_fridge(fruit_target|1)
+  - nav(fruit_target|1)
+  - pick(fruit_target|1)
+  - nav(TARGET_fruit_target|1)
+  - place(fruit_target|1,TARGET_fruit_target|1)
+
