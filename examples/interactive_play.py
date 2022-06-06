@@ -75,16 +75,35 @@ def step_env(env, action_name, action_args, args):
 
 
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, g_args, prev_obs, env, not_block_input
+    skip_pygame,
+    arm_action,
+    g_args,
+    prev_obs,
+    env,
+    not_block_input,
+    agent_to_control,
 ):
     if skip_pygame:
         return step_env(env, "EMPTY", {}, g_args), None, False
 
-    if "ARM_ACTION" in env.action_space.spaces:
-        arm_action_space = env.action_space.spaces["ARM_ACTION"].spaces[
-            "arm_action"
+    multi_agent = len(env._sim.robots_mgr) > 1
+    arm_action_name = "ARM_ACTION"
+    base_action_name = "BASE_VELOCITY"
+    arm_key = "arm_action"
+    grip_key = "grip_action"
+    base_key = "base_vel"
+    if multi_agent:
+        arm_action_name = f"{agent_to_control}_{arm_action_name}"
+        base_action_name = f"{agent_to_control}_{base_action_name}"
+        arm_key = agent_to_control + "_" + arm_key
+        grip_key = agent_to_control + "_" + grip_key
+        base_key = agent_to_control + "_" + base_key
+
+    if arm_action_name in env.action_space.spaces:
+        arm_action_space = env.action_space.spaces[arm_action_name].spaces[
+            arm_key
         ]
-        arm_ctrlr = env.task.actions["ARM_ACTION"].arm_ctrlr
+        arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
     else:
         arm_action_space = np.zeros(7)
@@ -199,19 +218,19 @@ def get_input_vel_ctlr(
         print(f"Robot arm joint state: {joint_state}")
 
     args = {}
-    if base_action is not None and "BASE_VELOCITY" in env.action_space.spaces:
-        name = "BASE_VELOCITY"
-        args = {"base_vel": base_action}
+    if base_action is not None and base_action_name in env.action_space.spaces:
+        name = base_action_name
+        args = {base_key: base_action}
     else:
-        name = "ARM_ACTION"
+        name = arm_action_name
         if given_arm_action:
             # The grip is also contained in the provided action
             args = {
-                "arm_action": arm_action[:-1],
-                "grip_action": arm_action[-1],
+                arm_key: arm_action[:-1],
+                grip_key: arm_action[-1],
             }
         else:
-            args = {"arm_action": arm_action, "grip_action": magic_grasp}
+            args = {arm_key: arm_action, grip_key: magic_grasp}
 
     if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
@@ -324,6 +343,7 @@ def play_env(env, args, config):
     all_obs = []
     total_reward = 0
     all_arm_actions = []
+    agent_to_control = "AGENT_0"
 
     free_cam = FreeCamHelper()
 
@@ -337,6 +357,14 @@ def play_env(env, args, config):
         if render_steps_limit is not None and update_idx > render_steps_limit:
             break
 
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_x]:  # and (update_idx - self._last_pressed) > 60:
+            if agent_to_control == "AGENT_0":
+                agent_to_control = "AGENT_1"
+            else:
+                agent_to_control = "AGENT_0"
+            print(f"Swapped to {agent_to_control}")
+
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
@@ -346,6 +374,7 @@ def play_env(env, args, config):
             obs,
             env,
             not free_cam.is_free_cam_mode,
+            agent_to_control,
         )
         if step_result is None:
             break

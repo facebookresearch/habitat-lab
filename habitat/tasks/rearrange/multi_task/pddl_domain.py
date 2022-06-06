@@ -94,7 +94,9 @@ class PddlDomain:
                 )
                 for k, v in art_states.items()
             }
-            obj_states = {all_entites[k]: v for k, v in obj_states.items()}
+            obj_states = {
+                all_entites[k]: all_entites[v] for k, v in obj_states.items()
+            }
             robot_states = {
                 all_entites[k]: PddlRobotState(
                     holding=all_entites[v["holding"]]
@@ -165,7 +167,12 @@ class PddlDomain:
                     f"Could not find entity {func_arg} in predicate `{pred_str}` (args={func_args} name={func_name})"
                 )
             arg_values.append(v)
-        pred.set_param_values(arg_values)
+        try:
+            pred.set_param_values(arg_values)
+        except Exception as e:
+            raise ValueError(
+                f"Problem setting predicate values {pred} with {arg_values}"
+            ) from e
         return pred
 
     def parse_logical_expr(
@@ -177,8 +184,16 @@ class PddlDomain:
         if isinstance(load_d, str):
             # This can be assumed to just be a predicate
             return self.parse_predicate(load_d, existing_entities)
+        if isinstance(load_d, list):
+            raise TypeError(
+                f"Could not parse logical expr {load_d}. You likely need to nest the predicate list in a logical expression"
+            )
 
-        expr_type = LogicalExprType[load_d["expr_type"]]
+        try:
+            expr_type = LogicalExprType[load_d["expr_type"]]
+        except Exception as e:
+            raise ValueError(f"Could not load expr_type from {load_d}") from e
+
         sub_exprs = [
             self.parse_logical_expr(sub_expr, existing_entities)
             for sub_expr in load_d["sub_exprs"]
@@ -328,7 +343,14 @@ class PddlProblem(PddlDomain):
         self.init = [
             self.parse_predicate(p, self._objects) for p in problem_def["init"]
         ]
-        self.goal = self.parse_logical_expr(problem_def["goal"], self._objects)
+        try:
+            self.goal = self.parse_logical_expr(
+                problem_def["goal"], self._objects
+            )
+        except Exception as e:
+            raise ValueError(
+                f"Could not parse goal cond {problem_def['goal']}"
+            ) from e
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
             self.stage_goals[stage_name] = self.parse_logical_expr(
@@ -351,7 +373,12 @@ class PddlProblem(PddlDomain):
                         raise ValueError(f"Could not find entity {action_arg}")
                     arg_values.append(v)
 
-                action.set_param_values(arg_values)
+                try:
+                    action.set_param_values(arg_values)
+                except Exception as e:
+                    raise ValueError(
+                        f"Problem setting action {action} with {arg_values} in solution list"
+                    ) from e
 
                 self._solution.append(action)
 

@@ -3,7 +3,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -23,9 +23,9 @@ TASK:
     BASE_NOISE: 0.05
     EASY_INIT: false
 
-    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/ma_pddl/
-    TASK_SPEC: nav_pick
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/ma_pddl/replica_cad_domain.yaml
+    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
+    TASK_SPEC: ma_example
+    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     SENSORS:
@@ -34,13 +34,6 @@ TASK:
       - JOINT_SENSOR
       - IS_HOLDING_SENSOR
       - END_EFFECTOR_SENSOR
-      - RELATIVE_RESTING_POS_SENSOR
-      - TARGET_START_POINT_GOAL_SENSOR
-      - NAV_TO_SKILL_SENSOR
-      - MARKER_REL_POS_SENSOR
-      - ART_JOINT_SENSOR
-      - TARGET_START_GPS_COMPASS_SENSOR
-      - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -84,6 +77,8 @@ TASK:
     - OBJECT_TO_GOAL_DISTANCE
     - NUM_STEPS
     - COMPOSITE_STAGE_GOALS
+    - DOES_WANT_TERMINATE
+    - COMPOSITE_SPARSE_REWARD
     - COMPOSITE_SUCCESS
 
     ACTIONS:

@@ -62,6 +62,9 @@ class PddlAction:
                 return param_value
         return None
 
+    def __repr__(self):
+        return f"<Action {self._name}>"
+
     @property
     def name(self):
         return self._name

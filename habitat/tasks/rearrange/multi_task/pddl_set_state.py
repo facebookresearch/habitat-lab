@@ -113,6 +113,20 @@ class PddlSetState:
         obj_states: Dict[PddlEntity, PddlEntity],
         robot_states: Dict[PddlEntity, PddlRobotState],
     ):
+        for k, v in obj_states.items():
+            if not isinstance(k, PddlEntity) or not isinstance(v, PddlEntity):
+                raise TypeError(f"Unexpected types {obj_states}")
+
+        for k, v in art_states.items():
+            if not isinstance(k, PddlEntity) or not isinstance(v, ArtSampler):
+                raise TypeError(f"Unexpected types {art_states}")
+
+        for k, v in robot_states.items():
+            if not isinstance(k, PddlEntity) or not isinstance(
+                v, PddlRobotState
+            ):
+                raise TypeError(f"Unexpected types {robot_states}")
+
         self._art_states = art_states
         self._obj_states = obj_states
         self._robot_states = robot_states
@@ -136,7 +150,8 @@ class PddlSetState:
             sub_dict.get(k, k): v for k, v in self._art_states.items()
         }
         self._obj_states = {
-            sub_dict.get(k, k): v for k, v in self._obj_states.items()
+            sub_dict.get(k, k): sub_dict.get(v, v)
+            for k, v in self._obj_states.items()
         }
         return self
 
@@ -191,14 +206,14 @@ class PddlSetState:
                 # an object is inside of a receptacle.
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
-            elif sim_info.check_type_matches(target, OBJ_TYPE):
+            elif sim_info.check_type_matches(target, GOAL_TYPE):
                 obj_idx = sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
                 abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
                 cur_pos = rom.get_object_by_id(
                     abs_obj_id
                 ).transformation.translation
 
-                targ_idx = sim_info.search_for_entity(entity, GOAL_TYPE)
+                targ_idx = sim_info.search_for_entity(target, GOAL_TYPE)
                 idxs, pos_targs = sim_info.sim.get_targets()
                 targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
@@ -206,7 +221,9 @@ class PddlSetState:
                 if dist >= sim_info.obj_thresh:
                     return False
             else:
-                raise ValueError()
+                raise ValueError(
+                    f"Got unexpected combination of {entity} and {target}"
+                )
 
         for art_entity, set_art in self._art_states.items():
             if not sim_info.check_type_matches(art_entity, ART_OBJ_TYPE):

@@ -95,7 +95,7 @@ def ensure_entity_lists_match(
 
 # Hardcoded pddl types needed for setting simulator states.
 ROBOT_TYPE = "robot_type"
-STATIC_OBJ_TYPE = "static_obj"
+STATIC_OBJ_TYPE = "static_obj_type"
 ART_OBJ_TYPE = "art_obj_type"
 OBJ_TYPE = "obj_type"
 CAB_TYPE = "cab_type"
@@ -120,19 +120,18 @@ class PddlSimInfo:
     art_thresh: float
     expr_types: Dict[str, ExprType]
 
-    def check_type_matches(self, expr_type: ExprType, match_name: str) -> bool:
-        return expr_type.is_subtype_of(self.expr_types[match_name])
+    def check_type_matches(self, entity: PddlEntity, match_name: str) -> bool:
+        return entity.expr_type.is_subtype_of(self.expr_types[match_name])
 
     def search_for_entity_any(self, entity: PddlEntity):
         ename = entity.name
-        etype = entity.expr_type
-        if self.check_type_matches(etype, ROBOT_TYPE):
+        if self.check_type_matches(entity, ROBOT_TYPE):
             return self.robot_ids[ename]
-        elif self.check_type_matches(etype, ART_OBJ_TYPE):
+        elif self.check_type_matches(entity, ART_OBJ_TYPE):
             return self.marker_handles[ename]
-        elif self.check_type_matches(etype, GOAL_TYPE):
+        elif self.check_type_matches(entity, GOAL_TYPE):
             return self.target_ids[ename]
-        elif self.check_type_matches(etype, RIGID_OBJ_TYPE):
+        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
             return self.obj_ids[ename]
         else:
             raise ValueError()
@@ -140,7 +139,7 @@ class PddlSimInfo:
     def search_for_entity(
         self, entity: PddlEntity, expected_type: str
     ) -> Union[int, str, MarkerInfo]:
-        if not self.check_type_matches(entity.expr_type, expected_type):
+        if not self.check_type_matches(entity, expected_type):
             raise ValueError(
                 f"Type mismatch {entity} but expected {expected_type}"
             )

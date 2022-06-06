@@ -5,7 +5,7 @@ objects:
     expr_type: goal_type
   - name: fruit_target|1
     expr_type: rigid_obj_type
-  - name: TARGET_fruit_target|0
+  - name: TARGET_fruit_target|1
     expr_type: goal_type
   - name: ROBOT_0
     expr_type: robot_type
@@ -20,31 +20,39 @@ init:
 goal:
   expr_type: AND
   sub_exprs:
-    - at(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
-    - at(fruit_target|1,TARGET_fruit_target|1, ROBOT_0)
+    - at(bowl_target|0,TARGET_bowl_target|0)
+    - at(fruit_target|1,TARGET_fruit_target|1)
     - not_holding(ROBOT_0)
 stage_goals:
   stage_0_5:
-    - holding(bowl_target|0, ROBOT_0)
+    expr_type: AND
+    sub_exprs:
+      - holding(bowl_target|0, ROBOT_0)
   stage_1:
-    - at(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
-    - not_holding(, ROBOT_0)
+    expr_type: AND
+    sub_exprs:
+    - at(bowl_target|0,TARGET_bowl_target|0)
+    - not_holding(ROBOT_0)
   stage_1_5:
-    - at(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
-    - holding(fruit_target|1, ROBOT_0)
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - holding(fruit_target|1, ROBOT_0)
   stage_2:
-    - at(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
-    - at(fruit_target|1,TARGET_fruit_target|1, ROBOT_0)
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - at(fruit_target|1,TARGET_fruit_target|1)
 
 solution:
-    - nav_to_receptacle(MARKER_cab_push_point_5,bowl_target|0, ROBOT_0)
-    - open_cab(MARKER_cab_push_point_5,bowl_target|0, ROBOT_0)
+    - nav_to_receptacle(cab_push_point_5,bowl_target|0, ROBOT_0)
+    - open_cab(cab_push_point_5,bowl_target|0, ROBOT_0)
     - pick(bowl_target|0, ROBOT_0)
     - nav(TARGET_bowl_target|0, ROBOT_0)
     - place(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
 
-    - nav_to_receptacle(MARKER_fridge_push_point,fruit_target|1, ROBOT_0)
-    - open_fridge(fruit_target|1, ROBOT_0)
+    - nav_to_receptacle(fridge_push_point,fruit_target|1, ROBOT_0)
+    - open_fridge(fridge_push_point, fruit_target|1, ROBOT_0)
     - nav(fruit_target|1, ROBOT_0)
     - pick(fruit_target|1, ROBOT_0)
     - nav(TARGET_fruit_target|1, ROBOT_0)
