@@ -20,12 +20,12 @@ from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
     LogicalExprType,
 )
+from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.pddl_set_state import (
     ArtSampler,
     PddlRobotState,
     PddlSetState,
 )
-from habitat.tasks.rearrange.multi_task.predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ExprType,
     PddlEntity,
@@ -54,7 +54,7 @@ class PddlDomain:
         self.expr_types: Dict[str, ExprType] = {}
         self._leaf_exprs = []
         in_parent = []
-        for parent_type, sub_types in domain_def["types"]:
+        for parent_type, sub_types in domain_def["types"].items():
             if parent_type not in self.expr_types:
                 self.expr_types[parent_type] = ExprType(parent_type, None)
             in_parent.append(parent_type)
@@ -69,7 +69,7 @@ class PddlDomain:
         ]
 
         self._constants: Dict[str, PddlEntity] = {}
-        for c in domain_def["_constants"]:
+        for c in domain_def["constants"]:
             self._constants[c["name"]] = PddlEntity(
                 c["name"],
                 self.expr_types[c["expr_type"]],
@@ -78,7 +78,7 @@ class PddlDomain:
         self.predicates: Dict[str, Predicate] = {}
         for pred_d in domain_def["predicates"]:
             arg_entities = [
-                PddlEntity(arg.name, self.expr_types[arg.expr_type])
+                PddlEntity(arg["name"], self.expr_types[arg["expr_type"]])
                 for arg in pred_d["args"]
             ]
             pred_entities = {e.name: e for e in arg_entities}
@@ -92,11 +92,18 @@ class PddlDomain:
                 all_entites[k]: ArtSampler(
                     **v, thresh=self._config.ART_SUCC_THRESH
                 )
-                for k, v in art_states
+                for k, v in art_states.items()
             }
-            obj_states = {all_entites[k]: v for k, v in obj_states}
+            obj_states = {all_entites[k]: v for k, v in obj_states.items()}
             robot_states = {
-                all_entites[k]: PddlRobotState(**v) for k, v in robot_states
+                all_entites[k]: PddlRobotState(
+                    holding=all_entites[v["holding"]]
+                    if "holding" in v
+                    else None,
+                    should_drop=v.get("should_drop", False),
+                    pos=v.get("pos", None),
+                )
+                for k, v in robot_states.items()
             }
 
             set_state = PddlSetState(art_states, obj_states, robot_states)
@@ -105,7 +112,7 @@ class PddlDomain:
             self.predicates[pred.name] = pred
 
         self.actions: Dict[str, PddlAction] = {}
-        for action_d in self.domain_def["actions"]:
+        for action_d in domain_def["actions"]:
             parameters = [
                 PddlEntity(p["name"], self.expr_types[p["expr_type"]])
                 for p in action_d["parameters"]
@@ -120,9 +127,10 @@ class PddlDomain:
                 for p in action_d["postcondition"]
             ]
             task_info_d = action_d["task_info"]
+            full_entities = {**self._constants, **name_to_param}
             add_task_args = {
-                k: self._constants[v]
-                for k, v in task_info_d["add_task_args"].items()
+                k: full_entities[v]
+                for k, v in task_info_d.get("add_task_args", {}).items()
             }
 
             task_info = ActionTaskInfo(
@@ -153,7 +161,9 @@ class PddlDomain:
             elif func_arg in existing_entities:
                 v = existing_entities[func_arg]
             else:
-                raise ValueError(f"Could not find entity {func_arg}")
+                raise ValueError(
+                    f"Could not find entity {func_arg} in predicate `{pred_str}` (args={func_args} name={func_name})"
+                )
             arg_values.append(v)
         pred.set_param_values(arg_values)
         return pred
@@ -161,16 +171,24 @@ class PddlDomain:
     def parse_logical_expr(
         self, load_d, existing_entities: Dict[str, PddlEntity]
     ) -> Union[LogicalExpr, Predicate]:
+
+        if load_d is None:
+            return LogicalExpr(LogicalExprType.AND, [], [])
         if isinstance(load_d, str):
             # This can be assumed to just be a predicate
             return self.parse_predicate(load_d, existing_entities)
 
-        expr_type = LogicalExprType[load_d[["expr_type"]]]
+        expr_type = LogicalExprType[load_d["expr_type"]]
         sub_exprs = [
             self.parse_logical_expr(sub_expr, existing_entities)
             for sub_expr in load_d["sub_exprs"]
         ]
-        return LogicalExpr(expr_type, sub_exprs)
+        inputs = load_d.get("inputs", [])
+        inputs = [
+            PddlEntity(x["name"], LogicalExprType[x["expr_type"]])
+            for x in inputs
+        ]
+        return LogicalExpr(expr_type, sub_exprs, inputs)
 
     def bind_to_instance(
         self,
@@ -180,7 +198,7 @@ class PddlDomain:
         episode: Episode,
     ) -> None:
         id_to_name = {}
-        for k, i in self._sim.ref_handle_to_rigid_obj_id.items():
+        for k, i in sim.ref_handle_to_rigid_obj_id.items():
             id_to_name[i] = k
 
         self._sim_info = PddlSimInfo(
@@ -191,18 +209,21 @@ class PddlDomain:
             obj_thresh=self._config.OBJ_SUCC_THRESH,
             art_thresh=self._config.ART_SUCC_THRESH,
             expr_types=self.expr_types,
-            obj_ids=self._sim.ref_handle_to_rigid_obj_id,
+            obj_ids=sim.ref_handle_to_rigid_obj_id,
             target_ids={
                 f"TARGET_{id_to_name[idx]}": idx
-                for idx in self._sim.get_targets()[0]
+                for idx in sim.get_targets()[0]
             },
-            art_handles={k: i for i, k in enumerate(self._sim.art_objs)},
-            marker_handles=self._sim.get_all_markers(),
+            art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
+            marker_handles=sim.get_all_markers(),
             robot_ids={
                 f"ROBOT_{robot_id}": robot_id
-                for robot_id in range(self._sim.num_robots)
+                for robot_id in range(sim.num_robots)
             },
         )
+        # Ensure that all objects are accounted for.
+        for entity in self.all_entities.values():
+            self._sim_info.search_for_entity_any(entity)
 
     @property
     def sim_info(self) -> PddlSimInfo:
@@ -221,7 +242,7 @@ class PddlDomain:
         return expr.is_true(self.sim_info)
 
     def get_true_predicates(self) -> List[Predicate]:
-        all_entities = self.all_entities
+        all_entities = self.all_entities.values()
         true_preds: List[Predicate] = []
         for pred in self.predicates.values():
             for entity_input in itertools.combinations(
@@ -251,7 +272,7 @@ class PddlDomain:
         if restricted_action_names is None:
             restricted_action_names = []
 
-        all_entities = self.all_entities
+        all_entities = self.all_entities.values()
         matching_actions = []
         for action in self.actions.values():
             if (
@@ -286,27 +307,32 @@ class PddlDomain:
         return self._constants
 
 
-class PddlProblem:
+class PddlProblem(PddlDomain):
     stage_goals: Dict[str, LogicalExpr]
     init: List[Predicate]
     goal: LogicalExpr
 
-    def __init__(self, pddl_domain: PddlDomain, problem_file_path: str):
+    def __init__(
+        self,
+        domain_file_path: str,
+        problem_file_path: str,
+        cur_task_config: Optional[Config] = None,
+    ):
+        super().__init__(domain_file_path, cur_task_config)
         with open(problem_file_path, "r") as f:
             problem_def = yaml.safe_load(f)
         self._objects = {
-            o["name"]: PddlEntity(o["name"], pddl_domain.expr_types[o["type"]])
-            for o in problem_def["_objects"]
+            o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])
+            for o in problem_def["objects"]
         }
         self.init = [
-            pddl_domain.parse_predicate(p, self._objects)
-            for p in problem_def["init"]
+            self.parse_predicate(p, self._objects) for p in problem_def["init"]
         ]
-        self.goal = pddl_domain.parse_logical_expr(problem_def["goal"])
+        self.goal = self.parse_logical_expr(problem_def["goal"], self._objects)
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
-            self.stage_goals[stage_name] = pddl_domain.parse_logical_expr(
-                cond, self.all_entities
+            self.stage_goals[stage_name] = self.parse_logical_expr(
+                cond, self._objects
             )
 
         self._solution: Optional[List[PddlAction]] = None

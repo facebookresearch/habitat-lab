@@ -45,13 +45,16 @@ class RobotManager:
             robot = robot_cls(agent_cfg.ROBOT_URDF, sim)
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)
 
-            robot.params.cameras = {
-                f"{agent_name}_{k}": v for k, v in robot.params.cameras.items()
-            }
-            for camera_prefix in robot.params.cameras:
-                for sensor_name in self._sim._sensors:
-                    if sensor_name.startswith(camera_prefix):
-                        robot._cameras[camera_prefix].append(sensor_name)
+            if len(cfg.AGENTS) > 1:
+                # Only prefix cameras if there is more than one agent.
+                robot.params.cameras = {
+                    f"{agent_name}_{k}": v
+                    for k, v in robot.params.cameras.items()
+                }
+                for camera_prefix in robot.params.cameras:
+                    for sensor_name in self._sim._sensors:
+                        if sensor_name.startswith(camera_prefix):
+                            robot._cameras[camera_prefix].append(sensor_name)
 
             self._all_robot_data.append(
                 RobotData(

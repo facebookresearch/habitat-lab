@@ -22,11 +22,21 @@ class RobotAction(SimulatorTaskAction):
     _sim: RearrangeSim
 
     @property
+    def _ik_helper(self):
+        if self._config.AGENT is None:
+            return self._sim.robots_mgr[0].ik_helper
+        return self._sim.robots_mgr[self._config.AGENT].ik_helper
+
+    @property
     def cur_robot(self):
+        if self._config.AGENT is None:
+            return self._sim.robots_mgr[0].robot
         return self._sim.robots_mgr[self._config.AGENT].robot
 
     @property
     def cur_grasp_mgr(self):
+        if self._config.AGENT is None:
+            return self._sim.robots_mgr[0].grasp_mgr
         return self._sim.robots_mgr[self._config.AGENT].grasp_mgr
 
     @property

@@ -22,8 +22,13 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
     try:
         name = x.split("(")[0]
         args = x.split("(")[1].split(")")[0]
+        args = args.split(",")
+        args = [x.strip() for x in args]
     except IndexError as e:
         raise ValueError(f"Cannot parse '{x}'") from e
+
+    if len(args) == 1 and args[0] == "":
+        args = []
 
     return name, args
 
@@ -33,7 +38,7 @@ class ExprType:
         self.name = name
         self.parent = parent
 
-    def is_match(self, other_type: "ExprType") -> bool:
+    def is_subtype_of(self, other_type: "ExprType") -> bool:
         # Check if this or any of the parents match
         all_types = [self.name]
         parent = self.parent
@@ -41,49 +46,62 @@ class ExprType:
             all_types.append(parent.name)
             parent = parent.parent
 
-        cur = other_type
-        while cur is not None:
-            if cur.name not in all_types:
-                return True
-            cur = other_type.parent
-        return False
+        return other_type.name in all_types
+
+    def __repr__(self):
+        return f"T:{self.name}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class PddlEntity:
     name: str
     expr_type: ExprType
 
+    def __repr__(self):
+        return f"{self.name}-{self.expr_type}"
+
 
 def do_entity_lists_match(
-    list1: List[PddlEntity], list2: List[PddlEntity]
+    to_set: List[PddlEntity], set_value: List[PddlEntity]
 ) -> bool:
-    if len(list1) != len(list2):
+    if len(to_set) != len(set_value):
         return False
-    if list1 is not None:
+    if to_set is not None:
         return False
     # Check types are compatible
     return all(
-        arg.expr_type == set_arg.expr_type
-        for arg, set_arg in zip(list1, list2)
+        set_arg.expr_type.is_subtype_of(arg.expr_type)
+        for arg, set_arg in zip(to_set, set_value)
     )
 
 
 def ensure_entity_lists_match(
-    list1: List[PddlEntity], list2: List[PddlEntity]
+    to_set: List[PddlEntity], set_value: List[PddlEntity]
 ) -> None:
-    if len(list1) != len(list2):
-        raise ValueError(f"Set arg values are unequal size {list1} vs {list2}")
-    if list1 is not None:
+    """ """
+    if len(to_set) != len(set_value):
         raise ValueError(
-            f"Trying to set arg values with {list1} when current args are set to {list2}"
+            f"Set arg values are unequal size {to_set} vs {set_value}"
         )
     # Check types are compatible
-    for arg, set_arg in zip(list1, list2):
-        if arg.expr_type != set_arg.expr_type:
+    for arg, set_arg in zip(to_set, set_value):
+        if not set_arg.expr_type.is_subtype_of(arg.expr_type):
+            # breakpoint()
+            # set_arg.expr_type.is_subtype_of(arg.expr_type)
             raise ValueError(
-                f"Arg type in predicate is incompatible {list1} vs {list2}"
+                f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
             )
+
+
+# Hardcoded pddl types needed for setting simulator states.
+ROBOT_TYPE = "robot_type"
+STATIC_OBJ_TYPE = "static_obj"
+ART_OBJ_TYPE = "art_obj_type"
+OBJ_TYPE = "obj_type"
+CAB_TYPE = "cab_type"
+FRIDGE_TYPE = "fridge_type"
+GOAL_TYPE = "goal_type"
+RIGID_OBJ_TYPE = "rigid_obj_type"
 
 
 @dataclass
@@ -103,7 +121,39 @@ class PddlSimInfo:
     expr_types: Dict[str, ExprType]
 
     def check_type_matches(self, expr_type: ExprType, match_name: str) -> bool:
-        return expr_type.is_match(self.expr_types[match_name])
+        return expr_type.is_subtype_of(self.expr_types[match_name])
 
-    def search_for_entity(self, entity: PddlEntity) -> Union[int, MarkerInfo]:
-        return None
+    def search_for_entity_any(self, entity: PddlEntity):
+        ename = entity.name
+        etype = entity.expr_type
+        if self.check_type_matches(etype, ROBOT_TYPE):
+            return self.robot_ids[ename]
+        elif self.check_type_matches(etype, ART_OBJ_TYPE):
+            return self.marker_handles[ename]
+        elif self.check_type_matches(etype, GOAL_TYPE):
+            return self.target_ids[ename]
+        elif self.check_type_matches(etype, RIGID_OBJ_TYPE):
+            return self.obj_ids[ename]
+        else:
+            raise ValueError()
+
+    def search_for_entity(
+        self, entity: PddlEntity, expected_type: str
+    ) -> Union[int, str, MarkerInfo]:
+        if not self.check_type_matches(entity.expr_type, expected_type):
+            raise ValueError(
+                f"Type mismatch {entity} but expected {expected_type}"
+            )
+
+        ename = entity.name
+
+        if expected_type == ROBOT_TYPE:
+            return self.robot_ids[ename]
+        elif expected_type == ART_OBJ_TYPE:
+            return self.marker_handles[ename]
+        elif expected_type == GOAL_TYPE:
+            return self.target_ids[ename]
+        elif expected_type == RIGID_OBJ_TYPE:
+            return self.obj_ids[ename]
+        else:
+            raise ValueError()

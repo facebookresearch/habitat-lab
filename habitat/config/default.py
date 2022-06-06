@@ -146,7 +146,7 @@ _C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.0125
 _C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
 _C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
 _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
-_C.TASK.ACTIONS.ARM_ACTION.ORACLE_GRASP = False
+_C.TASK.ACTIONS.ARM_ACTION.AGENT = None
 _C.TASK.ACTIONS.BASE_VELOCITY = CN()
 _C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
 _C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 12.0
@@ -156,6 +156,7 @@ _C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
+_C.TASK.ACTIONS.BASE_VELOCITY.AGENT = None
 _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
 # -----------------------------------------------------------------------------
@@ -643,15 +644,10 @@ _C.SIMULATOR.ROBOT_JOINT_START_NOISE = 0.0
 _C.SIMULATOR.ARM_REST = [0.6, 0.0, 0.9]
 _C.SIMULATOR.CTRL_FREQ = 120.0
 _C.SIMULATOR.AC_FREQ_RATIO = 4
-_C.SIMULATOR.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-_C.SIMULATOR.ROBOT_TYPE = "FetchRobot"
-_C.SIMULATOR.EE_LINK_NAME = None
 _C.SIMULATOR.LOAD_OBJS = False
 # Rearrange Agent Grasping
 _C.SIMULATOR.HOLD_THRESH = 0.09
 _C.SIMULATOR.GRASP_IMPULSE = 1000.0
-# ROBOT
-_C.SIMULATOR.IK_ARM_URDF = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
@@ -782,6 +778,12 @@ _C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
 _C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
+_C.SIMULATOR.AGENT_0.JOINT_START_NOISE = 0.0
+_C.SIMULATOR.AGENT_0.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+_C.SIMULATOR.AGENT_0.ROBOT_TYPE = "FetchRobot"
+_C.SIMULATOR.AGENT_0.IK_ARM_URDF = (
+    "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+)
 _C.SIMULATOR.AGENTS = ["AGENT_0"]
 # -----------------------------------------------------------------------------
 # SIMULATOR HABITAT_SIM_V0

@@ -19,7 +19,7 @@ from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
 
 
 @registry.register_sensor
-class MarkerRelPosSensor(Sensor, UsesRobotInterface):
+class MarkerRelPosSensor(UsesRobotInterface, Sensor):
     """
     Tracks the relative position of a marker to the robot end-effector
     specified by `use_marker_name` in the task. This `use_marker_name` must

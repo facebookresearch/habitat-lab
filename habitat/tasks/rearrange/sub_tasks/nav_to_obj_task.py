@@ -15,14 +15,9 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.multi_task.pddl_domain import (
-    PddlDomain,
-    PddlProblem,
-)
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    PddlAction,
-    PddlEntity,
-)
+from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import PddlEntity
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
 
@@ -74,8 +69,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         self.pddl_problem = PddlProblem(
-            PddlDomain(self._config.PDDL_DOMAIN_DEF, self._config),
+            self._config.PDDL_DOMAIN_DEF,
             task_spec_path,
+            self._config,
         )
         self._nav_to_info: Optional[NavToInfo] = None
 
@@ -146,12 +142,8 @@ class DynNavRLEnv(RearrangeTask):
         action.task_kwargs["orig_applied_args"]
         nav_to_entity = action.get_arg_value("obj")
 
-        goal_type = self.pddl_problem.expr_types["goal_type"]
-        rigid_type = self.pddl_problem.expr_types["rigid_obj_type"]
-        if not (
-            nav_to_entity.is_match(goal_type)
-            or nav_to_entity.is_match(rigid_type)
-        ):
+        obj_type = self.pddl_problem.expr_types["obj_type"]
+        if not nav_to_entity.is_subtype_of(obj_type):
             raise ValueError(
                 f"Cannot navigate to non obj_type {nav_to_entity}"
             )

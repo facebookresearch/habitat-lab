@@ -361,4 +361,5 @@ class IkHelper:
 
 class UsesRobotInterface:
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.robot_id = None

@@ -12,10 +12,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.multi_task.pddl_domain import (
-    PddlDomain,
-    PddlProblem,
-)
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
@@ -34,8 +31,9 @@ class CompositeTask(RearrangeTask):
         )
 
         self.pddl_problem = PddlProblem(
-            PddlDomain(self._config.PDDL_DOMAIN_DEF, self._config),
+            self._config.PDDL_DOMAIN_DEF,
             task_spec_path,
+            self._config,
         )
 
         self._cur_node_idx: int = -1

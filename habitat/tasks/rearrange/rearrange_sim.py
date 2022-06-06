@@ -45,7 +45,7 @@ class RearrangeSim(HabitatSim):
     ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
 
     def __init__(self, config: Config):
-        if len(config.AGENTS) > 0:
+        if len(config.AGENTS) > 1:
             config.defrost()
             all_new_sensor_names = []
             for agent in config.AGENTS:
@@ -255,7 +255,7 @@ class RearrangeSim(HabitatSim):
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
-            return self.robot
+            return self.robots_mgr[0]
         else:
             return self.robots_mgr[agent_idx]
 

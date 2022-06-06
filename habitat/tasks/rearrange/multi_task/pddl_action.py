@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from habitat import Config
-from habitat.tasks.rearrange.multi_task.logical_expr import LogicalExpr
+from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlEntity,
@@ -29,7 +29,7 @@ class ActionTaskInfo:
     task: str
     task_def: str
     config_args: Dict[str, Any] = field(default_factory=dict)
-    add_task_args: Dict[str, PddlEntity] = field(default_factory=list)
+    add_task_args: Dict[str, PddlEntity] = field(default_factory=dict)
 
 
 class PddlAction:
@@ -46,8 +46,6 @@ class PddlAction:
             identifier and returns a predicate if one was found.
         """
         if not isinstance(pre_cond, LogicalExpr):
-            raise ValueError(f"Incorrect type {pre_cond}")
-        if not isinstance(post_cond, LogicalExpr):
             raise ValueError(f"Incorrect type {pre_cond}")
 
         self._name = name
@@ -76,7 +74,11 @@ class PddlAction:
         return do_entity_lists_match(self._args, arg_values)
 
     def set_param_values(self, param_values: List[PddlEntity]) -> None:
-        ensure_entity_lists_match(self._params, self._param_values)
+        if self._param_values is not None:
+            raise ValueError(
+                f"Trying to set arg values with {param_values} when current args are set to {self._param_values}"
+            )
+        ensure_entity_lists_match(self._params, param_values)
         self._param_values = param_values
 
         sub_dict = {
@@ -85,12 +87,18 @@ class PddlAction:
         }
 
         # Substitute into the post and pre conditions
-        self._param_values = [p.sub_in(sub_dict) for p in self._param_values]
+        self._param_values = [sub_dict.get(p, p) for p in self._param_values]
+        self._post_cond = [p.sub_in(sub_dict) for p in self._post_cond]
+        self._pre_cond = self._pre_cond.sub_in(sub_dict)
+        self._task_info.add_task_args = {
+            k: sub_dict.get(p, p)
+            for k, p in self._task_info.add_task_args.items()
+        }
 
     def clone(self) -> "PddlAction":
         return PddlAction(
             self._name,
-            [p.clone() for p in self._params],
+            self._params,
             self._pre_cond.clone(),
             [p.clone() for p in self._post_cond],
             self._task_info,
@@ -111,11 +119,13 @@ class PddlAction:
     def get_task_kwargs(self, sim_info: PddlSimInfo) -> Dict[str, Any]:
         task_kwargs = {"orig_applied_args": {}}
         for param, param_value in zip(self._params, self.param_values):
-            task_kwargs[param.name] = sim_info.search_for_entity(param_value)
+            task_kwargs[param.name] = sim_info.search_for_entity_any(
+                param_value
+            )
             task_kwargs["orig_applied_args"][param.name] = param_value.name
         task_kwargs.update(
             **{
-                k: sim_info.search_for_entity(v)
+                k: sim_info.search_for_entity_any(v)
                 for k, v in self._task_info.add_task_args.items()
             }
         )

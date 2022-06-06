@@ -347,10 +347,6 @@ class ArmEEAction(RobotAction):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
 
-    @property
-    def _ik_helper(self):
-        return self._sim.robots_mgr[self._config.AGENT].ik_helper
-
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(

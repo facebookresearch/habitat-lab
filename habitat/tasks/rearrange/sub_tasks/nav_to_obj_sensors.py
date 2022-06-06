@@ -19,7 +19,7 @@ BASE_ACTION_NAME = "BASE_VELOCITY"
 
 
 @registry.register_sensor
-class TargetOrGoalStartPointGoalSensor(Sensor, UsesRobotInterface):
+class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -60,11 +60,11 @@ class TargetOrGoalStartPointGoalSensor(Sensor, UsesRobotInterface):
         if task.nav_to_entity_name != "":
             entity = pddl.get_entity(task.nav_to_entity_name)
 
-        if entity is None or entity.expr_type.is_match(
+        if entity is None or entity.expr_type.is_subtype_of(
             pddl.expr_types["goal_type"]
         ):
             to_pos = self._sim.get_targets()[1][self._task.targ_idx]
-        elif entity.expr_type.is_match(pddl.expr_types["rigid_obj_type"]):
+        elif entity.expr_type.is_subtype_of(pddl.expr_types["rigid_obj_type"]):
             to_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
         else:
             raise ValueError(f"Unknown {entity}.")

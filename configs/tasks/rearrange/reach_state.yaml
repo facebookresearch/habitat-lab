@@ -98,7 +98,6 @@ SIMULATOR:
     AC_FREQ_RATIO: 8
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: "FetchRobot"
-    EE_LINK_NAME: null
     FORWARD_STEP_SIZE: 0.25
     LAG_OBSERVATIONS: 0
     LOAD_OBJS: False

@@ -27,8 +27,15 @@ class Predicate:
         return do_entity_lists_match(self._args, arg_values)
 
     def set_param_values(self, arg_values: List[PddlEntity]):
+        if self._arg_values is not None:
+            raise ValueError(
+                f"Trying to set arg values with {arg_values} when current args are set to {self._arg_values}"
+            )
         ensure_entity_lists_match(self._args, arg_values)
         self._arg_values = arg_values
+        self._set_state.sub_in(
+            {k: v for k, v in zip(self._args, self._arg_values)}
+        )
 
     @property
     def n_args(self):
@@ -38,11 +45,12 @@ class Predicate:
     def name(self):
         return self._name
 
-    def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+    def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "Predicate":
         self._arg_values = [
             sub_dict.get(entity, entity) for entity in self._arg_values
         ]
         ensure_entity_lists_match(self._args, self._arg_values)
+        self._set_state.sub_in(sub_dict)
         return self
 
     def is_true(self, sim_info: PddlSimInfo) -> bool:
@@ -52,7 +60,10 @@ class Predicate:
         return self._set_state.set_state(sim_info)
 
     def clone(self):
-        return Predicate(self._name, self.set_state.clone(), self.args)
+        p = Predicate(self._name, self._set_state.clone(), self._args)
+        if self._arg_values is not None:
+            p.set_param_values(self._arg_values)
+        return p
 
     def __str__(self):
         return f"<Predicate: {self._name} [{self._args}] [{self._arg_values}]>"
