@@ -495,6 +495,8 @@ if __name__ == "__main__":
         config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
         config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
         config.SIMULATOR.DEBUG_RENDER = True
+        config.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = False
+        config.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = False
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
     if args.add_ik:

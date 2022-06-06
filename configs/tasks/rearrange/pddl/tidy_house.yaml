@@ -25,10 +25,6 @@ objects:
 
 init:
   - closed_fridge(fridge_push_point)
-  - closed_cab(cab_push_point_4)
-  - closed_cab(cab_push_point_5)
-  - closed_cab(cab_push_point_6)
-  - closed_cab(cab_push_point_7)
 
 
 goal:

@@ -127,13 +127,9 @@ class CompositeTask(RearrangeTask):
         task_solution = self.solution
         if self._inferred_cur_node_idx >= len(task_solution):
             return False
-        while (
-            task_solution[self._inferred_cur_node_idx].name
-            in self._config.SKIP_NODES
-        ):
-            self._inferred_cur_node_idx += 1
-            if self._inferred_cur_node_idx >= len(task_solution):
-                return False
+        self._inferred_cur_node_idx += 1
+        if self._inferred_cur_node_idx >= len(task_solution):
+            return False
 
         prev_state = self._sim.capture_state(with_robot_js=True)
         if self._inferred_cur_node_idx in self._cached_tasks:

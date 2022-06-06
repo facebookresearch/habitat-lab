@@ -265,10 +265,9 @@ class CompositeSuccess(Measure):
         does_action_want_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid
         ].get_metric()
-        self._metric = (
-            task.pddl_problem.is_expr_true(task.pddl_problem.goal)
-            and does_action_want_stop
-        )
+        self._metric = task.pddl_problem.is_expr_true(
+            task.pddl_problem.goal
+        ) and (does_action_want_stop or not self._config.MUST_CALL_STOP)
         if does_action_want_stop:
             task.should_end = True
 
