@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import reduce
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (

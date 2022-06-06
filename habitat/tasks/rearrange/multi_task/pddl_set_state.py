@@ -5,15 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import magnum as mn
 import numpy as np
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ART_OBJ_TYPE,
-    CAB_TYPE,
-    FRIDGE_TYPE,
     GOAL_TYPE,
     OBJ_TYPE,
     RIGID_OBJ_TYPE,
