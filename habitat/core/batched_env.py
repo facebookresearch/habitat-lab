@@ -639,7 +639,8 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
-            end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.9
+            end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.0
+
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
             # success = curr_dist < self._config.REACH_SUCCESS_THRESH
@@ -747,6 +748,8 @@ class BatchedEnv:
                         self._config.get("DROP_IS_FAIL", True)
                         and is_holding_correct
                         and (prev_state.held_obj_idx == -1)
+                        and obj_to_goal
+                        > self._config.NPNP_SUCCESS_THRESH  # the robot is not re-picking
                     ):
                         self.rewards[b] += self._config.PICK_REWARD
                 self._previous_state[b] = state
