@@ -214,12 +214,10 @@ class RearrangeGraspManager:
         """
         Kinematically update held object to be within robot's grasp.
         """
-        return
-        # self.snap_rigid_obj.transformation = self._managed_robot.ee_transform
+        self.snap_rigid_obj.transformation = self._managed_robot.ee_transform
 
     def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
-        """Attempt to grasp an object, snapping/constraining it to the robot's
-        end effector with 3 ball-joint constraints forming a fixed frame.
+        """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
 
         :param snap_obj_id: The id of the object to be constrained to the end effector.
         :param force: Will kinematically snap the object to the robot's end-effector, even if

@@ -5,8 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
+from collections import OrderedDict
 from typing import Any, Dict, List, Union
 
+import gym.spaces as spaces
 import numpy as np
 
 from habitat.core.dataset import Episode
@@ -15,6 +17,7 @@ from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
+    UsesRobotInterface,
     rearrange_collision,
     rearrange_logger,
 )
@@ -42,6 +45,24 @@ class RearrangeTask(NavigationTask):
     def overwrite_sim_config(self, sim_config, episode):
         return merge_sim_episode_with_object_config(sim_config, episode)
 
+    def _duplicate_sensor_suite(self, sensor_suite, copy_all):
+        task_new_sensors = OrderedDict()
+        task_obs_spaces = OrderedDict()
+        for robot_idx, agent_id in enumerate(self._sim.robots_mgr.agent_names):
+            for sensor_name, sensor in sensor_suite.sensors.items():
+                if copy_all or isinstance(sensor, UsesRobotInterface):
+                    new_sensor = copy.copy(sensor)
+                    new_sensor.robot_id = robot_idx
+                    full_name = f"{agent_id}_{sensor_name}"
+                    task_new_sensors[full_name] = new_sensor
+                    task_obs_spaces[full_name] = new_sensor.observation_space
+                else:
+                    task_new_sensors[sensor_name] = sensor
+                    task_obs_spaces[sensor_name] = sensor.observation_space
+
+        sensor_suite.sensors = task_new_sensors
+        sensor_suite.observation_spaces = spaces.Dict(spaces=task_obs_spaces)
+
     def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
 
@@ -54,6 +75,10 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
+
+        if len(self._sim.robots_mgr) > 1:
+            # Duplicate sensors that handle robots. One for each robot.
+            self._duplicate_sensor_suite(self.sensor_suite, False)
 
     @property
     def targ_idx(self):
