@@ -84,6 +84,24 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
 
 @registry.register_task_action
+class GalaMagicGraspAction(MagicGraspAction):
+    def step(self, grip_action, should_step=True, *args, **kwargs):
+        if grip_action is None:
+            return
+
+        if (
+            grip_action > self._config.GRASP_PICK_THRESH
+            and not self._sim.grasp_mgr.is_grasped
+        ):
+            self._grasp()
+        elif (
+            grip_action < self._config.GRASP_DROP_THRESH
+            and self._sim.grasp_mgr.is_grasped
+        ):
+            self._ungrasp()
+
+
+@registry.register_task_action
 class SuctionGraspAction(GripSimulatorTaskAction):
     """
     Action to automatically grasp when the gripper makes contact with an object. Does not allow for ungrasping.

@@ -457,8 +457,13 @@ class ResNetNet(Net):
         #    )
         #    goal_observations = self.tgt_embeding(goal_observations)
         #    inputs.append(goal_observations)
+        batch_size = inputs[0].size(0)
         state_inputs = torch.cat(
-            [goal_observations[k] for k in self.ssc_keys], -1
+            [
+                goal_observations[k].view(batch_size, -1).float()
+                for k in self.ssc_keys
+            ],
+            -1,
         )
         state_inputs = self.tgt_embeding(state_inputs)
         inputs.append(state_inputs)

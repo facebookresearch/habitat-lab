@@ -19,6 +19,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 # These actions need to be imported since there is a Python evaluation
 # statement which dynamically creates the desired grip controller.
 from habitat.tasks.rearrange.grip_actions import (
+    GalaMagicGraspAction,
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
@@ -57,10 +58,10 @@ class RearrangeStopAction(SimulatorTaskAction):
         self.does_want_terminate = False
 
     def step(self, task, *args, is_last_action, **kwargs):
-        should_stop = kwargs.get("REARRANGE_STOP", [1.0])
-        if should_stop[0] == 1.0:
+        should_stop = kwargs.get("REARRANGE_STOP", [0.0])
+        if should_stop[0] > self._config.STOP_THRESHOLD:
             rearrange_logger.debug(
-                "Rearrange stop action requesting episode stop."
+                f"Rearrange stop action requesting episode stop with action {should_stop}"
             )
             self.does_want_terminate = True
 

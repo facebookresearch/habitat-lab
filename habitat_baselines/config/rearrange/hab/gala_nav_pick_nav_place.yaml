@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/gala.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick_nav_place.yaml
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0

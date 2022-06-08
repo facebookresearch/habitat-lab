@@ -163,6 +163,7 @@ _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
 _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
+_C.TASK.ACTIONS.REARRANGE_STOP.STOP_THRESHOLD = 0.0
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
 # -----------------------------------------------------------------------------

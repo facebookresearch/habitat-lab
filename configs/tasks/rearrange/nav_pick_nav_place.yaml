@@ -35,6 +35,7 @@ TASK:
     ART_SUCC_THRESH: 0.15
     SINGLE_EVAL_NODE: -1
     DEBUG_SKIP_TO_NODE: -1
+    USING_SUBTASKS: false
     SKIP_NODES:
     - move_obj
     TARGET_START_SENSOR:
@@ -92,13 +93,16 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
-            ARM_CONTROLLER: ArmRelPosAction
-            GRIP_CONTROLLER: MagicGraspAction
+            ARM_CONTROLLER: ArmRelPosKinematicAction
+            GRIP_CONTROLLER: GalaMagicGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+            GRASP_PICK_THRESH: 0.9
+            GRASP_DROP_THRESH: -0.9
+            ACT_INTERVAL: 10
         BASE_VELOCITY:
             TYPE: BaseVelAction
             LIN_SPEED: 10.0
@@ -110,13 +114,13 @@ TASK:
             MIN_ABS_ANG_SPEED: 1.0
         REARRANGE_STOP:
             TYPE: RearrangeStopAction
+            STOP_THRESHOLD: 0.9
     POSSIBLE_ACTIONS:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
     DID_VIOLATE_HOLD_CONSTRAINT:
         TYPE: DidViolateHoldConstraintMeasure
-    USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0
