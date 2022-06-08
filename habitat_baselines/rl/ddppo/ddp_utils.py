@@ -1,6 +1,8 @@
+import contextlib
 import functools
 import os
 import signal
+import socket
 import subprocess
 import threading
 from os import path as osp
@@ -267,3 +269,21 @@ def init_distrib_slurm(
     )
 
     return local_rank, tcp_store
+
+
+def find_free_port() -> int:
+    """
+    Returns a free port on the system.
+    Note that this can only be used to find a port for torch.distribted
+    if it's called by a process on the node that will have
+    world_rank == 0 and then all ranks are created. If you
+    just called `find_free_port()` on each rank independently, every
+    rank will have a different port!
+    """
+    with contextlib.closing(
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("localhost", 0))
+        _, port = sock.getsockname()
+        return port

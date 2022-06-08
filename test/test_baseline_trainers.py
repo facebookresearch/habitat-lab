@@ -23,6 +23,7 @@ try:
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
+    from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
     from habitat_baselines.run import execute_exp, run_exp
     from habitat_baselines.utils.common import (
         ObservationBatchingCache,
@@ -77,8 +78,8 @@ def _powerset(s):
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
-    # For testing with world_size=1, -1 works as port in PyTorch
-    os.environ["MAIN_PORT"] = str(-1)
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
 
     if gpu2gpu:
         try:

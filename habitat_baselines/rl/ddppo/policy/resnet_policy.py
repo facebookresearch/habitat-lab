@@ -237,7 +237,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
-        fuse_keys: List[str],
+        fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
     ):
@@ -255,9 +255,15 @@ class PointNavResNetNet(Net):
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys: List[str] = [
-            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
-        ]
+        self._fuse_keys: List[str] = (
+            [
+                k
+                for k in fuse_keys
+                if len(observation_space.spaces[k].shape) == 1
+            ]
+            if fuse_keys is not None
+            else []
+        )
         if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
                 [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
