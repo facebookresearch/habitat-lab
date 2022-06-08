@@ -16,7 +16,12 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
-from habitat.datasets.rearrange.receptacle import Receptacle, find_receptacles
+from habitat.datasets.rearrange.receptacle import (
+    OnTopOfReceptacle,
+    Receptacle,
+    ReceptacleTracker,
+    find_receptacles,
+)
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
@@ -72,9 +77,7 @@ class ObjectSampler:
     def __init__(
         self,
         object_set: List[str],
-        receptacle_sets: List[
-            Tuple[List[str], List[str], List[str], List[str]]
-        ],
+        allowed_recep_set_names: List[str],
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
@@ -84,15 +87,14 @@ class ObjectSampler:
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         """
         self.object_set = object_set
-        self.receptacle_sets = receptacle_sets
+        self._allowed_recep_set_names = allowed_recep_set_names
         self.receptacle_instances: Optional[
             List[Receptacle]
         ] = None  # all receptacles in the scene
         self.receptacle_candidates: Optional[
             List[Receptacle]
         ] = None  # the specific receptacle instances relevant to this sampler
-        assert len(self.receptacle_sets) > 0
-        self.max_sample_attempts = 1000  # number of distinct object|receptacle pairings to try before giving up
+        self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
         self.num_objects = num_objects  # tuple of [min,max] objects to sample
         assert self.num_objects[1] >= self.num_objects[0]
@@ -121,6 +123,7 @@ class ObjectSampler:
     def sample_receptacle(
         self,
         sim: habitat_sim.Simulator,
+        recep_tracker: ReceptacleTracker,
         cull_tilted_receptacles: bool = True,
         tilt_tolerance: float = 0.9,
     ) -> Receptacle:
@@ -131,21 +134,34 @@ class ObjectSampler:
         if self.receptacle_instances is None:
             self.receptacle_instances = find_receptacles(sim)
 
+        match_recep_sets = [
+            recep_tracker.recep_sets[k] for k in self._allowed_recep_set_names
+        ]
+
+        if match_recep_sets[0].is_on_top_of_sampler:
+            rs = match_recep_sets[0]
+            return OnTopOfReceptacle(
+                rs.name,
+                rs.included_receptacle_substrings,
+            )
+
         if self.receptacle_candidates is None:
             self.receptacle_candidates = []
             for receptacle in self.receptacle_instances:
                 found_match = False
-                for r_set_tuple in self.receptacle_sets:
-                    # r_set_tuple = (included_obj_substrs, excluded_obj_substrs, included_receptacle_substrs, excluded_receptacle_substrs)
+                for receptacle_set in match_recep_sets:
                     culled = False
                     # first try to cull by exclusion
                     for ex_object_substr in (
-                        r_set_tuple[1] and receptacle.parent_object_handle
+                        receptacle_set.excluded_object_substrings
+                        and receptacle.parent_object_handle
                     ):
                         if ex_object_substr in receptacle.parent_object_handle:
                             culled = True
                             break
-                    for ex_receptacle_substr in r_set_tuple[3]:
+                    for (
+                        ex_receptacle_substr
+                    ) in receptacle_set.excluded_receptacle_substrings:
                         if ex_receptacle_substr in receptacle.name:
                             culled = True
                             break
@@ -155,17 +171,23 @@ class ObjectSampler:
                     # if the receptacle is stage/global (no object handle) then always a match
                     if receptacle.parent_object_handle is None:
                         # check the inclusion name constraints
-                        for name_constraint in r_set_tuple[2]:
+                        for (
+                            name_constraint
+                        ) in receptacle_set.included_receptacle_substrings:
                             if name_constraint in receptacle.name:
                                 found_match = True
                                 break
                         break
 
                     # then search for inclusion
-                    for object_substr in r_set_tuple[0]:
+                    for (
+                        object_substr
+                    ) in receptacle_set.included_object_substrings:
                         if object_substr in receptacle.parent_object_handle:
                             # object substring is valid, try receptacle name constraint
-                            for name_constraint in r_set_tuple[2]:
+                            for (
+                                name_constraint
+                            ) in receptacle_set.included_receptacle_substrings:
                                 if name_constraint in receptacle.name:
                                     # found a valid substring match for this receptacle, stop the search
                                     found_match = True
@@ -176,6 +198,7 @@ class ObjectSampler:
                     if found_match:
                         # break receptacle set search
                         break
+
                 if found_match:
                     # substring match was found, check orientation constraint
                     if cull_tilted_receptacles:
@@ -198,7 +221,7 @@ class ObjectSampler:
 
         assert (
             len(self.receptacle_candidates) > 0
-        ), f"No receptacle instances found matching this sampler's requirements. Likely a sampler config constraint is not feasible for all scenes in the dataset. Cull this scene from your dataset? Scene='{sim.config.sim_cfg.scene_id}'. Receptacle constraints ='{self.receptacle_sets}'"
+        ), f"No receptacle instances found matching this sampler's requirements. Likely a sampler config constraint is not feasible for all scenes in the dataset. Cull this scene from your dataset? Scene='{sim.config.sim_cfg.scene_id}'. "
         target_receptacle = self.receptacle_candidates[
             random.randrange(0, len(self.receptacle_candidates))
         ]
@@ -262,6 +285,9 @@ class ObjectSampler:
                     new_object.rotation = (
                         habitat_sim.utils.common.random_quaternion()
                     )
+
+            if isinstance(receptacle, OnTopOfReceptacle):
+                snap_down = False
             if snap_down:
                 support_object_ids = [-1]
                 # add support object ids for non-stage receptacles
@@ -280,6 +306,7 @@ class ObjectSampler:
                             ]
                             break
                 elif receptacle.parent_object_handle is not None:
+                    print(receptacle.parent_object_handle)
                     support_object_ids = [
                         sim.get_rigid_object_manager()
                         .get_object_by_handle(receptacle.parent_object_handle)
@@ -344,6 +371,7 @@ class ObjectSampler:
     def single_sample(
         self,
         sim: habitat_sim.Simulator,
+        recep_tracker: ReceptacleTracker,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         fixed_target_receptacle=None,
@@ -357,7 +385,7 @@ class ObjectSampler:
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
         else:
-            target_receptacle = self.sample_receptacle(sim)
+            target_receptacle = self.sample_receptacle(sim, recep_tracker)
         logger.info(
             f"Sampling '{object_handle}' from '{target_receptacle.name}'"
         )
@@ -378,6 +406,7 @@ class ObjectSampler:
     def sample(
         self,
         sim: habitat_sim.Simulator,
+        recep_tracker: ReceptacleTracker,
         target_receptacles,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
@@ -401,13 +430,20 @@ class ObjectSampler:
             if len(new_objects) < len(target_receptacles):
                 # no objects sampled yet
                 new_object, receptacle = self.single_sample(
-                    sim, snap_down, vdb, target_receptacles[len(new_objects)]
+                    sim,
+                    recep_tracker,
+                    snap_down,
+                    vdb,
+                    target_receptacles[len(new_objects)],
                 )
             else:
                 new_object, receptacle = self.single_sample(
-                    sim, snap_down, vdb
+                    sim, recep_tracker, snap_down, vdb
                 )
             if new_object is not None:
+                print("Got ", receptacle.name)
+                if recep_tracker.update_receptacle_tracking(receptacle):
+                    self.receptacle_candidates = None
                 new_objects.append((new_object, receptacle))
 
         if len(new_objects) >= self.num_objects[0]:
@@ -421,7 +457,7 @@ class ObjectSampler:
             f"    Only able to sample {len(new_objects)} out of {self.num_objects}..."
         )
         # cleanup
-        for new_object in new_objects:
+        for new_object, _ in new_objects:
             sim.get_rigid_object_manager().remove_object_by_handle(
                 new_object.handle
             )
@@ -436,9 +472,7 @@ class ObjectTargetSampler(ObjectSampler):
     def __init__(
         self,
         object_instance_set: List[habitat_sim.physics.ManagedRigidObject],
-        receptacle_sets: List[
-            Tuple[List[str], List[str], List[str], List[str]]
-        ],
+        allowed_recep_set_names: List[str],
         num_targets: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
@@ -453,7 +487,7 @@ class ObjectTargetSampler(ObjectSampler):
         ]
         super().__init__(
             object_set,
-            receptacle_sets,
+            allowed_recep_set_names,
             num_targets,
             orientation_sample,
             sample_region_ratio,
@@ -463,6 +497,7 @@ class ObjectTargetSampler(ObjectSampler):
     def sample(
         self,
         sim: habitat_sim.Simulator,
+        recep_tracker: ReceptacleTracker,
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
         target_receptacles=None,
@@ -497,6 +532,7 @@ class ObjectTargetSampler(ObjectSampler):
                 )
             new_object, receptacle = self.single_sample(
                 sim,
+                recep_tracker,
                 snap_down,
                 vdb,
                 goal_recep,
@@ -537,6 +573,9 @@ class ArticulatedObjectStateSampler:
         self.state_range = state_range
         assert self.state_range[1] >= self.state_range[0]
 
+    def _sample_joint_state(self):
+        return random.uniform(self.state_range[0], self.state_range[1])
+
     def sample(
         self, sim: habitat_sim.Simulator, receptacles=None
     ) -> Optional[
@@ -560,9 +599,7 @@ class ArticulatedObjectStateSampler:
             for link_ix in range(ao_instance.num_links):
                 if ao_instance.get_link_name(link_ix) == self.link_name:
                     # found a matching link, sample the state
-                    joint_state = random.uniform(
-                        self.state_range[0], self.state_range[1]
-                    )
+                    joint_state = self._sample_joint_state()
                     # set the joint state
                     pose = ao_instance.joint_positions
                     pose[
@@ -574,6 +611,16 @@ class ArticulatedObjectStateSampler:
                     ao_states[ao_instance][link_ix] = joint_state
                     break
         return ao_states
+
+
+class ArtObjCatStateSampler(ArticulatedObjectStateSampler):
+    def __init__(
+        self, ao_handle: str, link_name: str, state_range: Tuple[float, float]
+    ):
+        super().__init__(ao_handle, link_name, state_range)
+
+    def _sample_joint_state(self):
+        return random.choice(self.state_range)
 
 
 class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):

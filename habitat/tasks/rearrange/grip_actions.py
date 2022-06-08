@@ -84,7 +84,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
 
 @registry.register_task_action
-class SuctionGraspAction(GripSimulatorTaskAction):
+class SuctionGraspAction(MagicGraspAction):
     """
     Action to automatically grasp when the gripper makes contact with an object. Does not allow for ungrasping.
     """
@@ -93,16 +93,7 @@ class SuctionGraspAction(GripSimulatorTaskAction):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
 
-    @property
-    def action_space(self):
-        return None
-
-    def _ungrasp(self):
-        self._sim.grasp_mgr.desnap()
-
-    def step(self, _, should_step=True, *args, **kwargs):
-        if self._sim.grasp_mgr.is_grasped:
-            return
+    def _grasp(self):
         attempt_snap_entity: Union[str, int] = None
         contacts = self._sim.get_physics_contact_points()
 

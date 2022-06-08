@@ -380,7 +380,8 @@ def play_env(env, args, config):
 
         else:
             use_ob = observations_to_image(obs, info)
-            use_ob = overlay_frame(use_ob, info)
+            if not args.skip_render_text:
+                use_ob = overlay_frame(use_ob, info)
 
         draw_ob = use_ob[:]
 
@@ -456,6 +457,9 @@ if __name__ == "__main__":
             """,
     )
     parser.add_argument("--play-cam-res", type=int, default=512)
+    parser.add_argument(
+        "--skip-render-text", action="store_true", default=False
+    )
     parser.add_argument(
         "--same-task",
         action="store_true",

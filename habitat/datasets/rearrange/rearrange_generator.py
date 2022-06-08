@@ -24,6 +24,9 @@ from habitat.datasets.rearrange.rearrange_dataset import (
     RearrangeEpisode,
 )
 from habitat.datasets.rearrange.receptacle import (
+    OnTopOfReceptacle,
+    ReceptacleSet,
+    ReceptacleTracker,
     find_receptacles,
     get_all_scenedataset_receptacles,
 )
@@ -107,9 +110,7 @@ class RearrangeEpisodeGenerator:
         self._obj_sets: Dict[str, List[str]] = {}
 
         # {receptacle set name -> ([included object handles], [excluded object handles], [included receptacle name substrings], [excluded receptacle name substrings])}
-        self._receptacle_sets: Dict[
-            str, Tuple[List[str], List[str], List[str], List[str]]
-        ] = {}
+        self._receptacle_sets: Dict[str, ReceptacleSet] = {}
 
         expected_list_keys = ["included_substrings", "excluded_substrings"]
         # scene sets
@@ -174,12 +175,8 @@ class RearrangeEpisodeGenerator:
                     type(receptacle_set[list_key]) is list
                 ), f"cfg.receptacle_sets - '{receptacle_set['name']}' '{list_key}' must be a list of strings."
 
-            # NOTE: we can't finalize this list until sampling time when objects are instanced and receptacle metadata is scraped from the scene
-            self._receptacle_sets[receptacle_set["name"]] = (
-                receptacle_set["included_object_substrings"],
-                receptacle_set["excluded_object_substrings"],
-                receptacle_set["included_receptacle_substrings"],
-                receptacle_set["excluded_receptacle_substrings"],
+            self._receptacle_sets[receptacle_set["name"]] = ReceptacleSet(
+                **receptacle_set
             )
 
     def _get_obj_samplers(self) -> None:
@@ -207,16 +204,12 @@ class RearrangeEpisodeGenerator:
                     for x in self._obj_sets[y]
                 ]
                 object_handles = sorted(set(object_handles))
-                receptacle_info = [
-                    self._receptacle_sets[y]
-                    for y in obj_sampler_info["params"]["receptacle_sets"]
-                ]
 
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
                     object_handles,
-                    receptacle_info,
+                    obj_sampler_info["params"]["receptacle_sets"],
                     (
                         obj_sampler_info["params"]["num_samples"][0],
                         obj_sampler_info["params"]["num_samples"][1],
@@ -248,17 +241,13 @@ class RearrangeEpisodeGenerator:
             ), f"Duplicate target sampler name '{target_sampler_info['name']}' in config."
             if target_sampler_info["type"] == "uniform":
                 # merge and flatten receptacle sets
-                receptacle_info = [
-                    self._receptacle_sets[y]
-                    for y in target_sampler_info["params"]["receptacle_sets"]
-                ]
 
                 self._target_samplers[
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
                     # Add object set later
                     [],
-                    receptacle_info,
+                    target_sampler_info["params"]["receptacle_sets"],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -326,6 +315,14 @@ class RearrangeEpisodeGenerator:
                 self._ao_state_samplers[
                     ao_info["name"]
                 ] = samplers.ArticulatedObjectStateSampler(
+                    ao_info["params"][0],
+                    ao_info["params"][1],
+                    (ao_info["params"][2], ao_info["params"][3]),
+                )
+            elif ao_info["type"] == "categorical":
+                self._ao_state_samplers[
+                    ao_info["name"]
+                ] = samplers.ArtObjCatStateSampler(
                     ao_info["params"][0],
                     ao_info["params"][1],
                     (ao_info["params"][2], ao_info["params"][3]),
@@ -444,6 +441,12 @@ class RearrangeEpisodeGenerator:
         Generate a single episode, sampling the scene.
         """
 
+        # Reset the number of allowed objects per receptacle.
+        recep_tracker = ReceptacleTracker(
+            {k: v for k, v in cfg.max_objects_per_receptacle},
+            self._receptacle_sets,
+        )
+
         self._reset_samplers()
         self.episode_data: Dict[str, Dict[str, Any]] = {
             "sampled_objects": {},  # object sampler name -> sampled object instances
@@ -478,9 +481,15 @@ class RearrangeEpisodeGenerator:
                 sampler_name
             ][0]
             sampler = self._obj_samplers[obj_sampler_name]
-            new_target_receptacles = [
-                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
-            ]
+            new_target_receptacles = []
+            for _ in range(num_targets):
+                new_receptacle = sampler.sample_receptacle(
+                    self.sim, recep_tracker
+                )
+                if recep_tracker.update_receptacle_tracking(new_receptacle):
+                    sampler.receptacle_candidates = None
+                new_target_receptacles.append(new_receptacle)
+
             target_receptacles[obj_sampler_name].extend(new_target_receptacles)
             all_target_receptacles.extend(new_target_receptacles)
 
@@ -489,18 +498,32 @@ class RearrangeEpisodeGenerator:
         for sampler, (sampler_name, num_targets) in zip(
             self._target_samplers.values(), target_numbers.items()
         ):
-            new_goal_receptacles = [
-                sampler.sample_receptacle(self.sim) for _ in range(num_targets)
-            ]
+            new_goal_receptacles = []
+            for _ in range(num_targets):
+                new_receptacle = sampler.sample_receptacle(
+                    self.sim,
+                    recep_tracker,
+                )
+                if isinstance(new_receptacle, OnTopOfReceptacle):
+                    new_receptacle.set_episode_data(self.episode_data)
+                if recep_tracker.update_receptacle_tracking(new_receptacle):
+                    sampler.receptacle_candidates = None
+
+                new_goal_receptacles.append(new_receptacle)
+
             goal_receptacles[sampler_name] = new_goal_receptacles
             all_goal_receptacles.extend(new_goal_receptacles)
+
+        for recep in [*all_goal_receptacles, *all_target_receptacles]:
+            recep_tracker.inc_count(recep.name)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
         ao_states: Dict[str, Dict[int, float]] = {}
         for _sampler_name, ao_state_sampler in self._ao_state_samplers.items():
             sampler_states = ao_state_sampler.sample(
-                self.sim, [*all_target_receptacles, *all_goal_receptacles]
+                self.sim,
+                [*all_target_receptacles, *all_goal_receptacles],
             )
             if sampler_states is None:
                 return None
@@ -520,6 +543,7 @@ class RearrangeEpisodeGenerator:
         for sampler_name, obj_sampler in self._obj_samplers.items():
             object_sample_data = obj_sampler.sample(
                 self.sim,
+                recep_tracker,
                 target_receptacles[sampler_name],
                 snap_down=True,
                 vdb=(self.vdb if self._render_debug_obs else None),
@@ -577,6 +601,7 @@ class RearrangeEpisodeGenerator:
             ][0]
             new_target_objects = target_sampler.sample(
                 self.sim,
+                recep_tracker,
                 snap_down=True,
                 vdb=self.vdb,
                 target_receptacles=target_receptacles[obj_sampler_name],
@@ -650,6 +675,10 @@ class RearrangeEpisodeGenerator:
             extract_recep_info(x) for x in all_goal_receptacles
         ]
 
+        name_to_receptacle = {
+            k: v.name for k, v in object_to_containing_receptacle.items()
+        }
+
         return RearrangeEpisode(
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
@@ -668,6 +697,7 @@ class RearrangeEpisodeGenerator:
             target_receptacles=save_target_receps,
             goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
+            name_to_receptacle=name_to_receptacle,
             info={"object_labels": target_refs},
         )
 
@@ -885,6 +915,11 @@ def get_config_defaults() -> CN:
     _C.scene_sampler.params.scene = "v3_sc1_staging_00"
     _C.scene_sampler.params.scene_sets = []
     _C.scene_sampler.comment = ""
+
+    # Specify name of receptacle and maximum # of placemenets in
+    # receptacle. To allow only two objects in the chair, specify:
+    # - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
+    _C.max_objects_per_receptacle = []
 
     # Define the object sampling configuration
     _C.object_samplers = [
