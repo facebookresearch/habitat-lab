@@ -372,9 +372,17 @@ class BatchedEnv:
             bsim_config.do_procedural_episode_set = generate_episodes
             if not generate_episodes:
                 if config.get("EVALUATION_MODE", False):
-                    bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json"
+                    # bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json"
+                    bsim_config.episode_set_filepath = self._config.get(
+                        "EVAL_DATASET",
+                        "/private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json",
+                    )
                 else:
-                    bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json"
+                    # bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json"
+                    bsim_config.episode_set_filepath = self._config.get(
+                        "TRAIN_DATASET",
+                        "/private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json",
+                    )
             bsim_config.episode_generator_config = generator_config
 
             bsim_config.enable_robot_collision = self._config.get(

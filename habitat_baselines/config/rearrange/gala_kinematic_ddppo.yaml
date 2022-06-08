@@ -4,14 +4,14 @@ BASE_TASK_CONFIG_PATH: /private/home/vincentpierre/Documents/gala_kinematic/habi
 VIDEO_DIR: "/checkpoint/vincentpierre/gala_kinematic/videos"
 VIDEO_OPTION: ["disk"]
 REWARD_SCALE: 1.0 # 0.01
-NUM_CHECKPOINTS: 10
+NUM_CHECKPOINTS: 100
 BATCHED_ENV: True
 OVERLAP_PHYSICS: True
 SAVE_VIDEOS_INTERVAL: -1
 LOG_INTERVAL: 10
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 5e9
-NUM_ENVIRONMENTS: 512
+NUM_ENVIRONMENTS: 128
 MAX_EPISODE_LENGTH: 500
 NUM_EPISODES: 10000
 MIN_NON_TARGET: 27
@@ -20,15 +20,16 @@ FIXED_ROBOT_START_POSITION: False
 STAGGER: True
 TEST_EPISODE_COUNT: 10
 EVALUATION_MODE: False
+TRAIN_DATASET: /private/home/vincentpierre/Documents/gala_kinematic/data/all_receptacles_10k_1k.json
 BLIND: False
-PROCEDURAL_GENERATION: True
+PROCEDURAL_GENERATION: False
 ENABLE_ROBOT_COLLISION: True
 ENABLE_HELD_OBJECT_COLLISION: True
 PICK_REWARD : 5.0
-TASK_IS_PLACE : False
+TASK_IS_PLACE : True
 NPNP_SUCCESS_REWARD: 10.0
 NPNP_SUCCESS_THRESH: 0.15 #0.3 #0.05
-NPNP_FAILURE_PENALTY: 10.0
+NPNP_FAILURE_PENALTY: 0.0
 DROP_IS_FAIL: True
 STATE_SENSORS:
   ROBOT_START_RELATIVE:
@@ -102,7 +103,7 @@ RL:
     ppo_epoch: 1
     num_mini_batch: 2
     num_steps: 64
-    entropy_coef: 0.0005
+    entropy_coef: 0.001
     lr: 3.5e-4
     use_normalized_advantage: True
     use_linear_lr_decay: True
