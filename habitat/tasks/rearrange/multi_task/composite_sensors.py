@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import List
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -117,6 +119,28 @@ class MoveObjectsReward(RearrangeReward):
 
 
 @registry.register_measure
+class CompositeSparseReward(Measure):
+    cls_uuid: str = "composite_sparse_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeSparseReward.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = self._config.SLACK_REWARD
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._config = config
+
+
+@registry.register_measure
 class CompositeReward(Measure):
     """
     The reward based on where the agent currently is in the hand defined solution list.
@@ -158,10 +182,7 @@ class CompositeReward(Measure):
         elif node_idx > self._prev_node_idx:
             self._metric += self._config.STAGE_COMPLETE_REWARD
 
-        if task.forced_node_task is None:
-            cur_task_cfg = task.get_inferrred_node_task()._config
-        else:
-            cur_task_cfg = task.forced_node_task._config
+        cur_task_cfg = task.get_inferrred_node_task()._config
 
         if "REWARD_MEASURE" not in cur_task_cfg:
             raise ValueError(
@@ -244,9 +265,46 @@ class CompositeSuccess(Measure):
         does_action_want_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid
         ].get_metric()
-        self._metric = task.is_goal_state_satisfied() and does_action_want_stop
+        self._metric = task.pddl_problem.is_expr_true(
+            task.pddl_problem.goal
+        ) and (does_action_want_stop or not self._config.MUST_CALL_STOP)
         if does_action_want_stop:
             task.should_end = True
+
+
+@registry.register_measure
+class CompositeStageGoals(Measure):
+    """
+    Adds to the metrics `[TASK_NAME]_success`: Did the agent complete a
+        particular stage defined in `stage_goals`.
+    """
+
+    _stage_succ: List[str]
+    cls_uuid: str = "composite_stage_goals"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeStageGoals.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = {}
+        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+            succ_k = f"{stage_name}_success"
+            if stage_name in self._stage_succ:
+                self._metric[succ_k] = 1.0
+            else:
+                if task.pddl_problem.is_expr_true(logical_expr):
+                    self._metric[succ_k] = 1.0
+                    self._stage_succ.append(stage_name)
+                else:
+                    self._metric[succ_k] = 0.0
 
 
 @registry.register_measure
@@ -257,8 +315,6 @@ class CompositeNodeIdx(Measure):
           sub-task `solution` list?
         - `node_idx`: Index of the agent in completing the sub-tasks from
           the `solution` list.
-        - `[TASK_NAME]_success`: Did the agent complete a particular stage
-          defined in `stage_goals`.
     """
 
     cls_uuid: str = "composite_node_idx"
@@ -274,7 +330,6 @@ class CompositeNodeIdx(Measure):
         return CompositeNodeIdx.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._stage_succ = []
         self.update_metric(
             *args,
             episode=episode,
@@ -285,41 +340,22 @@ class CompositeNodeIdx(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = {}
-        if task.forced_node_task is None:
-            inf_cur_task_cfg = task.get_inferrred_node_task()._config
-            if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
-                raise ValueError(
-                    f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}"
-                )
+        inf_cur_task_cfg = task.get_inferrred_node_task()._config
+        if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
+            raise ValueError(
+                f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}"
+            )
 
-            is_succ = task.measurements.measures[
-                inf_cur_task_cfg.SUCCESS_MEASURE
-            ].get_metric()
-            if is_succ:
-                task.increment_inferred_solution_idx(episode)
-                rearrange_logger.debug(
-                    f"Completed {inf_cur_task_cfg.TYPE}, incremented node to {task.get_inferrred_node_task()}"
-                )
+        is_succ = task.measurements.measures[
+            inf_cur_task_cfg.SUCCESS_MEASURE
+        ].get_metric()
+        if is_succ:
+            task.increment_inferred_solution_idx(episode)
+            rearrange_logger.debug(
+                f"Completed {inf_cur_task_cfg.TYPE}, incremented node to {task.get_inferrred_node_task()}"
+            )
 
-            node_idx = task.get_inferred_node_idx()
-            for i in range(task.num_solution_subtasks):
-                self._metric[f"reached_{i}"] = (
-                    task.get_inferred_node_idx() >= i
-                )
-        else:
-            node_idx = task.forced_node_task_idx
+        node_idx = task.get_inferred_node_idx()
+        for i in range(task.num_solution_subtasks):
+            self._metric[f"reached_{i}"] = task.get_inferred_node_idx() >= i
         self._metric["node_idx"] = node_idx
-        self._update_info_stage_succ(task, self._metric)
-
-    def _update_info_stage_succ(self, task, info):
-        stage_goals = task.stage_goals
-        for k, preds in stage_goals.items():
-            succ_k = f"{k}_success"
-            if k in self._stage_succ:
-                info[succ_k] = 1.0
-            else:
-                if task.are_predicates_satisfied(preds):
-                    info[succ_k] = 1.0
-                    self._stage_succ.append(k)
-                else:
-                    info[succ_k] = 0.0

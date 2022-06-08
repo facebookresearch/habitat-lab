@@ -24,10 +24,6 @@ TASK:
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
-    DESIRED_RESTING_POSITION:
-    - 0.5
-    - 0.0
-    - 1.0
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
@@ -37,10 +33,6 @@ TASK:
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-    SINGLE_EVAL_NODE: -1
-    DEBUG_SKIP_TO_NODE: -1
-    SKIP_NODES:
-    - move_obj
     TARGET_START_SENSOR:
         TYPE: TargetStartSensor
         GOAL_FORMAT: CARTESIAN
@@ -84,6 +76,7 @@ TASK:
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
+    - COMPOSITE_STAGE_GOALS
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
@@ -163,6 +156,9 @@ SIMULATOR:
         - 0
         - 0
         - 1
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: FetchRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -181,10 +177,6 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    ARM_REST:
-    - 0.6
-    - 0.0
-    - 0.9
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
@@ -194,23 +186,5 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: FetchRobot
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION:
-        - 0.0
-        - 0.0
-        - 0.0
-        POSITION:
-        - 0
-        - 1.25
-        - 0
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0

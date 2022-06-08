@@ -11,17 +11,15 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    RearrangeObjectTypes,
-)
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 
 
 @registry.register_sensor
-class TargetOrGoalStartPointGoalSensor(Sensor):
+class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -49,21 +47,65 @@ class TargetOrGoalStartPointGoalSensor(Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.robot.base_transformation
+        robot_T = self._sim.get_robot_data(
+            self.robot_id
+        ).robot.base_transformation
 
-        if task.nav_to_obj_type == RearrangeObjectTypes.GOAL_POSITION:
+        if not hasattr(task, "pddl_problem"):
+            raise ValueError(f"Must use task with PDDL. {task} does not.")
+
+        pddl = task.pddl_problem
+
+        entity = None
+        if task.nav_to_entity_name != "":
+            entity = pddl.get_entity(task.nav_to_entity_name)
+
+        if entity is None or entity.expr_type.is_subtype_of(
+            pddl.expr_types["goal_type"]
+        ):
             to_pos = self._sim.get_targets()[1][self._task.targ_idx]
-        elif task.nav_to_obj_type == RearrangeObjectTypes.RIGID_OBJECT:
+        elif entity.expr_type.is_subtype_of(pddl.expr_types["rigid_obj_type"]):
             to_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
         else:
-            raise ValueError(
-                f"Got navigate to object type {RearrangeObjectTypes.RIGID_OBJECT}"
-            )
+            raise ValueError(f"Unknown {entity}.")
 
         dir_vector = robot_T.inverted().transform_point(to_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
+
+
+@registry.register_sensor
+class NavToEntitySensor(Sensor):
+    cls_uuid: str = "nav_to_entity"
+
+    def __init__(self, task, sim, config, *args, **kwargs):
+        self._config = config
+        if not hasattr(task, "pddl_problem"):
+            raise ValueError(f"Task must use PDDL. {task} does not.")
+        self._expr_types = len(task.pddl_problem.leaf_expr_types)
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavToSkillSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(len(self._expr_types),),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        ret = np.zeros(len(self._expr_types), dtype=np.float32)
+
+        cur_idx = self._expr_types.index(task.nav_to_entity_name)
+        ret[cur_idx] = 1.0
+        return ret
 
 
 @registry.register_sensor

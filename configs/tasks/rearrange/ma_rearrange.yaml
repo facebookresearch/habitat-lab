@@ -1,18 +1,14 @@
-GYM:
-    AUTO_NAME: "NavPick"
-    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'obj_start_gps_compass', 'joint', 'is_holding']
-    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
 
-    REWARD_MEASURE: "move_obj_reward"
+    REWARD_MEASURE: "composite_sparse_reward"
     SUCCESS_MEASURE: "composite_success"
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
@@ -26,41 +22,24 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
+
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
-    TASK_SPEC: nav_pick
+    TASK_SPEC: ma_example
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-    TARGET_START_SENSOR:
-        TYPE: TargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: GoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
     SENSORS:
-    - TARGET_START_SENSOR
-    - GOAL_SENSOR
-    - JOINT_SENSOR
-    - IS_HOLDING_SENSOR
-    - END_EFFECTOR_SENSOR
-    - TARGET_START_GPS_COMPASS_SENSOR
-    - TARGET_GOAL_GPS_COMPASS_SENSOR
+      - TARGET_START_SENSOR
+      - GOAL_SENSOR
+      - JOINT_SENSOR
+      - IS_HOLDING_SENSOR
+      - END_EFFECTOR_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
+    COMPOSITE_SPARSE_REWARD:
+        TYPE: CompositeSparseReward
+        SLACK_REWARD: -0.1
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
@@ -96,20 +75,15 @@ TASK:
 
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
-    - ROBOT_FORCE
-    - FORCE_TERMINATE
-    - ROBOT_COLLS
-    - END_EFFECTOR_TO_OBJECT_DISTANCE
-    - DOES_WANT_TERMINATE
-    - COMPOSITE_SUCCESS
-    - COMPOSITE_BAD_CALLED_TERMINATE
     - NUM_STEPS
-    - DID_VIOLATE_HOLD_CONSTRAINT
-    - MOVE_OBJECTS_REWARD
     - COMPOSITE_STAGE_GOALS
+    - DOES_WANT_TERMINATE
+    - COMPOSITE_SPARSE_REWARD
+    - COMPOSITE_SUCCESS
 
     ACTIONS:
-        ARM_ACTION:
+        AGENT_0_ARM_ACTION:
+            AGENT: 0
             TYPE: ArmAction
             ARM_CONTROLLER: ArmRelPosAction
             GRIP_CONTROLLER: MagicGraspAction
@@ -118,7 +92,8 @@ TASK:
             DISABLE_GRIP: false
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
-        BASE_VELOCITY:
+        AGENT_0_BASE_VELOCITY:
+            AGENT: 0
             TYPE: BaseVelAction
             LIN_SPEED: 10.0
             ANG_SPEED: 10.0
@@ -127,11 +102,40 @@ TASK:
             ALLOW_BACK: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
-        REARRANGE_STOP:
-            TYPE: RearrangeStopAction
+        AGENT_0_PDDL_APPLY_ACTION:
+            AGENT: 0
+            TYPE: PddlApplyAction
+        AGENT_1_ARM_ACTION:
+            AGENT: 1
+            TYPE: ArmAction
+            ARM_CONTROLLER: ArmRelPosAction
+            GRIP_CONTROLLER: MagicGraspAction
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: false
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        AGENT_1_BASE_VELOCITY:
+            AGENT: 1
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+        AGENT_1_PDDL_APPLY_ACTION:
+            AGENT: 1
+            TYPE: PddlApplyAction
+
     POSSIBLE_ACTIONS:
-    - ARM_ACTION
-    - BASE_VELOCITY
+    - AGENT_0_ARM_ACTION
+    - AGENT_0_BASE_VELOCITY
+    - AGENT_0_PDDL_APPLY_ACTION
+    - AGENT_1_ARM_ACTION
+    - AGENT_1_BASE_VELOCITY
+    - AGENT_1_PDDL_APPLY_ACTION
     - REARRANGE_STOP
 SIMULATOR:
     ACTION_SPACE_CONFIG: v0
@@ -140,28 +144,35 @@ SIMULATOR:
     AC_FREQ_RATIO: 4
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: true
+
     AGENTS:
     - AGENT_0
-    CONCUR_RENDER: true
-    AUTO_SLEEP: true
+    - AGENT_1
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: false
+        IS_SET_START_STATE: False
         RADIUS: 0.3
-        SENSORS:
-        - HEAD_DEPTH_SENSOR
-        START_POSITION:
-        - 0
-        - 0
-        - 0
-        START_ROTATION:
-        - 0
-        - 0
-        - 0
-        - 1
+        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
         ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        ROBOT_TYPE: FetchRobot
+        ROBOT_TYPE: "FetchRobot"
+        JOINT_START_NOISE: 0.0
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
+    AGENT_1:
+        HEIGHT: 1.5
+        IS_SET_START_STATE: False
+        RADIUS: 0.3
+        # Only sensors for AGENT_0 works.
+        # SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR']
+        START_POSITION: [0, 0, 0]
+        START_ROTATION: [0, 0, 0, 1]
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: "FetchRobot"
+        JOINT_START_NOISE: 0.0
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -180,9 +191,13 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
+
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    ROBOT_TYPE: "FetchRobot"
+
     HABITAT_SIM_V0:
         ALLOW_SLIDING: false
         ENABLE_PHYSICS: true
