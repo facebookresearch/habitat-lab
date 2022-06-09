@@ -17,11 +17,12 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import PddlEntity
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    RIGID_OBJ_TYPE,
+    PddlEntity,
+)
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
-
-DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
 
 @dataclass
@@ -41,7 +42,7 @@ class NavToInfo:
     start_base_rot: Optional[float] = None
 
 
-@registry.register_task(name=DYN_NAV_TASK_NAME)
+@registry.register_task(name="RearrangeNavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
     """
     :_nav_to_info: Information about the next skill we are navigating to.
@@ -52,6 +53,7 @@ class DynNavRLEnv(RearrangeTask):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         self.force_obj_to_idx = None
+        self.force_recep_to_name = None
         self._prev_measure = 1.0
 
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
@@ -94,6 +96,8 @@ class DynNavRLEnv(RearrangeTask):
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
         self.force_kwargs = kwargs
+        if "marker" in kwargs:
+            self.force_recep_to_name = kwargs["marker"]
 
     def _get_allowed_tasks(
         self, filter_entities: Optional[List[PddlEntity]] = None
@@ -104,10 +108,22 @@ class DynNavRLEnv(RearrangeTask):
         allowed_actions = None
         if len(self._config.FILTER_NAV_TO_TASKS) != 0:
             allowed_actions = self._config.FILTER_NAV_TO_TASKS
+        true_preds = self.pddl_problem.get_true_predicates()
+        robot_entity = self.pddl_problem.get_entity("ROBOT_0")
+
+        for entity in self.pddl_problem.all_entities.values():
+            if entity.expr_type.is_subtype_of(
+                self.pddl_problem.expr_types[RIGID_OBJ_TYPE]
+            ):
+                # The robot could be at this object.
+                new_pred = self.pddl_problem.predicates["robot_at"].clone()
+                new_pred.set_param_values([entity, robot_entity])
+                true_preds.append(new_pred)
 
         poss_actions = self.pddl_problem.get_possible_actions(
+            true_preds=true_preds,
             filter_entities=filter_entities,
-            restricted_action_names=[DYN_NAV_TASK_NAME],
+            restricted_action_names=["nav", "nav_to_receptacle"],
             allowed_action_names=allowed_actions,
         )
 
@@ -193,16 +209,9 @@ class DynNavRLEnv(RearrangeTask):
             f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
         )
 
-        if self.force_recep_to_name is not None:
-            use_entity = self.pddl_problem.get_entity(self.force_recep_to_name)
-            rearrange_logger.debug(f"Forcing receptacle {use_entity}")
-        else:
-            use_entity = self.pddl_problem.get_entity(self.force_obj_to_name)
-            rearrange_logger.debug(f"Search object name {use_entity}")
-
         must_include_entities = [
             self.pddl_problem.get_entity(entity_name)
-            for entity_name in self.force_kwargs["orig_applied_args"]
+            for entity_name in self.force_kwargs["orig_applied_args"].values()
         ]
 
         allowed_tasks = self._get_allowed_tasks(must_include_entities)

@@ -66,8 +66,6 @@ def do_entity_lists_match(
 ) -> bool:
     if len(to_set) != len(set_value):
         return False
-    if to_set is not None:
-        return False
     # Check types are compatible
     return all(
         set_arg.expr_type.is_subtype_of(arg.expr_type)
@@ -86,8 +84,6 @@ def ensure_entity_lists_match(
     # Check types are compatible
     for arg, set_arg in zip(to_set, set_value):
         if not set_arg.expr_type.is_subtype_of(arg.expr_type):
-            # breakpoint()
-            # set_arg.expr_type.is_subtype_of(arg.expr_type)
             raise ValueError(
                 f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
             )

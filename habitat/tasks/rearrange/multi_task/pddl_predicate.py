@@ -70,3 +70,10 @@ class Predicate:
 
     def __repr__(self):
         return str(self)
+
+    def __eq__(self, other_pred):
+        return (
+            self._name == other_pred._name
+            and self._args == other_pred._args
+            and self._arg_values == other_pred._arg_values
+        )

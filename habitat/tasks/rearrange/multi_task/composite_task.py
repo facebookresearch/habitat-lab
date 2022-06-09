@@ -24,17 +24,17 @@ class CompositeTask(RearrangeTask):
     """
 
     def __init__(self, *args, config, dataset=None, **kwargs):
-        super().__init__(config=config, *args, dataset=dataset, **kwargs)
-
         task_spec_path = osp.join(
-            self._config.TASK_SPEC_BASE_PATH, self._config.TASK_SPEC + ".yaml"
+            config.TASK_SPEC_BASE_PATH, config.TASK_SPEC + ".yaml"
         )
 
         self.pddl_problem = PddlProblem(
-            self._config.PDDL_DOMAIN_DEF,
+            config.PDDL_DOMAIN_DEF,
             task_spec_path,
-            self._config,
+            config,
         )
+
+        super().__init__(config=config, *args, dataset=dataset, **kwargs)
 
         self._cur_node_idx: int = -1
         self._cached_tasks: Dict[str, RearrangeTask] = {}

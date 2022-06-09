@@ -29,9 +29,19 @@ class LogicalExpr:
         self._sub_exprs = sub_exprs
         self._inputs = inputs
 
+    def is_true_from_predicates(self, preds: List[Predicate]) -> bool:
+        def check_statement(p):
+            if isinstance(p, LogicalExpr):
+                return p.is_true_from_predicates(preds)
+            else:
+                return p in preds
+
+        return self._is_true(check_statement)
+
     def is_true(self, sim_info: PddlSimInfo) -> bool:
-        # if self._expr_type == LogicalExprType.FORALL:
-        #     return self._sub_exprs
+        return self._is_true(lambda p: p.is_true(sim_info))
+
+    def _is_true(self, is_true_fn) -> bool:
         if self._expr_type == LogicalExprType.AND:
             reduce_op = lambda x, y: x and y
             init_value = True
@@ -43,7 +53,7 @@ class LogicalExpr:
 
         return reduce(
             reduce_op,
-            (sub_expr.is_true(sim_info) for sub_expr in self._sub_exprs),
+            (is_true_fn(sub_expr) for sub_expr in self._sub_exprs),
             init_value,
         )
 

@@ -266,11 +266,11 @@ class PddlDomain:
                 if not pred.are_args_compatible(entity_input):
                     continue
 
-                pred = pred.clone()
-                pred.set_param_values(entity_input)
+                use_pred = pred.clone()
+                use_pred.set_param_values(entity_input)
 
-                if pred.is_true(self.sim_info):
-                    true_preds.append(pred)
+                if use_pred.is_true(self.sim_info):
+                    true_preds.append(use_pred)
         return true_preds
 
     def get_possible_actions(
@@ -280,6 +280,8 @@ class PddlDomain:
         restricted_action_names: Optional[List[str]] = None,
         true_preds: Optional[List[Predicate]] = None,
     ) -> List[PddlAction]:
+        if self._sim_info is None:
+            raise ValueError("Must first bind to simulator instance")
         if true_preds is None:
             true_preds = self.get_true_predicates()
         if filter_entities is None:
@@ -287,7 +289,7 @@ class PddlDomain:
         if restricted_action_names is None:
             restricted_action_names = []
 
-        all_entities = self.all_entities.values()
+        all_entities = list(self.all_entities.values())
         matching_actions = []
         for action in self.actions.values():
             if (
@@ -310,11 +312,16 @@ class PddlDomain:
                 if not matches_filter:
                     continue
 
-                if not action.are_args_compatible(entity_input):
-                    continue
-                new_action = action.clone()
-                new_action.set_param_values(entity_input)
-                matching_actions.append(new_action)
+                for entity_input_perm in itertools.permutations(entity_input):
+                    if not action.are_args_compatible(entity_input_perm):
+                        continue
+                    new_action = action.clone()
+                    new_action.set_param_values(entity_input_perm)
+                    if not action.is_precond_satisfied_from_predicates(
+                        true_preds
+                    ):
+                        continue
+                    matching_actions.append(new_action)
         return matching_actions
 
     @property

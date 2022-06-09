@@ -141,7 +141,7 @@ actions:
   - name: nav
     parameters:
       - name: obj
-        expr_type: static_obj_type
+        expr_type: obj_type
       - name: robot
         expr_type: robot_type
     precondition: null
@@ -162,7 +162,10 @@ actions:
         expr_type: obj_type
       - name: robot
         expr_type: robot_type
-    precondition: null
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - in(obj, marker)
     postcondition:
       - robot_at(marker, robot)
     task_info:
