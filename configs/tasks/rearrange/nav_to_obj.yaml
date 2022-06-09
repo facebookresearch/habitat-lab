@@ -116,6 +116,8 @@ TASK:
     POSSIBLE_ACTIONS: ['BASE_VELOCITY']
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
