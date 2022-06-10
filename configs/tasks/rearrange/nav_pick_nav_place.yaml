@@ -138,6 +138,8 @@ TASK:
         TYPE: RearrangePickSuccess
         EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
     HOLD_THRESH: 0.09

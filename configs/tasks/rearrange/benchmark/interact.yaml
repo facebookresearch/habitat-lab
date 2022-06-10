@@ -41,6 +41,9 @@ SIMULATOR:
     UPDATE_ROBOT: True
     ############################
 
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
+
     SEED: 100
     TILT_ANGLE: 15
     TURN_ANGLE: 10
