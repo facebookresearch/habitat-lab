@@ -465,6 +465,8 @@ TASK:
         - BASE_VELOCITY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     DEBUG_RENDER: False
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
