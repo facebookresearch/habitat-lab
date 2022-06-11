@@ -89,26 +89,25 @@ class PddlDomain:
             all_entites = {**self._constants, **pred_entities}
 
             art_states = {
-                all_entites[k]: ArtSampler(
-                    **v, thresh=self._config.ART_SUCC_THRESH
-                )
-                for k, v in art_states.items()
+                all_entites[k]: ArtSampler(**v) for k, v in art_states.items()
             }
             obj_states = {
                 all_entites[k]: all_entites[v] for k, v in obj_states.items()
             }
-            robot_states = {
-                all_entites[k]: PddlRobotState(
-                    holding=all_entites[v["holding"]]
-                    if "holding" in v
-                    else None,
-                    should_drop=v.get("should_drop", False),
-                    pos=v.get("pos", None),
-                )
-                for k, v in robot_states.items()
-            }
 
-            set_state = PddlSetState(art_states, obj_states, robot_states)
+            use_robot_states = {}
+            for k, v in robot_states.items():
+                use_k = all_entites[k]
+                robot_pos = v.get("pos", None)
+                holding = v.get("holding", None)
+
+                use_robot_states[use_k] = PddlRobotState(
+                    holding=all_entites.get(holding, holding),
+                    should_drop=v.get("should_drop", False),
+                    pos=all_entites.get(robot_pos, robot_pos),
+                )
+
+            set_state = PddlSetState(art_states, obj_states, use_robot_states)
 
             pred = Predicate(pred_d["name"], set_state, arg_entities)
             self.predicates[pred.name] = pred
@@ -280,10 +279,6 @@ class PddlDomain:
         restricted_action_names: Optional[List[str]] = None,
         true_preds: Optional[List[Predicate]] = None,
     ) -> List[PddlAction]:
-        if self._sim_info is None:
-            raise ValueError("Must first bind to simulator instance")
-        if true_preds is None:
-            true_preds = self.get_true_predicates()
         if filter_entities is None:
             filter_entities = []
         if restricted_action_names is None:
@@ -317,8 +312,11 @@ class PddlDomain:
                         continue
                     new_action = action.clone()
                     new_action.set_param_values(entity_input_perm)
-                    if not action.is_precond_satisfied_from_predicates(
-                        true_preds
+                    if (
+                        true_preds is not None
+                        and not action.is_precond_satisfied_from_predicates(
+                            true_preds
+                        )
                     ):
                         continue
                     matching_actions.append(new_action)
@@ -400,3 +398,15 @@ class PddlProblem(PddlDomain):
 
     def get_entity(self, k: str) -> PddlEntity:
         return self.all_entities[k]
+
+    def get_ordered_entities_list(self) -> List[PddlEntity]:
+        return sorted(
+            self.all_entities.values(),
+            key=lambda x: x.name,
+        )
+
+    def get_ordered_actions(self) -> List[PddlAction]:
+        return sorted(
+            self.actions.values(),
+            key=lambda x: x.name,
+        )

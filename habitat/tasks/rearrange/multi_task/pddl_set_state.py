@@ -24,12 +24,11 @@ from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 class ArtSampler:
-    def __init__(self, value, cmp, thresh=0.05):
+    def __init__(self, value, cmp):
         self.value = value
         self.cmp = cmp
-        self._thresh = thresh
 
-    def is_satisfied(self, cur_value: float) -> bool:
+    def is_satisfied(self, cur_value: float, thresh: float = 0.05) -> bool:
         if self.cmp == "greater":
             return cur_value > self.value
         elif self.cmp == "less":
@@ -57,6 +56,7 @@ class PddlRobotState:
         self, sub_dict: Dict[PddlEntity, PddlEntity]
     ) -> "PddlRobotState":
         self.holding = sub_dict.get(self.holding, self.holding)
+        self.pos = sub_dict.get(self.pos, self.pos)
         return self
 
     def clone(self) -> "PddlRobotState":
@@ -103,7 +103,17 @@ class PddlRobotState:
 
         # Set the robot starting position
         if self.pos == "rnd":
+            rearrange_logger.debug("Setting robot base random position.")
             sim.set_robot_base_to_random_point(agent_idx=robot_id)
+        elif isinstance(self.pos, PddlEntity):
+            pos = sim_info.get_entity_pos(self.pos)
+            pos = sim_info.sim.safe_snap_point(pos)
+            rearrange_logger.debug(
+                f"Setting robot base to {self.pos} at {pos}."
+            )
+            sim.get_robot_data(robot_id).robot.base_pos = pos
+        elif self.pos is not None:
+            raise ValueError(f"Unrecongized set position {self.pos}")
 
 
 class PddlSetState:
@@ -231,7 +241,7 @@ class PddlSetState:
 
             marker = sim_info.search_for_entity(art_entity, ART_OBJ_TYPE)
             prev_art_pos = marker.get_targ_js()
-            if not set_art.is_satisfied(prev_art_pos):
+            if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
                 return False
         return all(
             robot_state.is_true(sim_info, robot_entity)

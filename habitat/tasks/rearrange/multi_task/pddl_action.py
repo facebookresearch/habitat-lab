@@ -116,6 +116,7 @@ class PddlAction:
 
     def apply(self, sim_info: PddlSimInfo) -> None:
         for p in self._post_cond:
+            rearrange_logger.debug(f"Setting predicate {p}")
             p.set_state(sim_info)
 
     @property

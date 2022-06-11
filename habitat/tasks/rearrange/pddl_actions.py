@@ -18,11 +18,11 @@ class PddlApplyAction(RobotAction):
     @property
     def action_space(self):
         if self._entities_list is None:
-            self._entities_list = list(
-                self._task.pddl_problem.all_entities.values()
+            self._entities_list = (
+                self._task.pddl_problem.get_ordered_entities_list()
             )
-            self._action_ordering = list(
-                self._task.pddl_problem.actions.values()
+            self._action_ordering = (
+                self._task.pddl_problem.get_ordered_actions()
             )
 
         action_n_args = sum(
@@ -46,7 +46,7 @@ class PddlApplyAction(RobotAction):
             if sum(action_part) > 0:
                 # Take action
                 # Convert 1 indexed to 0 indexed.
-                real_action_idxs = [a - 1 for a in action_part]
+                real_action_idxs = [int(a) - 1 for a in action_part]
                 for a in real_action_idxs:
                     if a < 0.0:
                         raise ValueError(
@@ -58,12 +58,11 @@ class PddlApplyAction(RobotAction):
                     self._entities_list[i] for i in real_action_idxs
                 ]
 
-                rearrange_logger.debug(
-                    f"Got action {action} with obj args {args}"
-                )
-
                 apply_action = action.clone()
                 apply_action.set_param_values(param_values)
+                rearrange_logger.debug(
+                    f"Applying action {action} with obj args {param_values}"
+                )
                 self._task.pddl_problem.apply_action(apply_action)
             cur_i += action.n_args
         if is_last_action:

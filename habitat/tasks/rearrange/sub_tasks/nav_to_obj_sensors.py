@@ -201,6 +201,7 @@ class NavGoalSensor(UsesRobotInterface, Sensor):
         poss_actions = task.pddl_problem.get_possible_actions(
             allowed_action_names=["nav", "nav_to_receptacle"],
             filter_entities=[robot_entity],
+            true_preds=task.pddl_problem.get_true_predicates(),
         )
         targets = []
         state = self._sim.capture_state(True)
