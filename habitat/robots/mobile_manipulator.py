@@ -165,10 +165,12 @@ class MobileManipulator(RobotInterface):
             # automatic joint limit clamping after each call to sim.step_physics()
             self.sim_obj.auto_clamp_joint_limits = True
         for link_id in self.sim_obj.get_link_ids():
-            self.joint_pos_indices[link_id] = self.sim_obj.get_link_joint_pos_offset(
+            self.joint_pos_indices[
+                link_id
+            ] = self.sim_obj.get_link_joint_pos_offset(link_id)
+            self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(
                 link_id
             )
-            self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(link_id)
         self.joint_limits = self.sim_obj.joint_position_limits
 
         # remove any default damping motors
@@ -247,7 +249,9 @@ class MobileManipulator(RobotInterface):
                     cam_info.cam_look_at_pos,
                     mn.Vector3(0, 1, 0),
                 )
-                cam_transform = link_trans @ cam_transform @ cam_info.relative_transform
+                cam_transform = (
+                    link_trans @ cam_transform @ cam_info.relative_transform
+                )
                 cam_transform = inv_T @ cam_transform
 
                 sens_obj.node.transformation = orthonormalize_rotation_shear(
@@ -304,7 +308,9 @@ class MobileManipulator(RobotInterface):
         """
         return self.params.ee_offset
 
-    def calculate_ee_forward_kinematics(self, joint_state: np.ndarray) -> np.ndarray:
+    def calculate_ee_forward_kinematics(
+        self, joint_state: np.ndarray
+    ) -> np.ndarray:
         """Gets the end-effector position for the given joint state."""
         self.sim_obj.joint_positions = joint_state
         return self.ee_transform.translation
@@ -315,7 +321,9 @@ class MobileManipulator(RobotInterface):
         """Gets the joint states necessary to achieve the desired end-effector
         configuration.
         """
-        raise NotImplementedError("Currently no implementation for generic IK.")
+        raise NotImplementedError(
+            "Currently no implementation for generic IK."
+        )
 
     @property
     def ee_transform(self) -> mn.Matrix4:
@@ -358,7 +366,8 @@ class MobileManipulator(RobotInterface):
         """Set the gripper motors to a desired symmetric state of the gripper [0,1] -> [open, closed]"""
         for i, jidx in enumerate(self.params.gripper_joints):
             delta = (
-                self.params.gripper_closed_state[i] - self.params.gripper_open_state[i]
+                self.params.gripper_closed_state[i]
+                - self.params.gripper_open_state[i]
             )
             target = self.params.gripper_open_state[i] + delta * gripper_state
             self._set_motor_pos(jidx, target)
@@ -377,7 +386,8 @@ class MobileManipulator(RobotInterface):
         return (
             np.amax(
                 np.abs(
-                    self.gripper_joint_pos - np.array(self.params.gripper_open_state)
+                    self.gripper_joint_pos
+                    - np.array(self.params.gripper_open_state)
                 )
             )
             < self.params.gripper_state_eps
@@ -389,7 +399,8 @@ class MobileManipulator(RobotInterface):
         return (
             np.amax(
                 np.abs(
-                    self.gripper_joint_pos - np.array(self.params.gripper_closed_state)
+                    self.gripper_joint_pos
+                    - np.array(self.params.gripper_closed_state)
                 )
             )
             < self.params.gripper_state_eps
@@ -427,7 +438,9 @@ class MobileManipulator(RobotInterface):
         joint dimensions.
         """
         if len(ctrl) != len(self.params.arm_joints):
-            raise ValueError("Control dimension does not match joint dimension")
+            raise ValueError(
+                "Control dimension does not match joint dimension"
+            )
         if np.any(np.isnan(ctrl)):
             raise ValueError("Control is NaN")
 
@@ -474,7 +487,9 @@ class MobileManipulator(RobotInterface):
     def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
         """Clips a 3D end-effector position within region the robot can reach."""
         return np.clip(
-            pos, self.params.ee_constraint[:, 0], self.params.ee_constraint[:, 1]
+            pos,
+            self.params.ee_constraint[:, 0],
+            self.params.ee_constraint[:, 1],
         )
 
     #############################################
@@ -490,8 +505,11 @@ class MobileManipulator(RobotInterface):
     @property
     def base_pos(self):
         """Get the robot base ground position via configured local offset from origin."""
-        return self.sim_obj.translation + self.sim_obj.transformation.transform_vector(
-            self.params.base_offset
+        return (
+            self.sim_obj.translation
+            + self.sim_obj.transformation.transform_vector(
+                self.params.base_offset
+            )
         )
 
     @base_pos.setter
@@ -501,7 +519,9 @@ class MobileManipulator(RobotInterface):
             raise ValueError("Base position needs to be three dimensions")
         self.sim_obj.translation = (
             position
-            - self.sim_obj.transformation.transform_vector(self.params.base_offset)
+            - self.sim_obj.transformation.transform_vector(
+                self.params.base_offset
+            )
         )
 
     @property
@@ -519,7 +539,9 @@ class MobileManipulator(RobotInterface):
         return self.sim_obj.transformation
 
     def is_base_link(self, link_id: int) -> bool:
-        return self.sim_obj.get_link_name(link_id) in self.params.base_link_names
+        return (
+            self.sim_obj.get_link_name(link_id) in self.params.base_link_names
+        )
 
     #############################################
     # HIDDEN
@@ -573,7 +595,10 @@ class MobileManipulator(RobotInterface):
     def _update_motor_settings_cache(self):
         """Updates the JointMotorSettings cache for cheaper future updates"""
         self.joint_motors = {}
-        for motor_id, joint_id in self.sim_obj.existing_joint_motor_ids.items():
+        for (
+            motor_id,
+            joint_id,
+        ) in self.sim_obj.existing_joint_motor_ids.items():
             self.joint_motors[joint_id] = (
                 motor_id,
                 self.sim_obj.get_joint_motor_settings(motor_id),

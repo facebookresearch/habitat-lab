@@ -58,7 +58,9 @@ default_sim_settings = {
 def make_cfg(settings):
     sim_cfg = habitat_sim.SimulatorConfiguration()
     if "scene_dataset_config_file" in settings:
-        sim_cfg.scene_dataset_config_file = settings["scene_dataset_config_file"]
+        sim_cfg.scene_dataset_config_file = settings[
+            "scene_dataset_config_file"
+        ]
     sim_cfg.frustum_culling = settings.get("frustum_culling", False)
     if "enable_physics" in settings:
         sim_cfg.enable_physics = settings["enable_physics"]
@@ -159,7 +161,10 @@ def make_cfg(settings):
         fisheye_sensor_spec.alpha = 0.57
         fisheye_sensor_spec.focal_length = [364.84, 364.86]
 
-        fisheye_sensor_spec.resolution = [settings["height"], settings["width"]]
+        fisheye_sensor_spec.resolution = [
+            settings["height"],
+            settings["width"],
+        ]
         # The default principal_point_offset is the middle of the image
         fisheye_sensor_spec.principal_point_offset = None
         # default: fisheye_sensor_spec.principal_point_offset = [i/2 for i in fisheye_sensor_spec.resolution]
@@ -169,7 +174,9 @@ def make_cfg(settings):
         return fisheye_sensor_spec
 
     if settings["fisheye_rgba_sensor"]:
-        fisheye_rgba_sensor_spec = create_fisheye_spec(uuid="fisheye_rgba_sensor")
+        fisheye_rgba_sensor_spec = create_fisheye_spec(
+            uuid="fisheye_rgba_sensor"
+        )
         sensor_specs.append(fisheye_rgba_sensor_spec)
     if settings["fisheye_depth_sensor"]:
         fisheye_depth_sensor_spec = create_fisheye_spec(
@@ -190,14 +197,19 @@ def make_cfg(settings):
         equirect_sensor_spec = habitat_sim.EquirectangularSensorSpec()
         equirect_sensor_spec.uuid = "equirect_rgba_sensor"
         equirect_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
-        equirect_sensor_spec.resolution = [settings["height"], settings["width"]]
+        equirect_sensor_spec.resolution = [
+            settings["height"],
+            settings["width"],
+        ]
         equirect_sensor_spec.position = [0, settings["sensor_height"], 0]
         for k in kw_args:
             setattr(equirect_sensor_spec, k, kw_args[k])
         return equirect_sensor_spec
 
     if settings["equirect_rgba_sensor"]:
-        equirect_rgba_sensor_spec = create_equirect_spec(uuid="equirect_rgba_sensor")
+        equirect_rgba_sensor_spec = create_equirect_spec(
+            uuid="equirect_rgba_sensor"
+        )
         sensor_specs.append(equirect_rgba_sensor_spec)
 
     if settings["equirect_depth_sensor"]:
@@ -241,6 +253,7 @@ def make_cfg(settings):
 
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
+
 def simulate(sim, dt, get_observations=False):
     r"""Runs physics simulation at 60FPS for a given duration (dt) optionally collecting and returning sensor observations."""
     observations = []
@@ -250,6 +263,7 @@ def simulate(sim, dt, get_observations=False):
         if get_observations:
             observations.append(sim.get_sensor_observations())
     return observations
+
 
 @pytest.mark.skipif(
     not osp.exists("data/robots/hab_fetch"),
@@ -280,7 +294,9 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # add a ground plane
         cube_handle = obj_template_mgr.get_template_handles("cubeSolid")[0]
-        cube_template_cpy = obj_template_mgr.get_template_by_handle(cube_handle)
+        cube_template_cpy = obj_template_mgr.get_template_by_handle(
+            cube_handle
+        )
         cube_template_cpy.scale = np.array([5.0, 0.2, 5.0])
         obj_template_mgr.register_template(cube_template_cpy)
         ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
@@ -361,7 +377,9 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # kinematic open/close (checked before simulation)
         fetch.gripper_joint_pos = fetch.params.gripper_open_state
-        assert np.allclose(fetch.gripper_joint_pos, fetch.params.gripper_open_state)
+        assert np.allclose(
+            fetch.gripper_joint_pos, fetch.params.gripper_open_state
+        )
         assert fetch.is_gripper_open
         observations += simulate(sim, 0.2, produce_debug_video)
         fetch.gripper_joint_pos = fetch.params.gripper_closed_state
