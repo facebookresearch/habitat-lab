@@ -424,7 +424,7 @@ class RearrangeSim(HabitatSim):
                 )
                 assert (
                     len(matching_templates.values()) == 1
-                ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
                 ro = rom.add_object_by_template_handle(
                     list(matching_templates.keys())[0]
                 )

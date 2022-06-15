@@ -632,7 +632,7 @@ _C.SIMULATOR.SCENE = (
 _C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
 _C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
     []
-)  # a list of directory or config paths to search in addition to the dataset for object configs
+)  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees

@@ -465,6 +465,8 @@ TASK:
         - BASE_VELOCITY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     DEBUG_RENDER: False
     ACTION_SPACE_CONFIG: v0
     AGENTS: ['AGENT_0']
@@ -548,7 +550,7 @@ dataset_cfg_txt = """
 ---
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
-  - "data/objects/ycb/"
+  - "data/objects/ycb/configs/"
 scene_sets:
   -
     name: "v3_sc"

@@ -127,6 +127,8 @@ TASK:
         - ARM_ACTION
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
     ACTION_SPACE_CONFIG: v0
