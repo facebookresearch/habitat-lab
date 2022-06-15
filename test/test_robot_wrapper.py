@@ -9,9 +9,7 @@ from os import path as osp
 import numpy as np
 import pytest
 
-import habitat_sim
 import habitat.robots.fetch_robot as fetch_robot
-
 import habitat_sim
 import habitat_sim.agent
 

@@ -9,10 +9,10 @@ import attr
 import magnum as mn
 import numpy as np
 
+from habitat.robots.robot_interface import RobotInterface
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 from habitat_sim.utils.common import orthonormalize_rotation_shear
-from habitat.robots.robot_interface import RobotInterface
 
 
 @attr.s(auto_attribs=True, slots=True)
