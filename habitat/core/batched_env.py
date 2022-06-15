@@ -739,18 +739,20 @@ class BatchedEnv:
                     prev_obj_pos = prev_state.obj_positions[
                         prev_state.target_obj_idx
                     ]
-                    if not is_holding_correct:
-                        curr_dist = (
-                            state.obj_positions[state.target_obj_idx]
-                            - state.ee_pos
-                        ).length()
-                        prev_dist = (prev_obj_pos - prev_state.ee_pos).length()
-                        self.rewards[b] += -(curr_dist - prev_dist)
-                    else:
-                        prev_obj_to_goal = (
-                            prev_state.goal_pos - prev_obj_pos
-                        ).length()
-                        self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
+                    curr_dist_ee_to_obj = (
+                        state.obj_positions[state.target_obj_idx]
+                        - state.ee_pos
+                    ).length()
+                    prev_dist_ee_to_obj = (
+                        prev_obj_pos - prev_state.ee_pos
+                    ).length()
+                    self.rewards[b] += -(
+                        curr_dist_ee_to_obj - prev_dist_ee_to_obj
+                    )
+                    prev_obj_to_goal = (
+                        prev_state.goal_pos - prev_obj_pos
+                    ).length()
+                    self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
 
                     if (
                         self._config.get("DROP_IS_FAIL", True)
