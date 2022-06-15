@@ -16,6 +16,9 @@ import habitat_sim
 from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+
+# flake8: noqa
+from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -31,9 +34,6 @@ from habitat.tasks.rearrange.utils import (
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import JointMotorSettings, MotionType
-
-# flake8: noqa
-from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 from habitat_sim.sim import SimulatorBackend
 
 
