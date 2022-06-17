@@ -104,7 +104,7 @@ class PPOTrainer(BaseRLTrainer):
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
-            self._obs_space = self.envs.observation_spaces[0]
+            self._obs_space = self.envs.observation_space
 
         return self._obs_space
 
@@ -258,7 +258,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        action_space = self.envs.action_spaces[0]
+        action_space = self.envs.action_space
         if self.using_velocity_ctrl:
             # For navigation using a continuous action space for a task that
             # may be asking for discrete actions
@@ -934,7 +934,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config)
 
-        action_space = self.envs.action_spaces[0]
+        action_space = self.envs.action_space
         if self.using_velocity_ctrl:
             # For navigation using a continuous action space for a task that
             # may be asking for discrete actions
