@@ -21,6 +21,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
 )
 from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.utils import get_angle
 
 
 class ArtSampler:
@@ -106,12 +107,18 @@ class PddlRobotState:
             rearrange_logger.debug("Setting robot base random position.")
             sim.set_robot_base_to_random_point(agent_idx=robot_id)
         elif isinstance(self.pos, PddlEntity):
-            pos = sim_info.get_entity_pos(self.pos)
-            pos = sim_info.sim.safe_snap_point(pos)
+            targ_pos = sim_info.get_entity_pos(self.pos)
+            robo_pos = sim_info.sim.safe_snap_point(targ_pos)
+            robot = sim.get_robot_data(robot_id).robot
+            robot.base_pos = robo_pos
+
+            forward = np.array([0.0, 1.0])
+            rel_pos = np.array(targ_pos - robo_pos)[[0, 2]]
+            angle = get_angle(forward, rel_pos)
             rearrange_logger.debug(
-                f"Setting robot base to {self.pos} at {pos}."
+                f"Setting robot base to {self.pos} at {targ_pos} with angle {angle}."
             )
-            sim.get_robot_data(robot_id).robot.base_pos = pos
+            robot.base_rot = angle
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
 
@@ -266,6 +273,11 @@ class PddlSetState:
             rom = sim.get_rigid_object_manager()
             set_obj = rom.get_object_by_id(abs_obj_id)
             set_obj.transformation = set_T
+            set_obj.angular_velocity = mn.Vector3.zero_init()
+            set_obj.linear_velocity = mn.Vector3.zero_init()
+            sim.internal_step(-1)
+            set_obj.angular_velocity = mn.Vector3.zero_init()
+            set_obj.linear_velocity = mn.Vector3.zero_init()
 
         for art_entity, set_art in self._art_states.items():
             marker = sim_info.search_for_entity(art_entity, ART_OBJ_TYPE)

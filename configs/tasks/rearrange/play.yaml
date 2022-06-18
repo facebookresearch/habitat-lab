@@ -49,8 +49,6 @@ TASK:
         TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: "RelativeRestingPositionSensor"
     SENSORS: ["JOINT_SENSOR"]
 
     ########################

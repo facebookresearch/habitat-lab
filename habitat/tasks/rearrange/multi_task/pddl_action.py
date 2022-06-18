@@ -67,6 +67,10 @@ class PddlAction:
             f"<Action {self._name} ({self._params})->({self._param_values})>"
         )
 
+    @property
+    def compact_str(self):
+        return f"{self._name}({self._param_values})"
+
     def is_precond_satisfied_from_predicates(
         self, predicates: List[Predicate]
     ) -> bool:

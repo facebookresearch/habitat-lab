@@ -65,7 +65,6 @@ class CompositeTask(RearrangeTask):
 
         for i in range(node_idx):
             self.pddl_problem.apply_action(self.pddl_problem.solution[i])
-
         if node_idx not in self._cached_tasks:
             self.pddl_problem.solution[i]
             task = self._solution[node_idx].init_task(self, episode)

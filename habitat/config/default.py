@@ -551,6 +551,11 @@ _C.TASK.PLACE_SUCCESS = CN()
 _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
 _C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
+# COMPOSITE SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
+_C.TASK.TYPE = "GlobalPredicatesSensor"
+# -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.COMPOSITE_NODE_IDX = CN()

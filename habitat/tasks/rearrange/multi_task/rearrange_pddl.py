@@ -62,6 +62,13 @@ class PddlEntity:
     def __repr__(self):
         return f"{self.name}-{self.expr_type}"
 
+    def __eq__(self, other):
+        if not isinstance(other, PddlEntity):
+            return False
+        return (self.name == other.name) and (
+            self.expr_type.name == other.expr_type.name
+        )
+
 
 def do_entity_lists_match(
     to_set: List[PddlEntity], set_value: List[PddlEntity]

@@ -272,6 +272,21 @@ class PddlDomain:
                     true_preds.append(use_pred)
         return true_preds
 
+    def get_possible_predicates(self) -> List[Predicate]:
+        all_entities = self.all_entities.values()
+        poss_preds: List[Predicate] = []
+        for pred in self.predicates.values():
+            for entity_input in itertools.combinations(
+                all_entities, pred.n_args
+            ):
+                if not pred.are_args_compatible(entity_input):
+                    continue
+
+                use_pred = pred.clone()
+                use_pred.set_param_values(entity_input)
+                poss_preds.append(use_pred)
+        return poss_preds
+
     def get_possible_actions(
         self,
         filter_entities: Optional[List[PddlEntity]] = None,
