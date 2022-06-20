@@ -43,13 +43,14 @@ def _get_env_name(cfg: Config) -> Optional[str]:
         return cfg["GYM"]["CLASS_NAME"]
     return None
 
-def gym_from_config(config:Config):
+
+def gym_from_config(config: Config):
     if "TASK_CONFIG" in config:
         config = config.TASK_CONFIG
     env_class_name = _get_env_name(config)
     env_class = get_env_class(env_class_name)
     env = habitat.utils.env_utils.make_env_fn(
-    env_class=env_class, config=config
+        env_class=env_class, config=config
     )
     env = HabGymWrapper(env)
     return env

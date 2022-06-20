@@ -23,6 +23,7 @@ from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
 from habitat.utils.env_utils import construct_envs
 from habitat.utils.render_wrapper import overlay_frame
+from habitat.utils.unbatch_space import unbatch_space
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -104,7 +105,8 @@ class PPOTrainer(BaseRLTrainer):
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
-            self._obs_space = self.envs.observation_space
+            self._obs_space = unbatch_space(self.envs.observation_space)
+            print("\n\n\n >>>>", self.envs.observation_space, self._obs_space )
 
         return self._obs_space
 
@@ -259,6 +261,7 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs()
 
         action_space = self.envs.action_space
+        print(">>>>>", action_space, is_continuous_action_space(action_space),(get_num_actions(action_space),) )
         if self.using_velocity_ctrl:
             # For navigation using a continuous action space for a task that
             # may be asking for discrete actions
@@ -275,6 +278,7 @@ class PPOTrainer(BaseRLTrainer):
                 # For discrete pointnav
                 action_shape = None
                 discrete_actions = True
+        print(action_shape)
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -330,12 +334,15 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
+        print("\n\n\n >", batch)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
+        print("\n\n\n >>", batch)
 
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
+        print("\n\n\n >>>", self.rollouts.buffers["observations"][0])
         self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
@@ -445,6 +452,7 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice,
             ]
 
+            print("\n\n\n >>", step_batch["prev_actions"].shape, step_batch["masks"].shape)
             profiling_wrapper.range_push("compute actions")
             (
                 values,

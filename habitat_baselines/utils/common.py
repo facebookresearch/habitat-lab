@@ -232,6 +232,7 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
+    return observations
     batch_t: TensorDict = TensorDict()
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
@@ -658,7 +659,10 @@ def get_num_actions(action_space) -> int:
         if isinstance(v, spaces.Dict):
             queue.extend(v.spaces.values())
         elif isinstance(v, spaces.Box):
-            num_actions += v.shape[0]
+            assert len(v.shape) == 2
+            # when using AsyncVectorEnv, the action space is actually
+            # two dimensional
+            num_actions += v.shape[1]
         else:
             num_actions += 1
 
