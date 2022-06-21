@@ -99,7 +99,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            fuse_keys=config.TASK_CONFIG.GYM.OBS_KEYS,
+            # fuse_keys=config.TASK_CONFIG.GYM.OBS_KEYS,
         )
 
 

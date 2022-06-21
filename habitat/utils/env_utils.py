@@ -14,6 +14,7 @@ from habitat.utils.vector_env_action_dict_wrapper import (
     VectorEnvActionDictWrapper,
 )
 
+from habitat.utils.vector_env_obs_dict_wrapper import VectorEnvObsDictWrapper
 
 def make_env_fn(
     config: Config, env_class: Union[Type[Env], Type[RLEnv]]
@@ -135,6 +136,6 @@ def construct_envs(
     #     [make_gym_env(c) for c in configs], context="forkserver"
     # )
     # )
-    return AsyncVectorEnv(
-        [make_gym_env(c) for c in configs], context="forkserver"
-    )
+    return VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") )
+    # return AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver")
+        

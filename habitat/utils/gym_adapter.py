@@ -170,6 +170,7 @@ class HabGymWrapper(gym.Env):
             info = flatten_dict(info)
             info = {k: float(v) for k, v in info.items()}
 
+        # print(">>>>>> > > ", action, obs, reward, done)
         return obs, reward, done, info
 
     def _is_space_flat(self, space_name):

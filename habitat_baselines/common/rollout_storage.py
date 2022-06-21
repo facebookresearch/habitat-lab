@@ -32,6 +32,7 @@ class RolloutStorage:
         self.buffers["observations"] = TensorDict()
 
         for sensor in observation_space.spaces:
+            print(">>>>>>>> >", sensor, observation_space.spaces[sensor], observation_space.spaces[sensor].shape)
             self.buffers["observations"][sensor] = torch.from_numpy(
                 np.zeros(
                     (
