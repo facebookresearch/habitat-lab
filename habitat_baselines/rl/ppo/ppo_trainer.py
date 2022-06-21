@@ -106,7 +106,6 @@ class PPOTrainer(BaseRLTrainer):
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
             self._obs_space = unbatch_space(self.envs.observation_space)
-        print(">>>>>>>>>>>>", self._obs_space)
         return self._obs_space
 
     @obs_space.setter
