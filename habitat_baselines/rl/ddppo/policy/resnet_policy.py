@@ -244,7 +244,6 @@ class PointNavResNetNet(Net):
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         else:
-            print("\n\n\n >>",get_num_actions(action_space), action_space)
             num_actions = get_num_actions(action_space)
             self.prev_action_embedding = nn.Linear(num_actions, 32)
 

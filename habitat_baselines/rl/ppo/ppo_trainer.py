@@ -106,7 +106,6 @@ class PPOTrainer(BaseRLTrainer):
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
             self._obs_space = unbatch_space(self.envs.observation_space)
-            print("\n\n\n >>>>", self.envs.observation_space, self._obs_space )
 
         return self._obs_space
 
@@ -261,7 +260,6 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs()
 
         action_space = self.envs.action_space
-        print(">>>>>", action_space, is_continuous_action_space(action_space),(get_num_actions(action_space),) )
         if self.using_velocity_ctrl:
             # For navigation using a continuous action space for a task that
             # may be asking for discrete actions
@@ -278,7 +276,6 @@ class PPOTrainer(BaseRLTrainer):
                 # For discrete pointnav
                 action_shape = None
                 discrete_actions = True
-        print(action_shape)
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -334,15 +331,12 @@ class PPOTrainer(BaseRLTrainer):
         batch = batch_obs(
             observations, device=self.device, cache=self._obs_batching_cache
         )
-        print("\n\n\n >", batch)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-        print("\n\n\n >>", batch)
 
         if self._static_encoder:
             with torch.no_grad():
                 batch["visual_features"] = self._encoder(batch)
 
-        print("\n\n\n >>>", self.rollouts.buffers["observations"][0])
         self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
@@ -437,6 +431,7 @@ class PPOTrainer(BaseRLTrainer):
         return results
 
     def _compute_actions_and_step_envs(self, buffer_index: int = 0):
+        assert self._nbuffers == 1
         num_envs = self.envs.num_envs
         env_slice = slice(
             int(buffer_index * num_envs / self._nbuffers),
@@ -452,7 +447,6 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice,
             ]
 
-            print("\n\n\n >>", step_batch["prev_actions"].shape, step_batch["masks"].shape)
             profiling_wrapper.range_push("compute actions")
             (
                 values,
@@ -478,16 +472,18 @@ class PPOTrainer(BaseRLTrainer):
 
         t_step_env = time.time()
 
-        for index_env, act in zip(
-            range(env_slice.start, env_slice.stop), actions.unbind(0)
-        ):
-            if act.shape[0] > 1:
-                step_action = action_array_to_dict(
-                    self.policy_action_space, act
-                )
-            else:
-                step_action = act.item()
-            self.envs.async_step_at(index_env, step_action)
+        # for index_env, act in zip(
+        #     range(env_slice.start, env_slice.stop), actions.unbind(0)
+        # ):
+        #     if act.shape[0] > 1:
+        #         step_action = action_array_to_dict(
+        #             self.policy_action_space, act
+        #         )
+        #     else:
+        #         step_action = act.item()
+        #     self.envs.async_step_at(index_env, step_action)
+        actions = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+        self.envs.step_async(actions)
 
         self.env_time += time.time() - t_step_env
 
@@ -500,6 +496,7 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def _collect_environment_result(self, buffer_index: int = 0):
+        assert self._nbuffers == 1
         num_envs = self.envs.num_envs
         env_slice = slice(
             int(buffer_index * num_envs / self._nbuffers),
@@ -507,14 +504,13 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         t_step_env = time.time()
-        outputs = [
-            self.envs.wait_step_at(index_env)
-            for index_env in range(env_slice.start, env_slice.stop)
-        ]
+        # outputs = [
+        #     self.envs.wait_step_at(index_env)
+        #     for index_env in range(env_slice.start, env_slice.stop)
+        # ]
+        outputs = self.envs.step_wait()
 
-        observations, rewards_l, dones, infos = [
-            list(x) for x in zip(*outputs)
-        ]
+        observations, rewards_l, dones, infos = outputs
 
         self.env_time += time.time() - t_step_env
 

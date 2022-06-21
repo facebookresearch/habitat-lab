@@ -10,7 +10,9 @@ from typing import Any, List, Type, Union
 
 import habitat
 from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
-from habitat.utils.vector_env_action_dict_wrapper import VectorEnvActionDictWrapper
+from habitat.utils.vector_env_action_dict_wrapper import (
+    VectorEnvActionDictWrapper,
+)
 
 
 def make_env_fn(
@@ -128,8 +130,11 @@ def construct_envs(
 
         return _make_single_env
 
-    return VectorEnvActionDictWrapper(
-        AsyncVectorEnv(
+    # return VectorEnvActionDictWrapper(
+    #     AsyncVectorEnv(
+    #     [make_gym_env(c) for c in configs], context="forkserver"
+    # )
+    # )
+    return AsyncVectorEnv(
         [make_gym_env(c) for c in configs], context="forkserver"
-    )
     )

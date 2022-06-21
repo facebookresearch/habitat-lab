@@ -639,16 +639,18 @@ def action_to_velocity_control(
 
 
 def is_continuous_action_space(action_space) -> bool:
-    if not isinstance(action_space, spaces.Dict):
-        return False
+    if isinstance(action_space, spaces.Box):
+        return True
+    # if not isinstance(action_space, spaces.Dict):
+    #     return False
 
-    for v in action_space.spaces.values():
-        if isinstance(v, spaces.Dict):
-            return is_continuous_action_space(v)
-        elif isinstance(v, spaces.Box):
-            return True
+    # for v in action_space.spaces.values():
+    #     if isinstance(v, spaces.Dict):
+    #         return is_continuous_action_space(v)
+    #     elif isinstance(v, spaces.Box):
+    #         return True
 
-    return False
+    # return False
 
 
 def get_num_actions(action_space) -> int:
