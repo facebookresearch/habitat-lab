@@ -389,7 +389,12 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
+    METRICS_BLACKLIST = {
+        "top_down_map",
+        "collisions.is_collision",
+        "terminal_observation",
+    }
+    #  terminal_observation.observation is a gym specific info that is not useful here
 
     @classmethod
     def _extract_scalars_from_info(
@@ -548,7 +553,6 @@ class PPOTrainer(BaseRLTrainer):
                 self.running_episode_stats[k] = torch.zeros_like(
                     self.running_episode_stats["count"]
                 )
-
             self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
