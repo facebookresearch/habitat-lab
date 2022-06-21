@@ -487,8 +487,8 @@ class PPOTrainer(BaseRLTrainer):
         #     else:
         #         step_action = act.item()
         #     self.envs.async_step_at(index_env, step_action)
-        actions = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
-        self.envs.step_async(actions)
+        step_action = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+        self.envs.step_async(step_action)
 
         self.env_time += time.time() - t_step_env
 
