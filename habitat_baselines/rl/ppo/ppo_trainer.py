@@ -486,7 +486,8 @@ class PPOTrainer(BaseRLTrainer):
         #     else:
         #         step_action = act.item()
         #     self.envs.async_step_at(index_env, step_action)
-        step_action = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+        if actions.shape[0] > 1:
+            step_action = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
         self.envs.step_async(step_action)
 
         self.env_time += time.time() - t_step_env
@@ -1045,18 +1046,12 @@ class PPOTrainer(BaseRLTrainer):
             # For backwards compatibility, we also call .item() to convert to
             # an int
             if actions[0].shape[0] > 1:
-                step_data = [
-                    action_array_to_dict(self.policy_action_space, a)
-                    for a in actions.to(device="cpu")
-                ]
-            else:
-                step_data = [a.item() for a in actions.to(device="cpu")]
+                step_data = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+            # else:
+            #     step_data = [a.item() for a in actions.to(device="cpu")]
 
-            outputs = self.envs.step(step_data)
+            observations, rewards_l, dones, infos = self.envs.step(step_data)
 
-            observations, rewards_l, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

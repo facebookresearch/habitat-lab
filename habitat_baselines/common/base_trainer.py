@@ -300,7 +300,7 @@ class BaseRLTrainer(BaseTrainer):
             state_index = list(range(envs.num_envs))
             for idx in reversed(envs_to_pause):
                 state_index.pop(idx)
-                envs.pause_at(idx)
+                envs.close_at(idx)
 
             # indexing along the batch dimensions
             test_recurrent_hidden_states = test_recurrent_hidden_states[

@@ -21,6 +21,12 @@ class VectorEnvObsDictWrapper(VectorEnvWrapper):
                 }
             )
 
+    def call_async(self, name: str, *args, **kwargs):
+        return self.env.call_async(name, *args, **kwargs)
+    
+    def call_wait(self, timeout: Optional[Union[int, float]] = None) -> list:
+       return self.env.call_wait(timeout)
+
     def step_wait(
             self, timeout: Optional[Union[int, float]] = None
         ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[dict]]:

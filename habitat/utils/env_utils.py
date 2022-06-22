@@ -10,11 +10,10 @@ from typing import Any, List, Type, Union
 
 import habitat
 from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
-from habitat.utils.vector_env_action_dict_wrapper import (
-    VectorEnvActionDictWrapper,
-)
 
 from habitat.utils.vector_env_obs_dict_wrapper import VectorEnvObsDictWrapper
+from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
+from habitat.utils.vector_env_close_at_wrapper import VectorEnvCloseAtWrapper
 
 def make_env_fn(
     config: Config, env_class: Union[Type[Env], Type[RLEnv]]
@@ -122,6 +121,7 @@ def construct_envs(
     # return envs
 
     from gym.vector import AsyncVectorEnv
+    
 
     from habitat.utils.gym_definitions import gym_from_config
 
@@ -131,11 +131,9 @@ def construct_envs(
 
         return _make_single_env
 
-    # return VectorEnvActionDictWrapper(
-    #     AsyncVectorEnv(
-    #     [make_gym_env(c) for c in configs], context="forkserver"
-    # )
-    # )
-    return VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") )
+    return VectorEnvCloseAtWrapper(VectorEnvObsDictWrapper(HabitatAsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") ))
+
+    # return VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") )
+    # return VectorEnvEpisodeCountWrapper(VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") ))
     # return AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver")
         

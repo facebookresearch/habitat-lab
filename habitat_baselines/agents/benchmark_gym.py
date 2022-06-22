@@ -133,7 +133,7 @@ class BenchmarkGym:
                     int(self._env.current_episode.episode_id)
                 )
 
-                observations, reward, done, _ = self._gym_env.direct_hab_step(
+                observations, reward, done, _ = self._gym_env._direct_hab_step(
                     action
                 )
                 traj_rewards.append(reward)

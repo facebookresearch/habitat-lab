@@ -232,7 +232,7 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    return observations
+    return TensorDict.from_tree(observations).map_in_place(lambda v: v.to(device))
     batch_t: TensorDict = TensorDict()
     if cache is None:
         batch: DefaultDict[str, List] = defaultdict(list)
