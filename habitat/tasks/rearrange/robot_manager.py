@@ -5,6 +5,7 @@ import magnum as mn
 import numpy as np
 from yacs.config import CfgNode
 
+from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )

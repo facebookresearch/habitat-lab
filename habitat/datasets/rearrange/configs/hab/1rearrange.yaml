@@ -41,17 +41,11 @@ object_sets:
       - "016_pear.object_config.json"
       - "017_orange.object_config.json"
       - "018_plum.object_config.json"
-      - "019_pitcher_base.object_config.json"
       - "021_bleach_cleanser.object_config.json"
       - "024_bowl.object_config.json"
       - "025_mug.object_config.json"
       - "026_sponge.object_config.json"
-      - "028_skillet_lid.object_config.json"
       - "029_plate.object_config.json"
-      - "030_fork.object_config.json"
-      - "031_spoon.object_config.json"
-      - "032_knife.object_config.json"
-      - "033_spatula.object_config.json"
     excluded_substrings: []
 receptacle_sets:
   -
@@ -68,6 +62,14 @@ receptacle_sets:
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
       - "receptacle_aabb_Sofa_frl_apartment_sofa"
+
+      # Inside of articulated objects
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_middle_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
 
     excluded_receptacle_substrings: []
 
@@ -99,6 +101,28 @@ object_target_samplers:
       receptacle_sets: ["hab2"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+
+ao_state_samplers:
+  -
+    name: "open_fridge_cab"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.5, 0.5]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.5, 0.5]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.5, 0.5]
+          - ["drawer4", 0.5, 0.5]
+    comment: "For composite samplers, one param entry per AO and one joint state entry per joint: (name, min, max)."
 
 markers:
   - name: "cab_push_point_7"

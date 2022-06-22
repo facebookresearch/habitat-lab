@@ -34,6 +34,7 @@ class RearrangeGraspManager:
         self._snapped_obj_id: Optional[int] = None
         self._snapped_marker_id: Optional[str] = None
         self._snap_constraints: List[int] = []
+        self._keep_T: Optional[mn.Matrix4] = None
         self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
         self._managed_robot = robot
@@ -214,10 +215,22 @@ class RearrangeGraspManager:
         """
         Kinematically update held object to be within robot's grasp.
         """
-        return
-        # self.snap_rigid_obj.transformation = self._managed_robot.ee_transform
+        rel_T = self._keep_T
+        if rel_T is None:
+            rel_T = mn.Matrix4.identity_init()
 
-    def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
+        self.snap_rigid_obj.transformation = (
+            self._managed_robot.ee_transform @ rel_T
+        )
+
+    def snap_to_obj(
+        self,
+        snap_obj_id: int,
+        force: bool = True,
+        should_open_gripper=True,
+        rel_T=None,
+        keep_T=None,
+    ) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's
         end effector with 3 ball-joint constraints forming a fixed frame.
 
@@ -246,25 +259,34 @@ class RearrangeGraspManager:
             CollisionGroups.UserGroup7
         )
 
+        self._keep_T = keep_T
+
+        # Get object transform in EE frame
+        if rel_T is None:
+            rel_T = mn.Matrix4.identity_init()
+
+        gripper_offset = 0.1
+
         self._snap_constraints = [
             self.create_hold_constraint(
-                mn.Vector3(0.1, 0, 0),
-                mn.Vector3(0, 0, 0),
+                mn.Vector3(gripper_offset, 0, 0),
+                rel_T.transform_point(mn.Vector3(0.0, 0, 0)),
                 self._snapped_obj_id,
             ),
             self.create_hold_constraint(
                 mn.Vector3(0.0, 0, 0),
-                mn.Vector3(-0.1, 0, 0),
+                rel_T.transform_point(mn.Vector3(-0.1, 0, 0)),
                 self._snapped_obj_id,
             ),
             self.create_hold_constraint(
-                mn.Vector3(0.1, 0.0, 0.1),
-                mn.Vector3(0.0, 0.0, 0.1),
+                mn.Vector3(gripper_offset, 0.0, gripper_offset),
+                rel_T.transform_point(mn.Vector3(0.0, 0.0, 0.1)),
                 self._snapped_obj_id,
             ),
         ]
 
-        self._managed_robot.open_gripper()
+        if should_open_gripper:
+            self._managed_robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

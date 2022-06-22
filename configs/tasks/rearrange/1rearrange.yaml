@@ -159,8 +159,8 @@ SIMULATOR:
         - 0
         - 0
         - 1
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        ROBOT_TYPE: FetchRobot
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
         WIDTH: 128

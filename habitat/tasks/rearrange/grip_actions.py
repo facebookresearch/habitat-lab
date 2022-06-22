@@ -102,11 +102,14 @@ class MagicGraspAction(GripSimulatorTaskAction):
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
+        if not self.cur_grasp_mgr.is_grasped:
+            self._grasp()
+
         if grip_action is None:
             return
 
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
+        # if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        #     self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
 
@@ -146,7 +149,21 @@ class SuctionGraspAction(MagicGraspAction):
                 attempt_snap_entity = scene_obj_id
 
         if attempt_snap_entity is not None:
-            self._sim.grasp_mgr.snap_to_obj(int(attempt_snap_entity))
+            rom = self._sim.get_rigid_object_manager()
+            ro = rom.get_object_by_id(attempt_snap_entity)
+
+            ee_T = self.cur_robot.ee_transform
+            obj_to_W_T = ro.transformation.inverted()
+            ee_to_obj_T = obj_to_W_T @ ee_T
+
+            obj_in_ee_T = ee_T.inverted() @ ro.transformation
+
+            self._sim.grasp_mgr.snap_to_obj(
+                int(attempt_snap_entity),
+                rel_T=ee_to_obj_T,
+                keep_T=obj_in_ee_T,
+                should_open_gripper=False,
+            )
             return
 
         # Contacted any markers?
