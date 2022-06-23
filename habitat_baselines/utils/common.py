@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import numbers
 import os
 import re
 import shutil
@@ -221,9 +222,56 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    return TensorDict.from_tree(observations).map_in_place(
-        lambda v: v.to(device)
-    )
+
+    if cache is None:
+        return TensorDict.from_tree(observations).map_in_place(
+            lambda v: v.to(device)
+        )
+    else:
+        sensor_names = sorted(
+            observations.keys(),
+            key=lambda name: 1
+            if isinstance(observations[name], numbers.Number)
+            else np.prod(observations[name].shape),  # type: ignore
+            reverse=True,
+        )
+        result = TensorDict()
+        for sensor_name in sensor_names:
+            sensor = observations[sensor_name]
+            if sensor_name not in result:
+                result[sensor_name] = cache.get(  # type: ignore
+                    len(observations),
+                    sensor_name,
+                    torch.as_tensor(sensor),
+                    device,
+                )
+            # Use isinstance(sensor, np.ndarray) here instead of
+            # np.asarray as this is quickier for the more common
+            # path of sensor being an np.ndarray
+            # np.asarray is ~3x slower than checking
+            if isinstance(sensor, np.ndarray):
+                result[sensor_name] = sensor  # type: ignore
+            elif torch.is_tensor(sensor):
+                result[sensor_name].copy_(sensor, non_blocking=True)  # type: ignore
+            # If the sensor wasn't a tensor, then it's some CPU side data
+            # so use a numpy array
+            else:
+                result[sensor_name] = np.asarray(sensor)  # type: ignore
+            # With the batching cache, we use pinned mem
+            # so we can start the move to the GPU async
+            # and continue stacking other things with it
+            if cache is not None:
+                # If we were using a numpy array to do indexing and copying,
+                # convert back to torch tensor
+                # We know that batch_t[sensor_name] is either an np.ndarray
+                # or a torch.Tensor, so this is faster than torch.as_tensor
+                if isinstance(result[sensor_name], np.ndarray):
+                    result[sensor_name] = torch.from_numpy(result[sensor_name])
+
+                result[sensor_name] = result[sensor_name].to(  # type: ignore
+                    device, non_blocking=True
+                )
+        return result
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
