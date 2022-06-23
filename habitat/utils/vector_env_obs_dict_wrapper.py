@@ -8,6 +8,7 @@ from gym.vector import VectorEnv, VectorEnvWrapper
 
 class VectorEnvObsDictWrapper(VectorEnvWrapper):
     OBSERVATION_KEY = "obs"
+    observation_space: spaces
 
     def __init__(self, env: VectorEnv):
         """

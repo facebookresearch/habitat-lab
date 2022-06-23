@@ -1,9 +1,8 @@
-from typing import List, Sequence, Tuple, Union
+from typing import Callable, List, Sequence, Tuple, Union
 
 import numpy as np
-from gym import spaces
 from gym.core import ObsType
-from gym.vector import AsyncVectorEnv, VectorEnv, VectorEnvWrapper
+from gym.vector import AsyncVectorEnv
 
 from habitat.core.dataset import Episode
 from habitat.utils.gym_adapter import HabGymWrapper
@@ -11,7 +10,7 @@ from habitat.utils.gym_adapter import HabGymWrapper
 
 class HabitatAsyncVectorEnv(AsyncVectorEnv):
     # TODO : make this AsyncVectorEnv
-    def __init__(self, env_fns: Sequence[callable], *args, **kwargs):
+    def __init__(self, env_fns: Sequence[Callable], *args, **kwargs):
         super().__init__(env_fns, *args, **kwargs)
         dummy_env = env_fns[0]()
         self._is_habitat = False
@@ -41,8 +40,8 @@ class HabitatAsyncVectorEnv(AsyncVectorEnv):
             return self.call("get_current_episodes")
         return [
             Episode(
-                episode_id=episode,
-                scene_id=0,
+                episode_id=str(episode),
+                scene_id="default",
                 start_position=[],
                 start_rotation=[],
             )

@@ -1,11 +1,8 @@
 from typing import List, Tuple, Union
 
 import numpy as np
-from gym import spaces
 from gym.core import ObsType
-from gym.vector import AsyncVectorEnv, VectorEnv, VectorEnvWrapper
-
-from habitat.utils.gym_adapter import HabGymWrapper
+from gym.vector import VectorEnv, VectorEnvWrapper
 
 
 class VectorEnvCloseAtWrapper(VectorEnvWrapper):
@@ -31,6 +28,10 @@ class VectorEnvCloseAtWrapper(VectorEnvWrapper):
                 k: VectorEnvCloseAtWrapper._remove_closed_obs(v, open_envs)
                 for k, v in obs.items()
             }
+        else:
+            raise NotImplementedError(
+                f"Provided observation needs to be a disctionary of np.ndarrays but was {obs}"
+            )
 
     def reset_wait(
         self,

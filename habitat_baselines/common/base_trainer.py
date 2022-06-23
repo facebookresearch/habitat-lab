@@ -13,7 +13,7 @@ from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
-from habitat.core.vector_env import VectorEnv
+from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
@@ -279,7 +279,7 @@ class BaseRLTrainer(BaseTrainer):
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
-        envs: VectorEnv,
+        envs: HabitatAsyncVectorEnv,
         test_recurrent_hidden_states: Tensor,
         not_done_masks: Tensor,
         current_episode_reward: Tensor,
@@ -287,7 +287,7 @@ class BaseRLTrainer(BaseTrainer):
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
-        VectorEnv,
+        HabitatAsyncVectorEnv,
         Tensor,
         Tensor,
         Tensor,

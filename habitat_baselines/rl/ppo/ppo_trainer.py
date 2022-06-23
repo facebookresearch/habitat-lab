@@ -18,10 +18,11 @@ from gym import spaces
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from habitat import Config, VectorEnv, logger
+from habitat import Config, logger
 from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
 from habitat.utils.env_utils import construct_envs
+from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.unbatch_space import unbatch_space
 from habitat.utils.visualizations.utils import observations_to_image
@@ -77,7 +78,7 @@ class PPOTrainer(BaseRLTrainer):
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
     _is_distributed: bool
     _obs_batching_cache: ObservationBatchingCache
-    envs: VectorEnv
+    envs: HabitatAsyncVectorEnv
     agent: PPO
     actor_critic: NetPolicy
 

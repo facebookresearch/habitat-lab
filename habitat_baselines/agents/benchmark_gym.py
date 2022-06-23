@@ -31,7 +31,6 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import (
-    action_array_to_dict,
     batch_obs,
     generate_video,
     get_num_actions,
@@ -279,9 +278,9 @@ class RearrangePPOAgent(PPOAgent):
             #  Make masks not done till reset (end of episode) will be called
             self.not_done_masks.fill_(True)
             self.prev_actions.copy_(actions)  # type: ignore
-        action = action_array_to_dict(self.action_space, actions[0])
-
-        return action["action"]
+        # action = action_array_to_dict(self.action_space, actions[0])
+        # return action["action"]
+        raise NotImplementedError("TODO: What is a RearrangePPOAgent ?")
 
 
 def main():

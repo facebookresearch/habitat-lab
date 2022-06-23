@@ -7,8 +7,9 @@
 import random
 from typing import List, Type, Union
 
-import habitat
-from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
+import gym
+
+from habitat import Config, Env, RLEnv, logger, make_dataset
 from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
 from habitat.utils.vector_env_close_at_wrapper import VectorEnvCloseAtWrapper
@@ -41,7 +42,7 @@ def construct_envs(
     config: Config,
     env_class: Union[Type[Env], Type[RLEnv]],
     workers_ignore_signals: bool = False,
-) -> VectorEnv:
+) -> HabitatAsyncVectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
@@ -56,7 +57,6 @@ def construct_envs(
 
     num_environments = config.NUM_ENVIRONMENTS
     configs = []
-    env_classes = [env_class for _ in range(num_environments)]
     dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
     scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
@@ -104,7 +104,7 @@ def construct_envs(
         proc_config.freeze()
         configs.append(proc_config)
 
-    def make_gym_env(config: Config) -> Union[Env, RLEnv]:
+    def make_gym_env(config: Config) -> gym.Env:
         def _make_single_env():
             return make_gym_from_config(config)
             # TODO: allow using any environment like shown bellow.

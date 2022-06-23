@@ -10,15 +10,7 @@ import re
 import shutil
 import tarfile
 from io import BytesIO
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
 import numpy as np
@@ -210,7 +202,7 @@ class ObservationBatchingCache:
 @torch.no_grad()
 @profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
-    observations: List[DictTree],
+    observations: DictTree,
     device: Optional[torch.device] = None,
     cache: Optional[ObservationBatchingCache] = None,
 ) -> TensorDict:
@@ -577,9 +569,7 @@ def action_to_velocity_control(
 def is_continuous_action_space(action_space) -> bool:
     if isinstance(action_space, spaces.Box):
         return True
-    elif isinstance(action_space, spaces.Discrete):
-        return False
-    elif isinstance(action_space, spaces.MultiDiscrete):
+    elif isinstance(action_space, (spaces.Discrete, spaces.MultiDiscrete)):
         return False
     else:
         raise NotImplementedError(

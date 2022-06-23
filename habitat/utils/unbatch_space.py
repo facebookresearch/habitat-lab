@@ -2,15 +2,7 @@
 from collections import OrderedDict
 from functools import singledispatch
 
-from gym.spaces import (
-    Box,
-    Dict,
-    Discrete,
-    MultiBinary,
-    MultiDiscrete,
-    Space,
-    Tuple,
-)
+from gym.spaces import Box, Dict, MultiDiscrete, Space, Tuple
 
 # see https://github.com/openai/gym/blob/feea527a4fe66f48a077cf7e264ae60f86f745fa/gym/vector/utils/spaces.py for hints
 
@@ -63,5 +55,5 @@ def _unbatch_space_dict(space):
 
 
 @unbatch_space.register(MultiDiscrete)
-def _unbatch_space_dict(space):
+def _unbatch_space_multidiscrete(space):
     return space[0]

@@ -185,7 +185,6 @@ class HabGymWrapper(gym.Env):
             self._gym_action_keys = list(env.action_space.spaces.keys())
 
         self._last_obs: Optional[Observations] = None
-        self.action_mapping = {}
         self._save_orig_obs = save_orig_obs
         self.orig_obs = None
 
@@ -233,12 +232,13 @@ class HabGymWrapper(gym.Env):
             action
         ), f"Unvalid action {action} for action space {self.action_space}"
         if isinstance(self.action_space, spaces.Box):
-            action = continuous_vector_action_to_hab_dict(
+            assert isinstance(action, np.ndarray)
+            hab_action = continuous_vector_action_to_hab_dict(
                 self.original_action_space, action, clip=self._clip_actions
             )
         else:
-            action = {"action": action}
-        return self._direct_hab_step(action)
+            hab_action = {"action": action}
+        return self._direct_hab_step(hab_action)
 
     def get_number_of_episodes(self) -> int:
         return self._env.number_of_episodes
