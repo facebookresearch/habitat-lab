@@ -26,7 +26,7 @@ def unbatch_space(space: Space) -> Space:
         ValueError: Cannot batch space that is not a valid :class:`gym.Space` instance
     """
     raise ValueError(
-        f"Cannot batch space with type `{type(space)}`. The space must be a valid `gym.Space` instance."
+        f"Cannot unbatch space with type `{type(space)}`. The space must be a valid `gym.Space` instance."
     )
 
 
@@ -53,3 +53,8 @@ def _unbatch_space_dict(space):
             ]
         ),
     )
+
+@unbatch_space.register(MultiDiscrete)
+def _unbatch_space_dict(space):
+    return space[0]
+

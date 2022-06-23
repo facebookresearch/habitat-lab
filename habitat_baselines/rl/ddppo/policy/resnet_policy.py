@@ -520,6 +520,7 @@ class PointNavResNetNet(Net):
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)
             start_token = torch.zeros_like(prev_actions)
+            # The mask means the previous action will be zero, an extra dummy action
             prev_actions = self.prev_action_embedding(
                 torch.where(masks.view(-1), prev_actions + 1, start_token)
             )
