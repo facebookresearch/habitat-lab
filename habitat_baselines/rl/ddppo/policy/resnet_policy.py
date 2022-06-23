@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -50,6 +50,7 @@ class PointNavResNetPolicy(NetPolicy):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
+        fuse_keys: Optional[List[str]] = None,
         **kwargs
     ):
         if policy_config is not None:
@@ -73,6 +74,7 @@ class PointNavResNetPolicy(NetPolicy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
+                fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
             ),
@@ -97,6 +99,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
+            fuse_keys=config.TASK_CONFIG.GYM.OBS_KEYS,
         )
 
 
@@ -231,6 +234,7 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
+        fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
     ):
@@ -252,10 +256,10 @@ class PointNavResNetNet(Net):
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
+        if fuse_keys is None:
+            fuse_keys = observation_space.spaces.keys()
         self._fuse_keys: List[str] = [
-            k
-            for k in observation_space.spaces.keys()
-            if len(observation_space.spaces[k].shape) == 1
+            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
         ]
         if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
