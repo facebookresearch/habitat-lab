@@ -101,6 +101,7 @@ _C.TASK.PDDL_DOMAIN_DEF = (
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
+_C.TASK.ROBOT_AT_THRESH = 2.0
 _C.TASK.FILTER_NAV_TO_TASKS = []
 # -----------------------------------------------------------------------------
 # # ACTIONS
@@ -296,6 +297,11 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR = CN()
 _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
+# -----------------------------------------------------------------------------
+# COMPOSITE SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
+_C.TASK.GLOBAL_PREDICATE_SENSOR.TYPE = "GlobalPredicatesSensor"
 # -----------------------------------------------------------------------------
 # TARGET START GPS/COMPASS SENSOR
 # -----------------------------------------------------------------------------
@@ -551,11 +557,6 @@ _C.TASK.PLACE_SUCCESS = CN()
 _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
 _C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
-# COMPOSITE SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
-_C.TASK.TYPE = "GlobalPredicatesSensor"
-# -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.COMPOSITE_NODE_IDX = CN()
@@ -573,6 +574,13 @@ _C.TASK.DOES_WANT_TERMINATE = CN()
 _C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
+# -----------------------------------------------------------------------------
+# Composite Sparse Reward
+# -----------------------------------------------------------------------------
+_C.TASK.COMPOSITE_SPARSE_REWARD = CN()
+_C.TASK.COMPOSITE_SPARSE_REWARD.TYPE = "CompositeSparseReward"
+_C.TASK.COMPOSITE_SPARSE_REWARD.SLACK_REWARD = -0.1
+_C.TASK.COMPOSITE_SPARSE_REWARD.STAGE_SPARSE_REWARD = 0.0
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK

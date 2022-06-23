@@ -26,6 +26,9 @@ class Predicate:
     def are_args_compatible(self, arg_values: List[PddlEntity]):
         return do_entity_lists_match(self._args, arg_values)
 
+    def is_sim_compatible(self, expr_types):
+        return self._set_state.is_compatible(expr_types)
+
     def set_param_values(self, arg_values: List[PddlEntity]):
         if self._arg_values is not None:
             raise ValueError(

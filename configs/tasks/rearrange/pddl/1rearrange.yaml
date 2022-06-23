@@ -1,8 +1,5 @@
 start:
     precondition: []
-    state:
-        robo:
-            pos: 'rnd'
 
 goal:
     - "at(goal0|0,TARGET_goal0|0)"

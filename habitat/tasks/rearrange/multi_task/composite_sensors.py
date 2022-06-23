@@ -164,6 +164,7 @@ class CompositeSparseReward(Measure):
         return CompositeSparseReward.cls_uuid
 
     def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
         self.update_metric(
             *args,
             **kwargs,
@@ -171,6 +172,12 @@ class CompositeSparseReward(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = self._config.SLACK_REWARD
+        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+            if stage_name in self._stage_succ:
+                continue
+            if task.pddl_problem.is_expr_true(logical_expr):
+                self._metric += self._config.STAGE_SPARSE_REWARD
+                self._stage_succ.append(stage_name)
 
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(*args, **kwargs)

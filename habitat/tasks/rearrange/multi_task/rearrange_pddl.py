@@ -123,6 +123,7 @@ class PddlSimInfo:
     episode: Episode
     obj_thresh: float
     art_thresh: float
+    robot_at_thresh: float
     expr_types: Dict[str, ExprType]
 
     def check_type_matches(self, entity: PddlEntity, match_name: str) -> bool:

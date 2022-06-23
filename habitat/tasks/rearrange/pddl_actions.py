@@ -60,10 +60,16 @@ class PddlApplyAction(RobotAction):
 
                 apply_action = action.clone()
                 apply_action.set_param_values(param_values)
-                rearrange_logger.debug(
-                    f"Applying action {action} with obj args {param_values}"
-                )
-                self._task.pddl_problem.apply_action(apply_action)
+                if self._task.pddl_problem.is_expr_true(apply_action.precond):
+                    rearrange_logger.debug(
+                        f"Applying action {action} with obj args {param_values}"
+                    )
+                    self._task.pddl_problem.apply_action(apply_action)
+                else:
+                    rearrange_logger.debug(
+                        f"Preconds not satisfied for: action {action} with obj args {param_values}"
+                    )
+
             cur_i += action.n_args
         if is_last_action:
             return self._sim.step(HabitatSimActions.ARM_ACTION)

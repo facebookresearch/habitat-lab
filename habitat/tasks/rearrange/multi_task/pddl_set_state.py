@@ -29,13 +29,13 @@ class ArtSampler:
         self.value = value
         self.cmp = cmp
 
-    def is_satisfied(self, cur_value: float, thresh: float = 0.05) -> bool:
+    def is_satisfied(self, cur_value: float, thresh: float) -> bool:
         if self.cmp == "greater":
             return cur_value > self.value
         elif self.cmp == "less":
             return cur_value < self.value
         elif self.cmp == "close":
-            return abs(cur_value - self.value) < self._thresh
+            return abs(cur_value - self.value) < thresh
         else:
             raise ValueError(f"Unrecognized cmp {self.cmp}")
 
@@ -83,6 +83,13 @@ class PddlRobotState:
         elif self.should_drop and grasp_mgr.snap_idx != None:
             return False
 
+        if isinstance(self.pos, PddlEntity):
+            targ_pos = sim_info.get_entity_pos(self.pos)
+            robot = sim_info.sim.get_robot_data(robot_id).robot
+            dist = np.linalg.norm(robot.base_pos - targ_pos)
+            if dist > sim_info.robot_at_thresh:
+                return False
+
         return True
 
     def set_state(
@@ -103,10 +110,7 @@ class PddlRobotState:
             sim.internal_step(-1)
 
         # Set the robot starting position
-        if self.pos == "rnd":
-            rearrange_logger.debug("Setting robot base random position.")
-            sim.set_robot_base_to_random_point(agent_idx=robot_id)
-        elif isinstance(self.pos, PddlEntity):
+        if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
             robo_pos = sim_info.sim.safe_snap_point(targ_pos)
             robot = sim.get_robot_data(robot_id).robot
@@ -200,6 +204,31 @@ class PddlSetState:
         # if recep_name != check_marker.ao_parent.handle:
         #    return False
         return True
+
+    def is_compatible(self, expr_types) -> bool:
+        def type_matches(entity, match_name):
+            return entity.expr_type.is_subtype_of(expr_types[match_name])
+
+        for entity, target in self._obj_states.items():
+
+            if not type_matches(entity, OBJ_TYPE):
+                return False
+            if not type_matches(target, STATIC_OBJ_TYPE):
+                return False
+
+            if not (
+                type_matches(target, ART_OBJ_TYPE)
+                or type_matches(target, GOAL_TYPE)
+            ):
+                return False
+
+            if entity.expr_type.name == target.expr_type.name:
+                return False
+
+        return all(
+            type_matches(art_entity, ART_OBJ_TYPE)
+            for art_entity in self._art_states
+        )
 
     def is_true(
         self,

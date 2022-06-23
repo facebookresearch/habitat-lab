@@ -222,6 +222,7 @@ class PddlDomain:
             episode=episode,
             obj_thresh=self._config.OBJ_SUCC_THRESH,
             art_thresh=self._config.ART_SUCC_THRESH,
+            robot_at_thresh=self._config.ROBOT_AT_THRESH,
             expr_types=self.expr_types,
             obj_ids=sim.ref_handle_to_rigid_obj_id,
             target_ids={
@@ -284,7 +285,8 @@ class PddlDomain:
 
                 use_pred = pred.clone()
                 use_pred.set_param_values(entity_input)
-                poss_preds.append(use_pred)
+                if use_pred.is_sim_compatible(self.expr_types):
+                    poss_preds.append(use_pred)
         return poss_preds
 
     def get_possible_actions(

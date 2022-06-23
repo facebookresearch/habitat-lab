@@ -77,6 +77,10 @@ class PddlAction:
         return self._pre_cond.is_true_from_predicates(predicates)
 
     @property
+    def precond(self):
+        return self._pre_cond
+
+    @property
     def name(self):
         return self._name
 
