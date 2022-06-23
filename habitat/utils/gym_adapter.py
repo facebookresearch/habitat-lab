@@ -105,7 +105,7 @@ def create_action_space(original_space: gym.Space) -> gym.Space:
 
 
 def continuous_vector_action_to_hab_dict(
-    action_space, action: np.ndarray, clip: bool = True
+    action_space, action: np.ndarray
 ) -> Dict[str, Any]:
     """We naively assume that all actions are 1D (len(shape) == 1)"""
 
@@ -128,8 +128,6 @@ def continuous_vector_action_to_hab_dict(
     action_offset = 0
     for action_name, action_length in action_name_to_lengths.items():
         action_values = action[action_offset : action_offset + action_length]
-        if clip:
-            action_values = np.clip(action_values, -1.0, 1.0)
         action_args[action_name] = action_values
         action_offset += action_length
 
@@ -171,7 +169,6 @@ class HabGymWrapper(gym.Env):
     """
 
     def __init__(self, env, save_orig_obs: bool = False):
-        self._clip_actions = True
         gym_config = env.config.GYM
         self._gym_goal_keys = gym_config.DESIRED_GOAL_KEYS
         self._gym_achieved_goal_keys = gym_config.ACHIEVED_GOAL_KEYS
@@ -234,7 +231,7 @@ class HabGymWrapper(gym.Env):
         if isinstance(self.action_space, spaces.Box):
             assert isinstance(action, np.ndarray)
             hab_action = continuous_vector_action_to_hab_dict(
-                self.original_action_space, action, clip=self._clip_actions
+                self.original_action_space, action
             )
         else:
             hab_action = {"action": action}

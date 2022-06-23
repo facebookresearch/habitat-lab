@@ -464,7 +464,11 @@ class PPOTrainer(BaseRLTrainer):
         t_step_env = time.time()
 
         if is_continuous_action_space(self.policy_action_space):
-            step_data = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+            step_data = np.clip(
+                actions.detach().cpu().numpy(),
+                self.policy_action_space.low,
+                self.policy_action_space.high,
+            )
         else:
             step_data = [a.item() for a in actions.to(device="cpu")]
         self.envs.step_async(step_data)
@@ -1018,7 +1022,11 @@ class PPOTrainer(BaseRLTrainer):
             # For backwards compatibility, we also call .item() to convert to
             # an int
             if is_continuous_action_space(self.policy_action_space):
-                step_data = np.clip(actions.detach().cpu().numpy(), -1.0, 1.0)
+                step_data = np.clip(
+                    actions.detach().cpu().numpy(),
+                    self.policy_action_space.low,
+                    self.policy_action_space.high,
+                )
             else:
                 step_data = [a.item() for a in actions.to(device="cpu")]
 
