@@ -2,10 +2,18 @@
 from collections import OrderedDict
 from functools import singledispatch
 
-
-from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space, Tuple
+from gym.spaces import (
+    Box,
+    Dict,
+    Discrete,
+    MultiBinary,
+    MultiDiscrete,
+    Space,
+    Tuple,
+)
 
 # see https://github.com/openai/gym/blob/feea527a4fe66f48a077cf7e264ae60f86f745fa/gym/vector/utils/spaces.py for hints
+
 
 @singledispatch
 def unbatch_space(space: Space) -> Space:
@@ -28,7 +36,6 @@ def unbatch_space(space: Space) -> Space:
     raise ValueError(
         f"Cannot unbatch space with type `{type(space)}`. The space must be a valid `gym.Space` instance."
     )
-
 
 
 @unbatch_space.register(Box)
@@ -54,7 +61,7 @@ def _unbatch_space_dict(space):
         ),
     )
 
+
 @unbatch_space.register(MultiDiscrete)
 def _unbatch_space_dict(space):
     return space[0]
-

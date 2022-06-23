@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -239,22 +239,24 @@ class PointNavResNetNet(Net):
         self.discrete_actions = discrete_actions
         self._n_prev_action = 32
         if discrete_actions:
-            self.prev_action_embedding = nn.Embedding(action_space.n + 1, self._n_prev_action)
+            self.prev_action_embedding = nn.Embedding(
+                action_space.n + 1, self._n_prev_action
+            )
         else:
             num_actions = get_num_actions(action_space)
-            self.prev_action_embedding = nn.Linear(num_actions, self._n_prev_action)
+            self.prev_action_embedding = nn.Linear(
+                num_actions, self._n_prev_action
+            )
 
         rnn_input_size = self._n_prev_action  # test
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys: List[str] = (
-            [
-                k
-                for k in observation_space.spaces.keys()
-                if len(observation_space.spaces[k].shape) == 1
-            ]
-        )
+        self._fuse_keys: List[str] = [
+            k
+            for k in observation_space.spaces.keys()
+            if len(observation_space.spaces[k].shape) == 1
+        ]
         if len(self._fuse_keys) != 0:
             rnn_input_size += sum(
                 [observation_space.spaces[k].shape[0] for k in self._fuse_keys]

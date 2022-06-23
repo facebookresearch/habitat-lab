@@ -926,7 +926,7 @@ class PPOTrainer(BaseRLTrainer):
             # For discrete pointnav
             action_shape = (1,)
             discrete_actions = True
-        
+
         self._setup_actor_critic_agent(ppo_cfg)
 
         if self.agent.actor_critic.should_load_agent_state:
@@ -984,7 +984,9 @@ class PPOTrainer(BaseRLTrainer):
                 )
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
-        assert number_of_eval_episodes > 1, "The number TEST_EPISODE_COUNT needs to be strictly positive."
+        assert (
+            number_of_eval_episodes > 1
+        ), "The number TEST_EPISODE_COUNT needs to be strictly positive."
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()

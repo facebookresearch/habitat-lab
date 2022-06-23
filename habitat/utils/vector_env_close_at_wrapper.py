@@ -1,10 +1,12 @@
-from gym import spaces
-from gym.vector import VectorEnv, VectorEnvWrapper
-from typing import List, Optional, Sequence, Tuple, Union
-from habitat.utils.gym_adapter import HabGymWrapper
+from typing import List, Tuple, Union
+
 import numpy as np
+from gym import spaces
 from gym.core import ObsType
-from gym.vector import AsyncVectorEnv
+from gym.vector import AsyncVectorEnv, VectorEnv, VectorEnvWrapper
+
+from habitat.utils.gym_adapter import HabGymWrapper
+
 
 class VectorEnvCloseAtWrapper(VectorEnvWrapper):
     # TODO : make this AsyncVectorEnv
@@ -23,28 +25,44 @@ class VectorEnvCloseAtWrapper(VectorEnvWrapper):
         does not do it automatically.
         """
         if isinstance(obs, np.ndarray):
-            return np.take(obs, open_envs, axis = 0)
+            return np.take(obs, open_envs, axis=0)
         elif isinstance(obs, dict):
-            return {k: VectorEnvCloseAtWrapper._remove_closed_obs(v, open_envs) for k,v in obs.items()}
+            return {
+                k: VectorEnvCloseAtWrapper._remove_closed_obs(v, open_envs)
+                for k, v in obs.items()
+            }
 
-
-    def reset_wait(self, return_info: bool = False, *args, **kwargs, ) -> Union[ObsType, Tuple[ObsType, List[dict]]]:
-        if not self._has_closed_envs :
-            return self.env.reset_wait(return_info=return_info, *args, **kwargs)
+    def reset_wait(
+        self,
+        return_info: bool = False,
+        *args,
+        **kwargs,
+    ) -> Union[ObsType, Tuple[ObsType, List[dict]]]:
+        if not self._has_closed_envs:
+            return self.env.reset_wait(
+                return_info=return_info, *args, **kwargs
+            )
         if return_info:
-            obs, info = self.env.reset_wait(return_info=return_info, *args, **kwargs)
-            obs = VectorEnvCloseAtWrapper._remove_closed_obs(obs, self.open_envs)
-            return  obs, info 
+            obs, info = self.env.reset_wait(
+                return_info=return_info, *args, **kwargs
+            )
+            obs = VectorEnvCloseAtWrapper._remove_closed_obs(
+                obs, self.open_envs
+            )
+            return obs, info
         else:
             obs = self.env.reset_wait(return_info=return_info, *args, **kwargs)
-            obs = VectorEnvCloseAtWrapper._remove_closed_obs(obs, self.open_envs)
-            return  obs 
-        
+            obs = VectorEnvCloseAtWrapper._remove_closed_obs(
+                obs, self.open_envs
+            )
+            return obs
 
-    def step_wait(  self, *args, **kwargs  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[dict]]:
-        if not self._has_closed_envs :
+    def step_wait(
+        self, *args, **kwargs
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[dict]]:
+        if not self._has_closed_envs:
             return self.env.step_wait(*args, **kwargs)
-        obs, rew, done, info =  self.env.step_wait(*args, **kwargs)
+        obs, rew, done, info = self.env.step_wait(*args, **kwargs)
         obs = VectorEnvCloseAtWrapper._remove_closed_obs(obs, self.open_envs)
         return obs, rew, done, info
 
@@ -63,5 +81,3 @@ class VectorEnvCloseAtWrapper(VectorEnvWrapper):
         self.num_envs -= 1
         self.open_envs.pop(index)
         self._has_closed_envs = True
-
-

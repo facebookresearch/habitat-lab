@@ -5,16 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
-import numbers
 import os
 import re
 import shutil
 import tarfile
-from collections import defaultdict
 from io import BytesIO
 from typing import (
     Any,
-    DefaultDict,
     Dict,
     Iterable,
     List,
@@ -232,8 +229,10 @@ def batch_obs(
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    return TensorDict.from_tree(observations).map_in_place(lambda v: v.to(device))
-    
+    return TensorDict.from_tree(observations).map_in_place(
+        lambda v: v.to(device)
+    )
+
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
     r"""Attempts to extract the ckpt_id from the filename of a checkpoint.
@@ -583,7 +582,9 @@ def is_continuous_action_space(action_space) -> bool:
     elif isinstance(action_space, spaces.MultiDiscrete):
         return False
     else:
-        raise NotImplementedError(f"Unknown action space {action_space}. Is neither continuous nor discrete")
+        raise NotImplementedError(
+            f"Unknown action space {action_space}. Is neither continuous nor discrete"
+        )
 
 
 def get_num_actions(action_space) -> int:
@@ -594,15 +595,17 @@ def get_num_actions(action_space) -> int:
         if isinstance(v, spaces.Dict):
             queue.extend(v.spaces.values())
         elif isinstance(v, spaces.Box):
-            assert len(v.shape) == 1, f"shape was {v.shape} but was expecting a 1D action"
+            assert (
+                len(v.shape) == 1
+            ), f"shape was {v.shape} but was expecting a 1D action"
             num_actions += v.shape[0]
         elif isinstance(v, EmptySpace):
             num_actions += 1
         elif isinstance(v, spaces.Discrete):
             num_actions += v.n
         else:
-            raise NotImplementedError(f"Trying to count the number of actions with an unknown action space {v}")
+            raise NotImplementedError(
+                f"Trying to count the number of actions with an unknown action space {v}"
+            )
 
     return num_actions
-
-

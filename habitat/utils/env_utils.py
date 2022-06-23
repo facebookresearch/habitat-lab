@@ -4,17 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import random
-from typing import Any, List, Type, Union
+from typing import List, Type, Union
 
 import habitat
 from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
-
-from habitat.utils.vector_env_obs_dict_wrapper import VectorEnvObsDictWrapper
+from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
 from habitat.utils.vector_env_close_at_wrapper import VectorEnvCloseAtWrapper
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.utils.vector_env_obs_dict_wrapper import VectorEnvObsDictWrapper
+
 
 def make_env_fn(
     config: Config, env_class: Union[Type[Env], Type[RLEnv]]
@@ -105,7 +104,6 @@ def construct_envs(
         proc_config.freeze()
         configs.append(proc_config)
 
-
     def make_gym_env(config: Config) -> Union[Env, RLEnv]:
         def _make_single_env():
             return make_gym_from_config(config)
@@ -114,7 +112,10 @@ def construct_envs(
 
         return _make_single_env
 
-    return VectorEnvCloseAtWrapper(VectorEnvObsDictWrapper(HabitatAsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") ))
-
-    
-        
+    return VectorEnvCloseAtWrapper(
+        VectorEnvObsDictWrapper(
+            HabitatAsyncVectorEnv(
+                [make_gym_env(c) for c in configs], context="forkserver"
+            )
+        )
+    )

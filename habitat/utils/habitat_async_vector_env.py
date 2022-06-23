@@ -1,11 +1,13 @@
-from gym import spaces
-from gym.vector import VectorEnv, VectorEnvWrapper
-from typing import List, Optional, Sequence, Tuple, Union
-from habitat.utils.gym_adapter import HabGymWrapper
+from typing import List, Sequence, Tuple, Union
+
 import numpy as np
+from gym import spaces
 from gym.core import ObsType
-from gym.vector import AsyncVectorEnv
+from gym.vector import AsyncVectorEnv, VectorEnv, VectorEnvWrapper
+
 from habitat.core.dataset import Episode
+from habitat.utils.gym_adapter import HabGymWrapper
+
 
 class HabitatAsyncVectorEnv(AsyncVectorEnv):
     # TODO : make this AsyncVectorEnv
@@ -37,18 +39,33 @@ class HabitatAsyncVectorEnv(AsyncVectorEnv):
         """
         if self._is_habitat:
             return self.call("get_current_episodes")
-        return [Episode(episode_id=episode, scene_id = 0, start_position=[], start_rotation=[]) for episode in self._manual_episode_count]
+        return [
+            Episode(
+                episode_id=episode,
+                scene_id=0,
+                start_position=[],
+                start_rotation=[],
+            )
+            for episode in self._manual_episode_count
+        ]
 
-
-    def reset_wait(self, return_info: bool = False, *args, **kwargs, ) -> Union[ObsType, Tuple[ObsType, List[dict]]]:
+    def reset_wait(
+        self,
+        return_info: bool = False,
+        *args,
+        **kwargs,
+    ) -> Union[ObsType, Tuple[ObsType, List[dict]]]:
         if self._is_habitat:
             return super().reset_wait(return_info, *args, **kwargs)
         max_episode = max(self._manual_episode_count) + 1
-        self._manual_episode_count = list(range(max_episode, max_episode + self.num_envs))
+        self._manual_episode_count = list(
+            range(max_episode, max_episode + self.num_envs)
+        )
         return super().reset_wait(return_info, *args, **kwargs)
-        
 
-    def step_wait(  self, *args, **kwargs  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[dict]]:
+    def step_wait(
+        self, *args, **kwargs
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[dict]]:
         if self._is_habitat:
             return super().step_wait(*args, **kwargs)
         _obs, _rew, done, _info = super().step_wait(*args, **kwargs)

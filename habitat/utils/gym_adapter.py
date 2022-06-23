@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from collections.abc import Mapping
-from typing import Any, Dict, Optional, Union,List
+from typing import Any, Dict, List, Optional, Union
 
 import gym
 import numpy as np
@@ -50,45 +50,59 @@ def smash_observation_space(obs_space, limit_keys):
         {k: v for k, v in obs_space.spaces.items() if k in limit_keys}
     )
 
+
 def _is_continuous(original_space: gym.Space) -> bool:
     """
     returns true if the original space is only suitable for continuous control
     """
     if isinstance(original_space, spaces.Box):
-        # Any Box means it is continuous 
+        # Any Box means it is continuous
         return True
     if isinstance(original_space, EmptySpace):
         return False
     if isinstance(original_space, Mapping):
         return any([_is_continuous(v) for v in original_space.values()])
-    raise NotImplementedError(f"Unknow action space found : {original_space}. Can only be Box or Empty")
+    raise NotImplementedError(
+        f"Unknow action space found : {original_space}. Can only be Box or Empty"
+    )
 
-def _recursive_continuous_size_getter(original_space: gym.Space, size:List[int]):
+
+def _recursive_continuous_size_getter(
+    original_space: gym.Space, size: List[int]
+):
     """
     Returns the size of a continuous action vector from a habitat environment action space
     """
-    if isinstance(original_space,  spaces.Box):
+    if isinstance(original_space, spaces.Box):
         size[0] += original_space.shape[0]
-    elif isinstance(original_space,  EmptySpace):
+    elif isinstance(original_space, EmptySpace):
         size[0] += 1
-    elif isinstance(original_space,  Mapping):
+    elif isinstance(original_space, Mapping):
         for v in original_space.values():
             _recursive_continuous_size_getter(v, size)
     else:
-        raise NotImplementedError(f"Unknow continuous action space found : {original_space}. Can only be Box, Empty or Dict.")
+        raise NotImplementedError(
+            f"Unknow continuous action space found : {original_space}. Can only be Box, Empty or Dict."
+        )
+
 
 def create_action_space(original_space: gym.Space) -> gym.Space:
     """
     Converts a habitat task action space into a either continuous (Box) or discrete (Discrete) gym.space.
     """
-    assert isinstance(original_space, Mapping), f"The action space of the environment needs to be a Mapping, but was {original_space}"
+    assert isinstance(
+        original_space, Mapping
+    ), f"The action space of the environment needs to be a Mapping, but was {original_space}"
     if _is_continuous(original_space):
         size = [0]
         _recursive_continuous_size_getter(original_space, size)
-        return spaces.Box(shape=(size[0],), low=-1.0, high=1.0, dtype=np.float32)
+        return spaces.Box(
+            shape=(size[0],), low=-1.0, high=1.0, dtype=np.float32
+        )
     else:
-        # discrete case. The ActionSpace class gives us the correct action size 
+        # discrete case. The ActionSpace class gives us the correct action size
         return spaces.Discrete(len(original_space))
+
 
 def continuous_vector_action_to_hab_dict(
     action_space, action: np.ndarray, clip: bool = True
@@ -115,17 +129,15 @@ def continuous_vector_action_to_hab_dict(
     for action_name, action_length in action_name_to_lengths.items():
         action_values = action[action_offset : action_offset + action_length]
         if clip:
-            action_values = np.clip(
-                action_values, -1.0, 1.0
-            )
+            action_values = np.clip(action_values, -1.0, 1.0)
         action_args[action_name] = action_values
         action_offset += action_length
 
     action_dict = {
-            "action": root_action_names,
-            "action_args": action_args,
-        }
-    
+        "action": root_action_names,
+        "action_args": action_args,
+    }
+
     return action_dict
 
 
@@ -193,7 +205,6 @@ class HabGymWrapper(gym.Env):
 
         self.action_space = create_action_space(action_space)
 
-
         self.observation_space = smash_observation_space(
             env.observation_space, self._gym_obs_keys
         )
@@ -218,9 +229,13 @@ class HabGymWrapper(gym.Env):
         self._env = env
 
     def step(self, action: Union[np.ndarray, int]):
-        assert self.action_space.contains(action), f"Unvalid action {action} for action space {self.action_space}"
+        assert self.action_space.contains(
+            action
+        ), f"Unvalid action {action} for action space {self.action_space}"
         if isinstance(self.action_space, spaces.Box):
-            action = continuous_vector_action_to_hab_dict( self.original_action_space, action, clip = self._clip_actions)
+            action = continuous_vector_action_to_hab_dict(
+                self.original_action_space, action, clip=self._clip_actions
+            )
         else:
             action = {"action": action}
         return self._direct_hab_step(action)
