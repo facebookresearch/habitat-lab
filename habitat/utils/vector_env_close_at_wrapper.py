@@ -10,6 +10,8 @@ class VectorEnvCloseAtWrapper(VectorEnvWrapper):
     # TODO : make this AsyncVectorEnv
     def __init__(self, env: VectorEnv):
         super().__init__(env)
+        # _has_closed_envs is true if some environments closed. If it is false,
+        # we can skip some of the computation when resetting or stepping.
         self._has_closed_envs = False
 
         self.open_envs = list(range(self.num_envs))

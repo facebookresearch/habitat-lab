@@ -5,12 +5,14 @@ from gym.core import ObsType
 
 import numpy as np
 
-#from https://github.com/openai/gym/blob/4d57b864f866b5f38ce8a05024184d675c897727/gym/vector/vector_env.py#L295
-
 class VectorEnvObsDictWrapper(VectorEnvWrapper):
     OBSERVATION_KEY = "obs"
 
     def __init__(self, env: VectorEnv):
+        """
+        Wraps a VectorEnv environment and makes sure its obervation space is a
+        Dictionary (If it is a Box, it will be wrapped into a dictionary)
+        """
         super().__init__(env)
         self._requires_dict = False
         if isinstance(self.observation_space, spaces.Box):

@@ -14,6 +14,7 @@ from habitat import Config, Env, RLEnv, VectorEnv, logger, make_dataset
 from habitat.utils.vector_env_obs_dict_wrapper import VectorEnvObsDictWrapper
 from habitat.utils.habitat_async_vector_env import HabitatAsyncVectorEnv
 from habitat.utils.vector_env_close_at_wrapper import VectorEnvCloseAtWrapper
+from habitat.utils.gym_definitions import make_gym_from_config
 
 def make_env_fn(
     config: Config, env_class: Union[Type[Env], Type[RLEnv]]
@@ -104,36 +105,16 @@ def construct_envs(
         proc_config.freeze()
         configs.append(proc_config)
 
-    vector_env_cls: Type[Any]
-    if os.environ.get("HABITAT_ENV_DEBUG", 0):
-        logger.warn(
-            "Using the debug Vector environment interface. Expect slower performance."
-        )
-        vector_env_cls = habitat.ThreadedVectorEnv
-    else:
-        vector_env_cls = habitat.VectorEnv
-
-    # envs = vector_env_cls(
-    #     make_env_fn=make_env_fn,
-    #     env_fn_args=tuple(zip(configs, env_classes)),
-    #     workers_ignore_signals=workers_ignore_signals,
-    # )
-    # return envs
-
-    from gym.vector import AsyncVectorEnv
-    
-
-    from habitat.utils.gym_definitions import gym_from_config
 
     def make_gym_env(config: Config) -> Union[Env, RLEnv]:
         def _make_single_env():
-            return gym_from_config(config)
+            return make_gym_from_config(config)
+            # TODO: allow using any environment like shown bellow.
+            # import gym; return gym.make("CartPole-v1")
 
         return _make_single_env
 
     return VectorEnvCloseAtWrapper(VectorEnvObsDictWrapper(HabitatAsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") ))
 
-    # return VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") )
-    # return VectorEnvEpisodeCountWrapper(VectorEnvObsDictWrapper(AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver") ))
-    # return AsyncVectorEnv( [make_gym_env(c) for c in configs], context="forkserver")
+    
         

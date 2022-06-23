@@ -9,6 +9,7 @@ import os.path as osp
 from glob import glob
 from typing import Any, List, Optional
 
+import gym
 from gym.envs.registration import register, registry
 
 import habitat
@@ -44,7 +45,10 @@ def _get_env_name(cfg: Config) -> Optional[str]:
     return None
 
 
-def gym_from_config(config: Config):
+def make_gym_from_config(config: Config) -> gym.Env:
+    """
+    From a habitat-lab or habitat-baseline config, create the associated gym environment.
+    """
     if "TASK_CONFIG" in config:
         config = config.TASK_CONFIG
     env_class_name = _get_env_name(config)

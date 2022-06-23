@@ -5,6 +5,7 @@ from habitat.utils.gym_adapter import HabGymWrapper
 import numpy as np
 from gym.core import ObsType
 from gym.vector import AsyncVectorEnv
+from habitat.core.dataset import Episode
 
 class HabitatAsyncVectorEnv(AsyncVectorEnv):
     # TODO : make this AsyncVectorEnv
@@ -16,7 +17,7 @@ class HabitatAsyncVectorEnv(AsyncVectorEnv):
             # We need to know if the underlying gym is a habitat environment
             # so we can appropriately query the number of episodes
             self._is_habitat = True
-        # _manual_episode_count is a substitute to the  habitat environment
+        # _manual_episode_count is a substitute to the habitat environment
         # episode counting in the case the environment is not a habitat env
         self._manual_episode_count = list(range(self.num_envs))
         dummy_env.close()
@@ -30,13 +31,13 @@ class HabitatAsyncVectorEnv(AsyncVectorEnv):
             return self.call("get_number_of_episodes")
         return [-1] * self.num_envs
 
-    def current_episodes(self) -> List[int]:
+    def current_episodes(self) -> List[Episode]:
         """
         Returns the current episode the environments are at
         """
         if self._is_habitat:
             return self.call("get_current_episodes")
-        return self._manual_episode_count
+        return [Episode(episode_id=episode, scene_id = 0, start_position=[], start_rotation=[]) for episode in self._manual_episode_count]
 
 
     def reset_wait(self, return_info: bool = False, *args, **kwargs, ) -> Union[ObsType, Tuple[ObsType, List[dict]]]:

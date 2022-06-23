@@ -64,8 +64,6 @@ class RolloutStorage:
             else:
                 action_shape = action_space.shape
 
-
-    
         self.buffers["actions"] = torch.zeros(
             numsteps + 1, num_envs, *action_shape
         )
