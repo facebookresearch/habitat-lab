@@ -61,7 +61,7 @@ def _is_continuous(original_space: gym.Space) -> bool:
     if isinstance(original_space, EmptySpace):
         return False
     if isinstance(original_space, Mapping):
-        return any([_is_continuous(v) for v in original_space.values()])
+        return any((_is_continuous(v) for v in original_space.values()))
     raise NotImplementedError(
         f"Unknow action space found : {original_space}. Can only be Box or Empty"
     )
