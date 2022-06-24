@@ -68,18 +68,21 @@ def _is_continuous(original_space: gym.Space) -> bool:
 
 
 def _recursive_continuous_size_getter(
-    original_space: gym.Space, size: List[int]
+    original_space: gym.Space, low: List[float], high: List[float]
 ):
     """
     Returns the size of a continuous action vector from a habitat environment action space
     """
     if isinstance(original_space, spaces.Box):
-        size[0] += original_space.shape[0]
+        assert len(original_space.shape) == 1
+        low.extend(original_space.low.tolist())
+        high.extend(original_space.high.tolist())
     elif isinstance(original_space, EmptySpace):
-        size[0] += 1
+        low.append(-1.0)
+        high.append(1.0)
     elif isinstance(original_space, Mapping):
         for v in original_space.values():
-            _recursive_continuous_size_getter(v, size)
+            _recursive_continuous_size_getter(v, low, high)
     else:
         raise NotImplementedError(
             f"Unknow continuous action space found : {original_space}. Can only be Box, Empty or Dict."
@@ -94,10 +97,11 @@ def create_action_space(original_space: gym.Space) -> gym.Space:
         original_space, Mapping
     ), f"The action space of the environment needs to be a Mapping, but was {original_space}"
     if _is_continuous(original_space):
-        size = [0]
-        _recursive_continuous_size_getter(original_space, size)
+        low: List[float] = []
+        high: List[float] = []
+        _recursive_continuous_size_getter(original_space, low, high)
         return spaces.Box(
-            shape=(size[0],), low=-1.0, high=1.0, dtype=np.float32
+            low=np.array(low), high=np.array(high), dtype=np.float32
         )
     else:
         # discrete case. The ActionSpace class gives us the correct action size
@@ -105,17 +109,24 @@ def create_action_space(original_space: gym.Space) -> gym.Space:
 
 
 def continuous_vector_action_to_hab_dict(
-    action_space, action: np.ndarray, clip: bool = True
+    original_action_space: spaces.Space,
+    vector_action_space: spaces.Box,
+    action: np.ndarray,
 ) -> Dict[str, Any]:
-    """We naively assume that all actions are 1D (len(shape) == 1)"""
-
+    """
+    Converts a np.ndarray vector action into a habitat-lab compatible action dictionary.
+    """
+    # Clipping actions to the specified limits
+    action_values = np.clip(
+        action, vector_action_space.low, vector_action_space.high
+    )
     # Assume that the action space only has one root SimulatorTaskAction
-    root_action_names = tuple(action_space.spaces.keys())
+    root_action_names = tuple(original_action_space.spaces.keys())
     if len(root_action_names) == 1:
         # No need for a tuple if there is only one action
         root_action_names = root_action_names[0]
     action_name_to_lengths = {}
-    for outer_k, act_dict in action_space.spaces.items():
+    for outer_k, act_dict in original_action_space.spaces.items():
         if isinstance(act_dict, EmptySpace):
             action_name_to_lengths[outer_k] = 1
         else:
@@ -128,8 +139,6 @@ def continuous_vector_action_to_hab_dict(
     action_offset = 0
     for action_name, action_length in action_name_to_lengths.items():
         action_values = action[action_offset : action_offset + action_length]
-        if clip:
-            action_values = np.clip(action_values, -1.0, 1.0)
         action_args[action_name] = action_values
         action_offset += action_length
 
@@ -171,7 +180,6 @@ class HabGymWrapper(gym.Env):
     """
 
     def __init__(self, env, save_orig_obs: bool = False):
-        self._clip_actions = True
         gym_config = env.config.GYM
         self._gym_goal_keys = gym_config.DESIRED_GOAL_KEYS
         self._gym_achieved_goal_keys = gym_config.ACHIEVED_GOAL_KEYS
@@ -234,7 +242,7 @@ class HabGymWrapper(gym.Env):
         if isinstance(self.action_space, spaces.Box):
             assert isinstance(action, np.ndarray)
             hab_action = continuous_vector_action_to_hab_dict(
-                self.original_action_space, action, clip=self._clip_actions
+                self.original_action_space, self.action_space, action
             )
         else:
             hab_action = {"action": action}
