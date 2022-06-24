@@ -1,5 +1,5 @@
 GYM:
-    AUTO_NAME: NavPick
+    AUTO_NAME: SetTable
     CLASS_NAME: RearrangeRLEnv
     OBS_KEYS:
     - robot_head_depth

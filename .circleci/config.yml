@@ -148,7 +148,6 @@ jobs:
               then
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
-                conda install -c  conda-forge opencv -y
                 conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed

@@ -1,6 +1,6 @@
 GYM:
     CLASS_NAME: RearrangeRLEnv
-    AUTO_NAME: NavPick
+    AUTO_NAME: NavPickNavPlace
     OBS_KEYS:
     - robot_head_depth
     - obj_start_sensor
