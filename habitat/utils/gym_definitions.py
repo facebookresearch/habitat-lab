@@ -44,6 +44,21 @@ def _get_env_name(cfg: Config) -> Optional[str]:
     return None
 
 
+def make_gym_from_config(config: Config) -> HabRenderWrapper:
+    """
+    From a habitat-lab or habitat-baseline config, create the associated gym environment.
+    """
+    if "TASK_CONFIG" in config:
+        config = config.TASK_CONFIG
+    env_class_name = _get_env_name(config)
+    env_class = get_env_class(env_class_name)
+    env = habitat.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    env = HabGymWrapper(env)
+    return env
+
+
 def _make_habitat_gym_env(
     cfg_file_path: str,
     override_options: List[Any] = None,

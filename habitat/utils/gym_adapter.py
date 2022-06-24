@@ -116,10 +116,6 @@ def continuous_vector_action_to_hab_dict(
     """
     Converts a np.ndarray vector action into a habitat-lab compatible action dictionary.
     """
-    # Clipping actions to the specified limits
-    action_values = np.clip(
-        action, vector_action_space.low, vector_action_space.high
-    )
     # Assume that the action space only has one root SimulatorTaskAction
     root_action_names = tuple(original_action_space.spaces.keys())
     if len(root_action_names) == 1:
@@ -248,10 +244,12 @@ class HabGymWrapper(gym.Env):
             hab_action = {"action": action}
         return self._direct_hab_step(hab_action)
 
-    def get_number_of_episodes(self) -> int:
+    @property
+    def number_of_episodes(self) -> int:
         return self._env.number_of_episodes
 
-    def get_current_episodes(self) -> int:
+    @property
+    def current_episode(self) -> int:
         return self._env.current_episode
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
