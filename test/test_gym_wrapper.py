@@ -198,3 +198,33 @@ def test_auto_gym_wrapper(test_cfg_path):
         hab_gym.reset()
         hab_gym.step(hab_gym.action_space.sample())
         hab_gym.close()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "HabitatPick-v0",
+        "HabitatPlace-v0",
+        "HabitatCloseCab-v0",
+        "HabitatCloseFridge-v0",
+        "HabitatOpenCab-v0",
+        "HabitatOpenFridge-v0",
+        "HabitatNavToObj-v0",
+        "HabitatReachState-v0",
+        "HabitatTidyHouse-v0",
+        "HabitatPrepareGroceries-v0",
+        "HabitatSetTable-v0",
+        "HabitatNavPick-v0",
+        "HabitatNavPickNavPlace-v0",
+    ],
+)
+def test_gym_premade_envs(name):
+    env = gym.make(name)
+    env.reset()
+    done = False
+    for _ in range(10):
+        _, _, done, _ = env.step(env.action_space.sample())
+        if done:
+            env.reset()
+            done = False
+    env.close()
