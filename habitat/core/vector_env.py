@@ -32,6 +32,7 @@ from gym import spaces
 import habitat
 from habitat.config import Config
 from habitat.core.env import Env, RLEnv
+from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
@@ -231,7 +232,7 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        env = EnvObsDictWrapper(env_fn(*env_fn_args))
+        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
         if parent_pipe is not None:
             parent_pipe.close()
         try:
