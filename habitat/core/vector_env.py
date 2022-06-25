@@ -66,6 +66,30 @@ ACTION_SPACE_NAME = "action_space"
 OBSERVATION_SPACE_NAME = "observation_space"
 
 
+class CloudpickleWrapper:
+    """Wrapper that uses cloudpickle to pickle and unpickle the result."""
+
+    def __init__(self, fn: Callable):
+        """Cloudpickle wrapper for a function."""
+        self.fn = fn
+
+    def __getstate__(self):
+        """Get the state using `cloudpickle.dumps(self.fn)`."""
+        import cloudpickle
+
+        return cloudpickle.dumps(self.fn)
+
+    def __setstate__(self, ob):
+        """Sets the state with obs."""
+        import pickle
+
+        self.fn = pickle.loads(ob)
+
+    def __call__(self, *args, **kwargs):
+        """Calls the function `self.fn` with no arguments."""
+        return self.fn(*args, **kwargs)
+
+
 def _make_env_fn(
     config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
 ) -> Env:
@@ -305,7 +329,7 @@ class VectorEnv:
                 args=(
                     worker_conn.recv,
                     worker_conn.send,
-                    make_env_fn,
+                    CloudpickleWrapper(make_env_fn),
                     env_args,
                     self._auto_reset_done,
                     workers_ignore_signals,

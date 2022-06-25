@@ -258,12 +258,15 @@ class PointNavResNetNet(Net):
         # visual encoder
         if fuse_keys is None:
             fuse_keys = observation_space.spaces.keys()
-        self._fuse_keys: List[str] = [
+        self._fuse_keys_1d: List[str] = [
             k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
         ]
-        if len(self._fuse_keys) != 0:
+        if len(self._fuse_keys_1d) != 0:
             rnn_input_size += sum(
-                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+                [
+                    observation_space.spaces[k].shape[0]
+                    for k in self._fuse_keys_1d
+                ]
             )
 
         if (
@@ -358,16 +361,12 @@ class PointNavResNetNet(Net):
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
         else:
-            use_obs_space = (
-                spaces.Dict(
-                    {
-                        k: observation_space.spaces[k]
-                        for k in self._fuse_keys
-                        if len(observation_space.spaces[k].shape) == 3
-                    }
-                )
-                if self._fuse_keys is not None
-                else observation_space
+            use_obs_space = spaces.Dict(
+                {
+                    k: observation_space.spaces[k]
+                    for k in fuse_keys
+                    if len(observation_space.spaces[k].shape) == 3
+                }
             )
 
         self.visual_encoder = ResNetEncoder(
@@ -423,9 +422,9 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        if len(self._fuse_keys) != 0:
+        if len(self._fuse_keys_1d) != 0:
             fuse_states = torch.cat(
-                [observations[k] for k in self._fuse_keys], dim=-1
+                [observations[k] for k in self._fuse_keys_1d], dim=-1
             )
             x.append(fuse_states)
 

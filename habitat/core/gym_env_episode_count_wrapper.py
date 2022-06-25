@@ -1,6 +1,5 @@
 from typing import Tuple, Union
 
-import numpy as np
 from gym import Env, Wrapper, spaces
 from gym.core import ActType, ObsType
 
@@ -17,7 +16,7 @@ class EnvCountEpisodeWrapper(Wrapper):
         """
         super().__init__(env)
         self._has_number_episode = hasattr(env, "number_of_episodes")
-        self._current_episode = np.random.randint(100) * 1000
+        self._current_episode = 0
 
     @property
     def number_of_episodes(self):

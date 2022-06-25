@@ -81,7 +81,7 @@ def construct_envs(
         configs.append(proc_config)
 
     vector_env_cls: Type[Any]
-    if os.environ.get("HABITAT_ENV_DEBUG", 0):
+    if int(os.environ.get("HABITAT_ENV_DEBUG", 0)):
         logger.warn(
             "Using the debug Vector environment interface. Expect slower performance."
         )
@@ -89,10 +89,17 @@ def construct_envs(
     else:
         vector_env_cls = VectorEnv
 
-    # # TODO : Allow training any gym environment by substiting make_gym_from_config with
-    # # a method like this :
-    # def make_cartpole(any):
+    # ## TODO : Allow training any gym environment by substiting make_gym_from_config with
+    # ## a method like this :
+    # def make_cartpole(config) -> gym.Env:
     #     import gym; return gym.make("CartPole-v1")
+
+    # envs = vector_env_cls(
+    #     make_env_fn=make_cartpole,
+    #     env_fn_args=tuple((c,) for c in configs),
+    #     workers_ignore_signals=workers_ignore_signals,
+    # )
+    # return envs
 
     envs = vector_env_cls(
         make_env_fn=make_gym_from_config,
