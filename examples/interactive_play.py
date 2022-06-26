@@ -387,10 +387,8 @@ def play_env(env, args, config):
             print("Entities")
             for i, entity in enumerate(entities):
                 print(f"{i}: {entity}")
-            # action_sel = input("Enter Action Selection: ")
-            # entity_sel = input("Enter Entity Selection: ")
-            action_sel = "0"
-            entity_sel = "1,0"
+            action_sel = input("Enter Action Selection: ")
+            entity_sel = input("Enter Entity Selection: ")
             action_sel = int(action_sel)
             entity_sel = [int(x) + 1 for x in entity_sel.split(",")]
             ac = np.zeros(pddl_action.action_space["pddl_action"].shape[0])
