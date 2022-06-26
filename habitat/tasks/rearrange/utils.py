@@ -58,11 +58,6 @@ def get_match_link(coll, name):
     return None
 
 
-def swap_axes(x):
-    x[1], x[2] = x[2], x[1]
-    return x
-
-
 @attr.s(auto_attribs=True, kw_only=True)
 class CollisionDetails:
     obj_scene_colls: int = 0

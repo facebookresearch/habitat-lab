@@ -112,11 +112,16 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
+            if not sim_info.sim.is_point_within_bounds(targ_pos):
+                rearrange_logger.error(
+                    f"Object {self.pos} is out of bounds but trying to set robot position"
+                )
+
             robo_pos = sim_info.sim.safe_snap_point(targ_pos)
             robot = sim.get_robot_data(robot_id).robot
             robot.base_pos = robo_pos
 
-            forward = np.array([0.0, 1.0])
+            forward = np.array([1.0, 0.0])
             rel_pos = np.array(targ_pos - robo_pos)[[0, 2]]
             angle = get_angle(forward, rel_pos)
             rearrange_logger.debug(

@@ -14,6 +14,7 @@ class PddlApplyAction(RobotAction):
         self._task = task
         self._entities_list = None
         self._action_ordering = None
+        self._was_prev_action_invalid = False
 
     @property
     def action_space(self):
@@ -38,9 +39,23 @@ class PddlApplyAction(RobotAction):
             }
         )
 
+    @property
+    def was_prev_action_invalid(self):
+        return self._was_prev_action_invalid
+
+    def reset(self, *args, **kwargs):
+        self._was_prev_action_invalid = False
+
+    def get_pddl_action_start(self, action_id: int) -> int:
+        start_idx = 0
+        for action in self._action_ordering[:action_id]:
+            start_idx += action.n_args
+        return start_idx
+
     def step(self, *args, is_last_action, **kwargs):
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         cur_i = 0
+        self._was_prev_action_invalid = False
         for action in self._action_ordering:
             action_part = apply_pddl_action[cur_i : cur_i + action.n_args][:]
             if sum(action_part) > 0:
@@ -69,6 +84,7 @@ class PddlApplyAction(RobotAction):
                     rearrange_logger.debug(
                         f"Preconds not satisfied for: action {action} with obj args {param_values}"
                     )
+                    self._was_prev_action_invalid = True
 
             cur_i += action.n_args
         if is_last_action:

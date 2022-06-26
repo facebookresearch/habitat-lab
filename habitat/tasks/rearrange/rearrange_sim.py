@@ -270,6 +270,7 @@ class RearrangeSim(HabitatSim):
         :returns: The set base position and rotation
         """
         robot = self.get_robot_data(agent_idx).robot
+        lower_bound, upper_bound = self.pathfinder.get_bounds()
 
         for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
@@ -286,7 +287,7 @@ class RearrangeSim(HabitatSim):
             if not did_collide:
                 break
         if attempt_i == max_attempts - 1:
-            rearrange_logger.warning(
+            rearrange_logger.error(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
         return start_pos, start_rot
@@ -355,6 +356,10 @@ class RearrangeSim(HabitatSim):
                 ao_pose[joint_position_index] = joint_state
             ao.joint_positions = ao_pose
 
+    def is_point_within_bounds(self, pos):
+        lower_bound, upper_bound = self.pathfinder.get_bounds()
+        return all(lower_bound <= pos) and all(upper_bound >= pos)
+
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
         snap_point can return nan which produces hard to catch errors.
@@ -366,13 +371,10 @@ class RearrangeSim(HabitatSim):
             # The point is not valid or not in a different island. Find a
             # different point nearby that is on a different island and is
             # valid.
-            for _ in range(10):
-                new_pos = self.pathfinder.get_random_navigable_point_near(
-                    pos, 1.5, 1000
-                )
-                island_radius = self.pathfinder.island_radius(new_pos)
-                if island_radius == self._max_island_size:
-                    break
+            new_pos = self.pathfinder.get_random_navigable_point_near(
+                pos, 1.5, 1000
+            )
+            island_radius = self.pathfinder.island_radius(new_pos)
 
         if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
             # This is a last resort, take a navmesh vertex that is closest
@@ -420,6 +422,10 @@ class RearrangeSim(HabitatSim):
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
+            if self.habitat_config.KINEMATIC_MODE:
+                ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                ro.collidable = False
+
             if should_add_objects:
                 self.scene_obj_ids.append(ro.object_id)
 
@@ -432,8 +438,17 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
         ao_mgr = self.get_articulated_object_manager()
+        robot_art_handles = [
+            robot.sim_obj.handle for robot in self.robots_mgr.robots_iter
+        ]
         for aoi_handle in ao_mgr.get_object_handles():
-            self.art_objs.append(ao_mgr.get_object_by_handle(aoi_handle))
+            ao = ao_mgr.get_object_by_handle(aoi_handle)
+            if (
+                self.habitat_config.KINEMATIC_MODE
+                and ao.handle not in robot_art_handles
+            ):
+                ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+            self.art_objs.append(ao)
 
     def _create_obj_viz(self, ep_info: Config):
         """
