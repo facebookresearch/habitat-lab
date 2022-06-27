@@ -16,6 +16,7 @@ from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, StopAction
+from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
@@ -80,8 +81,9 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
         cfg.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
         cfg.freeze()
 
-    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    env_fn_args = tuple((c,) for c in configs)
     with habitat.VectorEnv(
+        make_env_fn=make_gym_from_config,
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method,
     ) as envs:

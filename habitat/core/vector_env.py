@@ -37,7 +37,10 @@ from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.utils import profiling_wrapper
-from habitat.utils.pickle5_multiprocessing import ConnectionWrapper
+from habitat.utils.pickle5_multiprocessing import (
+    CloudpickleWrapper,
+    ConnectionWrapper,
+)
 
 try:
     # Use torch.multiprocessing if we can.
@@ -64,30 +67,6 @@ CURRENT_EPISODE_NAME = "current_episode"
 NUMBER_OF_EPISODE_NAME = "number_of_episodes"
 ACTION_SPACE_NAME = "action_space"
 OBSERVATION_SPACE_NAME = "observation_space"
-
-
-class CloudpickleWrapper:
-    """Wrapper that uses cloudpickle to pickle and unpickle the result."""
-
-    def __init__(self, fn: Callable):
-        """Cloudpickle wrapper for a function."""
-        self.fn = fn
-
-    def __getstate__(self):
-        """Get the state using `cloudpickle.dumps(self.fn)`."""
-        import cloudpickle
-
-        return cloudpickle.dumps(self.fn)
-
-    def __setstate__(self, ob):
-        """Sets the state with obs."""
-        import pickle
-
-        self.fn = pickle.loads(ob)
-
-    def __call__(self, *args, **kwargs):
-        """Calls the function `self.fn` with no arguments."""
-        return self.fn(*args, **kwargs)
 
 
 def _make_env_fn(
@@ -166,8 +145,8 @@ class VectorEnv:
 
     def __init__(
         self,
-        make_env_fn: Callable[..., gym.Env] = _make_env_fn,
-        env_fn_args: Sequence[Tuple] = None,
+        make_env_fn: Callable[..., gym.Env],
+        env_fn_args: Sequence[Tuple],
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
         workers_ignore_signals: bool = False,
@@ -177,7 +156,7 @@ class VectorEnv:
         :param make_env_fn: function which creates a single environment. An
             environment can be of type :ref:`env.Env` or :ref:`env.RLEnv`
         :param env_fn_args: tuple of tuple of args to pass to the
-            :ref:`_make_env_fn`.
+            :ref:`make_gym_from_config`.
         :param auto_reset_done: automatically reset the environment when
             done. This functionality is provided for seamless training
             of vectorized environments.
