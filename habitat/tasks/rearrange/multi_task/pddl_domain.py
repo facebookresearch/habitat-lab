@@ -19,6 +19,7 @@ from habitat.tasks.rearrange.multi_task.pddl_action import (
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
     LogicalExprType,
+    LogicalQuantifierType,
 )
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.pddl_set_state import (
@@ -86,25 +87,25 @@ class PddlDomain:
             obj_states = pred_d["set_state"].get("obj_states", {})
             robot_states = pred_d["set_state"].get("robot_states", {})
 
-            all_entites = {**self._constants, **pred_entities}
+            all_entities = {**self._constants, **pred_entities}
 
             art_states = {
-                all_entites[k]: ArtSampler(**v) for k, v in art_states.items()
+                all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
             }
             obj_states = {
-                all_entites[k]: all_entites[v] for k, v in obj_states.items()
+                all_entities[k]: all_entities[v] for k, v in obj_states.items()
             }
 
             use_robot_states = {}
             for k, v in robot_states.items():
-                use_k = all_entites[k]
+                use_k = all_entities[k]
                 robot_pos = v.get("pos", None)
                 holding = v.get("holding", None)
 
                 use_robot_states[use_k] = PddlRobotState(
-                    holding=all_entites.get(holding, holding),
+                    holding=all_entities.get(holding, holding),
                     should_drop=v.get("should_drop", False),
-                    pos=all_entites.get(robot_pos, robot_pos),
+                    pos=all_entities.get(robot_pos, robot_pos),
                 )
 
             set_state = PddlSetState(art_states, obj_states, use_robot_states)
@@ -179,7 +180,8 @@ class PddlDomain:
     ) -> Union[LogicalExpr, Predicate]:
 
         if load_d is None:
-            return LogicalExpr(LogicalExprType.AND, [], [])
+            return LogicalExpr(LogicalExprType.AND, [], [], None)
+
         if isinstance(load_d, str):
             # This can be assumed to just be a predicate
             return self.parse_predicate(load_d, existing_entities)
@@ -193,16 +195,22 @@ class PddlDomain:
         except Exception as e:
             raise ValueError(f"Could not load expr_type from {load_d}") from e
 
-        sub_exprs = [
-            self.parse_logical_expr(sub_expr, existing_entities)
-            for sub_expr in load_d["sub_exprs"]
-        ]
         inputs = load_d.get("inputs", [])
         inputs = [
-            PddlEntity(x["name"], LogicalExprType[x["expr_type"]])
+            PddlEntity(x["name"], self.expr_types[x["expr_type"]])
             for x in inputs
         ]
-        return LogicalExpr(expr_type, sub_exprs, inputs)
+
+        sub_exprs = [
+            self.parse_logical_expr(
+                sub_expr, {**existing_entities, **{x.name: x for x in inputs}}
+            )
+            for sub_expr in load_d["sub_exprs"]
+        ]
+        quantifier = load_d.get("quantifier", None)
+        if quantifier is not None:
+            quantifier = LogicalQuantifierType[quantifier]
+        return LogicalExpr(expr_type, sub_exprs, inputs, quantifier)
 
     def bind_to_instance(
         self,
@@ -235,6 +243,8 @@ class PddlDomain:
                 f"ROBOT_{robot_id}": robot_id
                 for robot_id in range(sim.num_robots)
             },
+            all_entities=self.all_entities,
+            predicates=self.predicates,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -362,12 +372,13 @@ class PddlProblem(PddlDomain):
             o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])
             for o in problem_def["objects"]
         }
+
         self.init = [
             self.parse_predicate(p, self._objects) for p in problem_def["init"]
         ]
         try:
             self.goal = self.parse_logical_expr(
-                problem_def["goal"], self._objects
+                problem_def["goal"], self.all_entities
             )
         except Exception as e:
             raise ValueError(
@@ -376,7 +387,7 @@ class PddlProblem(PddlDomain):
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
             self.stage_goals[stage_name] = self.parse_logical_expr(
-                cond, self._objects
+                cond, self.all_entities
             )
 
         self._solution: Optional[List[PddlAction]] = None
@@ -404,6 +415,9 @@ class PddlProblem(PddlDomain):
 
                 self._solution.append(action)
 
+        for action in self.actions.values():
+            action.set_precond(self.expand_quantifiers(action.precond))
+
     def solution(self):
         if self._solution is None:
             raise ValueError("Solution is not supported by this PDDL")
@@ -427,3 +441,40 @@ class PddlProblem(PddlDomain):
             self.actions.values(),
             key=lambda x: x.name,
         )
+
+    def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
+        expr.sub_exprs = [
+            self.expand_quantifiers(subexpr)
+            if isinstance(subexpr, LogicalExpr)
+            else subexpr
+            for subexpr in expr.sub_exprs
+        ]
+
+        if expr.quantifier == LogicalQuantifierType.FORALL:
+            combine_type = LogicalExprType.AND
+        elif expr.quantifier is None:
+            return expr
+        else:
+            raise ValueError(f"Unrecongized {expr.quantifier}")
+
+        all_matching_entities = []
+        for expand_entity in expr.inputs:
+            all_matching_entities.append(
+                [
+                    e
+                    for e in self.all_entities.values()
+                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
+                ]
+            )
+
+        expanded_exprs = []
+        for poss_input in itertools.product(*all_matching_entities):
+            assert len(poss_input) == len(expr.inputs)
+            sub_dict = {
+                expand_entity: sub_entity
+                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
+            }
+
+            expanded_exprs.append(expr.clone().sub_in(sub_dict))
+
+        return LogicalExpr(combine_type, expanded_exprs, [], None)

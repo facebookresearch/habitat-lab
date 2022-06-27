@@ -69,12 +69,16 @@ class PddlAction:
 
     @property
     def compact_str(self):
-        return f"{self._name}({self._param_values})"
+        params = ",".join([x.name for x in self._param_values])
+        return f"{self._name}({params})"
 
     def is_precond_satisfied_from_predicates(
         self, predicates: List[Predicate]
     ) -> bool:
         return self._pre_cond.is_true_from_predicates(predicates)
+
+    def set_precond(self, new_precond):
+        self._pre_cond = new_precond
 
     @property
     def precond(self):

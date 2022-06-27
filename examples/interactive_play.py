@@ -403,8 +403,10 @@ def play_env(env, args, config):
             ]._predicates_list
             pred_values = step_result["all_predicates"]
             print("\nPredicate Truth Values:")
-            for pred, pred_value in zip(pred_list, pred_values):
-                print(f"{pred} IS {pred_value}")
+            for i, (pred, pred_value) in enumerate(
+                zip(pred_list, pred_values)
+            ):
+                print(f"{i}: {pred.compact_str} = {pred_value}")
 
         if step_result is None:
             break

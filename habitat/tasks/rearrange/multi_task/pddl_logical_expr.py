@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import reduce
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -11,7 +11,12 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 
 class LogicalExprType(Enum):
     AND = "and"
+    NAND = "nand"
     OR = "or"
+    NOR = "nor"
+
+
+class LogicalQuantifierType(Enum):
     FORALL = "forall"
 
 
@@ -21,13 +26,28 @@ class LogicalExpr:
         expr_type: LogicalExprType,
         sub_exprs: List[Union["LogicalExpr", Predicate]],
         inputs: List[PddlEntity],
+        quantifier: Optional[LogicalQuantifierType],
     ):
-        if expr_type == LogicalExprType.FORALL and len(sub_exprs) != 1:
-            raise ValueError()
-
         self._expr_type = expr_type
         self._sub_exprs = sub_exprs
         self._inputs = inputs
+        self._quantifier = quantifier
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @property
+    def sub_exprs(self):
+        return self._sub_exprs
+
+    @sub_exprs.setter
+    def sub_exprs(self, value):
+        self._sub_exprs = value
+
+    @property
+    def quantifier(self):
+        return self._quantifier
 
     def is_true_from_predicates(self, preds: List[Predicate]) -> bool:
         def check_statement(p):
@@ -42,20 +62,32 @@ class LogicalExpr:
         return self._is_true(lambda p: p.is_true(sim_info))
 
     def _is_true(self, is_true_fn) -> bool:
-        if self._expr_type == LogicalExprType.AND:
+        if (
+            self._expr_type == LogicalExprType.AND
+            or self._expr_type == LogicalExprType.NAND
+        ):
             reduce_op = lambda x, y: x and y
             init_value = True
-        elif self._expr_type == LogicalExprType.OR:
+        elif (
+            self._expr_type == LogicalExprType.OR
+            or self._expr_type == LogicalExprType.NOR
+        ):
             reduce_op = lambda x, y: x or y
             init_value = False
         else:
             raise ValueError()
 
-        return reduce(
+        ret = reduce(
             reduce_op,
             (is_true_fn(sub_expr) for sub_expr in self._sub_exprs),
             init_value,
         )
+        if (
+            self._expr_type == LogicalExprType.NAND
+            or self._expr_type == LogicalExprType.NOR
+        ):
+            ret = not ret
+        return ret
 
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "LogicalExpr":
         self._sub_exprs = [e.sub_in(sub_dict) for e in self._sub_exprs]
@@ -66,5 +98,8 @@ class LogicalExpr:
 
     def clone(self) -> "LogicalExpr":
         return LogicalExpr(
-            self._expr_type, [p.clone() for p in self._sub_exprs], self._inputs
+            self._expr_type,
+            [p.clone() for p in self._sub_exprs],
+            self._inputs,
+            self._quantifier,
         )

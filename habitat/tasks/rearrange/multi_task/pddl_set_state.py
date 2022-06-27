@@ -10,8 +10,12 @@ from typing import Any, Dict, Optional
 import magnum as mn
 import numpy as np
 
+import habitat_sim
+from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ART_OBJ_TYPE,
+    CAB_TYPE,
+    FRIDGE_TYPE,
     GOAL_TYPE,
     OBJ_TYPE,
     RIGID_OBJ_TYPE,
@@ -25,15 +29,21 @@ from habitat.tasks.utils import get_angle
 
 
 class ArtSampler:
-    def __init__(self, value, cmp):
+    def __init__(
+        self, value: float, cmp: str, override_thresh: Optional[float] = None
+    ):
         self.value = value
         self.cmp = cmp
+        self.override_thresh = override_thresh
 
     def is_satisfied(self, cur_value: float, thresh: float) -> bool:
+        if self.override_thresh is not None:
+            thresh = self.override_thresh
+
         if self.cmp == "greater":
-            return cur_value > self.value
+            return cur_value > self.value - thresh
         elif self.cmp == "less":
-            return cur_value < self.value
+            return cur_value < self.value + thresh
         elif self.cmp == "close":
             return abs(cur_value - self.value) < thresh
         else:
@@ -183,39 +193,27 @@ class PddlSetState:
 
     def _is_object_inside(
         self, entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
-    ):
-        if sim_info.check_type_matches(entity, GOAL_TYPE):
-            use_receps = sim_info.sim.ep_info["goal_receptacles"]
-            obj_idx = sim_info.search_for_entity(entity, GOAL_TYPE)
-        elif sim_info.check_type_matches(entity, RIGID_OBJ_TYPE):
-            use_receps = sim_info.sim.ep_info["target_receptacles"]
-            obj_idx = sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
-        else:
-            raise ValueError()
-
-        if not sim_info.check_type_matches(target, ART_OBJ_TYPE):
-            raise ValueError()
+    ) -> bool:
+        """
+        Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
+        """
+        entity_pos = sim_info.get_entity_pos(entity)
         check_marker = sim_info.search_for_entity(target, ART_OBJ_TYPE)
-
-        if obj_idx >= len(use_receps):
-            rearrange_logger.debug(
-                f"Could not find object {entity} in {use_receps}"
+        if sim_info.check_type_matches(target, FRIDGE_TYPE):
+            global_bb = get_ao_global_bb(check_marker.ao_parent)
+        else:
+            bb = check_marker.link_node.cumulative_bb
+            global_bb = habitat_sim.geo.get_transformed_bb(
+                bb, check_marker.link_node.transformation
             )
-            return False
 
-        recep_name, recep_link_id = use_receps[obj_idx]
-        if recep_link_id != check_marker.link_id:
-            return False
-        # if recep_name != check_marker.ao_parent.handle:
-        #    return False
-        return True
+        return global_bb.contains(entity_pos)
 
     def is_compatible(self, expr_types) -> bool:
         def type_matches(entity, match_name):
             return entity.expr_type.is_subtype_of(expr_types[match_name])
 
         for entity, target in self._obj_states.items():
-
             if not type_matches(entity, OBJ_TYPE):
                 return False
             if not type_matches(target, STATIC_OBJ_TYPE):
@@ -314,8 +312,43 @@ class PddlSetState:
             set_obj.linear_velocity = mn.Vector3.zero_init()
 
         for art_entity, set_art in self._art_states.items():
+            sim = sim_info.sim
+            rom = sim.get_rigid_object_manager()
+
+            in_pred = sim_info.get_predicate("in")
+            poss_entities = [
+                e
+                for e in sim_info.all_entities.values()
+                if e.expr_type.is_subtype_of(
+                    sim_info.expr_types[RIGID_OBJ_TYPE]
+                )
+            ]
+
+            move_objs = []
+            for poss_entity in poss_entities:
+                bound_in_pred = in_pred.clone()
+                bound_in_pred.set_param_values([poss_entity, art_entity])
+                if not bound_in_pred.is_true(sim_info):
+                    continue
+                obj_idx = sim_info.search_for_entity(
+                    poss_entity, RIGID_OBJ_TYPE
+                )
+                abs_obj_id = sim.scene_obj_ids[obj_idx]
+                set_obj = rom.get_object_by_id(abs_obj_id)
+                move_objs.append(set_obj)
+
             marker = sim_info.search_for_entity(art_entity, ART_OBJ_TYPE)
+            pre_link_pos = marker.link_node.transformation.translation
             marker.set_targ_js(set_art.sample())
-            sim.internal_step(-1)
+            post_link_pos = marker.link_node.transformation.translation
+
+            if art_entity.expr_type.is_subtype_of(
+                sim_info.expr_types[CAB_TYPE]
+            ):
+                # Also move all objects that were in the drawer
+                diff_pos = post_link_pos - pre_link_pos
+                for move_obj in move_objs:
+                    move_obj.translation += diff_pos
+
         for robot_entity, robot_state in self._robot_states.items():
             robot_state.set_state(sim_info, robot_entity)

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -41,7 +41,8 @@ class ExprType:
         self.parent = parent
 
     def is_subtype_of(self, other_type: "ExprType") -> bool:
-        # Check if this or any of the parents match
+        # If true, then `self` is compatible with `other_type` but `other_type`
+        # is NOT necessarily compatible with `self`
         all_types = [self.name]
         parent = self.parent
         while parent is not None:
@@ -125,6 +126,11 @@ class PddlSimInfo:
     art_thresh: float
     robot_at_thresh: float
     expr_types: Dict[str, ExprType]
+    predicates: Dict[str, Any]
+    all_entities: Dict[str, Any]
+
+    def get_predicate(self, pred_name: str):
+        return self.predicates[pred_name]
 
     def check_type_matches(self, entity: PddlEntity, match_name: str) -> bool:
         return entity.expr_type.is_subtype_of(self.expr_types[match_name])
