@@ -872,7 +872,7 @@ _C.GYM.OBS_KEYS = None
 _C.GYM.ACTION_KEYS = None
 _C.GYM.ACHIEVED_GOAL_KEYS = []
 _C.GYM.DESIRED_GOAL_KEYS = []
-_C.GYM.FIX_INFO_DICT = True
+_C.GYM.FIX_INFO_DICT = False
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
