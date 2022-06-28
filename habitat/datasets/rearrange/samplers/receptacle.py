@@ -462,9 +462,6 @@ class ReceptacleTracker:
         if recep_name not in self._receptacle_counts:
             return False
         self._receptacle_counts[recep_name] -= 1
-        print(
-            f"Subtracting from {recep_name} now at {self._receptacle_counts[recep_name]}"
-        )
         if self._receptacle_counts[recep_name] < 0:
             raise ValueError(f"Receptacle count for {recep_name} is invalid")
         if self._receptacle_counts[recep_name] == 0:
