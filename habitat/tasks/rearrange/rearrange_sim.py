@@ -710,7 +710,7 @@ class RearrangeSim(HabitatSim):
         """
 
         # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.get("STEP_PHYSICS", True):
+        if self.habitat_config.STEP_PHYSICS:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
