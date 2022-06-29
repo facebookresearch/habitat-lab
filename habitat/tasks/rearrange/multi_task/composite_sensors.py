@@ -7,14 +7,51 @@
 
 from typing import List
 
+import numpy as np
+from gym import spaces
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     ObjectToGoalDistance,
     RearrangeReward,
 )
 from habitat.tasks.rearrange.utils import rearrange_logger
+
+
+@registry.register_sensor
+class GlobalPredicatesSensor(Sensor):
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        self._predicates_list = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return "all_predicates"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        if self._predicates_list is None:
+            self._predicates_list = (
+                self._task.pddl_problem.get_possible_predicates()
+            )
+
+        return spaces.Box(
+            shape=(len(self._predicates_list),),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        sim_info = self._task.pddl_problem.sim_info
+        truth_values = [p.is_true(sim_info) for p in self._predicates_list]
+        return np.array(truth_values, dtype=np.float32)
 
 
 @registry.register_measure

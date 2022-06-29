@@ -19,6 +19,7 @@ from habitat.tasks.rearrange.multi_task.pddl_action import (
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
     LogicalExprType,
+    LogicalQuantifierType,
 )
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.pddl_set_state import (
@@ -86,29 +87,28 @@ class PddlDomain:
             obj_states = pred_d["set_state"].get("obj_states", {})
             robot_states = pred_d["set_state"].get("robot_states", {})
 
-            all_entites = {**self._constants, **pred_entities}
+            all_entities = {**self._constants, **pred_entities}
 
             art_states = {
-                all_entites[k]: ArtSampler(
-                    **v, thresh=self._config.ART_SUCC_THRESH
-                )
-                for k, v in art_states.items()
+                all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
             }
             obj_states = {
-                all_entites[k]: all_entites[v] for k, v in obj_states.items()
-            }
-            robot_states = {
-                all_entites[k]: PddlRobotState(
-                    holding=all_entites[v["holding"]]
-                    if "holding" in v
-                    else None,
-                    should_drop=v.get("should_drop", False),
-                    pos=v.get("pos", None),
-                )
-                for k, v in robot_states.items()
+                all_entities[k]: all_entities[v] for k, v in obj_states.items()
             }
 
-            set_state = PddlSetState(art_states, obj_states, robot_states)
+            use_robot_states = {}
+            for k, v in robot_states.items():
+                use_k = all_entities[k]
+                robot_pos = v.get("pos", None)
+                holding = v.get("holding", None)
+
+                use_robot_states[use_k] = PddlRobotState(
+                    holding=all_entities.get(holding, holding),
+                    should_drop=v.get("should_drop", False),
+                    pos=all_entities.get(robot_pos, robot_pos),
+                )
+
+            set_state = PddlSetState(art_states, obj_states, use_robot_states)
 
             pred = Predicate(pred_d["name"], set_state, arg_entities)
             self.predicates[pred.name] = pred
@@ -180,7 +180,8 @@ class PddlDomain:
     ) -> Union[LogicalExpr, Predicate]:
 
         if load_d is None:
-            return LogicalExpr(LogicalExprType.AND, [], [])
+            return LogicalExpr(LogicalExprType.AND, [], [], None)
+
         if isinstance(load_d, str):
             # This can be assumed to just be a predicate
             return self.parse_predicate(load_d, existing_entities)
@@ -194,16 +195,22 @@ class PddlDomain:
         except Exception as e:
             raise ValueError(f"Could not load expr_type from {load_d}") from e
 
-        sub_exprs = [
-            self.parse_logical_expr(sub_expr, existing_entities)
-            for sub_expr in load_d["sub_exprs"]
-        ]
         inputs = load_d.get("inputs", [])
         inputs = [
-            PddlEntity(x["name"], LogicalExprType[x["expr_type"]])
+            PddlEntity(x["name"], self.expr_types[x["expr_type"]])
             for x in inputs
         ]
-        return LogicalExpr(expr_type, sub_exprs, inputs)
+
+        sub_exprs = [
+            self.parse_logical_expr(
+                sub_expr, {**existing_entities, **{x.name: x for x in inputs}}
+            )
+            for sub_expr in load_d["sub_exprs"]
+        ]
+        quantifier = load_d.get("quantifier", None)
+        if quantifier is not None:
+            quantifier = LogicalQuantifierType[quantifier]
+        return LogicalExpr(expr_type, sub_exprs, inputs, quantifier)
 
     def bind_to_instance(
         self,
@@ -223,6 +230,7 @@ class PddlDomain:
             episode=episode,
             obj_thresh=self._config.OBJ_SUCC_THRESH,
             art_thresh=self._config.ART_SUCC_THRESH,
+            robot_at_thresh=self._config.ROBOT_AT_THRESH,
             expr_types=self.expr_types,
             obj_ids=sim.ref_handle_to_rigid_obj_id,
             target_ids={
@@ -235,6 +243,8 @@ class PddlDomain:
                 f"ROBOT_{robot_id}": robot_id
                 for robot_id in range(sim.num_robots)
             },
+            all_entities=self.all_entities,
+            predicates=self.predicates,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -266,12 +276,28 @@ class PddlDomain:
                 if not pred.are_args_compatible(entity_input):
                     continue
 
-                pred = pred.clone()
-                pred.set_param_values(entity_input)
+                use_pred = pred.clone()
+                use_pred.set_param_values(entity_input)
 
-                if pred.is_true(self.sim_info):
-                    true_preds.append(pred)
+                if use_pred.is_true(self.sim_info):
+                    true_preds.append(use_pred)
         return true_preds
+
+    def get_possible_predicates(self) -> List[Predicate]:
+        all_entities = self.all_entities.values()
+        poss_preds: List[Predicate] = []
+        for pred in self.predicates.values():
+            for entity_input in itertools.combinations(
+                all_entities, pred.n_args
+            ):
+                if not pred.are_args_compatible(entity_input):
+                    continue
+
+                use_pred = pred.clone()
+                use_pred.set_param_values(entity_input)
+                if use_pred.is_sim_compatible(self.expr_types):
+                    poss_preds.append(use_pred)
+        return poss_preds
 
     def get_possible_actions(
         self,
@@ -280,14 +306,18 @@ class PddlDomain:
         restricted_action_names: Optional[List[str]] = None,
         true_preds: Optional[List[Predicate]] = None,
     ) -> List[PddlAction]:
-        if true_preds is None:
-            true_preds = self.get_true_predicates()
+        """
+        :param filter_entities: ONLY actions with entities that contain all
+            entities in `filter_entities` are allowed.
+        :param allowed_action_names: ONLY action names allowed.
+        :param restricted_action_names: Action names NOT allowed.
+        """
         if filter_entities is None:
             filter_entities = []
         if restricted_action_names is None:
             restricted_action_names = []
 
-        all_entities = self.all_entities.values()
+        all_entities = list(self.all_entities.values())
         matching_actions = []
         for action in self.actions.values():
             if (
@@ -310,11 +340,19 @@ class PddlDomain:
                 if not matches_filter:
                     continue
 
-                if not action.are_args_compatible(entity_input):
-                    continue
-                new_action = action.clone()
-                new_action.set_param_values(entity_input)
-                matching_actions.append(new_action)
+                for entity_input_perm in itertools.permutations(entity_input):
+                    if not action.are_args_compatible(entity_input_perm):
+                        continue
+                    new_action = action.clone()
+                    new_action.set_param_values(entity_input_perm)
+                    if (
+                        true_preds is not None
+                        and not new_action.is_precond_satisfied_from_predicates(
+                            true_preds
+                        )
+                    ):
+                        continue
+                    matching_actions.append(new_action)
         return matching_actions
 
     @property
@@ -340,12 +378,13 @@ class PddlProblem(PddlDomain):
             o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])
             for o in problem_def["objects"]
         }
+
         self.init = [
             self.parse_predicate(p, self._objects) for p in problem_def["init"]
         ]
         try:
             self.goal = self.parse_logical_expr(
-                problem_def["goal"], self._objects
+                problem_def["goal"], self.all_entities
             )
         except Exception as e:
             raise ValueError(
@@ -354,7 +393,7 @@ class PddlProblem(PddlDomain):
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
             self.stage_goals[stage_name] = self.parse_logical_expr(
-                cond, self._objects
+                cond, self.all_entities
             )
 
         self._solution: Optional[List[PddlAction]] = None
@@ -382,6 +421,9 @@ class PddlProblem(PddlDomain):
 
                 self._solution.append(action)
 
+        for action in self.actions.values():
+            action.set_precond(self.expand_quantifiers(action.precond))
+
     def solution(self):
         if self._solution is None:
             raise ValueError("Solution is not supported by this PDDL")
@@ -393,3 +435,52 @@ class PddlProblem(PddlDomain):
 
     def get_entity(self, k: str) -> PddlEntity:
         return self.all_entities[k]
+
+    def get_ordered_entities_list(self) -> List[PddlEntity]:
+        return sorted(
+            self.all_entities.values(),
+            key=lambda x: x.name,
+        )
+
+    def get_ordered_actions(self) -> List[PddlAction]:
+        return sorted(
+            self.actions.values(),
+            key=lambda x: x.name,
+        )
+
+    def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
+        expr.sub_exprs = [
+            self.expand_quantifiers(subexpr)
+            if isinstance(subexpr, LogicalExpr)
+            else subexpr
+            for subexpr in expr.sub_exprs
+        ]
+
+        if expr.quantifier == LogicalQuantifierType.FORALL:
+            combine_type = LogicalExprType.AND
+        elif expr.quantifier is None:
+            return expr
+        else:
+            raise ValueError(f"Unrecongized {expr.quantifier}")
+
+        all_matching_entities = []
+        for expand_entity in expr.inputs:
+            all_matching_entities.append(
+                [
+                    e
+                    for e in self.all_entities.values()
+                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
+                ]
+            )
+
+        expanded_exprs = []
+        for poss_input in itertools.product(*all_matching_entities):
+            assert len(poss_input) == len(expr.inputs)
+            sub_dict = {
+                expand_entity: sub_entity
+                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
+            }
+
+            expanded_exprs.append(expr.clone().sub_in(sub_dict))
+
+        return LogicalExpr(combine_type, expanded_exprs, [], None)

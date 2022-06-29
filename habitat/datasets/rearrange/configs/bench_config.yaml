@@ -1,7 +1,7 @@
 ---
 dataset_path: "data/hab2_bench_assets/hab2_bench.scene_dataset_config.json"
 additional_object_paths:
-  - "data/objects/ycb/"
+  - "data/objects/ycb/configs/"
 scene_sets:
   -
     name: "Baked_sc1_staging_00_bench"

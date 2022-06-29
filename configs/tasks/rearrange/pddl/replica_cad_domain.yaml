@@ -69,6 +69,7 @@ predicates:
         cab_id:
           value: 0.45
           cmp: 'greater'
+          override_thresh: 0.1
 
   - name: closed_cab
     args:
@@ -124,24 +125,11 @@ predicates:
         obj_states:
             obj: at_entity
 
-axioms:
-  - vars: []
-    context:
-      expr_type: FORALL
-      inputs:
-        - name: robot
-          expr_type: robot_type
-      sub_exprs:
-        - not_holding(robot)
-    implies:
-      - all_not_holding()
-    always_required: True
-
 actions:
   - name: nav
     parameters:
       - name: obj
-        expr_type: static_obj_type
+        expr_type: obj_type
       - name: robot
         expr_type: robot_type
     precondition: null
@@ -162,7 +150,10 @@ actions:
         expr_type: obj_type
       - name: robot
         expr_type: robot_type
-    precondition: null
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - in(obj, marker)
     postcondition:
       - robot_at(marker, robot)
     task_info:
@@ -182,6 +173,14 @@ actions:
       expr_type: AND
       sub_exprs:
         - robot_at(obj, robot)
+        - quantifier: FORALL
+          inputs:
+            - name: recep
+              expr_type: cab_type
+          expr_type: NAND
+          sub_exprs:
+            - in(obj, recep)
+            - closed_cab(recep)
     postcondition:
       - holding(obj, robot)
     task_info:

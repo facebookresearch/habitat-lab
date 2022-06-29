@@ -63,7 +63,26 @@ class PddlAction:
         return None
 
     def __repr__(self):
-        return f"<Action {self._name}>"
+        return (
+            f"<Action {self._name} ({self._params})->({self._param_values})>"
+        )
+
+    @property
+    def compact_str(self):
+        params = ",".join([x.name for x in self._param_values])
+        return f"{self._name}({params})"
+
+    def is_precond_satisfied_from_predicates(
+        self, predicates: List[Predicate]
+    ) -> bool:
+        return self._pre_cond.is_true_from_predicates(predicates)
+
+    def set_precond(self, new_precond):
+        self._pre_cond = new_precond
+
+    @property
+    def precond(self):
+        return self._pre_cond
 
     @property
     def name(self):
@@ -74,7 +93,7 @@ class PddlAction:
         return len(self._params)
 
     def are_args_compatible(self, arg_values: List[PddlEntity]) -> bool:
-        return do_entity_lists_match(self._args, arg_values)
+        return do_entity_lists_match(self._params, arg_values)
 
     def set_param_values(self, param_values: List[PddlEntity]) -> None:
         if self._param_values is not None:
@@ -109,12 +128,15 @@ class PddlAction:
 
     def apply(self, sim_info: PddlSimInfo) -> None:
         for p in self._post_cond:
+            rearrange_logger.debug(f"Setting predicate {p}")
             p.set_state(sim_info)
 
     @property
     def param_values(self):
         if self._param_values is None:
-            raise ValueError()
+            raise ValueError(
+                "Accessing action param values before they are set."
+            )
         if len(self._param_values) != len(self._params):
             raise ValueError()
         return self._param_values
@@ -159,6 +181,6 @@ class PddlAction:
             cur_dataset=sim_info.dataset,
             should_super_reset=should_reset,
             task_kwargs=task_kwargs,
-            episode=sim_info.epiosde,
+            episode=sim_info.episode,
             task_config_args=self._task_info.config_args,
         )

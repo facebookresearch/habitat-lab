@@ -5,7 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
+
+import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
@@ -39,7 +41,8 @@ class ExprType:
         self.parent = parent
 
     def is_subtype_of(self, other_type: "ExprType") -> bool:
-        # Check if this or any of the parents match
+        # If true, then `self` is compatible with `other_type` but `other_type`
+        # is NOT necessarily compatible with `self`
         all_types = [self.name]
         parent = self.parent
         while parent is not None:
@@ -60,13 +63,18 @@ class PddlEntity:
     def __repr__(self):
         return f"{self.name}-{self.expr_type}"
 
+    def __eq__(self, other):
+        if not isinstance(other, PddlEntity):
+            return False
+        return (self.name == other.name) and (
+            self.expr_type.name == other.expr_type.name
+        )
+
 
 def do_entity_lists_match(
     to_set: List[PddlEntity], set_value: List[PddlEntity]
 ) -> bool:
     if len(to_set) != len(set_value):
-        return False
-    if to_set is not None:
         return False
     # Check types are compatible
     return all(
@@ -86,8 +94,6 @@ def ensure_entity_lists_match(
     # Check types are compatible
     for arg, set_arg in zip(to_set, set_value):
         if not set_arg.expr_type.is_subtype_of(arg.expr_type):
-            # breakpoint()
-            # set_arg.expr_type.is_subtype_of(arg.expr_type)
             raise ValueError(
                 f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
             )
@@ -109,7 +115,7 @@ class PddlSimInfo:
     obj_ids: Dict[str, int]
     target_ids: Dict[str, int]
     art_handles: Dict[str, int]
-    marker_handles: List[str]
+    marker_handles: Dict[str, MarkerInfo]
     robot_ids: Dict[str, int]
 
     sim: RearrangeSim
@@ -118,10 +124,40 @@ class PddlSimInfo:
     episode: Episode
     obj_thresh: float
     art_thresh: float
+    robot_at_thresh: float
     expr_types: Dict[str, ExprType]
+    predicates: Dict[str, Any]
+    all_entities: Dict[str, Any]
+
+    def get_predicate(self, pred_name: str):
+        return self.predicates[pred_name]
 
     def check_type_matches(self, entity: PddlEntity, match_name: str) -> bool:
         return entity.expr_type.is_subtype_of(self.expr_types[match_name])
+
+    def get_entity_pos(self, entity: PddlEntity) -> np.ndarray:
+        ename = entity.name
+        if self.check_type_matches(entity, ROBOT_TYPE):
+            robot_id = self.robot_ids[ename]
+            return self.sim.get_robot_data(robot_id).robot.base_pos
+        elif self.check_type_matches(entity, ART_OBJ_TYPE):
+            marker_info = self.marker_handles[ename]
+            return marker_info.get_current_position()
+        elif self.check_type_matches(entity, GOAL_TYPE):
+            idx = self.target_ids[ename]
+            targ_idxs, pos_targs = self.sim.get_targets()
+            rel_idx = targ_idxs.tolist().index(idx)
+            return pos_targs[rel_idx]
+        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+            rom = self.sim.get_rigid_object_manager()
+            idx = self.obj_ids[ename]
+            abs_obj_id = self.sim.scene_obj_ids[idx]
+            cur_pos = rom.get_object_by_id(
+                abs_obj_id
+            ).transformation.translation
+            return cur_pos
+        else:
+            raise ValueError()
 
     def search_for_entity_any(self, entity: PddlEntity):
         ename = entity.name

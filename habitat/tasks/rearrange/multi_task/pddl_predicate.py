@@ -26,7 +26,10 @@ class Predicate:
     def are_args_compatible(self, arg_values: List[PddlEntity]):
         return do_entity_lists_match(self._args, arg_values)
 
-    def set_param_values(self, arg_values: List[PddlEntity]):
+    def is_sim_compatible(self, expr_types):
+        return self._set_state.is_compatible(expr_types)
+
+    def set_param_values(self, arg_values: List[PddlEntity]) -> None:
         if self._arg_values is not None:
             raise ValueError(
                 f"Trying to set arg values with {arg_values} when current args are set to {self._arg_values}"
@@ -70,3 +73,15 @@ class Predicate:
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def compact_str(self):
+        args = ",".join([str(x) for x in self._arg_values])
+        return f"{self._name}({args})"
+
+    def __eq__(self, other_pred):
+        return (
+            self._name == other_pred._name
+            and self._args == other_pred._args
+            and self._arg_values == other_pred._arg_values
+        )

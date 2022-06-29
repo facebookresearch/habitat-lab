@@ -82,6 +82,7 @@ _C.TASK.SPAWN_REGION_SCALE = 0.2
 _C.TASK.JOINT_MAX_IMPULSE = -1.0
 _C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
 _C.TASK.USE_MARKER_T = True
+_C.TASK.CACHE_ROBOT_INIT = False
 _C.TASK.SUCCESS_STATE = 0.0
 # Measurements for composite tasks.
 _C.TASK.REWARD_MEASUREMENT = ""
@@ -101,6 +102,7 @@ _C.TASK.PDDL_DOMAIN_DEF = (
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
+_C.TASK.ROBOT_AT_THRESH = 2.0
 _C.TASK.FILTER_NAV_TO_TASKS = []
 # -----------------------------------------------------------------------------
 # # ACTIONS
@@ -296,6 +298,11 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR = CN()
 _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
+# -----------------------------------------------------------------------------
+# COMPOSITE SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
+_C.TASK.GLOBAL_PREDICATE_SENSOR.TYPE = "GlobalPredicatesSensor"
 # -----------------------------------------------------------------------------
 # TARGET START GPS/COMPASS SENSOR
 # -----------------------------------------------------------------------------
@@ -569,6 +576,13 @@ _C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
 # -----------------------------------------------------------------------------
+# Composite Sparse Reward
+# -----------------------------------------------------------------------------
+_C.TASK.COMPOSITE_SPARSE_REWARD = CN()
+_C.TASK.COMPOSITE_SPARSE_REWARD.TYPE = "CompositeSparseReward"
+_C.TASK.COMPOSITE_SPARSE_REWARD.SLACK_REWARD = -0.1
+_C.TASK.COMPOSITE_SPARSE_REWARD.STAGE_SPARSE_REWARD = 0.0
+# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
 # -----------------------------------------------------------------------------
@@ -631,12 +645,13 @@ _C.SIMULATOR.SCENE = (
 _C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
 _C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
     []
-)  # a list of directory or config paths to search in addition to the dataset for object configs
+)  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.DEBUG_RENDER = False
+_C.SIMULATOR.KINEMATIC_MODE = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.
 _C.SIMULATOR.DEBUG_RENDER_GOAL = True

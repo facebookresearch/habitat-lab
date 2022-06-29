@@ -27,7 +27,9 @@ class MarkerInfo:
         self.update()
 
     def set_targ_js(self, js):
-        self.ao_parent.joint_positions[self.joint_idx] = js
+        js_arr = self.ao_parent.joint_positions[:]
+        js_arr[self.joint_idx] = js
+        self.ao_parent.joint_positions = js_arr
 
     def get_targ_js(self):
         return self.ao_parent.joint_positions[self.joint_idx]

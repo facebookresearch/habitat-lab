@@ -97,6 +97,11 @@ class RearrangeGraspManager:
             if dist >= self._leave_info[1]:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._leave_info = None
+        if (
+            self._sim.habitat_config.KINEMATIC_MODE
+            and self._snapped_obj_id is not None
+        ):
+            self.update_object_to_grasp()
 
     def desnap(self, force=False) -> None:
         """Removes any hold constraints currently active. Removes hold constraints for regular and articulated objects.
@@ -163,6 +168,7 @@ class RearrangeGraspManager:
 
         :param marker_name: The name/id of the marker.
         """
+
         if marker_name == self._snapped_marker_id:
             return
 
@@ -173,6 +179,11 @@ class RearrangeGraspManager:
             )
 
         marker = self._sim.get_marker(marker_name)
+        self._snapped_marker_id = marker_name
+        self._managed_robot.open_gripper()
+        if self._sim.habitat_config.KINEMATIC_MODE:
+            return
+
         self._snap_constraints = [
             self.create_hold_constraint(
                 mn.Vector3(0.0, 0.0, 0.0),
@@ -181,8 +192,6 @@ class RearrangeGraspManager:
                 marker.link_id,
             ),
         ]
-        self._snapped_marker_id = marker_name
-        self._managed_robot.open_gripper()
 
     def create_hold_constraint(
         self,
@@ -252,6 +261,11 @@ class RearrangeGraspManager:
         if force:
             # Set the transformation to be in the robot's hand already.
             self.update_object_to_grasp()
+
+        self._managed_robot.open_gripper()
+
+        if self._sim.habitat_config.KINEMATIC_MODE:
+            return
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.
