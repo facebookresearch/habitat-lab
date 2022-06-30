@@ -88,19 +88,24 @@ class TargetStartSensor(MultiObjSensor):
 
 
 class PositionGpsCompassSensor(Sensor):
-    def __init__(self, *args, sim, task, **kwargs):
+    def __init__(self, *args, sim, task, config, **kwargs):
         self._task = task
         self._sim = sim
-        super().__init__(*args, task=task, **kwargs)
+        self._config = config
+        super().__init__(*args, config=config, task=task, **kwargs)
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
         n_targets = self._task.get_n_targets()
-        self._polar_pos = np.zeros(n_targets * 2, dtype=np.float32)
+        if self._config.get("INCLUDE_Z", True):
+            dim_per_obj = 3
+        else:
+            dim_per_obj = 2
+        self._polar_pos = np.zeros(n_targets * dim_per_obj, dtype=np.float32)
         return spaces.Box(
-            shape=(n_targets * 2,),
+            shape=(n_targets * dim_per_obj,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -115,11 +120,17 @@ class PositionGpsCompassSensor(Sensor):
 
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
 
-        for i, rel_obj_pos in enumerate(rel_pos):
-            rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
-            self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
+        if self._config.get("CARTESIAN", False):
+            if self._config.get("INCLUDE_Z", True):
+                return rel_pos
+            else:
+                return rel_pos[:, :2]
+        else:
+            for i, rel_obj_pos in enumerate(rel_pos):
+                rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
+                self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, phi]
 
-        return self._polar_pos
+            return self._polar_pos
 
 
 @registry.register_sensor
@@ -250,7 +261,18 @@ class StepCountSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        return np.array([0.0, 0.0, 0.0])
+        episode_step_idx = task._cur_episode_step
+        max_episode_length = self.config.MAX_STEPS
+        fraction_steps_left = (
+            (max_episode_length - episode_step_idx) * 1.0 / max_episode_length
+        )
+        return np.array(
+            [
+                min(1.0, fraction_steps_left * 1.0),
+                min(1.0, fraction_steps_left * 5.0),
+                min(1.0, fraction_steps_left * 50.0),
+            ]
+        )
 
 
 @registry.register_sensor
