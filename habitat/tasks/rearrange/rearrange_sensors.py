@@ -99,7 +99,7 @@ class PositionGpsCompassSensor(Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         n_targets = self._task.get_n_targets()
-        if self._config.INCLUDE_Z:
+        if self._config.get("INCLUDE_Z", True):
             dim_per_obj = 3
         else:
             dim_per_obj = 2
@@ -120,8 +120,8 @@ class PositionGpsCompassSensor(Sensor):
 
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
 
-        if self._config.CARTESIAN:
-            if self._config.INCLUDE_Z:
+        if self._config.get("CARTESIAN", False):
+            if self._config.get("INCLUDE_Z", True):
                 return rel_pos
             else:
                 return rel_pos[:, :2]
