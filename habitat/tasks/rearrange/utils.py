@@ -177,7 +177,7 @@ def convert_legacy_cfg(obj_list):
             obj_dat[0] = osp.join("data/replica_cad/urdf", fname)
         else:
             obj_dat[0] = obj_dat[0].replace(
-                "data/objects/", "data/objects/ycb/"
+                "data/objects/", "data/objects/ycb/configs/"
             )
 
         if (

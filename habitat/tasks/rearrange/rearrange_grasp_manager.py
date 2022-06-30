@@ -149,9 +149,14 @@ class RearrangeGraspManager:
     @property
     def snap_rigid_obj(self) -> ManagedRigidObject:
         """The grasped object instance."""
-        return self._sim.get_rigid_object_manager().get_object_by_id(
+        ret_obj = self._sim.get_rigid_object_manager().get_object_by_id(
             self._snapped_obj_id
         )
+        if ret_obj is None:
+            raise ValueError(
+                f"Tried to get non-existence object from ID {self._snapped_obj_id}"
+            )
+        return ret_obj
 
     def snap_to_marker(self, marker_name: str) -> None:
         """

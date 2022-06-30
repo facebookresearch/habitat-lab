@@ -463,6 +463,7 @@ _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.FORCE_END_PEN = 10.0
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = True
 # Distance in radians.
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
@@ -565,6 +566,10 @@ _C.TASK.COMPOSITE_REWARD = CN()
 _C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
 _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
 _C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
+_C.TASK.DOES_WANT_TERMINATE = CN()
+_C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
@@ -628,7 +633,7 @@ _C.SIMULATOR.SCENE = (
 _C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
 _C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
     []
-)  # a list of directory or config paths to search in addition to the dataset for object configs
+)  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees

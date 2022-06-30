@@ -1,6 +1,6 @@
 GYM:
     AUTO_NAME: "NavToObj"
-    OBS_KEYS: ["object_to_agent_gps_compass", 'joint']
+    OBS_KEYS: ["robot_head_depth", "object_to_agent_gps_compass", 'joint', 'nav_to_skill']
     CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
@@ -116,6 +116,8 @@ TASK:
     POSSIBLE_ACTIONS: ['BASE_VELOCITY']
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True

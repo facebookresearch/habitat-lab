@@ -118,6 +118,8 @@ TASK:
         - EMPTY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True

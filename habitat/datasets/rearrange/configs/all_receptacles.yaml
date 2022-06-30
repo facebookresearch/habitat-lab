@@ -4,7 +4,7 @@
 # To use the non-baked scenes
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
-  - "data/objects/ycb/"
+  - "data/objects/ycb/configs/"
 scene_sets:
   -
     name: "scene_train_split"

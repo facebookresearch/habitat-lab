@@ -24,9 +24,6 @@ FORCE_TORCH_SINGLE_THREADED: True
 
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
 ENV_NAME: "RearrangeRLEnv"
-EVAL:
-  SPLIT: "eval"
-
 RL:
   POLICY:
       name: "PointNavResNetPolicy"

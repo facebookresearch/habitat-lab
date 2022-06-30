@@ -176,6 +176,47 @@ class CompositeReward(Measure):
 
 
 @registry.register_measure
+class DoesWantTerminate(Measure):
+    cls_uuid: str = "does_want_terminate"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DoesWantTerminate.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = task.actions["REARRANGE_STOP"].does_want_terminate
+
+
+@registry.register_measure
+class CompositeBadCalledTerminate(Measure):
+    cls_uuid: str = "composite_bad_called_terminate"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeBadCalledTerminate.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [DoesWantTerminate.cls_uuid, CompositeSuccess.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        does_action_want_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+        is_succ = task.measurements.measures[
+            CompositeSuccess.cls_uuid
+        ].get_metric()
+
+        self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_measure
 class CompositeSuccess(Measure):
     """
     Did satisfy all the goal predicates?
@@ -192,19 +233,17 @@ class CompositeSuccess(Measure):
     def _get_uuid(*args, **kwargs):
         return CompositeSuccess.cls_uuid
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [DoesWantTerminate.cls_uuid],
         )
+        self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        does_action_want_stop = task.actions[
-            "REARRANGE_STOP"
-        ].does_want_terminate
+        does_action_want_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
         self._metric = task.is_goal_state_satisfied() and does_action_want_stop
         if does_action_want_stop:
             task.should_end = True

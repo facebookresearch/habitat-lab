@@ -823,7 +823,7 @@ def get_config_defaults() -> CN:
     # the scene dataset from which scenes and objects are sampled
     _C.dataset_path = "data/replica_cad/replicaCAD.scene_dataset_config.json"
     # any additional object assets to load before defining object sets
-    _C.additional_object_paths = ["data/objects/ycb/"]
+    _C.additional_object_paths = ["data/objects/ycb/configs/"]
 
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.

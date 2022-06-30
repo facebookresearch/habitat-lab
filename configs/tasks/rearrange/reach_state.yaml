@@ -21,6 +21,7 @@ TASK:
     REWARD_MEASURE: "rearrange_reach_reward"
     SUCCESS_MEASURE: "rearrange_reach_success"
     SUCCESS_REWARD: 10.0
+    END_ON_SUCCESS: True
 
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
 

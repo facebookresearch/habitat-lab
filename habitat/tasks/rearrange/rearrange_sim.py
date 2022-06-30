@@ -16,6 +16,9 @@ import habitat_sim
 from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+
+# flake8: noqa
+from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -31,9 +34,6 @@ from habitat.tasks.rearrange.utils import (
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import JointMotorSettings, MotionType
-
-# flake8: noqa
-from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 from habitat_sim.sim import SimulatorBackend
 
 
@@ -436,7 +436,7 @@ class RearrangeSim(HabitatSim):
                 )
                 assert (
                     len(matching_templates.values()) == 1
-                ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
                 ro = rom.add_object_by_template_handle(
                     list(matching_templates.keys())[0]
                 )

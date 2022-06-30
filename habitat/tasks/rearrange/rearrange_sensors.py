@@ -88,24 +88,19 @@ class TargetStartSensor(MultiObjSensor):
 
 
 class PositionGpsCompassSensor(Sensor):
-    def __init__(self, *args, sim, task, config, **kwargs):
+    def __init__(self, *args, sim, task, **kwargs):
         self._task = task
-        self._config = config
         self._sim = sim
-        super().__init__(*args, task=task, config=config, **kwargs)
+        super().__init__(*args, task=task, **kwargs)
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
         n_targets = self._task.get_n_targets()
-        if self._config.get("INCLUDE_Z", True):
-            dim_per_obj = 3
-        else:
-            dim_per_obj = 2
-        self._polar_pos = np.zeros(n_targets * dim_per_obj, dtype=np.float32)
+        self._polar_pos = np.zeros(n_targets * 2, dtype=np.float32)
         return spaces.Box(
-            shape=(n_targets * dim_per_obj,),
+            shape=(n_targets * 2,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -120,17 +115,11 @@ class PositionGpsCompassSensor(Sensor):
 
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
 
-        if self._config.get("CARTESIAN", False):
-            if self._config.get("INCLUDE_Z", True):
-                return rel_pos
-            else:
-                return rel_pos[:, :2]
-        else:
-            for i, rel_obj_pos in enumerate(rel_pos):
-                rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
-                self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, phi]
+        for i, rel_obj_pos in enumerate(rel_pos):
+            rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
+            self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
 
-            return self._polar_pos
+        return self._polar_pos
 
 
 @registry.register_sensor
