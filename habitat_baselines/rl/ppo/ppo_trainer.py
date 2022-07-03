@@ -458,12 +458,6 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            # if act.shape[0] > 1:
-            #     step_action = action_array_to_dict(
-            #         self.policy_action_space, act
-            #     )
-            # else:
-            #     step_action = act.item()
             if is_continuous_action_space(self.policy_action_space):
                 # Clipping actions to the specified limits
                 act = np.clip(
