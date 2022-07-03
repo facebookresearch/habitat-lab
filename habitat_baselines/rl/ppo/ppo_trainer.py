@@ -443,12 +443,6 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["masks"],
             )
 
-        # NB: Move actions to CPU.  If CUDA tensors are
-        # sent in to env.step(), that will create CUDA contexts
-        # in the subprocesses.
-        # For backwards compatibility, we also call .item() to convert to
-        # an int
-        actions = actions.to(device="cpu")
         self.pth_time += time.time() - t_sample_action
 
         profiling_wrapper.range_pop()  # compute actions
@@ -466,7 +460,7 @@ class PPOTrainer(BaseRLTrainer):
                     self.policy_action_space.high,
                 )
             else:
-                act = act.item()
+                act = act.cpu().item()
             self.envs.async_step_at(index_env, act)
 
         self.env_time += time.time() - t_step_env
@@ -1027,10 +1021,10 @@ class PPOTrainer(BaseRLTrainer):
                         self.policy_action_space.low,
                         self.policy_action_space.high,
                     )
-                    for a in actions.to(device="cpu")
+                    for a in actions
                 ]
             else:
-                step_data = [a.item() for a in actions.to(device="cpu")]
+                step_data = [a.item() for a in actions.cpu()]
 
             outputs = self.envs.step(step_data)
 
