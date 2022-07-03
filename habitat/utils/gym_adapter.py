@@ -167,9 +167,6 @@ class HabGymWrapper(gym.Env):
     - `DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
       any observations are returned in the `desired_goal` returned key of the
       observation.
-    - `FIX_INFO_DICT`: By default True, but if specified as true, this
-      flattens the returned info dictionary to have depth 1 where sub-keys are
-      concatenated to parent keys.
     - `ACTION_KEYS`: Include a subset of the allowed actions in the
       wrapped environment. If not specified, all actions are included.
     Example usage:
@@ -179,7 +176,6 @@ class HabGymWrapper(gym.Env):
         gym_config = env.config.GYM
         self._gym_goal_keys = gym_config.DESIRED_GOAL_KEYS
         self._gym_achieved_goal_keys = gym_config.ACHIEVED_GOAL_KEYS
-        self._fix_info_dict = gym_config.FIX_INFO_DICT
         self._gym_action_keys = gym_config.ACTION_KEYS
         self._gym_obs_keys = gym_config.OBS_KEYS
 
@@ -256,9 +252,6 @@ class HabGymWrapper(gym.Env):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
-        if self._fix_info_dict:
-            info = flatten_dict(info)
-            info = {k: float(v) for k, v in info.items()}
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
