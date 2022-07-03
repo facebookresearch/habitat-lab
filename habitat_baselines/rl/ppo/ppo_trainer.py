@@ -538,17 +538,6 @@ class PPOTrainer(BaseRLTrainer):
                 self.running_episode_stats[k] = torch.zeros_like(
                     self.running_episode_stats["count"]
                 )
-
-            print(
-                ">>>>>>>",
-                k,
-                v,
-                v.shape,
-                done_masks,
-                done_masks.shape,
-                self.running_episode_stats[k][env_slice],
-                self.running_episode_stats[k][env_slice].shape,
-            )
             self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
