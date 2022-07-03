@@ -41,7 +41,7 @@ def smash_observation_space(obs_space, limit_keys):
     obs_dims = [len(shape) for shape in obs_shapes]
     if len(set(obs_dims)) == 1 and obs_dims[0] == 1:
         # Smash together
-        total_dim = sum([shape[0] for shape in obs_shapes])
+        total_dim = sum(shape[0] for shape in obs_shapes)
 
         return spaces.Box(
             shape=(total_dim,), low=-1.0, high=1.0, dtype=np.float32

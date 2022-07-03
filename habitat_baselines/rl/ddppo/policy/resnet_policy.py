@@ -122,7 +122,7 @@ class ResNetEncoder(nn.Module):
         # Count total # of channels for rgb and for depth
         self._n_input_rgb, self._n_input_depth = [
             # sum() returns 0 for an empty list
-            sum([observation_space.spaces[k].shape[2] for k in keys])
+            sum(observation_space.spaces[k].shape[2] for k in keys)
             for keys in [self.rgb_keys, self.depth_keys]
         ]
 
@@ -263,10 +263,8 @@ class PointNavResNetNet(Net):
         ]
         if len(self._fuse_keys_1d) != 0:
             rnn_input_size += sum(
-                [
-                    observation_space.spaces[k].shape[0]
-                    for k in self._fuse_keys_1d
-                ]
+                observation_space.spaces[k].shape[0]
+                for k in self._fuse_keys_1d
             )
 
         if (
