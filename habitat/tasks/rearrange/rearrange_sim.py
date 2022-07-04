@@ -32,7 +32,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.physics import JointMotorSettings, MotionType
+from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 
 
@@ -599,6 +599,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
 
         if self.habitat_config.DEBUG_RENDER:
+            self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
             # Don't draw bounding boxes over target objects.

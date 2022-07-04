@@ -179,6 +179,12 @@ class RearrangeTask(NavigationTask):
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
         self._cur_episode_step += 1
+        for grasp_mgr in self._sim.robots_mgr.grasp_iter:
+            if (
+                grasp_mgr.is_violating_hold_constraint()
+                and self._config.CONSTRAINT_VIOLATION_DROPS_OBJECT
+            ):
+                grasp_mgr.desnap(True)
 
         return obs
 

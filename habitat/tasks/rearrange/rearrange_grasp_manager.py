@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -17,6 +17,7 @@ from habitat_sim.physics import (
     CollisionGroups,
     ManagedRigidObject,
     RigidConstraintSettings,
+    RigidConstraintType,
 )
 
 
@@ -55,6 +56,7 @@ class RearrangeGraspManager:
 
         self.desnap(True)
         self._leave_info = None
+        self._vis_info: List[Any] = []
 
     def is_violating_hold_constraint(self) -> bool:
         """
@@ -108,6 +110,7 @@ class RearrangeGraspManager:
 
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """
+        self._vis_info = []
         if len(self._snap_constraints) == 0:
             # No constraints to unsnap
             self._snapped_obj_id = None
@@ -186,6 +189,7 @@ class RearrangeGraspManager:
 
         self._snap_constraints = [
             self.create_hold_constraint(
+                RigidConstraintType.PointToPoint,
                 mn.Vector3(0.0, 0.0, 0.0),
                 mn.Vector3(*marker.offset_position),
                 marker.ao_parent.object_id,
@@ -195,6 +199,7 @@ class RearrangeGraspManager:
 
     def create_hold_constraint(
         self,
+        constraint_type,
         pivot_in_link: mn.Vector3,
         pivot_in_obj: mn.Vector3,
         obj_id_b: int,
@@ -218,7 +223,23 @@ class RearrangeGraspManager:
         c.pivot_a = pivot_in_link
         c.pivot_b = pivot_in_obj
         c.max_impulse = self._config.GRASP_IMPULSE
+        c.constraint_type = constraint_type
+
+        if constraint_type == RigidConstraintType.Fixed:
+            self._vis_info.append((pivot_in_obj, obj_id_b))
+
         return self._sim.create_rigid_constraint(c)
+
+    def update_debug(self):
+        for i, (local_pivot, obj_id) in enumerate(self._vis_info):
+            rom = self._sim.get_rigid_object_manager()
+            obj = rom.get_object_by_id(obj_id)
+            pivot_pos = obj.transformation.transform_point(local_pivot)
+            self._sim.viz_ids[i] = self._sim.visualize_position(
+                pivot_pos,
+                self._sim.viz_ids[i],
+                r=0.02,
+            )
 
     def update_object_to_grasp(self) -> None:
         """
@@ -237,8 +258,10 @@ class RearrangeGraspManager:
         snap_obj_id: int,
         force: bool = True,
         should_open_gripper=True,
-        rel_T=None,
+        rel_pos=None,
         keep_T=None,
+        gripper_offset=0.1,
+        object_offset=0.1,
     ) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's
         end effector with 3 ball-joint constraints forming a fixed frame.
@@ -276,25 +299,14 @@ class RearrangeGraspManager:
         self._keep_T = keep_T
 
         # Get object transform in EE frame
-        if rel_T is None:
-            rel_T = mn.Matrix4.identity_init()
-
-        gripper_offset = 0.1
+        if rel_pos is None:
+            rel_pos = mn.Vector3.zero_init()
 
         self._snap_constraints = [
             self.create_hold_constraint(
+                RigidConstraintType.Fixed,
                 mn.Vector3(gripper_offset, 0, 0),
-                rel_T.transform_point(mn.Vector3(0.0, 0, 0)),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(0.0, 0, 0),
-                rel_T.transform_point(mn.Vector3(-0.1, 0, 0)),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(gripper_offset, 0.0, gripper_offset),
-                rel_T.transform_point(mn.Vector3(0.0, 0.0, 0.1)),
+                rel_pos,
                 self._snapped_obj_id,
             ),
         ]

@@ -131,3 +131,7 @@ class RobotManager:
         for robot_data in self._all_robot_data:
             robot_data.grasp_mgr.update()
             robot_data.robot.update()
+
+    def update_debug(self):
+        for robot_data in self._all_robot_data:
+            robot_data.grasp_mgr.update_debug()

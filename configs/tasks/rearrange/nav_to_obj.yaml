@@ -22,7 +22,6 @@ TASK:
     # Collision related
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    MAX_COLLISIONS: -1.0
 
     FILTER_NAV_TO_TASKS: []
 

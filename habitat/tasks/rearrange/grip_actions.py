@@ -102,11 +102,14 @@ class MagicGraspAction(GripSimulatorTaskAction):
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
+        if not self.cur_grasp_mgr.is_grasped:
+            self._grasp()
+
         if grip_action is None:
             return
 
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
+        # if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        #     self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
 
@@ -119,6 +122,7 @@ class SuctionGraspAction(MagicGraspAction):
 
     def _grasp(self):
         attempt_snap_entity: Union[str, int] = None
+        match_coll = None
         contacts = self._sim.get_physics_contact_points()
 
         robot_id = self._sim.robot.sim_obj.object_id
@@ -137,27 +141,36 @@ class SuctionGraspAction(MagicGraspAction):
 
         # Contacted any objects?
         for scene_obj_id in self._sim.scene_obj_ids:
-            has_robot_match = any(
-                c for c in robot_contacts if coll_name_matches(c, scene_obj_id)
-            )
-            if has_robot_match:
+            for c in robot_contacts:
+                if coll_name_matches(c, scene_obj_id):
+                    match_coll = c
+                    break
+            if match_coll is not None:
                 attempt_snap_entity = scene_obj_id
+                break
 
         if attempt_snap_entity is not None:
+            # breakpoint()
             rom = self._sim.get_rigid_object_manager()
             ro = rom.get_object_by_id(attempt_snap_entity)
 
-            ee_T = self.cur_robot.ee_transform
-            obj_to_W_T = ro.transformation.inverted()
-            ee_to_obj_T = obj_to_W_T @ ee_T
+            if scene_obj_id == match_coll.object_id_a:
+                pos_W = match_coll.position_on_a_in_ws
+            else:
+                pos_W = match_coll.position_on_b_in_ws
 
+            obj_to_W_T = ro.transformation.inverted()
+            pos_obj = obj_to_W_T.transform_point(pos_W)
+
+            ee_T = self.cur_robot.ee_transform
             obj_in_ee_T = ee_T.inverted() @ ro.transformation
 
             self._sim.grasp_mgr.snap_to_obj(
                 int(attempt_snap_entity),
-                rel_T=ee_to_obj_T,
+                rel_pos=pos_obj,
                 keep_T=obj_in_ee_T,
                 should_open_gripper=False,
+                gripper_offset=0.15,
             )
             return
 

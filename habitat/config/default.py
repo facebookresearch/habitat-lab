@@ -59,11 +59,11 @@ _C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
 # -----------------------------------------------------------------------------
 # # REARRANGE TASK
 # -----------------------------------------------------------------------------
-_C.TASK.MAX_COLLISIONS = -1.0
 _C.TASK.COUNT_OBJ_COLLISIONS = True
 _C.TASK.COUNT_ROBOT_OBJ_COLLS = False
 _C.TASK.SETTLE_STEPS = 5
 _C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = True
+_C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
 _C.TASK.FORCE_REGENERATE = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
@@ -393,6 +393,7 @@ _C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
 _C.TASK.FORCE_TERMINATE = CN()
 _C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
 _C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
+_C.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
 
 _C.TASK.ROBOT_COLLS = CN()
 _C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
@@ -651,6 +652,7 @@ _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.DEBUG_RENDER = False
+_C.SIMULATOR.DEBUG_RENDER_ROBOT = False
 _C.SIMULATOR.KINEMATIC_MODE = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.

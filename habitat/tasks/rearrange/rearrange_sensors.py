@@ -674,7 +674,10 @@ class RobotForce(UsesRobotInterface, Measure):
             self._prev_force = self._cur_force
             self._add_force = 0.0
 
-        self._metric = self._accum_force
+        self._metric = {
+            "accum": self._accum_force,
+            "instant": self._cur_force,
+        }
 
 
 @registry.register_measure
@@ -731,15 +734,26 @@ class ForceTerminate(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        accum_force = task.measurements.measures[
+        force_info = task.measurements.measures[
             RobotForce.cls_uuid
         ].get_metric()
+        accum_force = force_info["accum"]
+        instant_force = force_info["instant"]
         if (
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
         ):
             rearrange_logger.debug(
                 f"Force threshold={self._config.MAX_ACCUM_FORCE} exceeded with {accum_force}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        elif (
+            self._config.MAX_INSTANT_FORCE > 0
+            and instant_force > self._config.MAX_INSTANT_FORCE
+        ):
+            rearrange_logger.debug(
+                f"Force instant threshold={self._config.MAX_INSTANT_FORCE} exceeded with {instant_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True

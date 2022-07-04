@@ -11,7 +11,6 @@ DATASET:
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]

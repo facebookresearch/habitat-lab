@@ -21,10 +21,10 @@ TASK:
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: True
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
@@ -58,7 +58,8 @@ TASK:
     - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
+        MAX_ACCUM_FORCE: 100_000.0
+        MAX_INSTANT_FORCE: 10_000.0
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
@@ -78,7 +79,7 @@ TASK:
         ARM_ACTION:
             TYPE: ArmAction
             ARM_CONTROLLER: ArmRelPosAction
-            GRIP_CONTROLLER: MagicGraspAction
+            GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
@@ -133,11 +134,12 @@ SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
-    GRASP_IMPULSE: 1000.0
-    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 10000.0
+    HOLD_THRESH: 0.2
     AC_FREQ_RATIO: 4
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: true
+    DEBUG_RENDER_ROBOT: True
     AGENTS:
     - AGENT_0
     CONCUR_RENDER: true
