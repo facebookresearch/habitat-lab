@@ -33,12 +33,79 @@ def setup_function(test_trainers):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
+    "config_path,num_updates",
+    [
+        ("habitat_baselines/config/rearrange/ddppo_close_cab.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_open_fridge.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_place.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_close_fridge.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_open_cab.yaml", 3),
+        ("habitat_baselines/config/rearrange/ddppo_pick.yaml", 3),
+        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        ("habitat_baselines/config/objectnav/ddppo_objectnav.yaml", 3),
+        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 3),
+    ],
+)
+def test_trainers(config_path, num_updates):
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    # Setup the training
+    config = get_config(
+        config_path,
+        [
+            "NUM_UPDATES",
+            num_updates,
+            "TOTAL_NUM_STEPS",
+            -1.0,
+            "CHECKPOINT_FOLDER",
+            "data/test_checkpoints/test_training",
+        ],
+    )
+    random.seed(config.TASK_CONFIG.SEED)
+    np.random.seed(config.TASK_CONFIG.SEED)
+    torch.manual_seed(config.TASK_CONFIG.SEED)
+    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    torch.backends.cudnn.deterministic = True
+    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+        torch.set_num_threads(1)
+
+    assert (
+        config.TRAINER_NAME == "ddppo"
+    ), "This test can only be used with ddppo trainer"
+
+    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
+    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer = trainer_init(config)
+
+    # Train
+    trainer.train()
+    # Training should complete without raising an error.
+
+
+@pytest.mark.skipif(
+    int(os.environ.get("FULL_TRAINING", 0)),
+    reason="Full training tests did not run. Need `export FULL_TRAINING=1",
+)
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
     "config_path,num_updates,target_reward",
     [
         ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 40, 5.0),
+        ("habitat_baselines/config/rearrange/hab/ddppo_nav_pick.yaml", 3, 5.0),
+        (
+            "habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+            5.0,
+        ),
+        ("habitat_baselines/config/objectnav/ddppo_objectnav.yaml", 3, 5.0),
+        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 3, 5.0),
     ],
 )
-def test_trainers(config_path, num_updates, target_reward):
+def test_trainers_large(config_path, num_updates, target_reward):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
