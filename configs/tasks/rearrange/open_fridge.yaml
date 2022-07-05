@@ -144,11 +144,11 @@ SIMULATOR:
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
     ARM_DEPTH_SENSOR:
-        HEIGHT: 256
+        HEIGHT: 128
         MAX_DEPTH: 10.0
         MIN_DEPTH: 0.0
         NORMALIZE_DEPTH: true
-        WIDTH: 256
+        WIDTH: 128
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     FORWARD_STEP_SIZE: 0.25
@@ -164,3 +164,9 @@ SIMULATOR:
     SEED: 100
     TYPE: RearrangeSim-v0
     NEEDS_MARKERS: false
+    HEAD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128

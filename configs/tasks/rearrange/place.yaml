@@ -163,8 +163,14 @@ SIMULATOR:
     SEED: 100
     TYPE: RearrangeSim-v0
     ARM_DEPTH_SENSOR:
-        WIDTH: 256
-        HEIGHT: 256
+        WIDTH: 128
+        HEIGHT: 128
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
+    HEAD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128

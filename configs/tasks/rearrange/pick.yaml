@@ -141,12 +141,18 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
-    ARM_DEPTH_SENSOR:
+    HEAD_RGB_SENSOR:
         WIDTH: 256
         HEIGHT: 256
-        MIN_DEPTH: 0.0
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
         MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: True
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: true
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
 
     # Agent setup
     CTRL_FREQ: 120.0
