@@ -252,6 +252,7 @@ class HabGymWrapper(gym.Env):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
+        info = flatten_dict(info)
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
