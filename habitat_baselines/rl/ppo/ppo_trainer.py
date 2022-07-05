@@ -19,7 +19,6 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
-from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
@@ -197,7 +196,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self.envs = construct_envs(
             config,
-            get_env_class(config.ENV_NAME),
             workers_ignore_signals=is_slurm_batch_job(),
         )
 

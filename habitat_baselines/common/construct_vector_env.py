@@ -1,22 +1,13 @@
 import os
 import random
-from typing import Any, List, Type, Union
+from typing import Any, List, Type
 
-from habitat import (
-    Config,
-    Env,
-    RLEnv,
-    ThreadedVectorEnv,
-    VectorEnv,
-    logger,
-    make_dataset,
-)
+from habitat import Config, ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.utils.gym_definitions import make_gym_from_config
 
 
 def construct_envs(
     config: Config,
-    env_class: Union[Type[Env], Type[RLEnv]],
     workers_ignore_signals: bool = False,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
@@ -25,7 +16,6 @@ def construct_envs(
 
     :param config: configs that contain num_environments as well as information
     :param necessary to create individual environments.
-    :param env_class: class type of the envs to be created.
     :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
 
     :return: VectorEnv object created according to specification.

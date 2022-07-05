@@ -1,5 +1,4 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
-ENV_NAME: "RearrangeRLEnv"
 
 SENSE_PLAN_ACT:
   VERBOSE: True
