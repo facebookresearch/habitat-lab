@@ -1,6 +1,6 @@
 GYM:
     AUTO_NAME: "CloseCab"
-    OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
+    OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'relative_resting_position']
     CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
@@ -47,16 +47,10 @@ TASK:
         TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
         TYPE: "IsHoldingSensor"
-    ART_JOINT_SENSOR:
-        TYPE: "ArtJointSensor"
-    ART_JOINT_SENSOR_NO_VEL:
-        TYPE: "ArtJointSensorNoVel"
-    MARKER_REL_POS_SENSOR:
-        TYPE: "MarkerRelPosSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
 
-    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "ART_JOINT_SENSOR_NO_VEL", "MARKER_REL_POS_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
 
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -145,41 +139,29 @@ SIMULATOR:
     AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: False
         RADIUS: 0.3
-        SENSORS: ['HEAD_RGB_SENSOR', 'HEAD_DEPTH_SENSOR', 'ARM_RGB_SENSOR', 'ARM_DEPTH_SENSOR']
-        START_POSITION: [0, 0, 0]
-        START_ROTATION: [0, 0, 0, 1]
+        SENSORS: ['HEAD_DEPTH_SENSOR']
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
     HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: True
-        WIDTH: 128
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
 
     # Agent setup
-    ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
 
     # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.2
+    GRASP_IMPULSE: 10000.0
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
@@ -189,13 +171,4 @@ SIMULATOR:
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0

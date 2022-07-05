@@ -1,6 +1,6 @@
 GYM:
     AUTO_NAME: "OpenFridge"
-    OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
+    OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'relative_resting_position']
     CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
@@ -50,12 +50,8 @@ TASK:
         TYPE: "IsHoldingSensor"
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
-    ART_JOINT_SENSOR:
-        TYPE: "ArtJointSensor"
-    MARKER_REL_POS_SENSOR:
-        TYPE: "MarkerRelPosSensor"
 
-    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "ART_JOINT_SENSOR", "MARKER_REL_POS_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
 
 
     ROBOT_FORCE:

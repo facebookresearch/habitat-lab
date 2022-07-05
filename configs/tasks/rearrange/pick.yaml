@@ -127,7 +127,6 @@ SIMULATOR:
     AGENTS: ['AGENT_0']
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: False
-    ROBOT_JOINT_START_NOISE: 0.0
     NEEDS_MARKERS: False
     AGENT_0:
         HEIGHT: 1.5
@@ -166,13 +165,4 @@ SIMULATOR:
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0
