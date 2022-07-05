@@ -261,7 +261,6 @@ class RearrangeGraspManager:
         rel_pos=None,
         keep_T=None,
         gripper_offset=0.1,
-        object_offset=0.1,
     ) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's
         end effector with 3 ball-joint constraints forming a fixed frame.

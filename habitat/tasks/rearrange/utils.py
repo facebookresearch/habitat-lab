@@ -349,7 +349,10 @@ class IkHelper:
         :param targ_ee: 3D target position in the ROBOT BASE coordinate frame
         """
         js = p.calculateInverseKinematics(
-            self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
+            self.robo_id,
+            self.pb_link_idx,
+            targ_ee,
+            physicsClientId=self.pc_id,
         )
         return js[: self._arm_len]
 

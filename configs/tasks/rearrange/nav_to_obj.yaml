@@ -13,11 +13,12 @@ TASK:
     TYPE: RearrangeNavToObjTask-v0
 
     MUST_LOOK_AT_TARG: True
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
     FORCE_REGENERATE: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
     OBJECT_IN_HAND_SAMPLE_PROB: 0.167
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: True
 
     # Collision related
     COUNT_OBJ_COLLISIONS: True
@@ -52,6 +53,7 @@ TASK:
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: -1.0
+        MAX_INSTANT_FORCE: 10_000.0
     ROBOT_COLLS:
         TYPE: "RobotCollisions"
     OBJECT_TO_GOAL_DISTANCE:
@@ -120,44 +122,33 @@ SIMULATOR:
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
-    CONCUR_RENDER: True
-    AUTO_SLEEP: True
 
     AGENTS: ['AGENT_0']
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
         SENSORS: ['HEAD_DEPTH_SENSOR']
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
     HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: True
-        WIDTH: 128
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
 
     # Agent setup
-    ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: "FetchRobot"
     FORWARD_STEP_SIZE: 0.25
 
     # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
+    HOLD_THRESH: 0.2
+    GRASP_IMPULSE: 10000.0
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
@@ -167,13 +158,4 @@ SIMULATOR:
         GPU_GPU: False
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0
