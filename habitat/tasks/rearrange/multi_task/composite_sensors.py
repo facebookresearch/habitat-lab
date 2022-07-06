@@ -292,19 +292,24 @@ class CompositeSuccess(Measure):
         return CompositeSuccess.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [DoesWantTerminate.cls_uuid],
-        )
+        if self._config.MUST_CALL_STOP:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [DoesWantTerminate.cls_uuid],
+            )
         self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        does_action_want_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
-        self._metric = task.pddl_problem.is_expr_true(
-            task.pddl_problem.goal
-        ) and (does_action_want_stop or not self._config.MUST_CALL_STOP)
+        self._metric = task.pddl_problem.is_expr_true(task.pddl_problem.goal)
+
+        if self._config.MUST_CALL_STOP:
+            does_action_want_stop = task.measurements.measures[
+                DoesWantTerminate.cls_uuid
+            ].get_metric()
+            self._metric = self._metric and does_action_want_stop
+        else:
+            does_action_want_stop = False
+
         if does_action_want_stop:
             task.should_end = True
 
