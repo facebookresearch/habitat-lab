@@ -43,8 +43,6 @@ def setup_function(test_trainers):
         ("habitat_baselines/config/rearrange/ddppo_open_cab.yaml", 3),
         ("habitat_baselines/config/rearrange/ddppo_pick.yaml", 3),
         ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
-        ("habitat_baselines/config/objectnav/ddppo_objectnav.yaml", 3),
-        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 3),
     ],
 )
 def test_trainers(config_path, num_updates):
@@ -85,8 +83,8 @@ def test_trainers(config_path, num_updates):
 
 
 @pytest.mark.skipif(
-    int(os.environ.get("FULL_TRAINING", 0)),
-    reason="Full training tests did not run. Need `export FULL_TRAINING=1",
+    int(os.environ.get("FULL_TRAINING_TEST", 0)) == 0,
+    reason="Full training tests did not run. Need `export FULL_TRAINING_TEST=1",
 )
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
@@ -95,14 +93,7 @@ def test_trainers(config_path, num_updates):
     "config_path,num_updates,target_reward",
     [
         ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 40, 5.0),
-        ("habitat_baselines/config/rearrange/hab/ddppo_nav_pick.yaml", 3, 5.0),
-        (
-            "habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
-            3,
-            5.0,
-        ),
-        ("habitat_baselines/config/objectnav/ddppo_objectnav.yaml", 3, 5.0),
-        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 3, 5.0),
+        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 1000, 2.0),
     ],
 )
 def test_trainers_large(config_path, num_updates, target_reward):
