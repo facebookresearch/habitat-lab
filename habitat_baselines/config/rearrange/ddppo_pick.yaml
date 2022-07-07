@@ -32,7 +32,8 @@ RL:
       ACTION_DIST:
          use_log_std: True
          clamp_std: True
-
+         std_init: -1.0
+         use_std_param: True
   PPO:
     # ppo params
     clip_param: 0.2
@@ -40,7 +41,7 @@ RL:
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.0001
-    lr: 2.5e-4
+    lr: 3e-4
     eps: 1e-5
     max_grad_norm: 0.2
     num_steps: 128
@@ -76,6 +77,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2

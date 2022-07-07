@@ -26,6 +26,8 @@ def get_config_defaults() -> CN:
     Populates and resturns a default config for a RearrangeEpisode.
     """
     _C = CN()
+    # The minimum distance from the target object starting position to its goal
+    _C.min_dist_from_start_to_goal = 0.5
 
     # ----- import/initialization parameters ------
     # the scene dataset from which scenes and objects are sampled

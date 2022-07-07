@@ -1,10 +1,12 @@
 GYM:
     CLASS_NAME: RearrangeRLEnv
-    AUTO_NAME: NavPick
+    AUTO_NAME: RearrangeEasy
     OBS_KEYS:
     - robot_head_depth
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:

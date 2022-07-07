@@ -101,18 +101,12 @@ class GaussianNet(nn.Module):
         super().__init__()
 
         self.action_activation = config.action_activation
-        self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
         self.use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
-        if config.use_log_std:
-            self.min_std = config.min_log_std
-            self.max_std = config.max_log_std
-            std_init = 0.0  # initialize std value so that exp(std) ~ 1
-        else:
-            self.min_std = config.min_std
-            self.max_std = config.max_std
-            std_init = 1.0  # initialize std value so that std ~ 1
+        self.min_std = config.min_log_std
+        self.max_std = config.max_log_std
+        std_init = config.log_std_init
 
         self.mu = nn.Linear(num_inputs, num_outputs)
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
@@ -139,8 +133,7 @@ class GaussianNet(nn.Module):
 
         if self.clamp_std:
             std = torch.clamp(std, min=self.min_std, max=self.max_std)
-        if self.use_log_std:
-            std = torch.exp(std)
+        std = torch.exp(std)
         if self.use_softplus:
             std = torch.nn.functional.softplus(std)
 

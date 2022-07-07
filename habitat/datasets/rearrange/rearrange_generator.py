@@ -198,6 +198,10 @@ class RearrangeEpisodeGenerator:
                     for x in self._obj_sets[y]
                 ]
                 object_handles = sorted(set(object_handles))
+                if len(object_handles) == 0:
+                    raise ValueError(
+                        f"Found no object handles for {obj_sampler_info}"
+                    )
 
                 self._obj_samplers[
                     obj_sampler_info["name"]
@@ -591,6 +595,7 @@ class RearrangeEpisodeGenerator:
         target_refs: Dict[str, str] = {}
 
         # sample targets
+        handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
         for sampler_name, target_sampler in self._target_samplers.items():
             obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
                 sampler_name
@@ -606,6 +611,17 @@ class RearrangeEpisodeGenerator:
             )
             if new_target_objects is None:
                 return None
+            for target_handle, (
+                new_target_obj,
+                _,
+            ) in new_target_objects.items():
+                match_obj = handle_to_obj[target_handle]
+
+                dist = np.linalg.norm(
+                    match_obj.translation - new_target_obj.translation
+                )
+                if dist < self.cfg.min_dist_from_start_to_goal:
+                    return None
 
             # cache transforms and add visualizations
             for i, (instance_handle, value) in enumerate(

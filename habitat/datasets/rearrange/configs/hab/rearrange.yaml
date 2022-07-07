@@ -2,7 +2,7 @@
 ---
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
-  - "data/objects/ycb/"
+  - "data/objects/ycb/configs"
 scene_sets:
   -
     name: "scene_train_split"
@@ -46,7 +46,6 @@ object_sets:
       - "024_bowl.object_config.json"
       - "025_mug.object_config.json"
       - "026_sponge.object_config.json"
-      - "029_plate.object_config.json"
     excluded_substrings: []
 
 receptacle_sets:

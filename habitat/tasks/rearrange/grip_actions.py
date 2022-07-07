@@ -102,14 +102,11 @@ class MagicGraspAction(GripSimulatorTaskAction):
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
-        if not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
-
         if grip_action is None:
             return
 
-        # if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
-        #     self._grasp()
+        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+            self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
 

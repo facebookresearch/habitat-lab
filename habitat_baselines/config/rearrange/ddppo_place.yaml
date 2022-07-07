@@ -75,6 +75,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2
