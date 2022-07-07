@@ -95,9 +95,9 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
         cfg.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
         cfg.freeze()
 
-    env_fn_args = tuple((c,) for c in configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
-        make_env_fn=make_gym_from_config,
+        make_env_fn=_make_dummy_env_func,
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method,
     ) as envs:
@@ -251,7 +251,7 @@ def test_rl_vectorized_envs(gpu2gpu):
         config.freeze()
 
     num_envs = len(configs)
-    env_fn_args = tuple((c,) for c in configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
         make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
     ) as envs:
