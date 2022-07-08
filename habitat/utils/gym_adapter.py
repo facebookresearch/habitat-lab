@@ -300,4 +300,5 @@ class HabGymWrapper(gym.Env):
         return frame
 
     def close(self):
+        del self._last_obs
         self._env.close()
