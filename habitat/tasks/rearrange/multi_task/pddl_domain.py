@@ -380,7 +380,8 @@ class PddlProblem(PddlDomain):
         }
 
         self.init = [
-            self.parse_predicate(p, self._objects) for p in problem_def["init"]
+            self.parse_predicate(p, self._objects)
+            for p in problem_def.get("init", [])
         ]
         try:
             self.goal = self.parse_logical_expr(
