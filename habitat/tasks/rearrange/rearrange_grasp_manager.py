@@ -229,6 +229,21 @@ class RearrangeGraspManager:
         c.max_impulse = self._config.GRASP_IMPULSE
         c.constraint_type = constraint_type
 
+        # we set the link frame to object rotation in link space (objR -> world -> link)
+        link_node = self._managed_robot.sim_obj.get_link_scene_node(
+            self._managed_robot.ee_link_id
+        )
+        link_frame_world_space = link_node.absolute_transformation().rotation()
+        object_frame_world_space = (
+            self._sim.get_rigid_object_manager()
+            .get_object_by_id(obj_id_b)
+            .transformation.rotation()
+        )
+        c.frame_a = link_frame_world_space.inverted().__matmul__(
+            object_frame_world_space
+        )
+        # NOTE: object frame is default identity because using it instead is unstable
+
         if constraint_type == RigidConstraintType.Fixed:
             self._vis_info.append((pivot_in_obj, obj_id_b))
 
@@ -308,10 +323,11 @@ class RearrangeGraspManager:
         self._snap_constraints = [
             self.create_hold_constraint(
                 RigidConstraintType.Fixed,
-                mn.Vector3(gripper_offset, 0, 0),
-                rel_pos,
-                self._snapped_obj_id,
-                # rotation_lock_b=self._keep_T.rotation(),
+                # link pivot is the object in link space
+                pivot_in_link=rel_pos,
+                # object pivot is local origin
+                pivot_in_obj=mn.Vector3(0),
+                obj_id_b=self._snapped_obj_id,
             ),
         ]
 

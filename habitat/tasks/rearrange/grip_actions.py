@@ -149,20 +149,27 @@ class SuctionGraspAction(MagicGraspAction):
             rom = self._sim.get_rigid_object_manager()
             ro = rom.get_object_by_id(attempt_snap_entity)
 
-            if scene_obj_id == match_coll.object_id_a:
-                pos_W = match_coll.position_on_a_in_ws
-            else:
-                pos_W = match_coll.position_on_b_in_ws
+            # if scene_obj_id == match_coll.object_id_a:
+            #    pos_W = match_coll.position_on_a_in_ws
+            # else:
+            #    pos_W = match_coll.position_on_b_in_ws
 
-            obj_to_W_T = ro.transformation.inverted()
-            pos_obj = obj_to_W_T.transform_point(pos_W)
+            # obj_to_W_T = ro.transformation.inverted()
+            # pos_obj = obj_to_W_T.transform_point(pos_W)
 
             ee_T = self.cur_robot.ee_transform
             obj_in_ee_T = ee_T.inverted() @ ro.transformation
 
+            # here we need the link T, not the EE T for the constraint frame
+            ee_link_T = self.cur_robot.sim_obj.get_link_scene_node(
+                self.cur_robot.params.ee_link
+            ).absolute_transformation()
+
             self._sim.grasp_mgr.snap_to_obj(
                 int(attempt_snap_entity),
-                rel_pos=pos_obj,
+                force=False,
+                # rel_pos is the relative position of the object COM in link space
+                rel_pos=ee_link_T.inverted().transform_point(ro.translation),
                 keep_T=obj_in_ee_T,
                 should_open_gripper=False,
                 gripper_offset=0.0,
