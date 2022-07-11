@@ -249,7 +249,9 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test --addopts "--cov-report=xml --cov=./"
+              python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
+              export TEST_BASELINE_SMALL=1
+              python setup.py test --addopts "test/test_baseline_training.py"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
@@ -282,6 +284,8 @@ jobs:
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
+      - store_artifacts:
+          path: data/profile  # This is the benchmark profile
 
 
 workflows:
