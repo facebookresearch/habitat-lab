@@ -258,6 +258,18 @@ class PointNavResNetNet(Net):
         # visual encoder
         if fuse_keys is None:
             fuse_keys = observation_space.spaces.keys()
+            # removing keys that correspond to goal sensors
+            goal_sensor_keys = {
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
+                ObjectGoalSensor.cls_uuid,
+                EpisodicGPSSensor.cls_uuid,
+                PointGoalSensor.cls_uuid,
+                HeadingSensor.cls_uuid,
+                ProximitySensor.cls_uuid,
+                EpisodicCompassSensor.cls_uuid,
+                ImageGoalSensor.cls_uuid,
+            }
+            fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
         self._fuse_keys_1d: List[str] = [
             k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
         ]
