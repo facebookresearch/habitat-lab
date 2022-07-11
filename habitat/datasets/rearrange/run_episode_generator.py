@@ -325,7 +325,7 @@ if __name__ == "__main__":
             logger.info("==================================")
             logger.info("Done listing SceneDataset summary")
             logger.info("==================================")
-        elif args.run:
+        else:
             import time
 
             start_time = time.time()

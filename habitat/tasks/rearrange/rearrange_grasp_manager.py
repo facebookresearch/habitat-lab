@@ -204,6 +204,7 @@ class RearrangeGraspManager:
         pivot_in_obj: mn.Vector3,
         obj_id_b: int,
         link_id_b: Optional[int] = None,
+        rotation_lock_b: Optional[mn.Matrix3] = None,
     ) -> int:
         """Create a new rigid point-to-point (ball joint) constraint between the robot and an object.
 
@@ -222,6 +223,9 @@ class RearrangeGraspManager:
             c.link_id_b = link_id_b
         c.pivot_a = pivot_in_link
         c.pivot_b = pivot_in_obj
+        c.frame_a = mn.Matrix3.identity_init()
+        if rotation_lock_b is not None:
+            c.frame_b = rotation_lock_b
         c.max_impulse = self._config.GRASP_IMPULSE
         c.constraint_type = constraint_type
 
