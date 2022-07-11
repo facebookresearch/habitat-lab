@@ -97,8 +97,8 @@ TASK:
     ACTIONS:
         BASE_VELOCITY:
             TYPE: BaseVelAction
-            LIN_SPEED: 15.0
-            ANG_SPEED: 15.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: true
             ALLOW_BACK: true
             END_ON_STOP: true

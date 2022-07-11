@@ -13,7 +13,7 @@ ENVIRONMENT:
     MAX_EPISODE_STEPS: 1000
 DATASET:
     TYPE: RearrangeDataset-v0
-    SPLIT: minival
+    SPLIT: train
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:

@@ -46,10 +46,11 @@ class NavToInfo:
 @registry.register_task(name="RearrangeNavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
     """
-    :_nav_to_info: Information about the next skill we are navigating to.
+    :property _nav_to_info: Information about the next skill we are navigating to.
     """
 
     pddl_problem: PddlProblem
+    _nav_to_info: Optional[NavToInfo]
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
@@ -76,7 +77,7 @@ class DynNavRLEnv(RearrangeTask):
             task_spec_path,
             self._config,
         )
-        self._nav_to_info: Optional[NavToInfo] = None
+        self._nav_to_info = None
 
     @property
     def nav_to_task_name(self):
@@ -244,6 +245,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         episode_id = sim.ep_info["episode_id"]
+
+        # Rest the nav to information for this episode.
+        self._nav_to_info = None
 
         if self.force_obj_to_idx is not None:
             full_key = (

@@ -145,17 +145,8 @@ class SuctionGraspAction(MagicGraspAction):
                 break
 
         if attempt_snap_entity is not None:
-            # breakpoint()
             rom = self._sim.get_rigid_object_manager()
             ro = rom.get_object_by_id(attempt_snap_entity)
-
-            # if scene_obj_id == match_coll.object_id_a:
-            #    pos_W = match_coll.position_on_a_in_ws
-            # else:
-            #    pos_W = match_coll.position_on_b_in_ws
-
-            # obj_to_W_T = ro.transformation.inverted()
-            # pos_obj = obj_to_W_T.transform_point(pos_W)
 
             ee_T = self.cur_robot.ee_transform
             obj_in_ee_T = ee_T.inverted() @ ro.transformation
