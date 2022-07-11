@@ -250,10 +250,19 @@ jobs:
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
               python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
-              export TEST_BASELINE_SMALL=1
-              python setup.py test --addopts "test/test_baseline_training.py"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Run baseline training tests
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python setup.py develop --all
+              export PYTHONPATH=.:$PYTHONPATH
+              # This is a flag that enables test_test_baseline_training to work
+              export TEST_BASELINE_SMALL=1
+              python setup.py test --addopts "test/test_baseline_training.py"
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
