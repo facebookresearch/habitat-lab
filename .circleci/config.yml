@@ -294,7 +294,7 @@ jobs:
               mkdir -p ../build/docs
               ./build-public.sh
       - store_artifacts:
-          path: data/profile  # This is the benchmark profile
+          path: habitat-lab/data/profile  # This is the benchmark profile
 
 
 workflows:
