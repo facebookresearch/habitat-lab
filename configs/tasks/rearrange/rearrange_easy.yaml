@@ -32,7 +32,7 @@ TASK:
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: rearrange_easy
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     TARGET_START_SENSOR:

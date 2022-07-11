@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
+import os.path as osp
 from typing import Dict, List, Optional, Union
 
 import yaml
@@ -47,8 +48,21 @@ class PddlDomain:
         domain_file_path: str,
         cur_task_config: Optional[Config] = None,
     ):
+        """
+        :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
+        """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
+
+        if not osp.isabs(domain_file_path):
+            parent_dir = osp.dirname(__file__)
+            domain_file_path = osp.join(
+                parent_dir, "domain_configs", domain_file_path
+            )
+
+        if "." not in domain_file_path:
+            domain_file_path += ".yaml"
+
         with open(domain_file_path, "r") as f:
             domain_def = yaml.safe_load(f)
 

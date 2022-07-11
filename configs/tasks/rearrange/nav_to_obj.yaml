@@ -23,7 +23,7 @@ TASK:
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     FILTER_NAV_TO_TASKS: []
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     REWARD_MEASURE: nav_to_obj_reward

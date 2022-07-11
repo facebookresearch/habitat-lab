@@ -6,8 +6,6 @@ objects:
   - name: ROBOT_0
     expr_type: robot_type
 
-init: []
-
 goal:
   expr_type: AND
   sub_exprs:
@@ -23,5 +21,3 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(goal0|0,TARGET_goal0|0)
-
-solution: []
