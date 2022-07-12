@@ -9,6 +9,10 @@ import attr
 import magnum as mn
 import numpy as np
 
+from habitat.robots.robot_interface import RobotInterface
+from habitat_sim.physics import JointMotorSettings
+from habitat_sim.simulator import Simulator
+
 @attr.s(auto_attribs=True, slots=True)
 class StaticManipulatorParams:
     """Data to configure a static manipulator.
