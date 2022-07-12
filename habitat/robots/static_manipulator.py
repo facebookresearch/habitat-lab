@@ -154,7 +154,14 @@ class StaticManipulator(RobotInterface):
         self.sim_obj.awake = True
 
     def reset(self) -> None:
-        pass
+        """Reset joints"""
+        self.sim_obj.clear_joint_states()
+
+        self.arm_joint_pos = self.params.arm_init_params
+        self.gripper_joint_pos = self.params.gripper_init_params
+
+        self._update_motor_settings_cache()
+        self.update()
 
     def _update_motor_settings_cache(self):
         """Updates the JointMotorSettings cache for cheaper future updates"""
