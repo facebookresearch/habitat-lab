@@ -401,15 +401,15 @@ class PddlProblem(PddlDomain):
             self.goal = self.parse_logical_expr(
                 problem_def["goal"], self.all_entities
             )
+            self.goal = self.expand_quantifiers(self.goal)
         except Exception as e:
             raise ValueError(
                 f"Could not parse goal cond {problem_def['goal']}"
             ) from e
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
-            self.stage_goals[stage_name] = self.parse_logical_expr(
-                cond, self.all_entities
-            )
+            expr = self.parse_logical_expr(cond, self.all_entities)
+            self.stage_goals[stage_name] = self.expand_quantifiers(expr)
 
         self._solution: Optional[List[PddlAction]] = None
         if "solution" in problem_def:
@@ -473,6 +473,8 @@ class PddlProblem(PddlDomain):
 
         if expr.quantifier == LogicalQuantifierType.FORALL:
             combine_type = LogicalExprType.AND
+        elif expr.quantifier == LogicalQuantifierType.EXISTS:
+            combine_type = LogicalExprType.OR
         elif expr.quantifier is None:
             return expr
         else:
