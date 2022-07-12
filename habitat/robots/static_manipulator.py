@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
 import attr
-import magnum as mn
 import numpy as np
 
 from habitat.robots.robot_interface import RobotInterface
@@ -46,7 +45,7 @@ class StaticManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: mn.Vector3
+    ee_offset: np.ndarray
     ee_link: int
     ee_constraint: np.ndarray
 
