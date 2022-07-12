@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 @attr.s(auto_attribs=True, slots=True)
 class StaticManipulatorParams:
     """Data to configure a static manipulator.
@@ -48,6 +49,7 @@ class StaticManipulatorParams:
     arm_mtr_pos_gain: float
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
+
 
 class StaticManipulator(RobotInterface):
     """Robot with a fixed base and controllable arm."""
@@ -99,4 +101,3 @@ class StaticManipulator(RobotInterface):
 
     def reset(self) -> None:
         pass
-        
