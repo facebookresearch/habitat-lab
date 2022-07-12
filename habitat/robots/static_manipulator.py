@@ -16,7 +16,7 @@ class StaticManipulatorParams:
     :property ee_link: The Habitat Sim link ID of the end-effector.
     :property ee_constraint: A (2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
-    :property cameras: The cameras and where they should go. The key is the 
+    :property cameras: The cameras and where they should go. The key is the
         prefix to match in the sensor names. For example, a key of `"robot_head"`
         will match sensors `"robot_head_rgb"` and `"robot_head_depth"`
     :property gripper_closed_state: All gripper joints must achieve this
@@ -39,7 +39,7 @@ class StaticManipulatorParams:
     ee_link: int
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams] # TODO: Are cameras necessary?
+    cameras: Dict[str, RobotCameraParams]  # TODO: Are cameras necessary?
 
     gripper_closed_state: np.ndarray
     gripper_open_state: np.ndarray
@@ -58,15 +58,14 @@ class StaticManipulator(RobotInterface):
         urdf_path: str,
         sim: Simulator,
     ):
-        r"""Constructor
-        """
+        r"""Constructor"""
         super().__init__()
         self.urdf_path = urdf_path
         self.params = params
         self._sim = sim
         self.sim_obj = None
 
-        #TODO: Are cameras needed?
+        # TODO: Are cameras needed?
         self._cameras = defaultdict(list)
         for camera_prefix in self.params.cameras:
             for sensor_name in self._sim._sensors:
@@ -100,3 +99,4 @@ class StaticManipulator(RobotInterface):
 
     def reset(self) -> None:
         pass
+        
