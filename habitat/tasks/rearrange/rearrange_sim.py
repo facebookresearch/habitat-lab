@@ -31,7 +31,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
-from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 
@@ -305,7 +304,17 @@ class RearrangeSim(HabitatSim):
         base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            navmesh_settings = habitat_sim.NavMeshSettings()
+            navmesh_settings.agent_height = self.habitat_config.AGENT_0.HEIGHT
+            navmesh_settings.agent_radius = self.habitat_config.AGENT_0.RADIUS
+            navmesh_settings.agent_max_climb = 0.2
+            navmesh_settings.agent_max_slope = 45
+            self.recompute_navmesh(
+                self.pathfinder, navmesh_settings, include_static_objects=True
+            )
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
