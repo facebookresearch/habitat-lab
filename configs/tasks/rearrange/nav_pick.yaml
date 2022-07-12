@@ -1,7 +1,6 @@
 GYM:
     AUTO_NAME: "NavPick"
     OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'obj_start_gps_compass', 'joint', 'is_holding']
-    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:
