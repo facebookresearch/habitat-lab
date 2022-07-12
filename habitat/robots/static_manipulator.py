@@ -63,12 +63,14 @@ class StaticManipulator(RobotInterface):
         params: StaticManipulatorParams,
         urdf_path: str,
         sim: Simulator,
+        limit_robo_joints: bool = True,
     ):
         r"""Constructor"""
         super().__init__()
         self.urdf_path = urdf_path
         self.params = params
         self._sim = sim
+        self._limit_robo_joints = limit_robo_joints
         self.sim_obj = None
 
         # NOTE: the follow members cache static info for improved efficiency over querying the API
@@ -91,10 +93,77 @@ class StaticManipulator(RobotInterface):
             )
 
     def reconfigure(self) -> None:
-        pass
+        """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
+        ao_mgr = self._sim.get_articulated_object_manager()
+        self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
+            self.urdf_path, fixed_base=True
+        )
+        if self._limit_robo_joints:
+            # automatic joint limit clamping after each call to sim.step_physics()
+            self.sim_obj.auto_clamp_joint_limits = True
+        for link_id in self.sim_obj.get_link_ids():
+            self.joint_pos_indices[
+                link_id
+            ] = self.sim_obj.get_link_joint_pos_offset(link_id)
+            self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(
+                link_id
+            )
+        self.joint_limits = self.sim_obj.joint_position_limits
+
+        # remove any default damping motors
+        for motor_id in self.sim_obj.existing_joint_motor_ids:
+            self.sim_obj.remove_joint_motor(motor_id)
+        # re-generate all joint motors with arm gains.
+
+        jms = JointMotorSettings()
+        self.sim_obj.create_all_motors(jms)
+        self._update_motor_settings_cache()
+
+        if self.params.arm_joints is not None:
+            jms = JointMotorSettings(
+                0,  # position_target
+                self.params.arm_mtr_pos_gain,  # position_gain
+                0,  # velocity_target
+                self.params.arm_mtr_vel_gain,  # velocity_gain
+                self.params.arm_mtr_max_impulse,  # max_impulse
+            )
+            for i in self.params.arm_joints:
+                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
+        self._update_motor_settings_cache()
+
+        if self.params.gripper_joints is not None:
+            jms = JointMotorSettings(
+                0,  # position_target
+                self.params.arm_mtr_pos_gain,  # position_gain
+                0,  # velocity_target
+                self.params.arm_mtr_vel_gain,  # velocity_gain
+                self.params.arm_mtr_max_impulse,  # max_impulse
+            )
+            for i in self.params.gripper_joints:
+                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
+        
+        # set initial states and targets
+        self.arm_joint_pos = self.params.arm_init_params
+        self.gripper_joint_pos = self.params.gripper_init_params
+
+        self._update_motor_settings_cache()
+
 
     def update(self) -> None:
-        pass
+        """Updates sleep state"""
+        self.sim_obj.awake = True
 
     def reset(self) -> None:
         pass
+
+    def _update_motor_settings_cache(self):
+        """Updates the JointMotorSettings cache for cheaper future updates"""
+        self.joint_motors = {}
+        for (
+            motor_id,
+            joint_id,
+        ) in self.sim_obj.existing_joint_motor_ids.items():
+            self.joint_motors[joint_id] = (
+                motor_id,
+                self.sim_obj.get_joint_motor_settings(motor_id),
+            )
