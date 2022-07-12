@@ -880,6 +880,8 @@ _C.GYM.DESIRED_GOAL_KEYS = []
 # -----------------------------------------------------------------------------
 # Task
 # -----------------------------------------------------------------------------
+# Uless another RLEnv is implemented and registered, the default task is
+# should be RLTaskEnv. RLTaskEnv works for both Navigation and Rearrange.
 _C.ENV_TASK = "RLTaskEnv"
 
 # -----------------------------------------------------------------------------
