@@ -26,9 +26,6 @@ class StaticManipulatorParams:
     :property ee_link: The Habitat Sim link ID of the end-effector.
     :property ee_constraint: A (2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
-    :property cameras: The cameras and where they should go. The key is the
-        prefix to match in the sensor names. For example, a key of `"robot_head"`
-        will match sensors `"robot_head_rgb"` and `"robot_head_depth"`
     :property gripper_closed_state: All gripper joints must achieve this
         state for the gripper to be considered closed.
     :property gripper_open_state: All gripper joints must achieve this
