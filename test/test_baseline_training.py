@@ -31,7 +31,7 @@ def setup_function(test_trainers):
 
 @pytest.mark.skipif(
     int(os.environ.get("TEST_BASELINE_SMALL", 0)) == 0,
-    reason="Full training tests did not run. Need `export FULL_TRAINING_TEST=1",
+    reason="Full training tests did not run. Need `export TEST_BASELINE_SMALL=1",
 )
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
@@ -88,7 +88,7 @@ def test_trainers(config_path, num_updates):
 
 @pytest.mark.skipif(
     int(os.environ.get("TEST_BASELINE_LARGE", 0)) == 0,
-    reason="Full training tests did not run. Need `export FULL_TRAINING_TEST=1",
+    reason="Full training tests did not run. Need `export TEST_BASELINE_LARGE=1",
 )
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
