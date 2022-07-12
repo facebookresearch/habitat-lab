@@ -176,41 +176,6 @@ if vut.is_notebook():
 
 
 # %% [markdown]
-# ## Interactive Play Script
-# On your local machine with a display connected, play the tasks using the keyboard to control the robot:
-# ```
-# python examples/interactive_play.py --play-task --never-end
-# ```
-# For more information about the interactive play script, see the
-# [documentation string at the top of the file](https://github.com/facebookresearch/habitat-lab/blob/main/examples/interactive_play.py).
-
-# %% [markdown]
-# ## Training with Habitat Baselines
-# Start training policies with PPO using [Habitat Baselines](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines). As an example, start training a pick policy with:
-#
-# ```
-# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/ddppo_pick.yaml --run-type train
-# ```
-# Find the [complete list of RL configurations here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange), any config starting with `ddppo` can be substituted.
-#
-# See [here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines#baselines) for more information on how to run with Habitat Baselines.
-
-# %% [markdown]
-# ## Home Assistant Benchmark (HAB) Tasks
-#
-# To run the HAB tasks, use any of the training configurations here: [here](https://github.com/facebookresearch/habitat-lab/tree/main/main/config/rearrange/hab). For example, to run monolithic RL training on the Tidy House task run:
-# ```
-# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/ddppo_tidy_house.yaml --run-type train
-# ```
-# To run the TP-SRL baseline use the [`tp_srl`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl.yaml`) config. You will first need trained models for each of the individual skills placed in `data/models/[skill_name].pt`. Then specify the name of the task to run. For example, to run TP-SRL on the `set_table` task, run the following:
-# ```
-# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH configs/tasks/rearrange/set_table.yaml
-# ```
-# [`tp_srl_oracle_nav`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl_oracle_nav.yaml) is the TP-SRL method with oracle navigation.
-#
-# The HAB tasks can also be used from the Gym interface (tutorial [here](https://github.com/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb)).
-
-# %% [markdown]
 # # Defining New Tasks
 #
 # We will define a task for the robot to navigate to and then pick up a target object in the environment. To support a new task we need:

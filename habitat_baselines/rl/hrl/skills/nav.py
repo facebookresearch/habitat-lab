@@ -77,7 +77,7 @@ class NavSkillPolicy(NnSkillPolicy):
         return should_stop
 
     def _parse_skill_arg(self, skill_arg):
-        targ_name, targ_idx = skill_arg[-1].split("|")
+        targ_name, targ_idx = skill_arg[-2].split("|")
         return NavSkillPolicy.NavArgs(
             obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")
         )
