@@ -34,6 +34,8 @@ try:
 except ImportError:
     baseline_installed = False
 
+from habitat.utils.gym_definitions import make_gym_from_config
+
 
 def _powerset(s):
     return [
@@ -179,9 +181,11 @@ def test_cubemap_stiching(
             tmp_config.defrost()
             tmp_config.DATASET["SPLIT"] = split
             tmp_config.freeze()
-            env_fn_args.append((tmp_config, None))
+            env_fn_args.append((tmp_config,))
 
-        with VectorEnv(env_fn_args=env_fn_args) as envs:
+        with VectorEnv(
+            make_env_fn=make_gym_from_config, env_fn_args=env_fn_args
+        ) as envs:
             observations = envs.reset()
         batch = batch_obs(observations)
         orig_batch = deepcopy(batch)

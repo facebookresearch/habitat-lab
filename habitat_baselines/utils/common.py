@@ -638,16 +638,14 @@ def action_to_velocity_control(
 
 
 def is_continuous_action_space(action_space) -> bool:
-    if not isinstance(action_space, spaces.Dict):
+    if isinstance(action_space, spaces.Box):
+        return True
+    elif isinstance(action_space, (spaces.Discrete, spaces.MultiDiscrete)):
         return False
-
-    for v in action_space.spaces.values():
-        if isinstance(v, spaces.Dict):
-            return is_continuous_action_space(v)
-        elif isinstance(v, spaces.Box):
-            return True
-
-    return False
+    else:
+        raise NotImplementedError(
+            f"Unknown action space {action_space}. Is neither continuous nor discrete"
+        )
 
 
 def get_num_actions(action_space) -> int:
@@ -658,48 +656,17 @@ def get_num_actions(action_space) -> int:
         if isinstance(v, spaces.Dict):
             queue.extend(v.spaces.values())
         elif isinstance(v, spaces.Box):
+            assert (
+                len(v.shape) == 1
+            ), f"shape was {v.shape} but was expecting a 1D action"
             num_actions += v.shape[0]
-        else:
+        elif isinstance(v, EmptySpace):
             num_actions += 1
+        elif isinstance(v, spaces.Discrete):
+            num_actions += v.n
+        else:
+            raise NotImplementedError(
+                f"Trying to count the number of actions with an unknown action space {v}"
+            )
 
     return num_actions
-
-
-def action_array_to_dict(
-    action_space, action: torch.Tensor, clip: bool = True
-):
-    """We naively assume that all actions are 1D (len(shape) == 1)"""
-
-    # Assume that the action space only has one root SimulatorTaskAction
-    root_action_names = tuple(action_space.spaces.keys())
-    if len(root_action_names) == 1:
-        # No need for a tuple if there is only one action
-        root_action_names = root_action_names[0]
-    action_name_to_lengths = {}
-    for outer_k, act_dict in action_space.spaces.items():
-        if isinstance(act_dict, EmptySpace):
-            action_name_to_lengths[outer_k] = 1
-        else:
-            for k, v in act_dict.items():
-                # The only element in the action
-                action_name_to_lengths[k] = v.shape[0]
-
-    # Determine action arguments for root_action_name
-    action_args = {}
-    action_offset = 0
-    for action_name, action_length in action_name_to_lengths.items():
-        action_values = action[action_offset : action_offset + action_length]
-        if clip:
-            action_values = np.clip(
-                action_values.detach().cpu().numpy(), -1.0, 1.0
-            )
-        action_args[action_name] = action_values
-        action_offset += action_length
-
-    action_dict = {
-        "action": {
-            "action": root_action_names,
-            "action_args": action_args,
-        },
-    }
-    return action_dict

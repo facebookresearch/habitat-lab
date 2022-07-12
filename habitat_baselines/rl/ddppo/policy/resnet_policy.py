@@ -99,7 +99,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            fuse_keys=config.TASK_CONFIG.GYM.OBS_KEYS,
+            fuse_keys=None,
         )
 
 
@@ -122,7 +122,7 @@ class ResNetEncoder(nn.Module):
         # Count total # of channels for rgb and for depth
         self._n_input_rgb, self._n_input_depth = [
             # sum() returns 0 for an empty list
-            sum([observation_space.spaces[k].shape[2] for k in keys])
+            sum(observation_space.spaces[k].shape[2] for k in keys)
             for keys in [self.rgb_keys, self.depth_keys]
         ]
 
@@ -241,29 +241,42 @@ class PointNavResNetNet(Net):
         super().__init__()
         self.prev_action_embedding: nn.Module
         self.discrete_actions = discrete_actions
+        self._n_prev_action = 32
         if discrete_actions:
-            self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
+            self.prev_action_embedding = nn.Embedding(
+                action_space.n + 1, self._n_prev_action
+            )
         else:
             num_actions = get_num_actions(action_space)
-            self.prev_action_embedding = nn.Linear(num_actions, 32)
-
+            self.prev_action_embedding = nn.Linear(
+                num_actions, self._n_prev_action
+            )
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action  # test
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys: List[str] = (
-            [
-                k
-                for k in fuse_keys
-                if len(observation_space.spaces[k].shape) == 1
-            ]
-            if fuse_keys is not None
-            else []
-        )
-        if len(self._fuse_keys) != 0:
+        if fuse_keys is None:
+            fuse_keys = observation_space.spaces.keys()
+            # removing keys that correspond to goal sensors
+            goal_sensor_keys = {
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
+                ObjectGoalSensor.cls_uuid,
+                EpisodicGPSSensor.cls_uuid,
+                PointGoalSensor.cls_uuid,
+                HeadingSensor.cls_uuid,
+                ProximitySensor.cls_uuid,
+                EpisodicCompassSensor.cls_uuid,
+                ImageGoalSensor.cls_uuid,
+            }
+            fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
+        self._fuse_keys_1d: List[str] = [
+            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
+        ]
+        if len(self._fuse_keys_1d) != 0:
             rnn_input_size += sum(
-                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+                observation_space.spaces[k].shape[0]
+                for k in self._fuse_keys_1d
             )
 
         if (
@@ -358,16 +371,12 @@ class PointNavResNetNet(Net):
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
         else:
-            use_obs_space = (
-                spaces.Dict(
-                    {
-                        k: observation_space.spaces[k]
-                        for k in fuse_keys
-                        if len(observation_space.spaces[k].shape) == 3
-                    }
-                )
-                if fuse_keys is not None
-                else observation_space
+            use_obs_space = spaces.Dict(
+                {
+                    k: observation_space.spaces[k]
+                    for k in fuse_keys
+                    if len(observation_space.spaces[k].shape) == 3
+                }
             )
 
         self.visual_encoder = ResNetEncoder(
@@ -423,9 +432,9 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        if len(self._fuse_keys) != 0:
+        if len(self._fuse_keys_1d) != 0:
             fuse_states = torch.cat(
-                [observations[k] for k in self._fuse_keys], dim=-1
+                [observations[k] for k in self._fuse_keys_1d], dim=-1
             )
             x.append(fuse_states)
 
@@ -513,6 +522,7 @@ class PointNavResNetNet(Net):
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)
             start_token = torch.zeros_like(prev_actions)
+            # The mask means the previous action will be zero, an extra dummy action
             prev_actions = self.prev_action_embedding(
                 torch.where(masks.view(-1), prev_actions + 1, start_token)
             )

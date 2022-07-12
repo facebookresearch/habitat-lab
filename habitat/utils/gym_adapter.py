@@ -41,7 +41,7 @@ def smash_observation_space(obs_space, limit_keys):
     obs_dims = [len(shape) for shape in obs_shapes]
     if len(set(obs_dims)) == 1 and obs_dims[0] == 1:
         # Smash together
-        total_dim = sum([shape[0] for shape in obs_shapes])
+        total_dim = sum(shape[0] for shape in obs_shapes)
 
         return spaces.Box(
             shape=(total_dim,), low=-1.0, high=1.0, dtype=np.float32
@@ -116,10 +116,6 @@ def continuous_vector_action_to_hab_dict(
     """
     Converts a np.ndarray vector action into a habitat-lab compatible action dictionary.
     """
-    # Clipping actions to the specified limits
-    action_values = np.clip(
-        action, vector_action_space.low, vector_action_space.high
-    )
     # Assume that the action space only has one root SimulatorTaskAction
     root_action_names = tuple(original_action_space.spaces.keys())
     if len(root_action_names) == 1:
@@ -171,9 +167,6 @@ class HabGymWrapper(gym.Env):
     - `DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
       any observations are returned in the `desired_goal` returned key of the
       observation.
-    - `FIX_INFO_DICT`: By default True, but if specified as true, this
-      flattens the returned info dictionary to have depth 1 where sub-keys are
-      concatenated to parent keys.
     - `ACTION_KEYS`: Include a subset of the allowed actions in the
       wrapped environment. If not specified, all actions are included.
     Example usage:
@@ -183,7 +176,6 @@ class HabGymWrapper(gym.Env):
         gym_config = env.config.GYM
         self._gym_goal_keys = gym_config.DESIRED_GOAL_KEYS
         self._gym_achieved_goal_keys = gym_config.ACHIEVED_GOAL_KEYS
-        self._fix_info_dict = gym_config.FIX_INFO_DICT
         self._gym_action_keys = gym_config.ACTION_KEYS
         self._gym_obs_keys = gym_config.OBS_KEYS
 
@@ -248,19 +240,19 @@ class HabGymWrapper(gym.Env):
             hab_action = {"action": action}
         return self._direct_hab_step(hab_action)
 
-    def get_number_of_episodes(self) -> int:
+    @property
+    def number_of_episodes(self) -> int:
         return self._env.number_of_episodes
 
-    def get_current_episodes(self) -> int:
+    @property
+    def current_episode(self) -> int:
         return self._env.current_episode
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
-        if self._fix_info_dict:
-            info = flatten_dict(info)
-            info = {k: float(v) for k, v in info.items()}
+        info = flatten_dict(info)
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
@@ -308,4 +300,5 @@ class HabGymWrapper(gym.Env):
         return frame
 
     def close(self):
+        del self._last_obs
         self._env.close()

@@ -28,7 +28,6 @@ TASK_CONFIG:
     GYM:
       OBS_KEYS: ['joint', 'ee_pos']
       DESIRED_GOAL_KEYS: ['resting_position']
-      FIX_INFO_DICT: True
       ACTION_KEYS: ['ARM_ACTION']
       CLASS_NAME: "RearrangeRLEnv"
 

@@ -1,5 +1,4 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
-ENV_NAME: "RearrangeRLEnv"
 
 SENSE_PLAN_ACT:
   VERBOSE: True
@@ -26,7 +25,6 @@ TASK_CONFIG:
     OBS_KEYS: ['joint', 'ee_pos']
     DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
     ACHIEVED_GOAL_KEYS: []
-    FIX_INFO_DICT: True
     ACTION_KEYS: ['ARM_ACTION']
 
 RL:

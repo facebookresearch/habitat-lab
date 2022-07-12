@@ -7,7 +7,6 @@
 import numpy as np
 import pytest
 
-from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat.tasks.nav.nav import IntegratedPointGoalGPSAndCompassSensor
 
 torch = pytest.importorskip("torch")
@@ -49,7 +48,7 @@ def _worker_fn(
             )
         }
     )
-    action_space = ActionSpace({"move": EmptySpace()})
+    action_space = gym.spaces.Discrete(1)
     actor_critic = PointNavBaselinePolicy.from_config(
         config, obs_space, action_space
     )

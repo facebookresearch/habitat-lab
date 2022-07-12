@@ -19,13 +19,12 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
-from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
-from habitat.utils.env_utils import construct_envs
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.construct_vector_env import construct_envs
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
@@ -58,7 +57,6 @@ from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
     ObservationBatchingCache,
-    action_array_to_dict,
     batch_obs,
     generate_video,
     get_num_actions,
@@ -96,10 +94,6 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
-
-        self.using_velocity_ctrl = (
-            self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-        ) == ["VELOCITY_CONTROL"]
 
     @property
     def obs_space(self):
@@ -202,7 +196,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self.envs = construct_envs(
             config,
-            get_env_class(config.ENV_NAME),
             workers_ignore_signals=is_slurm_batch_job(),
         )
 
@@ -210,9 +203,6 @@ class PPOTrainer(BaseRLTrainer):
         resume_state = load_resume_state(self.config)
         if resume_state is not None:
             self.config: Config = resume_state["config"]
-            self.using_velocity_ctrl = (
-                self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-            ) == ["VELOCITY_CONTROL"]
 
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
@@ -259,22 +249,15 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs()
 
         action_space = self.envs.action_spaces[0]
-        if self.using_velocity_ctrl:
-            # For navigation using a continuous action space for a task that
-            # may be asking for discrete actions
-            self.policy_action_space = action_space["VELOCITY_CONTROL"]
-            action_shape = (2,)
+        self.policy_action_space = action_space
+        if is_continuous_action_space(action_space):
+            # Assume ALL actions are NOT discrete
+            action_shape = (get_num_actions(action_space),)
             discrete_actions = False
         else:
-            self.policy_action_space = action_space
-            if is_continuous_action_space(action_space):
-                # Assume ALL actions are NOT discrete
-                action_shape = (get_num_actions(action_space),)
-                discrete_actions = False
-            else:
-                # For discrete pointnav
-                action_shape = None
-                discrete_actions = True
+            # For discrete pointnav
+            action_shape = (1,)
+            discrete_actions = True
 
         ppo_cfg = self.config.RL.PPO
         if torch.cuda.is_available():
@@ -458,12 +441,6 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["masks"],
             )
 
-        # NB: Move actions to CPU.  If CUDA tensors are
-        # sent in to env.step(), that will create CUDA contexts
-        # in the subprocesses.
-        # For backwards compatibility, we also call .item() to convert to
-        # an int
-        actions = actions.to(device="cpu")
         self.pth_time += time.time() - t_sample_action
 
         profiling_wrapper.range_pop()  # compute actions
@@ -473,13 +450,16 @@ class PPOTrainer(BaseRLTrainer):
         for index_env, act in zip(
             range(env_slice.start, env_slice.stop), actions.unbind(0)
         ):
-            if act.shape[0] > 1:
-                step_action = action_array_to_dict(
-                    self.policy_action_space, act
+            if is_continuous_action_space(self.policy_action_space):
+                # Clipping actions to the specified limits
+                act = np.clip(
+                    act.detach().cpu().numpy(),
+                    self.policy_action_space.low,
+                    self.policy_action_space.high,
                 )
             else:
-                step_action = act.item()
-            self.envs.async_step_at(index_env, step_action)
+                act = act.cpu().item()
+            self.envs.async_step_at(index_env, act)
 
         self.env_time += time.time() - t_step_env
 
@@ -544,7 +524,6 @@ class PPOTrainer(BaseRLTrainer):
                 self.running_episode_stats[k] = torch.zeros_like(
                     self.running_episode_stats["count"]
                 )
-
             self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
@@ -935,22 +914,15 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config)
 
         action_space = self.envs.action_spaces[0]
-        if self.using_velocity_ctrl:
-            # For navigation using a continuous action space for a task that
-            # may be asking for discrete actions
-            self.policy_action_space = action_space["VELOCITY_CONTROL"]
-            action_shape = (2,)
+        self.policy_action_space = action_space
+        if is_continuous_action_space(action_space):
+            # Assume NONE of the actions are discrete
+            action_shape = (get_num_actions(action_space),)
             discrete_actions = False
         else:
-            self.policy_action_space = action_space
-            if is_continuous_action_space(action_space):
-                # Assume NONE of the actions are discrete
-                action_shape = (get_num_actions(action_space),)
-                discrete_actions = False
-            else:
-                # For discrete pointnav
-                action_shape = (1,)
-                discrete_actions = True
+            # For discrete pointnav
+            action_shape = (1,)
+            discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
 
@@ -1001,13 +973,17 @@ class PPOTrainer(BaseRLTrainer):
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
         else:
             total_num_eps = sum(self.envs.number_of_episodes)
-            if total_num_eps < number_of_eval_episodes:
+            # if total_num_eps is negative, it means the number of evaluation episodes is unknown
+            if total_num_eps < number_of_eval_episodes and total_num_eps > 1:
                 logger.warn(
                     f"Config specified {number_of_eval_episodes} eval episodes"
                     ", dataset only has {total_num_eps}."
                 )
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
+        assert (
+            number_of_eval_episodes > 1
+        ), "The number TEST_EPISODE_COUNT needs to be strictly positive."
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
@@ -1035,15 +1011,18 @@ class PPOTrainer(BaseRLTrainer):
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
-            # For backwards compatibility, we also call .item() to convert to
-            # an int
-            if actions[0].shape[0] > 1:
+            if is_continuous_action_space(self.policy_action_space):
+                # Clipping actions to the specified limits
                 step_data = [
-                    action_array_to_dict(self.policy_action_space, a)
-                    for a in actions.to(device="cpu")
+                    np.clip(
+                        a.detach().cpu().numpy(),
+                        self.policy_action_space.low,
+                        self.policy_action_space.high,
+                    )
+                    for a in actions
                 ]
             else:
-                step_data = [a.item() for a in actions.to(device="cpu")]
+                step_data = [a.item() for a in actions.cpu()]
 
             outputs = self.envs.step(step_data)
 

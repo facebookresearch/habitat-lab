@@ -867,12 +867,11 @@ _C.DATASET.DATA_PATH = (
 # -----------------------------------------------------------------------------
 _C.GYM = CN()
 _C.GYM.AUTO_NAME = ""
-_C.GYM.CLASS_NAME = "RearrangeRLEnv"
+_C.GYM.CLASS_NAME = None
 _C.GYM.OBS_KEYS = None
 _C.GYM.ACTION_KEYS = None
 _C.GYM.ACHIEVED_GOAL_KEYS = []
 _C.GYM.DESIRED_GOAL_KEYS = []
-_C.GYM.FIX_INFO_DICT = True
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
