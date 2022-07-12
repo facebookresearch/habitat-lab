@@ -1,0 +1,38 @@
+---
+dataset_path: "data/fremont/fremont.scene_dataset_config.json"
+scene_sets:
+  -
+    name: "scene_train_split"
+    included_substrings:
+      - ""
+    excluded_substrings: []
+
+
+object_sets:
+  -
+    name: "kitchen"
+    included_substrings:
+      - ""
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "counter"
+    included_object_substrings:
+      - "kitchen_counter"
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: "single"
+
+  params:
+    scene_sets: ["scene_train_split"]
+    scene: fremont_kinematic
+
+object_samplers: []
+object_target_samplers: []
+
+markers: []
