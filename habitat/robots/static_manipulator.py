@@ -2,6 +2,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections import defaultdict
+from typing import Dict, List, Optional, Set, Tuple
+
+import attr
+import magnum as mn
+import numpy as np
 
 @attr.s(auto_attribs=True, slots=True)
 class StaticManipulatorParams:
@@ -40,8 +46,6 @@ class StaticManipulatorParams:
     ee_link: int
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]  # TODO: Are cameras necessary?
-
     gripper_closed_state: np.ndarray
     gripper_open_state: np.ndarray
     gripper_state_eps: float
@@ -66,13 +70,6 @@ class StaticManipulator(RobotInterface):
         self.params = params
         self._sim = sim
         self.sim_obj = None
-
-        # TODO: Are cameras needed?
-        self._cameras = defaultdict(list)
-        for camera_prefix in self.params.cameras:
-            for sensor_name in self._sim._sensors:
-                if sensor_name.startswith(camera_prefix):
-                    self._cameras[camera_prefix].append(sensor_name)
 
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience
