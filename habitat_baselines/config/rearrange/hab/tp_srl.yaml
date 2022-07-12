@@ -85,6 +85,7 @@ RL:
       name: "HierarchicalPolicy"
       high_level_policy:
         name: "GtHighLevelPolicy"
+
       DEFINED_SKILLS:
         NN_OPEN_CAB:
           skill_name: "ArtObjSkillPolicy"

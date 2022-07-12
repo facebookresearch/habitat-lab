@@ -120,7 +120,13 @@ class NnSkillPolicy(SkillPolicy):
                 f"Skill {config.skill_name}: Need to specify LOAD_CKPT_FILE"
             )
 
-        ckpt_dict = torch.load(config.LOAD_CKPT_FILE, map_location="cpu")
+        try:
+            ckpt_dict = torch.load(config.LOAD_CKPT_FILE, map_location="cpu")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                "Could not load neural network weights for skill."
+            ) from e
+
         policy = baseline_registry.get_policy(config.name)
         policy_cfg = ckpt_dict["config"]
 
