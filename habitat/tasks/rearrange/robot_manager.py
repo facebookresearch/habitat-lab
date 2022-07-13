@@ -5,14 +5,13 @@ import magnum as mn
 import numpy as np
 from yacs.config import CfgNode
 
+# flake8: noqa
+from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
-
-# flake8: noqa
-from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
 
 
 @dataclass

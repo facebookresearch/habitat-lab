@@ -14,7 +14,7 @@ DATASET:
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
-    TYPE: RearrangeNavToObjTask-v0
+    TYPE: NavToObjTask-v0
     MUST_LOOK_AT_TARG: true
     FORCE_REGENERATE: false
     OBJECT_IN_HAND_SAMPLE_PROB: 0.167

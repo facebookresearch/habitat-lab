@@ -1,6 +1,6 @@
 import numpy as np
 
-from habitat_sim.robots import FetchRobot
+from habitat.robots import FetchRobot
 
 
 class FetchSuctionRobot(FetchRobot):

@@ -20,6 +20,8 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
 from habitat.core.environments import get_env_class
+from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
+from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
 from habitat.utils.env_utils import construct_envs
 from habitat.utils.render_wrapper import overlay_frame
@@ -1109,6 +1111,14 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+
+                    gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
+                    if gfx_str != "":
+                        write_gfx_replay(
+                            gfx_str,
+                            self.config.TASK_CONFIG.TASK,
+                            current_episodes[i].episode_id,
+                        )
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:

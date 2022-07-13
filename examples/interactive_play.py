@@ -54,7 +54,8 @@ import numpy as np
 import habitat
 import habitat.tasks.rearrange.rearrange_task
 from habitat.tasks.rearrange.actions import ArmEEAction
-from habitat.tasks.rearrange.utils import euler_to_quat
+from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
+from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
@@ -490,6 +491,13 @@ def play_env(env, args, config):
             "color",
             osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),
         )
+    gfx_measure = env.task.measurements.measures.get(
+        GfxReplayMeasure.cls_uuid, None
+    )
+    if gfx_measure is not None:
+        gfx_str = gfx_measure.get_metric(force_get=True)
+        write_gfx_replay(gfx_str, config.TASK, env.current_episode.episode_id)
+
     if not args.no_render:
         pygame.quit()
 
@@ -528,6 +536,12 @@ if __name__ == "__main__":
         help="If true, then do not add the render camera for better visualization",
     )
     parser.add_argument(
+        "--skip-task",
+        action="store_true",
+        default=False,
+        help="If true, then do not add the render camera for better visualization",
+    )
+    parser.add_argument(
         "--never-end",
         action="store_true",
         default=False,
@@ -538,6 +552,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="If true, changes arm control to IK",
+    )
+    parser.add_argument(
+        "--gfx",
+        action="store_true",
+        default=False,
+        help="Save a GFX replay file.",
     )
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
@@ -562,6 +582,9 @@ if __name__ == "__main__":
         config.SIMULATOR.DEBUG_RENDER = True
         config.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = False
         config.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = False
+    if args.gfx:
+        config.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = True
+        config.TASK.MEASUREMENTS.append("GFX_REPLAY_MEASURE")
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
     if args.add_ik:

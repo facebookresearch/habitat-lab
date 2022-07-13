@@ -70,6 +70,7 @@ _C.TASK.FORCE_REGENERATE = (
 _C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
+_C.TASK.GFX_REPLAY_DIR = "data/replays"
 _C.TASK.USING_SUBTASKS = False
 _C.TASK.DEBUG_GOAL_POINT = True
 _C.TASK.RENDER_TARGET = True
@@ -408,6 +409,9 @@ _C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.USE_ABSOLUTE_DISTANCE = True
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.SUCCESS_DIST_THRESHOLD = 0.05
+
+_C.TASK.GFX_REPLAY_MEASURE = CN()
+_C.TASK.GFX_REPLAY_MEASURE.TYPE = "GfxReplayMeasure"
 
 _C.TASK.EE_DIST_TO_MARKER = CN()
 _C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
@@ -823,6 +827,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
 _C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------

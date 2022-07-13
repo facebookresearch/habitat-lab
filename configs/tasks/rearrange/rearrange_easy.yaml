@@ -14,7 +14,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy_2.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -142,8 +142,6 @@ SIMULATOR:
     DEBUG_RENDER_GOAL: true
     AGENTS:
     - AGENT_0
-    CONCUR_RENDER: true
-    AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3

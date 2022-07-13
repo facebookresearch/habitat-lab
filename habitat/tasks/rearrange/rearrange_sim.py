@@ -178,6 +178,7 @@ class RearrangeSim(HabitatSim):
         return None
 
     def reconfigure(self, config: Config):
+        self.step_idx = 0
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
@@ -643,6 +644,13 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
+        if (
+            self.habitat_config.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE
+            and self.step_idx > 10
+        ):
+            self.gfx_replay_manager.save_keyframe()
+        self.step_idx += 1
+
         if self.habitat_config.NEEDS_MARKERS:
             self._update_markers()
 
@@ -661,11 +669,6 @@ class RearrangeSim(HabitatSim):
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
-
-        if self.habitat_config.HABITAT_SIM_V0.get(
-            "ENABLE_GFX_REPLAY_SAVE", False
-        ):
-            self.gfx_replay_manager.save_keyframe()
 
         return obs
 

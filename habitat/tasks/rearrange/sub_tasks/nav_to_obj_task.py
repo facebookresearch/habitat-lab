@@ -43,7 +43,7 @@ class NavToInfo:
     start_base_rot: Optional[float] = None
 
 
-@registry.register_task(name="RearrangeNavToObjTask-v0")
+@registry.register_task(name="NavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
     """
     :property _nav_to_info: Information about the next skill we are navigating to.
