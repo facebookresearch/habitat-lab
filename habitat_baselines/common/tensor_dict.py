@@ -15,7 +15,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    Protocol,
     Tuple,
     Type,
     TypeVar,
@@ -32,15 +31,7 @@ DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
 TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
 
-class SupportsIndexing(Protocol):
-    def __getitem__(self, key: Any) -> Any:
-        pass
-
-    def __setitem__(self, key: Any, value: Any):
-        pass
-
-
-T = TypeVar("T", bound="SupportsIndexing")
+T = TypeVar("T")
 _DictTreeInst = TypeVar("_DictTreeInst", bound="_DictTreeBase")
 
 
@@ -206,7 +197,7 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
                     assert isinstance(dst, _DictTreeBase)
                     dst.set(index, v, strict=strict)
                 else:
-                    dst[index] = self._to_instance(v)
+                    dst[index] = self._to_instance(v)  # type: ignore
 
     def __setitem__(
         self,

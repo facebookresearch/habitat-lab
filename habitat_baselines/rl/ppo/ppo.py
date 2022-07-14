@@ -18,7 +18,6 @@ from torch import Tensor
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
-from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import inference_mode
 
 EPS_PPO = 1e-5
@@ -185,13 +184,12 @@ class PPO(nn.Module):
         learner_metrics = collections.defaultdict(list)
 
         def record_min_mean_max(t: torch.Tensor, prefix: str):
-            with inference_mode():
-                for name, op in (
-                    ("min", torch.min),
-                    ("mean", torch.mean),
-                    ("max", torch.max),
-                ):
-                    learner_metrics[f"{prefix}_{name}"].append(op(t))
+            for name, op in (
+                ("min", torch.min),
+                ("mean", torch.mean),
+                ("max", torch.max),
+            ):
+                learner_metrics[f"{prefix}_{name}"].append(op(t))
 
         for epoch in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
@@ -309,23 +307,6 @@ class PPO(nn.Module):
                     ):
                         learner_metrics["entropy_coef"].append(
                             self.entropy_coef().detach()
-                        )
-
-                    if "is_stale" in batch:
-                        assert isinstance(batch["is_stale"], torch.Tensor)
-                        learner_metrics["fraction_stale"].append(
-                            torch.count_nonzero(batch["is_stale"])
-                            / batch["is_stale"].numel()
-                        )
-
-                    if "policy_version" in batch:
-                        assert isinstance(rollouts, VERRolloutStorage)
-                        record_min_mean_max(
-                            (
-                                rollouts.current_policy_version
-                                - batch["policy_version"]
-                            ).float(),
-                            "version_difference",
                         )
 
             profiling_wrapper.range_pop()  # PPO.update epoch

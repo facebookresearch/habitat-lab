@@ -241,7 +241,9 @@ class RolloutStorage:
             batch["rnn_build_seq_info"] = build_rnn_build_seq_info(
                 device=self.device,
                 build_fn_result=build_pack_info_from_dones(
-                    dones_cpu[curr_slice],
+                    dones_cpu[
+                        0 : self.current_rollout_step_idx, inds.numpy()
+                    ].reshape(-1, len(inds)),
                 ),
             )
 
