@@ -297,12 +297,12 @@ class PPO(nn.Module):
                     learner_metrics["dist_entopy"].append(dist_entropy)
                     if epoch == (self.ppo_epoch - 1):
                         learner_metrics["ppo_fraction_clipped"].append(
-                            torch.count_nonzero(
-                                torch.logical_or(
-                                    ratio > (1.0 + self.clip_param),
-                                    ratio < (1.0 - self.clip_param),
-                                )
+                            torch.logical_or(
+                                ratio > (1.0 + self.clip_param),
+                                ratio < (1.0 - self.clip_param),
                             )
+                            .float()
+                            .sum()
                             / ratio.numel()
                         )
 
