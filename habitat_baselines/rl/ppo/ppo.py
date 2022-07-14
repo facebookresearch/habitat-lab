@@ -174,6 +174,11 @@ class PPO(nn.Module):
     def _compute_var_mean(self, x):
         return torch.var_mean(x)
 
+    def _set_grads_to_none(self):
+        for pg in self.optimizer.param_groups:
+            for p in pg["params"]:
+                p.grad = None
+
     def update(
         self,
         rollouts: RolloutStorage,
@@ -198,7 +203,7 @@ class PPO(nn.Module):
             )
 
             for _bid, batch in enumerate(data_generator):
-                self.optimizer.zero_grad(set_to_none=True)
+                self._set_grads_to_none()
 
                 (
                     values,
@@ -311,7 +316,7 @@ class PPO(nn.Module):
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 
-        self.optimizer.zero_grad(set_to_none=True)
+        self._set_grads_to_none()
 
         with inference_mode():
             return {
