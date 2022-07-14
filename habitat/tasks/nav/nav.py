@@ -1019,7 +1019,7 @@ class DistanceToGoal(Measure):
 class DistanceToGoalReward(Measure):
     """
     The measure calculates a reward based on the distance towards the goal.
-    The reward is simply - (new_distance - previous_distance) i.e. the
+    The reward is `- (new_distance - previous_distance)` i.e. the
     decrease of distance to the goal.
     """
 
