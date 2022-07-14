@@ -36,6 +36,12 @@ class RLTaskEnv(habitat.RLEnv):
         super().__init__(config, dataset)
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
+        assert (
+            self._reward_measure_name is not None
+        ), "The key TASK.REWARD_MEASURE cannot be None"
+        assert (
+            self._success_measure_name is not None
+        ), "The key TASK.SUCCESS_MEASURE cannot be None"
 
     def reset(self):
         observations = super().reset()
