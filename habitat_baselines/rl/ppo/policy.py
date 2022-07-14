@@ -17,7 +17,11 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import CategoricalNet, GaussianNet
+from habitat_baselines.utils.common import (
+    CategoricalNet,
+    GaussianNet,
+    NormalAndCategoricalNet,
+)
 
 
 class Policy(nn.Module, metaclass=abc.ABCMeta):
@@ -41,6 +45,12 @@ class Policy(nn.Module, metaclass=abc.ABCMeta):
             self.action_distribution = GaussianNet(
                 self.net.output_size,
                 self.dim_actions,
+                policy_config.ACTION_DIST,
+            )
+        elif self.action_distribution_type == "gaussian_and_categorical":
+            self.action_distribution = NormalAndCategoricalNet(
+                self.net.output_size,
+                -1,
                 policy_config.ACTION_DIST,
             )
         else:

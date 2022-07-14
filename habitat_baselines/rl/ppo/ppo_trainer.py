@@ -813,6 +813,7 @@ class PPOTrainer(BaseRLTrainer):
         lr_scheduler = LambdaLR(
             optimizer=self.agent.optimizer,
             lr_lambda=lambda x: 1 - self.percent_done(),
+            # lr_lambda=lambda x: 1 ,
         )
 
         resume_state = load_resume_state(self.config)
@@ -1306,6 +1307,15 @@ class PPOTrainer(BaseRLTrainer):
                 ) in stats_episodes:
                     envs_to_pause.append(i)
 
+                if len(self.config.VIDEO_OPTION) > 0:
+                    # TODO move normalization / channel changing out of the policy and undo it here
+                    frame = observations_to_image(
+                        {k: v[i] for k, v in batch.items()}, infos[i]
+                    )
+                    if self.config.VIDEO_RENDER_ALL_INFO:
+                        frame = overlay_frame(frame, infos[i])
+                    rgb_frames[i].append(frame)
+
                 # episode ended
                 if not not_done_masks[i].item():
                     pbar.update()
@@ -1337,16 +1347,6 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
-
-                # episode continues
-                elif len(self.config.VIDEO_OPTION) > 0:
-                    # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
-                    )
-                    if self.config.VIDEO_RENDER_ALL_INFO:
-                        frame = overlay_frame(frame, infos[i])
-                    rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)
             if self.config.BATCHED_ENV:

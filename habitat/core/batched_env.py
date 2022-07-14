@@ -206,7 +206,7 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_obs(self, state):
-        return float(state.held_obj_idx != -1)
+        return (float(state.held_obj_idx != -1),)
 
 
 class StepCountSensorConfig(StateSensorConfig):
@@ -314,9 +314,10 @@ class BatchedEnv:
                 "11"
             )
             # you can disable this assert if you really need to test the debug build
-            assert (
-                build_type == "release"
-            ), "Ensure habitat-sim release build for training!"
+            if not config.get("DEBUG_SIM", False):
+                assert (
+                    build_type == "release"
+                ), "Ensure habitat-sim release build for training!"
             from habitat_sim._ext.habitat_sim_bindings import (
                 BatchedSimulator,
                 BatchedSimulatorConfig,
@@ -412,13 +413,13 @@ class BatchedEnv:
                 self._debug_camera = Camera(
                     "base_link",
                     mn.Vector3(
-                        -0.8, 2.5, -0.8
+                        -0.8, 3.5, -0.8
                     ),  # place behind, above, and to the left of the base
                     mn.Quaternion.rotation(
                         mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
                     )  # face 30 degs to the right
                     * mn.Quaternion.rotation(
-                        mn.Deg(-45.0), mn.Vector3(1.0, 0.0, 0.0)
+                        mn.Deg(-65.0), mn.Vector3(1.0, 0.0, 0.0)
                     ),  # tilt down
                     60,
                 )
@@ -648,6 +649,9 @@ class BatchedEnv:
                 continue
 
             end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.0
+            end_episode_action = (
+                end_episode_action and state.episode_step_idx > 5
+            )
 
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
@@ -669,6 +673,9 @@ class BatchedEnv:
 
             if self._config.get("TASK_IS_PLACE", False):
                 success = success and (state.held_obj_idx == -1)
+
+            if self._config.get("PREVENT_STOP_ACTION", False):
+                end_episode_action = False
 
             if self._config.get("DROP_IS_FAIL", True):
                 failure = (
