@@ -1050,39 +1050,36 @@ class PPOTrainer(BaseRLTrainer):
 
                 # episode ended
                 if not not_done_masks[i].item():
+                    pbar.update()
+                    episode_stats = {
+                        "reward": current_episode_reward[i].item()
+                    }
+                    episode_stats.update(
+                        self._extract_scalars_from_info(infos[i])
+                    )
+                    current_episode_reward[i] = 0
                     k = (
                         current_episodes[i].scene_id,
                         current_episodes[i].episode_id,
                     )
-                    if ep_eval_count[k] < evals_per_ep:
-                        pbar.update()
-                        episode_stats = {
-                            "reward": current_episode_reward[i].item()
-                        }
-                        episode_stats.update(
-                            self._extract_scalars_from_info(infos[i])
+                    ep_eval_count[k] += 1
+                    # use scene_id + episode_id as unique id for storing stats
+                    stats_episodes[(k, ep_eval_count[k])] = episode_stats
+
+                    if len(self.config.VIDEO_OPTION) > 0:
+                        generate_video(
+                            video_option=self.config.VIDEO_OPTION,
+                            video_dir=self.config.VIDEO_DIR,
+                            images=rgb_frames[i],
+                            episode_id=current_episodes[i].episode_id,
+                            checkpoint_idx=checkpoint_index,
+                            metrics=self._extract_scalars_from_info(infos[i]),
+                            fps=self.config.VIDEO_FPS,
+                            tb_writer=writer,
+                            keys_to_include_in_name=self.config.EVAL_KEYS_TO_INCLUDE_IN_NAME,
                         )
-                        current_episode_reward[i] = 0
-                        ep_eval_count[k] += 1
-                        # use scene_id + episode_id as unique id for storing stats
-                        stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
-                        if len(self.config.VIDEO_OPTION) > 0:
-                            generate_video(
-                                video_option=self.config.VIDEO_OPTION,
-                                video_dir=self.config.VIDEO_DIR,
-                                images=rgb_frames[i],
-                                episode_id=current_episodes[i].episode_id,
-                                checkpoint_idx=checkpoint_index,
-                                metrics=self._extract_scalars_from_info(
-                                    infos[i]
-                                ),
-                                fps=self.config.VIDEO_FPS,
-                                tb_writer=writer,
-                                keys_to_include_in_name=self.config.EVAL_KEYS_TO_INCLUDE_IN_NAME,
-                            )
-
-                            rgb_frames[i] = []
+                        rgb_frames[i] = []
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
