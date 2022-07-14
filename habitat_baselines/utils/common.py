@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
-import math
 import numbers
 import os
 import re
@@ -43,31 +42,6 @@ if hasattr(torch, "inference_mode"):
     inference_mode = torch.inference_mode
 else:
     inference_mode = torch.no_grad
-
-
-@inference_mode()
-def update_ema(
-    tgt_i: Iterable[torch.Tensor],
-    src_i: Iterable[torch.Tensor],
-    beta: float,
-    alpha: Optional[float] = None,
-):
-    tgt = list(tgt_i)
-    src = list(src_i)
-
-    alpha = alpha or 1.0 - beta
-    torch._foreach_mul_(tgt, beta)
-    torch._foreach_add_(tgt, src, alpha=alpha)
-
-
-def update_hard(tgt_i: Iterable[torch.Tensor], src_i: Iterable[torch.Tensor]):
-    update_ema(tgt_i, src_i, 0.0)
-
-
-def cosine_decay(progress: float):
-    progress = min(max(progress, 0.0), 1.0)
-
-    return (1.0 + math.cos(progress * math.pi)) / 2.0
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -130,58 +104,48 @@ class GaussianNet(nn.Module):
         self.action_activation = config.action_activation
         self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
-        use_std_param = config.use_std_param
+        self.use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
-
-        if self.use_log_std:
+        if config.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
             std_init = 0.0  # initialize std value so that exp(std) ~ 1
-        elif self.use_softplus:
-            inv_softplus = lambda x: math.log(math.exp(x) - 1)
-            self.min_std = inv_softplus(config.min_std)
-            self.max_std = inv_softplus(config.max_std)
-            std_init = inv_softplus(1.0)
         else:
             self.min_std = config.min_std
             self.max_std = config.max_std
             std_init = 1.0  # initialize std value so that std ~ 1
 
-        if use_std_param:
+        self.mu = nn.Linear(num_inputs, num_outputs)
+        nn.init.orthogonal_(self.mu.weight, gain=0.01)
+        nn.init.constant_(self.mu.bias, 0)
+
+        if self.use_std_param:
             self.std = torch.nn.parameter.Parameter(
                 torch.randn(num_outputs) * 0.01 + std_init
             )
-            num_linear_outputs = num_outputs
         else:
-            self.std = None
-            num_linear_outputs = 2 * num_outputs
-
-        self.mu_maybe_std = nn.Linear(num_inputs, num_linear_outputs)
-        nn.init.orthogonal_(self.mu_maybe_std.weight, gain=0.01)
-        nn.init.constant_(self.mu_maybe_std.bias, 0)
-
-        if not use_std_param:
-            nn.init.constant_(self.mu_maybe_std.bias[num_outputs:], std_init)
+            self.std = nn.Linear(num_inputs, num_outputs)
+            nn.init.orthogonal_(self.std.weight, gain=0.01)
+            nn.init.constant_(self.std.bias, std_init)
 
     def forward(self, x: Tensor) -> CustomNormal:
-        mu_maybe_std = self.mu_maybe_std(x).float()
-        if self.std is not None:
-            mu = mu_maybe_std
-            std = self.std
-        else:
-            mu, std = torch.chunk(mu_maybe_std, 2, -1)
-
+        mu = self.mu(x)
         if self.action_activation == "tanh":
             mu = torch.tanh(mu)
 
+        if self.use_std_param:
+            std = self.std
+        else:
+            std = self.std(x)
+
         if self.clamp_std:
-            std = torch.clamp(std, self.min_std, self.max_std)
+            std = torch.clamp(std, min=self.min_std, max=self.max_std)
         if self.use_log_std:
             std = torch.exp(std)
         if self.use_softplus:
             std = torch.nn.functional.softplus(std)
 
-        return CustomNormal(mu, std, validate_args=False)
+        return CustomNormal(mu, std)
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
@@ -197,7 +161,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, slots=True)
 class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
@@ -719,33 +683,3 @@ def get_num_actions(action_space) -> int:
             )
 
     return num_actions
-
-
-def get_num_discrete_action_logits(action_space) -> int:
-    num_logits = 0
-    for v in iterate_action_space_recursively(action_space):
-        if isinstance(v, spaces.Discrete):
-            num_logits += v.n
-
-    return num_logits
-
-
-def get_num_continuous_action_logits(action_space) -> int:
-    num_logits = 0
-    for v in iterate_action_space_recursively(action_space):
-        if isinstance(v, spaces.Box):
-            num_logits += 2 * int(np.prod(v.shape))
-
-    return num_logits
-
-
-def get_num_action_logits(action_space) -> int:
-    return get_num_continuous_action_logits(
-        action_space
-    ) + get_num_discrete_action_logits(action_space)
-
-
-def get_num_distribution_parameters(action_space) -> int:
-    return 2 * get_num_continuous_action_logits(
-        action_space
-    ) + get_num_discrete_action_logits(action_space)

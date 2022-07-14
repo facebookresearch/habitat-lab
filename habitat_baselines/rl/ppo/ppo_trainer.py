@@ -1141,13 +1141,4 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in metrics.items():
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)
 
-        if self.config.EVAL.LOG_INDIVIDUAL_EPS:
-            i = 0
-            for ep_i in range(evals_per_ep):
-                for ep_k in sorted(ep_eval_count.keys()):
-                    stats = stats_episodes[(ep_k, ep_i + 1)]
-                    for k, v in stats.items():
-                        writer.add_scalar(f"individual_eval_metrics/{k}", v, i)
-                    i += 1
-
         self.envs.close()

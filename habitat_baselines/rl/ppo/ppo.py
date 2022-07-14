@@ -84,10 +84,10 @@ class PPO(nn.Module):
         lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
-        use_clipped_value_loss: bool = False,
+        use_clipped_value_loss: bool = True,
         use_normalized_advantage: bool = True,
         entropy_target_factor: float = 0.0,
-        use_adaptive_entropy_pen: bool = True,
+        use_adaptive_entropy_pen: bool = False,
     ) -> None:
 
         super().__init__()

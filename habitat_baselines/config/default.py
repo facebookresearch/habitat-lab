@@ -78,7 +78,6 @@ _C.EVAL.SPLIT = "val"
 _C.EVAL.USE_CKPT_CONFIG = True
 _C.EVAL.SHOULD_LOAD_CKPT = True
 _C.EVAL.EVALS_PER_EP = 1
-_C.EVAL.LOG_INDIVIDUAL_EPS = False
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
@@ -163,14 +162,13 @@ _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
 _C.RL.PPO.entropy_target_factor = 0.0
-_C.RL.PPO.use_adaptive_entropy_pen = True
+_C.RL.PPO.use_adaptive_entropy_pen = False
 _C.RL.PPO.use_clipped_value_loss = True
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
-_C.RL.PPO.autocast = False
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------

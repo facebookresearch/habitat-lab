@@ -201,7 +201,6 @@ class RolloutStorage:
         self,
         advantages: Optional[torch.Tensor],
         num_mini_batch: int,
-        include_all: bool = False,
     ) -> Iterator[TensorDict]:
         assert isinstance(self.buffers["returns"], torch.Tensor)
         num_environments = self.buffers["returns"].size(1)
@@ -228,10 +227,7 @@ class RolloutStorage:
             .numpy()
         )
         for inds in torch.randperm(num_environments).chunk(num_mini_batch):
-            if include_all:
-                curr_slice = (slice(None), inds)
-            else:
-                curr_slice = (slice(0, self.current_rollout_step_idx), inds)
+            curr_slice = (slice(0, self.current_rollout_step_idx), inds)
 
             batch = self.buffers[curr_slice]
             if advantages is not None:

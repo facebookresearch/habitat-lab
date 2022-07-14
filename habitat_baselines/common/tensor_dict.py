@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import copy
-import inspect
 import numbers
 from typing import (
     Any,
@@ -45,15 +44,9 @@ T = TypeVar("T", bound="SupportsIndexing")
 _DictTreeInst = TypeVar("_DictTreeInst", bound="_DictTreeBase")
 
 
-_MapFuncType = Union[
-    Callable[[T], T],
-    Callable[[T, str], T],
-]
+_MapFuncType = Callable[[T], T]
 
-_ApplyFuncType = Union[
-    Callable[[T], None],
-    Callable[[T, str], None],
-]
+_ApplyFuncType = Callable[[T], None]
 
 
 class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
@@ -236,7 +229,6 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         else:
             dst = dst_in
 
-        full_arg_spec = inspect.getfullargspec(func)
         for k, v in src.items():
             if isinstance(v, (cls, dict)):
                 dst_k = dst.get(k, None) if needs_return else None
@@ -250,25 +242,7 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
                     prefix=f"{prefix}{k}.",
                 )
             else:
-                if isinstance(v, (tuple, list)):
-                    args = v
-                else:
-                    args = (v,)
-
-                sig_n_args = len(full_arg_spec.args)
-                if (
-                    len(args) == sig_n_args
-                    or full_arg_spec.varargs is not None
-                ):
-                    pass
-                elif len(args) + 1 == sig_n_args:
-                    args = (*args, k)
-                else:
-                    raise RuntimeError(
-                        f"The mapped function expects {sig_n_args} params but got {len(args)} for key {prefix}{k}"
-                    )
-
-                res = func(*args)
+                res = func(v)
 
             if needs_return:
                 dst[k] = res
