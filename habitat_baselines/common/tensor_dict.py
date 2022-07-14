@@ -25,13 +25,22 @@ from typing import (
 
 import numpy as np
 import torch
+from typing_extensions import Protocol
 
 TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
 TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
 
-T = TypeVar("T")
+class SupportsIndexing(Protocol):
+    def __getitem__(self, key: Any) -> Any:
+        pass
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        pass
+
+
+T = TypeVar("T", bound=SupportsIndexing)
 _DictTreeInst = TypeVar("_DictTreeInst", bound="_DictTreeBase")
 
 
@@ -197,7 +206,8 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
                     assert isinstance(dst, _DictTreeBase)
                     dst.set(index, v, strict=strict)
                 else:
-                    dst[index] = self._to_instance(v)  # type: ignore
+                    assert not isinstance(dst, _DictTreeBase)
+                    dst[index] = self._to_instance(v)
 
     def __setitem__(
         self,
