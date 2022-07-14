@@ -9,13 +9,10 @@ from typing import Tuple
 import torch
 from torch import distributed as distrib
 
-from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo import PPO
 
-EPS_PPO = 1e-5
 
-
-def distributed_mean_and_var(
+def distributed_var_mean(
     values: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     r"""Computes the mean and variances of a tensor over multiple workers.
@@ -40,7 +37,7 @@ def distributed_mean_and_var(
     distrib.all_reduce(var)
     var = var / world_size
 
-    return mean, var
+    return var, mean
 
 
 class _EvalActionsWrapper(torch.nn.Module):
@@ -57,21 +54,8 @@ class _EvalActionsWrapper(torch.nn.Module):
 
 
 class DecentralizedDistributedMixin:
-    def _get_advantages_distributed(
-        self, rollouts: RolloutStorage
-    ) -> torch.Tensor:
-        advantages = (
-            rollouts.buffers["returns"][: rollouts.current_rollout_step_idx]  # type: ignore
-            - rollouts.buffers["value_preds"][
-                : rollouts.current_rollout_step_idx
-            ]
-        )
-        if not self.use_normalized_advantage:  # type: ignore
-            return advantages
-
-        mean, var = distributed_mean_and_var(advantages)
-
-        return (advantages - mean) / (var.sqrt() + EPS_PPO)
+    def _compute_var_mean(self, x):
+        return distributed_var_mean(x)
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
         r"""Initializes distributed training for the model
@@ -92,9 +76,9 @@ class DecentralizedDistributedMixin:
                 if torch.cuda.is_available():
                     self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
                         model,
-                        device_ids=[device],
-                        output_device=device,
                         find_unused_parameters=find_unused_params,
+                        gradient_as_bucket_view=True,
+                        static_graph=True,
                     )
                 else:
                     self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
@@ -104,15 +88,11 @@ class DecentralizedDistributedMixin:
 
         self._evaluate_actions_wrapper = Guard(_EvalActionsWrapper(self.actor_critic), self.device)  # type: ignore
 
-    def _evaluate_actions(
-        self, observations, rnn_hidden_states, prev_actions, masks, action
-    ):
+    def _evaluate_actions(self, *args, **kwargs):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
         that directly so that that call can be overrided with inheritance
         """
-        return self._evaluate_actions_wrapper.ddp(
-            observations, rnn_hidden_states, prev_actions, masks, action
-        )
+        return self._evaluate_actions_wrapper.ddp(*args, **kwargs)
 
 
 class DDPPO(DecentralizedDistributedMixin, PPO):

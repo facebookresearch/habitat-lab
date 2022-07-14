@@ -9,6 +9,7 @@ from habitat.utils.gym_definitions import make_gym_from_config
 def construct_envs(
     config: Config,
     workers_ignore_signals: bool = False,
+    is_eval: bool = False,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -40,10 +41,14 @@ def construct_envs(
 
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
     if len(scenes) < num_environments:
-        logger.warn(
-            f"There are less scenes ({len(scenes)}) than environments ({num_environments}). "
-            "Each environment will use all the scenes instead of using a subset."
-        )
+        msg = f"There are less scenes ({len(scenes)}) than environments ({num_environments}). "
+        if is_eval:
+            raise RuntimeError(msg + "This is invalid for evaluation.")
+        else:
+            logger.warn(
+                msg
+                + "Each environment will use all the scenes instead of using a subset."
+            )
         for scene in scenes:
             for split in scene_splits:
                 split.append(scene)

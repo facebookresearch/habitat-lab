@@ -5,25 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import math
 import numbers
 import os
 import re
 import shutil
 import tarfile
-from collections import defaultdict
 from io import BytesIO
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-import attr
 import numpy as np
 import torch
 from gym import spaces
@@ -38,10 +28,45 @@ from habitat.core.spaces import EmptySpace
 from habitat.core.utils import try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
-from habitat_baselines.common.tensor_dict import DictTree, TensorDict
+from habitat_baselines.common.tensor_dict import (
+    DictTree,
+    TensorDict,
+    TensorOrNDArrayDict,
+)
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 cv2 = try_cv2_import()
+
+
+if hasattr(torch, "inference_mode"):
+    inference_mode = torch.inference_mode
+else:
+    inference_mode = torch.no_grad
+
+
+@inference_mode()
+def update_ema(
+    tgt_i: Iterable[torch.Tensor],
+    src_i: Iterable[torch.Tensor],
+    beta: float,
+    alpha: Optional[float] = None,
+):
+    tgt = list(tgt_i)
+    src = list(src_i)
+
+    alpha = alpha or 1.0 - beta
+    torch._foreach_mul_(tgt, beta)
+    torch._foreach_add_(tgt, src, alpha=alpha)
+
+
+def update_hard(tgt_i: Iterable[torch.Tensor], src_i: Iterable[torch.Tensor]):
+    update_ema(tgt_i, src_i, 0.0)
+
+
+def cosine_decay(progress: float):
+    progress = min(max(progress, 0.0), 1.0)
+
+    return (1.0 + math.cos(progress * math.pi)) / 2.0
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -55,12 +80,14 @@ class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
             super()
             .log_prob(actions.squeeze(-1))
             .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
+            .sum(-1, keepdim=True)
         )
 
     def mode(self):
         return self.probs.argmax(dim=-1, keepdim=True)
+
+    def entropy(self):
+        return super().entropy().unsqueeze(-1)
 
 
 class CategoricalNet(nn.Module):
@@ -74,21 +101,20 @@ class CategoricalNet(nn.Module):
 
     def forward(self, x: Tensor) -> CustomFixedCategorical:
         x = self.linear(x)
-        return CustomFixedCategorical(logits=x)
+        return CustomFixedCategorical(logits=x.float(), validate_args=False)
 
 
 class CustomNormal(torch.distributions.normal.Normal):
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008
     ) -> Tensor:
-        return super().rsample(sample_shape)
+        return self.rsample(sample_shape)
 
     def log_probs(self, actions) -> Tensor:
-        ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
-        return ret
+        return super().log_prob(actions).sum(-1, keepdim=True)
 
     def entropy(self) -> Tensor:
-        return super().entropy().sum(-1).unsqueeze(-1)
+        return super().entropy().sum(-1, keepdim=True)
 
 
 class GaussianNet(nn.Module):
@@ -103,48 +129,58 @@ class GaussianNet(nn.Module):
         self.action_activation = config.action_activation
         self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
-        self.use_std_param = config.use_std_param
+        use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
-        if config.use_log_std:
+
+        if self.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
             std_init = 0.0  # initialize std value so that exp(std) ~ 1
+        elif self.use_softplus:
+            inv_softplus = lambda x: math.log(math.exp(x) - 1)
+            self.min_std = inv_softplus(config.min_std)
+            self.max_std = inv_softplus(config.max_std)
+            std_init = inv_softplus(1.0)
         else:
             self.min_std = config.min_std
             self.max_std = config.max_std
             std_init = 1.0  # initialize std value so that std ~ 1
 
-        self.mu = nn.Linear(num_inputs, num_outputs)
-        nn.init.orthogonal_(self.mu.weight, gain=0.01)
-        nn.init.constant_(self.mu.bias, 0)
-
-        if self.use_std_param:
+        if use_std_param:
             self.std = torch.nn.parameter.Parameter(
                 torch.randn(num_outputs) * 0.01 + std_init
             )
+            num_linear_outputs = num_outputs
         else:
-            self.std = nn.Linear(num_inputs, num_outputs)
-            nn.init.orthogonal_(self.std.weight, gain=0.01)
-            nn.init.constant_(self.std.bias, std_init)
+            self.std = None
+            num_linear_outputs = 2 * num_outputs
+
+        self.mu_maybe_std = nn.Linear(num_inputs, num_linear_outputs)
+        nn.init.orthogonal_(self.mu_maybe_std.weight, gain=0.01)
+        nn.init.constant_(self.mu_maybe_std.bias, 0)
+
+        if not use_std_param:
+            nn.init.constant_(self.mu_maybe_std.bias[num_outputs:], std_init)
 
     def forward(self, x: Tensor) -> CustomNormal:
-        mu = self.mu(x)
+        mu_maybe_std = self.mu_maybe_std(x).float()
+        if self.std is not None:
+            mu = mu_maybe_std
+            std = self.std
+        else:
+            mu, std = torch.chunk(mu_maybe_std, 2, -1)
+
         if self.action_activation == "tanh":
             mu = torch.tanh(mu)
 
-        if self.use_std_param:
-            std = self.std
-        else:
-            std = self.std(x)
-
         if self.clamp_std:
-            std = torch.clamp(std, min=self.min_std, max=self.max_std)
+            std = torch.clamp(std, self.min_std, self.max_std)
         if self.use_log_std:
             std = torch.exp(std)
         if self.use_softplus:
             std = torch.nn.functional.softplus(std)
 
-        return CustomNormal(mu, std)
+        return CustomNormal(mu, std, validate_args=False)
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
@@ -160,17 +196,17 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-@attr.s(auto_attribs=True, slots=True)
-class ObservationBatchingCache:
+class _ObservationBatchingCache:
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
-    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = attr.Factory(dict)
+    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = {}
 
+    @classmethod
     def get(
-        self,
+        cls,
         num_obs: int,
-        sensor_name: str,
+        sensor_name: Any,
         sensor: torch.Tensor,
         device: Optional[torch.device] = None,
     ) -> Union[torch.Tensor, np.ndarray]:
@@ -181,15 +217,19 @@ class ObservationBatchingCache:
         a cuda tensor
         """
         key = (
-            num_obs,
             sensor_name,
             tuple(sensor.size()),
             sensor.type(),
             sensor.device.type,
             sensor.device.index,
         )
-        if key in self._pool:
-            return self._pool[key]
+        if key in cls._pool:
+            cache = cls._pool[key]
+            if cache.shape[0] >= num_obs:
+                return cache[0:num_obs]
+            else:
+                cache = None
+                del cls._pool[key]
 
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
@@ -206,16 +246,84 @@ class ObservationBatchingCache:
             # so convert to numpy
             cache = cache.numpy()
 
-        self._pool[key] = cache
+        cls._pool[key] = cache
         return cache
 
+    @classmethod
+    def batch_obs(
+        cls,
+        observations: List[DictTree],
+        device: Optional[torch.device] = None,
+    ) -> TensorDict:
+        observations = [
+            TensorOrNDArrayDict.from_tree(o).map(
+                lambda t: t.numpy()
+                if isinstance(t, torch.Tensor) and t.device.type == "cpu"
+                else t
+            )
+            for o in observations
+        ]
+        observation_keys, _ = observations[0].flatten()
+        observation_tensors = [o.flatten()[1] for o in observations]
 
-@torch.no_grad()
+        # Order sensors by size, stack and move the largest first
+        upload_ordering = sorted(
+            range(len(observation_keys)),
+            key=lambda idx: 1
+            if isinstance(observation_tensors[0][idx], numbers.Number)
+            else int(np.prod(observation_tensors[0][idx].shape)),  # type: ignore
+            reverse=True,
+        )
+
+        batched_tensors = []
+        for sensor_name, obs in zip(observation_keys, observation_tensors[0]):
+            batched_tensors.append(
+                cls.get(
+                    len(observations),
+                    sensor_name,
+                    torch.as_tensor(obs),
+                    device,
+                )
+            )
+
+        for idx in upload_ordering:
+            for i, all_obs in enumerate(observation_tensors):
+                obs = all_obs[idx]
+                # Use isinstance(sensor, np.ndarray) here instead of
+                # np.asarray as this is quickier for the more common
+                # path of sensor being an np.ndarray
+                # np.asarray is ~3x slower than checking
+                if isinstance(obs, np.ndarray):
+                    batched_tensors[idx][i] = obs  # type: ignore
+                elif isinstance(obs, torch.Tensor):
+                    batched_tensors[idx][i].copy_(obs, non_blocking=True)  # type: ignore
+                # If the sensor wasn't a tensor, then it's some CPU side data
+                # so use a numpy array
+                else:
+                    batched_tensors[idx][i] = np.asarray(obs)  # type: ignore
+
+            # With the batching cache, we use pinned mem
+            # so we can start the move to the GPU async
+            # and continue stacking other things with it
+            # If we were using a numpy array to do indexing and copying,
+            # convert back to torch tensor
+            # We know that batch_t[sensor_name] is either an np.ndarray
+            # or a torch.Tensor, so this is faster than torch.as_tensor
+            if isinstance(batched_tensors[idx], np.ndarray):
+                batched_tensors[idx] = torch.from_numpy(batched_tensors[idx])
+
+            batched_tensors[idx] = batched_tensors[idx].to(  # type: ignore
+                device, non_blocking=True
+            )
+
+        return TensorDict.from_flattened(observation_keys, batched_tensors)
+
+
+@inference_mode()
 @profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
     observations: List[DictTree],
     device: Optional[torch.device] = None,
-    cache: Optional[ObservationBatchingCache] = None,
 ) -> TensorDict:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
@@ -224,77 +332,11 @@ def batch_obs(
         observations:  list of dicts of observations.
         device: The torch.device to put the resulting tensors on.
             Will not move the tensors if None
-        cache: An ObservationBatchingCache.  This enables faster
-            stacking of observations and cpu-gpu transfer as it
-            maintains a correctly sized tensor for the batched
-            observations that is pinned to cuda memory.
-
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    batch_t: TensorDict = TensorDict()
-    if cache is None:
-        batch: DefaultDict[str, List] = defaultdict(list)
 
-    obs = observations[0]
-    # Order sensors by size, stack and move the largest first
-    sensor_names = sorted(
-        obs.keys(),
-        key=lambda name: 1
-        if isinstance(obs[name], numbers.Number)
-        else np.prod(obs[name].shape),  # type: ignore
-        reverse=True,
-    )
-
-    for sensor_name in sensor_names:
-        for i, obs in enumerate(observations):
-            sensor = obs[sensor_name]
-            if cache is None:
-                batch[sensor_name].append(torch.as_tensor(sensor))
-            else:
-                if sensor_name not in batch_t:
-                    batch_t[sensor_name] = cache.get(  # type: ignore
-                        len(observations),
-                        sensor_name,
-                        torch.as_tensor(sensor),
-                        device,
-                    )
-
-                # Use isinstance(sensor, np.ndarray) here instead of
-                # np.asarray as this is quickier for the more common
-                # path of sensor being an np.ndarray
-                # np.asarray is ~3x slower than checking
-                if isinstance(sensor, np.ndarray):
-                    batch_t[sensor_name][i] = sensor  # type: ignore
-                elif torch.is_tensor(sensor):
-                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)  # type: ignore
-                # If the sensor wasn't a tensor, then it's some CPU side data
-                # so use a numpy array
-                else:
-                    batch_t[sensor_name][i] = np.asarray(sensor)  # type: ignore
-
-        # With the batching cache, we use pinned mem
-        # so we can start the move to the GPU async
-        # and continue stacking other things with it
-        if cache is not None:
-            # If we were using a numpy array to do indexing and copying,
-            # convert back to torch tensor
-            # We know that batch_t[sensor_name] is either an np.ndarray
-            # or a torch.Tensor, so this is faster than torch.as_tensor
-            if isinstance(batch_t[sensor_name], np.ndarray):
-                batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
-
-            batch_t[sensor_name] = batch_t[sensor_name].to(  # type: ignore
-                device, non_blocking=True
-            )
-
-    if cache is None:
-        for sensor in batch:
-            batch_t[sensor] = torch.stack(batch[sensor], dim=0)
-
-        batch_t.map_in_place(lambda v: v.to(device))
-
-    return batch_t
+    return _ObservationBatchingCache.batch_obs(observations, device)
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
@@ -332,7 +374,10 @@ def poll_checkpoint_folder(
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
     models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
+        filter(
+            lambda name: "latest" not in name,
+            filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")),
+        )
     )
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
@@ -637,6 +682,14 @@ def action_to_velocity_control(
     return step_action
 
 
+def iterate_action_space_recursively(action_space):
+    if isinstance(action_space, spaces.Dict):
+        for v in action_space.values():
+            yield from iterate_action_space_recursively(v)
+    else:
+        yield action_space
+
+
 def is_continuous_action_space(action_space) -> bool:
     if isinstance(action_space, spaces.Box):
         return True
@@ -649,13 +702,9 @@ def is_continuous_action_space(action_space) -> bool:
 
 
 def get_num_actions(action_space) -> int:
-    queue = [action_space]
     num_actions = 0
-    while len(queue) != 0:
-        v = queue.pop()
-        if isinstance(v, spaces.Dict):
-            queue.extend(v.spaces.values())
-        elif isinstance(v, spaces.Box):
+    for v in iterate_action_space_recursively(action_space):
+        if isinstance(v, spaces.Box):
             assert (
                 len(v.shape) == 1
             ), f"shape was {v.shape} but was expecting a 1D action"
@@ -670,3 +719,33 @@ def get_num_actions(action_space) -> int:
             )
 
     return num_actions
+
+
+def get_num_discrete_action_logits(action_space) -> int:
+    num_logits = 0
+    for v in iterate_action_space_recursively(action_space):
+        if isinstance(v, spaces.Discrete):
+            num_logits += v.n
+
+    return num_logits
+
+
+def get_num_continuous_action_logits(action_space) -> int:
+    num_logits = 0
+    for v in iterate_action_space_recursively(action_space):
+        if isinstance(v, spaces.Box):
+            num_logits += 2 * int(np.prod(v.shape))
+
+    return num_logits
+
+
+def get_num_action_logits(action_space) -> int:
+    return get_num_continuous_action_logits(
+        action_space
+    ) + get_num_discrete_action_logits(action_space)
+
+
+def get_num_distribution_parameters(action_space) -> int:
+    return 2 * get_num_continuous_action_logits(
+        action_space
+    ) + get_num_discrete_action_logits(action_space)

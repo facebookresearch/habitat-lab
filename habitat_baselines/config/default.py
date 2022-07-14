@@ -77,6 +77,8 @@ _C.EVAL = CN()
 _C.EVAL.SPLIT = "val"
 _C.EVAL.USE_CKPT_CONFIG = True
 _C.EVAL.SHOULD_LOAD_CKPT = True
+_C.EVAL.EVALS_PER_EP = 1
+_C.EVAL.LOG_INDIVIDUAL_EPS = False
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
@@ -109,12 +111,13 @@ _C.RL.POLICY.ACTION_DIST.use_softplus = False
 _C.RL.POLICY.ACTION_DIST.use_std_param = False
 # If True, the std will be clamped to the specified min and max std values
 _C.RL.POLICY.ACTION_DIST.clamp_std = True
-_C.RL.POLICY.ACTION_DIST.min_std = 1e-6
-_C.RL.POLICY.ACTION_DIST.max_std = 1
+_C.RL.POLICY.ACTION_DIST.min_std = 1e-5
+_C.RL.POLICY.ACTION_DIST.max_std = 10
 _C.RL.POLICY.ACTION_DIST.min_log_std = -5
 _C.RL.POLICY.ACTION_DIST.max_log_std = 2
 # For continuous action distributions (including gaussian):
 _C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
+_C.RL.POLICY.ACTION_DIST.scheduled_std = False
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------
@@ -160,11 +163,15 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
+_C.RL.PPO.entropy_target_factor = 0.0
+_C.RL.PPO.use_adaptive_entropy_pen = True
+_C.RL.PPO.use_clipped_value_loss = True
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
+_C.RL.PPO.autocast = False
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------

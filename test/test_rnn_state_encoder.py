@@ -15,6 +15,8 @@ except ImportError:
 @pytest.mark.skipif(torch is None, reason="Test requires pytorch")
 def test_rnn_state_encoder():
     from habitat_baselines.rl.models.rnn_state_encoder import (
+        build_pack_info_from_dones,
+        build_rnn_build_seq_info,
         build_rnn_state_encoder,
     )
 
@@ -30,9 +32,17 @@ def test_rnn_state_encoder():
     with torch.no_grad():
         for T in [1, 2, 4, 8, 16, 32, 64, 3, 13, 31]:
             for N in [1, 2, 4, 8, 3, 5]:
-                masks = torch.randint(
-                    0, 2, size=(T, N, 1), dtype=torch.bool, device=device
-                )
+                masks = torch.rand((T, N, 1), device=device) > (1.0 / 25.0)
+                if T == 1:
+                    rnn_build_seq_info = None
+                else:
+                    rnn_build_seq_info = build_rnn_build_seq_info(
+                        device,
+                        build_fn=lambda: build_pack_info_from_dones(
+                            torch.logical_not(masks).view(T, N).cpu().numpy()
+                        ),
+                    )
+
                 inputs = torch.randn((T, N, 32), device=device)
                 hidden_states = torch.randn(
                     rnn_state_encoder.num_recurrent_layers,
@@ -45,6 +55,7 @@ def test_rnn_state_encoder():
                     inputs.flatten(0, 1),
                     hidden_states.permute(1, 0, 2),
                     masks.flatten(0, 1),
+                    rnn_build_seq_info,
                 )
                 out_hiddens = out_hiddens.permute(1, 0, 2)
 

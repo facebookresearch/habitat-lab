@@ -135,10 +135,20 @@ class NetPolicy(nn.Module, Policy):
         return self.critic(features)
 
     def evaluate_actions(
-        self, observations, rnn_hidden_states, prev_actions, masks, action
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        action,
+        rnn_build_seq_info,
     ):
         features, rnn_hidden_states = self.net(
-            observations, rnn_hidden_states, prev_actions, masks
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            rnn_build_seq_info,
         )
         distribution = self.action_distribution(features)
         value = self.critic(features)
@@ -147,6 +157,19 @@ class NetPolicy(nn.Module, Policy):
         distribution_entropy = distribution.entropy()
 
         return value, action_log_probs, distribution_entropy, rnn_hidden_states
+
+    @property
+    def policy_components(self):
+        return (self.net, self.critic, self.action_distribution)
+
+    def policy_parameters(self):
+        for c in self.policy_components:
+            yield from c.parameters()
+
+    def all_policy_tensors(self):
+        yield from self.policy_parameters()
+        for c in self.policy_components:
+            yield from c.buffers()
 
     @classmethod
     @abc.abstractmethod
@@ -270,7 +293,14 @@ class PointNavBaselineNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        rnn_build_seq_info=None,
+    ):
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             target_encoding = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -289,7 +319,7 @@ class PointNavBaselineNet(Net):
 
         x_out = torch.cat(x, dim=1)
         x_out, rnn_hidden_states = self.state_encoder(
-            x_out, rnn_hidden_states, masks
+            x_out, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
         return x_out, rnn_hidden_states

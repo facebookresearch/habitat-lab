@@ -87,3 +87,8 @@ data
 
 # vim
 *.swp
+/sandbox/
+/videos/
+/train_dir/
+/tb/
+/plots/outputs/

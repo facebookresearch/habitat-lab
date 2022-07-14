@@ -1,12 +1,14 @@
 import contextlib
 import functools
+import io
 import os
+import pickle
 import signal
 import socket
 import subprocess
 import threading
 from os import path as osp
-from typing import Any, Callable, Optional, Tuple, Union, overload
+from typing import Any, Callable, List, Optional, Tuple, Union, overload
 
 import ifcfg
 import torch
@@ -58,7 +60,7 @@ def resume_state_filename(config: Config) -> str:
     if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.CHECKPOINT_FOLDER, fname + ".pth")
+    return osp.join(config.CHECKPOINT_FOLDER, fname)
 
 
 @overload
@@ -154,7 +156,9 @@ def add_signal_handlers() -> None:
 
 
 @rank0_only
-def save_resume_state(state: Any, filename_or_config: Union[Config, str]):
+def save_resume_state(
+    state: Any, filename_or_config: Union[Config, str], filename_key: str = ""
+):
     r"""Saves the resume job state to the specified filename.
         This is useful when working with preemptable job partitions.
 
@@ -162,14 +166,18 @@ def save_resume_state(state: Any, filename_or_config: Union[Config, str]):
     :param filename_or_config: The filename of the saved state or the config to construct it.
     """
     if isinstance(filename_or_config, Config):
-        filename = resume_state_filename(filename_or_config)
+        filename = (
+            resume_state_filename(filename_or_config) + filename_key + ".pth"
+        )
     else:
         filename = filename_or_config
 
     torch.save(state, filename)
 
 
-def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
+def load_resume_state(
+    filename_or_config: Union[Config, str], filename_key: str = ""
+) -> Optional[Any]:
     r"""Loads the saved resume state
 
     :param filename_or_config: The filename of the saved state or the config to construct it.
@@ -177,7 +185,9 @@ def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
     :return: The saved state if the file exists, else none
     """
     if isinstance(filename_or_config, Config):
-        filename = resume_state_filename(filename_or_config)
+        filename = (
+            resume_state_filename(filename_or_config) + filename_key + ".pth"
+        )
     else:
         filename = filename_or_config
 
@@ -230,6 +240,10 @@ def get_distrib_size() -> Tuple[int, int, int]:
     return local_rank, world_rank, world_size
 
 
+def get_main_addr() -> str:
+    return os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
+
+
 def init_distrib_slurm(
     backend: str = "nccl",
 ) -> Tuple[int, torch.distributed.TCPStore]:  # type: ignore
@@ -259,7 +273,7 @@ def init_distrib_slurm(
         main_port += int(SLURM_JOBID) % int(
             os.environ.get("MAIN_PORT_RANGE", DEFAULT_PORT_RANGE)
         )
-    main_addr = os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
+    main_addr = get_main_addr()
 
     tcp_store = distrib.TCPStore(  # type: ignore
         main_addr, main_port, world_size, world_rank == 0
@@ -287,3 +301,127 @@ def find_free_port() -> int:
         sock.bind(("localhost", 0))
         _, port = sock.getsockname()
         return port
+
+
+def get_free_port_distributed(
+    key_name: str, tcp_store: Optional[distrib.TCPStore]
+) -> int:
+    _port_key = f"_hab_dist_port_{key_name}"
+    if rank0_only():
+        port = find_free_port()
+        if distrib.is_initialized():
+            assert tcp_store is not None
+            tcp_store.set(_port_key, str(port))
+    else:
+        assert tcp_store is not None
+        tcp_store.wait([_port_key])
+        port = int(tcp_store.get(_port_key))
+
+    return port
+
+
+def gatherv(
+    t: torch.Tensor, output_rank: int = 0
+) -> Optional[List[torch.Tensor]]:
+    assert t.ndim == 1
+
+    world_size = distrib.get_world_size() if distrib.is_initialized() else 1
+    if world_size == 1:
+        return [t]
+
+    rank = distrib.get_rank()
+    is_mine = rank == output_rank
+
+    my_size = torch.tensor(t.numel(), dtype=torch.int64, device=t.device)
+    sizes = my_size.view(1).repeat(world_size)
+
+    distrib.all_gather(list(sizes.unbind(0)), my_size)
+    sizes = sizes.cpu()
+    max_size = sizes.max().item()
+
+    if torch.all(sizes == max_size):
+        if is_mine:
+            output = list(
+                torch.empty(
+                    (world_size, max_size), dtype=t.dtype, device=t.device
+                ).unbind(0)
+            )
+        else:
+            output = None
+
+        distrib.gather(t, output, output_rank)
+    else:
+        relative_rank: int = (
+            rank - output_rank
+            if rank >= output_rank
+            else rank - relative_rank + world_size
+        )
+
+        mask = 1
+        output = [t]
+        while mask < world_size:
+            handles = []
+            if (relative_rank & mask) == 0:
+                src = relative_rank | mask
+                if src < world_size:
+                    num_msgs = min(mask, world_size - src)
+
+                    src_real = (src + output_rank) % world_size
+                    for i in range(num_msgs):
+                        output.append(
+                            torch.empty(
+                                (sizes[(src_real + i) % world_size],),
+                                dtype=t.dtype,
+                                device=t.device,
+                            )
+                        )
+                        handles.append(
+                            torch.distributed.irecv(
+                                output[-1], src_real, tag=i
+                            )
+                        )
+            else:
+                dst = relative_rank ^ mask
+                dst_real = (dst + output_rank) % world_size
+                for i, v in enumerate(output):
+                    assert v.numel() == sizes[(rank + i) % world_size]
+                    handles.append(torch.distributed.isend(v, dst_real, tag=i))
+
+                output = None
+
+            [h.wait() for h in handles]
+
+            if output is None:
+                break
+
+            mask = mask << 1
+
+    if is_mine:
+        assert output is not None
+    else:
+        assert output is None
+
+    return output
+
+
+def gather_objects(
+    obj: Any, device: torch.device, output_rank: int = 0
+) -> Optional[List[Any]]:
+
+    buf = io.BytesIO()
+    pickle.Pickler(buf, protocol=pickle.HIGHEST_PROTOCOL).dump(obj)
+    encoded_obj = torch.frombuffer(buf.getbuffer(), dtype=torch.uint8).to(
+        device=device
+    )
+    buf = None
+
+    output = gatherv(
+        encoded_obj,
+        output_rank=output_rank,
+    )
+    encoded_obj = None
+
+    if output is not None:
+        output = [pickle.loads(bytes(t.cpu())) for t in output]
+
+    return output
