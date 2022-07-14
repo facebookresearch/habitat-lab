@@ -115,35 +115,24 @@ def build_pack_info_from_episode_ids(
     select_inds = episode_id_sorting[select_inds]
     sequence_starts = select_inds[0 : num_seqs_at_step[0]]
 
-    rnn_state_batch_inds = np.empty_like(sequence_starts)
-
     unique_environment_ids = np.unique(environment_ids)
 
     episode_environment_ids = environment_ids[sequence_starts]
     episode_ids_for_starts = unsorted_episode_ids[sequence_starts]
-    env_eps_masks = []
     last_sequence_in_batch_mask = np.zeros_like(episode_environment_ids == 0)
     first_sequence_in_batch_mask = np.zeros_like(last_sequence_in_batch_mask)
     for env_id in unique_environment_ids:
         env_eps = episode_environment_ids == env_id
         env_eps_ids = episode_ids_for_starts[env_eps]
-        env_eps_masks.append(env_eps)
 
         last_sequence_in_batch_mask[env_eps] = env_eps_ids == env_eps_ids.max()
         first_sequence_in_batch_mask[env_eps] = (
             env_eps_ids == env_eps_ids.min()
         )
 
-    first_sequence_in_batch_mask_cumsum = np.cumsum(
-        first_sequence_in_batch_mask.astype(np.int64)
+    _, rnn_state_batch_inds = np.unique(
+        episode_environment_ids, return_inverse=True
     )
-    for env_eps in env_eps_masks:
-        first_ep_ind = int(
-            (env_eps & first_sequence_in_batch_mask).nonzero()[0].item()
-        )
-        rnn_state_batch_inds[env_eps] = (
-            first_sequence_in_batch_mask_cumsum[first_ep_ind] - 1
-        )
 
     return {
         "select_inds": select_inds,

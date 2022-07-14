@@ -32,14 +32,19 @@ def test_rnn_state_encoder():
     with torch.no_grad():
         for T in [1, 2, 4, 8, 16, 32, 64, 3, 13, 31]:
             for N in [1, 2, 4, 8, 3, 5]:
-                masks = torch.rand((T, N, 1), device=device) > (1.0 / 25.0)
+                not_done_masks = torch.rand((T, N, 1), device=device) > (
+                    1.0 / 25.0
+                )
                 if T == 1:
                     rnn_build_seq_info = None
                 else:
                     rnn_build_seq_info = build_rnn_build_seq_info(
                         device,
                         build_fn_result=build_pack_info_from_dones(
-                            torch.logical_not(masks).view(T, N).cpu().numpy()
+                            torch.logical_not(not_done_masks)
+                            .view(T, N)
+                            .cpu()
+                            .numpy()
                         ),
                     )
 
@@ -54,7 +59,7 @@ def test_rnn_state_encoder():
                 outputs, out_hiddens = rnn_state_encoder(
                     inputs.flatten(0, 1),
                     hidden_states.permute(1, 0, 2),
-                    masks.flatten(0, 1),
+                    not_done_masks.flatten(0, 1),
                     rnn_build_seq_info,
                 )
                 out_hiddens = out_hiddens.permute(1, 0, 2)
@@ -63,7 +68,7 @@ def test_rnn_state_encoder():
                 reference_hiddens = hidden_states.clone()
                 for t in range(T):
                     reference_hiddens = torch.where(
-                        masks[t].view(1, -1, 1),
+                        not_done_masks[t].view(1, -1, 1),
                         reference_hiddens,
                         reference_hiddens.new_zeros(()),
                     )
