@@ -43,7 +43,7 @@ def construct_envs(
     if len(scenes) < num_environments:
         msg = f"There are less scenes ({len(scenes)}) than environments ({num_environments}). "
         if is_eval:
-            raise RuntimeError(msg + "This is invalid for evaluation.")
+            raise ValueError(msg + "This is invalid for evaluation.")
         else:
             logger.warn(
                 msg

@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 import numpy as np
 import torch
@@ -249,9 +249,8 @@ class RolloutStorage:
 
             yield batch
 
-    def __getstate__(self):
-        return self.__dict__.copy()
+    def __getstate__(self) -> Dict[str, Any]:
+        return self.__dict__
 
-    def __setstate__(self, state):
-        for k, v in state.items():
-            setattr(self, k, v)
+    def __setstate__(self, state: Dict[str, Any]):
+        self.__dict__.update(state)
