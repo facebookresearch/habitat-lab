@@ -203,6 +203,7 @@ class RolloutStorage:
         num_mini_batch: int,
         include_all: bool = False,
     ) -> Iterator[TensorDict]:
+        assert isinstance(self.buffers["returns"], torch.Tensor)
         num_environments = self.buffers["returns"].size(1)
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "
@@ -231,6 +232,7 @@ class RolloutStorage:
                 curr_slice = (slice(None), inds)
             else:
                 curr_slice = (slice(0, self.current_rollout_step_idx), inds)
+
             batch = self.buffers[curr_slice]
             if advantages is not None:
                 batch["advantages"] = advantages[curr_slice]
@@ -242,8 +244,8 @@ class RolloutStorage:
 
             batch["rnn_build_seq_info"] = build_rnn_build_seq_info(
                 device=self.device,
-                build_fn=lambda: build_pack_info_from_dones(
-                    dones_cpu[curr_slice].reshape(-1, len(inds)),
+                build_fn_result=build_pack_info_from_dones(
+                    dones_cpu[curr_slice],
                 ),
             )
 

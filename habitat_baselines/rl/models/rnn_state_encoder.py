@@ -28,11 +28,29 @@ def _np_invert_permutation(permutation: np.ndarray) -> np.ndarray:
     return np.argsort(permutation.ravel()).reshape(permutation.shape)
 
 
+# This is some pretty wild code. I recommend you just trust
+# the unit test on it and leave it be.
 def build_pack_info_from_episode_ids(
     episode_ids: np.ndarray,
     environment_ids: np.ndarray,
     step_ids: np.ndarray,
 ) -> Dict[str, np.ndarray]:
+    r"""Create the indexing info needed to make the PackedSequence
+    based on the dones.
+
+    PackedSequences are PyTorch's way of supporting a single RNN forward
+    call where each input in the batch can have an arbitrary sequence length
+
+    They work as follows: Given the sequences [c], [x, y, z], [a, b],
+    we generate data [x, a, c, y, b, z] and num_seqs_at_step [3, 2, 1].  The
+    data is a flattened out version of the input sequences (the ordering in
+    data is determined by sequence length).  num_seqs_at_step tells you that
+    for each index, how many sequences have a length of (index + 1) or greater.
+
+    This method will generate the new index ordering such that you can
+    construct the data for a PackedSequence from a (T*N, ...) tensor
+    via x.index_select(0, select_inds)
+    """
     # make episode_ids globally unique. This will make things easier
     episode_ids = episode_ids * (environment_ids.max() + 1) + environment_ids
     unsorted_episode_ids = episode_ids
@@ -145,22 +163,6 @@ def build_pack_info_from_episode_ids(
 
 
 def build_pack_info_from_dones(dones: np.ndarray) -> Dict[str, np.ndarray]:
-    r"""Create the indexing info needed to make the PackedSequence
-    based on the dones.
-
-    PackedSequences are PyTorch's way of supporting a single RNN forward
-    call where each input in the batch can have an arbitrary sequence length
-
-    They work as follows: Given the sequences [c], [x, y, z], [a, b],
-    we generate data [x, a, c, y, b, z] and num_seqs_at_step [3, 2, 1].  The
-    data is a flattened out version of the input sequences (the ordering in
-    data is determined by sequence length).  num_seqs_at_step tells you that
-    for each index, how many sequences have a length of (index + 1) or greater.
-
-    This method will generate the new index ordering such that you can
-    construct the data for a PackedSequence from a (T*N, ...) tensor
-    via x.index_select(0, select_inds)
-    """
     T, N = dones.shape
     episode_ids = np.cumsum(dones, 0)
     environment_ids = np.arange(N).reshape(1, N).repeat(T, 0)
@@ -176,10 +178,13 @@ def build_pack_info_from_dones(dones: np.ndarray) -> Dict[str, np.ndarray]:
     )
 
 
-def build_rnn_build_seq_info(device, build_fn):
+def build_rnn_build_seq_info(
+    device: torch.device, build_fn_result: Dict[str, np.ndarray]
+) -> TensorDict:
+    r"""Creates the dict with the build pack seq results."""
     rnn_build_seq_info = TensorDict()
-    for k, v in build_fn().items():
-        v = torch.from_numpy(v)
+    for k, v_n in build_fn_result.items():
+        v = torch.from_numpy(v_n)
         # We keep the CPU side
         # tensor as well. This makes various things
         # easier and some things need to be on the CPU

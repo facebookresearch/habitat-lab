@@ -14,6 +14,7 @@ import tarfile
 from io import BytesIO
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
+import attr
 import numpy as np
 import torch
 from gym import spaces
@@ -25,7 +26,7 @@ from habitat import logger
 from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.spaces import EmptySpace
-from habitat.core.utils import try_cv2_import
+from habitat.core.utils import Singleton, try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensor_dict import (
@@ -196,15 +197,15 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-class _ObservationBatchingCache:
+@attr.s(auto_attribs=True)
+class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
-    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = {}
+    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = attr.Factory(dict)
 
-    @classmethod
     def get(
-        cls,
+        self,
         num_obs: int,
         sensor_name: Any,
         sensor: torch.Tensor,
@@ -223,13 +224,13 @@ class _ObservationBatchingCache:
             sensor.device.type,
             sensor.device.index,
         )
-        if key in cls._pool:
-            cache = cls._pool[key]
+        if key in self._pool:
+            cache = self._pool[key]
             if cache.shape[0] >= num_obs:
                 return cache[0:num_obs]
             else:
                 cache = None
-                del cls._pool[key]
+                del self._pool[key]
 
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
@@ -246,12 +247,11 @@ class _ObservationBatchingCache:
             # so convert to numpy
             cache = cache.numpy()
 
-        cls._pool[key] = cache
+        self._pool[key] = cache
         return cache
 
-    @classmethod
     def batch_obs(
-        cls,
+        self,
         observations: List[DictTree],
         device: Optional[torch.device] = None,
     ) -> TensorDict:
@@ -278,7 +278,7 @@ class _ObservationBatchingCache:
         batched_tensors = []
         for sensor_name, obs in zip(observation_keys, observation_tensors[0]):
             batched_tensors.append(
-                cls.get(
+                self.get(
                     len(observations),
                     sensor_name,
                     torch.as_tensor(obs),
@@ -336,7 +336,7 @@ def batch_obs(
         transposed dict of torch.Tensor of observations.
     """
 
-    return _ObservationBatchingCache.batch_obs(observations, device)
+    return _ObservationBatchingCache().batch_obs(observations, device)
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:

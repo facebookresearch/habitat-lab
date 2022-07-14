@@ -7,7 +7,7 @@
 import collections
 import inspect
 import math
-from typing import Optional, Tuple
+from typing import Dict, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -54,6 +54,8 @@ class LagrangeInequalityCoefficient(nn.Module):
 
 
 class PPO(nn.Module):
+    entropy_coef: Union[float, LagrangeInequalityCoefficient]
+
     @classmethod
     def from_config(cls, actor_critic: NetPolicy, config):
         config = {k.lower(): v for k, v in config.items()}
@@ -176,7 +178,7 @@ class PPO(nn.Module):
     def update(
         self,
         rollouts: RolloutStorage,
-    ) -> Tuple[float, float, float]:
+    ) -> Dict[str, float]:
 
         advantages = self.get_advantages(rollouts)
 
@@ -332,7 +334,8 @@ class PPO(nn.Module):
 
         with inference_mode():
             return {
-                k: torch.stack(v).mean() for k, v in learner_metrics.items()
+                k: float(torch.stack(v).mean())
+                for k, v in learner_metrics.items()
             }
 
     def _evaluate_actions(self, *args, **kwargs):

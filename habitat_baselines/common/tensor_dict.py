@@ -16,6 +16,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Protocol,
     Tuple,
     Type,
     TypeVar,
@@ -28,11 +29,19 @@ import numpy as np
 import torch
 
 TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
-DictTree = Dict[str, Union[TensorLike, "DictTree"]]
+DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
 TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
 
-T = TypeVar("T")
-K = TypeVar("K")
+
+class SupportsIndexing(Protocol):
+    def __getitem__(self, key: Any) -> Any:
+        pass
+
+    def __setitem__(self, key: Any, value: Any):
+        pass
+
+
+T = TypeVar("T", bound="SupportsIndexing")
 _DictTreeInst = TypeVar("_DictTreeInst", bound="_DictTreeBase")
 
 
@@ -81,10 +90,10 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
     ) -> _DictTreeInst:
         res = cls()
         remaining: Tuple[List[Tuple[str, ...]], List[TensorLike]] = ([], [])
-        for i, (first_key, *other_keys), v in zip(
+        for i, (first_key, *other_keys_l), v in zip(
             range(len(spec)), spec, tensors
         ):
-            other_keys = tuple(other_keys)
+            other_keys = tuple(other_keys_l)
             if len(other_keys) == 0:
                 v = cls._to_instance(v)
 
@@ -201,7 +210,7 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
                 dst = self[k]
 
                 if isinstance(v, dict):
-                    assert isinstance(dst, dict)
+                    assert isinstance(dst, _DictTreeBase)
                     dst.set(index, v, strict=strict)
                 else:
                     dst[index] = self._to_instance(v)
@@ -218,20 +227,25 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         cls: Type[_DictTreeInst],
         func: Union[_MapFuncType, _ApplyFuncType],
         src: Union[_DictTreeBase[T], DictTree],
-        dst: Optional[_DictTreeBase[T]] = None,
+        dst_in: Optional[_DictTreeInst] = None,
         needs_return: bool = True,
         prefix: str = "",
     ) -> Union[_DictTreeInst, None]:
-        if dst is None and needs_return:
+        if dst_in is None and needs_return:
             dst = cls()
+        else:
+            dst = dst_in
 
         full_arg_spec = inspect.getfullargspec(func)
         for k, v in src.items():
             if isinstance(v, (cls, dict)):
+                dst_k = dst.get(k, None) if needs_return else None
+                if dst_k is not None:
+                    assert isinstance(dst_k, _DictTreeBase)
                 res = cls._map_apply_func(
                     func,
-                    v,
-                    dst.get(k, None) if needs_return else None,
+                    v,  # type: ignore
+                    dst_k,  # type: ignore
                     needs_return,
                     prefix=f"{prefix}{k}.",
                 )
@@ -266,7 +280,7 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         cls: Type[_DictTreeInst],
         func: _MapFuncType,
         src: Union[_DictTreeBase[T], DictTree],
-        dst: Optional[_DictTreeBase[T]] = None,
+        dst: Optional[_DictTreeInst] = None,
     ) -> _DictTreeInst:
         return cls._map_apply_func(func, src, dst, needs_return=True)
 
@@ -277,7 +291,7 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         return self.map_func(func, self, self)
 
     def apply(self, func: _ApplyFuncType) -> None:
-        self._map_apply_func(func, self, dst=None, needs_return=False)
+        self._map_apply_func(func, self, dst_in=None, needs_return=False)
 
     def slice_keys(
         self: _DictTreeInst, *keys: Union[str, Iterable[str]]
@@ -318,7 +332,7 @@ class TensorDict(_DictTreeBase[torch.Tensor]):
             return torch.as_tensor(v)
 
     def numpy(self) -> NDArrayDict:
-        return NDArrayDict.from_tree(self)
+        return NDArrayDict.from_tree(self.to_tree())
 
 
 class NDArrayDict(_DictTreeBase[np.ndarray]):
@@ -332,7 +346,7 @@ class NDArrayDict(_DictTreeBase[np.ndarray]):
             return np.asarray(v)
 
     def as_tensor(self) -> TensorDict:
-        return TensorDict.from_tree(self)
+        return TensorDict.from_tree(self.to_tree())
 
 
 class TensorOrNDArrayDict(_DictTreeBase[Union[torch.Tensor, np.ndarray]]):
@@ -341,15 +355,17 @@ class TensorOrNDArrayDict(_DictTreeBase[Union[torch.Tensor, np.ndarray]]):
         if isinstance(v, (np.ndarray, torch.Tensor)):
             return v
         else:
-            return np.asarray(v)
+            return np.asarray(v)  # type: ignore
 
 
-def iterate_dicts_recursively(*dicts_i: _DictTreeBase[T]) -> Tuple[T, ...]:
+def iterate_dicts_recursively(
+    *dicts_i: _DictTreeBase[T],
+) -> Iterable[Tuple[T, ...]]:
     dicts = tuple(dicts_i)
     for k in dicts[0].keys():
         assert all(k in d for d in dicts)
 
-        if isinstance(dicts[0][k], dict):
-            yield from iterate_dicts_recursively(*(d[k] for d in dicts))
+        if isinstance(dicts[0][k], _DictTreeBase):
+            yield from iterate_dicts_recursively(*tuple(d[k] for d in dicts))  # type: ignore
         else:
-            yield (d[k] for d in dicts)
+            yield tuple(cast(T, d[k]) for d in dicts)

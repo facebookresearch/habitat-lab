@@ -72,21 +72,14 @@ class DecentralizedDistributedMixin:
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
         class Guard:  # noqa: SIM119
-            def __init__(self, model, device):
-                if torch.cuda.is_available():
-                    self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
-                        model,
-                        find_unused_parameters=find_unused_params,
-                        gradient_as_bucket_view=True,
-                        static_graph=True,
-                    )
-                else:
-                    self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
-                        model,
-                        find_unused_parameters=find_unused_params,
-                    )
+            def __init__(self, model):
+                self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
+                    model,
+                    find_unused_parameters=find_unused_params,
+                    gradient_as_bucket_view=True,
+                )
 
-        self._evaluate_actions_wrapper = Guard(_EvalActionsWrapper(self.actor_critic), self.device)  # type: ignore
+        self._evaluate_actions_wrapper = Guard(_EvalActionsWrapper(self.actor_critic))  # type: ignore
 
     def _evaluate_actions(self, *args, **kwargs):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling

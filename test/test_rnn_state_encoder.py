@@ -38,7 +38,7 @@ def test_rnn_state_encoder():
                 else:
                     rnn_build_seq_info = build_rnn_build_seq_info(
                         device,
-                        build_fn=lambda: build_pack_info_from_dones(
+                        build_fn_result=build_pack_info_from_dones(
                             torch.logical_not(masks).view(T, N).cpu().numpy()
                         ),
                     )
