@@ -28,18 +28,26 @@ def test_transforms(obs_transform_key: str):
     transformer = transformer_cls.from_config(default_config)
     obs_space = spaces.Dict(
         {
-            "BACK": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
-            "DOWN": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
-            "FRONT": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
-            "LEFT": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
-            "RIGHT": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
-            "UP": spaces.Box(low=0, high=1, shape=(256, 128, 3)),
+            "BACK": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
+            "DOWN": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
+            "FRONT": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
+            "LEFT": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
+            "RIGHT": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
+            "UP": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
         }
     )
-    print(">>>", obs_space)
-    transformer.transform_observation_space(observation_space=obs_space)
-    apply_obs_transforms_obs_space(obs_space, [transformer])
-    print(">>>>", obs_space)
-    observation = batch_space(obs_space, 7).sample()
+    modified_obs_space = transformer.transform_observation_space(
+        observation_space=obs_space
+    )
+    assert modified_obs_space == apply_obs_transforms_obs_space(
+        obs_space, [transformer]
+    )
+    batched_modified_obs_space = batch_space(obs_space, 7)
+    observation = batched_modified_obs_space.sample()
     tensor_observation = TensorDict.from_tree(observation)
-    apply_obs_transforms_batch(tensor_observation, [transformer])
+    transformed_obs = apply_obs_transforms_batch(
+        tensor_observation, [transformer]
+    )
+    assert batched_modified_obs_space.contains(
+        transformed_obs
+    ), f"Observation transform did not generate an observation ({str({k: v.shape for k,v in transformed_obs.items()}) }) according to the defined observation space {batched_modified_obs_space}"
