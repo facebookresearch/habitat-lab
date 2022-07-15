@@ -19,6 +19,7 @@ from torch import nn
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.algo import DDPPO
+from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 
 
@@ -101,11 +102,12 @@ def _worker_fn(
         batch["prev_actions"],
         batch["masks"],
         batch["actions"],
+        batch["rnn_build_seq_info"],
     )
     # Backprop on things
     (value.mean() + action_log_probs.mean() + dist_entropy.mean()).backward()
 
-    # Make sure all ranks have very similar parameters
+    # Make sure all ranks have very similar gradients
     for param in actor_critic.parameters():
         if param.grad is not None:
             grads = [param.grad.detach().clone() for _ in range(world_size)]
@@ -120,6 +122,6 @@ def test_ddppo_reduce(unused_params: bool):
     world_size = 2
     torch.multiprocessing.spawn(
         _worker_fn,
-        args=(world_size, 8748 + int(unused_params), unused_params),
+        args=(world_size, find_free_port(), unused_params),
         nprocs=world_size,
     )
