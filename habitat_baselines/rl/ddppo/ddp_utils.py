@@ -320,10 +320,21 @@ def get_free_port_distributed(
     return port
 
 
+def _rank_to_relative_rank(
+    rank: int, output_rank: int, world_size: int
+) -> int:
+    return (
+        rank - output_rank
+        if rank >= output_rank
+        else rank - output_rank + world_size
+    )
+
+
 def gatherv(
     t: torch.Tensor, output_rank: int = 0
 ) -> Optional[List[torch.Tensor]]:
     assert t.ndim == 1
+    assert output_rank >= 0
 
     world_size = distrib.get_world_size() if distrib.is_initialized() else 1
     if world_size == 1:
@@ -351,11 +362,7 @@ def gatherv(
 
         distrib.gather(t, output, output_rank)
     else:
-        relative_rank: int = (
-            rank - output_rank
-            if rank >= output_rank
-            else rank - relative_rank + world_size
-        )
+        relative_rank = _rank_to_relative_rank(rank, output_rank, world_size)
 
         mask = 1
         output = [t]
@@ -396,6 +403,14 @@ def gatherv(
 
             mask = mask << 1
 
+        if output is not None:
+            # We need to re-order the output list to be wrt world ranks
+            # instead of relative ranks
+            output = [
+                output[_rank_to_relative_rank(i, output_rank, world_size)]
+                for i in range(world_size)
+            ]
+
     if is_mine:
         assert output is not None
     else:
@@ -405,8 +420,10 @@ def gatherv(
 
 
 def gather_objects(
-    obj: Any, device: torch.device, output_rank: int = 0
+    obj: Any, device: Optional[torch.device] = None, output_rank: int = 0
 ) -> Optional[List[Any]]:
+    device = device or torch.device("cpu")
+    assert output_rank >= 0
 
     buf = io.BytesIO()
     pickle.Pickler(buf, protocol=pickle.HIGHEST_PROTOCOL).dump(obj)
