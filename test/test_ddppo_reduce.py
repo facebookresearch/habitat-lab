@@ -72,7 +72,7 @@ def _worker_fn(
         max_grad_norm=ppo_cfg.max_grad_norm,
         use_normalized_advantage=ppo_cfg.use_normalized_advantage,
     )
-    agent.init_distributed()
+    agent.init_distributed(find_unused_params=unused_params)
     rollouts = RolloutStorage(
         ppo_cfg.num_steps,
         2,

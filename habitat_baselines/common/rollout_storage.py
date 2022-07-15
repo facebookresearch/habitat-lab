@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 import numpy as np
 import torch
 
-from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
@@ -201,7 +201,7 @@ class RolloutStorage:
         self,
         advantages: Optional[torch.Tensor],
         num_mini_batch: int,
-    ) -> Iterator[TensorDict]:
+    ) -> Iterator[DictTree]:
         assert isinstance(self.buffers["returns"], torch.Tensor)
         num_environments = self.buffers["returns"].size(1)
         assert num_environments >= num_mini_batch, (
@@ -247,7 +247,7 @@ class RolloutStorage:
                 ),
             )
 
-            yield batch
+            yield batch.to_tree()
 
     def __getstate__(self) -> Dict[str, Any]:
         return self.__dict__
