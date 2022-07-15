@@ -19,4 +19,6 @@ __all__ = [
     "FetchRobot",
     "FetchRobotNoWheels",
     "RobotCameraParams",
+    "StaticManipulatorParams",
+    "StaticManipulator",
 ]
