@@ -320,8 +320,12 @@ class PPO(nn.Module):
 
         with inference_mode():
             return {
-                k: float(torch.as_tensor(v, dtype=torch.float32).mean())
-                for k, v in learner_metrics.items()
+                k: float(
+                    torch.stack(
+                        [torch.as_tensor(v, dtype=torch.float32) for v in vs]
+                    ).mean()
+                )
+                for k, vs in learner_metrics.items()
             }
 
     def _evaluate_actions(self, *args, **kwargs):
