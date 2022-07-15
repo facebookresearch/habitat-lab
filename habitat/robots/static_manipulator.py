@@ -162,18 +162,6 @@ class StaticManipulator(RobotInterface):
         self._update_motor_settings_cache()
         self.update()
 
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
-            )
-
     #############################################
     # ARM PROPERTIES GETTERS + SETTERS
     #############################################
@@ -236,159 +224,159 @@ class StaticManipulator(RobotInterface):
     #     )
     #     return ef_link_transform
 
-    # @property
-    # def gripper_joint_pos(self) -> np.ndarray:
-    #     """Get the current gripper joint positions."""
+    @property
+    def gripper_joint_pos(self) -> np.ndarray:
+        """Get the current gripper joint positions."""
 
-    #     # deref self vars to cut access in half
-    #     joint_pos_indices = self.joint_pos_indices
-    #     gripper_joints = self.params.gripper_joints
-    #     sim_obj_joint_pos = self.sim_obj.joint_positions
+        # deref self vars to cut access in half
+        joint_pos_indices = self.joint_pos_indices
+        gripper_joints = self.params.gripper_joints
+        sim_obj_joint_pos = self.sim_obj.joint_positions
 
-    #     gripper_pos_indices = (joint_pos_indices[x] for x in gripper_joints)
-    #     return np.array(
-    #         [sim_obj_joint_pos[i] for i in gripper_pos_indices],
-    #         dtype=np.float32,
-    #     )
+        gripper_pos_indices = (joint_pos_indices[x] for x in gripper_joints)
+        return np.array(
+            [sim_obj_joint_pos[i] for i in gripper_pos_indices],
+            dtype=np.float32,
+        )
 
-    # @gripper_joint_pos.setter
-    # def gripper_joint_pos(self, ctrl: List[float]):
-    #     """Kinematically sets the gripper joints and sets the motors to target."""
-    #     joint_positions = self.sim_obj.joint_positions
-    #     for i, jidx in enumerate(self.params.gripper_joints):
-    #         self._set_motor_pos(jidx, ctrl[i])
-    #         joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
-    #     self.sim_obj.joint_positions = joint_positions
+    @gripper_joint_pos.setter
+    def gripper_joint_pos(self, ctrl: List[float]):
+        """Kinematically sets the gripper joints and sets the motors to target."""
+        joint_positions = self.sim_obj.joint_positions
+        for i, jidx in enumerate(self.params.gripper_joints):
+            self._set_motor_pos(jidx, ctrl[i])
+            joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
+        self.sim_obj.joint_positions = joint_positions
 
-    # def set_gripper_target_state(self, gripper_state: float) -> None:
-    #     """Set the gripper motors to a desired symmetric state of the gripper [0,1] -> [open, closed]"""
-    #     for i, jidx in enumerate(self.params.gripper_joints):
-    #         delta = (
-    #             self.params.gripper_closed_state[i]
-    #             - self.params.gripper_open_state[i]
-    #         )
-    #         target = self.params.gripper_open_state[i] + delta * gripper_state
-    #         self._set_motor_pos(jidx, target)
+    def set_gripper_target_state(self, gripper_state: float) -> None:
+        """Set the gripper motors to a desired symmetric state of the gripper [0,1] -> [open, closed]"""
+        for i, jidx in enumerate(self.params.gripper_joints):
+            delta = (
+                self.params.gripper_closed_state[i]
+                - self.params.gripper_open_state[i]
+            )
+            target = self.params.gripper_open_state[i] + delta * gripper_state
+            self._set_motor_pos(jidx, target)
 
-    # def close_gripper(self) -> None:
-    #     """Set gripper to the close state"""
-    #     self.set_gripper_target_state(1)
+    def close_gripper(self) -> None:
+        """Set gripper to the close state"""
+        self.set_gripper_target_state(1)
 
-    # def open_gripper(self) -> None:
-    #     """Set gripper to the open state"""
-    #     self.set_gripper_target_state(0)
+    def open_gripper(self) -> None:
+        """Set gripper to the open state"""
+        self.set_gripper_target_state(0)
 
-    # @property
-    # def is_gripper_open(self) -> bool:
-    #     """True if all gripper joints are within eps of the open state."""
-    #     return (
-    #         np.amax(
-    #             np.abs(
-    #                 self.gripper_joint_pos
-    #                 - np.array(self.params.gripper_open_state)
-    #             )
-    #         )
-    #         < self.params.gripper_state_eps
-    #     )
+    @property
+    def is_gripper_open(self) -> bool:
+        """True if all gripper joints are within eps of the open state."""
+        return (
+            np.amax(
+                np.abs(
+                    self.gripper_joint_pos
+                    - np.array(self.params.gripper_open_state)
+                )
+            )
+            < self.params.gripper_state_eps
+        )
 
-    # @property
-    # def is_gripper_closed(self) -> bool:
-    #     """True if all gripper joints are within eps of the closed state."""
-    #     return (
-    #         np.amax(
-    #             np.abs(
-    #                 self.gripper_joint_pos
-    #                 - np.array(self.params.gripper_closed_state)
-    #             )
-    #         )
-    #         < self.params.gripper_state_eps
-    #     )
+    @property
+    def is_gripper_closed(self) -> bool:
+        """True if all gripper joints are within eps of the closed state."""
+        return (
+            np.amax(
+                np.abs(
+                    self.gripper_joint_pos
+                    - np.array(self.params.gripper_closed_state)
+                )
+            )
+            < self.params.gripper_state_eps
+        )
 
-    # @property
-    # def arm_joint_pos(self) -> np.ndarray:
-    #     """Get the current arm joint positions."""
+    @property
+    def arm_joint_pos(self) -> np.ndarray:
+        """Get the current arm joint positions."""
 
-    #     # deref self vars to cut access in half
-    #     joint_pos_indices = self.joint_pos_indices
-    #     arm_joints = self.params.arm_joints
-    #     sim_obj_joint_pos = self.sim_obj.joint_positions
+        # deref self vars to cut access in half
+        joint_pos_indices = self.joint_pos_indices
+        arm_joints = self.params.arm_joints
+        sim_obj_joint_pos = self.sim_obj.joint_positions
 
-    #     arm_pos_indices = (joint_pos_indices[x] for x in arm_joints)
-    #     return np.array(
-    #         [sim_obj_joint_pos[i] for i in arm_pos_indices], dtype=np.float32
-    #     )
+        arm_pos_indices = (joint_pos_indices[x] for x in arm_joints)
+        return np.array(
+            [sim_obj_joint_pos[i] for i in arm_pos_indices], dtype=np.float32
+        )
 
-    # @arm_joint_pos.setter
-    # def arm_joint_pos(self, ctrl: List[float]):
-    #     """Kinematically sets the arm joints and sets the motors to target."""
-    #     self._validate_arm_ctrl_input(ctrl)
+    @arm_joint_pos.setter
+    def arm_joint_pos(self, ctrl: List[float]):
+        """Kinematically sets the arm joints and sets the motors to target."""
+        self._validate_arm_ctrl_input(ctrl)
 
-    #     joint_positions = self.sim_obj.joint_positions
+        joint_positions = self.sim_obj.joint_positions
 
-    #     for i, jidx in enumerate(self.params.arm_joints):
-    #         self._set_motor_pos(jidx, ctrl[i])
-    #         joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
-    #     self.sim_obj.joint_positions = joint_positions
+        for i, jidx in enumerate(self.params.arm_joints):
+            self._set_motor_pos(jidx, ctrl[i])
+            joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
+        self.sim_obj.joint_positions = joint_positions
 
-    # def _validate_arm_ctrl_input(self, ctrl: List[float]):
-    #     """
-    #     Raises an exception if the control input is NaN or does not match the
-    #     joint dimensions.
-    #     """
-    #     if len(ctrl) != len(self.params.arm_joints):
-    #         raise ValueError(
-    #             "Control dimension does not match joint dimension"
-    #         )
-    #     if np.any(np.isnan(ctrl)):
-    #         raise ValueError("Control is NaN")
+    def _validate_arm_ctrl_input(self, ctrl: List[float]):
+        """
+        Raises an exception if the control input is NaN or does not match the
+        joint dimensions.
+        """
+        if len(ctrl) != len(self.params.arm_joints):
+            raise ValueError(
+                "Control dimension does not match joint dimension"
+            )
+        if np.any(np.isnan(ctrl)):
+            raise ValueError("Control is NaN")
 
-    # def set_fixed_arm_joint_pos(self, fix_arm_joint_pos):
-    #     """
-    #     Will fix the arm to a desired position at every internal timestep. Can
-    #     be used for kinematic arm control.
-    #     """
-    #     self._validate_arm_ctrl_input(fix_arm_joint_pos)
-    #     self._fix_joint_values = fix_arm_joint_pos
-    #     self.arm_joint_pos = fix_arm_joint_pos
+    def set_fixed_arm_joint_pos(self, fix_arm_joint_pos):
+        """
+        Will fix the arm to a desired position at every internal timestep. Can
+        be used for kinematic arm control.
+        """
+        self._validate_arm_ctrl_input(fix_arm_joint_pos)
+        self._fix_joint_values = fix_arm_joint_pos
+        self.arm_joint_pos = fix_arm_joint_pos
 
-    # @property
-    # def arm_velocity(self) -> np.ndarray:
-    #     """Get the velocity of the arm joints."""
+    @property
+    def arm_velocity(self) -> np.ndarray:
+        """Get the velocity of the arm joints."""
 
-    #     # deref self vars to cut access in half
-    #     joint_dof_indices = self.joint_dof_indices
-    #     arm_joints = self.params.arm_joints
-    #     sim_obj_joint_vel = self.sim_obj.joint_velocities
+        # deref self vars to cut access in half
+        joint_dof_indices = self.joint_dof_indices
+        arm_joints = self.params.arm_joints
+        sim_obj_joint_vel = self.sim_obj.joint_velocities
 
-    #     arm_dof_indices = (joint_dof_indices[x] for x in arm_joints)
-    #     return np.array(
-    #         [sim_obj_joint_vel[i] for i in arm_dof_indices],
-    #         dtype=np.float32,
-    #     )
+        arm_dof_indices = (joint_dof_indices[x] for x in arm_joints)
+        return np.array(
+            [sim_obj_joint_vel[i] for i in arm_dof_indices],
+            dtype=np.float32,
+        )
 
-    # @property
-    # def arm_motor_pos(self) -> np.ndarray:
-    #     """Get the current target of the arm joints motors."""
-    #     motor_targets = np.zeros(len(self.params.arm_init_params))
-    #     for i, jidx in enumerate(self.params.arm_joints):
-    #         motor_targets[i] = self._get_motor_pos(jidx)
-    #     return motor_targets
+    @property
+    def arm_motor_pos(self) -> np.ndarray:
+        """Get the current target of the arm joints motors."""
+        motor_targets = np.zeros(len(self.params.arm_init_params))
+        for i, jidx in enumerate(self.params.arm_joints):
+            motor_targets[i] = self._get_motor_pos(jidx)
+        return motor_targets
 
-    # @arm_motor_pos.setter
-    # def arm_motor_pos(self, ctrl: List[float]) -> None:
-    #     """Set the desired target of the arm joint motors."""
-    #     self._validate_arm_ctrl_input(ctrl)
+    @arm_motor_pos.setter
+    def arm_motor_pos(self, ctrl: List[float]) -> None:
+        """Set the desired target of the arm joint motors."""
+        self._validate_arm_ctrl_input(ctrl)
 
-    #     for i, jidx in enumerate(self.params.arm_joints):
-    #         self._set_motor_pos(jidx, ctrl[i])
+        for i, jidx in enumerate(self.params.arm_joints):
+            self._set_motor_pos(jidx, ctrl[i])
 
-    # def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
-    #     """Clips a 3D end-effector position within region the robot can reach."""
-    #     return np.clip(
-    #         pos,
-    #         self.params.ee_constraint[:, 0],
-    #         self.params.ee_constraint[:, 1],
-    #     )
+    def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
+        """Clips a 3D end-effector position within region the robot can reach."""
+        return np.clip(
+            pos,
+            self.params.ee_constraint[:, 0],
+            self.params.ee_constraint[:, 1],
+        )
 
     @property
     def arm_motor_forces(self) -> np.ndarray:
@@ -399,3 +387,64 @@ class StaticManipulator(RobotInterface):
     def arm_motor_forces(self, ctrl: List[float]) -> None:
         """Set the desired torques of the arm joint motors"""
         self.sim_obj.joint_forces = ctrl
+
+    #############################################
+    # HIDDEN
+    #############################################
+
+    def _validate_joint_idx(self, joint):
+        if joint not in self.joint_motors:
+            raise ValueError(
+                f"Requested joint {joint} not in joint motors with indices (keys {self.joint_motors.keys()}) and {self.joint_motors}"
+            )
+
+    def _set_motor_pos(self, joint, ctrl):
+        self._validate_joint_idx(joint)
+        self.joint_motors[joint][1].position_target = ctrl
+        self.sim_obj.update_joint_motor(
+            self.joint_motors[joint][0], self.joint_motors[joint][1]
+        )
+
+    def _get_motor_pos(self, joint):
+        self._validate_joint_idx(joint)
+        return self.joint_motors[joint][1].position_target
+
+    def _set_joint_pos(self, joint_idx, angle):
+        # NOTE: This is pretty inefficient and should not be used iteratively
+        set_pos = self.sim_obj.joint_positions
+        set_pos[self.joint_pos_indices[joint_idx]] = angle
+        self.sim_obj.joint_positions = set_pos
+
+    def _interpolate_arm_control(
+        self, targs, idxs, seconds, ctrl_freq, get_observations=False
+    ):
+        curs = np.array([self._get_motor_pos(i) for i in idxs])
+        diff = targs - curs
+        T = int(seconds * ctrl_freq)
+        delta = diff / T
+
+        observations = []
+        for i in range(T):
+            joint_positions = self.sim_obj.joint_positions
+            for j, jidx in enumerate(idxs):
+                self._set_motor_pos(jidx, delta[j] * (i + 1) + curs[j])
+                joint_positions[self.joint_pos_indices[jidx]] = (
+                    delta[j] * (i + 1) + curs[j]
+                )
+            self.sim_obj.joint_positions = joint_positions
+            self._sim.step_world(1 / ctrl_freq)
+            if get_observations:
+                observations.append(self._sim.get_sensor_observations())
+        return observations
+
+    def _update_motor_settings_cache(self):
+        """Updates the JointMotorSettings cache for cheaper future updates"""
+        self.joint_motors = {}
+        for (
+            motor_id,
+            joint_id,
+        ) in self.sim_obj.existing_joint_motor_ids.items():
+            self.joint_motors[joint_id] = (
+                motor_id,
+                self.sim_obj.get_joint_motor_settings(motor_id),
+            )
