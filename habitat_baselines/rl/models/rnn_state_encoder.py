@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -15,13 +15,15 @@ from habitat_baselines.common.tensor_dict import TensorDict
 
 
 def _invert_permutation(permutation: torch.Tensor) -> torch.Tensor:
-    output = torch.empty_like(permutation.view(-1))
+    orig_size = permutation.size()
+    permutation = permutation.view(-1)
+    output = torch.empty_like(permutation)
     output.scatter_(
         0,
-        permutation.view(-1),
+        permutation,
         torch.arange(0, permutation.numel(), device=permutation.device),
     )
-    return output.view_as(permutation)
+    return output.view(orig_size)
 
 
 def _np_invert_permutation(permutation: np.ndarray) -> np.ndarray:
@@ -78,9 +80,6 @@ def build_pack_info_from_episode_ids(
     sequence_starts = sequence_starts[sorted_indices]
 
     max_length = int(lengths[0])
-
-    #  for i, eid in enumerate(unique_episode_ids):
-    #  assert sequence_starts[i] == (episode_ids == eid).nonzero()[0].min()
 
     select_inds = np.empty((episode_ids.size,), dtype=np.int64)
 
@@ -315,7 +314,11 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def seq_forward(
-        self, x, hidden_states, masks, rnn_build_seq_info
+        self,
+        x,
+        hidden_states,
+        masks,
+        rnn_build_seq_info: Dict[str, torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Forward for a sequence of length T
 
@@ -345,13 +348,18 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def forward(
-        self, x, hidden_states, masks, rnn_build_seq_info=None
+        self,
+        x,
+        hidden_states,
+        masks,
+        rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         hidden_states = hidden_states.permute(1, 0, 2)
         if x.size(0) == hidden_states.size(1):
             assert rnn_build_seq_info is None
             x, hidden_states = self.single_forward(x, hidden_states, masks)
         else:
+            assert rnn_build_seq_info is not None
             x, hidden_states = self.seq_forward(
                 x, hidden_states, masks, rnn_build_seq_info
             )

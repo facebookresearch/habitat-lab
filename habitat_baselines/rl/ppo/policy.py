@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Union
+from typing import Dict, Optional, Union
 
 import torch
 from gym import spaces
@@ -141,7 +141,7 @@ class NetPolicy(nn.Module, Policy):
         prev_actions,
         masks,
         action,
-        rnn_build_seq_info,
+        rnn_build_seq_info: Dict[str, torch.Tensor],
     ):
         features, rnn_hidden_states = self.net(
             observations,
@@ -299,7 +299,7 @@ class PointNavBaselineNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
-        rnn_build_seq_info=None,
+        rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ):
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             target_encoding = observations[

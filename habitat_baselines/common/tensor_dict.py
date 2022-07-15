@@ -50,6 +50,13 @@ _ApplyFuncType = Callable[[T], None]
 
 
 class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
+    r"""Base class that represents a dictionary tree (DictTree).
+
+    In a DictTree, all elements of the dict are either a leaf (of type T) or
+    a subtree. This is setup for T's that are indexable, like a torch.Tensor
+    or np.ndarray
+    """
+
     @classmethod
     def _to_instance(cls, v: Any) -> T:
         raise NotImplementedError()
@@ -79,12 +86,12 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
     def _from_flattened_helper(
         cls: Type[_DictTreeInst],
         spec: List[Tuple[str, ...]],
-        tensors: List[TensorLike],
+        leaves: List[TensorLike],
     ) -> _DictTreeInst:
         res = cls()
         remaining: Tuple[List[Tuple[str, ...]], List[TensorLike]] = ([], [])
         for i, (first_key, *other_keys_l), v in zip(
-            range(len(spec)), spec, tensors
+            range(len(spec)), spec, leaves
         ):
             other_keys = tuple(other_keys_l)
             if len(other_keys) == 0:
@@ -112,15 +119,32 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
     def from_flattened(
         cls: Type[_DictTreeInst],
         spec: List[Tuple[str, ...]],
-        tensors: List[TensorLike],
+        leaves: List[TensorLike],
     ) -> _DictTreeInst:
+        r"""Construct a DictTree from the flattened representation, i.e. from :py:ref:`flatten`.
+
+        :param spec: The key for each leaf.
+        :param leaves: The leaves.
+        """
+        assert len(spec) == len(leaves)
         sort_ordering = sorted(range(len(spec)), key=lambda i: spec[i])
         spec = [spec[i] for i in sort_ordering]
-        tensors = [tensors[i] for i in sort_ordering]
+        leaves = [leaves[i] for i in sort_ordering]
 
-        return cls._from_flattened_helper(spec, tensors)
+        return cls._from_flattened_helper(spec, leaves)
 
-    def flatten(self) -> Tuple[List[Tuple[str, ...]], List[TensorLike]]:
+    def flatten(self) -> Tuple[List[Tuple[str, ...]], List[T]]:
+        r"""Returns a flattened representation of the tree.
+
+        This is useful for
+        operating on the leaves and then making a new tree with the same keys
+        when operation on the leaves can't be easily done with :py:ref:`map`
+
+        A new instance can be created via :py:ref:`from_flattened`.
+
+        :return: A tuple of lists where the first list is the key for each leaf and the second
+        list is all the leaves.
+        """
         spec = []
         tensors = []
         for k, v in self.items():
@@ -260,17 +284,30 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         return cls._map_apply_func(func, src, dst, needs_return=True)
 
     def map(self: _DictTreeInst, func: _MapFuncType) -> _DictTreeInst:
+        r"""Apply a function to all leaves that transforms that leaf into a new value.
+        Returns a new instances with the transformed leafs."""
         return self.map_func(func, self)
 
     def map_in_place(self: _DictTreeInst, func: _MapFuncType) -> _DictTreeInst:
+        r"""Same as :py:ref:`map` but modifies the current tree. The current tree is
+        returned for chaining.
+        """
         return self.map_func(func, self, self)
 
     def apply(self, func: _ApplyFuncType) -> None:
+        r"""Applies a function to all leaves where the function doesn't
+        return a new value
+        """
         self._map_apply_func(func, self, dst_in=None, needs_return=False)
 
     def slice_keys(
         self: _DictTreeInst, *keys: Union[str, Iterable[str]]
     ) -> _DictTreeInst:
+        r"""Returns a new instance that only has the specified keys.
+
+        The new instance is a shallow copy and references the same underlying data.
+        """
+
         res = type(self)()
         for _k in keys:
             for k in (_k,) if isinstance(_k, str) else _k:
@@ -336,6 +373,7 @@ class TensorOrNDArrayDict(_DictTreeBase[Union[torch.Tensor, np.ndarray]]):
 def iterate_dicts_recursively(
     *dicts_i: _DictTreeBase[T],
 ) -> Iterable[Tuple[T, ...]]:
+    r"""Iterate a list of DictTrees recursively and yield a tuple of each tree's leaves."""
     dicts = tuple(dicts_i)
     for k in dicts[0].keys():
         assert all(k in d for d in dicts)

@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
+
 import numpy as np
 import pytest
 
@@ -115,6 +117,10 @@ def _worker_fn(
 
             for i in range(world_size):
                 assert torch.isclose(grads[i], grads[world_rank]).all()
+
+    torch.distributed.destroy_process_group()
+    tcp_store = None
+    gc.collect()
 
 
 @pytest.mark.parametrize("unused_params", [True, False])

@@ -91,6 +91,7 @@ class RolloutStorage:
         self.num_steps = numsteps
         self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
 
+        # The default device to torch is the CPU, so everything is on the CPU.
         self.device = torch.device("cpu")
 
     @property

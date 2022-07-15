@@ -79,6 +79,10 @@ class BaseTrainer:
 
         return config
 
+    def _add_preemption_signal_handlers(self):
+        if is_slurm_batch_job():
+            add_signal_handlers()
+
     def eval(self) -> None:
         r"""Main method of trainer evaluation. Calls _eval_checkpoint() that
         is specified in Trainer class that inherits from BaseRLTrainer
@@ -87,11 +91,15 @@ class BaseTrainer:
         Returns:
             None
         """
-        if is_slurm_batch_job():
-            add_signal_handlers()
+
+        self._add_preemption_signal_handlers()
 
         resume_state = load_resume_state(self.config, filename_key="eval")
         if resume_state is not None:
+            # If we have a resume state saved, that means
+            # we are resuming an evaluation session that got
+            # preempted. We grab the config and the prev_ckpt_ind
+            # so that we pick-up from the checkpoint we left off with
             self.config = resume_state["config"]
             prev_ckpt_ind = resume_state["prev_ckpt_ind"]
         else:
@@ -113,14 +121,7 @@ class BaseTrainer:
                 len(self.config.VIDEO_DIR) > 0
             ), "Must specify a directory for storing videos on disk"
 
-        if prev_ckpt_ind == -1:
-            purge_step = 0
-        else:
-            purge_step = None
-
-        with get_writer(
-            self.config, flush_secs=self.flush_secs, purge_step=purge_step
-        ) as writer:
+        with get_writer(self.config, flush_secs=self.flush_secs) as writer:
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
                 proposed_index = get_checkpoint_id(
@@ -152,6 +153,9 @@ class BaseTrainer:
                         checkpoint_index=prev_ckpt_ind,
                     )
 
+                    # We save a resume state during evaluation so that
+                    # we can resume evaluating incase the job gets
+                    # preempted.
                     save_resume_state(
                         {
                             "config": self.config,

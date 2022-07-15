@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
+
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -47,6 +49,10 @@ def _worker_fn(
         ), f"world_rank={world_rank} got not None output with output_rank={output_rank}"
 
     torch.distributed.barrier()
+
+    torch.distributed.destroy_process_group()
+    tcp_store = None
+    gc.collect()
 
 
 @pytest.mark.parametrize("all_same_size", [True, False])

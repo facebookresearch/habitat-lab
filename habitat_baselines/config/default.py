@@ -75,8 +75,13 @@ _C.WB.RUN_NAME = ""
 _C.EVAL = CN()
 # The split to evaluate on
 _C.EVAL.SPLIT = "val"
+# Whether or not to use the config in the checkpoint. Setting this to False
+# is useful if some code changes necessitate a new config but the weights
+# are still valid.
 _C.EVAL.USE_CKPT_CONFIG = True
 _C.EVAL.SHOULD_LOAD_CKPT = True
+# The number of time to run each episode through evaluation.
+# Only works when evaluating on all episodes.
 _C.EVAL.EVALS_PER_EP = 1
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG

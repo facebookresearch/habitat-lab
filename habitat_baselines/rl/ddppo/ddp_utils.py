@@ -11,6 +11,7 @@ from os import path as osp
 from typing import Any, Callable, List, Optional, Tuple, Union, overload
 
 import ifcfg
+import numpy as np
 import torch
 from torch import distributed as distrib
 
@@ -54,13 +55,13 @@ def is_slurm_batch_job() -> bool:
     )
 
 
-def resume_state_filename(config: Config) -> str:
+def resume_state_filename(config: Config, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
     if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.CHECKPOINT_FOLDER, fname)
+    return osp.join(config.CHECKPOINT_FOLDER, fname) + filename_key + ".pth"
 
 
 @overload
@@ -164,11 +165,10 @@ def save_resume_state(
 
     :param state: The state to save
     :param filename_or_config: The filename of the saved state or the config to construct it.
+    :param filename_key: If generating the filename from the config, append this to the name.
     """
     if isinstance(filename_or_config, Config):
-        filename = (
-            resume_state_filename(filename_or_config) + filename_key + ".pth"
-        )
+        filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
 
@@ -181,13 +181,12 @@ def load_resume_state(
     r"""Loads the saved resume state
 
     :param filename_or_config: The filename of the saved state or the config to construct it.
+    :param filename_key: If generating the filename from the config, append this to the name.
 
     :return: The saved state if the file exists, else none
     """
     if isinstance(filename_or_config, Config):
-        filename = (
-            resume_state_filename(filename_or_config) + filename_key + ".pth"
-        )
+        filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
 
@@ -306,6 +305,14 @@ def find_free_port() -> int:
 def get_free_port_distributed(
     key_name: str, tcp_store: Optional[distrib.TCPStore]
 ) -> int:
+    r"""Return a free port from :py:ref:`find_free_port` and synchronize it across
+    all ranks
+
+    :param key_name: The name for this port. This must be unique for each call into this method
+        and the same across ranks.
+    :param tcp_store: A torch TCPStore that has all ranks. This is used for synchronizing
+        the port. Only needed if world_size > 1.
+    """
     _port_key = f"_hab_dist_port_{key_name}"
     if rank0_only():
         port = find_free_port()
@@ -333,6 +340,15 @@ def _rank_to_relative_rank(
 def gatherv(
     t: torch.Tensor, output_rank: int = 0
 ) -> Optional[List[torch.Tensor]]:
+    r"""Distributed gather that works on tensors of variable size.
+
+    Currently on works on tensors with 1 dimension.
+
+    :param t: This rank's tensor to be sent to :ref:`output_rank`
+    :param output_rank: The rank the return everyone's inputs to.
+
+    :return: The list of inputs if this rank is :ref:`output_rank`, else :py:`None`.
+    """
     assert t.ndim == 1
     assert output_rank >= 0
 
@@ -422,14 +438,23 @@ def gatherv(
 def gather_objects(
     obj: Any, device: Optional[torch.device] = None, output_rank: int = 0
 ) -> Optional[List[Any]]:
+    r"""Distributed gather on arbitrary python objects. Uses torch.distributed
+    under the hood.
+
+    :param obj: This rank's object to be send to :ref:`output_rank`
+    :param device: The device to put the tensor that holds the encoded object. Defaults to CPU.
+    :param output_rank: The rank to return everyone's inputs to.
+
+    :return: The list of objects if this rank is :ref:`output_rank`, else :py:`None`.
+    """
     device = device or torch.device("cpu")
     assert output_rank >= 0
 
     buf = io.BytesIO()
     pickle.Pickler(buf, protocol=pickle.HIGHEST_PROTOCOL).dump(obj)
-    encoded_obj = torch.frombuffer(buf.getbuffer(), dtype=torch.uint8).to(
-        device=device
-    )
+    encoded_obj = torch.from_numpy(
+        np.frombuffer(buf.getbuffer(), dtype=np.uint8)
+    ).to(device=device)
     buf = None
 
     output = gatherv(

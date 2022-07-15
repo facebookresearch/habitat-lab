@@ -6,20 +6,17 @@
 
 import pytest
 
-try:
-    import torch
-except ImportError:
-    torch = None
+torch = pytest.importorskip("torch")
+habitat_baselines = pytest.importorskip("habitat_baselines")
+
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_pack_info_from_dones,
+    build_rnn_build_seq_info,
+    build_rnn_state_encoder,
+)
 
 
-@pytest.mark.skipif(torch is None, reason="Test requires pytorch")
 def test_rnn_state_encoder():
-    from habitat_baselines.rl.models.rnn_state_encoder import (
-        build_pack_info_from_dones,
-        build_rnn_build_seq_info,
-        build_rnn_state_encoder,
-    )
-
     device = (
         torch.device("cuda")
         if torch.cuda.is_available()
@@ -64,7 +61,7 @@ def test_rnn_state_encoder():
                 )
                 out_hiddens = out_hiddens.permute(1, 0, 2)
 
-                reference_ouputs = []
+                reference_outputs = []
                 reference_hiddens = hidden_states.clone()
                 for t in range(T):
                     reference_hiddens = torch.where(
@@ -77,15 +74,15 @@ def test_rnn_state_encoder():
                         inputs[t : t + 1], reference_hiddens
                     )
 
-                    reference_ouputs.append(x.squeeze(0))
+                    reference_outputs.append(x.squeeze(0))
 
-                reference_ouputs = torch.stack(reference_ouputs, 0).flatten(
+                reference_outputs = torch.stack(reference_outputs, 0).flatten(
                     0, 1
                 )
 
                 assert (
-                    torch.norm(reference_ouputs - outputs).item() < 1e-3
+                    torch.norm(reference_outputs - outputs) < 0.001
                 ), "Failed on (T={}, N={})".format(T, N)
                 assert (
-                    torch.norm(reference_hiddens - out_hiddens).item() < 1e-3
+                    torch.norm(reference_hiddens - out_hiddens) < 0.001
                 ), "Failed on (T={}, N={})".format(T, N)

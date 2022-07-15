@@ -38,7 +38,6 @@ from habitat_baselines.common.tensorboard_utils import (
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
-    add_signal_handlers,
     get_distrib_size,
     init_distrib_slurm,
     is_slurm_batch_job,
@@ -186,7 +185,7 @@ class PPOTrainer(BaseRLTrainer):
         self.envs = construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
-            is_eval=is_eval,
+            enforce_scenes_greater_eq_environments=is_eval,
         )
 
     def _init_train(self, resume_state=None):
@@ -199,8 +198,7 @@ class PPOTrainer(BaseRLTrainer):
         if self.config.RL.DDPPO.force_distributed:
             self._is_distributed = True
 
-        if is_slurm_batch_job():
-            add_signal_handlers()
+        self._add_preemption_signal_handlers()
 
         if self._is_distributed:
             local_rank, tcp_store = init_distrib_slurm(

@@ -9,7 +9,7 @@ from habitat.utils.gym_definitions import make_gym_from_config
 def construct_envs(
     config: Config,
     workers_ignore_signals: bool = False,
-    is_eval: bool = False,
+    enforce_scenes_greater_eq_environments: bool = False,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -18,6 +18,8 @@ def construct_envs(
     :param config: configs that contain num_environments as well as information
     :param necessary to create individual environments.
     :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
+    :param enforce_scenes_greater_eq_environments: Make sure that there are more (or equal)
+        scenes than environments. This is needed for correct evaluation.
 
     :return: VectorEnv object created according to specification.
     """
@@ -42,8 +44,13 @@ def construct_envs(
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
     if len(scenes) < num_environments:
         msg = f"There are less scenes ({len(scenes)}) than environments ({num_environments}). "
-        if is_eval:
-            raise ValueError(msg + "This is invalid for evaluation.")
+        if enforce_scenes_greater_eq_environments:
+            logger.warn(
+                msg
+                + "Reducing the number of environments to be the number of scenes."
+            )
+            num_environments = len(scenes)
+            scene_splits = [[s] for s in scenes]
         else:
             logger.warn(
                 msg

@@ -82,7 +82,8 @@ class _EvalActionsWrapper(torch.nn.Module):
 
 
 class DecentralizedDistributedMixin:
-    def _compute_var_mean(self, x):
+    @staticmethod
+    def _compute_var_mean(x):
         return distributed_var_mean(x)
 
     def init_distributed(self, find_unused_params: bool = True) -> None:

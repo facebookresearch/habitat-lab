@@ -171,7 +171,8 @@ class PPO(nn.Module):
 
         return advantages.mul_(torch.rsqrt(var + EPS_PPO))
 
-    def _compute_var_mean(self, x):
+    @staticmethod
+    def _compute_var_mean(x):
         return torch.var_mean(x)
 
     def _set_grads_to_none(self):
