@@ -35,14 +35,7 @@ def _get_gym_name(cfg: Config) -> Optional[str]:
 
 
 def _get_env_name(cfg: Config) -> Optional[str]:
-    if (
-        "GYM" in cfg
-        and "AUTO_NAME" in cfg["GYM"]
-        and cfg["GYM"]["CLASS_NAME"] is not None
-        and len(cfg["GYM"]["CLASS_NAME"]) > 1
-    ):
-        return cfg["GYM"]["CLASS_NAME"]
-    return None
+    return cfg["ENV_TASK"]
 
 
 def make_gym_from_config(config: Config) -> HabRenderWrapper:
@@ -55,7 +48,7 @@ def make_gym_from_config(config: Config) -> HabRenderWrapper:
     env_class = get_env_class(env_class_name)
     assert (
         env_class is not None
-    ), "No environment class was found, you need to specify it with GYM.CLASS_NAME"
+    ), "No environment class was found, you need to specify it with ENV_TASK"
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
