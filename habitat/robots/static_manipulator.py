@@ -381,7 +381,7 @@ class StaticManipulator(RobotInterface):
     @property
     def arm_motor_forces(self) -> np.ndarray:
         """Get the current torques on the arm joint motors"""
-        return np.ndarray(self.sim_obj.joint_forces)
+        return np.array(self.sim_obj.joint_forces)
 
     @arm_motor_forces.setter
     def arm_motor_forces(self, ctrl: List[float]) -> None:
