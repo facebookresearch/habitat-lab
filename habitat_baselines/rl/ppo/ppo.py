@@ -320,7 +320,7 @@ class PPO(nn.Module):
 
         with inference_mode():
             return {
-                k: float(torch.stack(v).mean())
+                k: float(torch.as_tensor(v, dtype=torch.float32).mean())
                 for k, v in learner_metrics.items()
             }
 
