@@ -76,7 +76,6 @@ class DecentralizedDistributedMixin:
                 self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
                     model,
                     find_unused_parameters=find_unused_params,
-                    gradient_as_bucket_view=True,
                 )
 
         self._evaluate_actions_wrapper = Guard(_EvalActionsWrapper(self.actor_critic))  # type: ignore
