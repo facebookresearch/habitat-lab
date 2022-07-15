@@ -888,6 +888,8 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {}
 
+        raw_cfg = ckpt_dict["config"].clone()
+
         if self.config.EVAL.USE_CKPT_CONFIG:
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
@@ -896,6 +898,35 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
 
         config.defrost()
+        #################################
+        # Gala specific options
+        if config.EVAL.SPLIT == "val":
+            config.EVAL.SPLIT = "eval"
+        config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+
+        self.config.defrost()
+        fuse_keys = []
+        map_sensors = {
+            "ROBOT_TARGET_RELATIVE": "obj_start_gps_compass",
+            "ROBOT_GOAL_RELATIVE": "obj_goal_gps_compass",
+            "EE_TARGET_RELATIVE": "obj_start_sensor",
+            "EE_GOAL_RELATIVE": "obj_goal_sensor",
+            "ROBOT_EE_RELATIVE": "ee_pos",
+            "IS_HOLDING_SENSOR": "is_holding",
+            "JOINT_SENSOR": "joint",
+            "STEP_COUNT_SENSOR": "step_count_remaining",
+        }
+        for sensor in raw_cfg.SENSORS:
+            if sensor in ["DEPTH_SENSOR", "RGB_SENSOR"]:
+                continue
+            fuse_keys.append(map_sensors[sensor])
+
+        self.config.RL.POLICY.fuse_keys = fuse_keys
+        self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+        self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
+        self.config.freeze()
+
+        #################################
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
 
@@ -925,6 +956,17 @@ class PPOTrainer(BaseRLTrainer):
             discrete_actions = True
 
         self._setup_actor_critic_agent(ppo_cfg)
+        cur_state_dict = self.agent.state_dict()
+        is_missing_any = False
+        for k in ckpt_dict["state_dict"]:
+            if k not in cur_state_dict:
+                print("Missing: ", k)
+                is_missing_any = True
+        if is_missing_any:
+            for k in cur_state_dict:
+                if k not in ckpt_dict["state_dict"]:
+                    print("Diff: ", k)
+            raise ValueError("Missing keys")
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])

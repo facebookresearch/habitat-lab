@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from torch import nn as nn
 
+DEPTH_KEY = "robot_head_depth"
+RGB_KEY = "robot_head_rgb"
+
 
 class SimpleCNN(nn.Module):
     r"""A Simple 3-Conv CNN followed by a fully connected layer
@@ -22,13 +25,13 @@ class SimpleCNN(nn.Module):
     ):
         super().__init__()
 
-        if "rgb" in observation_space.spaces:
-            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+        if RGB_KEY in observation_space.spaces:
+            self._n_input_rgb = observation_space.spaces[RGB_KEY].shape[2]
         else:
             self._n_input_rgb = 0
 
-        if "depth" in observation_space.spaces:
-            self._n_input_depth = observation_space.spaces["depth"].shape[2]
+        if DEPTH_KEY in observation_space.spaces:
+            self._n_input_depth = observation_space.spaces[DEPTH_KEY].shape[2]
         else:
             self._n_input_depth = 0
 
@@ -40,11 +43,11 @@ class SimpleCNN(nn.Module):
 
         if self._n_input_rgb > 0:
             cnn_dims = np.array(
-                observation_space.spaces["rgb"].shape[:2], dtype=np.float32
+                observation_space.spaces[RGB_KEY].shape[:2], dtype=np.float32
             )
         elif self._n_input_depth > 0:
             cnn_dims = np.array(
-                observation_space.spaces["depth"].shape[:2], dtype=np.float32
+                observation_space.spaces[DEPTH_KEY].shape[:2], dtype=np.float32
             )
 
         if self.is_blind:
@@ -135,7 +138,7 @@ class SimpleCNN(nn.Module):
     def forward(self, observations: Dict[str, torch.Tensor]):
         cnn_input = []
         if self._n_input_rgb > 0:
-            rgb_observations = observations["rgb"]
+            rgb_observations = observations[RGB_KEY]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
@@ -144,7 +147,7 @@ class SimpleCNN(nn.Module):
             cnn_input.append(rgb_observations)
 
         if self._n_input_depth > 0:
-            depth_observations = observations["depth"]
+            depth_observations = observations[DEPTH_KEY]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)

@@ -1,4 +1,5 @@
 GYM:
+    CLASS_NAME: RearrangeRLEnv
     AUTO_NAME: NavPickNavPlace
     OBS_KEYS:
     - robot_head_depth
@@ -6,6 +7,8 @@ GYM:
     - obj_start_gps_compass
     - joint
     - is_holding
+    - obj_goal_sensor
+    - obj_goal_gps_compass
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:
@@ -56,14 +59,19 @@ TASK:
         TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
+    STEPS_REMAINING_SENSOR:
+        TYPE: StepCountSensor
+        MAX_STEPS: 500
     SENSORS:
-    - TARGET_START_SENSOR
-    - GOAL_SENSOR
-    - JOINT_SENSOR
-    - IS_HOLDING_SENSOR
-    - END_EFFECTOR_SENSOR
-    - TARGET_START_GPS_COMPASS_SENSOR
-    - TARGET_GOAL_GPS_COMPASS_SENSOR
+      - TARGET_START_SENSOR
+      - GOAL_SENSOR
+      - JOINT_SENSOR
+      - IS_HOLDING_SENSOR
+      - END_EFFECTOR_SENSOR
+      - TARGET_START_GPS_COMPASS_SENSOR
+      - TARGET_GOAL_GPS_COMPASS_SENSOR
+      - STEPS_REMAINING_SENSOR
+
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -124,8 +132,12 @@ TASK:
         FORCE_END_PEN: 10.0
     TARGET_START_GPS_COMPASS_SENSOR:
         TYPE: TargetStartGpsCompassSensor
+        INCLUDE_Z: True
+        CARTESIAN: True
     TARGET_GOAL_GPS_COMPASS_SENSOR:
         TYPE: TargetGoalGpsCompassSensor
+        INCLUDE_Z: True
+        CARTESIAN: True
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
         SUCCESS_ANGLE_DIST: 0.7
