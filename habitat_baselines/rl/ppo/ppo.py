@@ -6,7 +6,6 @@
 
 import collections
 import inspect
-import math
 from typing import Dict, Optional, Union
 
 import torch
@@ -18,38 +17,12 @@ from torch import Tensor
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
-from habitat_baselines.utils.common import inference_mode
+from habitat_baselines.utils.common import (
+    LagrangeInequalityCoefficient,
+    inference_mode,
+)
 
 EPS_PPO = 1e-5
-
-
-class LagrangeInequalityCoefficient(nn.Module):
-    def __init__(
-        self,
-        threshold: float,
-        init_alpha=1.0,
-        alpha_min=1e-4,
-        alpha_max=1.0,
-    ):
-        super().__init__()
-        self.alpha = nn.Parameter(torch.full((), math.log(init_alpha)))
-        self.threshold = float(threshold)
-        self.alpha_min = math.log(alpha_min)
-        self.alpha_max = math.log(alpha_max)
-
-    def project_into_bounds(self):
-        with torch.no_grad():
-            self.alpha.data.clamp_(self.alpha_min, self.alpha_max)
-
-    def forward(self):
-        return torch.exp(self.alpha)
-
-    def lagrangian_loss(self, reference_value):
-        c = self()
-
-        return c.detach() * reference_value + c * (
-            self.threshold - reference_value.detach().mean()
-        )
 
 
 class PPO(nn.Module):

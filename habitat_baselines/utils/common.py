@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import math
 import numbers
 import os
 import re
@@ -683,3 +684,51 @@ def get_num_actions(action_space) -> int:
             )
 
     return num_actions
+
+
+class LagrangeInequalityCoefficient(nn.Module):
+    r"""Implements a learnable lagrange coefficient for a constrained
+    optimization problem.
+
+
+    Given the problem
+        min f(x) st. x < threshold
+
+    this becomes
+        min_alpha min_x f(x) + alpha * (threshold - x)
+
+    which we can then optimize via coordinate ascent as
+        min_alpha min_x f(x) + [[alpha]]_sg * x + alpha * (threshold - [[x]]_sg)
+    """
+
+    def __init__(
+        self,
+        threshold: float,
+        init_alpha: float = 1.0,
+        alpha_min: float = 1e-4,
+        alpha_max: float = 1.0,
+    ):
+        super().__init__()
+        self.log_alpha = nn.Parameter(torch.full((), math.log(init_alpha)))
+        self.threshold = float(threshold)
+        self.log_alpha_min = math.log(alpha_min)
+        self.log_alpha_max = math.log(alpha_max)
+
+    def project_into_bounds(self):
+        r"""Projects alpha back into bounds. To be called after each optim step"""
+        with torch.no_grad():
+            self.log_alpha.data.clamp_(self.log_alpha_min, self.log_alpha_max)
+
+    def forward(self):
+        r"""Compute alpha. This is done to allow forward hooks to work, the expected entry point is ref:`lagrangian_loss`"""
+        return torch.exp(self.log_alpha)
+
+    def lagrangian_loss(self, x):
+        r"""Return the coordinate ascent lagrangian loss that keeps x
+        less than the threshold.
+        """
+        alpha = self()
+
+        return alpha.detach() * x + alpha * (
+            self.threshold - x.detach().mean()
+        )
