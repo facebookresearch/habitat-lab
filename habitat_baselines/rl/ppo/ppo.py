@@ -87,10 +87,11 @@ class PPO(nn.Module):
             num_actions = self.actor_critic.num_actions
 
             self.entropy_coef = LagrangeInequalityCoefficient(
-                float(entropy_target_factor) * num_actions,
+                -float(entropy_target_factor) * num_actions,
                 init_alpha=entropy_coef,
                 alpha_max=1.0,
                 alpha_min=1e-4,
+                greater_than=True,
             ).to(device=self.device)
 
         self.use_normalized_advantage = use_normalized_advantage
@@ -245,7 +246,7 @@ class PPO(nn.Module):
                     all_losses.append(-self.entropy_coef * dist_entropy)
                 else:
                     all_losses.append(
-                        self.entropy_coef.lagrangian_loss(-dist_entropy)
+                        self.entropy_coef.lagrangian_loss(dist_entropy)
                     )
 
                 total_loss = torch.stack(all_losses).sum()

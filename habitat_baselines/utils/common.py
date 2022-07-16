@@ -695,10 +695,13 @@ class LagrangeInequalityCoefficient(nn.Module):
         min f(x) st. x < threshold
 
     this becomes
-        min_alpha min_x f(x) + alpha * (threshold - x)
+        min_alpha min_x f(x) + alpha * (threshold - x) st. alpha > 0
 
-    which we can then optimize via coordinate ascent as
-        min_alpha min_x f(x) + [[alpha]]_sg * x + alpha * (threshold - [[x]]_sg)
+    We then optimize via coordinate ascent as
+        f(x) + [[alpha]]_sg * x + alpha * (threshold - [[x]]_sg)
+    and then project alpha to be > 0 after every gradient step.
+
+    In the case that we want for enforce x > threshold, we negate x and the threshold.
     """
 
     def __init__(
@@ -707,12 +710,14 @@ class LagrangeInequalityCoefficient(nn.Module):
         init_alpha: float = 1.0,
         alpha_min: float = 1e-4,
         alpha_max: float = 1.0,
+        greater_than: bool = False,
     ):
         super().__init__()
         self.log_alpha = nn.Parameter(torch.full((), math.log(init_alpha)))
         self.threshold = float(threshold)
         self.log_alpha_min = math.log(alpha_min)
         self.log_alpha_max = math.log(alpha_max)
+        self._greater_than = greater_than
 
     def project_into_bounds(self):
         r"""Projects alpha back into bounds. To be called after each optim step"""
@@ -720,15 +725,22 @@ class LagrangeInequalityCoefficient(nn.Module):
             self.log_alpha.data.clamp_(self.log_alpha_min, self.log_alpha_max)
 
     def forward(self):
-        r"""Compute alpha. This is done to allow forward hooks to work, the expected entry point is ref:`lagrangian_loss`"""
+        r"""Compute alpha. This is done to allow forward hooks to work,
+        the expected entry point is ref:`lagrangian_loss`"""
         return torch.exp(self.log_alpha)
 
     def lagrangian_loss(self, x):
         r"""Return the coordinate ascent lagrangian loss that keeps x
-        less than the threshold.
+        less than or greater than the threshold.
         """
         alpha = self()
 
-        return alpha.detach() * x + alpha * (
-            self.threshold - x.detach().mean()
-        )
+        if self._greater_than:
+            return (
+                alpha * (x.detach().mean() - self.threshold)
+                - alpha.detach() * x
+            )
+        else:
+            return alpha.detach() * x + alpha * (
+                self.threshold - x.detach().mean()
+            )
