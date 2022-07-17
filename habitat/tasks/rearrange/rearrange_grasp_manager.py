@@ -251,7 +251,10 @@ class RearrangeGraspManager:
 
         return self._sim.create_rigid_constraint(c)
 
-    def update_debug(self):
+    def update_debug(self) -> None:
+        """
+        Creates visualizations for grasp points.
+        """
         for i, (local_pivot, obj_id) in enumerate(self._vis_info):
             rom = self._sim.get_rigid_object_manager()
             obj = rom.get_object_by_id(obj_id)

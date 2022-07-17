@@ -21,3 +21,9 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(goal0|0,TARGET_goal0|0)
+
+solution:
+  - nav(goal0|0, ROBOT_0)
+  - pick(goal0|0, ROBOT_0)
+  - nav(TARGET_goal0|0, ROBOT_0)
+  - place(goal0|0, TARGET_goal0|0, ROBOT_0)

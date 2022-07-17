@@ -600,7 +600,8 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
 
         if self.habitat_config.DEBUG_RENDER:
-            self.robots_mgr.update_debug()
+            if self.habitat_config.DEBUG_RENDER_ROBOT:
+                self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
             # Don't draw bounding boxes over target objects.

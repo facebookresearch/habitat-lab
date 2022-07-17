@@ -1158,6 +1158,7 @@ class PPOTrainer(BaseRLTrainer):
                 sum(v[stat_key] for v in stats_episodes.values())
                 / num_episodes
             )
+            torch.linalg.inv()
 
         for k, v in aggregated_stats.items():
             logger.info(f"Average episode {k}: {v:.4f}")
