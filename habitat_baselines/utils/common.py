@@ -691,17 +691,22 @@ class LagrangeInequalityCoefficient(nn.Module):
     optimization problem.
 
 
-    Given the problem
-        min f(x) st. x < threshold
+    Given the constrained optimization problem
+        min f(x)
+            st. x < threshold
 
-    this becomes
-        min_alpha min_x f(x) + alpha * (threshold - x) st. alpha > 0
+    The lagrangian relaxation is then the dual problem
+        argmax_alpha argmin_x f(x) + alpha * (x - threshold)
+            st. alpha > 0
 
-    We then optimize via coordinate ascent as
-        f(x) + [[alpha]]_sg * x + alpha * (threshold - [[x]]_sg)
-    and then project alpha to be > 0 after every gradient step.
+    We can optimize the dual problem via coordinate descent as
+        f(x) + [[alpha]]_sg * x - alpha * ([[x]]_sg - threshold)
+    To satisfy the constraint on alpha, we use projected gradient
+    descent and project alpha to be > 0 after every step.
 
-    In the case that we want for enforce x > threshold, we negate x and the threshold.
+    To enforce x > threshold, we negate x and the threshold.
+    This yields the coordinate descent objective
+       alpha * (threshold - [[x]]_sg) - [[alpha]]_sg * x
     """
 
     def __init__(
@@ -735,12 +740,7 @@ class LagrangeInequalityCoefficient(nn.Module):
         """
         alpha = self()
 
-        if self._greater_than:
-            return (
-                alpha * (x.detach().mean() - self.threshold)
-                - alpha.detach() * x
-            )
+        if not self._greater_than:
+            return alpha.detach() * x - alpha * (x.detach() - self.threshold)
         else:
-            return alpha.detach() * x + alpha * (
-                self.threshold - x.detach().mean()
-            )
+            return alpha * (self.threshold - x.detach()) - alpha.detach() * x
