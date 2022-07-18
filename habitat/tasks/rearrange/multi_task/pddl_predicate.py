@@ -69,14 +69,14 @@ class Predicate:
         return p
 
     def __str__(self):
-        return f"<Predicate: {self._name} [{self._args}] [{self._arg_values}]>"
+        return f"<Predicate: {self._name} {self._args} {self._arg_values}>"
 
     def __repr__(self):
         return str(self)
 
     @property
     def compact_str(self):
-        args = ",".join([str(x) for x in self._arg_values])
+        args = ",".join([x.name for x in self._arg_values])
         return f"{self._name}({args})"
 
     def __eq__(self, other_pred):

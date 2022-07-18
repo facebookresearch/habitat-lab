@@ -23,14 +23,17 @@ from habitat.tasks.rearrange.utils import rearrange_logger
 
 @registry.register_sensor
 class GlobalPredicatesSensor(Sensor):
+    cls_uuid: str = "all_predicates"
+
     def __init__(self, sim, config, *args, task, **kwargs):
         self._task = task
         self._sim = sim
         self._predicates_list = None
+        self._cur_step = 0
         super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
-        return "all_predicates"
+        return GlobalPredicatesSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -42,6 +45,7 @@ class GlobalPredicatesSensor(Sensor):
             )
 
         return spaces.Box(
+            # shape=(len(self._predicates_list) + 1,),
             shape=(len(self._predicates_list),),
             low=0,
             high=1,
@@ -49,8 +53,13 @@ class GlobalPredicatesSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        #############################################
+        # TODO: THIS SENSOR WAS CHANGED FOR DEBUGGING
+        #############################################
         sim_info = self._task.pddl_problem.sim_info
         truth_values = [p.is_true(sim_info) for p in self._predicates_list]
+        # self._cur_step += 1
+        # truth_values.insert(0, self._cur_step)
         return np.array(truth_values, dtype=np.float32)
 
 
@@ -170,7 +179,7 @@ class CompositeSparseReward(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = self._config.SLACK_REWARD
+        self._metric = 0.0
 
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(*args, **kwargs)
