@@ -43,6 +43,7 @@ def create_task_object(
 
     config = copy.deepcopy(cur_config)
     config.defrost()
+    TASK_IGNORE_KEYS = ["TASK_SPEC", "TASK_SPEC_BASE_PATH", "PDDL_DOMAIN_DEF"]
     if task_config_path is not None:
         pass_args = []
         for k, v in task_config_args.items():
@@ -50,6 +51,8 @@ def create_task_object(
         task_config = habitat.get_config(
             osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"), pass_args
         )
+        for k in TASK_IGNORE_KEYS:
+            del task_config["TASK"][k]
         config.merge_from_other_cfg(task_config.TASK)
     # New task should not recreate any sensors
     config.MEASUREMENTS = []

@@ -113,7 +113,9 @@ class NnSkillPolicy(SkillPolicy):
         return full_action, rnn_hidden_states
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, batch_size):
+    def from_config(
+        cls, config, observation_space, action_space, batch_size, full_config
+    ):
         # Load the wrap policy from file
         if len(config.LOAD_CKPT_FILE) == 0:
             raise ValueError(

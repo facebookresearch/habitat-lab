@@ -45,6 +45,12 @@ class RobotAction(SimulatorTaskAction):
             return f"AGENT_{self._config.AGENT}_"
         return ""
 
+    @property
+    def _robot_prefix(self) -> str:
+        if self._config.AGENT is not None:
+            return f"ROBOT_{self._config.AGENT}_"
+        return "ROBOT_0"
+
 
 class GripSimulatorTaskAction(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):

@@ -50,6 +50,7 @@ class PddlDomain:
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
+        :param cur_task_config: The task config (`TASK_CONFIG.TASK`).
         """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config

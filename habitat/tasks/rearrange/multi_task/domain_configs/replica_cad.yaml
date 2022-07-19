@@ -136,7 +136,7 @@ actions:
     postcondition:
       - robot_at(obj, robot)
     task_info:
-      task: RearrangeNavToObjTask-v0
+      task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
         TASK.FORCE_REGENERATE: True
@@ -157,7 +157,7 @@ actions:
     postcondition:
       - robot_at(marker, robot)
     task_info:
-      task: RearrangeNavToObjTask-v0
+      task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
         TASK.FORCE_REGENERATE: True

@@ -221,7 +221,8 @@ class DynNavRLEnv(RearrangeTask):
         if len(allowed_tasks) == 0:
             raise ValueError("Got no allowed tasks.")
 
-        nav_to_task = allowed_tasks[0]
+        any_key = next(iter(allowed_tasks))
+        nav_to_task = allowed_tasks[any_key][0]
 
         rearrange_logger.debug(f"Navigating to {nav_to_task}")
 
