@@ -11,7 +11,7 @@ GYM:
     - joint
     - is_holding
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 5000
+    MAX_EPISODE_STEPS: 3000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -100,7 +100,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0

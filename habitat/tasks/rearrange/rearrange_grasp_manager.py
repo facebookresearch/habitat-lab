@@ -282,9 +282,8 @@ class RearrangeGraspManager:
         snap_obj_id: int,
         force: bool = True,
         should_open_gripper=True,
-        rel_pos=None,
-        keep_T=None,
-        gripper_offset=0.1,
+        rel_pos: Optional[mn.Vector3] = None,
+        keep_T: Optional[mn.Matrix4] = None,
     ) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's
         end effector with 3 ball-joint constraints forming a fixed frame.
@@ -331,7 +330,7 @@ class RearrangeGraspManager:
                 # link pivot is the object in link space
                 pivot_in_link=rel_pos,
                 # object pivot is local origin
-                pivot_in_obj=mn.Vector3(0),
+                pivot_in_obj=mn.Vector3.zero_init(),
                 obj_id_b=self._snapped_obj_id,
             ),
         ]

@@ -3,8 +3,11 @@ GYM:
     AUTO_NAME: TidyHouse
     OBS_KEYS:
     - robot_head_depth
+    - relative_resting_position
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:
@@ -50,6 +53,7 @@ TASK:
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
@@ -101,34 +105,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
-    MOVE_OBJECTS_REWARD:
-        TYPE: MoveObjectsReward
-        PICK_REWARD: 1.0
-        SUCCESS_DIST: 0.15
-        SINGLE_REARRANGE_REWARD: 1.0
-        DIST_REWARD: 1.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
-    NAV_TO_POS_SUCC:
-        SUCCESS_DISTANCE: 0.2
-        TYPE: NavToPosSucc
-    PLACE_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: PlaceSuccess
-    PICK_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: RearrangePickSuccess
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"
@@ -144,19 +120,9 @@ SIMULATOR:
     AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: false
         RADIUS: 0.3
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        START_POSITION:
-        - 0
-        - 0
-        - 0
-        START_ROTATION:
-        - 0
-        - 0
-        - 0
-        - 1
         ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
         ROBOT_TYPE: FetchRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf

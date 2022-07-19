@@ -18,7 +18,6 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     ObjectToGoalDistance,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_sensor
@@ -178,62 +177,6 @@ class CompositeSparseReward(Measure):
 
 
 @registry.register_measure
-class CompositeReward(Measure):
-    """
-    The reward based on where the agent currently is in the hand defined solution list.
-    """
-
-    cls_uuid: str = "composite_reward"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return CompositeReward.cls_uuid
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(**kwargs)
-        self._sim = sim
-        self._config = config
-        self._prev_node_idx = None
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [CompositeNodeIdx.cls_uuid],
-        )
-
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = 0.0
-        node_measure = task.measurements.measures[CompositeNodeIdx.cls_uuid]
-
-        node_idx = node_measure.get_metric()["node_idx"]
-        if self._prev_node_idx is None:
-            self._prev_node_idx = node_idx
-        elif node_idx > self._prev_node_idx:
-            self._metric += self._config.STAGE_COMPLETE_REWARD
-
-        cur_task_cfg = task.get_inferrred_node_task()._config
-
-        if "REWARD_MEASURE" not in cur_task_cfg:
-            raise ValueError(
-                f"Cannot find REWARD_MEASURE key in {list(cur_task_cfg.keys())}"
-            )
-        cur_task_reward = task.measurements.measures[
-            cur_task_cfg.REWARD_MEASURE
-        ].get_metric()
-        self._metric += cur_task_reward
-
-        self._prev_node_idx = node_idx
-
-
-@registry.register_measure
 class DoesWantTerminate(Measure):
     cls_uuid: str = "does_want_terminate"
 
@@ -347,57 +290,3 @@ class CompositeStageGoals(Measure):
                     self._stage_succ.append(stage_name)
                 else:
                     self._metric[succ_k] = 0.0
-
-
-@registry.register_measure
-class CompositeNodeIdx(Measure):
-    """
-    Adds several keys to the metrics dictionary:
-        - `reached_i`: Did the agent succeed in sub-task at index `i` of the
-          sub-task `solution` list?
-        - `node_idx`: Index of the agent in completing the sub-tasks from
-          the `solution` list.
-    """
-
-    cls_uuid: str = "composite_node_idx"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(**kwargs)
-        self._sim = sim
-        self._config = config
-        self._stage_succ = []
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return CompositeNodeIdx.cls_uuid
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = {}
-        inf_cur_task_cfg = task.get_inferrred_node_task()._config
-        if "SUCCESS_MEASURE" not in inf_cur_task_cfg:
-            raise ValueError(
-                f"SUCCESS_MEASURE key not found in config: {inf_cur_task_cfg}"
-            )
-
-        is_succ = task.measurements.measures[
-            inf_cur_task_cfg.SUCCESS_MEASURE
-        ].get_metric()
-        if is_succ:
-            task.increment_inferred_solution_idx(episode)
-            rearrange_logger.debug(
-                f"Completed {inf_cur_task_cfg.TYPE}, incremented node to {task.get_inferrred_node_task()}"
-            )
-
-        node_idx = task.get_inferred_node_idx()
-        for i in range(task.num_solution_subtasks):
-            self._metric[f"reached_{i}"] = task.get_inferred_node_idx() >= i
-        self._metric["node_idx"] = node_idx

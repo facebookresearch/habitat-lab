@@ -4,8 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Union
+from typing import Optional, Union
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -82,9 +83,14 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 ee_pos - scene_obj_pos[closest_obj_idx], ord=2
             )
 
+            keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+
             if to_target < self._config.GRASP_THRESH_DIST:
                 self.cur_grasp_mgr.snap_to_obj(
-                    self._sim.scene_obj_ids[closest_obj_idx]
+                    self._sim.scene_obj_ids[closest_obj_idx],
+                    force=False,
+                    rel_pos=mn.Vector3(0.1, 0.0, 0.0),
+                    keep_T=keep_T,
                 )
                 return
 
@@ -124,7 +130,7 @@ class SuctionGraspAction(MagicGraspAction):
         self._sim: RearrangeSim = sim
 
     def _grasp(self):
-        attempt_snap_entity: Union[str, int] = None
+        attempt_snap_entity: Optional[Union[str, int]] = None
         match_coll = None
         contacts = self._sim.get_physics_contact_points()
 
@@ -169,7 +175,6 @@ class SuctionGraspAction(MagicGraspAction):
                 rel_pos=ee_link_T.inverted().transform_point(ro.translation),
                 keep_T=obj_in_ee_T,
                 should_open_gripper=False,
-                gripper_offset=0.0,
             )
             return
 

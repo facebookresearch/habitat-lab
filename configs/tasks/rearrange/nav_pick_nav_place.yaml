@@ -3,8 +3,11 @@ GYM:
     AUTO_NAME: NavPickNavPlace
     OBS_KEYS:
     - robot_head_depth
+    - relative_resting_position
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:
@@ -32,22 +35,8 @@ TASK:
     PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-    TARGET_START_SENSOR:
-        TYPE: TargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: GoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
@@ -99,7 +88,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0
@@ -110,25 +98,6 @@ TASK:
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"

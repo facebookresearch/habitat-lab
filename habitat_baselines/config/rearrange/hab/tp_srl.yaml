@@ -58,6 +58,28 @@ RL:
           START_ZONE_RADIUS: 0.3
           FORCE_END_ON_TIMEOUT: True
 
+        NN_CLOSE_CAB:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          AT_RESTING_THRESHOLD: 0.2
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/close_cab.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
+
+        NN_CLOSE_FRIDGE:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          AT_RESTING_THRESHOLD: 0.2
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/close_fridge.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
+
         NN_PICK:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
@@ -105,6 +127,8 @@ RL:
         # Uncomment if you are also using these skills
         # open_cab: "NN_OPEN_CAB"
         # open_fridge: "NN_OPEN_FRIDGE"
+        # close_cab: "NN_OPEN_CAB"
+        # close_fridge: "NN_OPEN_FRIDGE"
         pick: "NN_PICK"
         place: "NN_PLACE"
         nav: "NN_NAV"

@@ -440,6 +440,7 @@ class PddlProblem(PddlDomain):
         for action in self.actions.values():
             action.set_precond(self.expand_quantifiers(action.precond))
 
+    @property
     def solution(self):
         if self._solution is None:
             raise ValueError("Solution is not supported by this PDDL")
