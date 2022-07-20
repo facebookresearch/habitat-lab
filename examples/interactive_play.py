@@ -347,6 +347,9 @@ def play_env(env, args, config):
     agent_to_control = "AGENT_0"
 
     free_cam = FreeCamHelper()
+    gfx_measure = env.task.measurements.measures.get(
+        GfxReplayMeasure.cls_uuid, None
+    )
 
     while True:
         if (
@@ -414,6 +417,9 @@ def play_env(env, args, config):
 
         if end_ep:
             total_reward = 0
+            # Clear the saved keyframes.
+            if gfx_measure is not None:
+                gfx_measure.get_metric(force_get=True)
             env.reset()
 
         if not args.no_render:
@@ -491,9 +497,6 @@ def play_env(env, args, config):
             "color",
             osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),
         )
-    gfx_measure = env.task.measurements.measures.get(
-        GfxReplayMeasure.cls_uuid, None
-    )
     if gfx_measure is not None:
         gfx_str = gfx_measure.get_metric(force_get=True)
         write_gfx_replay(gfx_str, config.TASK, env.current_episode.episode_id)
@@ -582,6 +585,8 @@ if __name__ == "__main__":
         config.SIMULATOR.DEBUG_RENDER = True
         config.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = False
         config.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = False
+        config.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
+        config.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
     if args.gfx:
         config.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = True
         config.TASK.MEASUREMENTS.append("GFX_REPLAY_MEASURE")

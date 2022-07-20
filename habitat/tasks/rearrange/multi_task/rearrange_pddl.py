@@ -41,8 +41,11 @@ class ExprType:
         self.parent = parent
 
     def is_subtype_of(self, other_type: "ExprType") -> bool:
-        # If true, then `self` is compatible with `other_type` but `other_type`
-        # is NOT necessarily compatible with `self`
+        """
+        If true, then `self` is compatible with `other_type` but `other_type`
+        is NOT necessarily compatible with `self`. In other words, `other_type`
+        is higher on the hierarchy of sub-types than `self`.
+        """
         all_types = [self.name]
         parent = self.parent
         while parent is not None:
