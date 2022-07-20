@@ -5,6 +5,7 @@
 from typing import Dict, List, Optional, Tuple
 
 import attr
+import magnum as mn
 import numpy as np
 
 from habitat.robots.robot_interface import RobotInterface
@@ -42,7 +43,7 @@ class StaticManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: np.ndarray
+    ee_offset: mn.Vector3
     ee_link: int
     ee_constraint: np.ndarray
 
@@ -188,41 +189,41 @@ class StaticManipulator(RobotInterface):
         return self.params.ee_link
 
     @property
-    def ee_local_offset(self) -> np.ndarray:
+    def ee_local_offset(self) -> mn.Vector3:
         """Gets the relative offset of the end-effector center from the
         end-effector link.
         """
         return self.params.ee_offset
 
-    # def calculate_ee_forward_kinematics(
-    #     self, joint_state: np.ndarray
-    # ) -> np.ndarray:
-    #     """Gets the end-effector position for the given joint state."""
-    #     self.sim_obj.joint_positions = joint_state
-    #     return self.ee_transform.translation
+    def calculate_ee_forward_kinematics(
+        self, joint_state: np.ndarray
+    ) -> np.ndarray:
+        """Gets the end-effector position for the given joint state."""
+        self.sim_obj.joint_positions = joint_state
+        return self.ee_transform.translation
 
-    # def calculate_ee_inverse_kinematics(
-    #     self, ee_target_position: np.ndarray
-    # ) -> np.ndarray:
-    #     """Gets the joint states necessary to achieve the desired end-effector
-    #     configuration.
-    #     """
-    #     raise NotImplementedError(
-    #         "Currently no implementation for generic IK."
-    #     )
+    def calculate_ee_inverse_kinematics(
+        self, ee_target_position: np.ndarray
+    ) -> np.ndarray:
+        """Gets the joint states necessary to achieve the desired end-effector
+        configuration.
+        """
+        raise NotImplementedError(
+            "Currently no implementation for generic IK."
+        )
 
-    # @property
-    # def ee_transform(self) -> np.ndarray:
-    #     """Gets the transformation of the end-effector location. This is offset
-    #     from the end-effector link location.
-    #     """
-    #     ef_link_transform = self.sim_obj.get_link_scene_node(
-    #         self.params.ee_link
-    #     ).transformation
-    #     ef_link_transform.translation = ef_link_transform.transform_point(
-    #         self.ee_local_offset
-    #     )
-    #     return ef_link_transform
+    @property
+    def ee_transform(self) -> mn.Matrix4:
+        """Gets the transformation of the end-effector location. This is offset
+        from the end-effector link location.
+        """
+        ef_link_transform = self.sim_obj.get_link_scene_node(
+            self.params.ee_link
+        ).transformation
+        ef_link_transform.translation = ef_link_transform.transform_point(
+            self.ee_local_offset
+        )
+        return ef_link_transform
 
     @property
     def gripper_joint_pos(self) -> np.ndarray:
@@ -448,3 +449,10 @@ class StaticManipulator(RobotInterface):
                 motor_id,
                 self.sim_obj.get_joint_motor_settings(motor_id),
             )
+
+    def _get_translation_from_htm(self, mat: np.ndarray) -> np.ndarray:
+        assert mat.shape == (
+            4,
+            4,
+        ), f"Invalid matrix shape. Homogenous transformation matrices should be 4x4, got {mat.shape} instead"
+        return mat[:3, -1]
