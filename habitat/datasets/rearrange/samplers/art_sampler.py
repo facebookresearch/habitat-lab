@@ -161,10 +161,9 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
                             matching_recep = recep
                             break
 
-                    should_sample = (
-                        self._apply_prob is not None
-                        and self._apply_prob < random.random()
-                    )
+                    should_sample = True
+                    if self._apply_prob is not None:
+                        should_sample = self._apply_prob < random.random()
 
                     if matching_recep is not None and should_sample:
                         # If this is true, this means that the receptacle AO must be opened. That is because

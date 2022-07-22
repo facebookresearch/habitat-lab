@@ -461,7 +461,7 @@ class GfxReplayMeasure(Measure):
             self._metric = ""
 
     def get_metric(self, force_get=False):
-        if force_get:
+        if force_get and self._sim.sim_config.sim_cfg.enable_gfx_replay_save:
             return (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
