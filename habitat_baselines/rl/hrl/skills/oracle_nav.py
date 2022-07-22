@@ -1,11 +1,18 @@
 import os.path as osp
+from dataclasses import dataclass
 
+import numpy as np
 import torch
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
 from habitat.tasks.rearrange.oracle_nav_action import (
     get_possible_nav_to_actions,
+)
+from habitat.tasks.rearrange.rearrange_sensors import (
+    TargetGoalGpsCompassSensor,
+    TargetStartGpsCompassSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -13,6 +20,12 @@ from habitat_baselines.rl.hrl.utils import find_action_range
 
 
 class OracleNavPolicy(NnSkillPolicy):
+    @dataclass
+    class OracleNavActionArgs:
+        action_idx: int
+        is_target_obj: bool
+        target_idx: int
+
     def __init__(
         self,
         wrap_policy,
@@ -44,6 +57,9 @@ class OracleNavPolicy(NnSkillPolicy):
             action_space, "ORACLE_NAV_ACTION"
         )
 
+        self._is_target_obj = None
+        self._targ_obj_idx = None
+
     def on_enter(
         self,
         skill_arg,
@@ -52,6 +68,8 @@ class OracleNavPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
     ):
+        self._is_target_obj = None
+        self._targ_obj_idx = None
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
@@ -90,17 +108,23 @@ class OracleNavPolicy(NnSkillPolicy):
         prev_actions,
         masks,
     ) -> torch.BoolTensor:
+        ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
-        # Check if the navigation policy has stopped moving.
-        if self._was_running_on_prev_step:
-            prev_nav_action = prev_actions[:, self._oracle_nav_ac_idx]
-            action_mags = torch.linalg.norm(prev_nav_action, dim=-1)
-            ret = action_mags < self._config.STOP_ACTION_THRESH
-        else:
-            ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(
-                masks.device
+        for env_i, skill_arg in enumerate(self._cur_skill_args):
+            if skill_arg.is_target_obj:
+                dist, angle = observations[
+                    TargetStartGpsCompassSensor.cls_uuid
+                ][env_i]
+            else:
+                dist, angle = observations[
+                    TargetGoalGpsCompassSensor.cls_uuid
+                ][env_i]
+            angle = np.abs(angle)
+            ret[env_i] = (
+                dist < self._config.STOP_DIST_THRESH
+                and angle < self._config.STOP_ANGLE_THRESH
             )
-        self._was_running_on_prev_step = True
+
         return ret
 
     def _parse_skill_arg(self, skill_arg):
@@ -113,6 +137,8 @@ class OracleNavPolicy(NnSkillPolicy):
             raise ValueError(
                 f"Unexpected number of skill arguments in {skill_arg}"
             )
+
+        targ_obj_idx = int(targ_obj.split("|")[-1])
 
         targ_obj = self._pddl_problem.get_entity(targ_obj)
         if marker is not None:
@@ -131,7 +157,15 @@ class OracleNavPolicy(NnSkillPolicy):
             break
         if match_i is None:
             raise ValueError(f"Cannot find matching action for {skill_arg}")
-        return match_i
+        is_target_obj = targ_obj.expr_type.is_subtype_of(
+            self._pddl_problem.expr_types[RIGID_OBJ_TYPE]
+        )
+        return OracleNavPolicy.OracleNavActionArgs(
+            match_i, is_target_obj, targ_obj_idx
+        )
+
+    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
+        return self._cur_skill_args[batch_idx].target_idx
 
     def _internal_act(
         self,
@@ -144,8 +178,8 @@ class OracleNavPolicy(NnSkillPolicy):
     ):
         full_action = torch.zeros(prev_actions.shape, device=masks.device)
         full_action = self._keep_holding_state(full_action, observations)
-        full_action[:, self._oracle_nav_ac_idx] = (
-            self._cur_skill_args[cur_batch_idx] + 1
-        )
+        cur_args = self._cur_skill_args[cur_batch_idx]
+
+        full_action[:, self._oracle_nav_ac_idx] = cur_args.action_idx + 1
 
         return full_action, rnn_hidden_states

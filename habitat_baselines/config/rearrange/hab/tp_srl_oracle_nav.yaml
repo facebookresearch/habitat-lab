@@ -9,6 +9,9 @@ VIDEO_DIR: "video_dir"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
+VIDEO_RENDER_VIEWS:
+  - "THIRD_RGB_SENSOR"
+SENSORS: ["HEAD_DEPTH_SENSOR"]
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: ""
 NUM_ENVIRONMENTS: 1
@@ -102,9 +105,10 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
           GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
           NAV_ACTION_NAME: "BASE_VELOCITY"
-          STOP_ACTION_THRESH: 0.01
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: True
+          STOP_ANGLE_THRESH: 0.2
+          STOP_DIST_THRESH: 1.0
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"

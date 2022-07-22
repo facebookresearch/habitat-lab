@@ -107,25 +107,33 @@ class OracleNavAction(BaseVelAction):
         rel_targ = rel_targ[[0, 2]]
         rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
 
-        rel_angle = get_angle(robot_forward, rel_targ)
+        angle_to_target = get_angle(robot_forward, rel_targ)
+        angle_to_obj = get_angle(robot_forward, rel_pos)
 
         dist_to_final_nav_targ = np.linalg.norm(
             (final_nav_targ - robot_pos)[[0, 2]]
         )
+        at_goal = (
+            dist_to_final_nav_targ < self._config.DIST_THRESH
+            and angle_to_obj < self._config.TURN_THRESH
+        )
 
-        if dist_to_final_nav_targ < self._config.DIST_THRESH:
-            # Look at the object
-            vel = compute_turn(
-                rel_pos, self._config.TURN_VELOCITY, robot_forward
-            )
-        elif rel_angle < self._config.TURN_THRESH:
-            # Move towards the target
-            vel = [self._config.FORWARD_VELOCITY, 0]
+        if not at_goal:
+            if dist_to_final_nav_targ < self._config.DIST_THRESH:
+                # Look at the object
+                vel = compute_turn(
+                    rel_pos, self._config.TURN_VELOCITY, robot_forward
+                )
+            elif angle_to_target < self._config.TURN_THRESH:
+                # Move towards the target
+                vel = [self._config.FORWARD_VELOCITY, 0]
+            else:
+                # Look at the target waypoint.
+                vel = compute_turn(
+                    rel_targ, self._config.TURN_VELOCITY, robot_forward
+                )
         else:
-            # Look at the target waypoint.
-            vel = compute_turn(
-                rel_targ, self._config.TURN_VELOCITY, robot_forward
-            )
+            vel = [0, 0]
 
         kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
         return super().step(*args, is_last_action=is_last_action, **kwargs)

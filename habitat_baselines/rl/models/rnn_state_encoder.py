@@ -278,7 +278,7 @@ class RNNStateEncoder(nn.Module):
         return hidden_states
 
     def unpack_hidden(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        return hidden_states.contiguous()
+        return hidden_states
 
     def single_forward(
         self, x, hidden_states, masks

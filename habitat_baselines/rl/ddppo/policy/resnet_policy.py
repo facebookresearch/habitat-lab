@@ -64,9 +64,6 @@ class PointNavResNetPolicy(NetPolicy):
             discrete_actions = True
             self.action_distribution_type = "categorical"
 
-        if fuse_keys is None:
-            fuse_keys = []
-
         super().__init__(
             PointNavResNetNet(
                 observation_space=observation_space,

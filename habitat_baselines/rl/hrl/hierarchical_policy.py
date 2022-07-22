@@ -216,11 +216,18 @@ class HierarchicalPolicy(Policy):
         )
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        orig_action_space,
+        **kwargs,
+    ):
         return cls(
             config.RL.POLICY,
             config,
             observation_space,
-            action_space,
+            orig_action_space,
             config.NUM_ENVIRONMENTS,
         )

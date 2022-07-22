@@ -1,5 +1,4 @@
 GYM:
-    CLASS_NAME: RearrangeRLEnv
     AUTO_NAME: RearrangeEasy
     OBS_KEYS:
     - robot_head_depth

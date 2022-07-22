@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
 import gym.spaces as spaces
 import numpy as np
 import torch
 
-from habitat.config import Config as CN
 from habitat.core.spaces import ActionSpace
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
@@ -132,23 +133,11 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
         policy_cfg = ckpt_dict["config"]
 
-        if "GYM" not in policy_cfg.TASK_CONFIG:
-            # Support loading legacy policies
-            # TODO: Remove this eventually and drop support for policies
-            # trained on older version of codebase.
-            policy_cfg.defrost()
-            policy_cfg.TASK_CONFIG.GYM = CN()
-            policy_cfg.TASK_CONFIG.GYM.OBS_KEYS = list(
-                set(
-                    policy_cfg.RL.POLICY.include_visual_keys
-                    + policy_cfg.RL.GYM_OBS_KEYS
-                )
-            )
-            policy_cfg.freeze()
-
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
-            {k: observation_space.spaces[k] for k in expected_obs_keys}
+            OrderedDict(
+                [(k, observation_space.spaces[k]) for k in expected_obs_keys]
+            )
         )
 
         for k in config.OBS_SKILL_INPUTS:
@@ -160,10 +149,12 @@ class NnSkillPolicy(SkillPolicy):
         )
 
         filtered_action_space = ActionSpace(
-            {
-                k: action_space[k]
-                for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-            }
+            OrderedDict(
+                [
+                    (k, action_space[k])
+                    for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+                ]
+            )
         )
 
         if "ARM_ACTION" in filtered_action_space.spaces and (

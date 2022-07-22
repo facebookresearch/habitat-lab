@@ -26,6 +26,7 @@ _C.TRAINER_NAME = "ppo"
 _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
+_C.VIDEO_RENDER_VIEWS = []
 _C.TENSORBOARD_DIR = "tb"
 _C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
