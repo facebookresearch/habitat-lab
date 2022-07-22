@@ -10,22 +10,27 @@ import os
 
 import numpy as np
 import pytest
+from gym import Wrapper
 
 import habitat
 from habitat.config.default import get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
-from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal, StopAction
-from habitat.utils.test_utils import sample_non_stop_action
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
+from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.utils.test_utils import (
+    sample_non_stop_action,
+    sample_non_stop_action_gym,
+)
 
 CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
 NUM_ENVS = 4
 
 
 class DummyRLEnv(habitat.RLEnv):
-    def __init__(self, config, dataset=None, env_ind=0):
+    def __init__(self, config, dataset=None):
         super(DummyRLEnv, self).__init__(config, dataset)
-        self._env_ind = env_ind
 
     def get_reward_range(self):
         return -1.0, 1.0
@@ -42,11 +47,17 @@ class DummyRLEnv(habitat.RLEnv):
     def get_info(self, observations):
         return {}
 
+
+class CallTestEnvWrapper(Wrapper):
+    def __init__(self, env, env_ind=0):
+        super(CallTestEnvWrapper, self).__init__(env)
+        self._dummy_variable = env_ind
+
     def get_env_ind(self):
-        return self._env_ind
+        return self._dummy_variable
 
     def set_env_ind(self, new_env_ind):
-        self._env_ind = new_env_ind
+        self._dummy_variable = new_env_ind
 
 
 def _load_test_data():
@@ -65,6 +76,10 @@ def _load_test_data():
 
         config.defrost()
         config.SIMULATOR.SCENE = datasets[-1].episodes[0].scene_id
+        # remove the teleport action that makes the action space continuous
+        config.TASK.POSSIBLE_ACTIONS = [
+            a for a in config.TASK.POSSIBLE_ACTIONS if a != "TELEPORT"
+        ]
         if not os.path.exists(config.SIMULATOR.SCENE):
             pytest.skip("Please download Habitat test data to data folder.")
         config.freeze()
@@ -82,6 +97,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
 
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
+        make_env_fn=_make_dummy_env_func,
         env_fn_args=env_fn_args,
         multiprocessing_start_method=multiprocessing_start_method,
     ) as envs:
@@ -89,7 +105,7 @@ def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
 
         for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
             observations = envs.step(
-                sample_non_stop_action(envs.action_spaces[0], num_envs)
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
             )
             assert len(observations) == num_envs
 
@@ -126,11 +142,12 @@ def test_vectorized_envs(multiprocessing_start_method, gpu2gpu):
 
 
 def test_with_scope():
-    configs, datasets = _load_test_data()
-    num_envs = len(configs)
-    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    configs, _ = _load_test_data()
+    env_fn_args = tuple((c,) for c in configs)
     with habitat.VectorEnv(
-        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+        make_env_fn=make_gym_from_config,
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method="forkserver",
     ) as envs:
         envs.reset()
 
@@ -138,11 +155,12 @@ def test_with_scope():
 
 
 def test_number_of_episodes():
-    configs, datasets = _load_test_data()
-    num_envs = len(configs)
-    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    configs, _ = _load_test_data()
+    env_fn_args = tuple((c,) for c in configs)
     with habitat.VectorEnv(
-        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+        make_env_fn=make_gym_from_config,
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method="forkserver",
     ) as envs:
         assert envs.number_of_episodes == [10000, 10000, 10000, 10000]
 
@@ -150,13 +168,15 @@ def test_number_of_episodes():
 def test_threaded_vectorized_env():
     configs, datasets = _load_test_data()
     num_envs = len(configs)
-    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    with habitat.ThreadedVectorEnv(env_fn_args=env_fn_args) as envs:
+    env_fn_args = tuple((c,) for c in configs)
+    with habitat.ThreadedVectorEnv(
+        make_env_fn=make_gym_from_config, env_fn_args=env_fn_args
+    ) as envs:
         envs.reset()
 
         for _ in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
             observations = envs.step(
-                sample_non_stop_action(envs.action_spaces[0], num_envs)
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
             )
             assert len(observations) == num_envs
 
@@ -174,6 +194,9 @@ def test_env(gpu2gpu):
 
     config.defrost()
     config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.TASK.POSSIBLE_ACTIONS = [
+        a for a in config.TASK.POSSIBLE_ACTIONS if a != "TELEPORT"
+    ]
     config.freeze()
     with habitat.Env(config=config, dataset=None) as env:
         env.episodes = [
@@ -206,23 +229,11 @@ def test_env(gpu2gpu):
 
         env.reset()
 
-        env.step(action={"action": StopAction.name})
+        env.step(action=0)
         # check for STOP action
         assert (
             env.episode_over is True
         ), "episode should be over after STOP action"
-
-
-def make_rl_env(config, dataset, rank: int = 0):
-    r"""Constructor for default habitat Env.
-    :param config: configurations for environment
-    :param dataset: dataset for environment
-    :param rank: rank for setting seeds for environment
-    :return: constructed habitat Env
-    """
-    env = DummyRLEnv(config=config, dataset=dataset)
-    env.seed(config.SEED + rank)
-    return env
 
 
 @pytest.mark.parametrize("gpu2gpu", [False, True])
@@ -236,18 +247,19 @@ def test_rl_vectorized_envs(gpu2gpu):
     for config in configs:
         config.defrost()
         config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+        config.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
         config.freeze()
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
-        make_env_fn=make_rl_env, env_fn_args=env_fn_args
+        make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
     ) as envs:
         envs.reset()
 
         for i in range(2 * configs[0].ENVIRONMENT.MAX_EPISODE_STEPS):
             outputs = envs.step(
-                sample_non_stop_action(envs.action_spaces[0], num_envs)
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
             )
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
@@ -260,7 +272,6 @@ def test_rl_vectorized_envs(gpu2gpu):
             tiled_img = envs.render(mode="rgb_array")
             new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
             new_width = int(np.ceil(float(NUM_ENVS) / new_height))
-            print(f"observations: {observations}")
             h, w, c = observations[0]["rgb"].shape
             assert tiled_img.shape == (
                 h * new_height,
@@ -287,9 +298,12 @@ def test_rl_env(gpu2gpu):
 
     config.defrost()
     config.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = gpu2gpu
+    config.TASK.POSSIBLE_ACTIONS = [
+        a for a in config.TASK.POSSIBLE_ACTIONS if a != "TELEPORT"
+    ]
     config.freeze()
 
-    with DummyRLEnv(config=config, dataset=None) as env:
+    with _make_dummy_env_func(config=config, dataset=None) as env:
         env.episodes = [
             NavigationEpisode(
                 episode_id="0",
@@ -314,21 +328,29 @@ def test_rl_env(gpu2gpu):
 
         for _ in range(config.ENVIRONMENT.MAX_EPISODE_STEPS):
             observation, reward, done, info = env.step(
-                action=sample_non_stop_action(env.action_space)
+                action=sample_non_stop_action_gym(env.action_space)
             )
 
         # check for steps limit on environment
         assert done is True, "episodes should be over after max_episode_steps"
 
         env.reset()
-        observation, reward, done, info = env.step(
-            action={"action": StopAction.name}
-        )
+        observation, reward, done, info = env.step(action=0)
         assert done is True, "done should be true after STOP action"
 
 
-def _make_dummy_env_func(config, dataset, env_id):
-    return DummyRLEnv(config=config, dataset=dataset, env_ind=env_id)
+def _make_dummy_env_func(config, dataset=None, env_id=0, rank=0):
+    r"""Constructor for dummy habitat Env.
+    :param config: configurations for environment
+    :param dataset: dataset for environment
+    :param rank: rank for setting seeds for environment
+    :return: constructed habitat Env
+    """
+    env = DummyRLEnv(config=config, dataset=dataset)
+    env.seed(config.SEED + rank)
+    env = HabGymWrapper(env)
+    env = CallTestEnvWrapper(env, env_id)
+    return env
 
 
 def test_vec_env_call_func():
@@ -374,11 +396,12 @@ def test_vec_env_call_func():
 
 
 def test_close_with_paused():
-    configs, datasets = _load_test_data()
-    num_envs = len(configs)
-    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    configs, _ = _load_test_data()
+    env_fn_args = tuple((c,) for c in configs)
     with habitat.VectorEnv(
-        env_fn_args=env_fn_args, multiprocessing_start_method="forkserver"
+        make_env_fn=make_gym_from_config,
+        env_fn_args=env_fn_args,
+        multiprocessing_start_method="forkserver",
     ) as envs:
         envs.reset()
 

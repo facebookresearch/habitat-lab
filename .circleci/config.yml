@@ -249,9 +249,20 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test --addopts "--cov-report=xml --cov=./"
+              python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Run baseline training tests
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python setup.py develop --all
+              export PYTHONPATH=.:$PYTHONPATH
+              # This is a flag that enables test_test_baseline_training to work
+              export TEST_BASELINE_SMALL=1
+              python setup.py test --addopts "test/test_baseline_training.py"
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
@@ -282,6 +293,8 @@ jobs:
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
+      - store_artifacts:
+          path: habitat-lab/data/profile  # This is the benchmark profile
 
 
 workflows:

@@ -7,7 +7,6 @@ GYM:
     - obj_start_gps_compass
     - joint
     - is_holding
-    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:

@@ -5,7 +5,6 @@ GYM:
     - object_to_agent_gps_compass
     - joint
     - nav_to_skill
-    CLASS_NAME: RearrangeRLEnv
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
 DATASET:

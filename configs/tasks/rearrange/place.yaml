@@ -6,7 +6,6 @@ GYM:
     - joint
     - is_holding
     - relative_resting_position
-    CLASS_NAME: RearrangeRLEnv
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:

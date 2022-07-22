@@ -23,7 +23,6 @@ _C.BASE_TASK_CONFIG_PATH = "configs/tasks/pointnav.yaml"
 _C.TASK_CONFIG = CN()  # task_config will be stored as a config node
 _C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"
-_C.ENV_NAME = "NavRLEnv"
 _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
