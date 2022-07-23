@@ -423,6 +423,7 @@ class PointNavResNetNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
+        rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
@@ -535,7 +536,7 @@ class PointNavResNetNet(Net):
 
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(
-            out, rnn_hidden_states, masks
+            out, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
         return out, rnn_hidden_states
