@@ -4,6 +4,7 @@ import gym.spaces as spaces
 import numpy as np
 import torch
 
+from habitat.config.default import get_config
 from habitat.core.spaces import ActionSpace
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
@@ -119,19 +120,20 @@ class NnSkillPolicy(SkillPolicy):
     ):
         # Load the wrap policy from file
         if len(config.LOAD_CKPT_FILE) == 0:
-            raise ValueError(
-                f"Skill {config.skill_name}: Need to specify LOAD_CKPT_FILE"
-            )
+            ckpt_dict = {}
+            policy_cfg = get_config(config.FORCE_CONFIG_FILE)
+        else:
+            try:
+                ckpt_dict = torch.load(
+                    config.LOAD_CKPT_FILE, map_location="cpu"
+                )
+            except FileNotFoundError as e:
+                raise FileNotFoundError(
+                    "Could not load neural network weights for skill."
+                ) from e
 
-        try:
-            ckpt_dict = torch.load(config.LOAD_CKPT_FILE, map_location="cpu")
-        except FileNotFoundError as e:
-            raise FileNotFoundError(
-                "Could not load neural network weights for skill."
-            ) from e
-
+            policy_cfg = ckpt_dict["config"]
         policy = baseline_registry.get_policy(config.name)
-        policy_cfg = ckpt_dict["config"]
 
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
@@ -176,19 +178,19 @@ class NnSkillPolicy(SkillPolicy):
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )
+        if len(ckpt_dict) > 0:
+            try:
+                actor_critic.load_state_dict(
+                    {  # type: ignore
+                        k[len("actor_critic.") :]: v
+                        for k, v in ckpt_dict["state_dict"].items()
+                    }
+                )
 
-        try:
-            actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in ckpt_dict["state_dict"].items()
-                }
-            )
-
-        except Exception as e:
-            raise ValueError(
-                f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
-            ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
+                ) from e
 
         return cls(
             actor_critic,

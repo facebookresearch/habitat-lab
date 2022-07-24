@@ -116,6 +116,35 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
 )
 @pytest.mark.parametrize(
     "test_cfg_path,mode",
+    list(
+        itertools.product(
+            glob("habitat_baselines/config/tp_srl_test/*"),
+            ["eval"],
+        )
+    ),
+)
+def test_tp_srl(test_cfg_path, mode):
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
+
+    run_exp(
+        test_cfg_path,
+        mode,
+    )
+
+    # Needed to destroy the trainer
+    gc.collect()
+
+    # Deinit processes group
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
+
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "test_cfg_path,mode",
     [
         [
             "habitat_baselines/config/test/ppo_pointnav_test.yaml",

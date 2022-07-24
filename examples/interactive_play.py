@@ -47,6 +47,7 @@ import argparse
 import os
 import os.path as osp
 import time
+from collections import defaultdict
 
 import magnum as mn
 import numpy as np
@@ -361,8 +362,14 @@ def play_env(env, args, config):
         if render_steps_limit is not None and update_idx > render_steps_limit:
             break
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_x]:  # and (update_idx - self._last_pressed) > 60:
+        if args.no_render:
+            keys = defaultdict(lambda: False)
+        else:
+            keys = pygame.key.get_pressed()
+
+        if (
+            not args.no_render and keys[pygame.K_x]
+        ):  # and (update_idx - self._last_pressed) > 60:
             if agent_to_control == "AGENT_0":
                 agent_to_control = "AGENT_1"
             else:
@@ -381,7 +388,7 @@ def play_env(env, args, config):
             agent_to_control,
         )
 
-        if keys[pygame.K_c]:
+        if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
             print("Actions:")
             actions = pddl_action._action_ordering
@@ -401,7 +408,7 @@ def play_env(env, args, config):
 
             step_env(env, "PDDL_APPLY_ACTION", {"pddl_action": ac})
 
-        if keys[pygame.K_g]:
+        if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[
                 "all_predicates"
             ]._predicates_list
