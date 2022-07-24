@@ -124,6 +124,7 @@ class RearrangeTask(NavigationTask):
         if (
             self._robot_pos_start is None
             or start_ident not in self._robot_pos_start
+            or self._config.FORCE_REGENERATE
         ):
             robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
                 agent_idx=agent_idx
