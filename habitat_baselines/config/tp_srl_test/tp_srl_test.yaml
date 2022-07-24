@@ -2,7 +2,7 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick_nav_place.yaml
 TRAINER_NAME: "ppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk"]
+VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
 VIDEO_DIR: "data/test_checkpoints/ppo/pointnav/video"
 SENSORS: ["HEAD_DEPTH_SENSOR"]

@@ -132,12 +132,13 @@ class RearrangeTask(NavigationTask):
                 self._robot_pos_start is not None
                 and self._config.SHOULD_SAVE_TO_CACHE
             ):
+                self._robot_pos_start[start_ident] = (robot_pos, robot_rot)
                 self._robot_init_cache.save(self._robot_pos_start)
         else:
             robot_pos, robot_rot = self._robot_pos_start[start_ident]
-            robot = self._sim.get_robot_data(agent_idx).robot
-            robot.base_pos = robot_pos
-            robot.base_rot = robot_rot
+        robot = self._sim.get_robot_data(agent_idx).robot
+        robot.base_pos = robot_pos
+        robot.base_rot = robot_rot
 
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id

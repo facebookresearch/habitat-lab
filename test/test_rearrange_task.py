@@ -13,7 +13,7 @@ import pytest
 import yaml
 
 import habitat
-import habitat.datasets.rearrange.rearrange_generator as rr_gen
+import habitat.datasets.rearrange.run_episode_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils

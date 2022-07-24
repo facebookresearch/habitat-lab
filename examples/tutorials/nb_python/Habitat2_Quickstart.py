@@ -508,7 +508,7 @@ with habitat.Env(
 # # Dataset Generation
 # The previously defined task uses an included default `all_receptacles_10k_1k.json.gz` dataset which places objects on any receptacle. The episode `.json.gz` dataset defines where
 # objects are placed and their rearrangement target positions. New episode
-# datasets are generated with the [rearrange_generator.py](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/datasets/rearrange/rearrange_generator.py) script. In this example, we will define a new episode dataset where a single object spawns on the table with its goal also on the table.
+# datasets are generated with the [run_episode_generator.py](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/datasets/rearrange/run_episode_generator.py) script. In this example, we will define a new episode dataset where a single object spawns on the table with its goal also on the table.
 
 # %%
 dataset_cfg_txt = """
@@ -576,7 +576,7 @@ with open(nav_pick_cfg_path, "w") as f:
     f.write(dataset_cfg_txt)
 
 # %%
-# !python -m habitat.datasets.rearrange.rearrange_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
+# !python -m habitat.datasets.rearrange.run_rearrange_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
 
 # %% [markdown]
 # To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
