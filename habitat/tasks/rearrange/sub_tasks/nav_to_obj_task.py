@@ -18,6 +18,7 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    OBJ_TYPE,
     RIGID_OBJ_TYPE,
     PddlEntity,
 )
@@ -42,13 +43,14 @@ class NavToInfo:
     start_base_rot: Optional[float] = None
 
 
-@registry.register_task(name="RearrangeNavToObjTask-v0")
+@registry.register_task(name="NavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
     """
-    :_nav_to_info: Information about the next skill we are navigating to.
+    :property _nav_to_info: Information about the next skill we are navigating to.
     """
 
     pddl_problem: PddlProblem
+    _nav_to_info: Optional[NavToInfo]
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
@@ -75,7 +77,7 @@ class DynNavRLEnv(RearrangeTask):
             task_spec_path,
             self._config,
         )
-        self._nav_to_info: Optional[NavToInfo] = None
+        self._nav_to_info = None
 
     @property
     def nav_to_task_name(self):
@@ -135,19 +137,16 @@ class DynNavRLEnv(RearrangeTask):
 
     def _get_nav_targ(
         self,
-        task_name: str,
+        action: PddlAction,
         add_task_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Tuple[mn.Vector3, float, str]:
         rearrange_logger.debug(
-            f"Getting nav target for {task_name} with added arguments {add_task_kwargs}"
+            f"Getting nav target for {action} with added arguments {add_task_kwargs}"
         )
-        # Get the config for this task
-        action = self.pddl_problem.actions[task_name]
-        rearrange_logger.debug(f"Corresponding action {action}")
 
         orig_state = self._sim.capture_state(with_robot_js=True)
         action.init_task(
-            self.pddl_domain.sim_info,
+            self.pddl_problem.sim_info,
             should_reset=False,
             add_task_kwargs=add_task_kwargs,
         )
@@ -155,16 +154,14 @@ class DynNavRLEnv(RearrangeTask):
         heading_angle = self._sim.robot.base_rot
 
         self._sim.set_state(orig_state, set_hold=True)
-        action.task_kwargs["orig_applied_args"]
+        obj_type = self.pddl_problem.expr_types[OBJ_TYPE]
         nav_to_entity = action.get_arg_value("obj")
-
-        obj_type = self.pddl_problem.expr_types["obj_type"]
-        if not nav_to_entity.is_subtype_of(obj_type):
+        if nav_to_entity is None:
+            raise ValueError(f"`obj` argument is necessary in action {action}")
+        if not nav_to_entity.expr_type.is_subtype_of(obj_type):
             raise ValueError(
                 f"Cannot navigate to non obj_type {nav_to_entity}"
             )
-        if nav_to_entity:
-            raise ValueError(f"`obj` argument is necessary in action {action}")
 
         return robo_pos, heading_angle, nav_to_entity.name
 
@@ -181,10 +178,15 @@ class DynNavRLEnv(RearrangeTask):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
         allowed_tasks = self._get_allowed_tasks()
+        if len(allowed_tasks) == 0:
+            raise ValueError(
+                "Could not get any allowed tasks as navigation targets."
+            )
 
         nav_to_task_name = random.choice(list(allowed_tasks.keys()))
+        nav_to_task = random.choice(allowed_tasks[nav_to_task_name])
         target_pos, target_angle, nav_to_entity_name = self._get_nav_targ(
-            nav_to_task_name,
+            nav_to_task,
             {
                 ADD_CACHE_KEY: "nav",
             },
@@ -194,6 +196,7 @@ class DynNavRLEnv(RearrangeTask):
         target_pos = np.array(self._sim.safe_snap_point(target_pos))
 
         start_pos, start_rot = get_robo_start_pos(self._sim, target_pos)
+
         return NavToInfo(
             nav_target_pos=target_pos,
             nav_target_angle=float(target_angle),
@@ -218,12 +221,13 @@ class DynNavRLEnv(RearrangeTask):
         if len(allowed_tasks) == 0:
             raise ValueError("Got no allowed tasks.")
 
-        nav_to_task = allowed_tasks[0]
+        any_key = next(iter(allowed_tasks))
+        nav_to_task = allowed_tasks[any_key][0]
 
         rearrange_logger.debug(f"Navigating to {nav_to_task}")
 
         targ_pos, nav_target_angle, nav_to_entity_name = self._get_nav_targ(
-            nav_to_task.name
+            nav_to_task
         )
         return NavToInfo(
             nav_target_pos=np.array(self._sim.safe_snap_point(targ_pos)),
@@ -242,6 +246,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         episode_id = sim.ep_info["episode_id"]
+
+        # Rest the nav to information for this episode.
+        self._nav_to_info = None
 
         if self.force_obj_to_idx is not None:
             full_key = (
@@ -291,15 +298,15 @@ class DynNavRLEnv(RearrangeTask):
                         f"Loaded episode from cache {self.cache.cache_id}."
                     )
 
-                if (
-                    self._nav_to_info is not None
-                    and self._nav_to_info.start_hold_obj_idx is not None
-                ):
-                    # The object to hold was generated from stale object IDs.
-                    # Reselect a new object to hold.
-                    self._nav_to_info.start_hold_obj_idx = (
-                        self._generate_snap_to_obj()
-                    )
+            if (
+                self._nav_to_info is not None
+                and self._nav_to_info.start_hold_obj_idx is not None
+            ):
+                # The object to hold was generated from stale object IDs.
+                # Reselect a new object to hold.
+                self._nav_to_info.start_hold_obj_idx = (
+                    self._generate_snap_to_obj()
+                )
 
             if self._nav_to_info is None:
                 self._nav_to_info = self._generate_nav_start_goal(episode)
@@ -326,7 +333,7 @@ class DynNavRLEnv(RearrangeTask):
         rearrange_logger.debug(f"Got nav to info {self._nav_to_info}")
 
         if not sim.pathfinder.is_navigable(self._nav_to_info.nav_target_pos):
-            rearrange_logger.error("Goal is not navigable")
+            rearrange_logger.error("Goal is not navigable.")
 
         if self._sim.habitat_config.DEBUG_RENDER:
             # Visualize the position the agent is navigating to.

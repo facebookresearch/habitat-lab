@@ -273,6 +273,7 @@ class BaseVelAction(RobotAction):
         self.does_want_terminate = False
 
     def update_base(self):
+
         ctrl_freq = self._sim.ctrl_freq
 
         before_trans_state = self._capture_robot_state()

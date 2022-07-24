@@ -53,7 +53,7 @@ class Policy(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(cls, config, observation_space, action_space, **kwargs):
         pass
 
 
@@ -150,7 +150,7 @@ class NetPolicy(nn.Module, Policy):
 
     @classmethod
     @abc.abstractmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(cls, config, observation_space, action_space, **kwargs):
         pass
 
 
@@ -185,7 +185,11 @@ class PointNavBaselinePolicy(NetPolicy):
 
     @classmethod
     def from_config(
-        cls, config: Config, observation_space: spaces.Dict, action_space
+        cls,
+        config: Config,
+        observation_space: spaces.Dict,
+        action_space,
+        **kwargs,
     ):
         return cls(
             observation_space=observation_space,

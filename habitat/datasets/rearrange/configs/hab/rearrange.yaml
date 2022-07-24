@@ -1,7 +1,8 @@
+# For the `rearrange` task.
 ---
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
-  - "data/objects/ycb/"
+  - "data/objects/ycb/configs"
 scene_sets:
   -
     name: "scene_train_split"
@@ -41,19 +42,44 @@ object_sets:
       - "016_pear.object_config.json"
       - "017_orange.object_config.json"
       - "018_plum.object_config.json"
-      - "019_pitcher_base.object_config.json"
       - "021_bleach_cleanser.object_config.json"
       - "024_bowl.object_config.json"
       - "025_mug.object_config.json"
       - "026_sponge.object_config.json"
-      - "028_skillet_lid.object_config.json"
-      - "029_plate.object_config.json"
-      - "030_fork.object_config.json"
-      - "031_spoon.object_config.json"
-      - "032_knife.object_config.json"
-      - "033_spatula.object_config.json"
     excluded_substrings: []
+
 receptacle_sets:
+  -
+    name: "clutter"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_Chr1_Top1_frl_apartment_chair_01"
+      - "receptacle_aabb_Tbl1_Top1_frl_apartment_table_01"
+      - "receptacle_aabb_Tbl2_Top1_frl_apartment_table_02"
+      - "receptacle_aabb_TvStnd1_Top1_frl_apartment_tvstand"
+      - "receptacle_aabb_sink_kitchen_counter"
+      - "receptacle_aabb_counter_right_kitchen_counter"
+      - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
+    excluded_receptacle_substrings: []
+
+  -
+    name: "hab2_recep"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
+    excluded_receptacle_substrings: []
   -
     name: "hab2"
     included_object_substrings:
@@ -68,8 +94,29 @@ receptacle_sets:
       - "receptacle_aabb_counter_right_kitchen_counter"
       - "receptacle_aabb_counter_left_kitchen_counter"
       - "receptacle_aabb_Sofa_frl_apartment_sofa"
-
     excluded_receptacle_substrings: []
+
+ao_state_samplers:
+  -
+    name: "open_fridge_cab"
+    type: "composite"
+    apply_prob: 0.5
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.5, 0.5]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.5, 0.5]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.5, 0.5]
+          - ["drawer4", 0.5, 0.5]
 
 max_objects_per_receptacle:
   - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
@@ -82,13 +129,24 @@ scene_sampler:
 
 object_samplers:
   -
+    name: "clutter"
+    type: "uniform"
+    params:
+      object_sets: ["hab2"]
+      receptacle_sets: ["clutter"]
+      num_samples: [30, 30]
+      orientation_sampling: "up"
+  -
     name: "any_targets"
     type: "uniform"
     params:
       object_sets: ["hab2"]
-      receptacle_sets: ["hab2"]
-      num_samples: [30, 30]
+      receptacle_sets: ["hab2_recep", "hab2"]
+      num_samples: [1, 1]
       orientation_sampling: "up"
+      sample_probs:
+        "hab2_recep": 0.5
+        "hab2": 0.5
 
 object_target_samplers:
   -
@@ -96,9 +154,12 @@ object_target_samplers:
     type: "uniform"
     params:
       object_samplers: ["any_targets"]
-      receptacle_sets: ["hab2"]
+      receptacle_sets: ["hab2_recep", "hab2"]
       num_samples: [1, 1]
       orientation_sampling: "up"
+      sample_probs:
+        "hab2_recep": 0.5
+        "hab2": 0.5
 
 markers:
   - name: "cab_push_point_7"

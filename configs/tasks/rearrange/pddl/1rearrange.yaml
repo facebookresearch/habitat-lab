@@ -1,9 +1,0 @@
-start:
-    precondition: []
-
-goal:
-    - "at(goal0|0,TARGET_goal0|0)"
-    - "not_holding()"
-stage_goals: {}
-
-solution: []

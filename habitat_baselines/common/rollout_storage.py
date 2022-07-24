@@ -59,10 +59,7 @@ class RolloutStorage:
         )
 
         if action_shape is None:
-            if action_space.__class__.__name__ == "ActionSpace":
-                action_shape = (1,)
-            else:
-                action_shape = action_space.shape
+            action_shape = action_space.shape
 
         self.buffers["actions"] = torch.zeros(
             numsteps + 1, num_envs, *action_shape
@@ -70,10 +67,8 @@ class RolloutStorage:
         self.buffers["prev_actions"] = torch.zeros(
             numsteps + 1, num_envs, *action_shape
         )
-        if (
-            discrete_actions
-            and action_space.__class__.__name__ == "ActionSpace"
-        ):
+        if discrete_actions:
+
             assert isinstance(self.buffers["actions"], torch.Tensor)
             assert isinstance(self.buffers["prev_actions"], torch.Tensor)
             self.buffers["actions"] = self.buffers["actions"].long()

@@ -1,6 +1,5 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
 TRAINER_NAME: "ppo"
-ENV_NAME: "NavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["DISK"]

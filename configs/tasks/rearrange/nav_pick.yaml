@@ -1,7 +1,12 @@
 GYM:
     AUTO_NAME: "NavPick"
-    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'obj_start_gps_compass', 'joint', 'is_holding']
-    CLASS_NAME: "RearrangeRLEnv"
+    OBS_KEYS:
+    - robot_head_depth
+    - relative_resting_position
+    - obj_start_sensor
+    - obj_start_gps_compass
+    - joint
+    - is_holding
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:
@@ -18,46 +23,22 @@ TASK:
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: True
 
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
-    USING_SUBTASKS: False
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: nav_pick
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
-    TARGET_START_SENSOR:
-        TYPE: TargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: GoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
+    PDDL_DOMAIN_DEF: replica_cad
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
-    - GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - TARGET_START_GPS_COMPASS_SENSOR
-    - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -75,24 +56,6 @@ TASK:
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-
-    # Overrides for measurements that are not used in monolithic RL but are
-    # used in TP-SRL
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: True
-        HEURISTIC_STOP: False
-        MUST_CALL_STOP: False
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE

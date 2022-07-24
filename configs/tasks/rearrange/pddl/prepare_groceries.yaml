@@ -6,10 +6,31 @@ init:
   - opened_fridge(fridge_push_point)
 
 goal:
-  - at(obj0_target|0,TARGET_obj0_target|0)
-  - at(obj1_target|1,TARGET_obj1_target|1)
-  - at(obj2_target|2,TARGET_obj2_target|2)
-  - not_holding(ROBOT_0)
+  expr_type: AND
+  sub_exprs:
+    - at(obj0_target|0,TARGET_obj0_target|0)
+    - at(obj1_target|1,TARGET_obj1_target|1)
+    - at(obj2_target|2,TARGET_obj2_target|2)
+    - not_holding(ROBOT_0)
+
+objects:
+  - name: obj0_target|0
+    expr_type: rigid_obj_type
+  - name: TARGET_obj0_target|0
+    expr_type: goal_type
+
+  - name: obj1_target|1
+    expr_type: rigid_obj_type
+  - name: TARGET_obj1_target|1
+    expr_type: goal_type
+
+  - name: obj2_target|2
+    expr_type: rigid_obj_type
+  - name: TARGET_obj2_target|2
+    expr_type: goal_type
+
+  - name: ROBOT_0
+    expr_type: robot_type
 
 stage_goals:
   stage_0_5:
@@ -20,7 +41,7 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(obj0_target|0,TARGET_obj0_target|0)
-      - not_holding(, ROBOT_0)
+      - not_holding(ROBOT_0)
   stage_1_5:
     expr_type: AND
     sub_exprs:

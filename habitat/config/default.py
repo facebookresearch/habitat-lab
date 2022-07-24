@@ -43,8 +43,8 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # TASK
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
-_C.TASK.REWARD_MEASURE = "distance_to_goal"
-_C.TASK.SUCCESS_MEASURE = "spl"
+_C.TASK.REWARD_MEASURE = None
+_C.TASK.SUCCESS_MEASURE = None
 _C.TASK.SUCCESS_REWARD = 2.5
 _C.TASK.SLACK_REWARD = -0.01
 _C.TASK.END_ON_SUCCESS = False
@@ -59,18 +59,18 @@ _C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
 # -----------------------------------------------------------------------------
 # # REARRANGE TASK
 # -----------------------------------------------------------------------------
-_C.TASK.MAX_COLLISIONS = -1.0
 _C.TASK.COUNT_OBJ_COLLISIONS = True
 _C.TASK.COUNT_ROBOT_OBJ_COLLS = False
 _C.TASK.SETTLE_STEPS = 5
 _C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = True
+_C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
 _C.TASK.FORCE_REGENERATE = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
 _C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
-_C.TASK.USING_SUBTASKS = False
+_C.TASK.GFX_REPLAY_DIR = "data/replays"
 _C.TASK.DEBUG_GOAL_POINT = True
 _C.TASK.RENDER_TARGET = True
 _C.TASK.EE_SAMPLE_FACTOR = 0.2
@@ -82,6 +82,7 @@ _C.TASK.SPAWN_REGION_SCALE = 0.2
 _C.TASK.JOINT_MAX_IMPULSE = -1.0
 _C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
 _C.TASK.USE_MARKER_T = True
+_C.TASK.CACHE_ROBOT_INIT = False
 _C.TASK.SUCCESS_STATE = 0.0
 # Measurements for composite tasks.
 _C.TASK.REWARD_MEASUREMENT = ""
@@ -94,11 +95,9 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
 _C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
-_C.TASK.TASK_SPEC = "nav_pick"
+_C.TASK.TASK_SPEC = ""
 # PDDL domain params
-_C.TASK.PDDL_DOMAIN_DEF = (
-    "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
-)
+_C.TASK.PDDL_DOMAIN_DEF = "replica_cad"
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
 _C.TASK.ROBOT_AT_THRESH = 2.0
@@ -150,8 +149,8 @@ _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
 _C.TASK.ACTIONS.ARM_ACTION.AGENT = None
 _C.TASK.ACTIONS.BASE_VELOCITY = CN()
 _C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
-_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 12.0
-_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 12.0
+_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 10.0
+_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 10.0
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
 _C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
@@ -160,6 +159,23 @@ _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.AGENT = None
 _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
+# -----------------------------------------------------------------------------
+# Oracle navigation action
+# -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION = CN()
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TYPE = "OracleNavAction"
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_VELOCITY = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.FORWARD_VELOCITY = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_THRESH = 0.1
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.DIST_THRESH = 0.2
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.AGENT = None
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.LIN_SPEED = 10.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ANG_SPEED = 10.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_LIN_SPEED = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_ANG_SPEED = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_DYN_SLIDE = True
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.END_ON_STOP = False
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_BACK = True
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
 # -----------------------------------------------------------------------------
@@ -392,6 +408,7 @@ _C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
 _C.TASK.FORCE_TERMINATE = CN()
 _C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
 _C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
+_C.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
 
 _C.TASK.ROBOT_COLLS = CN()
 _C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
@@ -406,6 +423,9 @@ _C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.USE_ABSOLUTE_DISTANCE = True
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.SUCCESS_DIST_THRESHOLD = 0.05
+
+_C.TASK.GFX_REPLAY_MEASURE = CN()
+_C.TASK.GFX_REPLAY_MEASURE.TYPE = "GfxReplayMeasure"
 
 _C.TASK.EE_DIST_TO_MARKER = CN()
 _C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
@@ -614,6 +634,11 @@ _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
 _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL_REWARD MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL_REWARD = CN()
+_C.TASK.DISTANCE_TO_GOAL_REWARD.TYPE = "DistanceToGoalReward"
+# -----------------------------------------------------------------------------
 # # ANSWER_ACCURACY MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.ANSWER_ACCURACY = CN()
@@ -650,6 +675,7 @@ _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.DEBUG_RENDER = False
+_C.SIMULATOR.DEBUG_RENDER_ROBOT = False
 _C.SIMULATOR.KINEMATIC_MODE = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.
@@ -820,6 +846,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
 _C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------
@@ -880,12 +907,17 @@ _C.DATASET.DATA_PATH = (
 # -----------------------------------------------------------------------------
 _C.GYM = CN()
 _C.GYM.AUTO_NAME = ""
-_C.GYM.CLASS_NAME = "RearrangeRLEnv"
 _C.GYM.OBS_KEYS = None
 _C.GYM.ACTION_KEYS = None
 _C.GYM.ACHIEVED_GOAL_KEYS = []
 _C.GYM.DESIRED_GOAL_KEYS = []
-_C.GYM.FIX_INFO_DICT = True
+
+# -----------------------------------------------------------------------------
+# Task
+# -----------------------------------------------------------------------------
+# Uless another RLEnv is implemented and registered, the default task is
+# should be RLTaskEnv. RLTaskEnv works for both Navigation and Rearrange.
+_C.ENV_TASK = "RLTaskEnv"
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

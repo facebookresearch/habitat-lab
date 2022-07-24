@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
+import os.path as osp
 from typing import Dict, List, Optional, Union
 
 import yaml
@@ -47,8 +48,22 @@ class PddlDomain:
         domain_file_path: str,
         cur_task_config: Optional[Config] = None,
     ):
+        """
+        :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
+        :param cur_task_config: The task config (`TASK_CONFIG.TASK`).
+        """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
+
+        if not osp.isabs(domain_file_path):
+            parent_dir = osp.dirname(__file__)
+            domain_file_path = osp.join(
+                parent_dir, "domain_configs", domain_file_path
+            )
+
+        if "." not in domain_file_path:
+            domain_file_path += ".yaml"
+
         with open(domain_file_path, "r") as f:
             domain_def = yaml.safe_load(f)
 
@@ -306,6 +321,12 @@ class PddlDomain:
         restricted_action_names: Optional[List[str]] = None,
         true_preds: Optional[List[Predicate]] = None,
     ) -> List[PddlAction]:
+        """
+        :param filter_entities: ONLY actions with entities that contain all
+            entities in `filter_entities` are allowed.
+        :param allowed_action_names: ONLY action names allowed.
+        :param restricted_action_names: Action names NOT allowed.
+        """
         if filter_entities is None:
             filter_entities = []
         if restricted_action_names is None:
@@ -341,7 +362,7 @@ class PddlDomain:
                     new_action.set_param_values(entity_input_perm)
                     if (
                         true_preds is not None
-                        and not action.is_precond_satisfied_from_predicates(
+                        and not new_action.is_precond_satisfied_from_predicates(
                             true_preds
                         )
                     ):
@@ -374,7 +395,8 @@ class PddlProblem(PddlDomain):
         }
 
         self.init = [
-            self.parse_predicate(p, self._objects) for p in problem_def["init"]
+            self.parse_predicate(p, self._objects)
+            for p in problem_def.get("init", [])
         ]
         try:
             self.goal = self.parse_logical_expr(
@@ -418,6 +440,7 @@ class PddlProblem(PddlDomain):
         for action in self.actions.values():
             action.set_precond(self.expand_quantifiers(action.precond))
 
+    @property
     def solution(self):
         if self._solution is None:
             raise ValueError("Solution is not supported by this PDDL")

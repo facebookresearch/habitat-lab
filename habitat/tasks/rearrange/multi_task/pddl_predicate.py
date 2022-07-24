@@ -30,6 +30,7 @@ class Predicate:
         return self._set_state.is_compatible(expr_types)
 
     def set_param_values(self, arg_values: List[PddlEntity]) -> None:
+        arg_values = list(arg_values)
         if self._arg_values is not None:
             raise ValueError(
                 f"Trying to set arg values with {arg_values} when current args are set to {self._arg_values}"

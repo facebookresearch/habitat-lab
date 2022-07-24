@@ -1,10 +1,12 @@
 GYM:
     AUTO_NAME: SetTable
-    CLASS_NAME: RearrangeRLEnv
     OBS_KEYS:
     - robot_head_depth
+    - relative_resting_position
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:
@@ -21,7 +23,6 @@ TASK:
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
@@ -30,25 +31,9 @@ TASK:
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: set_table
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
-    TARGET_START_SENSOR:
-        TYPE: TargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: GoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
+    PDDL_DOMAIN_DEF: replica_cad
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
@@ -100,7 +85,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0
@@ -111,25 +95,6 @@ TASK:
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
-    NAV_TO_POS_SUCC:
-        SUCCESS_DISTANCE: 0.2
-        TYPE: NavToPosSucc
-    PLACE_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: PlaceSuccess
-    PICK_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: RearrangePickSuccess
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"

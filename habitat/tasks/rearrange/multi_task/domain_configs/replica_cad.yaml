@@ -56,10 +56,6 @@ predicates:
         robot_id:
           should_drop: True
 
-  - name: all_not_holding
-    args:  []
-    set_state: {}
-
   - name: opened_cab
     args:
       - name: cab_id
@@ -69,6 +65,7 @@ predicates:
         cab_id:
           value: 0.45
           cmp: 'greater'
+          override_thresh: 0.1
 
   - name: closed_cab
     args:
@@ -124,19 +121,6 @@ predicates:
         obj_states:
             obj: at_entity
 
-axioms:
-  - vars: []
-    context:
-      expr_type: FORALL
-      inputs:
-        - name: robot
-          expr_type: robot_type
-      sub_exprs:
-        - not_holding(robot)
-    implies:
-      - all_not_holding()
-    always_required: True
-
 actions:
   - name: nav
     parameters:
@@ -148,7 +132,7 @@ actions:
     postcondition:
       - robot_at(obj, robot)
     task_info:
-      task: RearrangeNavToObjTask-v0
+      task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
         TASK.FORCE_REGENERATE: True
@@ -169,7 +153,7 @@ actions:
     postcondition:
       - robot_at(marker, robot)
     task_info:
-      task: RearrangeNavToObjTask-v0
+      task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
         TASK.FORCE_REGENERATE: True
@@ -185,6 +169,14 @@ actions:
       expr_type: AND
       sub_exprs:
         - robot_at(obj, robot)
+        - quantifier: FORALL
+          inputs:
+            - name: recep
+              expr_type: cab_type
+          expr_type: NAND
+          sub_exprs:
+            - in(obj, recep)
+            - closed_cab(recep)
     postcondition:
       - holding(obj, robot)
     task_info:

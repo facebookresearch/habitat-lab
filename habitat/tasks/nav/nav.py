@@ -1015,6 +1015,46 @@ class DistanceToGoal(Measure):
             self._metric = distance_to_target
 
 
+@registry.register_measure
+class DistanceToGoalReward(Measure):
+    """
+    The measure calculates a reward based on the distance towards the goal.
+    The reward is `- (new_distance - previous_distance)` i.e. the
+    decrease of distance to the goal.
+    """
+
+    cls_uuid: str = "distance_to_goal_reward"
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self._previous_distance: Optional[float] = None
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [DistanceToGoal.cls_uuid]
+        )
+        self._previous_distance = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        distance_to_target = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self._metric = -(distance_to_target - self._previous_distance)
+        self._previous_distance = distance_to_target
+
+
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
     name: str = "MOVE_FORWARD"

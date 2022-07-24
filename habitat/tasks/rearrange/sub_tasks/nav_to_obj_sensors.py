@@ -114,6 +114,7 @@ class NavToSkillSensor(Sensor):
 
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
+        self._action_names = None
         super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
@@ -132,11 +133,10 @@ class NavToSkillSensor(Sensor):
 
     def get_observation(self, task, *args, **kwargs):
         ret = np.zeros(self._config.NUM_SKILLS, dtype=np.float32)
-        if task.nav_to_task_name is None or task.domain is None:
-            return ret
-        skills = task.domain.action_names
+        if self._action_names is None:
+            self._action_names = list(task.pddl_problem.actions.keys())
 
-        cur_idx = skills.index(task.nav_to_task_name)
+        cur_idx = self._action_names.index(task.nav_to_task_name)
         ret[cur_idx] = 1.0
         return ret
 

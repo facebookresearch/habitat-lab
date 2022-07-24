@@ -7,6 +7,7 @@ from yacs.config import CfgNode
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
+from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -129,3 +130,7 @@ class RobotManager:
         for robot_data in self._all_robot_data:
             robot_data.grasp_mgr.update()
             robot_data.robot.update()
+
+    def update_debug(self):
+        for robot_data in self._all_robot_data:
+            robot_data.grasp_mgr.update_debug()

@@ -1,18 +1,20 @@
 GYM:
-    CLASS_NAME: RearrangeRLEnv
-    AUTO_NAME: Rearrange2
+    AUTO_NAME: Rearrange
     OBS_KEYS:
     - robot_head_depth
+    - relative_resting_position
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 500
+    MAX_EPISODE_STEPS: 3000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/2rearrange_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -21,16 +23,16 @@ TASK:
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: True
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
-    TASK_SPEC: 2rearrange
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    TASK_SPEC: rearrange
+    PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     TARGET_START_SENSOR:
@@ -44,11 +46,8 @@ TASK:
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
@@ -58,7 +57,8 @@ TASK:
     - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
+        MAX_ACCUM_FORCE: 100_000.0
+        MAX_INSTANT_FORCE: 10_000.0
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
@@ -78,7 +78,7 @@ TASK:
         ARM_ACTION:
             TYPE: ArmAction
             ARM_CONTROLLER: ArmRelPosAction
-            GRIP_CONTROLLER: MagicGraspAction
+            GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
@@ -99,7 +99,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
         PICK_REWARD: 1.0
@@ -114,25 +113,12 @@ TASK:
         TYPE: TargetStartGpsCompassSensor
     TARGET_GOAL_GPS_COMPASS_SENSOR:
         TYPE: TargetGoalGpsCompassSensor
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
-    GRASP_IMPULSE: 1000.0
-    HOLD_THRESH: 0.09
+    GRASP_IMPULSE: 10000.0
+    HOLD_THRESH: 0.2
     AC_FREQ_RATIO: 4
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: true
@@ -142,41 +128,21 @@ SIMULATOR:
     AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: false
         RADIUS: 0.3
-        SENSORS: []
-        #- HEAD_DEPTH_SENSOR
-        START_POSITION:
-        - 0
-        - 0
-        - 0
-        START_ROTATION:
-        - 0
-        - 0
-        - 0
-        - 1
+        SENSORS:
+        - HEAD_DEPTH_SENSOR
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
     HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+        WIDTH: 256
+        HEIGHT: 256
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: true
-        WIDTH: 128
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
-    ARM_REST:
-    - 0.6
-    - 0.0
-    - 0.9
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
@@ -186,23 +152,5 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: FetchRobot
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION:
-        - 0.0
-        - 0.0
-        - 0.0
-        POSITION:
-        - 0
-        - 1.25
-        - 0
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0
