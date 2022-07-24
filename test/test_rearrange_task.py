@@ -4,12 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
+import itertools
 import json
+import os
 import os.path as osp
 import time
 from glob import glob
 
 import pytest
+import torch
 import yaml
 
 import habitat
@@ -24,6 +28,8 @@ from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat_baselines.config.default import get_config as baselines_get_config
+from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
+from habitat_baselines.run import run_exp
 
 CFG_TEST = "configs/tasks/rearrange/pick.yaml"
 GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
@@ -172,3 +178,30 @@ def test_rearrange_episode_generator(
     logger.info(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )
+
+
+@pytest.mark.parametrize(
+    "test_cfg_path,mode",
+    list(
+        itertools.product(
+            glob("habitat_baselines/config/tp_srl_test/*"),
+            ["eval"],
+        )
+    ),
+)
+def test_tp_srl(test_cfg_path, mode):
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
+
+    run_exp(
+        test_cfg_path,
+        mode,
+        ["EVAL.SPLIT", "train"],
+    )
+
+    # Needed to destroy the trainer
+    gc.collect()
+
+    # Deinit processes group
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
