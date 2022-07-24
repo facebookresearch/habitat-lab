@@ -56,10 +56,6 @@ predicates:
         robot_id:
           should_drop: True
 
-  - name: all_not_holding
-    args:  []
-    set_state: {}
-
   - name: opened_cab
     args:
       - name: cab_id

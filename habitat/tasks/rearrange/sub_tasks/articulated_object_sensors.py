@@ -220,7 +220,7 @@ class ArtObjSuccess(Measure):
 
 
 @registry.register_measure
-class EndEffectorDistToMarker(Measure):
+class EndEffectorDistToMarker(UsesRobotInterface, Measure):
     """
     The distance of the end-effector to the target marker on the articulated object.
     """
@@ -240,10 +240,14 @@ class EndEffectorDistToMarker(Measure):
             **kwargs
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = np.linalg.norm(
-            observations[MarkerRelPosSensor.cls_uuid]
+    def update_metric(self, *args, task, **kwargs):
+        marker = task.get_use_marker()
+        ee_trans = task._sim.get_robot_data(self.robot_id).robot.ee_transform
+        rel_marker_pos = ee_trans.inverted().transform_point(
+            marker.get_current_position()
         )
+
+        self._metric = np.linalg.norm(rel_marker_pos)
 
 
 @registry.register_measure

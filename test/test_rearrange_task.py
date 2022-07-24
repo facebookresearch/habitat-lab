@@ -139,6 +139,8 @@ def test_composite_tasks(test_cfg_path):
     )
     with open(pddl_path, "r") as f:
         domain = yaml.safe_load(f)
+    if "solution" not in domain:
+        return
     n_stages = len(domain["solution"])
 
     for task_idx in range(n_stages):

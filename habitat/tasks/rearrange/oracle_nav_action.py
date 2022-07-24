@@ -40,7 +40,10 @@ class OracleNavAction(BaseVelAction):
             {
                 self._action_arg_prefix
                 + "oracle_nav_action": spaces.Box(
-                    shape=(1,), low=-1, high=1, dtype=np.float32
+                    shape=(1,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
                 )
             }
         )
@@ -83,7 +86,9 @@ class OracleNavAction(BaseVelAction):
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
         ]
-        if nav_to_target_idx <= 0:
+        if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+            self._poss_actions
+        ):
             if is_last_action:
                 return self._sim.step(HabitatSimActions.BASE_VELOCITY)
             else:

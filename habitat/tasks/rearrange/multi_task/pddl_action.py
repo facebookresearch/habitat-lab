@@ -96,6 +96,7 @@ class PddlAction:
         return do_entity_lists_match(self._params, arg_values)
 
     def set_param_values(self, param_values: List[PddlEntity]) -> None:
+        param_values = list(param_values)
         if self._param_values is not None:
             raise ValueError(
                 f"Trying to set arg values with {param_values} when current args are set to {self._param_values}"
