@@ -126,7 +126,7 @@ def test_composite_tasks(test_cfg_path):
     if not osp.isfile(test_cfg_path):
         return
 
-    config = get_config(test_cfg_path)
+    config = get_config(test_cfg_path, ["SIMULATOR.CONCUR_RENDER", False])
     if "TASK_SPEC" not in config.TASK:
         return
 
