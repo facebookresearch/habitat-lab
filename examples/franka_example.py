@@ -43,7 +43,7 @@ def example(args):
         logger.info(env.action_space)
         while not env.episode_over:
             action = env.action_space.sample()
-            logger.info("Executing action:", action)
+            logger.info(f"Executing action: {action}")
             observations = env.step(action)  # noqa: F841
             if not args.no_render:
                 display_rgb(observations[SENSOR_KEY])
