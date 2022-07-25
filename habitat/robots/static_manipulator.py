@@ -390,6 +390,36 @@ class StaticManipulator(RobotInterface):
         self.sim_obj.joint_forces = ctrl
 
     #############################################
+    # BASE RELATED
+    #############################################
+
+    @property
+    def base_pos(self):
+        """Creates base position property, should not change"""
+        return 0
+
+    @base_pos.setter
+    def base_pos(self, position: mn.Vector3):
+        """Attempts to change the base position will result in an error to prevent accidental mobility"""
+        raise NotImplementedError(
+            "Setting the base position of a static manipulator is not permitted."
+        )
+
+    @property
+    def base_rot(self) -> float:
+        return self.sim_obj.rotation.angle()
+
+    @base_rot.setter
+    def base_rot(self, rotation_y_rad: float):
+        raise NotImplementedError(
+            "Setting the base rotation of a static manipulator is not permitted."
+        )
+
+    @property
+    def base_transformation(self):
+        return self.sim_obj.transformation
+
+    #############################################
     # HIDDEN
     #############################################
 
