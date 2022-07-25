@@ -396,7 +396,7 @@ class StaticManipulator(RobotInterface):
     @property
     def base_pos(self):
         """Creates base position property, should not change"""
-        return 0
+        return mn.Vector3()  # zeros
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):

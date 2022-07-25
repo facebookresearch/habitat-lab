@@ -14,19 +14,27 @@ from habitat.robots.static_manipulator import (
 class FrankaRobot(StaticManipulator):
     def _get_franka_params(self) -> StaticManipulatorParams:
         return StaticManipulatorParams(
-            arm_joints=[],
-            gripper_joints=[],
-            arm_init_params=np.array([]),
-            gripper_init_params=np.array([]),
-            ee_offset=mn.Vector3(),
+            arm_joints=list(range(0, 7)),
+            gripper_joints=[8],
+            arm_init_params=np.zeros((7,)),
+            gripper_init_params=np.zeros((1,)),
+            ee_offset=mn.Vector3(),  # zeroed
             ee_link=1,
             ee_constraint=np.array([]),
-            gripper_closed_state=np.array([]),
-            gripper_open_state=np.array([]),
-            gripper_state_eps=0.0,
-            arm_mtr_pos_gain=0.0,
-            arm_mtr_vel_gain=0.0,
-            arm_mtr_max_impulse=0.0,
+            gripper_closed_state=np.array(
+                [
+                    0.0,
+                ]
+            ),
+            gripper_open_state=np.array(
+                [
+                    0.4,
+                ]
+            ),
+            gripper_state_eps=0.001,
+            arm_mtr_pos_gain=0.3,
+            arm_mtr_vel_gain=0.3,
+            arm_mtr_max_impulse=10.0,
         )
 
     def __init__(
