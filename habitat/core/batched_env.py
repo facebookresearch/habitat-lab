@@ -400,10 +400,13 @@ class BatchedEnv:
             self._bsim.enable_debug_sensor(False)
 
             self._main_camera = Camera(
-                "torso_lift_link",
-                mn.Vector3(-0.536559, 1.16173, 0.568379),
-                mn.Quaternion(
-                    mn.Vector3(-0.26714, -0.541109, -0.186449), 0.775289
+                "head_pan_link",
+                mn.Vector3(0.2, 0.2, 0.0),
+                mn.Quaternion.rotation(
+                    mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+                )
+                * mn.Quaternion.rotation(
+                    mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
                 ),
                 60,
             )
@@ -731,7 +734,7 @@ class BatchedEnv:
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
-                self.rewards[b] = -1.0 / self._max_episode_length
+                self.rewards[b] = -self._config.NPNP_SLACK_PENALTY
                 self.infos[b] = {
                     "success": 0.0,
                     "failure": 0.0,
