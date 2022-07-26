@@ -8,13 +8,14 @@ import os.path as osp
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlAction,
@@ -26,9 +27,6 @@ from habitat.tasks.rearrange.multi_task.task_creator_utils import (
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
-
-if TYPE_CHECKING:
-    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 

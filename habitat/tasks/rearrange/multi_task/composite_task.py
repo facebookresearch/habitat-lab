@@ -6,13 +6,14 @@
 
 import copy
 import os.path as osp
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import yaml  # type: ignore[import]
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -24,9 +25,6 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
-
-if TYPE_CHECKING:
-    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 
 @registry.register_task(name="RearrangeCompositeTask-v0")
