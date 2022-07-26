@@ -8,7 +8,7 @@ import os.path as osp
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -26,6 +26,9 @@ from habitat.tasks.rearrange.multi_task.task_creator_utils import (
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
+
+if TYPE_CHECKING:
+    from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
@@ -45,7 +48,7 @@ class NavToInfo:
     nav_target_angle: float
     nav_to_task_name: str
     nav_to_obj_type: RearrangeObjectTypes
-    start_hold_obj_idx: Optional[bool] = None
+    start_hold_obj_idx: Optional[int] = None
     start_base_pos: Optional[mn.Vector3] = None
     start_base_rot: Optional[float] = None
 
@@ -144,6 +147,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         orig_state = self._sim.capture_state(with_robot_js=True)
+        assert isinstance(
+            self._dataset, RearrangeDatasetV0
+        ), "Incompatble dataset type"
         create_task_object(
             action.task,
             action.task_def,
@@ -285,6 +291,9 @@ class DynNavRLEnv(RearrangeTask):
         super().reset(episode, fetch_observations=False)
         rearrange_logger.debug("Resetting navigation task")
 
+        assert isinstance(
+            self._dataset, RearrangeDatasetV0
+        ), "Incompatble dataset type"
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
@@ -310,7 +319,7 @@ class DynNavRLEnv(RearrangeTask):
                     f"Forcing episode, loaded `{full_key}` from cache {self.cache.cache_id}."
                 )
                 if not isinstance(self._nav_to_info, NavToInfo):
-                    rearrange_logger.warning(
+                    rearrange_logger.warning(  # type: ignore[unreachable]
                         f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
                     )
                     self._nav_to_info = None

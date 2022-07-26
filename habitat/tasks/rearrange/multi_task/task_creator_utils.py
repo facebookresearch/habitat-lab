@@ -6,7 +6,7 @@
 
 import copy
 import os.path as osp
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import habitat
 from habitat import Config
@@ -44,7 +44,7 @@ def create_task_object(
     config = copy.deepcopy(cur_config)
     config.defrost()
     if task_config_path is not None:
-        pass_args = []
+        pass_args: List[Any] = []
         for k, v in task_config_args.items():
             pass_args.extend((k, v))
         task_config = habitat.get_config(
@@ -57,6 +57,9 @@ def create_task_object(
     config.freeze()
     task = task_cls(config=config, dataset=cur_dataset, sim=cur_env._sim)
 
+    assert isinstance(
+        task, RearrangeTask
+    ), f"Subtask must be a Rearrange Task and not {type(task)}"
     task.set_args(**task_kwargs)
     task.set_sim_reset(should_super_reset)
     task.reset(episode)
