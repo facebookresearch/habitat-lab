@@ -43,8 +43,8 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # TASK
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
-_C.TASK.REWARD_MEASURE = "distance_to_goal"
-_C.TASK.SUCCESS_MEASURE = "spl"
+_C.TASK.REWARD_MEASURE = None
+_C.TASK.SUCCESS_MEASURE = None
 _C.TASK.SUCCESS_REWARD = 2.5
 _C.TASK.SLACK_REWARD = -0.01
 _C.TASK.END_ON_SUCCESS = False
@@ -602,6 +602,11 @@ _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
 _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL_REWARD MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL_REWARD = CN()
+_C.TASK.DISTANCE_TO_GOAL_REWARD.TYPE = "DistanceToGoalReward"
+# -----------------------------------------------------------------------------
 # # ANSWER_ACCURACY MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.ANSWER_ACCURACY = CN()
@@ -867,11 +872,17 @@ _C.DATASET.DATA_PATH = (
 # -----------------------------------------------------------------------------
 _C.GYM = CN()
 _C.GYM.AUTO_NAME = ""
-_C.GYM.CLASS_NAME = None
 _C.GYM.OBS_KEYS = None
 _C.GYM.ACTION_KEYS = None
 _C.GYM.ACHIEVED_GOAL_KEYS = []
 _C.GYM.DESIRED_GOAL_KEYS = []
+
+# -----------------------------------------------------------------------------
+# Task
+# -----------------------------------------------------------------------------
+# Uless another RLEnv is implemented and registered, the default task is
+# should be RLTaskEnv. RLTaskEnv works for both Navigation and Rearrange.
+_C.ENV_TASK = "RLTaskEnv"
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

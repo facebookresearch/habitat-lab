@@ -25,10 +25,7 @@ try:
     from habitat_baselines.config.default import get_config
     from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
     from habitat_baselines.run import execute_exp, run_exp
-    from habitat_baselines.utils.common import (
-        ObservationBatchingCache,
-        batch_obs,
-    )
+    from habitat_baselines.utils.common import batch_obs
 
     baseline_installed = True
 except ImportError:
@@ -357,7 +354,6 @@ def test_batch_obs(sensor_device, batched_device):
 
     numpy_if = lambda t: t.numpy() if sensor_device.type == "cpu" else t
 
-    cache = ObservationBatchingCache()
     sensors = [
         {
             f"{s}": numpy_if(torch.randn(128, 128, device=sensor_device))
@@ -366,4 +362,4 @@ def test_batch_obs(sensor_device, batched_device):
         for _ in range(4)
     ]
 
-    _ = batch_obs(sensors, device=batched_device, cache=cache)
+    _ = batch_obs(sensors, device=batched_device)

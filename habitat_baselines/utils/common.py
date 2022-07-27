@@ -5,23 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import math
 import numbers
 import os
 import re
 import shutil
 import tarfile
-from collections import defaultdict
 from io import BytesIO
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
 import numpy as np
@@ -35,13 +26,23 @@ from habitat import logger
 from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.spaces import EmptySpace
-from habitat.core.utils import try_cv2_import
+from habitat.core.utils import Singleton, try_cv2_import
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
-from habitat_baselines.common.tensor_dict import DictTree, TensorDict
+from habitat_baselines.common.tensor_dict import (
+    DictTree,
+    TensorDict,
+    TensorOrNDArrayDict,
+)
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 
 cv2 = try_cv2_import()
+
+
+if hasattr(torch, "inference_mode"):
+    inference_mode = torch.inference_mode
+else:
+    inference_mode = torch.no_grad
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
@@ -55,12 +56,14 @@ class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
             super()
             .log_prob(actions.squeeze(-1))
             .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
+            .sum(-1, keepdim=True)
         )
 
     def mode(self):
         return self.probs.argmax(dim=-1, keepdim=True)
+
+    def entropy(self):
+        return super().entropy().unsqueeze(-1)
 
 
 class CategoricalNet(nn.Module):
@@ -74,21 +77,20 @@ class CategoricalNet(nn.Module):
 
     def forward(self, x: Tensor) -> CustomFixedCategorical:
         x = self.linear(x)
-        return CustomFixedCategorical(logits=x)
+        return CustomFixedCategorical(logits=x.float(), validate_args=False)
 
 
 class CustomNormal(torch.distributions.normal.Normal):
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008
     ) -> Tensor:
-        return super().rsample(sample_shape)
+        return self.rsample(sample_shape)
 
     def log_probs(self, actions) -> Tensor:
-        ret = super().log_prob(actions).sum(-1).unsqueeze(-1)
-        return ret
+        return super().log_prob(actions).sum(-1, keepdim=True)
 
     def entropy(self) -> Tensor:
-        return super().entropy().sum(-1).unsqueeze(-1)
+        return super().entropy().sum(-1, keepdim=True)
 
 
 class GaussianNet(nn.Module):
@@ -161,7 +163,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ObservationBatchingCache:
+class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
@@ -170,7 +172,7 @@ class ObservationBatchingCache:
     def get(
         self,
         num_obs: int,
-        sensor_name: str,
+        sensor_name: Any,
         sensor: torch.Tensor,
         device: Optional[torch.device] = None,
     ) -> Union[torch.Tensor, np.ndarray]:
@@ -181,7 +183,6 @@ class ObservationBatchingCache:
         a cuda tensor
         """
         key = (
-            num_obs,
             sensor_name,
             tuple(sensor.size()),
             sensor.type(),
@@ -189,7 +190,12 @@ class ObservationBatchingCache:
             sensor.device.index,
         )
         if key in self._pool:
-            return self._pool[key]
+            cache = self._pool[key]
+            if cache.shape[0] >= num_obs:
+                return cache[0:num_obs]
+            else:
+                cache = None
+                del self._pool[key]
 
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
@@ -209,13 +215,80 @@ class ObservationBatchingCache:
         self._pool[key] = cache
         return cache
 
+    def batch_obs(
+        self,
+        observations: List[DictTree],
+        device: Optional[torch.device] = None,
+    ) -> TensorDict:
+        observations = [
+            TensorOrNDArrayDict.from_tree(o).map(
+                lambda t: t.numpy()
+                if isinstance(t, torch.Tensor) and t.device.type == "cpu"
+                else t
+            )
+            for o in observations
+        ]
+        observation_keys, _ = observations[0].flatten()
+        observation_tensors = [o.flatten()[1] for o in observations]
 
-@torch.no_grad()
+        # Order sensors by size, stack and move the largest first
+        upload_ordering = sorted(
+            range(len(observation_keys)),
+            key=lambda idx: 1
+            if isinstance(observation_tensors[0][idx], numbers.Number)
+            else int(np.prod(observation_tensors[0][idx].shape)),  # type: ignore
+            reverse=True,
+        )
+
+        batched_tensors = []
+        for sensor_name, obs in zip(observation_keys, observation_tensors[0]):
+            batched_tensors.append(
+                self.get(
+                    len(observations),
+                    sensor_name,
+                    torch.as_tensor(obs),
+                    device,
+                )
+            )
+
+        for idx in upload_ordering:
+            for i, all_obs in enumerate(observation_tensors):
+                obs = all_obs[idx]
+                # Use isinstance(sensor, np.ndarray) here instead of
+                # np.asarray as this is quickier for the more common
+                # path of sensor being an np.ndarray
+                # np.asarray is ~3x slower than checking
+                if isinstance(obs, np.ndarray):
+                    batched_tensors[idx][i] = obs  # type: ignore
+                elif isinstance(obs, torch.Tensor):
+                    batched_tensors[idx][i].copy_(obs, non_blocking=True)  # type: ignore
+                # If the sensor wasn't a tensor, then it's some CPU side data
+                # so use a numpy array
+                else:
+                    batched_tensors[idx][i] = np.asarray(obs)  # type: ignore
+
+            # With the batching cache, we use pinned mem
+            # so we can start the move to the GPU async
+            # and continue stacking other things with it
+            # If we were using a numpy array to do indexing and copying,
+            # convert back to torch tensor
+            # We know that batch_t[sensor_name] is either an np.ndarray
+            # or a torch.Tensor, so this is faster than torch.as_tensor
+            if isinstance(batched_tensors[idx], np.ndarray):
+                batched_tensors[idx] = torch.from_numpy(batched_tensors[idx])
+
+            batched_tensors[idx] = batched_tensors[idx].to(  # type: ignore
+                device, non_blocking=True
+            )
+
+        return TensorDict.from_flattened(observation_keys, batched_tensors)
+
+
+@inference_mode()
 @profiling_wrapper.RangeContext("batch_obs")
 def batch_obs(
     observations: List[DictTree],
     device: Optional[torch.device] = None,
-    cache: Optional[ObservationBatchingCache] = None,
 ) -> TensorDict:
     r"""Transpose a batch of observation dicts to a dict of batched
     observations.
@@ -224,77 +297,11 @@ def batch_obs(
         observations:  list of dicts of observations.
         device: The torch.device to put the resulting tensors on.
             Will not move the tensors if None
-        cache: An ObservationBatchingCache.  This enables faster
-            stacking of observations and cpu-gpu transfer as it
-            maintains a correctly sized tensor for the batched
-            observations that is pinned to cuda memory.
-
     Returns:
         transposed dict of torch.Tensor of observations.
     """
-    batch_t: TensorDict = TensorDict()
-    if cache is None:
-        batch: DefaultDict[str, List] = defaultdict(list)
 
-    obs = observations[0]
-    # Order sensors by size, stack and move the largest first
-    sensor_names = sorted(
-        obs.keys(),
-        key=lambda name: 1
-        if isinstance(obs[name], numbers.Number)
-        else np.prod(obs[name].shape),  # type: ignore
-        reverse=True,
-    )
-
-    for sensor_name in sensor_names:
-        for i, obs in enumerate(observations):
-            sensor = obs[sensor_name]
-            if cache is None:
-                batch[sensor_name].append(torch.as_tensor(sensor))
-            else:
-                if sensor_name not in batch_t:
-                    batch_t[sensor_name] = cache.get(  # type: ignore
-                        len(observations),
-                        sensor_name,
-                        torch.as_tensor(sensor),
-                        device,
-                    )
-
-                # Use isinstance(sensor, np.ndarray) here instead of
-                # np.asarray as this is quickier for the more common
-                # path of sensor being an np.ndarray
-                # np.asarray is ~3x slower than checking
-                if isinstance(sensor, np.ndarray):
-                    batch_t[sensor_name][i] = sensor  # type: ignore
-                elif torch.is_tensor(sensor):
-                    batch_t[sensor_name][i].copy_(sensor, non_blocking=True)  # type: ignore
-                # If the sensor wasn't a tensor, then it's some CPU side data
-                # so use a numpy array
-                else:
-                    batch_t[sensor_name][i] = np.asarray(sensor)  # type: ignore
-
-        # With the batching cache, we use pinned mem
-        # so we can start the move to the GPU async
-        # and continue stacking other things with it
-        if cache is not None:
-            # If we were using a numpy array to do indexing and copying,
-            # convert back to torch tensor
-            # We know that batch_t[sensor_name] is either an np.ndarray
-            # or a torch.Tensor, so this is faster than torch.as_tensor
-            if isinstance(batch_t[sensor_name], np.ndarray):
-                batch_t[sensor_name] = torch.from_numpy(batch_t[sensor_name])
-
-            batch_t[sensor_name] = batch_t[sensor_name].to(  # type: ignore
-                device, non_blocking=True
-            )
-
-    if cache is None:
-        for sensor in batch:
-            batch_t[sensor] = torch.stack(batch[sensor], dim=0)
-
-        batch_t.map_in_place(lambda v: v.to(device))
-
-    return batch_t
+    return _ObservationBatchingCache().batch_obs(observations, device)
 
 
 def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
@@ -332,7 +339,10 @@ def poll_checkpoint_folder(
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
     models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
+        filter(
+            lambda name: "latest" not in name,
+            filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")),
+        )
     )
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
@@ -637,6 +647,14 @@ def action_to_velocity_control(
     return step_action
 
 
+def iterate_action_space_recursively(action_space):
+    if isinstance(action_space, spaces.Dict):
+        for v in action_space.values():
+            yield from iterate_action_space_recursively(v)
+    else:
+        yield action_space
+
+
 def is_continuous_action_space(action_space) -> bool:
     if isinstance(action_space, spaces.Box):
         return True
@@ -649,13 +667,9 @@ def is_continuous_action_space(action_space) -> bool:
 
 
 def get_num_actions(action_space) -> int:
-    queue = [action_space]
     num_actions = 0
-    while len(queue) != 0:
-        v = queue.pop()
-        if isinstance(v, spaces.Dict):
-            queue.extend(v.spaces.values())
-        elif isinstance(v, spaces.Box):
+    for v in iterate_action_space_recursively(action_space):
+        if isinstance(v, spaces.Box):
             assert (
                 len(v.shape) == 1
             ), f"shape was {v.shape} but was expecting a 1D action"
@@ -670,3 +684,63 @@ def get_num_actions(action_space) -> int:
             )
 
     return num_actions
+
+
+class LagrangeInequalityCoefficient(nn.Module):
+    r"""Implements a learnable lagrange coefficient for a constrained
+    optimization problem.
+
+
+    Given the constrained optimization problem
+        min f(x)
+            st. x < threshold
+
+    The lagrangian relaxation is then the dual problem
+        argmax_alpha argmin_x f(x) + alpha * (x - threshold)
+            st. alpha > 0
+
+    We can optimize the dual problem via coordinate descent as
+        f(x) + [[alpha]]_sg * x - alpha * ([[x]]_sg - threshold)
+    To satisfy the constraint on alpha, we use projected gradient
+    descent and project alpha to be > 0 after every step.
+
+    To enforce x > threshold, we negate x and the threshold.
+    This yields the coordinate descent objective
+       alpha * (threshold - [[x]]_sg) - [[alpha]]_sg * x
+    """
+
+    def __init__(
+        self,
+        threshold: float,
+        init_alpha: float = 1.0,
+        alpha_min: float = 1e-4,
+        alpha_max: float = 1.0,
+        greater_than: bool = False,
+    ):
+        super().__init__()
+        self.log_alpha = nn.Parameter(torch.full((), math.log(init_alpha)))
+        self.threshold = float(threshold)
+        self.log_alpha_min = math.log(alpha_min)
+        self.log_alpha_max = math.log(alpha_max)
+        self._greater_than = greater_than
+
+    def project_into_bounds(self):
+        r"""Projects alpha back into bounds. To be called after each optim step"""
+        with torch.no_grad():
+            self.log_alpha.data.clamp_(self.log_alpha_min, self.log_alpha_max)
+
+    def forward(self):
+        r"""Compute alpha. This is done to allow forward hooks to work,
+        the expected entry point is ref:`lagrangian_loss`"""
+        return torch.exp(self.log_alpha)
+
+    def lagrangian_loss(self, x):
+        r"""Return the coordinate ascent lagrangian loss that keeps x
+        less than or greater than the threshold.
+        """
+        alpha = self()
+
+        if not self._greater_than:
+            return alpha.detach() * x - alpha * (x.detach() - self.threshold)
+        else:
+            return alpha * (self.threshold - x.detach()) - alpha.detach() * x

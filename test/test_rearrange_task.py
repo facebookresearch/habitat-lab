@@ -77,7 +77,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
     """
     config = baselines_get_config(test_cfg_path)
 
-    env_class = get_env_class(config.TASK_CONFIG.GYM.CLASS_NAME)
+    env_class = get_env_class(config.TASK_CONFIG.ENV_TASK)
 
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config

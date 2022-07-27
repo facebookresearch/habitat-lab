@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
+
 import numpy as np
 import pytest
 
@@ -19,6 +21,7 @@ from torch import nn
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.ddppo.algo import DDPPO
+from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 
 
@@ -71,7 +74,7 @@ def _worker_fn(
         max_grad_norm=ppo_cfg.max_grad_norm,
         use_normalized_advantage=ppo_cfg.use_normalized_advantage,
     )
-    agent.init_distributed()
+    agent.init_distributed(find_unused_params=unused_params)
     rollouts = RolloutStorage(
         ppo_cfg.num_steps,
         2,
@@ -101,11 +104,12 @@ def _worker_fn(
         batch["prev_actions"],
         batch["masks"],
         batch["actions"],
+        batch["rnn_build_seq_info"],
     )
     # Backprop on things
     (value.mean() + action_log_probs.mean() + dist_entropy.mean()).backward()
 
-    # Make sure all ranks have very similar parameters
+    # Make sure all ranks have very similar gradients
     for param in actor_critic.parameters():
         if param.grad is not None:
             grads = [param.grad.detach().clone() for _ in range(world_size)]
@@ -114,12 +118,16 @@ def _worker_fn(
             for i in range(world_size):
                 assert torch.isclose(grads[i], grads[world_rank]).all()
 
+    torch.distributed.destroy_process_group()
+    tcp_store = None
+    gc.collect()
+
 
 @pytest.mark.parametrize("unused_params", [True, False])
 def test_ddppo_reduce(unused_params: bool):
     world_size = 2
     torch.multiprocessing.spawn(
         _worker_fn,
-        args=(world_size, 8748 + int(unused_params), unused_params),
+        args=(world_size, find_free_port(), unused_params),
         nprocs=world_size,
     )
