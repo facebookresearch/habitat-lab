@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Iterator, Optional
 
 import magnum as mn
 import numpy as np
@@ -8,6 +8,7 @@ from yacs.config import CfgNode
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.robots.fetch_suction import FetchSuctionRobot
+from habitat.robots.mobile_manipulator import MobileManipulator
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -16,7 +17,11 @@ from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
 
 @dataclass
 class RobotData:
-    robot: Any
+    """
+    Data needed to manage a robot instance.
+    """
+
+    robot: MobileManipulator
     grasp_mgr: RearrangeGraspManager
     cfg: CfgNode
     start_js: np.ndarray
@@ -33,6 +38,10 @@ class RobotData:
 
 
 class RobotManager:
+    """
+    Handles creating, updating and managing all robot instances.
+    """
+
     def __init__(self, cfg, sim):
         self._sim = sim
         self._all_robot_data = []
@@ -46,7 +55,7 @@ class RobotManager:
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)
 
             if len(cfg.AGENTS) > 1:
-                # Only prefix cameras if there is more than one agent.
+                # Prefix sensors if there is more than 1 agent in the scene.
                 robot.params.cameras = {
                     f"{agent_name}_{k}": v
                     for k, v in robot.params.cameras.items()
@@ -66,7 +75,7 @@ class RobotManager:
                 )
             )
 
-    def reconfigure(self, is_new_scene):
+    def reconfigure(self, is_new_scene: bool):
         ao_mgr = self._sim.get_articulated_object_manager()
         for robot_data in self._all_robot_data:
             if is_new_scene:
@@ -83,8 +92,12 @@ class RobotManager:
             robot_data.grasp_mgr.reset()
 
     def post_obj_load_reconfigure(self):
+        """
+        Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
+        """
+
         for robot_data in self._all_robot_data:
-            robot_data.robot.arm_init_params = (
+            robot_data.robot.params.arm_init_params = (
                 robot_data.start_js
                 + robot_data.cfg.JOINT_START_NOISE
                 * np.random.randn(len(robot_data.start_js))
@@ -101,19 +114,31 @@ class RobotManager:
                     mn.Vector3(agent_rot[:3]), agent_rot[3]
                 )
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int):
+        """
+        Fetches the robot data at the robot index.
+        """
+
         return self._all_robot_data[key]
 
     def __len__(self):
+        """
+        The number of robots.
+        """
+
         return len(self._all_robot_data)
 
     @property
-    def robots_iter(self):
+    def robots_iter(self) -> Iterator[MobileManipulator]:
+        """
+        Iterator over all robot interfaces.
+        """
+
         for robot_data in self._all_robot_data:
             yield robot_data.robot
 
     @property
-    def grasp_iter(self):
+    def grasp_iter(self) -> Iterator[RearrangeGraspManager]:
         for robot_data in self._all_robot_data:
             yield robot_data.grasp_mgr
 
@@ -127,10 +152,19 @@ class RobotManager:
                 )
 
     def update_robots(self):
+        """
+        Update all robot instance managers.
+        """
+
         for robot_data in self._all_robot_data:
             robot_data.grasp_mgr.update()
             robot_data.robot.update()
 
     def update_debug(self):
+        """
+        Only call when in debug mode. This renders visualization helpers for
+        the robots.
+        """
+
         for robot_data in self._all_robot_data:
             robot_data.grasp_mgr.update_debug()
