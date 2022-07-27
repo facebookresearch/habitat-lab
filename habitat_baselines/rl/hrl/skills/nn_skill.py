@@ -4,11 +4,11 @@ import gym.spaces as spaces
 import numpy as np
 import torch
 
-from habitat.config.default import get_config
 from habitat.core.spaces import ActionSpace
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.utils.common import get_num_actions
 

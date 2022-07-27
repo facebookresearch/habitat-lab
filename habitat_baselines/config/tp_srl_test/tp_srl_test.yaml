@@ -35,10 +35,10 @@ RL:
           action_distribution_type: "gaussian"
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          LOAD_CKPT_FILE: "data/models/pick.pth"
+          LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 200
           FORCE_END_ON_TIMEOUT: True
-          FORCE_CONFIG_FILE: "configs/tasks/rearrange/pick.yaml"
+          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_pick.yaml"
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"
@@ -46,10 +46,10 @@ RL:
           action_distribution_type: "gaussian"
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: ["obj_goal_sensor"]
-          LOAD_CKPT_FILE: "data/models/place.pth"
+          LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 200
           FORCE_END_ON_TIMEOUT: True
-          FORCE_CONFIG_FILE: "configs/tasks/rearrange/place.yaml"
+          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_place.yaml"
 
         NN_NAV:
           skill_name: "NavSkillPolicy"
@@ -59,10 +59,10 @@ RL:
           OBS_SKILL_INPUT_DIM: 2
           LIN_SPEED_STOP: 0.067
           ANG_SPEED_STOP: 0.067
-          LOAD_CKPT_FILE: "data/models/nav.pth"
+          LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: False
-          FORCE_CONFIG_FILE: "configs/tasks/rearrange/nav_to_obj.yaml"
+          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
 
         WAIT_SKILL:
           skill_name: "WaitSkillPolicy"
