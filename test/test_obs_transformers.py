@@ -42,12 +42,12 @@ def test_transforms(obs_transform_key: str):
     assert modified_obs_space == apply_obs_transforms_obs_space(
         obs_space, [transformer]
     )
-    batched_modified_obs_space = batch_space(obs_space, 7)
-    observation = batched_modified_obs_space.sample()
+    batched_obs_space = batch_space(obs_space, 7)
+    observation = batched_obs_space.sample()
     tensor_observation = TensorDict.from_tree(observation)
     transformed_obs = apply_obs_transforms_batch(
         tensor_observation, [transformer]
     )
-    assert batched_modified_obs_space.contains(
-        transformed_obs
-    ), f"Observation transform did not generate an observation ({str({k: v.shape for k,v in transformed_obs.items()}) }) according to the defined observation space {batched_modified_obs_space}"
+    assert modified_obs_space.contains(
+        {k: v[0] for k, v in transformed_obs.items()}
+    ), f"Observation transform generated the observation ({str({k: v.shape for k,v in transformed_obs.items()}) }) which is incompatible with the defined observation space {modified_obs_space}"
