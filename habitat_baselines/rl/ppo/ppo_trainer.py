@@ -1179,3 +1179,5 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)
 
         self.envs.close()
+
+        self.envs.close()

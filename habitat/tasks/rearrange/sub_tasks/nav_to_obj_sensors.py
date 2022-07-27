@@ -76,39 +76,6 @@ class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
 
 
 @registry.register_sensor
-class NavToEntitySensor(Sensor):
-    cls_uuid: str = "nav_to_entity"
-
-    def __init__(self, task, sim, config, *args, **kwargs):
-        self._config = config
-        if not hasattr(task, "pddl_problem"):
-            raise ValueError(f"Task must use PDDL. {task} does not.")
-        self._expr_types = len(task.pddl_problem.leaf_expr_types)
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args, **kwargs):
-        return NavToSkillSensor.cls_uuid
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(len(self._expr_types),),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, task, *args, **kwargs):
-        ret = np.zeros(len(self._expr_types), dtype=np.float32)
-
-        cur_idx = self._expr_types.index(task.nav_to_entity_name)
-        ret[cur_idx] = 1.0
-        return ret
-
-
-@registry.register_sensor
 class NavToSkillSensor(Sensor):
     cls_uuid: str = "nav_to_skill"
 
