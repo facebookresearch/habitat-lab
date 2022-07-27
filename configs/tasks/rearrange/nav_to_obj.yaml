@@ -14,7 +14,7 @@ TASK:
     MUST_LOOK_AT_TARG: True
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
-    FORCE_REGENERATE: False
+    FORCE_REGENERATE: True
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
     OBJECT_IN_HAND_SAMPLE_PROB: 0.167
 
