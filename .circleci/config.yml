@@ -1,7 +1,7 @@
 version: 2
 gpu: &gpu
   machine:
-    image: ubuntu-2004-cuda-11.4:202110-01
+    image: ubuntu-1604-cuda-10.1:201909-23
   resource_class: gpu.nvidia.medium
   environment:
     FPS_THRESHOLD: 900
@@ -147,7 +147,7 @@ jobs:
               then
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
-                conda install -y pytorch torchvision cudatoolkit=11.3 -c pytorch
+                conda install -y pytorch==1.11.0 torchvision cudatoolkit=10.0 -c pytorch
                 echo "Installing pytorch"
               fi
               touch ~/miniconda/pytorch_installed
