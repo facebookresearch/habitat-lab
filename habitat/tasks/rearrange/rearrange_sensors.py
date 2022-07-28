@@ -272,7 +272,7 @@ class EEPositionSensor(UsesRobotInterface, Sensor):
         ).robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
-        return np.array(local_ee_pos)
+        return np.array(local_ee_pos, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -338,7 +338,7 @@ class RestingPositionSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        return np.array(task.desired_resting)
+        return np.array(task.desired_resting, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -400,7 +400,8 @@ class IsHoldingSensor(UsesRobotInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         return np.array(
-            int(self._sim.get_robot_data(self.robot_id).grasp_mgr.is_grasped)
+            int(self._sim.get_robot_data(self.robot_id).grasp_mgr.is_grasped),
+            dtype=np.float32,
         ).reshape((1,))
 
 
