@@ -142,7 +142,6 @@ jobs:
       - run:
           name: Install pytorch
           no_output_timeout: 20m
-          background: true
           command: |
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
