@@ -149,8 +149,10 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
                 conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
+                echo "Installing pytorch"
               fi
               touch ~/miniconda/pytorch_installed
+              python -c 'import torch; print(torch.cuda.is_available()); print(torch.__version__)'
       - restore_cache:
           keys:
             - habitat-sim-{{ checksum "./hsim_sha" }}
