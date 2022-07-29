@@ -9,10 +9,11 @@ import os.path as osp
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import yaml
+import yaml  # type: ignore[import]
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -49,7 +50,7 @@ class CompositeTask(RearrangeTask):
 
         self._cur_node_idx: int = -1
         self._cur_task: RearrangeTask = None
-        self._cached_tasks: Dict[str, RearrangeTask] = {}
+        self._cached_tasks: Dict[int, RearrangeTask] = {}
         self._cur_state = None
 
         # None until loaded.
@@ -134,6 +135,9 @@ class CompositeTask(RearrangeTask):
     def reset(self, episode: Episode):
         super().reset(episode, fetch_observations=False)
         if self.domain is None:
+            assert isinstance(
+                self._dataset, RearrangeDatasetV0
+            ), "Incompatble dataset type"
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
                 self._dataset,
@@ -280,9 +284,9 @@ class CompositeTask(RearrangeTask):
         is not valid, then return the supplied default value.
         """
         if self.forced_node_task is not None and hasattr(
-            self.cur_task, prop_name
+            self._cur_task, prop_name
         ):
-            return getattr(self.cur_task, prop_name)
+            return getattr(self._cur_task, prop_name)
 
         elif self._inferred_cur_task is not None and hasattr(
             self._inferred_cur_task, prop_name

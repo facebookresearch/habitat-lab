@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 
-def parse_func(x: str) -> Tuple[str, List[str]]:
+def parse_func(x: str) -> Tuple[str, str]:
     """
     Parses out the components of a function string.
     :returns: First element is the name of the function, second argument are the function arguments.
@@ -95,7 +95,7 @@ class Predicate:
         else:
             self.set_state = None
         self.args = load_config.get("args", [])
-        self.set_args = None
+        self.set_args: Optional[List[str]] = None
 
     def get_n_args(self) -> int:
         return len(self.args)
@@ -432,7 +432,7 @@ class PddlAction:
 
         for bound_args in all_bound_args:
             # Extract out the set arguments from consistent_preds
-            all_set_args = [[]]
+            all_set_args: List[List[str]] = [[]]
 
             for action_param_name in self.parameters:
                 if action_param_name in self._action_arg_to_precond_arg:

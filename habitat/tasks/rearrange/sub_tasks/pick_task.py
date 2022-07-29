@@ -12,6 +12,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
@@ -196,7 +197,7 @@ class RearrangePickTaskV1(RearrangeTask):
         return obs
 
     def get_receptacle_info(
-        self, episode: Episode, sel_idx: int
+        self, episode: RearrangeEpisode, sel_idx: int
     ) -> Tuple[str, int]:
         """
         Returns the receptacle handle and receptacle parent link index.
@@ -205,6 +206,10 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def reset(self, episode: Episode, fetch_observations: bool = True):
         sim = self._sim
+
+        assert isinstance(
+            episode, RearrangeEpisode
+        ), "Provided episode needs to be of type RearrangeEpisode for RearrangePickTaskV1"
 
         super().reset(episode, fetch_observations=False)
 
