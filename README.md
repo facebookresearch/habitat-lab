@@ -202,6 +202,13 @@ The full Matterport3D (MP3D) dataset for use with Habitat can be downloaded usin
 #### Gibson
 Download the Habitat related Gibson dataset following the instructions [here](https://github.com/StanfordVL/GibsonEnv#database). After downloading extract the dataset to folder `habitat-lab/data/scene_datasets/gibson/` folder (this folder should contain the `.glb` files from Gibson).
 
+#### Habitat test scenes
+Download the scenes used for performing unit tests via the download api from [habitat-sim](https://github.com/facebookresearch/habitat-sim).
+
+```
+python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes
+```
+
 
 ### Task datasets
 | Task | Scenes | Link | Extract path | Config to use | Archive size |
@@ -218,6 +225,12 @@ Download the Habitat related Gibson dataset following the instructions [here](ht
 | [Visual Language Navigation](https://bringmeaspoon.org/) | MatterPort3D | [vln_r2r_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/vln/mp3d/r2r/v1/vln_r2r_mp3d_v1.zip) | `data/datasets/vln/mp3d/r2r/v1` | [`datasets/vln/mp3d_r2r.yaml`](configs/datasets/vln/mp3d_r2r.yaml) | 2.7 MB |
 | [Image goal navigation](https://github.com/facebookresearch/habitat-lab/pull/333) | Gibson | [pointnav_gibson_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) | `data/datasets/pointnav/gibson/v1/` |  [`datasets/imagenav/gibson.yaml`](configs/datasets/imagenav/gibson.yaml) | 385 MB |
 | [Image goal navigation](https://github.com/facebookresearch/habitat-lab/pull/333) | MatterPort3D | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) | `data/datasets/pointnav/mp3d/v1/` | [`datasets/imagenav/mp3d.yaml`](configs/datasets/imagenav/mp3d.yaml) | 400 MB |
+
+To download the point goal navigation episodes for the habitat test scenes, use the download api from [habitat-sim](https://github.com/facebookresearch/habitat-sim).
+
+```
+python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+```
 
 To use an episode dataset provide related config to the Env in [the example](#example) or use the config for [RL agent training](habitat_baselines/README.md#reinforcement-learning-rl).
 
