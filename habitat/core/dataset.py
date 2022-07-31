@@ -12,7 +12,6 @@ import copy
 import json
 import os
 import random
-from collections import namedtuple
 from itertools import groupby
 from typing import (
     Any,
