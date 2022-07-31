@@ -16,6 +16,9 @@ import habitat_sim
 from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+
+# flake8: noqa
+from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -31,9 +34,7 @@ from habitat.tasks.rearrange.utils import (
 )
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import JointMotorSettings, MotionType
-
-# flake8: noqa
-from habitat_sim.robots import FetchRobot, FetchRobotNoWheels
+from habitat_sim.sim import SimulatorBackend
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
@@ -161,6 +162,12 @@ class RearrangeSim(HabitatSim):
             )
         return self._ik_helper
 
+    def reset(self):
+        SimulatorBackend.reset(self)
+        for i in range(len(self.agents)):
+            self.reset_agent(i)
+        return None
+
     def reconfigure(self, config: Config):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
@@ -277,9 +284,13 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def set_robot_base_to_random_point(self):
-        MAX_ATTEMPTS = 50
-        for attempt_i in range(MAX_ATTEMPTS):
+    def set_robot_base_to_random_point(
+        self, max_attempts: int = 50
+    ) -> Tuple[np.ndarray, float]:
+        """
+        :returns: The set base position and rotation
+        """
+        for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
 
             start_pos = self.safe_snap_point(start_pos)
@@ -295,10 +306,11 @@ class RearrangeSim(HabitatSim):
             )
             if not did_collide:
                 break
-        if attempt_i == MAX_ATTEMPTS - 1:
+        if attempt_i == max_attempts - 1:
             rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
+        return start_pos, start_rot
 
     def _setup_targets(self):
         self._targets = {}
@@ -412,7 +424,7 @@ class RearrangeSim(HabitatSim):
                 )
                 assert (
                     len(matching_templates.values()) == 1
-                ), "Duplicate object attributes matched to shortened handle. TODO: relative paths as handles should fix this. For now, try renaming objects to avoid collision."
+                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
                 ro = rom.add_object_by_template_handle(
                     list(matching_templates.keys())[0]
                 )

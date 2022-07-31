@@ -148,10 +148,11 @@ jobs:
               then
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 . activate habitat;
-                conda install -c  conda-forge opencv -y
-                conda install -y pytorch torchvision cudatoolkit=10.0 -c pytorch
+                conda install -y pytorch==1.4.0 torchvision cudatoolkit=10.0 -c pytorch
+                echo "Installing pytorch"
               fi
               touch ~/miniconda/pytorch_installed
+              python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
       - restore_cache:
           keys:
             - habitat-sim-{{ checksum "./hsim_sha" }}
@@ -250,9 +251,20 @@ jobs:
               . activate habitat; cd habitat-lab
               python setup.py develop --all
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test --addopts "--cov-report=xml --cov=./"
+              python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - run:
+          name: Run baseline training tests
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python setup.py develop --all
+              export PYTHONPATH=.:$PYTHONPATH
+              # This is a flag that enables test_test_baseline_training to work
+              export TEST_BASELINE_SMALL=1
+              python setup.py test --addopts "test/test_baseline_training.py"
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
@@ -283,6 +295,16 @@ jobs:
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
+      - run:
+          name: Ensure non-editable mode works
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python -m pip install .
+              python -c "import habitat"
+
+      - store_artifacts:
+          path: habitat-lab/data/profile  # This is the benchmark profile
 
 
 workflows:

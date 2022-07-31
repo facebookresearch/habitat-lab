@@ -1,7 +1,6 @@
 GYM:
     AUTO_NAME: "Place"
-    OBS_KEYS: ['obj_goal_sensor', 'joint', 'is_holding', 'relative_resting_position']
-    CLASS_NAME: "RearrangeRLEnv"
+    OBS_KEYS: ["robot_head_depth", 'obj_goal_sensor', 'joint', 'is_holding', 'relative_resting_position']
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -29,6 +28,7 @@ TASK:
     SUCCESS_MEASURE: "place_success"
     SUCCESS_REWARD: 10.0
     SLACK_REWARD: 0.0
+    END_ON_SUCCESS: True
 
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
@@ -98,7 +98,7 @@ TASK:
         FORCE_END_PEN: 10.0
     PLACE_SUCCESS:
         TYPE: "PlaceSuccess"
-        SUCC_THRESH: 0.15
+        EE_RESTING_SUCCESS_THRESHOLD : 0.15
     NUM_STEPS:
         TYPE: "NumStepsMeasure"
 
@@ -126,6 +126,8 @@ TASK:
         - ARM_ACTION
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
     ACTION_SPACE_CONFIG: v0
@@ -176,7 +178,7 @@ SIMULATOR:
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
+        ALLOW_SLIDING: False
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

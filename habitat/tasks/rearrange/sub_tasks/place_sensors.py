@@ -23,7 +23,7 @@ class PlaceReward(RearrangeReward):
     cls_uuid: str = "place_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
-        self.cur_dist = -1.0
+        self._prev_dist = -1.0
         self._prev_dropped = False
         self._metric = None
 
@@ -44,7 +44,7 @@ class PlaceReward(RearrangeReward):
                 ForceTerminate.cls_uuid,
             ],
         )
-        self.cur_dist = -1.0
+        self._prev_dist = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
 
         super().reset_metric(
@@ -88,7 +88,7 @@ class PlaceReward(RearrangeReward):
                 reward += self._config.PLACE_REWARD
                 # If we just transitioned to the next stage our current
                 # distance is stale.
-                self.cur_dist = -1
+                self._prev_dist = -1
             else:
                 # Dropped at wrong location
                 reward -= self._config.DROP_PEN
@@ -101,17 +101,17 @@ class PlaceReward(RearrangeReward):
                     return
 
         if self._config.USE_DIFF:
-            if self.cur_dist < 0:
+            if self._prev_dist < 0:
                 dist_diff = 0.0
             else:
-                dist_diff = self.cur_dist - dist_to_goal
+                dist_diff = self._prev_dist - dist_to_goal
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
             reward += self._config.DIST_REWARD * dist_diff
         else:
             reward -= self._config.DIST_REWARD * dist_to_goal
-        self.cur_dist = dist_to_goal
+        self._prev_dist = dist_to_goal
 
         self._metric = reward
 
@@ -158,5 +158,5 @@ class PlaceSuccess(Measure):
         self._metric = (
             not is_holding
             and is_obj_at_goal
-            and ee_to_rest_distance < self._config.SUCC_THRESH
+            and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
         )

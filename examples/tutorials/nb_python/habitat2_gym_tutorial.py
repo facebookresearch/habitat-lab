@@ -22,7 +22,7 @@
 # %% [markdown]
 # # Habitat 2.0 Gym API
 # This tutorial covers how to use Habitat 2.0 environments as standard gym environments.
-# See [here for Habitat 2.0 installation instructions](https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/hab_suite/examples/tutorials/colabs/Habitat2_Quickstart.ipynb#scrollTo=50rOVwceXvzL)
+# See [here for Habitat 2.0 installation instructions and more tutorials.](https://aihabitat.org/docs/habitat2/)
 
 # %%
 # %%capture
@@ -34,9 +34,6 @@ import os
 if "COLAB_GPU" in os.environ:
     print("Setting up Habitat")
     # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-    # Setup to use the hab_suite branch of Habitat Lab.
-    # ! cd /content/habitat-lab && git remote set-branches origin 'hab_suite' && git fetch -v && git checkout hab_suite && cd /content/habitat-lab && python setup.py develop --all && pip install . && cd -
-
 # %%
 import os
 

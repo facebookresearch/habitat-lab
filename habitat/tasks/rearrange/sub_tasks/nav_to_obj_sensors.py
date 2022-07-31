@@ -23,8 +23,8 @@ BASE_ACTION_NAME = "BASE_VELOCITY"
 @registry.register_sensor
 class TargetOrGoalStartPointGoalSensor(Sensor):
     """
-    GPS and compass sensor relative to the starting target position. Only for
-    the first target object.
+    GPS and compass sensor relative to the starting object position or goal
+    position.
     """
 
     cls_uuid: str = "object_to_agent_gps_compass"
@@ -407,15 +407,10 @@ class BadCalledTerminate(GeoMeasure):
             success_measure.does_action_want_stop(task, observations)
             and not success_measure.get_metric()
         ):
-            if self._config.DECAY_BAD_TERM:
-                remaining = (
-                    self._config.ENVIRONMENT.MAX_EPISODE_STEPS - self._n_steps
-                )
-                self.reward_pen -= self._config.BAD_TERM_PEN * (
-                    remaining / self._config.ENVIRONMENT.MAX_EPISODE_STEPS
-                )
-            else:
-                self.reward_pen = self._config.BAD_TERM_PEN
+            assert (
+                not self._config.DECAY_BAD_TERM
+            ), "DECAY_BAD_TERM is not supported for this measure"
+            self.reward_pen = self._config.BAD_TERM_PEN
             self._metric = 1.0
         else:
             self._metric = 0.0
@@ -462,7 +457,7 @@ class NavToObjSuccess(GeoMeasure):
             self.uuid,
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
         )
-        self._action_can_stop = task.actions[BASE_ACTION_NAME].end_on_stop
+        self._end_on_stop = task.actions[BASE_ACTION_NAME].end_on_stop
 
         super().reset_metric(
             *args,
@@ -487,19 +482,18 @@ class NavToObjSuccess(GeoMeasure):
             )
         else:
             self._metric = nav_pos_succ
+
         called_stop = self.does_action_want_stop(task, observations)
-        if self._action_can_stop:
+
+        if self._config.MUST_CALL_STOP:
             if called_stop:
-                task.should_end = True
+                if self._end_on_stop:
+                    task.should_end = True
             else:
                 self._metric = False
 
     def does_action_want_stop(self, task, obs):
-        if self._config.HEURISTIC_STOP:
-            angle_succ = (
-                self._get_angle_dist(obs) < self._config.SUCCESS_ANGLE_DIST
-            )
-            obj_dist = np.linalg.norm(obs["dyn_obj_start_or_goal_sensor"])
-            return angle_succ and (obj_dist < 1.0)
-
+        assert (
+            not self._config.HEURISTIC_STOP
+        ), "HEURISTIC_STOP not supported in this metric"
         return task.actions[BASE_ACTION_NAME].does_want_terminate

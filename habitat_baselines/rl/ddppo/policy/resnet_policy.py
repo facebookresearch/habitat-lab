@@ -60,14 +60,9 @@ class PointNavResNetPolicy(NetPolicy):
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
-            include_visual_keys = policy_config.include_visual_keys
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
-            include_visual_keys = None
-
-        if fuse_keys is None:
-            fuse_keys = []
 
         super().__init__(
             PointNavResNetNet(
@@ -82,7 +77,6 @@ class PointNavResNetPolicy(NetPolicy):
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
-                include_visual_keys=include_visual_keys,
             ),
             dim_actions=get_num_actions(action_space),
             policy_config=policy_config,
@@ -105,7 +99,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            fuse_keys=config.RL.GYM_OBS_KEYS,
+            fuse_keys=None,
         )
 
 
@@ -128,7 +122,7 @@ class ResNetEncoder(nn.Module):
         # Count total # of channels for rgb and for depth
         self._n_input_rgb, self._n_input_depth = [
             # sum() returns 0 for an empty list
-            sum([observation_space.spaces[k].shape[2] for k in keys])
+            sum(observation_space.spaces[k].shape[2] for k in keys)
             for keys in [self.rgb_keys, self.depth_keys]
         ]
 
@@ -240,31 +234,49 @@ class PointNavResNetNet(Net):
         backbone,
         resnet_baseplanes,
         normalize_visual_inputs: bool,
-        fuse_keys: List[str],
+        fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
-        include_visual_keys: Optional[List[str]] = None,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
         self.discrete_actions = discrete_actions
+        self._n_prev_action = 32
         if discrete_actions:
-            self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
+            self.prev_action_embedding = nn.Embedding(
+                action_space.n + 1, self._n_prev_action
+            )
         else:
             num_actions = get_num_actions(action_space)
-            self.prev_action_embedding = nn.Linear(num_actions, 32)
-
+            self.prev_action_embedding = nn.Linear(
+                num_actions, self._n_prev_action
+            )
         self._n_prev_action = 32
         rnn_input_size = self._n_prev_action  # test
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
-        self._fuse_keys: List[str] = [
+        if fuse_keys is None:
+            fuse_keys = observation_space.spaces.keys()
+            # removing keys that correspond to goal sensors
+            goal_sensor_keys = {
+                IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
+                ObjectGoalSensor.cls_uuid,
+                EpisodicGPSSensor.cls_uuid,
+                PointGoalSensor.cls_uuid,
+                HeadingSensor.cls_uuid,
+                ProximitySensor.cls_uuid,
+                EpisodicCompassSensor.cls_uuid,
+                ImageGoalSensor.cls_uuid,
+            }
+            fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
+        self._fuse_keys_1d: List[str] = [
             k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
         ]
-        if len(self._fuse_keys) != 0:
+        if len(self._fuse_keys_1d) != 0:
             rnn_input_size += sum(
-                [observation_space.spaces[k].shape[0] for k in self._fuse_keys]
+                observation_space.spaces[k].shape[0]
+                for k in self._fuse_keys_1d
             )
 
         if (
@@ -358,16 +370,14 @@ class PointNavResNetNet(Net):
 
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
-        elif include_visual_keys is not None and len(include_visual_keys) != 0:
+        else:
             use_obs_space = spaces.Dict(
                 {
-                    k: v
-                    for k, v in observation_space.spaces.items()
-                    if k in include_visual_keys
+                    k: observation_space.spaces[k]
+                    for k in fuse_keys
+                    if len(observation_space.spaces[k].shape) == 3
                 }
             )
-        else:
-            use_obs_space = observation_space
 
         self.visual_encoder = ResNetEncoder(
             use_obs_space,
@@ -413,6 +423,7 @@ class PointNavResNetNet(Net):
         rnn_hidden_states,
         prev_actions,
         masks,
+        rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
         if not self.is_blind:
@@ -422,9 +433,9 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        if len(self._fuse_keys) != 0:
+        if len(self._fuse_keys_1d) != 0:
             fuse_states = torch.cat(
-                [observations[k] for k in self._fuse_keys], dim=-1
+                [observations[k] for k in self._fuse_keys_1d], dim=-1
             )
             x.append(fuse_states)
 
@@ -512,6 +523,7 @@ class PointNavResNetNet(Net):
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)
             start_token = torch.zeros_like(prev_actions)
+            # The mask means the previous action will be zero, an extra dummy action
             prev_actions = self.prev_action_embedding(
                 torch.where(masks.view(-1), prev_actions + 1, start_token)
             )
@@ -524,7 +536,7 @@ class PointNavResNetNet(Net):
 
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(
-            out, rnn_hidden_states, masks
+            out, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
         return out, rnn_hidden_states

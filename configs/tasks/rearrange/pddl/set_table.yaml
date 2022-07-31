@@ -3,7 +3,7 @@ start:
     state:
         art_states:
             "kitchen_counter_:0000": [0,0,0,0,0,0,0]
-            "fridge_:0000": [0,2.35619]
+            "fridge_:0000": [0,0]
         robo:
             pos: 'rnd'
 

@@ -10,8 +10,12 @@ from habitat_baselines.common.logging import baselines_logger
 class HighLevelPolicy:
     def get_next_skill(
         self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
-    ) -> Tuple[torch.Tensor, List[Any], torch.Tensor]:
-        pass
+    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor]:
+        """
+        :returns: A tuple containing the next skill index, a list of arguments
+            for the skill, and if the high-level policy requests immediate
+            termination.
+        """
 
 
 class GtHighLevelPolicy:
@@ -40,7 +44,9 @@ class GtHighLevelPolicy:
     ):
         next_skill = torch.zeros(self._num_envs, device=prev_actions.device)
         skill_args_data = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(self._num_envs, device=prev_actions.device)
+        immediate_end = torch.zeros(
+            self._num_envs, device=prev_actions.device, dtype=torch.bool
+        )
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
                 if self._next_sol_idxs[batch_idx] >= len(
@@ -49,7 +55,7 @@ class GtHighLevelPolicy:
                     baselines_logger.info(
                         f"Calling for immediate end with {self._next_sol_idxs[batch_idx]}"
                     )
-                    immediate_end[batch_idx] = 1.0
+                    immediate_end[batch_idx] = True
                     use_idx = len(self._solution_actions) - 1
                 else:
                     use_idx = self._next_sol_idxs[batch_idx].item()

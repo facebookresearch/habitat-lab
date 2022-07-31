@@ -23,15 +23,15 @@ try:
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
+    from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
     from habitat_baselines.run import execute_exp, run_exp
-    from habitat_baselines.utils.common import (
-        ObservationBatchingCache,
-        batch_obs,
-    )
+    from habitat_baselines.utils.common import batch_obs
 
     baseline_installed = True
 except ImportError:
     baseline_installed = False
+
+from habitat.utils.gym_definitions import make_gym_from_config
 
 
 def _powerset(s):
@@ -77,8 +77,8 @@ def _powerset(s):
     ),
 )
 def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
-    # For testing with world_size=1, -1 works as port in PyTorch
-    os.environ["MASTER_PORT"] = str(-1)
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
 
     if gpu2gpu:
         try:
@@ -178,9 +178,11 @@ def test_cubemap_stiching(
             tmp_config.defrost()
             tmp_config.DATASET["SPLIT"] = split
             tmp_config.freeze()
-            env_fn_args.append((tmp_config, None))
+            env_fn_args.append((tmp_config,))
 
-        with VectorEnv(env_fn_args=env_fn_args) as envs:
+        with VectorEnv(
+            make_env_fn=make_gym_from_config, env_fn_args=env_fn_args
+        ) as envs:
             observations = envs.reset()
         batch = batch_obs(observations)
         orig_batch = deepcopy(batch)
@@ -352,7 +354,6 @@ def test_batch_obs(sensor_device, batched_device):
 
     numpy_if = lambda t: t.numpy() if sensor_device.type == "cpu" else t
 
-    cache = ObservationBatchingCache()
     sensors = [
         {
             f"{s}": numpy_if(torch.randn(128, 128, device=sensor_device))
@@ -361,4 +362,4 @@ def test_batch_obs(sensor_device, batched_device):
         for _ in range(4)
     ]
 
-    _ = batch_obs(sensors, device=batched_device, cache=cache)
+    _ = batch_obs(sensors, device=batched_device)

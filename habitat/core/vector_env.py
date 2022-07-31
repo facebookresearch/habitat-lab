@@ -32,10 +32,15 @@ from gym import spaces
 import habitat
 from habitat.config import Config
 from habitat.core.env import Env, RLEnv
+from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
+from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.utils import profiling_wrapper
-from habitat.utils.pickle5_multiprocessing import ConnectionWrapper
+from habitat.utils.pickle5_multiprocessing import (
+    CloudpickleWrapper,
+    ConnectionWrapper,
+)
 
 try:
     # Use torch.multiprocessing if we can.
@@ -141,8 +146,8 @@ class VectorEnv:
 
     def __init__(
         self,
-        make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
-        env_fn_args: Sequence[Tuple] = None,
+        make_env_fn: Callable[..., gym.Env],
+        env_fn_args: Sequence[Tuple],
         auto_reset_done: bool = True,
         multiprocessing_start_method: str = "forkserver",
         workers_ignore_signals: bool = False,
@@ -152,7 +157,7 @@ class VectorEnv:
         :param make_env_fn: function which creates a single environment. An
             environment can be of type :ref:`env.Env` or :ref:`env.RLEnv`
         :param env_fn_args: tuple of tuple of args to pass to the
-            :ref:`_make_env_fn`.
+            :ref:`make_gym_from_config`.
         :param auto_reset_done: automatically reset the environment when
             done. This functionality is provided for seamless training
             of vectorized environments.
@@ -231,33 +236,20 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        env = env_fn(*env_fn_args)
+        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
         if parent_pipe is not None:
             parent_pipe.close()
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-                    # different step methods for habitat.RLEnv and habitat.Env
-                    if isinstance(env, (habitat.RLEnv, gym.Env)):
-                        # habitat.RLEnv
-                        observations, reward, done, info = env.step(**data)
-                        if auto_reset_done and done:
-                            observations = env.reset()
-                        with profiling_wrapper.RangeContext(
-                            "worker write after step"
-                        ):
-                            connection_write_fn(
-                                (observations, reward, done, info)
-                            )
-                    elif isinstance(env, habitat.Env):  # type: ignore
-                        # habitat.Env
-                        observations = env.step(**data)
-                        if auto_reset_done and env.episode_over:
-                            observations = env.reset()
-                        connection_write_fn(observations)
-                    else:
-                        raise NotImplementedError
+                    observations, reward, done, info = env.step(data)
+                    if auto_reset_done and done:
+                        observations = env.reset()
+                    with profiling_wrapper.RangeContext(
+                        "worker write after step"
+                    ):
+                        connection_write_fn((observations, reward, done, info))
 
                 elif command == RESET_COMMAND:
                     observations = env.reset()
@@ -317,7 +309,7 @@ class VectorEnv:
                 args=(
                     worker_conn.recv,
                     worker_conn.send,
-                    make_env_fn,
+                    CloudpickleWrapper(make_env_fn),
                     env_args,
                     self._auto_reset_done,
                     workers_ignore_signals,
@@ -401,12 +393,8 @@ class VectorEnv:
         return results
 
     def async_step_at(
-        self, index_env: int, action: Union[int, str, Dict[str, Any]]
+        self, index_env: int, action: Union[int, np.ndarray]
     ) -> None:
-        # Backward compatibility
-        if isinstance(action, (int, np.integer, str)):
-            action = {"action": {"action": action}}
-
         self._warn_cuda_tensors(action)
         self._connection_write_fns[index_env]((STEP_COMMAND, action))
 
@@ -414,7 +402,7 @@ class VectorEnv:
     def wait_step_at(self, index_env: int) -> Any:
         return self._connection_read_fns[index_env]()
 
-    def step_at(self, index_env: int, action: Union[int, str, Dict[str, Any]]):
+    def step_at(self, index_env: int, action: Union[int, np.ndarray]):
         r"""Step in the index_env environment in the vector.
 
         :param index_env: index of the environment to be stepped into
@@ -424,14 +412,12 @@ class VectorEnv:
         self.async_step_at(index_env, action)
         return self.wait_step_at(index_env)
 
-    def async_step(
-        self, data: Sequence[Union[int, str, Dict[str, Any]]]
-    ) -> None:
+    def async_step(self, data: Sequence[Union[int, np.ndarray]]) -> None:
         r"""Asynchronously step in the environments.
 
         :param data: list of size _num_envs containing keyword arguments to
             pass to :ref:`step` method for each Environment. For example,
-            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            :py:`[1, 3 ,5 , ...]`.
         """
 
         for index_env, act in enumerate(data):
@@ -444,14 +430,12 @@ class VectorEnv:
             self.wait_step_at(index_env) for index_env in range(self.num_envs)
         ]
 
-    def step(
-        self, data: Sequence[Union[int, str, Dict[str, Any]]]
-    ) -> List[Any]:
+    def step(self, data: Sequence[Union[int, np.ndarray]]) -> List[Any]:
         r"""Perform actions in the vectorized environments.
 
         :param data: list of size _num_envs containing keyword arguments to
             pass to :ref:`step` method for each Environment. For example,
-            :py:`[{"action": "TURN_LEFT", "action_args": {...}}, ...]`.
+            :py:`[1, 3 ,5 , ...]`.
         :return: list of outputs from the step method of envs.
         """
         self.async_step(data)
@@ -556,7 +540,7 @@ class VectorEnv:
     ) -> Optional[np.ndarray]:
         r"""Render observations from all environments in a tiled image."""
         for write_fn in self._connection_write_fns:
-            write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
+            write_fn((RENDER_COMMAND, (args, {"mode": "rgb_array", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
@@ -577,22 +561,22 @@ class VectorEnv:
         return {"forkserver", "spawn", "fork"}
 
     def _warn_cuda_tensors(
-        self, action: Dict[str, Any], prefix: Optional[str] = None
+        self,
+        action: Union[int, np.ndarray, Dict[str, Any]],
+        prefix: Optional[str] = None,
     ):
         if torch is None:
             return
-
-        for k, v in action.items():
-            if isinstance(v, dict):
+        if isinstance(action, dict):
+            for k, v in action.items():
                 subk = f"{prefix}.{k}" if prefix is not None else k
                 self._warn_cuda_tensors(v, prefix=subk)
-            elif torch.is_tensor(v) and v.device.type == "cuda":
-                subk = f"{prefix}.{k}" if prefix is not None else k
-                warnings.warn(
-                    "Action with key {} is a CUDA tensor."
-                    "  This will result in a CUDA context in the subproccess worker."
-                    "  Using CPU tensors instead is recommended.".format(subk)
-                )
+        elif isinstance(action, torch.Tensor) and action.device.type == "cuda":
+            warnings.warn(
+                f"Action with key {subk} is a CUDA tensor."
+                "  This will result in a CUDA context in the subproccess worker."
+                "  Using CPU tensors instead is recommended."
+            )
 
     def __del__(self):
         self.close()

@@ -57,7 +57,12 @@ class RearrangeEpisodeGenerator:
             self.sim.close(destroy=True)
             del self.sim
 
-    def __init__(self, cfg: CN, debug_visualization: bool = False) -> None:
+    def __init__(
+        self,
+        cfg: CN,
+        debug_visualization: bool = False,
+        limit_scene_set: Optional[str] = None,
+    ) -> None:
         """
         Initialize the generator object for a particular configuration.
         Loads yaml, sets up samplers and debug visualization settings.
@@ -65,6 +70,7 @@ class RearrangeEpisodeGenerator:
         # load and cache the config
         self.cfg = cfg
         self.start_cfg = self.cfg.clone()
+        self._limit_scene_set = limit_scene_set
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
@@ -282,6 +288,11 @@ class RearrangeEpisodeGenerator:
             unified_scene_set: List[str] = []
             # concatenate all requested scene sets
             for set_name in self.cfg.scene_sampler.params.scene_sets:
+                if (
+                    self._limit_scene_set is not None
+                    and set_name != self._limit_scene_set
+                ):
+                    continue
                 assert (
                     set_name in self._scene_sets
                 ), f"'subset' SceneSampler requested scene_set name, '{set_name}', not found."
@@ -812,7 +823,7 @@ def get_config_defaults() -> CN:
     # the scene dataset from which scenes and objects are sampled
     _C.dataset_path = "data/replica_cad/replicaCAD.scene_dataset_config.json"
     # any additional object assets to load before defining object sets
-    _C.additional_object_paths = ["data/objects/ycb/"]
+    _C.additional_object_paths = ["data/objects/ycb/configs/"]
 
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.
@@ -1009,6 +1020,12 @@ if __name__ == "__main__":
         help="Relative path to output debug frames and videos.",
     )
     parser.add_argument(
+        "--limit-scene-set",
+        type=str,
+        default=None,
+        help="Limit to one of the scene set samplers. Used to differentiate scenes from training and eval.",
+    )
+    parser.add_argument(
         "--num-episodes",
         type=int,
         default=1,
@@ -1035,7 +1052,9 @@ if __name__ == "__main__":
 
     dataset = RearrangeDatasetV0()
     with RearrangeEpisodeGenerator(
-        cfg=cfg, debug_visualization=args.debug
+        cfg=cfg,
+        debug_visualization=args.debug,
+        limit_scene_set=args.limit_scene_set,
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)

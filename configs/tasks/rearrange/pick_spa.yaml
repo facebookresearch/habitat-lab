@@ -118,6 +118,8 @@ TASK:
         - EMPTY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: True
@@ -169,7 +171,7 @@ SIMULATOR:
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
+        ALLOW_SLIDING: False
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

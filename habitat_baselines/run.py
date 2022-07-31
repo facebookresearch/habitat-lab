@@ -3,9 +3,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 import argparse
 import random
+from typing import Optional
 
 import numpy as np
 import torch
@@ -15,8 +15,14 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
 
 
-def main():
-    parser = argparse.ArgumentParser()
+def build_parser(
+    parser: Optional[argparse.ArgumentParser] = None,
+) -> argparse.ArgumentParser:
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+
     parser.add_argument(
         "--run-type",
         choices=["train", "eval"],
@@ -35,6 +41,12 @@ def main():
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
+
+    return parser
+
+
+def main():
+    parser = build_parser()
 
     args = parser.parse_args()
     run_exp(**vars(args))

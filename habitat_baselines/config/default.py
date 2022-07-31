@@ -23,7 +23,6 @@ _C.BASE_TASK_CONFIG_PATH = "configs/tasks/pointnav.yaml"
 _C.TASK_CONFIG = CN()  # task_config will be stored as a config node
 _C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"
-_C.ENV_NAME = "NavRLEnv"
 _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
@@ -76,8 +75,14 @@ _C.WB.RUN_NAME = ""
 _C.EVAL = CN()
 # The split to evaluate on
 _C.EVAL.SPLIT = "val"
+# Whether or not to use the config in the checkpoint. Setting this to False
+# is useful if some code changes necessitate a new config but the weights
+# are still valid.
 _C.EVAL.USE_CKPT_CONFIG = True
 _C.EVAL.SHOULD_LOAD_CKPT = True
+# The number of time to run each episode through evaluation.
+# Only works when evaluating on all episodes.
+_C.EVAL.EVALS_PER_EP = 1
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
@@ -102,8 +107,6 @@ _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
 _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
 # If the list is empty, all keys will be included.
-_C.RL.POLICY.include_visual_keys = []
-_C.RL.GYM_OBS_KEYS = []
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True
@@ -163,6 +166,9 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
+_C.RL.PPO.entropy_target_factor = 0.0
+_C.RL.PPO.use_adaptive_entropy_pen = False
+_C.RL.PPO.use_clipped_value_loss = True
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation

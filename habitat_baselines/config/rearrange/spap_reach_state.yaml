@@ -1,7 +1,5 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
 
-EVAL:
-  SPLIT: "eval"
 SENSE_PLAN_ACT:
   VERBOSE: True
   RUN_FREQ: 4
@@ -30,9 +28,7 @@ TASK_CONFIG:
     GYM:
       OBS_KEYS: ['joint', 'ee_pos']
       DESIRED_GOAL_KEYS: ['resting_position']
-      FIX_INFO_DICT: True
       ACTION_KEYS: ['ARM_ACTION']
-      CLASS_NAME: "RearrangeRLEnv"
 
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]

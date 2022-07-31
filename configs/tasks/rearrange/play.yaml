@@ -127,6 +127,8 @@ TASK:
         - EMPTY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
     HOLD_THRESH: 0.09
@@ -168,7 +170,7 @@ SIMULATOR:
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
+        ALLOW_SLIDING: False
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

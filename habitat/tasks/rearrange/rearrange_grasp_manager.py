@@ -81,7 +81,7 @@ class RearrangeGraspManager:
 
     @property
     def is_grasped(self) -> bool:
-        """Returns whether or not an object is current grasped."""
+        """Returns whether or not an object or marker is currently grasped."""
         return (
             self._snapped_obj_id is not None
             or self._snapped_marker_id is not None
@@ -101,7 +101,7 @@ class RearrangeGraspManager:
                 self._leave_info = None
 
     def desnap(self, force=False) -> None:
-        """Removes any hold constraints currently active.
+        """Removes any hold constraints currently active. Removes hold constraints for regular and articulated objects.
 
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """
@@ -133,21 +133,30 @@ class RearrangeGraspManager:
         self._sim.robot.close_gripper()
 
     @property
-    def snap_idx(self) -> int:
-        """The index of the grasped RigidObject."""
+    def snap_idx(self) -> Optional[int]:
+        """
+        The index of the grasped RigidObject. None if nothing is being grasped.
+        """
         return self._snapped_obj_id
 
     @property
-    def snapped_marker_id(self) -> str:
-        """The name of the marker for the grasp."""
+    def snapped_marker_id(self) -> Optional[str]:
+        """
+        The name of the marker for the grasp. None if nothing is being grasped.
+        """
         return self._snapped_marker_id
 
     @property
     def snap_rigid_obj(self) -> ManagedRigidObject:
         """The grasped object instance."""
-        return self._sim.get_rigid_object_manager().get_object_by_id(
+        ret_obj = self._sim.get_rigid_object_manager().get_object_by_id(
             self._snapped_obj_id
         )
+        if ret_obj is None:
+            raise ValueError(
+                f"Tried to get non-existence object from ID {self._snapped_obj_id}"
+            )
+        return ret_obj
 
     def snap_to_marker(self, marker_name: str) -> None:
         """
@@ -204,6 +213,12 @@ class RearrangeGraspManager:
         c.max_impulse = self._config.GRASP_IMPULSE
         return self._sim.create_rigid_constraint(c)
 
+    def update_object_to_grasp(self) -> None:
+        """
+        Kinematically update held object to be within robot's grasp.
+        """
+        self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+
     def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
         """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
 
@@ -224,11 +239,7 @@ class RearrangeGraspManager:
         self._snapped_obj_id = snap_obj_id
         if force:
             # Set the transformation to be in the robot's hand already.
-            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
-
-        if force:
-            # Set the transformation to be in the robot's hand already.
-            self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+            self.update_object_to_grasp()
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.

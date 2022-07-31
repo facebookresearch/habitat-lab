@@ -1,7 +1,6 @@
 VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
 TRAINER_NAME: "ddppo"
-ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
@@ -30,7 +29,6 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      include_visual_keys: ["robot_head_depth"]
       ACTION_DIST:
          use_log_std: True
 

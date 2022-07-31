@@ -95,9 +95,6 @@ class Env:
                 self.current_episode.scene_dataset_config
             )
             self._config.SIMULATOR.SCENE = self.current_episode.scene_id
-            self._config.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
-                self.current_episode.additional_obj_config_paths
-            )
             self._config.freeze()
 
             self.number_of_episodes = len(self.episodes)

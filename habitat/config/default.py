@@ -43,8 +43,8 @@ _C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
 # TASK
 # -----------------------------------------------------------------------------
 _C.TASK = CN()
-_C.TASK.REWARD_MEASURE = "distance_to_goal"
-_C.TASK.SUCCESS_MEASURE = "spl"
+_C.TASK.REWARD_MEASURE = None
+_C.TASK.SUCCESS_MEASURE = None
 _C.TASK.SUCCESS_REWARD = 2.5
 _C.TASK.SLACK_REWARD = -0.01
 _C.TASK.END_ON_SUCCESS = False
@@ -147,7 +147,7 @@ _C.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER = None
 _C.TASK.ACTIONS.ARM_ACTION.ARM_JOINT_DIMENSIONALITY = 7
 _C.TASK.ACTIONS.ARM_ACTION.GRASP_THRESH_DIST = 0.15
 _C.TASK.ACTIONS.ARM_ACTION.DISABLE_GRIP = False
-_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.025
+_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.0125
 _C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
 _C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
 _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
@@ -301,7 +301,17 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
 # -----------------------------------------------------------------------------
-# TARGET START OR GOAL SENSOR
+# TARGET START GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_START_GPS_COMPASS_SENSOR.TYPE = "TargetStartGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# TARGET GOAL GPS/COMPASS SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR = CN()
+_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR.TYPE = "TargetGoalGpsCompassSensor"
+# -----------------------------------------------------------------------------
+# NAV TO SKILL ID SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.NAV_TO_SKILL_SENSOR = CN()
 _C.TASK.NAV_TO_SKILL_SENSOR.TYPE = "NavToSkillSensor"
@@ -452,6 +462,7 @@ _C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.FORCE_END_PEN = 10.0
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
+_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = True
 # Distance in radians.
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
 _C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
@@ -542,7 +553,7 @@ _C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
 
 _C.TASK.PLACE_SUCCESS = CN()
 _C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
-_C.TASK.PLACE_SUCCESS.SUCC_THRESH = 0.15
+_C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -554,6 +565,10 @@ _C.TASK.COMPOSITE_REWARD = CN()
 _C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
 _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
 _C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
+_C.TASK.DOES_WANT_TERMINATE = CN()
+_C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
+_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
@@ -587,6 +602,11 @@ _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
 _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 # -----------------------------------------------------------------------------
+# # DISTANCE_TO_GOAL_REWARD MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.DISTANCE_TO_GOAL_REWARD = CN()
+_C.TASK.DISTANCE_TO_GOAL_REWARD.TYPE = "DistanceToGoalReward"
+# -----------------------------------------------------------------------------
 # # ANSWER_ACCURACY MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.ANSWER_ACCURACY = CN()
@@ -617,7 +637,7 @@ _C.SIMULATOR.SCENE = (
 _C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
 _C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
     []
-)  # a list of directory or config paths to search in addition to the dataset for object configs
+)  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.SIMULATOR.SEED = _C.SEED
 _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
@@ -852,12 +872,17 @@ _C.DATASET.DATA_PATH = (
 # -----------------------------------------------------------------------------
 _C.GYM = CN()
 _C.GYM.AUTO_NAME = ""
-_C.GYM.CLASS_NAME = "RearrangeRLEnv"
 _C.GYM.OBS_KEYS = None
 _C.GYM.ACTION_KEYS = None
 _C.GYM.ACHIEVED_GOAL_KEYS = []
 _C.GYM.DESIRED_GOAL_KEYS = []
-_C.GYM.FIX_INFO_DICT = True
+
+# -----------------------------------------------------------------------------
+# Task
+# -----------------------------------------------------------------------------
+# Uless another RLEnv is implemented and registered, the default task is
+# should be RLTaskEnv. RLTaskEnv works for both Navigation and Rearrange.
+_C.ENV_TASK = "RLTaskEnv"
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

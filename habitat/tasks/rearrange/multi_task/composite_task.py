@@ -9,10 +9,11 @@ import os.path as osp
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import yaml
+import yaml  # type: ignore[import]
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -47,9 +48,9 @@ class CompositeTask(RearrangeTask):
 
         self.start_state = PddlSetState(task_def["start"]["state"])
 
-        self._cur_node: int = -1
+        self._cur_node_idx: int = -1
         self._cur_task: RearrangeTask = None
-        self.cached_tasks: Dict[str, RearrangeTask] = {}
+        self._cached_tasks: Dict[int, RearrangeTask] = {}
         self._cur_state = None
 
         # None until loaded.
@@ -64,7 +65,7 @@ class CompositeTask(RearrangeTask):
         self._inferred_cur_task: Optional[RearrangeTask] = None
 
         if self._config.SINGLE_EVAL_NODE >= 0:
-            self._cur_node = self._config.SINGLE_EVAL_NODE
+            self._cur_node_idx = self._config.SINGLE_EVAL_NODE
 
     @property
     def stage_goals(self) -> Dict[str, List[Predicate]]:
@@ -102,12 +103,15 @@ class CompositeTask(RearrangeTask):
             solution.append(ac_instance)
         return solution
 
-    def _jump_to_node(
+    def jump_to_node(
         self, node_idx: int, episode: Episode, is_full_task: bool = False
     ) -> None:
         """
         Sequentially applies all solution actions before `node_idx`. But NOT
         including the solution action at index `node_idx`.
+
+        :param node_idx: An integer in [0, len(self._solution)).
+        :param is_full_task: If true, then calling reset will always the task to this solution node.
         """
 
         rearrange_logger.debug(
@@ -115,24 +119,25 @@ class CompositeTask(RearrangeTask):
         )
         # We don't want to reset to this node if we are in full task mode.
         if not is_full_task:
-            self._cur_node = node_idx
+            self._cur_node_idx = node_idx
 
         for i in range(node_idx):
             self._solution[i].apply(
                 self.domain.get_name_to_id_mapping(), self._sim
             )
 
-        if node_idx in self.cached_tasks:
-            self._cur_task = self.cached_tasks[node_idx]
-            self._cur_task.reset()
-        else:
+        if node_idx not in self._cached_tasks:
             task = self._solution[node_idx].init_task(self, episode)
-            self.cached_tasks[node_idx] = task
-            self._cur_task = task
+            self._cached_tasks[node_idx] = task
+        else:
+            self._cached_tasks[node_idx].reset(episode)
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        super().reset(episode, fetch_observations=False)
         if self.domain is None:
+            assert isinstance(
+                self._dataset, RearrangeDatasetV0
+            ), "Incompatble dataset type"
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
                 self._dataset,
@@ -156,24 +161,32 @@ class CompositeTask(RearrangeTask):
         )
 
         if self._config.DEBUG_SKIP_TO_NODE != -1:
-            self._jump_to_node(
+            self.jump_to_node(
                 self._config.DEBUG_SKIP_TO_NODE, episode, is_full_task=True
             )
 
-        if self._cur_node >= 0:
-            self._jump_to_node(self._cur_node, episode)
+        if self._cur_node_idx >= 0:
+            self.jump_to_node(self._cur_node_idx, episode)
 
         self._inferred_cur_node_idx = 0
         self._inferred_cur_task = None
         if self._config.USING_SUBTASKS:
             self._increment_solution_subtask(episode)
-        self.cached_tasks = {}
+        self._cached_tasks.clear()
         return self._get_observations(episode)
 
     def get_inferred_node_idx(self) -> int:
+        if not self._config.USING_SUBTASKS:
+            raise ValueError(
+                "Cannot get inferred sub-task when task is not configured to use sub-tasks. See `TASK.USING_SUBTASKS` key."
+            )
         return self._inferred_cur_node_idx
 
     def get_inferrred_node_task(self) -> RearrangeTask:
+        if not self._config.USING_SUBTASKS:
+            raise ValueError(
+                "Cannot get inferred sub-task when task is not configured to use sub-tasks. See `TASK.USING_SUBTASKS` key."
+            )
         return self._inferred_cur_task
 
     def increment_inferred_solution_idx(self, episode: Episode) -> None:
@@ -204,8 +217,8 @@ class CompositeTask(RearrangeTask):
                 return False
 
         prev_state = self._sim.capture_state(with_robot_js=True)
-        if self._inferred_cur_node_idx in self.cached_tasks:
-            self._inferred_cur_task = self.cached_tasks[
+        if self._inferred_cur_node_idx in self._cached_tasks:
+            self._inferred_cur_task = self._cached_tasks[
                 self._inferred_cur_node_idx
             ]
             self._inferred_cur_task.reset(episode)
@@ -219,25 +232,30 @@ class CompositeTask(RearrangeTask):
             task = task_solution[self._inferred_cur_node_idx].init_task(
                 self, episode, should_reset=False
             )
-            self.cached_tasks[self._inferred_cur_node_idx] = task
+            self._cached_tasks[self._inferred_cur_node_idx] = task
             self._inferred_cur_task = task
         self._sim.set_state(prev_state)
 
         return True
 
     @property
-    def cur_task(self) -> RearrangeTask:
+    def forced_node_task(self) -> RearrangeTask:
         """
-        The current sub-task from the solution list the agent is currently at.
+        The current sub-task from the solution list the agent is forced to be
+        in. This must be programmatically. Unlike the inferred_node, this will
+        not automatically increment.
         """
-        return self._cur_task
+        if self._cur_node_idx >= 0:
+            return self._cached_tasks[self._cur_node_idx]
+        else:
+            return None
 
     @property
-    def cur_node(self) -> int:
+    def forced_node_task_idx(self) -> int:
         """
         The index of the current sub-task in the solution list the agent is at.
         """
-        return self._cur_node
+        return self._cur_node_idx
 
     @property
     def num_solution_subtasks(self) -> int:
@@ -265,8 +283,11 @@ class CompositeTask(RearrangeTask):
         Try to get a property from the current inferred subtask. If the subtask
         is not valid, then return the supplied default value.
         """
-        if self._cur_task is not None and hasattr(self._cur_node, prop_name):
-            return getattr(self._cur_node, prop_name)
+        if self.forced_node_task is not None and hasattr(
+            self._cur_task, prop_name
+        ):
+            return getattr(self._cur_task, prop_name)
+
         elif self._inferred_cur_task is not None and hasattr(
             self._inferred_cur_task, prop_name
         ):
