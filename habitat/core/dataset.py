@@ -36,7 +36,10 @@ from habitat.core.utils import not_none_validator
 
 ALL_SCENES_MASK = "*"
 
-EpisodeInfo = namedtuple("EpisodeInfo", ["episode_id", "scene_id"])
+@attr.s(auto_attribs=True)
+class EpisodeInfo:
+    episode_id : str
+    scene_id : str
 
 
 @attr.s(auto_attribs=True, kw_only=True)
