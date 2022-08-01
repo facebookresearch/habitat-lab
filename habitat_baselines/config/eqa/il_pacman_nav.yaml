@@ -1,7 +1,6 @@
 BASE_TASK_CONFIG_PATH: "configs/tasks/eqa_mp3d.yaml"
 TRAINER_NAME: "pacman"
 
-ENV_NAME: "NavILEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 

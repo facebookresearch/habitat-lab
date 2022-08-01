@@ -1,7 +1,6 @@
 GYM:
     AUTO_NAME: "NavToObj"
     OBS_KEYS: ["robot_head_depth", "object_to_agent_gps_compass", 'joint', 'nav_to_skill']
-    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
 DATASET:
@@ -15,7 +14,7 @@ TASK:
     MUST_LOOK_AT_TARG: True
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     # If true, will always regenerate the cache
-    FORCE_REGENERATE: False
+    FORCE_REGENERATE: True
     DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
     OBJECT_IN_HAND_SAMPLE_PROB: 0.167
 

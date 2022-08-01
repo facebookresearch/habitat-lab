@@ -1,14 +1,17 @@
 import contextlib
 import functools
+import io
 import os
+import pickle
 import signal
 import socket
 import subprocess
 import threading
 from os import path as osp
-from typing import Any, Callable, Optional, Tuple, Union, overload
+from typing import Any, Callable, List, Optional, Tuple, Union, overload
 
 import ifcfg
+import numpy as np
 import torch
 from torch import distributed as distrib
 
@@ -52,13 +55,13 @@ def is_slurm_batch_job() -> bool:
     )
 
 
-def resume_state_filename(config: Config) -> str:
+def resume_state_filename(config: Config, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
     if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.CHECKPOINT_FOLDER, fname + ".pth")
+    return osp.join(config.CHECKPOINT_FOLDER, fname) + filename_key + ".pth"
 
 
 @overload
@@ -154,30 +157,36 @@ def add_signal_handlers() -> None:
 
 
 @rank0_only
-def save_resume_state(state: Any, filename_or_config: Union[Config, str]):
+def save_resume_state(
+    state: Any, filename_or_config: Union[Config, str], filename_key: str = ""
+):
     r"""Saves the resume job state to the specified filename.
         This is useful when working with preemptable job partitions.
 
     :param state: The state to save
     :param filename_or_config: The filename of the saved state or the config to construct it.
+    :param filename_key: If generating the filename from the config, append this to the name.
     """
     if isinstance(filename_or_config, Config):
-        filename = resume_state_filename(filename_or_config)
+        filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
 
     torch.save(state, filename)
 
 
-def load_resume_state(filename_or_config: Union[Config, str]) -> Optional[Any]:
+def load_resume_state(
+    filename_or_config: Union[Config, str], filename_key: str = ""
+) -> Optional[Any]:
     r"""Loads the saved resume state
 
     :param filename_or_config: The filename of the saved state or the config to construct it.
+    :param filename_key: If generating the filename from the config, append this to the name.
 
     :return: The saved state if the file exists, else none
     """
     if isinstance(filename_or_config, Config):
-        filename = resume_state_filename(filename_or_config)
+        filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
 
@@ -230,6 +239,10 @@ def get_distrib_size() -> Tuple[int, int, int]:
     return local_rank, world_rank, world_size
 
 
+def get_main_addr() -> str:
+    return os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
+
+
 def init_distrib_slurm(
     backend: str = "nccl",
 ) -> Tuple[int, torch.distributed.TCPStore]:  # type: ignore
@@ -259,7 +272,7 @@ def init_distrib_slurm(
         main_port += int(SLURM_JOBID) % int(
             os.environ.get("MAIN_PORT_RANGE", DEFAULT_PORT_RANGE)
         )
-    main_addr = os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
+    main_addr = get_main_addr()
 
     tcp_store = distrib.TCPStore(  # type: ignore
         main_addr, main_port, world_size, world_rank == 0
@@ -287,3 +300,170 @@ def find_free_port() -> int:
         sock.bind(("localhost", 0))
         _, port = sock.getsockname()
         return port
+
+
+def get_free_port_distributed(
+    key_name: str, tcp_store: Optional[distrib.TCPStore]
+) -> int:
+    r"""Return a free port from :py:ref:`find_free_port` and synchronize it across
+    all ranks
+
+    :param key_name: The name for this port. This must be unique for each call into this method
+        and the same across ranks.
+    :param tcp_store: A torch TCPStore that has all ranks. This is used for synchronizing
+        the port. Only needed if world_size > 1.
+    """
+    _port_key = f"_hab_dist_port_{key_name}"
+    if rank0_only():
+        port = find_free_port()
+        if distrib.is_initialized():
+            assert tcp_store is not None
+            tcp_store.set(_port_key, str(port))
+    else:
+        assert tcp_store is not None
+        tcp_store.wait([_port_key])
+        port = int(tcp_store.get(_port_key))
+
+    return port
+
+
+def _rank_to_relative_rank(
+    rank: int, output_rank: int, world_size: int
+) -> int:
+    return (
+        rank - output_rank
+        if rank >= output_rank
+        else rank - output_rank + world_size
+    )
+
+
+def gatherv(
+    t: torch.Tensor, output_rank: int = 0
+) -> Optional[List[torch.Tensor]]:
+    r"""Distributed gather that works on tensors of variable size.
+
+    Currently on works on tensors with 1 dimension.
+
+    :param t: This rank's tensor to be sent to :ref:`output_rank`
+    :param output_rank: The rank the return everyone's inputs to.
+
+    :return: The list of inputs if this rank is :ref:`output_rank`, else :py:`None`.
+    """
+    assert t.ndim == 1
+    assert output_rank >= 0
+
+    world_size = distrib.get_world_size() if distrib.is_initialized() else 1
+    if world_size == 1:
+        return [t]
+
+    rank = distrib.get_rank()
+    is_mine = rank == output_rank
+
+    my_size = torch.tensor(t.numel(), dtype=torch.int64, device=t.device)
+    sizes = my_size.view(1).repeat(world_size)
+
+    distrib.all_gather(list(sizes.unbind(0)), my_size)
+    sizes = sizes.cpu()
+    max_size = sizes.max().item()
+
+    if torch.all(sizes == max_size):
+        if is_mine:
+            output = list(
+                torch.empty(
+                    (world_size, max_size), dtype=t.dtype, device=t.device
+                ).unbind(0)
+            )
+        else:
+            output = None
+
+        distrib.gather(t, output, output_rank)
+    else:
+        relative_rank = _rank_to_relative_rank(rank, output_rank, world_size)
+
+        mask = 1
+        output = [t]
+        while mask < world_size:
+            handles = []
+            if (relative_rank & mask) == 0:
+                src = relative_rank | mask
+                if src < world_size:
+                    num_msgs = min(mask, world_size - src)
+
+                    src_real = (src + output_rank) % world_size
+                    for i in range(num_msgs):
+                        output.append(
+                            torch.empty(
+                                (sizes[(src_real + i) % world_size],),
+                                dtype=t.dtype,
+                                device=t.device,
+                            )
+                        )
+                        handles.append(
+                            torch.distributed.irecv(
+                                output[-1], src_real, tag=i
+                            )
+                        )
+            else:
+                dst = relative_rank ^ mask
+                dst_real = (dst + output_rank) % world_size
+                for i, v in enumerate(output):
+                    assert v.numel() == sizes[(rank + i) % world_size]
+                    handles.append(torch.distributed.isend(v, dst_real, tag=i))
+
+                output = None
+
+            [h.wait() for h in handles]
+
+            if output is None:
+                break
+
+            mask = mask << 1
+
+        if output is not None:
+            # We need to re-order the output list to be wrt world ranks
+            # instead of relative ranks
+            output = [
+                output[_rank_to_relative_rank(i, output_rank, world_size)]
+                for i in range(world_size)
+            ]
+
+    if is_mine:
+        assert output is not None
+    else:
+        assert output is None
+
+    return output
+
+
+def gather_objects(
+    obj: Any, device: Optional[torch.device] = None, output_rank: int = 0
+) -> Optional[List[Any]]:
+    r"""Distributed gather on arbitrary python objects. Uses torch.distributed
+    under the hood.
+
+    :param obj: This rank's object to be send to :ref:`output_rank`
+    :param device: The device to put the tensor that holds the encoded object. Defaults to CPU.
+    :param output_rank: The rank to return everyone's inputs to.
+
+    :return: The list of objects if this rank is :ref:`output_rank`, else :py:`None`.
+    """
+    device = device or torch.device("cpu")
+    assert output_rank >= 0
+
+    buf = io.BytesIO()
+    pickle.Pickler(buf, protocol=pickle.HIGHEST_PROTOCOL).dump(obj)
+    encoded_obj = torch.from_numpy(
+        np.frombuffer(buf.getbuffer(), dtype=np.uint8)
+    ).to(device=device)
+    buf = None
+
+    output = gatherv(
+        encoded_obj,
+        output_rank=output_rank,
+    )
+    encoded_obj = None
+
+    if output is not None:
+        output = [pickle.loads(bytes(t.cpu())) for t in output]
+
+    return output

@@ -15,6 +15,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlAction,
@@ -45,7 +46,7 @@ class NavToInfo:
     nav_target_angle: float
     nav_to_task_name: str
     nav_to_obj_type: RearrangeObjectTypes
-    start_hold_obj_idx: Optional[bool] = None
+    start_hold_obj_idx: Optional[int] = None
     start_base_pos: Optional[mn.Vector3] = None
     start_base_rot: Optional[float] = None
 
@@ -144,6 +145,9 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         orig_state = self._sim.capture_state(with_robot_js=True)
+        assert isinstance(
+            self._dataset, RearrangeDatasetV0
+        ), "Incompatble dataset type"
         create_task_object(
             action.task,
             action.task_def,
@@ -285,6 +289,9 @@ class DynNavRLEnv(RearrangeTask):
         super().reset(episode, fetch_observations=False)
         rearrange_logger.debug("Resetting navigation task")
 
+        assert isinstance(
+            self._dataset, RearrangeDatasetV0
+        ), "Incompatble dataset type"
         if self.domain is None:
             self.domain = PddlDomain(
                 self._config.PDDL_DOMAIN_DEF,
@@ -310,7 +317,7 @@ class DynNavRLEnv(RearrangeTask):
                     f"Forcing episode, loaded `{full_key}` from cache {self.cache.cache_id}."
                 )
                 if not isinstance(self._nav_to_info, NavToInfo):
-                    rearrange_logger.warning(
+                    rearrange_logger.warning(  # type: ignore[unreachable]
                         f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
                     )
                     self._nav_to_info = None
@@ -345,15 +352,15 @@ class DynNavRLEnv(RearrangeTask):
                         f"Loaded episode from cache {self.cache.cache_id}."
                     )
 
-                if (
-                    self._nav_to_info is not None
-                    and self._nav_to_info.start_hold_obj_idx is not None
-                ):
-                    # The object to hold was generated from stale object IDs.
-                    # Reselect a new object to hold.
-                    self._nav_to_info.start_hold_obj_idx = (
-                        self._generate_snap_to_obj()
-                    )
+            if (
+                self._nav_to_info is not None
+                and self._nav_to_info.start_hold_obj_idx is not None
+            ):
+                # The object to hold was generated from stale object IDs.
+                # Reselect a new object to hold.
+                self._nav_to_info.start_hold_obj_idx = (
+                    self._generate_snap_to_obj()
+                )
 
             if self._nav_to_info is None:
                 self._nav_to_info = self._generate_nav_start_goal(episode)

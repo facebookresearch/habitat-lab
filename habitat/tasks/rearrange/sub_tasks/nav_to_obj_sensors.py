@@ -407,15 +407,10 @@ class BadCalledTerminate(GeoMeasure):
             success_measure.does_action_want_stop(task, observations)
             and not success_measure.get_metric()
         ):
-            if self._config.DECAY_BAD_TERM:
-                remaining = (
-                    self._config.ENVIRONMENT.MAX_EPISODE_STEPS - self._n_steps
-                )
-                self.reward_pen -= self._config.BAD_TERM_PEN * (
-                    remaining / self._config.ENVIRONMENT.MAX_EPISODE_STEPS
-                )
-            else:
-                self.reward_pen = self._config.BAD_TERM_PEN
+            assert (
+                not self._config.DECAY_BAD_TERM
+            ), "DECAY_BAD_TERM is not supported for this measure"
+            self.reward_pen = self._config.BAD_TERM_PEN
             self._metric = 1.0
         else:
             self._metric = 0.0
@@ -498,11 +493,7 @@ class NavToObjSuccess(GeoMeasure):
                 self._metric = False
 
     def does_action_want_stop(self, task, obs):
-        if self._config.HEURISTIC_STOP:
-            angle_succ = (
-                self._get_angle_dist(obs) < self._config.SUCCESS_ANGLE_DIST
-            )
-            obj_dist = np.linalg.norm(obs["dyn_obj_start_or_goal_sensor"])
-            return angle_succ and (obj_dist < 1.0)
-
+        assert (
+            not self._config.HEURISTIC_STOP
+        ), "HEURISTIC_STOP not supported in this metric"
         return task.actions[BASE_ACTION_NAME].does_want_terminate

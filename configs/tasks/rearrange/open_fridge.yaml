@@ -1,7 +1,6 @@
 GYM:
     AUTO_NAME: "OpenFridge"
     OBS_KEYS: ['robot_head_depth', 'joint', 'ee_pos', 'is_holding', 'marker_rel_pos', 'marker_js', 'relative_resting_position']
-    CLASS_NAME: "RearrangeRLEnv"
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:

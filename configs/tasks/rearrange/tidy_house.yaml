@@ -1,5 +1,4 @@
 GYM:
-    CLASS_NAME: RearrangeRLEnv
     AUTO_NAME: TidyHouse
     OBS_KEYS:
     - robot_head_depth

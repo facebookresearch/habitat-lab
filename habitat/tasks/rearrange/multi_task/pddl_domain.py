@@ -9,7 +9,7 @@ import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import yaml
+import yaml  # type: ignore[import]
 
 from habitat import Config
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -56,7 +56,7 @@ class PddlDomain:
         self._config = cur_task_config
 
         self.dataset = dataset
-        self.actions = {}
+        self.actions: Dict[str, PddlAction] = {}
         self.reset()
 
     @property

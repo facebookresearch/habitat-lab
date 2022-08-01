@@ -6,16 +6,36 @@
 
 from typing import Tuple
 
+import numpy as np
 import torch
 from torch import distributed as distrib
 
-from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo import PPO
 
-EPS_PPO = 1e-5
+
+def _recursive_apply(inp, fn):
+    if isinstance(inp, dict):
+        return type(inp)((k, _recursive_apply(v, fn)) for k, v in inp.items())
+    elif isinstance(inp, (tuple, list)):
+        return type(inp)(_recursive_apply(v, fn) for v in inp)
+    else:
+        return fn(inp)
 
 
-def distributed_mean_and_var(
+def _cpu_to_numpy(inp):
+    return _recursive_apply(
+        inp, lambda t: t.numpy() if t.device.type == "cpu" else t
+    )
+
+
+def _numpy_to_cpu(inp):
+    return _recursive_apply(
+        inp,
+        lambda t: torch.from_numpy(t) if isinstance(t, np.ndarray) else t,
+    )
+
+
+def distributed_var_mean(
     values: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     r"""Computes the mean and variances of a tensor over multiple workers.
@@ -40,7 +60,7 @@ def distributed_mean_and_var(
     distrib.all_reduce(var)
     var = var / world_size
 
-    return mean, var
+    return var, mean
 
 
 class _EvalActionsWrapper(torch.nn.Module):
@@ -53,25 +73,18 @@ class _EvalActionsWrapper(torch.nn.Module):
         self.actor_critic = actor_critic
 
     def forward(self, *args, **kwargs):
-        return self.actor_critic.evaluate_actions(*args, **kwargs)
+        # We then convert numpy arrays back to a CPU tensor.
+        # This is needed for older versions of pytorch that haven't deprecated
+        # the single-process multi-device version of DDP
+        return self.actor_critic.evaluate_actions(
+            *_numpy_to_cpu(args), **_numpy_to_cpu(kwargs)
+        )
 
 
 class DecentralizedDistributedMixin:
-    def _get_advantages_distributed(
-        self, rollouts: RolloutStorage
-    ) -> torch.Tensor:
-        advantages = (
-            rollouts.buffers["returns"][: rollouts.current_rollout_step_idx]  # type: ignore
-            - rollouts.buffers["value_preds"][
-                : rollouts.current_rollout_step_idx
-            ]
-        )
-        if not self.use_normalized_advantage:  # type: ignore
-            return advantages
-
-        mean, var = distributed_mean_and_var(advantages)
-
-        return (advantages - mean) / (var.sqrt() + EPS_PPO)
+    @staticmethod
+    def _compute_var_mean(x):
+        return distributed_var_mean(x)
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
         r"""Initializes distributed training for the model
@@ -89,7 +102,7 @@ class DecentralizedDistributedMixin:
         # so they don't show up in the state_dict
         class Guard:  # noqa: SIM119
             def __init__(self, model, device):
-                if torch.cuda.is_available():
+                if device.type == "cuda":
                     self.ddp = torch.nn.parallel.DistributedDataParallel(  # type: ignore
                         model,
                         device_ids=[device],
@@ -104,14 +117,16 @@ class DecentralizedDistributedMixin:
 
         self._evaluate_actions_wrapper = Guard(_EvalActionsWrapper(self.actor_critic), self.device)  # type: ignore
 
-    def _evaluate_actions(
-        self, observations, rnn_hidden_states, prev_actions, masks, action
-    ):
+    def _evaluate_actions(self, *args, **kwargs):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
         that directly so that that call can be overrided with inheritance
         """
+        # DistributedDataParallel moves all tensors to the device (or devices)
+        # So we need to make anything that is on the CPU into a numpy array
+        # This is needed for older versions of pytorch that haven't deprecated
+        # the single-process multi-device version of DDP
         return self._evaluate_actions_wrapper.ddp(
-            observations, rnn_hidden_states, prev_actions, masks, action
+            *_cpu_to_numpy(args), **_cpu_to_numpy(kwargs)
         )
 
 
