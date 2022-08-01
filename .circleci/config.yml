@@ -144,12 +144,12 @@ jobs:
           no_output_timeout: 20m
           background: true
           command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat;
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
-                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                . activate habitat;
-                conda install -y pytorch==1.4.0 torchvision cudatoolkit=10.0 -c pytorch
                 echo "Installing pytorch"
+                conda install -y pytorch==1.4.0 torchvision cudatoolkit=10.0 -c pytorch
               fi
               touch ~/miniconda/pytorch_installed
               python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
