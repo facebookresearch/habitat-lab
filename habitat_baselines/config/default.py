@@ -12,14 +12,14 @@ import numpy as np
 from habitat import get_config as get_task_config
 from habitat.config import Config as CN
 
-DEFAULT_CONFIG_DIR = "habitat/configs/"
+DEFAULT_CONFIG_DIR = "habitat/config/"
 CONFIG_FILE_SEPARATOR = ","
 # -----------------------------------------------------------------------------
 # EXPERIMENT CONFIG
 # -----------------------------------------------------------------------------
 _C = CN()
 # task config can be a list of conifgs like "A.yaml,B.yaml"
-_C.BASE_TASK_CONFIG_PATH = "habitat/configs/tasks/pointnav.yaml"
+_C.BASE_TASK_CONFIG_PATH = "habitat/config/tasks/pointnav.yaml"
 _C.TASK_CONFIG = CN()  # task_config will be stored as a config node
 _C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"

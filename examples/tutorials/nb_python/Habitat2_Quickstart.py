@@ -124,7 +124,7 @@ with habitat.Env(
         habitat.get_config(
             os.path.join(
                 habitat_gym.base_dir,
-                "habitat/configs/tasks/rearrange/pick.yaml",
+                "habitat/config/tasks/rearrange/pick.yaml",
             )
         )
     )
@@ -204,7 +204,7 @@ if vut.is_notebook():
 # ```
 # To run the TP-SRL baseline use the [`tp_srl`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl.yaml`) config. You will first need trained models for each of the individual skills placed in `data/models/[skill_name].pt`. Then specify the name of the task to run. For example, to run TP-SRL on the `set_table` task, run the following:
 # ```
-# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH habitat/configs/tasks/rearrange/set_table.yaml
+# python -u habitat_baselines/run.py --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml --run-type train BASE_TASK_CONFIG_PATH habitat/config/tasks/rearrange/set_table.yaml
 # ```
 # [`tp_srl_oracle_nav`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat_baselines/config/rearrange/hab/tp_srl_oracle_nav.yaml) is the TP-SRL method with oracle navigation.
 #
@@ -379,7 +379,7 @@ class NavPickSuccess(Measure):
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat/configs/tasks/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat/config/tasks/rearrange).
 #
 # This config also defines the action space through the `TASK.ACTIONS` key. You
 # can substitute different base control actions from

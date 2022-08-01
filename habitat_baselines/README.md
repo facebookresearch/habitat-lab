@@ -37,7 +37,7 @@ We also provide trained RGB, RGBD, and Depth PPO  models for MatterPort3D and Gi
 To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) and unzip and specify model path [here](agents/ppo_agents.py#L149).
 
 The `habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparamters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#task-datasets) instead of the test scenes.
-Change the field `task_config` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `habitat/configs/tasks/pointnav_mp3d.yaml` for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#task-datasets).
+Change the field `task_config` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `habitat/config/tasks/pointnav_mp3d.yaml` for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#task-datasets).
 
 ### Classic
 

@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="habitat/configs/tasks/pointnav.yaml",
+        default="habitat/config/tasks/pointnav.yaml",
     )
     args = parser.parse_args()
 

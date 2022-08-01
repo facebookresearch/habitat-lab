@@ -26,7 +26,7 @@ TASK:
     FILTER_NAV_TO_TASKS: []
 
     # PDDL related parameters
-    PDDL_DOMAIN_DEF: "habitat/configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    PDDL_DOMAIN_DEF: "habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml"
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
 

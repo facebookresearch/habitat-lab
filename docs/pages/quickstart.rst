@@ -63,7 +63,7 @@ you can install using: :sh:`pip install opencv-python`.
 
     def example():
         env = habitat.Env(
-            config=habitat.get_config("habitat/configs/tasks/pointnav.yaml")
+            config=habitat.get_config("habitat/config/tasks/pointnav.yaml")
         )
 
         print("Environment creation successful")

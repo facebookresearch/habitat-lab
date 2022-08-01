@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: habitat/configs/tasks/rearrange/nav_pick.yaml
+BASE_TASK_CONFIG_PATH: habitat/config/tasks/rearrange/nav_pick.yaml
 TASK_CONFIG:
   TASK:
     REWARD_MEASURE: "composite_reward"

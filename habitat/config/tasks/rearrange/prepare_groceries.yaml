@@ -1,5 +1,5 @@
 GYM:
-    AUTO_NAME: SetTable
+    AUTO_NAME: PrepareGroceries
     OBS_KEYS:
     - robot_head_depth
     - obj_start_sensor
@@ -7,11 +7,11 @@ GYM:
     - joint
     - is_holding
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 4500
+    MAX_EPISODE_STEPS: 4000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/prepare_groceries_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -31,9 +31,9 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
-    TASK_SPEC_BASE_PATH: habitat/configs/tasks/rearrange/pddl/
-    TASK_SPEC: set_table
-    PDDL_DOMAIN_DEF: habitat/configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    TASK_SPEC_BASE_PATH: habitat/config/tasks/rearrange/pddl/
+    TASK_SPEC: prepare_groceries
+    PDDL_DOMAIN_DEF: habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     SINGLE_EVAL_NODE: -1

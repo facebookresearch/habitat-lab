@@ -1,5 +1,5 @@
 GYM:
-    AUTO_NAME: NavPickNavPlace
+    AUTO_NAME: TidyHouse
     OBS_KEYS:
     - robot_head_depth
     - obj_start_sensor
@@ -7,11 +7,11 @@ GYM:
     - joint
     - is_holding
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 500
+    MAX_EPISODE_STEPS: 5000
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -32,7 +32,7 @@ TASK:
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: habitat/config/tasks/rearrange/pddl/
-    TASK_SPEC: nav_pick_nav_place
+    TASK_SPEC: tidy_house
     PDDL_DOMAIN_DEF: habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
@@ -44,6 +44,8 @@ TASK:
         TYPE: TargetStartSensor
         GOAL_FORMAT: CARTESIAN
         DIMENSIONALITY: 3
+    TARGET_START_GPS_COMPASS_SENSOR:
+        TYPE: TargetStartGpsCompassSensor
     GOAL_SENSOR:
         TYPE: GoalSensor
         GOAL_FORMAT: CARTESIAN
@@ -117,25 +119,23 @@ TASK:
         FORCE_PEN: 0.0
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
     TARGET_GOAL_GPS_COMPASS_SENSOR:
         TYPE: TargetGoalGpsCompassSensor
+    NAV_TO_POS_SUCC:
+        SUCCESS_DISTANCE: 0.2
+        TYPE: NavToPosSucc
+    PLACE_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: PlaceSuccess
+    PICK_SUCCESS:
+        EE_RESTING_SUCCESS_THRESHOLD: 0.3
+        TYPE: RearrangePickSuccess
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
         SUCCESS_ANGLE_DIST: 0.7
         MUST_LOOK_AT_TARG: true
         HEURISTIC_STOP: false
         MUST_CALL_STOP: false
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"

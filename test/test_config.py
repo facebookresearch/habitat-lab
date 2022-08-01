@@ -12,9 +12,9 @@ import pytest
 import habitat
 from habitat.config.default import _C, get_config
 
-CFG_TEST = "habitat/configs/test/habitat_all_sensors_test.yaml"
-CFG_EQA = "habitat/configs/test/habitat_mp3d_eqa_test.yaml"
-CFG_NEW_KEYS = "habitat/configs/test/new_keys_test.yaml"
+CFG_TEST = "habitat/config/test/habitat_all_sensors_test.yaml"
+CFG_EQA = "habitat/config/test/habitat_mp3d_eqa_test.yaml"
+CFG_NEW_KEYS = "habitat/config/test/new_keys_test.yaml"
 MAX_TEST_STEPS_LIMIT = 3
 
 
@@ -57,9 +57,9 @@ def test_overwrite_options():
 CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     # new_keys_test.yaml excluded since it explicitely uses
     # keys not present in the default for testing purposes
-    "habitat/configs/test/new_keys_test.yaml",
+    "habitat/config/test/new_keys_test.yaml",
     # Trainer excluded because does not use the default config
-    "habitat/configs/baselines/ppo.yaml",
+    "habitat/config/baselines/ppo.yaml",
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
 ] + glob("**/pddl/*.yaml", recursive=True)
@@ -67,7 +67,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
 
 @pytest.mark.parametrize(
     "config_path",
-    glob("habitat/configs/**/*.yaml", recursive=True),
+    glob("habitat/config/**/*.yaml", recursive=True),
 )
 def test_no_core_config_has_non_default_keys(config_path):
     if config_path in CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS:
