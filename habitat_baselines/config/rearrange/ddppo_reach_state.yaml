@@ -22,7 +22,7 @@ NUM_CHECKPOINTS: 100
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
 
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/reach_state.yaml
+BASE_TASK_CONFIG_PATH: habitat/configs/tasks/rearrange/reach_state.yaml
 RL:
   POLICY:
       name: "PointNavResNetPolicy"

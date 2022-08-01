@@ -22,7 +22,9 @@ class ForwardOnlyAgent(habitat.Agent):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--task-config", type=str, default="configs/tasks/pointnav.yaml"
+        "--task-config",
+        type=str,
+        default="habitat/configs/tasks/pointnav.yaml",
     )
     args = parser.parse_args()
 

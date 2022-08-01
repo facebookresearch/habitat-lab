@@ -25,7 +25,7 @@ override parameters and freeze the config.
 
     .. code:: py
 
-        config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
+        config = habitat.get_config(config_paths='../habitat/configs/tasks/pointnav_mp3d.yaml')
         config.defrost()
         config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
         config.DATASET.SCENES_DIR = '../data/scene_datasets/'
@@ -128,7 +128,7 @@ override parameters and freeze the config.
             plt.imshow(data)
         plt.show()
 
-    config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
+    config = habitat.get_config(config_paths='../habitat/configs/tasks/pointnav_mp3d.yaml')
     config.defrost()
     config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
     config.DATASET.SCENES_DIR = '../data/scene_datasets/'

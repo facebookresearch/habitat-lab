@@ -29,7 +29,7 @@ Controls:
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
 
-Change the task with `--cfg configs/tasks/rearrange/close_cab.yaml` (choose any task under the `configs/tasks/rearrange/` folder).
+Change the task with `--cfg habitat/configs/tasks/rearrange/close_cab.yaml` (choose any task under the `configs/tasks/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
@@ -64,7 +64,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
+DEFAULT_CFG = "habitat/configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"

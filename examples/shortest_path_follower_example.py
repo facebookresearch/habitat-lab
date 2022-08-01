@@ -43,7 +43,9 @@ def draw_top_down_map(info, output_size):
 
 
 def shortest_path_example():
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_paths="habitat/configs/tasks/pointnav.yaml"
+    )
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.freeze()

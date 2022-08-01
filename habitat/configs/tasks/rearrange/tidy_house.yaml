@@ -31,9 +31,9 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
-    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
+    TASK_SPEC_BASE_PATH: habitat/configs/tasks/rearrange/pddl/
     TASK_SPEC: tidy_house
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    PDDL_DOMAIN_DEF: habitat/configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     SINGLE_EVAL_NODE: -1

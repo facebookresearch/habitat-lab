@@ -25,7 +25,7 @@ base_dir = os.environ.get(
     osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))),
 )
 
-gym_task_config_dir = osp.join(base_dir, "configs/tasks/rearrange/")
+gym_task_config_dir = osp.join(base_dir, "habitat/configs/tasks/rearrange/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:

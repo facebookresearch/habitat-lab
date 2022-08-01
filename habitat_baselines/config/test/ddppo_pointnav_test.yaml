@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
+BASE_TASK_CONFIG_PATH: "habitat/configs/tasks/pointnav.yaml"
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0

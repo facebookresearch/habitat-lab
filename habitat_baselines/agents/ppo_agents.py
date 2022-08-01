@@ -150,7 +150,9 @@ def main():
     )
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument(
-        "--task-config", type=str, default="configs/tasks/pointnav.yaml"
+        "--task-config",
+        type=str,
+        default="habitat/configs/tasks/pointnav.yaml",
     )
     args = parser.parse_args()
 

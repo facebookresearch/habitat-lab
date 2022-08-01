@@ -17,7 +17,7 @@ class Config(yacs.config.CfgNode):
 
 CN = Config
 
-DEFAULT_CONFIG_DIR = "configs/"
+DEFAULT_CONFIG_DIR = "habitat/configs/"
 CONFIG_FILE_SEPARATOR = ","
 
 # -----------------------------------------------------------------------------
@@ -93,11 +93,11 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
-_C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
+_C.TASK.TASK_SPEC_BASE_PATH = "habitat/configs/tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = "nav_pick"
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = (
-    "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    "habitat/configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15

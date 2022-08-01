@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
+BASE_TASK_CONFIG_PATH: habitat/configs/tasks/rearrange/pick.yaml
 
 SENSE_PLAN_ACT:
   VERBOSE: True

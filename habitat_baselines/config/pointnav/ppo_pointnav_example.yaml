@@ -1,7 +1,7 @@
 # Note:  This is an example config, see habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual training
 
-BASE_TASK_CONFIG_PATH: "configs/tasks/pointnav.yaml"
+BASE_TASK_CONFIG_PATH: "habitat/configs/tasks/pointnav.yaml"
 TRAINER_NAME: "ppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
