@@ -4,9 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os.path as osp
 from typing import List, Optional, Union
 
 import yacs.config
+
+from habitat.core.logging import logger
 
 
 # Default Habitat config node
@@ -17,7 +20,8 @@ class Config(yacs.config.CfgNode):
 
 CN = Config
 
-DEFAULT_CONFIG_DIR = "habitat/config/"
+_HABITAT_CFG_DIR = osp.dirname(osp.abspath(__file__))
+
 CONFIG_FILE_SEPARATOR = ","
 
 # -----------------------------------------------------------------------------
@@ -93,11 +97,11 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
-_C.TASK.TASK_SPEC_BASE_PATH = f"{DEFAULT_CONFIG_DIR}/tasks/rearrange/pddl/"
+_C.TASK.TASK_SPEC_BASE_PATH = f"{_HABITAT_CFG_DIR}/tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = "nav_pick"
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = (
-    f"{DEFAULT_CONFIG_DIR}/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    f"{_HABITAT_CFG_DIR}/tasks/rearrange/pddl/replica_cad_domain.yaml"
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
@@ -892,6 +896,17 @@ _C.register_deprecated_key("TASK.SUCCESS_DISTANCE")
 # -----------------------------------------------------------------------------
 
 
+def _get_full_config_path(config_path: str) -> str:
+    if osp.exists(config_path):
+        return config_path
+
+    proposed_full_path = osp.join(_HABITAT_CFG_DIR, config_path)
+    if osp.exists(proposed_full_path):
+        return proposed_full_path
+
+    raise RuntimeError(f"No file found for config '{config_path}'")
+
+
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,
     opts: Optional[list] = None,
@@ -915,6 +930,11 @@ def get_config(
                 config_paths = [config_paths]
 
         for config_path in config_paths:
+            config_path = _get_full_config_path(config_path)
+            if not osp.exists(config_path):
+                logger.warn(
+                    f"Config file {config_path} could not be found. Note that configuration files were moved to the `habitat/config` folder."
+                )
             config.merge_from_file(config_path)
 
     if opts:

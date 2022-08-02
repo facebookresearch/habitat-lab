@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import os.path as osp
 from glob import glob
 from typing import Any, List, Optional
@@ -13,19 +12,12 @@ from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
-from habitat.config.default import Config
+from habitat.config.default import _HABITAT_CFG_DIR, Config
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_adapter import HabGymWrapper
 from habitat.utils.render_wrapper import HabRenderWrapper
 
-HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
-
-base_dir = os.environ.get(
-    HABLAB_INSTALL_PATH,
-    osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))),
-)
-
-gym_task_config_dir = osp.join(base_dir, "habitat/config/tasks/rearrange/")
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/rearrange/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:
