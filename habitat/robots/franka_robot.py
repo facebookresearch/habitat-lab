@@ -15,20 +15,22 @@ class FrankaRobot(StaticManipulator):
     def _get_franka_params(self) -> StaticManipulatorParams:
         return StaticManipulatorParams(
             arm_joints=list(range(0, 7)),
-            gripper_joints=[8],
+            gripper_joints=[8, 9],
             arm_init_params=np.zeros((7,)),
-            gripper_init_params=np.zeros((1,)),
+            gripper_init_params=np.zeros((2,)),
             ee_offset=mn.Vector3(),  # zeroed
             ee_link=1,
-            ee_constraint=np.array([]),
+            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
             gripper_closed_state=np.array(
                 [
+                    0.0,
                     0.0,
                 ]
             ),
             gripper_open_state=np.array(
                 [
-                    0.4,
+                    0.04,
+                    0.04,
                 ]
             ),
             gripper_state_eps=0.001,

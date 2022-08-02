@@ -72,18 +72,18 @@ def test_rearrange_example_modules(args):
     run_main_subproc(args)
 
 
-# @pytest.mark.skipif(
-#     not osp.exists("configs/tasks/franka_point.yaml"),
-#     reason="Requires the franka point config",
-# )
-# @pytest.mark.parametrize(
-#     "args",
-#     [
-#         (
-#             "examples/franka_example.py",
-#             "--no-render",
-#         ),
-#     ],
-# )
-# def test_static_franka_example(args):
-#     run_main_subproc(args)
+@pytest.mark.skipif(
+    not osp.exists("configs/tasks/franka_point.yaml"),
+    reason="Requires the franka point config",
+)
+@pytest.mark.parametrize(
+    "args",
+    [
+        (
+            "examples/franka_example.py",
+            "--no-render",
+        ),
+    ],
+)
+def test_static_franka_example(args):
+    run_main_subproc(args)
