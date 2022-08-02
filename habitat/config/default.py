@@ -93,7 +93,7 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
-_C.TASK.TASK_SPEC_BASE_PATH = "habitat/config/tasks/rearrange/pddl/"
+_C.TASK.TASK_SPEC_BASE_PATH = f"{DEFAULT_CONFIG_DIR}/tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = "nav_pick"
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = (
