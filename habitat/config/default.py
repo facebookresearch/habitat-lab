@@ -97,7 +97,7 @@ _C.TASK.TASK_SPEC_BASE_PATH = f"{DEFAULT_CONFIG_DIR}/tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = "nav_pick"
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = (
-    "habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml"
+    f"{DEFAULT_CONFIG_DIR}/tasks/rearrange/pddl/replica_cad_domain.yaml"
 )
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
