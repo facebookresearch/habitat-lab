@@ -933,7 +933,9 @@ def get_config(
             config_path = _get_full_config_path(config_path)
             if not osp.exists(config_path):
                 logger.warn(
-                    f"Config file {config_path} could not be found. Note that configuration files were moved to the `habitat/config` folder."
+                    f"Config file {config_path} could not be found. "
+                    "Note that configuration files were moved to "
+                    "the `habitat/config` folder."
                 )
             config.merge_from_file(config_path)
 
