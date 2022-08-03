@@ -67,7 +67,7 @@ import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat.utils.gym_definitions as habitat_gym
+import habitat.utils.gym_definitions
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -122,10 +122,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            os.path.join(
-                habitat_gym.base_dir,
-                "habitat/config/tasks/rearrange/pick.yaml",
-            )
+            "tasks/rearrange/pick.yaml",
         )
     )
 ) as env:
