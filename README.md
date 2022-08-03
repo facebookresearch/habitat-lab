@@ -81,7 +81,8 @@ If you use the Habitat platform in your research, please cite the [Habitat](http
     git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
     cd habitat-lab
     pip install -r requirements.txt
-    python setup.py develop --all # install habitat and habitat_baselines
+    pip install -e habitat-lab
+    pip install -e habitat-baselines
     ```
 
 2. Install `habitat-sim`:
