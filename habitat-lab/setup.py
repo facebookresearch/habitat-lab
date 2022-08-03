@@ -28,7 +28,7 @@ LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = "MIT License"
 REQUIREMENTS = reqs.strip().split("\n")
-DEFAULT_EXCLUSION = ["test", "examples"]
+DEFAULT_EXCLUSION = ["tests"]
 URL = "https://aihabitat.org/"
 PROJECT_URLS = {
     "GitHub repo": "https://github.com/facebookresearch/habitat-lab/",

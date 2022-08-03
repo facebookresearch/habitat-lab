@@ -27,7 +27,7 @@ DESCRIPTION = "Habitat baselines: a modular high-level library for end-to-end de
 LONG_DESCRIPTION = readme
 AUTHOR = "Facebook AI Research"
 LICENSE = "MIT License"
-DEFAULT_EXCLUSION = ["test", "examples"]
+DEFAULT_EXCLUSION = ["tests"]
 URL = "https://aihabitat.org/"
 PROJECT_URLS = {
     "GitHub repo": "https://github.com/facebookresearch/habitat-lab/",
@@ -46,7 +46,9 @@ if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=list(REQUIREMENTS),
-        packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
+        packages=setuptools.find_packages(
+            include="../examples", exclude=DEFAULT_EXCLUSION
+        ),
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
