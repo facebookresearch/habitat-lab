@@ -44,7 +44,7 @@ def reference_path_example(mode):
         mode: 'geodesic_path' or 'greedy'
     """
     config = habitat.get_config(
-        config_paths="habitat/config/test/habitat_r2r_vln_test.yaml"
+        config_paths="habitat-lab/habitat/config/test/habitat_r2r_vln_test.yaml"
     )
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")

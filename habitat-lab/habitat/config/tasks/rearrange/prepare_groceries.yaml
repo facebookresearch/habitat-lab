@@ -31,9 +31,9 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
-    TASK_SPEC_BASE_PATH: habitat/config/tasks/rearrange/pddl/
+    TASK_SPEC_BASE_PATH: habitat-lab/habitat/config/tasks/rearrange/pddl/
     TASK_SPEC: prepare_groceries
-    PDDL_DOMAIN_DEF: habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml
+    PDDL_DOMAIN_DEF: habitat-lab/habitat/config/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
     SINGLE_EVAL_NODE: -1

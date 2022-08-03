@@ -16,7 +16,9 @@ from habitat_baselines.agents.mp_agents import (
 )
 from habitat_baselines.motion_planning.motion_plan import is_ompl_installed
 
-TEST_CFG = "habitat_baselines/config/rearrange/spap_pick.yaml"
+TEST_CFG = (
+    "habitat-baselines/habitat_baselines/config/rearrange/spap_pick.yaml"
+)
 
 
 @pytest.mark.skipif(

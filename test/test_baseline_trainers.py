@@ -49,7 +49,7 @@ def _powerset(s):
     "test_cfg_path,mode,gpu2gpu,observation_transforms",
     list(
         itertools.product(
-            glob("habitat_baselines/config/test/*"),
+            glob("habitat-baselines/habitat_baselines/config/test/*"),
             ["train", "eval"],
             [False],
             [
@@ -63,7 +63,9 @@ def _powerset(s):
     )
     + list(
         itertools.product(
-            ["habitat_baselines/config/test/ppo_pointnav_test.yaml"],
+            [
+                "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
+            ],
             ["train", "eval"],
             [True],
             [
@@ -115,7 +117,7 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
     "test_cfg_path,mode",
     [
         [
-            "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
             "train",
         ],
     ],

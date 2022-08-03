@@ -935,7 +935,7 @@ def get_config(
                 logger.warn(
                     f"Config file {config_path} could not be found. "
                     "Note that configuration files were moved to "
-                    "the `habitat/config` folder."
+                    "the `habitat-lab/habitat/config` folder."
                 )
             config.merge_from_file(config_path)
 

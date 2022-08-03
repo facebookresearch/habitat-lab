@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: "habitat/config/tasks/objectnav_mp3d.yaml"
+BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/objectnav_mp3d.yaml"
 CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0

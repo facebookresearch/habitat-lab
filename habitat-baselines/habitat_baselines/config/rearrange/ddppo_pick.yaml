@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: habitat/config/tasks/rearrange/pick.yaml
+BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0

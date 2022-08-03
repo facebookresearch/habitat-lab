@@ -17,7 +17,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
-TASK_CONFIGS_DIR = "habitat/config/tasks/rearrange/"
+TASK_CONFIGS_DIR = "habitat-lab/habitat/config/tasks/rearrange/"
 
 
 def create_task_object(
