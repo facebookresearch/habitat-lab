@@ -1,7 +1,6 @@
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
-BASE_TASK_CONFIG_PATH: /private/home/vincentpierre/Documents/gala_kinematic/habitat-lab/configs/tasks/pointnav.yaml
-VIDEO_DIR: "/checkpoint/vincentpierre/gala_kinematic/videos"
+VIDEO_DIR: "../videos2"
 VIDEO_OPTION: ["disk"]
 REWARD_SCALE: 1.0 # 0.01
 NUM_CHECKPOINTS: 100
@@ -21,8 +20,8 @@ PREVENT_STOP_ACTION: False
 STAGGER: True
 TEST_EPISODE_COUNT: 10
 EVALUATION_MODE: False
-TRAIN_DATASET: /private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json
-EVAL_DATASET: /private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json
+TRAIN_DATASET: ../data/train_generated.episode_set.json
+EVAL_DATASET: ../data/test_generated.episode_set.json
 BLIND: False
 PROCEDURAL_GENERATION: False
 ENABLE_ROBOT_COLLISION: True

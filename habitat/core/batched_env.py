@@ -331,12 +331,12 @@ class BatchedEnv:
             )
             # generator_config.seed = 3
             # # # generator_config.num_stage_variations = 12
-            generator_config.min_stage_number = (
-                70 if config.get("EVALUATION_MODE", False) else 0
-            )
-            generator_config.max_stage_number = (
-                83 if config.get("EVALUATION_MODE", False) else 69
-            )
+            # generator_config.min_stage_number = (
+            #     70 if config.get("EVALUATION_MODE", False) else 0
+            # )
+            # generator_config.max_stage_number = (
+            #     83 if config.get("EVALUATION_MODE", False) else 69
+            # )
             # 0 to 8 is training setup and 9 to 11 is testing setup
 
             # generator_config.num_object_variations = 6
@@ -373,17 +373,13 @@ class BatchedEnv:
             bsim_config.do_procedural_episode_set = generate_episodes
             if not generate_episodes:
                 if config.get("EVALUATION_MODE", False):
-                    # bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json"
-                    bsim_config.episode_set_filepath = self._config.get(
-                        "EVAL_DATASET",
-                        "/private/home/vincentpierre/Documents/gala_kinematic/data/test_generated.episode_set.json",
-                    )
+                    bsim_config.episode_set_filepath = self._config[
+                        "EVAL_DATASET"
+                    ]
                 else:
-                    # bsim_config.episode_set_filepath = "/private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json"
-                    bsim_config.episode_set_filepath = self._config.get(
-                        "TRAIN_DATASET",
-                        "/private/home/vincentpierre/Documents/gala_kinematic/data/train_generated.episode_set.json",
-                    )
+                    bsim_config.episode_set_filepath = self._config[
+                        "TRAIN_DATASET"
+                    ]
             bsim_config.episode_generator_config = generator_config
 
             bsim_config.enable_robot_collision = self._config.get(
