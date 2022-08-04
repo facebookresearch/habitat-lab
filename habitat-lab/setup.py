@@ -42,7 +42,10 @@ if __name__ == "__main__":
         install_requires=REQUIREMENTS,
         packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
         package_data={
-            "habitat": ["config/**/*.yaml", "utils/visualizations/**/*.png"]
+            "habitat": [
+                "config/**/*.yaml",
+                "utils/visualizations/assets/**/*.png",
+            ]
         },
         version=VERSION,
         description=DESCRIPTION,
