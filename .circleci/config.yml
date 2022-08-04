@@ -255,7 +255,7 @@ jobs:
               pip install -e habitat-lab
               pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
-              python -m pytest pytest --cov-report=xml --cov-report term  --cov=./
+              python -m pytest --cov-report=xml --cov-report term  --cov=./
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
@@ -269,7 +269,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python -m pytest pytest  test/test_baseline_training.py
+              python -m pytest  test/test_baseline_training.py
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
