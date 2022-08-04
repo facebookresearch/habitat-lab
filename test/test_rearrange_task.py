@@ -26,7 +26,9 @@ from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "habitat-lab/habitat/config/tasks/rearrange/pick.yaml"
-GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
+GEN_TEST_CFG = (
+    "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
+)
 EPISODES_LIMIT = 6
 
 
