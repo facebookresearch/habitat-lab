@@ -41,7 +41,9 @@ if __name__ == "__main__":
         name=DISTNAME,
         install_requires=REQUIREMENTS,
         packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
-        package_data={"habitat": ["config/**/*.yaml"]},
+        package_data={
+            "habitat": ["config/**/*.yaml", "utils/visualizations/**/*.png"]
+        },
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
