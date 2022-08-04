@@ -239,7 +239,7 @@ jobs:
               . activate habitat; cd habitat-lab
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
-              pip install -r requirements.txt --progress-bar off
+              pip install -r habitat-lab/requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
