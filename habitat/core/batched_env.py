@@ -438,9 +438,7 @@ class BatchedEnv:
 
         buffer_index = 0
 
-        self.raw_rgb = None
         self._raw_rgb = None
-        self.raw_depth = None
         self._raw_depth = None
         self._raw_debug_rgb = None
         assert self._bsim
@@ -543,6 +541,7 @@ class BatchedEnv:
         self.dones = [False] * self._num_envs
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
+        self._previous_action: List[Optional[Any]] = [None] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
             self._stagger_agents = [
@@ -652,6 +651,12 @@ class BatchedEnv:
                 end_episode_action and state.episode_step_idx > 5
             )
 
+            tried_grasp_last_step = (
+                self._previous_action[b] is not None
+            ) and (
+                self._previous_action[b][(b + 1) * self.action_dim - 2] > 0.0
+            )
+
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
             # success = curr_dist < self._config.REACH_SUCCESS_THRESH
@@ -669,6 +674,11 @@ class BatchedEnv:
             success = end_episode_action and (
                 obj_to_goal < self._config.NPNP_SUCCESS_THRESH
             )
+
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                success = is_holding_correct and end_episode_action
 
             if self._config.get("TASK_IS_PLACE", False):
                 success = success and (state.held_obj_idx == -1)
@@ -690,6 +700,13 @@ class BatchedEnv:
                 )
             else:
                 failure = end_episode_action and not success
+
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                failure = (
+                    (not is_holding_correct) and tried_grasp_last_step
+                ) or state.did_drop
 
             if (
                 success
@@ -714,6 +731,7 @@ class BatchedEnv:
                     "end_action": float(end_episode_action),
                 }
                 self._previous_state[b] = None
+                self._previous_action[b] = None
 
                 next_episode = self.get_next_episode()
                 if next_episode != -1:
