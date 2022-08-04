@@ -34,7 +34,10 @@ jobs:
           name: run mypy
           command: |
               mypy --version
-              mypy
+              mypy habitat-lab/
+              mypy habitat-baselines/
+              mypy examples/
+              mypy test/
   pre-commit:
     docker:
       - image: cimg/python:3.7.13
