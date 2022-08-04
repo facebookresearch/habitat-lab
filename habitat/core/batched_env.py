@@ -68,10 +68,15 @@ class StateSensorConfig:
 def _get_cartesian_coordinates(
     source_position, goal_position, source_rotation
 ):
-    source_T = mn.Matrix4.from_(source_rotation.to_matrix(), goal_position)
-    inverted_source_T = source_T.inverted()
-    rel_pos = inverted_source_T.transform_point(goal_position)
-    return np.array(rel_pos)
+    # source_T = mn.Matrix4.from_(source_rotation.to_matrix(), source_position)
+    # inverted_source_T = source_T.inverted()
+    # rel_pos = inverted_source_T.transform_point(goal_position)
+    # return np.array(rel_pos)
+    return np.array(
+        source_rotation.inverted().transform_vector(
+            goal_position - source_position
+        )
+    )
 
 
 def _get_spherical_coordinates_ref(
@@ -201,7 +206,7 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_obs(self, state):
-        return float(state.target_obj_idx != -1)
+        return (float(state.held_obj_idx != -1),)
 
 
 class StepCountSensorConfig(StateSensorConfig):
@@ -257,8 +262,12 @@ class BatchedEnv:
             config.NUM_ENVIRONMENTS > 0
         ), "number of environments to be created should be greater than 0"
 
-        include_depth = "DEPTH_SENSOR" in config.SENSORS
-        include_rgb = "RGB_SENSOR" in config.SENSORS
+        if not config.get("BLIND", False):
+            include_depth = "DEPTH_SENSOR" in config.SENSORS
+            include_rgb = "RGB_SENSOR" in config.SENSORS
+        else:
+            include_depth = False
+            include_rgb = False
 
         self._max_episode_length = config.MAX_EPISODE_LENGTH
 
@@ -273,7 +282,7 @@ class BatchedEnv:
             )
             self.state_sensor_config.append(ssc)
 
-        assert include_depth or include_rgb
+        assert (include_depth or include_rgb) or config.get("BLIND", False)
 
         self._num_envs = config.NUM_ENVIRONMENTS
 
@@ -293,7 +302,9 @@ class BatchedEnv:
             self.depth_sensor_config.WIDTH == sensor0_width
             and self.depth_sensor_config.HEIGHT == sensor0_height
         )
-        include_debug_sensor = "DEBUG_RGB_SENSOR" in config.SENSORS
+        include_debug_sensor = config.get(
+            "EVALUATION_MODE", False
+        )  # "DEBUG_RGB_SENSOR" in config.SENSORS
         debug_width = 512
         debug_height = 512
 
@@ -303,9 +314,10 @@ class BatchedEnv:
                 "11"
             )
             # you can disable this assert if you really need to test the debug build
-            assert (
-                build_type == "release"
-            ), "Ensure habitat-sim release build for training!"
+            if not config.get("DEBUG_SIM", False):
+                assert (
+                    build_type == "release"
+                ), "Ensure habitat-sim release build for training!"
             from habitat_sim._ext.habitat_sim_bindings import (
                 BatchedSimulator,
                 BatchedSimulatorConfig,
@@ -313,16 +325,32 @@ class BatchedEnv:
             )
 
             generator_config = EpisodeGeneratorConfig()
-            # see habitat-sim/src/esp/batched_sim/EpisodeGenerator.h for generator params and defaults
-            # generator_config.numEpisodes
-            # generator_config.seed
-            # generator_config.num_stage_variations
-            # generator_config.num_object_variations
-            # generator_config.min_nontarget_objects
-            # generator_config.max_nontarget_objects
-            # generator_config.used_fixed_robot_start_pos
-            # generator_config.use_fixed_robot_start_yaw
-            # generator_config.use_fixed_robot_joint_start_positions
+            # defaults:
+            generator_config.numEpisodes = self._config.get(
+                "NUM_EPISODES", 100
+            )
+            # generator_config.seed = 3
+            # # # generator_config.num_stage_variations = 12
+            # generator_config.min_stage_number = (
+            #     70 if config.get("EVALUATION_MODE", False) else 0
+            # )
+            # generator_config.max_stage_number = (
+            #     83 if config.get("EVALUATION_MODE", False) else 69
+            # )
+            # 0 to 8 is training setup and 9 to 11 is testing setup
+
+            # generator_config.num_object_variations = 6
+            generator_config.min_nontarget_objects = self._config.get(
+                "MIN_NON_TARGET", 27
+            )
+            generator_config.max_nontarget_objects = self._config.get(
+                "MAX_NON_TARGET", 32
+            )
+            generator_config.used_fixed_robot_start_pos = self._config.get(
+                "FIXED_ROBOT_START_POSITION", True
+            )
+            # generator_config.use_fixed_robot_start_yaw = False
+            # generator_config.use_fixed_robot_joint_start_positions = False
 
             bsim_config = BatchedSimulatorConfig()
             bsim_config.gpu_id = SIMULATOR_GPU_ID
@@ -341,7 +369,17 @@ class BatchedEnv:
             bsim_config.num_physics_substeps = (
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
-            bsim_config.do_procedural_episode_set = True
+            generate_episodes = self._config.get("PROCEDURAL_GENERATION", True)
+            bsim_config.do_procedural_episode_set = generate_episodes
+            if not generate_episodes:
+                if config.get("EVALUATION_MODE", False):
+                    bsim_config.episode_set_filepath = self._config[
+                        "EVAL_DATASET"
+                    ]
+                else:
+                    bsim_config.episode_set_filepath = self._config[
+                        "TRAIN_DATASET"
+                    ]
             bsim_config.episode_generator_config = generator_config
 
             bsim_config.enable_robot_collision = self._config.get(
@@ -351,7 +389,6 @@ class BatchedEnv:
                 "ENABLE_HELD_OBJECT_COLLISION", True
             )
 
-            # bsim_config.episode_set_filepath = "../data/episode_sets/train.episode_set.json"
             self._bsim = BatchedSimulator(bsim_config)
 
             self.action_dim = self._bsim.get_num_actions()
@@ -359,10 +396,13 @@ class BatchedEnv:
             self._bsim.enable_debug_sensor(False)
 
             self._main_camera = Camera(
-                "torso_lift_link",
-                mn.Vector3(-0.536559, 1.16173, 0.568379),
-                mn.Quaternion(
-                    mn.Vector3(-0.26714, -0.541109, -0.186449), 0.775289
+                "head_pan_link",
+                mn.Vector3(0.2, 0.2, 0.0),
+                mn.Quaternion.rotation(
+                    mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+                )
+                * mn.Quaternion.rotation(
+                    mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
                 ),
                 60,
             )
@@ -372,13 +412,13 @@ class BatchedEnv:
                 self._debug_camera = Camera(
                     "base_link",
                     mn.Vector3(
-                        -0.8, 2.5, -0.8
+                        -0.8, 3.5, -0.8
                     ),  # place behind, above, and to the left of the base
                     mn.Quaternion.rotation(
                         mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
                     )  # face 30 degs to the right
                     * mn.Quaternion.rotation(
-                        mn.Deg(-45.0), mn.Vector3(1.0, 0.0, 0.0)
+                        mn.Deg(-65.0), mn.Vector3(1.0, 0.0, 0.0)
                     ),  # tilt down
                     60,
                 )
@@ -398,8 +438,8 @@ class BatchedEnv:
 
         buffer_index = 0
 
-        self.raw_rgb = None
-        self.raw_depth = None
+        self._raw_rgb = None
+        self._raw_depth = None
         self._raw_debug_rgb = None
         assert self._bsim
         import bps_pytorch  # see https://github.com/shacklettbp/bps-nav#building
@@ -501,6 +541,7 @@ class BatchedEnv:
         self.dones = [False] * self._num_envs
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
+        self._previous_action: List[Optional[Any]] = [None] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
             self._stagger_agents = [
@@ -605,6 +646,17 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
+            end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.0
+            end_episode_action = (
+                end_episode_action and state.episode_step_idx > 5
+            )
+
+            tried_grasp_last_step = (
+                self._previous_action[b] is not None
+            ) and (
+                self._previous_action[b][(b + 1) * self.action_dim - 2] > 0.0
+            )
+
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
             # success = curr_dist < self._config.REACH_SUCCESS_THRESH
@@ -619,17 +671,42 @@ class BatchedEnv:
 
             obj_pos = state.obj_positions[state.target_obj_idx]
             obj_to_goal = (state.goal_pos - obj_pos).length()
-            success = was_holding_correct and (
+            success = end_episode_action and (
                 obj_to_goal < self._config.NPNP_SUCCESS_THRESH
             )
 
-            if self._config.get("TASK_IS_PLACE", False):
-                success = success and state.did_drop
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                success = is_holding_correct and end_episode_action
 
-            failure = (state.did_drop and not success) or (
-                state.target_obj_idx != state.held_obj_idx
-                and state.held_obj_idx != -1
-            )
+            if self._config.get("TASK_IS_PLACE", False):
+                success = success and (state.held_obj_idx == -1)
+
+            if self._config.get("PREVENT_STOP_ACTION", False):
+                end_episode_action = False
+
+            if self._config.get("DROP_IS_FAIL", True):
+                failure = (
+                    (
+                        state.did_drop
+                        and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+                    )
+                    or (
+                        state.target_obj_idx != state.held_obj_idx
+                        and state.held_obj_idx != -1
+                    )
+                    or (end_episode_action and not success)
+                )
+            else:
+                failure = end_episode_action and not success
+
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                failure = (
+                    (not is_holding_correct) and tried_grasp_last_step
+                ) or state.did_drop
 
             if (
                 success
@@ -641,7 +718,7 @@ class BatchedEnv:
                 self.dones[b] = True
                 _rew = 0.0
                 _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
-                _rew -= self._config.NPNP_FAILURE_PENALTY if success else 0.0
+                _rew -= self._config.NPNP_FAILURE_PENALTY if failure else 0.0
                 self.rewards[b] = _rew
                 self.infos[b] = {
                     "success": float(success),
@@ -651,8 +728,10 @@ class BatchedEnv:
                     "distance_to_goal": obj_to_goal,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
                 }
                 self._previous_state[b] = None
+                self._previous_action[b] = None
 
                 next_episode = self.get_next_episode()
                 if next_episode != -1:
@@ -669,7 +748,7 @@ class BatchedEnv:
             else:
                 self.resets[b] = -1
                 self.dones[b] = False
-                self.rewards[b] = -1.0 / self._max_episode_length
+                self.rewards[b] = -self._config.NPNP_SLACK_PENALTY
                 self.infos[b] = {
                     "success": 0.0,
                     "failure": 0.0,
@@ -678,23 +757,34 @@ class BatchedEnv:
                     "distance_to_goal": obj_to_goal,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
                 }
                 if self._previous_state[b] is not None:
-                    if not is_holding_correct:
-                        prev_dist = (
-                            prev_state.target_obj_start_pos - prev_state.ee_pos
-                        ).length()
-                        self.rewards[b] += -(ee_to_start - prev_dist)
-                    else:
-                        prev_obj_pos = prev_state.obj_positions[
-                            prev_state.target_obj_idx
-                        ]
-                        prev_obj_to_goal = (
-                            prev_state.goal_pos - prev_obj_pos
-                        ).length()
-                        self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
+                    prev_obj_pos = prev_state.obj_positions[
+                        prev_state.target_obj_idx
+                    ]
+                    curr_dist_ee_to_obj = (
+                        state.obj_positions[state.target_obj_idx]
+                        - state.ee_pos
+                    ).length()
+                    prev_dist_ee_to_obj = (
+                        prev_obj_pos - prev_state.ee_pos
+                    ).length()
+                    self.rewards[b] += -(
+                        curr_dist_ee_to_obj - prev_dist_ee_to_obj
+                    )
+                    prev_obj_to_goal = (
+                        prev_state.goal_pos - prev_obj_pos
+                    ).length()
+                    self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
 
-                    if is_holding_correct and (prev_state.held_obj_idx == -1):
+                    if (
+                        self._config.get("DROP_IS_FAIL", True)
+                        and is_holding_correct
+                        and (prev_state.held_obj_idx == -1)
+                        and obj_to_goal
+                        > self._config.NPNP_SUCCESS_THRESH  # the robot is not re-picking
+                    ):
                         self.rewards[b] += self._config.PICK_REWARD
                 self._previous_state[b] = state
 

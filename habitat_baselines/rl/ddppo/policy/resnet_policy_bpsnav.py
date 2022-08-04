@@ -272,6 +272,8 @@ class ResNetEncoder(nn.Module):
                 m.layer_init(num_fixups)
 
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
+        if self.is_blind:
+            return None
         cnn_input: List[torch.Tensor] = []
         if "rgb" in observations:
             rgb_observations = observations["rgb"]
@@ -417,7 +419,7 @@ class ResNetNet(Net):
         masks,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.rnn_forward(
-            self.visual_forward(observations),
+            observations,
             rnn_hidden_states,
             prev_actions,
             masks,
@@ -436,13 +438,15 @@ class ResNetNet(Net):
     @torch.jit.export
     def rnn_forward(
         self,
-        tensorrt_output,
+        visual_obs,
         rnn_hidden_states,
         prev_actions,
         masks,
         goal_observations: Optional[torch.Tensor] = None,
     ):
-        inputs: List[torch.Tensor] = [tensorrt_output]
+        inputs: List[torch.Tensor] = []
+        if not self.is_blind:
+            inputs = [self.visual_forward(visual_obs)]
         # if goal_observations is not None:
         #    goal_observations = torch.stack(
         #        [
