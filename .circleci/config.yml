@@ -306,8 +306,11 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              python -m pip install .
+              python -m pip install habitat-lab/
               python -c "import habitat"
+              python -m pip install habitat-baselines/
+              python -c "import habitat_baselines"
+
 
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
