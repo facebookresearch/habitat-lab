@@ -34,14 +34,17 @@ class GlobalPredicatesSensor(Sensor):
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
-    def _get_observation_space(self, *args, config, **kwargs):
+    @property
+    def predicates_list(self):
         if self._predicates_list is None:
             self._predicates_list = (
                 self._task.pddl_problem.get_possible_predicates()
             )
+        return self._predicates_list
 
+    def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(len(self._predicates_list),),
+            shape=(len(self.predicates_list),),
             low=0,
             high=1,
             dtype=np.float32,
@@ -49,7 +52,7 @@ class GlobalPredicatesSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         sim_info = self._task.pddl_problem.sim_info
-        truth_values = [p.is_true(sim_info) for p in self._predicates_list]
+        truth_values = [p.is_true(sim_info) for p in self.predicates_list]
         return np.array(truth_values, dtype=np.float32)
 
 
@@ -152,28 +155,6 @@ class MoveObjectsReward(RearrangeReward):
         self._metric += self._config.DIST_REWARD * dist_diff
         self._prev_measures = (to_obj, to_goal)
         self._prev_holding_obj = is_holding_obj
-
-
-@registry.register_measure
-class CompositeSparseReward(Measure):
-    cls_uuid: str = "composite_sparse_reward"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return CompositeSparseReward.cls_uuid
-
-    def reset_metric(self, *args, **kwargs):
-        self.update_metric(
-            *args,
-            **kwargs,
-        )
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = self._config.SLACK_REWARD
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._config = config
 
 
 @registry.register_measure

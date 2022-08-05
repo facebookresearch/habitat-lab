@@ -161,6 +161,9 @@ _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
 # -----------------------------------------------------------------------------
 # Oracle navigation action
+# This action takes as input a discrete ID which refers to an object in the
+# PDDL domain. The oracle navigation controller then computes the actions to
+# navigate to that desired object.
 # -----------------------------------------------------------------------------
 _C.TASK.ACTIONS.ORACLE_NAV_ACTION = CN()
 _C.TASK.ACTIONS.ORACLE_NAV_ACTION.TYPE = "OracleNavAction"
@@ -594,14 +597,6 @@ _C.TASK.DOES_WANT_TERMINATE = CN()
 _C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
-# -----------------------------------------------------------------------------
-# Composite Sparse Reward
-# -----------------------------------------------------------------------------
-_C.TASK.COMPOSITE_SPARSE_REWARD = CN()
-_C.TASK.COMPOSITE_SPARSE_REWARD.TYPE = "CompositeSparseReward"
-_C.TASK.COMPOSITE_SPARSE_REWARD.SLACK_REWARD = -0.1
-_C.TASK.COMPOSITE_SPARSE_REWARD.STAGE_SPARSE_REWARD = 0.0
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
 # -----------------------------------------------------------------------------
