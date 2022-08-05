@@ -1051,6 +1051,12 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    if not not_done_masks[i].item():
+                        # The last frame corresponds to the first frame of the next episode
+                        # but the info is correct. So we use a black frame
+                        frame = observations_to_image(
+                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                        )
                     if self.config.VIDEO_RENDER_ALL_INFO:
                         frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
