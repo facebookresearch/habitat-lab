@@ -46,9 +46,7 @@ if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
         install_requires=list(REQUIREMENTS),
-        packages=setuptools.find_packages(
-            include="../examples", exclude=DEFAULT_EXCLUSION
-        ),
+        packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
