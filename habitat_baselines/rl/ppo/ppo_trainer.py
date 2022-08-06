@@ -1000,7 +1000,7 @@ class PPOTrainer(BaseRLTrainer):
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
         assert (
-            number_of_eval_episodes >= 1
+            number_of_eval_episodes > 1
         ), "The number TEST_EPISODE_COUNT needs to be strictly positive."
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
@@ -1124,17 +1124,6 @@ class PPOTrainer(BaseRLTrainer):
                             current_episodes[i].episode_id,
                         )
 
-                # episode continues
-                elif len(self.config.VIDEO_OPTION) > 0:
-                    # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
-                    )
-                    if self.config.VIDEO_RENDER_ALL_INFO:
-                        frame = overlay_frame(frame, infos[i])
-
-                    rgb_frames[i].append(frame)
-
             not_done_masks = not_done_masks.to(device=self.device)
             (
                 self.envs,
@@ -1177,7 +1166,5 @@ class PPOTrainer(BaseRLTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         for k, v in metrics.items():
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)
-
-        self.envs.close()
 
         self.envs.close()
