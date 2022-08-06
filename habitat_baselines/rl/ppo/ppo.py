@@ -17,6 +17,7 @@ from torch import Tensor
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
     inference_mode,
@@ -56,7 +57,7 @@ class PPO(nn.Module):
         lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
-        use_clipped_value_loss: bool = True,
+        use_clipped_value_loss: bool = False,
         use_normalized_advantage: bool = True,
         entropy_target_factor: float = 0.0,
         use_adaptive_entropy_pen: bool = False,
@@ -272,13 +273,8 @@ class PPO(nn.Module):
                     learner_metrics["dist_entopy"].append(dist_entropy)
                     if epoch == (self.ppo_epoch - 1):
                         learner_metrics["ppo_fraction_clipped"].append(
-                            (
-                                (ratio > (1.0 + self.clip_param)).float().sum()
-                                + (ratio < (1.0 - self.clip_param))
-                                .float()
-                                .sum()
-                            )
-                            / ratio.numel()
+                            (ratio > (1.0 + self.clip_param)).float().mean()
+                            + (ratio < (1.0 - self.clip_param)).float().mean()
                         )
 
                     learner_metrics["grad_norm"].append(grad_norm)
@@ -287,6 +283,24 @@ class PPO(nn.Module):
                     ):
                         learner_metrics["entropy_coef"].append(
                             self.entropy_coef().detach()
+                        )
+
+                    if "is_stale" in batch:
+                        assert isinstance(batch["is_stale"], torch.Tensor)
+                        learner_metrics["fraction_stale"].append(
+                            batch["is_stale"].float().mean()
+                        )
+
+                    if isinstance(rollouts, VERRolloutStorage):
+                        assert isinstance(
+                            batch["policy_version"], torch.Tensor
+                        )
+                        record_min_mean_max(
+                            (
+                                rollouts.current_policy_version
+                                - batch["policy_version"]
+                            ).float(),
+                            "policy_version_difference",
                         )
 
             profiling_wrapper.range_pop()  # PPO.update epoch

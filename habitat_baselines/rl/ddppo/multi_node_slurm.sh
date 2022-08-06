@@ -15,7 +15,7 @@
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
 
-MAIN_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
+MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
 export MAIN_ADDR
 
 set -x

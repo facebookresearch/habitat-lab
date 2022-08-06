@@ -89,10 +89,10 @@ data
 *.swp
 
 # habitat_baselines outputs
-/videos/
-/train_dir/
-/tb/
+/videos
+/train_dir
+/tb
 
 # outputs from other libraries
-/sandbox/
-/plots/outputs/
+/sandbox
+/plots/outputs
