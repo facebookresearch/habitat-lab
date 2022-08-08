@@ -42,13 +42,8 @@ class PddlAction:
         task_info: ActionTaskInfo,
     ):
         """
-        Models the PDDL acton entity.
-
-        :param parameters: The parameters to the PDDL action in the domain file.
-        :param pre_cond: The pre condition of the PDDL action.
-        :param post_cond: The post conditions of the PDDL action.
-        :param task_info: Information to link the PDDL action with a Habitat
-            task definition.
+        :param predicate_lookup_fn: A function that takes as input a predicate
+            identifier and returns a predicate if one was found.
         """
         if not isinstance(pre_cond, LogicalExpr):
             raise ValueError(f"Incorrect type {pre_cond}")
@@ -62,11 +57,6 @@ class PddlAction:
         self._task_info = task_info
 
     def get_arg_value(self, param_name: str) -> Optional[PddlEntity]:
-        """
-        Get the assigned value of a parameter with name `param_name`. Returns
-        `None` if the parameter is not yet assigned.
-        """
-
         for param, param_value in zip(self._params, self._param_values):
             if param.name == param_name:
                 return param_value
@@ -78,29 +68,16 @@ class PddlAction:
         )
 
     @property
-    def compact_str(self) -> str:
-        """
-        Display string of the action.
-        """
+    def compact_str(self):
         params = ",".join([x.name for x in self._param_values])
         return f"{self._name}({params})"
 
     def is_precond_satisfied_from_predicates(
         self, predicates: List[Predicate]
     ) -> bool:
-        """
-        Checks if the preconditions of the action are satisfied from the input
-        predicates ALONE.
-        :param predicates: The set of predicates currently true in the
-            environment.
-        """
-
         return self._pre_cond.is_true_from_predicates(predicates)
 
     def set_precond(self, new_precond):
-        """
-        Sets the preconditions for the action.
-        """
         self._pre_cond = new_precond
 
     @property
@@ -119,10 +96,6 @@ class PddlAction:
         return do_entity_lists_match(self._params, arg_values)
 
     def set_param_values(self, param_values: List[PddlEntity]) -> None:
-        """
-        Bind the parameters to PDDL entities. An exception is thrown if the arguments don't match (like different number of arguments or wrong type).
-        """
-
         param_values = list(param_values)
         if self._param_values is not None:
             raise ValueError(

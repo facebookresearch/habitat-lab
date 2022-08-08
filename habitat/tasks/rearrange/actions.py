@@ -21,10 +21,10 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
+    RobotAction,
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 

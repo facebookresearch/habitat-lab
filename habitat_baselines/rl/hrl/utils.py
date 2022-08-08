@@ -7,10 +7,6 @@ from habitat_baselines.utils.common import get_num_actions
 def find_action_range(
     action_space: ActionSpace, search_key: str
 ) -> Tuple[int, int]:
-    """
-    Returns the start and end indices of an action key in the action tensor.
-    """
-
     start_idx = 0
     found = False
     end_idx = get_num_actions(action_space[search_key])

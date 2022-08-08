@@ -10,13 +10,67 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,
 )
+
+
+class RobotAction(SimulatorTaskAction):
+    """
+    Handles which robot instance the action is applied to.
+    """
+
+    _sim: RearrangeSim
+
+    @property
+    def _robot_mgr(self):
+        """
+        Underlying robot mananger for the robot instance the action is attached to.
+        """
+
+        if self._config.AGENT is None:
+            return self._sim.robots_mgr[0]
+        return self._sim.robots_mgr[self._config.AGENT]
+
+    @property
+    def _ik_helper(self):
+        """
+        The IK helper for this robot instance.
+        """
+
+        return self._robot_mgr.ik_helper
+
+    @property
+    def cur_robot(self):
+        """
+        The robot instance for this action.
+        """
+        return self._robot_mgr.robot
+
+    @property
+    def cur_grasp_mgr(self):
+        """
+        The grasp manager for the robot instance for this action.
+        """
+
+        if self._config.AGENT is None:
+            return self._sim.robots_mgr[0].grasp_mgr
+        return self._sim.robots_mgr[self._config.AGENT].grasp_mgr
+
+    @property
+    def _action_arg_prefix(self) -> str:
+        """
+        Returns the action prefix to go in front of sensor / action names if
+        there are multiple agents.
+        """
+
+        if self._config.AGENT is not None:
+            return f"AGENT_{self._config.AGENT}_"
+        return ""
 
 
 class GripSimulatorTaskAction(RobotAction):

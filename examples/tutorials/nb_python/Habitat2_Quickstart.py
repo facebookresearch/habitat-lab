@@ -576,7 +576,7 @@ with open(nav_pick_cfg_path, "w") as f:
     f.write(dataset_cfg_txt)
 
 # %%
-# !python -m habitat.datasets.rearrange.run_episode_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
+# !python -m habitat.datasets.rearrange.run_rearrange_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
 
 # %% [markdown]
-# To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.run_episode_generator --list`
+# To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.rearrange_generator --list`
