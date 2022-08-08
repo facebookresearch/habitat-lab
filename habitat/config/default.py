@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 import os.path as osp
 from typing import List, Optional, Union
 
@@ -20,7 +21,10 @@ class Config(yacs.config.CfgNode):
 
 CN = Config
 
-_HABITAT_CFG_DIR = osp.dirname(osp.abspath(__file__))
+_HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
+# This is equivalent to doing osp.dirname(osp.abspath(__file__))
+# in editable install, this is pwd/habitat/config
+
 
 CONFIG_FILE_SEPARATOR = ","
 
