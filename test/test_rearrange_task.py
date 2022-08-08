@@ -112,9 +112,8 @@ def test_rearrange_tasks(test_cfg_path):
         return
 
     config = get_config(test_cfg_path)
-    env = habitat.Env(config=config)
 
-    with env:
+    with habitat.Env(config=config) as env:
         for _ in range(5):
             env.reset()
 
@@ -136,24 +135,24 @@ def test_composite_tasks(test_cfg_path):
     if "TASK_SPEC" not in config.TASK:
         return
 
-    env = habitat.Env(config=config)
-    if not isinstance(env.task, CompositeTask):
-        return
+    with habitat.Env(config=config) as env:
+        if not isinstance(env.task, CompositeTask):
+            return
 
-    pddl_path = osp.join(
-        config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
-    )
-    with open(pddl_path, "r") as f:
-        domain = yaml.safe_load(f)
-    if "solution" not in domain:
-        return
-    n_stages = len(domain["solution"])
+        pddl_path = osp.join(
+            config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
+        )
+        with open(pddl_path, "r") as f:
+            domain = yaml.safe_load(f)
+        if "solution" not in domain:
+            return
+        n_stages = len(domain["solution"])
 
-    for task_idx in range(n_stages):
-        env.reset()
-        env.task.jump_to_node(task_idx, env.current_episode)
-        env.step(env.action_space.sample())
-        env.reset()
+        for task_idx in range(n_stages):
+            env.reset()
+            env.task.jump_to_node(task_idx, env.current_episode)
+            env.step(env.action_space.sample())
+            env.reset()
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
