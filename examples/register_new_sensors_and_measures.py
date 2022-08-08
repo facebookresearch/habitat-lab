@@ -76,9 +76,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 def main():
     # Get the default config node
-    config = habitat.get_config(
-        config_paths="habitat-lab/habitat/config/tasks/pointnav.yaml"
-    )
+    config = habitat.get_config(config_paths="tasks/pointnav.yaml")
     config.defrost()
 
     # Add things to the config to for the measure

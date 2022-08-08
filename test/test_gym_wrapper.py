@@ -23,19 +23,19 @@ from habitat.utils.render_wrapper import HabRenderWrapper
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml",
+            "tasks/rearrange/reach_state.yaml",
             [],
             7,
             np.ndarray,
         ),
         (
-            "habitat-lab/habitat/config/tasks/rearrange/pick.yaml",
+            "tasks/rearrange/pick.yaml",
             [],
             8,
             dict,
         ),
         (
-            "habitat-lab/habitat/config/tasks/rearrange/pick.yaml",
+            "tasks/rearrange/pick.yaml",
             [
                 "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
@@ -44,7 +44,7 @@ from habitat.utils.render_wrapper import HabRenderWrapper
             dict,
         ),
         (
-            "habitat-lab/habitat/config/tasks/rearrange/tidy_house.yaml",
+            "tasks/rearrange/tidy_house.yaml",
             [],
             11,  # 7 joints, 1 grip action, 2 base velocity, 1 stop action
             dict,
@@ -89,13 +89,13 @@ def test_gym_wrapper_contract_continuous(
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "habitat-lab/habitat/config/tasks/imagenav.yaml",
+            "tasks/imagenav.yaml",
             [],
             4,
             dict,
         ),
         (
-            "habitat-lab/habitat/config/tasks/pointnav.yaml",
+            "tasks/pointnav.yaml",
             [],
             4,
             dict,
@@ -140,13 +140,13 @@ def test_gym_wrapper_contract_discrete(
     "config_file,override_options",
     [
         [
-            "habitat-lab/habitat/config/tasks/rearrange/pick.yaml",
+            "tasks/rearrange/pick.yaml",
             [
                 "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
         ],
-        ["habitat-lab/habitat/config/tasks/rearrange/pick.yaml", []],
+        ["tasks/rearrange/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
@@ -177,7 +177,7 @@ def test_full_gym_wrapper(config_file, override_options):
     "test_cfg_path",
     list(
         glob(
-            "habitat-lab/habitat/config/tasks/rearrange/**/*.yaml",
+            "tasks/rearrange/**/*.yaml",
             recursive=True,
         ),
     ),

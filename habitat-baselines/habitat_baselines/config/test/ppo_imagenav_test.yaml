@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/imagenav.yaml"
+BASE_TASK_CONFIG_PATH: "tasks/imagenav.yaml"
 TRAINER_NAME: "ppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0

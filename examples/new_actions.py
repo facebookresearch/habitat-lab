@@ -148,9 +148,7 @@ def main():
     HabitatSimActions.extend_action_space("STRAFE_LEFT")
     HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
-    config = habitat.get_config(
-        config_paths="habitat-lab/habitat/config/tasks/pointnav.yaml"
-    )
+    config = habitat.get_config(config_paths="tasks/pointnav.yaml")
     config.defrost()
 
     config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
