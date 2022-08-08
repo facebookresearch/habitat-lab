@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os.path
+import os
 import sys
 
 import setuptools
@@ -35,7 +35,6 @@ PROJECT_URLS = {
     "Bug Tracker": "https://github.com/facebookresearch/habitat-lab/issues",
 }
 
-
 if __name__ == "__main__":
     setuptools.setup(
         name=DISTNAME,
@@ -43,7 +42,10 @@ if __name__ == "__main__":
         packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
         package_data={
             "habitat": [
-                "config/**/*.yaml",
+                "config/*.yaml",
+                "config/*/*.yaml",
+                "config/*/*/*.yaml",
+                "config/*/*/*/*.yaml",
                 "utils/visualizations/assets/**/*.png",
             ]
         },
