@@ -45,7 +45,7 @@ def example(render):
             action = env.action_space.sample()
             logger.info(f"Executing action: {action}")
             observations = env.step(action)  # noqa: F841
-            if not render:
+            if render:
                 display_rgb(observations[SENSOR_KEY])
             count_steps += 1
         logger.info("Episode finished after {} steps.".format(count_steps))
