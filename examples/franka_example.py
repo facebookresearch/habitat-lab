@@ -27,7 +27,7 @@ def display_rgb(image):
     cv2.waitKey(0)
 
 
-def example(args):
+def example(render):
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
     with habitat.Env(
@@ -35,7 +35,7 @@ def example(args):
     ) as env:
         logger.info("Environment creation successful")
         observations = env.reset()  # noqa: F841
-        if not args.no_render:
+        if render:
             display_rgb(observations[SENSOR_KEY])
 
         logger.info("Agent acting inside environment.")
@@ -45,7 +45,7 @@ def example(args):
             action = env.action_space.sample()
             logger.info(f"Executing action: {action}")
             observations = env.step(action)  # noqa: F841
-            if not args.no_render:
+            if not render:
                 display_rgb(observations[SENSOR_KEY])
             count_steps += 1
         logger.info("Episode finished after {} steps.".format(count_steps))
@@ -55,4 +55,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     args = parser.parse_args()
-    example(args)
+    render = not args.no_render
+    example(render=render)
