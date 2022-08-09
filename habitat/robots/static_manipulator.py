@@ -326,7 +326,7 @@ class StaticManipulator(RobotInterface):
         """
         if len(ctrl) != len(self.params.arm_joints):
             raise ValueError(
-                "Control dimension does not match joint dimension"
+                f"Control dimension ({len(ctrl)}) does not match joint dimension ({len(self.params.arm_joints)})"
             )
         if np.any(np.isnan(ctrl)):
             raise ValueError("Control is NaN")
