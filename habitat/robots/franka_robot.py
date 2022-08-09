@@ -40,14 +40,7 @@ class FrankaRobot(StaticManipulator):
         )
 
     def __init__(
-        self,
-        urdf_path,
-        sim,
-        limit_robo_joints=True,
+        self, *args, **kwargs
     ):
         super().__init__(
-            self._get_franka_params(),
-            urdf_path,
-            sim,
-            limit_robo_joints,
-        )
+            params=self._get_franka_params(), *args, **kwargs)
