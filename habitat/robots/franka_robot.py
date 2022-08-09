@@ -39,7 +39,6 @@ class FrankaRobot(StaticManipulator):
             arm_mtr_max_impulse=10.0,
         )
 
-    def __init__(
-        self, *args, **kwargs
-    ):
-        super().__init__(params=self._get_franka_params(), *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        kwargs["params"] = self._get_franka_params()
+        super().__init__(*args, **kwargs)
