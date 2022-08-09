@@ -366,6 +366,9 @@ class BatchedEnv:
             bsim_config.debug_sensor.height = debug_height
             bsim_config.force_random_actions = False
             bsim_config.do_async_physics_step = self._config.OVERLAP_PHYSICS
+            bsim_config.enable_sliding = self._config.get(
+                "ENABLE_SLIDING", False
+            )
             bsim_config.num_physics_substeps = (
                 self._config.NUM_PHYSICS_SUBSTEPS
             )
@@ -726,6 +729,7 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
+                    "try_grasp": actions[(b + 1) * self.action_dim - 2] > 0.0,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
@@ -755,6 +759,7 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
+                    "try_grasp": actions[(b + 1) * self.action_dim - 2] > 0.0,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
