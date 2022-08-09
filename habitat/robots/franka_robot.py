@@ -42,5 +42,4 @@ class FrankaRobot(StaticManipulator):
     def __init__(
         self, *args, **kwargs
     ):
-        super().__init__(
-            params=self._get_franka_params(), *args, **kwargs)
+        super().__init__(params=self._get_franka_params(), *args, **kwargs)
