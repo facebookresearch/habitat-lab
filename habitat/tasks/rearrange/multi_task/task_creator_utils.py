@@ -40,6 +40,8 @@ def create_task_object(
     :param cur_env: The main task.
     """
     task_cls = registry.get_task(task_cls_name)
+    if task_cls is None:
+        raise ValueError(f"Could not find task name {task_cls_name}")
 
     config = copy.deepcopy(cur_config)
     config.defrost()

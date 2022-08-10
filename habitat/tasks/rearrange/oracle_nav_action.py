@@ -5,6 +5,7 @@ import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions import BaseVelAction
+from habitat.tasks.rearrange.utils import rearrange_logger
 from habitat.tasks.utils import get_angle
 
 
@@ -57,16 +58,16 @@ class OracleNavAction(BaseVelAction):
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
             action = self._poss_actions[nav_to_target_idx]
-            state = self._sim.capture_state(True)
-            task = action.init_task(
-                self._task.pddl_problem.sim_info, should_reset=True
-            )
-            target_pos = task.nav_target_pos
-            self._sim.set_state(state, True)
-            obj_entity = action.get_arg_value("obj")
+            rearrange_logger.debug(f"Generating nav target for {action}")
+
+            targ_entity = action.get_arg_value("marker")
+            if targ_entity is None:
+                targ_entity = action.get_arg_value("obj")
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
-                obj_entity
+                targ_entity
             )
+
+            target_pos = self._sim.safe_snap_point(obj_pos)
 
             self._targets[nav_to_target_idx] = (target_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
@@ -94,11 +95,13 @@ class OracleNavAction(BaseVelAction):
             else:
                 return {}
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+        rearrange_logger.debug(f"Got nav to action idx {nav_to_target_idx}")
 
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )
-        cur_nav_targ = self._path_to_point(final_nav_targ)[1]
+        cur_nav_targ = np.array(self._path_to_point(final_nav_targ)[1])
+        final_nav_targ = np.array(final_nav_targ)
 
         robot_pos = np.array(self.cur_robot.base_pos)
         base_T = self.cur_robot.base_transformation

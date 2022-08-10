@@ -21,7 +21,7 @@ def flatten_dict(d, parent_key=""):
     # From https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
     items = []
     for k, v in d.items():
-        new_key = parent_key + str(k) if parent_key else str(k)
+        new_key = parent_key + "." + str(k) if parent_key else str(k)
         if isinstance(v, dict):
             items.extend(flatten_dict(v, new_key).items())
         else:

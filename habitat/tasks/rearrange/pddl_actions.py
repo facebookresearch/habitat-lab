@@ -34,7 +34,10 @@ class PddlApplyAction(RobotAction):
             {
                 self._action_arg_prefix
                 + "pddl_action": spaces.Box(
-                    shape=(action_n_args,), low=-1, high=1, dtype=np.float32
+                    shape=(action_n_args,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
                 )
             }
         )
@@ -52,10 +55,8 @@ class PddlApplyAction(RobotAction):
             start_idx += action.n_args
         return start_idx
 
-    def step(self, *args, is_last_action, **kwargs):
-        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
+    def _apply_action(self, apply_pddl_action):
         cur_i = 0
-        self._was_prev_action_invalid = False
         for action in self._action_ordering:
             action_part = apply_pddl_action[cur_i : cur_i + action.n_args][:]
             if sum(action_part) > 0:
@@ -87,6 +88,16 @@ class PddlApplyAction(RobotAction):
                     self._was_prev_action_invalid = True
 
             cur_i += action.n_args
+
+    def step(self, *args, is_last_action, **kwargs):
+        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
+        self._was_prev_action_invalid = False
+        inputs_outside = any(
+            a < 0 or a > len(self._entities_list) for a in apply_pddl_action
+        )
+        if not inputs_outside:
+            self._apply_action(apply_pddl_action)
+
         if is_last_action:
             return self._sim.step(HabitatSimActions.ARM_ACTION)
         else:

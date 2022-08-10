@@ -243,7 +243,6 @@ class PddlSetState:
         """
 
         # Check object states.
-        rom = sim_info.sim.get_rigid_object_manager()
         for entity, target in self._obj_states.items():
             if not sim_info.check_type_matches(entity, OBJ_TYPE):
                 raise ValueError()
@@ -255,24 +254,12 @@ class PddlSetState:
                 # an object is inside of a receptacle.
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
-            elif sim_info.check_type_matches(target, GOAL_TYPE):
-                obj_idx = sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
-                abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
-                cur_pos = rom.get_object_by_id(
-                    abs_obj_id
-                ).transformation.translation
-
-                targ_idx = sim_info.search_for_entity(target, GOAL_TYPE)
-                idxs, pos_targs = sim_info.sim.get_targets()
-                targ_pos = pos_targs[list(idxs).index(targ_idx)]
-
+            else:
+                cur_pos = sim_info.get_entity_pos(entity)
+                targ_pos = sim_info.get_entity_pos(target)
                 dist = np.linalg.norm(cur_pos - targ_pos)
                 if dist >= sim_info.obj_thresh:
                     return False
-            else:
-                raise ValueError(
-                    f"Got unexpected combination of {entity} and {target}"
-                )
 
         for art_entity, set_art in self._art_states.items():
             if not sim_info.check_type_matches(art_entity, ART_OBJ_TYPE):

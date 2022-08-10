@@ -57,9 +57,6 @@ class OracleNavPolicy(NnSkillPolicy):
             action_space, "ORACLE_NAV_ACTION"
         )
 
-        self._is_target_obj = None
-        self._targ_obj_idx = None
-
     def on_enter(
         self,
         skill_arg,
@@ -68,8 +65,6 @@ class OracleNavPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
     ):
-        self._is_target_obj = None
-        self._targ_obj_idx = None
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )

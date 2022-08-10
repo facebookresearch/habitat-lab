@@ -293,9 +293,9 @@ class PddlDomain:
 
                 use_pred = pred.clone()
                 use_pred.set_param_values(entity_input)
-
                 if use_pred.is_true(self.sim_info):
                     true_preds.append(use_pred)
+
         return true_preds
 
     def get_possible_predicates(self) -> List[Predicate]:

@@ -62,6 +62,12 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
 
 try:
+    # TODO: PROJECT SPECIFIC. YOU NEED TO REMOVE THIS.
+    from ma_habitat_baselines.task.sensors import *  # noqa: F401,F403
+except ImportError:
+    pass
+
+try:
     import pygame
 except ImportError:
     pygame = None
@@ -541,12 +547,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--same-task",
-        action="store_true",
-        default=False,
-        help="If true, then do not add the render camera for better visualization",
-    )
-    parser.add_argument(
-        "--skip-task",
         action="store_true",
         default=False,
         help="If true, then do not add the render camera for better visualization",
