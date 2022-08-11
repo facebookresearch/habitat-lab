@@ -285,7 +285,7 @@ class RearrangeSim(HabitatSim):
             }
 
     def set_robot_base_to_random_point(
-        self, max_attempts: int = 50
+        self, max_attempts: int = 1000
     ) -> Tuple[np.ndarray, float]:
         """
         :returns: The set base position and rotation
@@ -298,15 +298,20 @@ class RearrangeSim(HabitatSim):
 
             self.robot.base_pos = start_pos
             self.robot.base_rot = start_rot
-            self.perform_discrete_collision_detection()
-            did_collide, details = rearrange_collision(
-                self,
-                True,
-                ignore_base=False,
-            )
+            for _ in range(10):
+                self.internal_step(-1)
+                self.perform_discrete_collision_detection()
+                did_collide, details = rearrange_collision(
+                    self,
+                    True,
+                    ignore_base=False,
+                )
+                if did_collide:
+                    break
             if not did_collide:
                 break
         if attempt_i == max_attempts - 1:
+            raise ValueError()
             rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
@@ -320,23 +325,23 @@ class RearrangeSim(HabitatSim):
             )
 
     def _load_navmesh(self):
-        # for art_obj in self.art_objs:
-        #     art_obj.motion_type = habitat_sim.physics.MotionType.STATIC
-        # navmesh_settings = habitat_sim.NavMeshSettings()
-        # navmesh_settings.set_defaults()
-        # navmesh_settings.agent_radius = 0.6
-        # navmesh_settings.agent_max_climb = 0.05
-        # navmesh_success = self.recompute_navmesh(
-        #     self.pathfinder, navmesh_settings, include_static_objects=True
-        # )
-        # for art_obj in self.art_objs:
-        #     art_obj.motion_type = habitat_sim.physics.MotionType.DYNAMIC
+        for art_obj in self.art_objs:
+            art_obj.motion_type = habitat_sim.physics.MotionType.STATIC
+        navmesh_settings = habitat_sim.NavMeshSettings()
+        navmesh_settings.set_defaults()
+        navmesh_settings.agent_radius = 0.6
+        navmesh_settings.agent_max_climb = 0.05
+        navmesh_success = self.recompute_navmesh(
+            self.pathfinder, navmesh_settings, include_static_objects=True
+        )
+        for art_obj in self.art_objs:
+            art_obj.motion_type = habitat_sim.physics.MotionType.DYNAMIC
 
         scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
         base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
 
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+        # navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        # self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
