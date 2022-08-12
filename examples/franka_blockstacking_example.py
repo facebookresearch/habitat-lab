@@ -6,8 +6,8 @@
 
 import argparse
 
-import cv2
 import numpy as np
+from display_utils import display_rgb
 
 import habitat
 from habitat.core.logging import logger
@@ -18,19 +18,7 @@ BLOCK_CONFIGS_PATH = "data/objects/5boxes"
 ROOM_SIZE = 5
 
 
-def display_grayscale(image):
-    img_bgr = np.repeat(image, 3, 2)
-    cv2.imshow("Depth Sensor", img_bgr)
-    cv2.waitKey(0)
-
-
-def display_rgb(image):
-    img_bgr = image[..., ::-1]
-    cv2.imshow("RGB", img_bgr)
-    cv2.waitKey(0)
-
-
-def example(args):
+def example(render):
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
     with habitat.Env(config=habitat.get_config(CONFIG_FILE)) as env:
@@ -50,7 +38,7 @@ def example(args):
         logger.info("Blocks added to environment")
 
         observations = env.reset()  # noqa: F841
-        if not args.no_render:
+        if render:
             display_rgb(observations[SENSOR_KEY])
 
         logger.info("Agent acting inside environment.")
@@ -60,7 +48,7 @@ def example(args):
             action = env.action_space.sample()
             logger.info(f"Executing action: {action}")
             observations = env.step(action)  # noqa: F841
-            if not args.no_render:
+            if render:
                 display_rgb(observations[SENSOR_KEY])
             count_steps += 1
         logger.info("Episode finished after {} steps.".format(count_steps))
@@ -70,4 +58,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=False)
     args = parser.parse_args()
-    example(args)
+    render = not args.no_render
+    example(render=render)
