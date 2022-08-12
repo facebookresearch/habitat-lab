@@ -288,7 +288,7 @@ class RearrangeSim(HabitatSim):
             if not did_collide:
                 break
         if attempt_i == max_attempts - 1:
-            rearrange_logger.error(
+            rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info['episode_id']}"
             )
         return start_pos, start_rot
@@ -645,10 +645,7 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if (
-            self.habitat_config.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE
-            and self.step_idx > 10
-        ):
+        if self.habitat_config.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE:
             self.gfx_replay_manager.save_keyframe()
         self.step_idx += 1
 

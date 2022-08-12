@@ -142,7 +142,7 @@ class PddlRobotState:
             raise ValueError(f"Unrecongized set position {self.pos}")
 
 
-class PddlSetState:
+class PddlSimState:
     def __init__(
         self,
         art_states: Dict[PddlEntity, ArtSampler],
@@ -170,14 +170,14 @@ class PddlSetState:
     def __repr__(self):
         return f"{self._art_states}, {self._obj_states}, {self._robot_states}"
 
-    def clone(self) -> "PddlSetState":
-        return PddlSetState(
+    def clone(self) -> "PddlSimState":
+        return PddlSimState(
             self._art_states,
             self._obj_states,
             {k: v.clone() for k, v in self._robot_states.items()},
         )
 
-    def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "PddlSetState":
+    def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "PddlSimState":
         self._robot_states = {
             sub_dict.get(k, k): robot_state.sub_in(sub_dict)
             for k, robot_state in self._robot_states.items()

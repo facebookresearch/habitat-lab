@@ -23,10 +23,10 @@ from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalQuantifierType,
 )
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
-from habitat.tasks.rearrange.multi_task.pddl_set_state import (
+from habitat.tasks.rearrange.multi_task.pddl_sim_state import (
     ArtSampler,
     PddlRobotState,
-    PddlSetState,
+    PddlSimState,
 )
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ExprType,
@@ -50,7 +50,9 @@ class PddlDomain:
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
-        :param cur_task_config: The task config (`TASK_CONFIG.TASK`).
+        :param cur_task_config: The task config (`TASK_CONFIG.TASK`). This is
+            used when the action initializes a task via `PddlAction::init_task`. If
+            this is not used, `cur_task_config` can be None.
         """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
@@ -67,66 +69,15 @@ class PddlDomain:
         with open(domain_file_path, "r") as f:
             domain_def = yaml.safe_load(f)
 
-        self.expr_types: Dict[str, ExprType] = {}
-        self._leaf_exprs = []
-        in_parent = []
-        for parent_type, sub_types in domain_def["types"].items():
-            if parent_type not in self.expr_types:
-                self.expr_types[parent_type] = ExprType(parent_type, None)
-            in_parent.append(parent_type)
-            for sub_type in sub_types:
-                self.expr_types[sub_type] = ExprType(
-                    sub_type, self.expr_types[parent_type]
-                )
-        self._leaf_exprs = [
-            expr_type
-            for expr_type in self.expr_types.values()
-            if expr_type.name not in in_parent
-        ]
+        self._parse_expr_types(domain_def)
+        self._parse_constants(domain_def)
+        self._parse_predicates(domain_def)
+        self._parse_actions(domain_def)
 
-        self._constants: Dict[str, PddlEntity] = {}
-        for c in domain_def["constants"]:
-            self._constants[c["name"]] = PddlEntity(
-                c["name"],
-                self.expr_types[c["expr_type"]],
-            )
-
-        self.predicates: Dict[str, Predicate] = {}
-        for pred_d in domain_def["predicates"]:
-            arg_entities = [
-                PddlEntity(arg["name"], self.expr_types[arg["expr_type"]])
-                for arg in pred_d["args"]
-            ]
-            pred_entities = {e.name: e for e in arg_entities}
-            art_states = pred_d["set_state"].get("art_states", {})
-            obj_states = pred_d["set_state"].get("obj_states", {})
-            robot_states = pred_d["set_state"].get("robot_states", {})
-
-            all_entities = {**self._constants, **pred_entities}
-
-            art_states = {
-                all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
-            }
-            obj_states = {
-                all_entities[k]: all_entities[v] for k, v in obj_states.items()
-            }
-
-            use_robot_states = {}
-            for k, v in robot_states.items():
-                use_k = all_entities[k]
-                robot_pos = v.get("pos", None)
-                holding = v.get("holding", None)
-
-                use_robot_states[use_k] = PddlRobotState(
-                    holding=all_entities.get(holding, holding),
-                    should_drop=v.get("should_drop", False),
-                    pos=all_entities.get(robot_pos, robot_pos),
-                )
-
-            set_state = PddlSetState(art_states, obj_states, use_robot_states)
-
-            pred = Predicate(pred_d["name"], set_state, arg_entities)
-            self.predicates[pred.name] = pred
+    def _parse_actions(self, domain_def) -> None:
+        """
+        Fetches the PDDL actions into `self.actions`
+        """
 
         self.actions: Dict[str, PddlAction] = {}
         for action_d in domain_def["actions"]:
@@ -162,6 +113,82 @@ class PddlDomain:
             )
             self.actions[action.name] = action
 
+    def _parse_predicates(self, domain_def) -> None:
+        """
+        Fetches the PDDL predicates into `self.predicates`.
+        """
+
+        self.predicates: Dict[str, Predicate] = {}
+        for pred_d in domain_def["predicates"]:
+            arg_entities = [
+                PddlEntity(arg["name"], self.expr_types[arg["expr_type"]])
+                for arg in pred_d["args"]
+            ]
+            pred_entities = {e.name: e for e in arg_entities}
+            art_states = pred_d["set_state"].get("art_states", {})
+            obj_states = pred_d["set_state"].get("obj_states", {})
+            robot_states = pred_d["set_state"].get("robot_states", {})
+
+            all_entities = {**self._constants, **pred_entities}
+
+            art_states = {
+                all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
+            }
+            obj_states = {
+                all_entities[k]: all_entities[v] for k, v in obj_states.items()
+            }
+
+            use_robot_states = {}
+            for k, v in robot_states.items():
+                use_k = all_entities[k]
+                robot_pos = v.get("pos", None)
+                holding = v.get("holding", None)
+
+                use_robot_states[use_k] = PddlRobotState(
+                    holding=all_entities.get(holding, holding),
+                    should_drop=v.get("should_drop", False),
+                    pos=all_entities.get(robot_pos, robot_pos),
+                )
+
+            set_state = PddlSimState(art_states, obj_states, use_robot_states)
+
+            pred = Predicate(pred_d["name"], set_state, arg_entities)
+            self.predicates[pred.name] = pred
+
+    def _parse_constants(self, domain_def) -> None:
+        """
+        Fetches the constants into `self._constants`.
+        """
+
+        self._constants: Dict[str, PddlEntity] = {}
+        for c in domain_def["constants"]:
+            self._constants[c["name"]] = PddlEntity(
+                c["name"],
+                self.expr_types[c["expr_type"]],
+            )
+
+    def _parse_expr_types(self, domain_def):
+        """
+        Fetches the types from the domain into `self.expr_types`.
+        """
+
+        self.expr_types: Dict[str, ExprType] = {}
+        self._leaf_exprs = []
+        in_parent = []
+        for parent_type, sub_types in domain_def["types"].items():
+            if parent_type not in self.expr_types:
+                self.expr_types[parent_type] = ExprType(parent_type, None)
+            in_parent.append(parent_type)
+            for sub_type in sub_types:
+                self.expr_types[sub_type] = ExprType(
+                    sub_type, self.expr_types[parent_type]
+                )
+        self._leaf_exprs = [
+            expr_type
+            for expr_type in self.expr_types.values()
+            if expr_type.name not in in_parent
+        ]
+
     @property
     def leaf_expr_types(self) -> List[ExprType]:
         return self._leaf_exprs
@@ -169,6 +196,12 @@ class PddlDomain:
     def parse_predicate(
         self, pred_str: str, existing_entities: Dict[str, PddlEntity]
     ) -> Predicate:
+        """
+        Instantiates a predicate from call in string such as "in(X,Y)".
+        :param pred_str: The string to parse such as "in(X,Y)".
+        :param existing_entities: The valid entities for arguments in the predicate.
+        """
+
         func_name, func_args = parse_func(pred_str)
         pred = self.predicates[func_name].clone()
         arg_values = []
@@ -193,6 +226,10 @@ class PddlDomain:
     def parse_logical_expr(
         self, load_d, existing_entities: Dict[str, PddlEntity]
     ) -> Union[LogicalExpr, Predicate]:
+        """
+        Similar to `self.parse_predicate` for logical expressions. If `load_d`
+        is a string, it will be parsed as a predicate.
+        """
 
         if load_d is None:
             return LogicalExpr(LogicalExprType.AND, [], [], None)
@@ -234,6 +271,12 @@ class PddlDomain:
         env: RearrangeTask,
         episode: Episode,
     ) -> None:
+        """
+        Attach the domain to the simulator. This does not bind any entity
+        values, but creates `self._sim_info` which is needed to check simulator
+        backed values (like truth values of predicates).
+        """
+
         id_to_name = {}
         for k, i in sim.ref_handle_to_rigid_obj_id.items():
             id_to_name[i] = k
@@ -267,21 +310,35 @@ class PddlDomain:
 
     @property
     def sim_info(self) -> PddlSimInfo:
+        """
+        Info from the simulator instance needed to interface the planning
+        domain with the simulator. This property is used for all calls in the
+        PDDL code that must interface with the simulator.
+        """
+
         if self._sim_info is None:
             raise ValueError("Need to first bind to simulator instance.")
         return self._sim_info
 
-    def set_pred_states(self, preds: List[Predicate]) -> None:
-        for pred in preds:
-            pred.set_state(self.sim_info)
-
     def apply_action(self, action: PddlAction) -> None:
+        """
+        Helper to apply an action with the simulator info.
+        """
+
         action.apply(self.sim_info)
 
     def is_expr_true(self, expr: LogicalExpr) -> bool:
+        """
+        Helper to check expression truth value from simulator info.
+        """
+
         return expr.is_true(self.sim_info)
 
     def get_true_predicates(self) -> List[Predicate]:
+        """
+        Get all the predicates that are true in the current simulator state.
+        """
+
         all_entities = self.all_entities.values()
         true_preds: List[Predicate] = []
         for pred in self.predicates.values():
@@ -299,6 +356,12 @@ class PddlDomain:
         return true_preds
 
     def get_possible_predicates(self) -> List[Predicate]:
+        """
+        Get all predicates that COULD be true. This is independent of the
+        simulator state and is the set of compatible predicate and entity
+        arguments.
+        """
+
         all_entities = self.all_entities.values()
         poss_preds: List[Predicate] = []
         for pred in self.predicates.values():
@@ -310,7 +373,7 @@ class PddlDomain:
 
                 use_pred = pred.clone()
                 use_pred.set_param_values(entity_input)
-                if use_pred.is_sim_compatible(self.expr_types):
+                if use_pred.are_types_compatible(self.expr_types):
                     poss_preds.append(use_pred)
         return poss_preds
 
@@ -322,6 +385,7 @@ class PddlDomain:
         true_preds: Optional[List[Predicate]] = None,
     ) -> List[PddlAction]:
         """
+        Get all actions that can be applied.
         :param filter_entities: ONLY actions with entities that contain all
             entities in `filter_entities` are allowed.
         :param allowed_action_names: ONLY action names allowed.
@@ -442,6 +506,10 @@ class PddlProblem(PddlDomain):
 
     @property
     def solution(self):
+        """
+        Sequence of actions to solve the task specified in the problem file.
+        """
+
         if self._solution is None:
             raise ValueError("Solution is not supported by this PDDL")
         return self._solution
@@ -466,6 +534,10 @@ class PddlProblem(PddlDomain):
         )
 
     def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
+        """
+        Expand out a logical expression that could involve a quantifier into only logical expressions that don't involve any quantifier.
+        """
+
         expr.sub_exprs = [
             self.expand_quantifiers(subexpr)
             if isinstance(subexpr, LogicalExpr)

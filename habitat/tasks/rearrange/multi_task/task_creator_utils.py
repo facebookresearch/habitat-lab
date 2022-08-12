@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 TASK_CONFIGS_DIR = "configs/tasks/rearrange/"
+TASK_IGNORE_KEYS = ["TASK_SPEC", "TASK_SPEC_BASE_PATH", "PDDL_DOMAIN_DEF"]
 
 
 def create_task_object(
@@ -43,7 +44,6 @@ def create_task_object(
 
     config = copy.deepcopy(cur_config)
     config.defrost()
-    TASK_IGNORE_KEYS = ["TASK_SPEC", "TASK_SPEC_BASE_PATH", "PDDL_DOMAIN_DEF"]
     if task_config_path is not None:
         pass_args = []
         for k, v in task_config_args.items():

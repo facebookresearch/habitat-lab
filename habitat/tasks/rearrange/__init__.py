@@ -10,12 +10,12 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def _try_register_rearrange_task():
-    import habitat.tasks.rearrange.actions
-    import habitat.tasks.rearrange.grip_actions
+    import habitat.tasks.rearrange.actions.actions
+    import habitat.tasks.rearrange.actions.grip_actions
+    import habitat.tasks.rearrange.actions.oracle_nav_action
+    import habitat.tasks.rearrange.actions.pddl_actions
     import habitat.tasks.rearrange.multi_task.composite_sensors
     import habitat.tasks.rearrange.multi_task.composite_task
-    import habitat.tasks.rearrange.oracle_nav_action
-    import habitat.tasks.rearrange.pddl_actions
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
     import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors

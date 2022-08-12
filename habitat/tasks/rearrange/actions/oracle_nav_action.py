@@ -4,7 +4,7 @@ from gym import spaces
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions import BaseVelAction
+from habitat.tasks.rearrange.actions.actions import BaseVelAction
 from habitat.tasks.utils import get_angle
 
 

@@ -5,11 +5,11 @@ import numpy as np
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
-from habitat.tasks.rearrange.oracle_nav_action import (
+from habitat.tasks.rearrange.actions.oracle_nav_action import (
     get_possible_nav_to_actions,
 )
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
 from habitat.tasks.rearrange.rearrange_sensors import (
     TargetGoalGpsCompassSensor,
     TargetStartGpsCompassSensor,

@@ -77,6 +77,10 @@ class PddlEntity:
 def do_entity_lists_match(
     to_set: List[PddlEntity], set_value: List[PddlEntity]
 ) -> bool:
+    """
+    Returns if the two predicate lists match in count and argument types.
+    """
+
     if len(to_set) != len(set_value):
         return False
     # Check types are compatible
@@ -89,7 +93,11 @@ def do_entity_lists_match(
 def ensure_entity_lists_match(
     to_set: List[PddlEntity], set_value: List[PddlEntity]
 ) -> None:
-    """ """
+    """
+    Checks if the two predicate lists match in count and argument types. If
+    they don't match, an exception is thrown.
+    """
+
     if len(to_set) != len(set_value):
         raise ValueError(
             f"Set arg values are unequal size {to_set} vs {set_value}"

@@ -1232,6 +1232,14 @@ def apply_obs_transforms_obs_space(
 
 @baseline_registry.register_obs_transformer()
 class AddVirtualKeys(ObservationTransformer):
+    """
+    Will add sensor values with all 0s to the observation. This is used in the
+    TP-SRL method since skills are trained with sensors not available during
+    evaluation (such as the target object to navigate to for the navigation
+    policy). The method is responsible for filling out these 0 value
+    observations before passing them into the policy.
+    """
+
     def __init__(self, virtual_keys):
         super().__init__()
         self._virtual_keys = virtual_keys

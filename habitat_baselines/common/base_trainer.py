@@ -102,7 +102,8 @@ class BaseTrainer:
                 os.path.isfile(self.config.EVAL_CKPT_PATH_DIR)
                 or not self.config.EVAL.SHOULD_LOAD_CKPT
             ):
-                # evaluate singe checkpoint
+                # evaluate single checkpoint. If `SHOULD_LOAD_CKPT=False` then
+                # the `EVAL_CKPT_PATH_DIR` will be ignored.
 
                 if self.config.EVAL.SHOULD_LOAD_CKPT:
                     proposed_index = get_checkpoint_id(

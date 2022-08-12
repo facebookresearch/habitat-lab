@@ -140,7 +140,7 @@ class DistToNavGoalSensor(Sensor):
 
 
 @registry.register_sensor
-class NavGoalSensor(UsesRobotInterface, Sensor):
+class NavGoalSensor(Sensor):
     cls_uuid: str = "nav_goal"
 
     def __init__(self, *args, sim, task, **kwargs):

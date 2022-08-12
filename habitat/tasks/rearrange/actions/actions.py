@@ -18,13 +18,13 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 # flake8: noqa
 # These actions need to be imported since there is a Python evaluation
 # statement which dynamically creates the desired grip controller.
-from habitat.tasks.rearrange.grip_actions import (
+from habitat.tasks.rearrange.actions.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
 )
+from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 

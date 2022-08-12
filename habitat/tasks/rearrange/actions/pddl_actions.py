@@ -3,7 +3,7 @@ from gym import spaces
 
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.grip_actions import RobotAction
+from habitat.tasks.rearrange.actions.grip_actions import RobotAction
 from habitat.tasks.rearrange.utils import rearrange_logger
 
 

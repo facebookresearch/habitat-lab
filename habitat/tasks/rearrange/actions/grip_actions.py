@@ -11,8 +11,8 @@ import numpy as np
 from gym import spaces
 
 from habitat.core.registry import registry
+from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,
