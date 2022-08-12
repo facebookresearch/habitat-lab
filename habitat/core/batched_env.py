@@ -545,6 +545,7 @@ class BatchedEnv:
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
         self._previous_action: List[Optional[Any]] = [None] * self._num_envs
+        self._object_dropped_properly = [False] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
             self._stagger_agents = [
@@ -674,9 +675,41 @@ class BatchedEnv:
 
             obj_pos = state.obj_positions[state.target_obj_idx]
             obj_to_goal = (state.goal_pos - obj_pos).length()
-            success = end_episode_action and (
+
+            object_is_close_to_goal = (
                 obj_to_goal < self._config.NPNP_SUCCESS_THRESH
-            )
+            ) or self._object_dropped_properly[b]
+
+            bad_attempt_penalty = 0.0
+            if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
+                object_is_in_drop_position = (
+                    np.sqrt(
+                        (state.goal_pos[0] - obj_pos[0]) ** 2
+                        + (state.goal_pos[2] - obj_pos[2]) ** 2
+                    )
+                    < self._config.NPNP_SUCCESS_THRESH
+                    and (obj_pos[1] - state.goal_pos[1]) > 0
+                    and (obj_pos[1] - state.goal_pos[1])
+                    < self._config.NPNP_SUCCESS_THRESH
+                )
+                if (
+                    is_holding_correct
+                    and not object_is_in_drop_position
+                    and actions[(b + 1)] <= 0.0
+                ):
+                    bad_attempt_penalty = self._config.get(
+                        "DROP_WRONG_PENALTY", 0.1
+                    )
+                    # keep holding
+                    actions[(b + 1)] = 1.0
+                elif (
+                    is_holding_correct
+                    and object_is_in_drop_position
+                    and actions[(b + 1)] <= 0.0
+                ):
+                    self._object_dropped_properly[b] = True
+
+            success = end_episode_action and object_is_close_to_goal
 
             if self._config.get(
                 "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
@@ -722,6 +755,7 @@ class BatchedEnv:
                 _rew = 0.0
                 _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
                 _rew -= self._config.NPNP_FAILURE_PENALTY if failure else 0.0
+                _rew -= bad_attempt_penalty
                 self.rewards[b] = _rew
                 self.infos[b] = {
                     "success": float(success),
@@ -736,6 +770,7 @@ class BatchedEnv:
                 }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
+                self._object_dropped_properly[b] = False
 
                 next_episode = self.get_next_episode()
                 if next_episode != -1:
@@ -777,12 +812,14 @@ class BatchedEnv:
                     ).length()
                     self.rewards[b] += -(
                         curr_dist_ee_to_obj - prev_dist_ee_to_obj
-                    )
+                    ) * self._config.get("CARTHESIAN_REWARD", 1.0)
                     prev_obj_to_goal = (
                         prev_state.goal_pos - prev_obj_pos
                     ).length()
-                    self.rewards[b] += -(obj_to_goal - prev_obj_to_goal)
-
+                    self.rewards[b] += -(
+                        obj_to_goal - prev_obj_to_goal
+                    ) * self._config.get("CARTHESIAN_REWARD", 1.0)
+                    self.rewards[b] -= bad_attempt_penalty
                     if (
                         self._config.get("DROP_IS_FAIL", True)
                         and is_holding_correct
