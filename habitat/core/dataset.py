@@ -37,13 +37,13 @@ ALL_SCENES_MASK = "*"
 
 
 @attr.s(auto_attribs=True)
-class EpisodeInfo:
+class BaseEpisode:
     episode_id: str
     scene_id: str
 
 
 @attr.s(auto_attribs=True, kw_only=True)
-class Episode:
+class Episode(BaseEpisode):
     r"""Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode.
 

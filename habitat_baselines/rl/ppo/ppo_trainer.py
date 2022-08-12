@@ -977,7 +977,7 @@ class PPOTrainer(BaseRLTrainer):
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0
         ):
-            current_episodes_info = self.envs.current_episodes_info()
+            current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
                 (
@@ -1031,7 +1031,7 @@ class PPOTrainer(BaseRLTrainer):
                 rewards_l, dtype=torch.float, device="cpu"
             ).unsqueeze(1)
             current_episode_reward += rewards
-            next_episodes_info = self.envs.current_episodes_info()
+            next_episodes_info = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
             for i in range(n_envs):
