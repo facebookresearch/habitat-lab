@@ -5,12 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 import numpy as np
 import torch
 
-from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.common.tensor_dict import DictTree, TensorDict
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_pack_info_from_dones,
+    build_rnn_build_seq_info,
+)
 
 
 class RolloutStorage:
@@ -84,8 +88,11 @@ class RolloutStorage:
 
         assert (self._num_envs % self._nbuffers) == 0
 
-        self.numsteps = numsteps
+        self.num_steps = numsteps
         self.current_rollout_step_idxs = [0 for _ in range(self._nbuffers)]
+
+        # The default device to torch is the CPU, so everything is on the CPU.
+        self.device = torch.device("cpu")
 
     @property
     def current_rollout_step_idx(self) -> int:
@@ -97,6 +104,7 @@ class RolloutStorage:
 
     def to(self, device):
         self.buffers.map_in_place(lambda v: v.to(device))
+        self.device = device
 
     def insert(
         self,
@@ -179,6 +187,7 @@ class RolloutStorage:
                 self.buffers["returns"][step] = (  # type: ignore
                     gae + self.buffers["value_preds"][step]  # type: ignore
                 )
+
         else:
             self.buffers["returns"][self.current_rollout_step_idx] = next_value
             for step in reversed(range(self.current_rollout_step_idx)):
@@ -190,9 +199,12 @@ class RolloutStorage:
                 )
 
     def recurrent_generator(
-        self, advantages, num_mini_batch
-    ) -> Iterator[TensorDict]:
-        num_environments = advantages.size(1)
+        self,
+        advantages: Optional[torch.Tensor],
+        num_mini_batch: int,
+    ) -> Iterator[DictTree]:
+        assert isinstance(self.buffers["returns"], torch.Tensor)
+        num_environments = self.buffers["returns"].size(1)
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "
             "to be greater than or equal to the number of "
@@ -208,13 +220,38 @@ class RolloutStorage:
                     num_environments, num_mini_batch
                 )
             )
+
+        dones_cpu = (
+            torch.logical_not(self.buffers["masks"])
+            .cpu()
+            .view(-1, self._num_envs)
+            .numpy()
+        )
         for inds in torch.randperm(num_environments).chunk(num_mini_batch):
-            batch = self.buffers[0 : self.current_rollout_step_idx, inds]
-            batch["advantages"] = advantages[
-                0 : self.current_rollout_step_idx, inds
-            ]
+            curr_slice = (slice(0, self.current_rollout_step_idx), inds)
+
+            batch = self.buffers[curr_slice]
+            if advantages is not None:
+                batch["advantages"] = advantages[curr_slice]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]
 
-            yield batch.map(lambda v: v.flatten(0, 1))
+            batch.map_in_place(lambda v: v.flatten(0, 1))
+
+            batch["rnn_build_seq_info"] = build_rnn_build_seq_info(
+                device=self.device,
+                build_fn_result=build_pack_info_from_dones(
+                    dones_cpu[
+                        0 : self.current_rollout_step_idx, inds.numpy()
+                    ].reshape(-1, len(inds)),
+                ),
+            )
+
+            yield batch.to_tree()
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return self.__dict__
+
+    def __setstate__(self, state: Dict[str, Any]):
+        self.__dict__.update(state)

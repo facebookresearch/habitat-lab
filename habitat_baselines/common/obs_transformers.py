@@ -903,6 +903,7 @@ class ProjectionTransformer(ObservationTransformer):
     ):
         r"""Transforms the target UUID's sensor obs_space so it matches the new shape (H, W)"""
         # Transforms the observation space to of the target UUID
+        observation_space = copy.deepcopy(observation_space)
         for i, key in enumerate(self.target_uuids):
             assert (
                 key in observation_space.spaces

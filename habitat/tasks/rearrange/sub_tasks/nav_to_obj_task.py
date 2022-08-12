@@ -8,13 +8,14 @@ import os.path as osp
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -38,7 +39,7 @@ class NavToInfo:
     nav_target_angle: float
     nav_to_task_name: str
     nav_to_entity_name: str
-    start_hold_obj_idx: Optional[bool] = None
+    start_hold_obj_idx: Optional[int] = None
     start_base_pos: Optional[mn.Vector3] = None
     start_base_rot: Optional[float] = None
 
@@ -242,7 +243,7 @@ class DynNavRLEnv(RearrangeTask):
         rearrange_logger.debug("Resetting navigation task")
 
         self.pddl_problem.bind_to_instance(
-            self._sim, self._dataset, self, episode
+            self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )
 
         episode_id = sim.ep_info["episode_id"]
@@ -263,7 +264,7 @@ class DynNavRLEnv(RearrangeTask):
                     f"Forcing episode, loaded `{full_key}` from cache {self.cache.cache_id}."
                 )
                 if not isinstance(self._nav_to_info, NavToInfo):
-                    rearrange_logger.warning(
+                    rearrange_logger.warning(  # type: ignore[unreachable]
                         f"Incorrect cache saved to file {self._nav_to_info}. Regenerating now."
                     )
                     self._nav_to_info = None

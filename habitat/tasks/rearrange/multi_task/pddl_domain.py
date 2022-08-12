@@ -6,9 +6,9 @@
 
 import itertools
 import os.path as osp
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, cast
 
-import yaml
+import yaml  # type: ignore[import]
 
 from habitat import Config
 from habitat.core.dataset import Episode
@@ -87,7 +87,7 @@ class PddlDomain:
             ]
             name_to_param = {p.name: p for p in parameters}
 
-            pre_cond = self.parse_logical_expr(
+            pre_cond = self._parse_only_logical_expr(
                 action_d["precondition"], name_to_param
             )
             post_cond = [
@@ -223,7 +223,15 @@ class PddlDomain:
             ) from e
         return pred
 
-    def parse_logical_expr(
+    def _parse_only_logical_expr(
+        self, load_d, existing_entities: Dict[str, PddlEntity]
+    ) -> LogicalExpr:
+        ret = self._parse_logical_expr(load_d, existing_entities)
+        if not isinstance(ret, LogicalExpr):
+            raise ValueError(f"Expected logical expr, got {ret}")
+        return ret
+
+    def _parse_logical_expr(
         self, load_d, existing_entities: Dict[str, PddlEntity]
     ) -> Union[LogicalExpr, Predicate]:
         """
@@ -254,7 +262,7 @@ class PddlDomain:
         ]
 
         sub_exprs = [
-            self.parse_logical_expr(
+            self._parse_logical_expr(
                 sub_expr, {**existing_entities, **{x.name: x for x in inputs}}
             )
             for sub_expr in load_d["sub_exprs"]
@@ -420,10 +428,11 @@ class PddlDomain:
                     continue
 
                 for entity_input_perm in itertools.permutations(entity_input):
-                    if not action.are_args_compatible(entity_input_perm):
+                    entity_inputs = cast(List[PddlEntity], entity_input_perm)
+                    if not action.are_args_compatible(entity_inputs):
                         continue
                     new_action = action.clone()
-                    new_action.set_param_values(entity_input_perm)
+                    new_action.set_param_values(entity_inputs)
                     if (
                         true_preds is not None
                         and not new_action.is_precond_satisfied_from_predicates(
@@ -463,7 +472,7 @@ class PddlProblem(PddlDomain):
             for p in problem_def.get("init", [])
         ]
         try:
-            self.goal = self.parse_logical_expr(
+            self.goal = self._parse_only_logical_expr(
                 problem_def["goal"], self.all_entities
             )
             self.goal = self.expand_quantifiers(self.goal)
@@ -473,7 +482,7 @@ class PddlProblem(PddlDomain):
             ) from e
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
-            expr = self.parse_logical_expr(cond, self.all_entities)
+            expr = self._parse_only_logical_expr(cond, self.all_entities)
             self.stage_goals[stage_name] = self.expand_quantifiers(expr)
 
         self._solution: Optional[List[PddlAction]] = None
@@ -535,7 +544,8 @@ class PddlProblem(PddlDomain):
 
     def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
         """
-        Expand out a logical expression that could involve a quantifier into only logical expressions that don't involve any quantifier.
+        Expand out a logical expression that could involve a quantifier into
+        only logical expressions that don't involve any quantifier.
         """
 
         expr.sub_exprs = [
@@ -564,7 +574,7 @@ class PddlProblem(PddlDomain):
                 ]
             )
 
-        expanded_exprs = []
+        expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
         for poss_input in itertools.product(*all_matching_entities):
             assert len(poss_input) == len(expr.inputs)
             sub_dict = {
@@ -574,4 +584,5 @@ class PddlProblem(PddlDomain):
 
             expanded_exprs.append(expr.clone().sub_in(sub_dict))
 
-        return LogicalExpr(combine_type, expanded_exprs, [], None)
+        inputs: List[PddlEntity] = []
+        return LogicalExpr(combine_type, expanded_exprs, inputs, None)

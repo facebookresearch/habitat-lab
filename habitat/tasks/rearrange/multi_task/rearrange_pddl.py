@@ -24,15 +24,15 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
     try:
         name = x.split("(")[0]
         args = x.split("(")[1].split(")")[0]
-        args = args.split(",")
-        args = [x.strip() for x in args]
+        args_list = args.split(",")
+        args_list = [x.strip() for x in args_list]
     except IndexError as e:
         raise ValueError(f"Cannot parse '{x}'") from e
 
-    if len(args) == 1 and args[0] == "":
-        args = []
+    if len(args_list) == 1 and args_list[0] == "":
+        args_list = []
 
-    return name, args
+    return name, args_list
 
 
 class ExprType:

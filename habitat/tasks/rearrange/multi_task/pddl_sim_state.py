@@ -5,13 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import magnum as mn
 import numpy as np
 
 import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
+from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ART_OBJ_TYPE,
     CAB_TYPE,
@@ -79,14 +80,18 @@ class PddlRobotState:
         """
         Returns if the desired robot state is currently true in the simulator state.
         """
-        robot_id = sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+        robot_id = cast(
+            int, sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+        )
         grasp_mgr = sim_info.sim.get_robot_data(robot_id).grasp_mgr
 
         assert not (self.holding is not None and self.should_drop)
 
         if self.holding is not None:
             # Robot must be holding desired object.
-            obj_idx = sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+            obj_idx = cast(
+                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+            )
             abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
             if grasp_mgr.snap_idx != abs_obj_id:
                 return False
@@ -105,7 +110,9 @@ class PddlRobotState:
     def set_state(
         self, sim_info: PddlSimInfo, robot_entity: PddlEntity
     ) -> None:
-        robot_id = sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+        robot_id = cast(
+            int, sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+        )
         sim = sim_info.sim
         grasp_mgr = sim.get_robot_data(robot_id).grasp_mgr
         # Set the snapped object information
@@ -113,7 +120,9 @@ class PddlRobotState:
             grasp_mgr.desnap(True)
         elif self.holding is not None:
             # Swap objects to the desired object.
-            obj_idx = sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+            obj_idx = cast(
+                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+            )
             grasp_mgr.desnap(True)
             sim.internal_step(-1)
             grasp_mgr.snap_to_obj(sim.scene_obj_ids[obj_idx])
@@ -198,7 +207,9 @@ class PddlSimState:
         Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
         """
         entity_pos = sim_info.get_entity_pos(entity)
-        check_marker = sim_info.search_for_entity(target, ART_OBJ_TYPE)
+        check_marker = cast(
+            MarkerInfo, sim_info.search_for_entity(target, ART_OBJ_TYPE)
+        )
         if sim_info.check_type_matches(target, FRIDGE_TYPE):
             global_bb = get_ao_global_bb(check_marker.ao_parent)
         else:
@@ -256,13 +267,17 @@ class PddlSimState:
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
             elif sim_info.check_type_matches(target, GOAL_TYPE):
-                obj_idx = sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+                obj_idx = cast(
+                    int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+                )
                 abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
                 cur_pos = rom.get_object_by_id(
                     abs_obj_id
                 ).transformation.translation
 
-                targ_idx = sim_info.search_for_entity(target, GOAL_TYPE)
+                targ_idx = cast(
+                    int, sim_info.search_for_entity(target, GOAL_TYPE)
+                )
                 idxs, pos_targs = sim_info.sim.get_targets()
                 targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
@@ -278,7 +293,10 @@ class PddlSimState:
             if not sim_info.check_type_matches(art_entity, ART_OBJ_TYPE):
                 raise ValueError()
 
-            marker = sim_info.search_for_entity(art_entity, ART_OBJ_TYPE)
+            marker = cast(
+                MarkerInfo,
+                sim_info.search_for_entity(art_entity, ART_OBJ_TYPE),
+            )
             prev_art_pos = marker.get_targ_js()
             if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
                 return False
@@ -293,10 +311,12 @@ class PddlSimState:
         """
         sim = sim_info.sim
         for entity, target in self._obj_states.items():
-            obj_idx = sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+            obj_idx = cast(
+                int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+            )
             abs_obj_id = sim.scene_obj_ids[obj_idx]
 
-            targ_idx = sim_info.search_for_entity(target, GOAL_TYPE)
+            targ_idx = cast(int, sim_info.search_for_entity(target, GOAL_TYPE))
             all_targ_idxs, pos_targs = sim.get_targets()
             targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
             set_T = mn.Matrix4.translation(targ_pos)
@@ -330,14 +350,18 @@ class PddlSimState:
                 bound_in_pred.set_param_values([poss_entity, art_entity])
                 if not bound_in_pred.is_true(sim_info):
                     continue
-                obj_idx = sim_info.search_for_entity(
-                    poss_entity, RIGID_OBJ_TYPE
+                obj_idx = cast(
+                    int,
+                    sim_info.search_for_entity(poss_entity, RIGID_OBJ_TYPE),
                 )
                 abs_obj_id = sim.scene_obj_ids[obj_idx]
                 set_obj = rom.get_object_by_id(abs_obj_id)
                 move_objs.append(set_obj)
 
-            marker = sim_info.search_for_entity(art_entity, ART_OBJ_TYPE)
+            marker = cast(
+                MarkerInfo,
+                sim_info.search_for_entity(art_entity, ART_OBJ_TYPE),
+            )
             pre_link_pos = marker.link_node.transformation.translation
             marker.set_targ_js(set_art.sample())
             post_link_pos = marker.link_node.transformation.translation

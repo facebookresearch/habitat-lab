@@ -295,6 +295,14 @@ jobs:
               conda install -y  jinja2 pygments docutils
               mkdir -p ../build/docs
               ./build-public.sh
+      - run:
+          name: Ensure non-editable mode works
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              python -m pip install .
+              python -c "import habitat"
+
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
 

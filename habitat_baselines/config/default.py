@@ -76,8 +76,14 @@ _C.WB.RUN_NAME = ""
 _C.EVAL = CN()
 # The split to evaluate on
 _C.EVAL.SPLIT = "val"
+# Whether or not to use the config in the checkpoint. Setting this to False
+# is useful if some code changes necessitate a new config but the weights
+# are still valid.
 _C.EVAL.USE_CKPT_CONFIG = True
 _C.EVAL.SHOULD_LOAD_CKPT = True
+# The number of time to run each episode through evaluation.
+# Only works when evaluating on all episodes.
+_C.EVAL.EVALS_PER_EP = 1
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
@@ -129,17 +135,38 @@ _C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 512
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.WIDTH = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.FOV = 180
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.PARAMS = (0.2, 0.2, 0.2)
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 # -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
@@ -161,6 +188,9 @@ _C.RL.PPO.tau = 0.95
 _C.RL.PPO.reward_window_size = 50
 _C.RL.PPO.use_normalized_advantage = False
 _C.RL.PPO.hidden_size = 512
+_C.RL.PPO.entropy_target_factor = 0.0
+_C.RL.PPO.use_adaptive_entropy_pen = False
+_C.RL.PPO.use_clipped_value_loss = True
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation
