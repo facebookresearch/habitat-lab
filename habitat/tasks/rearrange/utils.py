@@ -364,6 +364,8 @@ class UsesRobotInterface:
     """
 
     def __init__(self, *args, **kwargs):
+        # This init call is necessary for using this class with `Measure`.
+        super().__init__(*args, **kwargs)
         self.robot_id = None
 
 
