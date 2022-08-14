@@ -120,7 +120,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     Episode finished after 5 steps.
     ```
 
-1. **Non-interactive testing**: Test the Pick task: Run the example pointnav script
+1. **Non-interactive testing**: Test the Pick task: Run the example pick task script
     <!--- Please, update `examples/example.py` if you update example. -->
     ```bash
     python examples/example.py
