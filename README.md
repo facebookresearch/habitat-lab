@@ -105,8 +105,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
       ```
 
-
-1. Test the PointNav task: Run the example pointnav script
+1. **Non-interactive testing**: Test the PointNav task: Run the example pointnav script
     ```bash
     python examples/example_pointnav.py
     ```
@@ -121,7 +120,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     Episode finished after 5 steps.
     ```
 
-1. Test the Pick task: Run the example pointnav script
+1. **Non-interactive testing**: Test the Pick task: Run the example pointnav script
     <!--- Please, update `examples/example.py` if you update example. -->
     ```bash
     python examples/example.py
@@ -151,11 +150,24 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       Episode finished after 200 steps.
     ```
 
-See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code.
+    See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code.
+
+
+1. **Interactive testing**: Using you keyboard and mouse to control a Fetch robot in a ReplicaCAD environment:
+    ```bash
+    # Pygame for interactive visualization, pybullet for inverse kinematics
+    pip install pygame==2.0.1 pybullet==3.0.4
+
+    # Interactive play script
+    python examples/interactive_play.py --never-end --add-ik
+    ```
+
+   Use I/J/K/L keys to move the robot base forward/left/backward/right and W/A/S/D to move the arm end-effector forward/left/backward/right and E/Q to move the arm up/down. The arm can be difficult to control via end-effector control. More details in documentation. Try to move the base and the arm to touch the red bowl on the table. Have fun!
+
 
 ## Documentation
 
-Browse the online [Habitat-Lab documentation](https://aihabitat.org/docs/habitat-lab/index.html). And the extentive [tutorial on how to train your agents with Habitat](https://aihabitat.org/tutorial/2020/).
+Browse the online [Habitat-Lab documentation](https://aihabitat.org/docs/habitat-lab/index.html). And the extentive [tutorial on how to train your agents with Habitat](https://aihabitat.org/tutorial/2020/). For Habitat 2.0, use this [quickstart guide](https://aihabitat.org/docs/habitat2/).
 
 
 ## Docker Setup
