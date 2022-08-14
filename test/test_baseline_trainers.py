@@ -161,6 +161,14 @@ def test_ver_trainer(
             torch.distributed.destroy_process_group()
 
 
+def test_cpca():
+    run_exp(
+        "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        "train",
+        ["RL.auxiliary_losses.enabled", "['cpca']"],
+    )
+
+
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )

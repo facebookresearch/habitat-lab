@@ -98,7 +98,7 @@ def _worker_fn(
 
     # Call eval actions through the internal wrapper that is used in
     # agent.update
-    value, action_log_probs, dist_entropy, _ = agent._evaluate_actions(
+    value, action_log_probs, dist_entropy, _, _ = agent._evaluate_actions(
         batch["observations"],
         batch["recurrent_hidden_states"],
         batch["prev_actions"],
