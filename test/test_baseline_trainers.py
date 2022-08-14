@@ -20,6 +20,7 @@ try:
     import torch
     import torch.distributed
 
+    import habitat_sim.utils.datasets_download as data_downloader
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
@@ -34,12 +35,10 @@ except ImportError:
 from habitat.utils.gym_definitions import make_gym_from_config
 
 
-def _powerset(s):
-    return [
-        combo
-        for r in range(len(s) + 1)
-        for combo in itertools.combinations(s, r)
-    ]
+@pytest.fixture(scope="module", autouse=True)
+def download_data():
+    # Download the needed datasets
+    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
 
 
 @pytest.mark.skipif(
@@ -89,23 +88,77 @@ def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
         if not habitat_sim.cuda_enabled:
             pytest.skip("GPU-GPU requires CUDA")
 
-    run_exp(
-        test_cfg_path,
-        mode,
-        [
-            "TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU",
-            str(gpu2gpu),
-            "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
-            str(tuple(observation_transforms)),
-        ],
-    )
+    try:
+        run_exp(
+            test_cfg_path,
+            mode,
+            [
+                "TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU",
+                str(gpu2gpu),
+                "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
+                str(tuple(observation_transforms)),
+            ],
+        )
+    finally:
+        # Needed to destroy the trainer
+        gc.collect()
 
-    # Needed to destroy the trainer
-    gc.collect()
+        # Deinit processes group
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
 
-    # Deinit processes group
-    if torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group()
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "test_cfg_path",
+    (
+        "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
+        "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+    ),
+)
+@pytest.mark.parametrize("variable_experience", [True, False])
+@pytest.mark.parametrize("overlap_rollouts_and_learn", [True, False])
+def test_ver_trainer(
+    test_cfg_path,
+    variable_experience,
+    overlap_rollouts_and_learn,
+):
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
+    try:
+        run_exp(
+            test_cfg_path,
+            "train",
+            [
+                "NUM_ENVIRONMENTS",
+                4,
+                "TRAINER_NAME",
+                "ver",
+                "RL.VER.variable_experience",
+                str(variable_experience),
+                "RL.VER.overlap_rollouts_and_learn",
+                str(overlap_rollouts_and_learn),
+                "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
+                "['CenterCropper', 'ResizeShortestEdge']",
+                "NUM_UPDATES",
+                2,
+                "TOTAL_NUM_STEPS",
+                -1.0,
+                "RL.preemption.save_state_batch_only",
+                True,
+                "RL.PPO.num_steps",
+                16,
+            ],
+        )
+    finally:
+        # Needed to destroy the trainer
+        gc.collect()
+
+        # Deinit processes group
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
 
 
 @pytest.mark.skipif(

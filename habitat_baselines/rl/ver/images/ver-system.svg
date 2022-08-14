@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="355 271 736 225" width="736" height="225">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="#323232">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_2" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="#333">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_3" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="black">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" stroke-opacity="1" fill="none" fill-opacity="1" stroke-dasharray="none" stroke="none">
+    <title>Canvas 1</title>
+    <rect fill="white" x="355" y="271" width="736" height="225"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_4">
+        <path d="M 374 273 L 525 273 C 527.20914 273 529 274.79086 529 277 L 529 320 C 529 322.20914 527.20914 324 525 324 L 374 324 C 371.79086 324 370 322.20914 370 320 L 370 277 C 370 274.79086 371.79086 273 374 273 Z" fill="#a1b0b1"/>
+        <path d="M 374 273 L 525 273 C 527.20914 273 529 274.79086 529 277 L 529 320 C 529 322.20914 527.20914 324 525 324 L 374 324 C 371.79086 324 370 322.20914 370 320 L 370 277 C 370 274.79086 371.79086 273 374 273 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_5">
+        <path d="M 384 283 L 535 283 C 537.20914 283 539 284.79086 539 287 L 539 330 C 539 332.20914 537.20914 334 535 334 L 384 334 C 381.79086 334 380 332.20914 380 330 L 380 287 C 380 284.79086 381.79086 283 384 283 Z" fill="#a1b0b1"/>
+        <path d="M 384 283 L 535 283 C 537.20914 283 539 284.79086 539 287 L 539 330 C 539 332.20914 537.20914 334 535 334 L 384 334 C 381.79086 334 380 332.20914 380 330 L 380 287 C 380 284.79086 381.79086 283 384 283 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_2">
+        <path d="M 394 293 L 545 293 C 547.20914 293 549 294.79086 549 297 L 549 340 C 549 342.20914 547.20914 344 545 344 L 394 344 C 391.79086 344 390 342.20914 390 340 L 390 297 C 390 294.79086 391.79086 293 394 293 Z" fill="#a1b0b1"/>
+        <path d="M 394 293 L 545 293 C 547.20914 293 549 294.79086 549 297 L 549 340 C 549 342.20914 547.20914 344 545 344 L 394 344 C 391.79086 344 390 342.20914 390 340 L 390 297 C 390 294.79086 391.79086 293 394 293 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_45">
+        <path d="M 924 351 L 1075 351 C 1077.2091 351 1079 352.79086 1079 355 L 1079 398 C 1079 400.20914 1077.2091 402 1075 402 L 924 402 C 921.7909 402 920 400.20914 920 398 L 920 355 C 920 352.79086 921.7909 351 924 351 Z" fill="#b87dd0"/>
+        <path d="M 924 351 L 1075 351 C 1077.2091 351 1079 352.79086 1079 355 L 1079 398 C 1079 400.20914 1077.2091 402 1075 402 L 924 402 C 921.7909 402 920 400.20914 920 398 L 920 355 C 920 352.79086 921.7909 351 924 351 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+      </g>
+      <g id="Graphic_44">
+        <path d="M 934 361 L 1085 361 C 1087.2091 361 1089 362.79086 1089 365 L 1089 408 C 1089 410.20914 1087.2091 412 1085 412 L 934 412 C 931.7909 412 930 410.20914 930 408 L 930 365 C 930 362.79086 931.7909 361 934 361 Z" fill="#b87dd0"/>
+        <path d="M 934 361 L 1085 361 C 1087.2091 361 1089 362.79086 1089 365 L 1089 408 C 1089 410.20914 1087.2091 412 1085 412 L 934 412 C 931.7909 412 930 410.20914 930 408 L 930 365 C 930 362.79086 931.7909 361 934 361 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(935 377)" fill="#333">
+          <tspan font-family="Roboto" font-size="16" fill="#333" x="15.058594" y="15">Inference Worker</tspan>
+        </text>
+      </g>
+      <g id="Graphic_8">
+        <path d="M 666.0781 302.68622 L 817.0781 302.68622 C 819.2873 302.68622 821.0781 304.47708 821.0781 306.6862 L 821.0781 349.6862 C 821.0781 351.89536 819.2873 353.6862 817.0781 353.6862 L 666.0781 353.6862 C 663.869 353.6862 662.0781 351.89536 662.0781 349.6862 L 662.0781 306.6862 C 662.0781 304.47708 663.869 302.68622 666.0781 302.68622 Z" fill="#79b1d4"/>
+        <path d="M 666.0781 302.68622 L 817.0781 302.68622 C 819.2873 302.68622 821.0781 304.47708 821.0781 306.6862 L 821.0781 349.6862 C 821.0781 351.89536 819.2873 353.6862 817.0781 353.6862 L 666.0781 353.6862 C 663.869 353.6862 662.0781 351.89536 662.0781 349.6862 L 662.0781 306.6862 C 662.0781 304.47708 663.869 302.68622 666.0781 302.68622 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(667.0781 318.6862)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="1.4335938" y="15">Shared CPU Memory</tspan>
+        </text>
+      </g>
+      <g id="Graphic_9">
+        <path d="M 666.0781 418.5 L 817.0781 418.5 C 819.2873 418.5 821.0781 420.29086 821.0781 422.5 L 821.0781 465.5 C 821.0781 467.70914 819.2873 469.5 817.0781 469.5 L 666.0781 469.5 C 663.869 469.5 662.0781 467.70914 662.0781 465.5 L 662.0781 422.5 C 662.0781 420.29086 663.869 418.5 666.0781 418.5 Z" fill="#71c996"/>
+        <path d="M 666.0781 418.5 L 817.0781 418.5 C 819.2873 418.5 821.0781 420.29086 821.0781 422.5 L 821.0781 465.5 C 821.0781 467.70914 819.2873 469.5 817.0781 469.5 L 666.0781 469.5 C 663.869 469.5 662.0781 467.70914 662.0781 465.5 L 662.0781 422.5 C 662.0781 420.29086 663.869 418.5 666.0781 418.5 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(667.0781 434.5)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="1.1601562" y="15">Shared GPU Memory</tspan>
+        </text>
+      </g>
+      <g id="Graphic_13">
+        <text transform="translate(581.8711 291.448)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">EnvStep</tspan>
+        </text>
+      </g>
+      <g id="Graphic_17">
+        <text transform="translate(592.8789 345.3138)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Action</tspan>
+        </text>
+      </g>
+      <g id="Graphic_24">
+        <text transform="translate(879 314.4102)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Batch(EnvStep)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_25">
+        <text transform="translate(743.3047 361.8431)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Batch(Actions)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <text transform="translate(884 434.5)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Batch(EnvStep)</tspan>
+        </text>
+      </g>
+      <g id="Graphic_30">
+        <text transform="translate(743.9023 394.5)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Policy Weights</tspan>
+        </text>
+      </g>
+      <g id="Line_31">
+        <line x1="568.4392" y1="434.5162" x2="637.0392" y2="434.5162" marker-end="url(#FilledArrow_Marker)" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_32">
+        <line x1="647.9392" y1="452.96417" x2="579.3392" y2="452.96417" marker-end="url(#FilledArrow_Marker)" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_33">
+        <text transform="translate(360.5963 344.8658)" fill="#333">
+          <tspan font-family="Roboto" font-size="16" fill="#333" x="0" y="15">N</tspan>
+        </text>
+      </g>
+      <g id="Line_35">
+        <line x1="360" y1="325" x2="400" y2="359.6289" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_36">
+        <text transform="translate(564 399.3138)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Policy Weights</tspan>
+        </text>
+      </g>
+      <g id="Graphic_37">
+        <text transform="translate(572.197 471.65356)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="0" y="15">Mini-batch</tspan>
+        </text>
+      </g>
+      <g id="Line_42">
+        <line x1="570.78906" y1="318.96222" x2="639.3891" y2="318.96222" marker-end="url(#FilledArrow_Marker)" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_41">
+        <line x1="650.2891" y1="337.4102" x2="581.68906" y2="337.4102" marker-end="url(#FilledArrow_Marker)" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+    </g>
+    <g id="Canvas_1_Layer_2">
+      <title>Layer 2</title>
+      <g id="Graphic_3">
+        <path d="M 404 303 L 555 303 C 557.20914 303 559 304.79086 559 307 L 559 350 C 559 352.20914 557.20914 354 555 354 L 404 354 C 401.79086 354 400 352.20914 400 350 L 400 307 C 400 304.79086 401.79086 303 404 303 Z" fill="#a1b0b1"/>
+        <path d="M 404 303 L 555 303 C 557.20914 303 559 304.79086 559 307 L 559 350 C 559 352.20914 557.20914 354 555 354 L 404 354 C 401.79086 354 400 352.20914 400 350 L 400 307 C 400 304.79086 401.79086 303 404 303 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(405 319)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="3.40625" y="15">Environment Worker</tspan>
+        </text>
+      </g>
+      <g id="Graphic_10">
+        <path d="M 404 418.5 L 555 418.5 C 557.20914 418.5 559 420.29086 559 422.5 L 559 465.5 C 559 467.70914 557.20914 469.5 555 469.5 L 404 469.5 C 401.79086 469.5 400 467.70914 400 465.5 L 400 422.5 C 400 420.29086 401.79086 418.5 404 418.5 Z" fill="#de7265"/>
+        <path d="M 404 418.5 L 555 418.5 C 557.20914 418.5 559 420.29086 559 422.5 L 559 465.5 C 559 467.70914 557.20914 469.5 555 469.5 L 404 469.5 C 401.79086 469.5 400 467.70914 400 465.5 L 400 422.5 C 400 420.29086 401.79086 418.5 404 418.5 Z" stroke="#323232" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(405 434.5)" fill="#323232">
+          <tspan font-family="Roboto" font-size="16" fill="#323232" x="17.324219" y="15">Learning Worker</tspan>
+        </text>
+      </g>
+    </g>
+    <g id="Canvas_1_Layer_3">
+      <title>Layer 3</title>
+      <g id="Line_51">
+        <path d="M 828.5469 321.5 L 868.5469 321.5 L 868.5469 360.6289 L 899.6312 360.6289" marker-end="url(#FilledArrow_Marker_2)" stroke="#333" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_52">
+        <path d="M 910.0469 374.3138 L 858.125 374.3138 L 858.125 335.18488 L 838.4469 335.18488" marker-end="url(#FilledArrow_Marker_2)" stroke="#333" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_54">
+        <path d="M 828.5469 436.5162 L 861.0781 436.5162 L 861.0781 397.38727 L 899.6312 397.38727" marker-end="url(#FilledArrow_Marker_2)" stroke="#333" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_53">
+        <path d="M 910.0469 411.3138 L 871.7952 411.3138 L 871.7952 450.4427 L 841.4469 450.4427" marker-end="url(#FilledArrow_Marker_3)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

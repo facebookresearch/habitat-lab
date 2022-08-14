@@ -8,7 +8,16 @@ import socket
 import subprocess
 import threading
 from os import path as osp
-from typing import Any, Callable, List, Optional, Tuple, Union, overload
+from typing import (
+    Any,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import ifcfg
 import numpy as np
@@ -16,6 +25,8 @@ import torch
 from torch import distributed as distrib
 
 from habitat import Config, logger
+
+T = TypeVar("T")
 
 EXIT = threading.Event()
 EXIT.clear()
@@ -410,11 +421,10 @@ def gatherv(
                     assert v.numel() == sizes[(rank + i) % world_size]
                     handles.append(torch.distributed.isend(v, dst_real, tag=i))
 
-                output = None
-
             [h.wait() for h in handles]
 
-            if output is None:
+            if (relative_rank & mask) != 0:
+                output = None
                 break
 
             mask = mask << 1
@@ -436,8 +446,8 @@ def gatherv(
 
 
 def gather_objects(
-    obj: Any, device: Optional[torch.device] = None, output_rank: int = 0
-) -> Optional[List[Any]]:
+    obj: T, device: Optional[torch.device] = None, output_rank: int = 0
+) -> Optional[List[T]]:
     r"""Distributed gather on arbitrary python objects. Uses torch.distributed
     under the hood.
 

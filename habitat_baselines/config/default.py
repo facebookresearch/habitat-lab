@@ -121,6 +121,7 @@ _C.RL.POLICY.ACTION_DIST.min_log_std = -5
 _C.RL.POLICY.ACTION_DIST.max_log_std = 2
 # For continuous action distributions (including gaussian):
 _C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
+_C.RL.POLICY.ACTION_DIST.scheduled_std = False
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------
@@ -195,6 +196,18 @@ _C.RL.PPO.use_clipped_value_loss = True
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
+# VER
+_C.RL.VER = CN()
+_C.RL.VER.variable_experience = True
+_C.RL.VER.num_inference_workers = 2
+_C.RL.VER.overlap_rollouts_and_learn = False
+## AUX
+# _C.RL.auxiliary_losses = CN()
+# _C.RL.auxiliary_losses.enabled = []
+# _C.RL.auxiliary_losses.cpca = CN()
+# _C.RL.auxiliary_losses.cpca.k = 20
+# _C.RL.auxiliary_losses.cpca.time_subsample = 6
+# _C.RL.auxiliary_losses.cpca.future_subsample = 2
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
