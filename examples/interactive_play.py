@@ -54,7 +54,7 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
-from habitat.tasks.rearrange.actions import ArmEEAction
+from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame

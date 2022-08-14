@@ -49,7 +49,8 @@ def setup_function(test_trainers):
         ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
     ],
 )
-def test_trainers(config_path, num_updates):
+@pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
+def test_trainers(config_path, num_updates, trainer_name):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
@@ -63,6 +64,8 @@ def test_trainers(config_path, num_updates):
             -1.0,
             "CHECKPOINT_FOLDER",
             "data/test_checkpoints/test_training",
+            "TRAINER_NAME",
+            trainer_name,
         ],
     )
     random.seed(config.TASK_CONFIG.SEED)
@@ -73,9 +76,10 @@ def test_trainers(config_path, num_updates):
     if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    assert (
-        config.TRAINER_NAME == "ddppo"
-    ), "This test can only be used with ddppo trainer"
+    assert config.TRAINER_NAME in (
+        "ddppo",
+        "ver",
+    ), "This test can only be used with ddppo/ver trainer"
 
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
@@ -100,7 +104,8 @@ def test_trainers(config_path, num_updates):
         ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 1000, 2.0),
     ],
 )
-def test_trainers_large(config_path, num_updates, target_reward):
+@pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
+def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
@@ -114,6 +119,8 @@ def test_trainers_large(config_path, num_updates, target_reward):
             -1.0,
             "CHECKPOINT_FOLDER",
             "data/test_checkpoints/test_training",
+            "TRAINER_NAME",
+            trainer_name,
         ],
     )
     random.seed(config.TASK_CONFIG.SEED)
@@ -124,9 +131,10 @@ def test_trainers_large(config_path, num_updates, target_reward):
     if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    assert (
-        config.TRAINER_NAME == "ddppo"
-    ), "This test can only be used with ddppo trainer"
+    assert config.TRAINER_NAME in (
+        "ddppo",
+        "ver",
+    ), "This test can only be used with ddppo/ver trainer"
 
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
@@ -136,12 +144,19 @@ def test_trainers_large(config_path, num_updates, target_reward):
     trainer.train()
 
     # Gather the data
-    deltas = {
-        k: ((v[-1] - v[0]).sum().item() if len(v) > 1 else v[0].sum().item())
-        for k, v in trainer.window_episode_stats.items()
-    }
-    deltas["count"] = max(deltas["count"], 1.0)
-    reward = deltas["reward"] / deltas["count"]
+    if config.TRAINER_NAME == "ddppo":
+        deltas = {
+            k: (
+                (v[-1] - v[0]).sum().item()
+                if len(v) > 1
+                else v[0].sum().item()
+            )
+            for k, v in trainer.window_episode_stats.items()
+        }
+        deltas["count"] = max(deltas["count"], 1.0)
+        reward = deltas["reward"] / deltas["count"]
+    else:
+        reward = trainer.window_episode_stats["reward"].mean
 
     # Make sure the final reward is greater than the target
     assert (

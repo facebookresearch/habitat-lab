@@ -29,7 +29,13 @@ from typing_extensions import Protocol
 
 TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
-TensorIndexType = Union[int, slice, Tuple[Union[int, slice], ...]]
+TensorIndexType = Union[
+    int,
+    slice,
+    torch.Tensor,
+    np.ndarray,
+    Tuple[Union[int, slice, torch.Tensor, np.ndarray], ...],
+]
 
 
 class SupportsIndexing(Protocol):
@@ -42,7 +48,6 @@ class SupportsIndexing(Protocol):
 
 T = TypeVar("T", bound=SupportsIndexing)
 _DictTreeInst = TypeVar("_DictTreeInst", bound="_DictTreeBase")
-
 
 _MapFuncType = Callable[[T], T]
 
@@ -62,7 +67,9 @@ class _DictTreeBase(Dict[str, Union["_DictTreeBase[T]", T]]):
         raise NotImplementedError()
 
     @classmethod
-    def from_tree(cls: Type[_DictTreeInst], tree: DictTree) -> _DictTreeInst:
+    def from_tree(
+        cls: Type[_DictTreeInst], tree: Dict[str, Any]
+    ) -> _DictTreeInst:
         res = cls()
         for k, v in tree.items():
             if isinstance(v, dict):
@@ -382,3 +389,17 @@ def iterate_dicts_recursively(
             yield from iterate_dicts_recursively(*tuple(d[k] for d in dicts))  # type: ignore
         else:
             yield tuple(cast(T, d[k]) for d in dicts)
+
+
+def transpose_list_of_dicts(*dicts_i: Dict[Any, Any]) -> Dict[Any, List[Any]]:
+    r"""Transposes a list of dicts into a dict of lists."""
+    res: Dict[Any, List[Any]] = {}
+    dicts = tuple(dicts_i)
+    for k in dicts[0].keys():
+        assert all(k in d for d in dicts)
+        if isinstance(dicts[0][k], dict):
+            res[k] = transpose_list_of_dicts(*tuple(d[k] for d in dicts))  # type: ignore
+        else:
+            res[k] = [d[k] for d in dicts]
+
+    return res
