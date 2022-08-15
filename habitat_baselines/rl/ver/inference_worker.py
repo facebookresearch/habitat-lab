@@ -81,7 +81,7 @@ class InferenceWorkerProcess(ProcessBase):
                 self.policy_name
             ).from_config(*self.policy_args)
             self.actor_critic.eval()
-            # self.actor_critic.aux_losses.clear()
+            self.actor_critic.aux_loss_modules.clear()
             self.actor_critic.to(device=self.device)
 
         self.transfer_buffers = self._torch_transfer_buffers.numpy()

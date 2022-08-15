@@ -186,6 +186,7 @@ class PPO(nn.Module):
                     action_log_probs,
                     dist_entropy,
                     _,
+                    aux_loss_res,
                 ) = self._evaluate_actions(
                     batch["observations"],
                     batch["recurrent_hidden_states"],
@@ -250,6 +251,8 @@ class PPO(nn.Module):
                         self.entropy_coef.lagrangian_loss(dist_entropy)
                     )
 
+                all_losses.extend(v["loss"] for v in aux_loss_res.values())
+
                 total_loss = torch.stack(all_losses).sum()
 
                 total_loss = self.before_backward(total_loss)
@@ -284,6 +287,12 @@ class PPO(nn.Module):
                         learner_metrics["entropy_coef"].append(
                             self.entropy_coef().detach()
                         )
+
+                    for name, res in aux_loss_res.items():
+                        for k, v in res.items():
+                            learner_metrics[f"aux_{name}_{k}"].append(
+                                v.detach()
+                            )
 
                     if "is_stale" in batch:
                         assert isinstance(batch["is_stale"], torch.Tensor)
@@ -347,6 +356,9 @@ class PPO(nn.Module):
             self.actor_critic.policy_parameters(),
             self.max_grad_norm,
         )
+
+        for v in self.actor_critic.aux_loss_parameters().values():
+            nn.utils.clip_grad_norm_(v, self.max_grad_norm)
 
         [h.wait() for h in handles]
 

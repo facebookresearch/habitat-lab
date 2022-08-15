@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Dict, Optional, Union
+from typing import Dict, Iterable, Optional, Union
 
 import torch
 from gym import spaces
@@ -21,7 +21,11 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
 from habitat_baselines.rl.models.simple_cnn import SimpleCNN
-from habitat_baselines.utils.common import CategoricalNet, GaussianNet
+from habitat_baselines.utils.common import (
+    CategoricalNet,
+    GaussianNet,
+    get_num_actions,
+)
 
 
 class Policy(abc.ABC):
@@ -58,12 +62,14 @@ class Policy(abc.ABC):
 
 
 class NetPolicy(nn.Module, Policy):
-    action_distribution: nn.Module
+    aux_loss_modules: nn.ModuleDict
 
-    def __init__(self, net, dim_actions, policy_config=None):
+    def __init__(
+        self, net, action_space, policy_config=None, aux_loss_config=None
+    ):
         super().__init__()
         self.net = net
-        self.dim_actions = dim_actions
+        self.dim_actions = get_num_actions(action_space)
         self.action_distribution: Union[CategoricalNet, GaussianNet]
 
         if policy_config is None:
@@ -91,6 +97,18 @@ class NetPolicy(nn.Module, Policy):
 
         self.critic = CriticHead(self.net.output_size)
 
+        self.aux_loss_modules = nn.ModuleDict()
+        for aux_loss_name in (
+            () if aux_loss_config is None else aux_loss_config.enabled
+        ):
+            aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
+
+            self.aux_loss_modules[aux_loss_name] = aux_loss(
+                action_space,
+                self.net,
+                **getattr(aux_loss_config, aux_loss_name),
+            )
+
     @property
     def should_load_agent_state(self):
         return True
@@ -110,7 +128,7 @@ class NetPolicy(nn.Module, Policy):
         masks,
         deterministic=False,
     ):
-        features, rnn_hidden_states = self.net(
+        features, rnn_hidden_states, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
         distribution = self.action_distribution(features)
@@ -129,7 +147,7 @@ class NetPolicy(nn.Module, Policy):
         return value, action, action_log_probs, rnn_hidden_states
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _ = self.net(
+        features, _, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
         return self.critic(features)
@@ -143,7 +161,7 @@ class NetPolicy(nn.Module, Policy):
         action,
         rnn_build_seq_info: Dict[str, torch.Tensor],
     ):
-        features, rnn_hidden_states = self.net(
+        features, rnn_hidden_states, aux_loss_state = self.net(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -156,20 +174,42 @@ class NetPolicy(nn.Module, Policy):
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
 
-        return value, action_log_probs, distribution_entropy, rnn_hidden_states
+        batch = dict(
+            observations=observations,
+            rnn_hidden_states=rnn_hidden_states,
+            prev_actions=prev_actions,
+            masks=masks,
+            action=action,
+            rnn_build_seq_info=rnn_build_seq_info,
+        )
+        aux_loss_res = {
+            k: v(aux_loss_state, batch)
+            for k, v in self.aux_loss_modules.items()
+        }
+
+        return (
+            value,
+            action_log_probs,
+            distribution_entropy,
+            rnn_hidden_states,
+            aux_loss_res,
+        )
 
     @property
     def policy_components(self):
         return (self.net, self.critic, self.action_distribution)
 
-    def policy_parameters(self):
+    def policy_parameters(self) -> Iterable[torch.Tensor]:
         for c in self.policy_components:
             yield from c.parameters()
 
-    def all_policy_tensors(self):
+    def all_policy_tensors(self) -> Iterable[torch.Tensor]:
         yield from self.policy_parameters()
         for c in self.policy_components:
             yield from c.buffers()
+
+    def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
+        return {k: v.parameters() for k, v in self.aux_loss_modules.items()}
 
     @classmethod
     @abc.abstractmethod
@@ -195,6 +235,7 @@ class PointNavBaselinePolicy(NetPolicy):
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
+        aux_loss_config=None,
         **kwargs,
     ):
         super().__init__(
@@ -203,7 +244,8 @@ class PointNavBaselinePolicy(NetPolicy):
                 hidden_size=hidden_size,
                 **kwargs,
             ),
-            action_space.n,
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
         )
 
     @classmethod
@@ -214,6 +256,7 @@ class PointNavBaselinePolicy(NetPolicy):
             observation_space=observation_space,
             action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
+            aux_loss_config=config.RL.auxiliary_losses,
         )
 
 
@@ -235,6 +278,11 @@ class Net(nn.Module, metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def is_blind(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def perception_embedding_size(self) -> int:
         pass
 
 
@@ -293,6 +341,10 @@ class PointNavBaselineNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
+    @property
+    def perception_embedding_size(self):
+        return self._hidden_size
+
     def forward(
         self,
         observations,
@@ -301,6 +353,7 @@ class PointNavBaselineNet(Net):
         masks,
         rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ):
+        aux_loss_state = {}
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             target_encoding = observations[
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid
@@ -316,10 +369,12 @@ class PointNavBaselineNet(Net):
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed] + x
+            aux_loss_state["perception_embed"] = perception_embed
 
         x_out = torch.cat(x, dim=1)
         x_out, rnn_hidden_states = self.state_encoder(
             x_out, rnn_hidden_states, masks, rnn_build_seq_info
         )
+        aux_loss_state["rnn_output"] = x_out
 
-        return x_out, rnn_hidden_states
+        return x_out, rnn_hidden_states, aux_loss_state

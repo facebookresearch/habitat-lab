@@ -196,18 +196,24 @@ _C.RL.PPO.use_clipped_value_loss = True
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
-# VER
+# -----------------------------------------------------------------------------
+# Variable Experience Rollout (VER)
+# -----------------------------------------------------------------------------
 _C.RL.VER = CN()
 _C.RL.VER.variable_experience = True
 _C.RL.VER.num_inference_workers = 2
 _C.RL.VER.overlap_rollouts_and_learn = False
-## AUX
-# _C.RL.auxiliary_losses = CN()
-# _C.RL.auxiliary_losses.enabled = []
-# _C.RL.auxiliary_losses.cpca = CN()
-# _C.RL.auxiliary_losses.cpca.k = 20
-# _C.RL.auxiliary_losses.cpca.time_subsample = 6
-# _C.RL.auxiliary_losses.cpca.future_subsample = 2
+# -----------------------------------------------------------------------------
+# Auxiliary Losses
+# -----------------------------------------------------------------------------
+_C.RL.auxiliary_losses = CN()
+_C.RL.auxiliary_losses.enabled = []
+# Action-Conditional Contrastive Predictive Coding Loss
+_C.RL.auxiliary_losses.cpca = CN()
+_C.RL.auxiliary_losses.cpca.k = 20
+_C.RL.auxiliary_losses.cpca.time_subsample = 6
+_C.RL.auxiliary_losses.cpca.future_subsample = 2
+_C.RL.auxiliary_losses.cpca.loss_scale = 0.1
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
