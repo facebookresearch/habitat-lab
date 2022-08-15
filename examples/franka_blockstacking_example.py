@@ -14,8 +14,9 @@ from habitat.core.logging import logger
 
 SENSOR_KEY = "rgb"
 CONFIG_FILE = "configs/tasks/franka_point.yaml"
-BLOCK_CONFIGS_PATH = "data/objects/5boxes"
-ROOM_SIZE = 5
+BLOCK_CONFIGS_PATH = "data/objects/nested_box"
+BLOCK_LOC_RANGE = 2.0
+BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
 
 
 def example(render):
@@ -26,15 +27,14 @@ def example(render):
         obj_templates_mgr = env.sim.get_object_template_manager()
         rigid_obj_mgr = env.sim.get_rigid_object_manager()
 
-        block_template_ids = obj_templates_mgr.load_configs(BLOCK_CONFIGS_PATH)
-        for tid in block_template_ids:
-            obj = rigid_obj_mgr.add_object_by_template_id(tid)
-            obj.translation = list(
-                np.random.random(
-                    3,
-                )
-                * ROOM_SIZE
-            )
+        for _ in range(6):
+            block_template_id = obj_templates_mgr.load_configs(
+                BLOCK_CONFIGS_PATH
+            )[0]
+            obj = rigid_obj_mgr.add_object_by_template_id(block_template_id)
+            offset = (np.random.random(3) * 2 - 1) * BLOCK_LOC_RANGE
+            offset[1] = 0  #  no change in z
+            obj.translation = BLOCK_LOC_CENTER + offset
         logger.info("Blocks added to environment")
 
         observations = env.reset()  # noqa: F841

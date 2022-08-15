@@ -11,10 +11,10 @@ import numpy as np
 def display_grayscale(image):
     img_bgr = np.repeat(image, 3, 2)
     cv2.imshow("Depth Sensor", img_bgr)
-    cv2.waitKey(0)
+    return cv2.waitKey(0)
 
 
 def display_rgb(image):
     img_bgr = image[..., ::-1]
     cv2.imshow("RGB", img_bgr)
-    cv2.waitKey(0)
+    return cv2.waitKey(0)

@@ -1,0 +1,5 @@
+{
+    "render_asset": "nested_box.glb",
+    "join_collision_meshes": true,
+    "scale":[0.25,0.25,0.25]
+}
