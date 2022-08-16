@@ -45,6 +45,12 @@ else:
     inference_mode = torch.no_grad
 
 
+def cosine_decay(progress: float) -> float:
+    progress = min(max(progress, 0.0), 1.0)
+
+    return (1.0 + math.cos(progress * math.pi)) / 2.0
+
+
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008
@@ -105,48 +111,58 @@ class GaussianNet(nn.Module):
         self.action_activation = config.action_activation
         self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
-        self.use_std_param = config.use_std_param
+        use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
-        if config.use_log_std:
+
+        if self.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
             std_init = 0.0  # initialize std value so that exp(std) ~ 1
+        elif self.use_softplus:
+            inv_softplus = lambda x: math.log(math.exp(x) - 1)
+            self.min_std = inv_softplus(config.min_std)
+            self.max_std = inv_softplus(config.max_std)
+            std_init = inv_softplus(1.0)
         else:
             self.min_std = config.min_std
             self.max_std = config.max_std
             std_init = 1.0  # initialize std value so that std ~ 1
 
-        self.mu = nn.Linear(num_inputs, num_outputs)
-        nn.init.orthogonal_(self.mu.weight, gain=0.01)
-        nn.init.constant_(self.mu.bias, 0)
-
-        if self.use_std_param:
+        if use_std_param:
             self.std = torch.nn.parameter.Parameter(
                 torch.randn(num_outputs) * 0.01 + std_init
             )
+            num_linear_outputs = num_outputs
         else:
-            self.std = nn.Linear(num_inputs, num_outputs)
-            nn.init.orthogonal_(self.std.weight, gain=0.01)
-            nn.init.constant_(self.std.bias, std_init)
+            self.std = None
+            num_linear_outputs = 2 * num_outputs
+
+        self.mu_maybe_std = nn.Linear(num_inputs, num_linear_outputs)
+        nn.init.orthogonal_(self.mu_maybe_std.weight, gain=0.01)
+        nn.init.constant_(self.mu_maybe_std.bias, 0)
+
+        if not use_std_param:
+            nn.init.constant_(self.mu_maybe_std.bias[num_outputs:], std_init)
 
     def forward(self, x: Tensor) -> CustomNormal:
-        mu = self.mu(x)
+        mu_maybe_std = self.mu_maybe_std(x).float()
+        if self.std is not None:
+            mu = mu_maybe_std
+            std = self.std
+        else:
+            mu, std = torch.chunk(mu_maybe_std, 2, -1)
+
         if self.action_activation == "tanh":
             mu = torch.tanh(mu)
 
-        if self.use_std_param:
-            std = self.std
-        else:
-            std = self.std(x)
-
         if self.clamp_std:
-            std = torch.clamp(std, min=self.min_std, max=self.max_std)
+            std = torch.clamp(std, self.min_std, self.max_std)
         if self.use_log_std:
             std = torch.exp(std)
         if self.use_softplus:
             std = torch.nn.functional.softplus(std)
 
-        return CustomNormal(mu, std)
+        return CustomNormal(mu, std, validate_args=False)
 
 
 def linear_decay(epoch: int, total_num_updates: int) -> float:
@@ -167,7 +183,7 @@ class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
-    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = attr.Factory(dict)
+    _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = {}
 
     def get(
         self,

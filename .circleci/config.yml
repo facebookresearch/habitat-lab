@@ -139,8 +139,10 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.7
                 . activate habitat
+                pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
                 pip install pytest-sugar mock
+                pip install pytest-sugar cython
               fi
       - run:
           name: Install pytorch

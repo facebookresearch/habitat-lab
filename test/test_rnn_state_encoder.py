@@ -17,6 +17,12 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 
 
 def test_rnn_state_encoder():
+    try:
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
+    except AttributeError:
+        pass
+
     device = (
         torch.device("cuda")
         if torch.cuda.is_available()

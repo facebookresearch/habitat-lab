@@ -114,24 +114,25 @@ def build_pack_info_from_episode_ids(
     select_inds = episode_id_sorting[select_inds]
     sequence_starts = select_inds[0 : num_seqs_at_step[0]]
 
-    unique_environment_ids = np.unique(environment_ids)
-
     episode_environment_ids = environment_ids[sequence_starts]
+    unique_environment_ids, rnn_state_batch_inds = np.unique(
+        episode_environment_ids, return_inverse=True
+    )
     episode_ids_for_starts = unsorted_episode_ids[sequence_starts]
     last_sequence_in_batch_mask = np.zeros_like(episode_environment_ids == 0)
     first_sequence_in_batch_mask = np.zeros_like(last_sequence_in_batch_mask)
+    first_step_for_env = []
     for env_id in unique_environment_ids:
         env_eps = episode_environment_ids == env_id
         env_eps_ids = episode_ids_for_starts[env_eps]
 
         last_sequence_in_batch_mask[env_eps] = env_eps_ids == env_eps_ids.max()
-        first_sequence_in_batch_mask[env_eps] = (
-            env_eps_ids == env_eps_ids.min()
-        )
+        first_ep_mask = env_eps_ids == env_eps_ids.min()
+        first_sequence_in_batch_mask[env_eps] = first_ep_mask
 
-    _, rnn_state_batch_inds = np.unique(
-        episode_environment_ids, return_inverse=True
-    )
+        first_step_for_env.append(
+            sequence_starts[env_eps][first_ep_mask].item()
+        )
 
     return {
         "select_inds": select_inds,
@@ -147,6 +148,7 @@ def build_pack_info_from_episode_ids(
         "first_episode_in_batch_inds": np.nonzero(
             first_sequence_in_batch_mask
         )[0],
+        "first_step_for_env": np.asarray(first_step_for_env),
     }
 
 

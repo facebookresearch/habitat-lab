@@ -126,5 +126,15 @@ class BaselineRegistry(Registry):
         r"""Get the Observation Transformer with :p:`name`."""
         return cls._get_impl("obs_transformer", name)
 
+    @classmethod
+    def register_auxiliary_loss(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        return cls._register_impl("aux_loss", to_register, name)
+
+    @classmethod
+    def get_auxiliary_loss(cls, name: str):
+        return cls._get_impl("aux_loss", name)
+
 
 baseline_registry = BaselineRegistry()

@@ -50,6 +50,7 @@ class PointNavResNetPolicy(NetPolicy):
         normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
+        aux_loss_config: Optional[Config] = None,
         fuse_keys: Optional[List[str]] = None,
         **kwargs
     ):
@@ -78,8 +79,9 @@ class PointNavResNetPolicy(NetPolicy):
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
             ),
-            dim_actions=get_num_actions(action_space),
+            action_space=action_space,
             policy_config=policy_config,
+            aux_loss_config=aux_loss_config,
         )
 
     @classmethod
@@ -99,6 +101,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
+            aux_loss_config=config.RL.auxiliary_losses,
             fuse_keys=None,
         )
 
@@ -417,6 +420,10 @@ class PointNavResNetNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
+    @property
+    def perception_embedding_size(self):
+        return self._hidden_size
+
     def forward(
         self,
         observations: Dict[str, torch.Tensor],
@@ -424,13 +431,17 @@ class PointNavResNetNet(Net):
         prev_actions,
         masks,
         rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         x = []
+        aux_loss_state = {}
         if not self.is_blind:
-            visual_feats = observations.get(
-                "visual_features", self.visual_encoder(observations)
-            )
+            if "visual_feats" in observations:  # noqa: SIM401
+                visual_feats = observations["visual_feats"]
+            else:
+                visual_feats = self.visual_encoder(observations)
+
             visual_feats = self.visual_fc(visual_feats)
+            aux_loss_state["perception_embed"] = visual_feats
             x.append(visual_feats)
 
         if len(self._fuse_keys_1d) != 0:
@@ -538,5 +549,6 @@ class PointNavResNetNet(Net):
         out, rnn_hidden_states = self.state_encoder(
             out, rnn_hidden_states, masks, rnn_build_seq_info
         )
+        aux_loss_state["rnn_output"] = out
 
-        return out, rnn_hidden_states
+        return out, rnn_hidden_states, aux_loss_state
