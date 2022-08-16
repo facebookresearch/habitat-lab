@@ -202,14 +202,6 @@ jobs:
                 rm habitat-test-scenes.zip
               fi
       - run:
-          name: Download pointnav data
-          command: |
-              if [ ! -d ./habitat-lab/data/datasets/pointnav/ ]
-              then
-                cd habitat-lab
-                python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
-              fi
-      - run:
           name: Download coda scene
           command: |
             if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
@@ -251,6 +243,14 @@ jobs:
           background: true
           paths:
             - ~/miniconda
+      - run:
+          name: Download pointnav data
+          command: |
+              if [ ! -d ./habitat-lab/data/datasets/pointnav/ ]
+              then
+                cd habitat-lab
+                python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+              fi
       - run:
           name: Run api tests
           no_output_timeout: 120m
