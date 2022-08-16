@@ -110,6 +110,7 @@ _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
 # If the list is empty, all keys will be included.
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()
+_C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
 _C.RL.POLICY.ACTION_DIST.log_std_init = 0.0
 # If True, the std will be a parameter not conditioned on state
