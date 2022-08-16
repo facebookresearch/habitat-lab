@@ -110,6 +110,7 @@ class GaussianNet(nn.Module):
 
         self.action_activation = config.action_activation
         self.use_softplus = config.use_softplus
+        self.use_log_std = config.use_log_std
         use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
 
