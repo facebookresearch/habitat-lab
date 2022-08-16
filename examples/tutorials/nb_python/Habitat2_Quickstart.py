@@ -104,12 +104,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 
 # %% [markdown]
 # # Local installation
-#
-# For Habitat 2.0 functionality, install the `main` branch of Habitat Lab. Complete installation steps:
-#
-# 1. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages) **using the `withbullet` option**. Linux example: `conda install habitat-sim withbullet headless -c conda-forge -c aihabitat-nightly`. MacOS example (does not include headless): `conda install habitat-sim withbullet -c conda-forge -c aihabitat-nightly`. Habitat Sim is not supported by Windows.
-# 2. Download the `main` branch of Habitat Lab: `git clone https://github.com/facebookresearch/habitat-lab.git`
-# 3. Install Habitat Lab: `cd habitat-lab && pip install -r requirements.txt && python setup.py develop --all`
+# Follow the steps on the [Habitat Lab README](https://github.com/facebookresearch/habitat-lab/tree/challenge_tasks#installation).
 
 # %% [markdown]
 # # Quickstart
