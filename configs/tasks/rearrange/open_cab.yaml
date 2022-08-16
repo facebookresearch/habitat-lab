@@ -102,7 +102,7 @@ TASK:
         ARM_ACTION:
             TYPE: ArmAction
             ARM_CONTROLLER: ArmRelPosAction
-            GRIP_CONTROLLER: MagicGraspAction
+            GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
