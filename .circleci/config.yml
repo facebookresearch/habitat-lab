@@ -248,7 +248,8 @@ jobs:
           command: |
               if [ ! -d ./habitat-lab/data/datasets/pointnav/ ]
               then
-                cd habitat-lab
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+                . activate habitat; cd habitat-lab
                 python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
               fi
       - run:
