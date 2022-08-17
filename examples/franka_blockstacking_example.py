@@ -14,7 +14,7 @@ from habitat.core.logging import logger
 
 SENSOR_KEY = "rgb"
 CONFIG_FILE = "configs/tasks/franka_point.yaml"
-BLOCK_CONFIGS_PATH = "data/objects/nested_box"
+BLOCK_CONFIGS_PATH = "data/test_assets/objects/nested_box"
 BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
 
