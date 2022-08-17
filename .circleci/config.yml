@@ -266,7 +266,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python setup.py test --addopts "test/test_baseline_training.py"
+              python setup.py test --addopts -v -s "test/test_baseline_training.py"
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
