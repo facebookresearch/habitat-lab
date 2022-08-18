@@ -6,6 +6,7 @@
 
 import copy
 from collections import OrderedDict
+from statistics import median
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -545,6 +546,9 @@ class BatchedEnv:
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
         self._previous_action: List[Optional[Any]] = [None] * self._num_envs
+        self._past_pick_success: List[Optional[bool]] = [
+            False
+        ] * self._num_envs
         self._object_dropped_properly = [False] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
@@ -670,6 +674,9 @@ class BatchedEnv:
                 was_holding_correct = (
                     prev_state.target_obj_idx == prev_state.held_obj_idx
                 )
+            self._past_pick_success[b] = (
+                self._past_pick_success[b] or is_holding_correct
+            )
 
             obj_pos = state.obj_positions[state.target_obj_idx]
             obj_to_goal = (state.goal_pos - obj_pos).length()
@@ -735,6 +742,16 @@ class BatchedEnv:
             else:
                 failure = end_episode_action and not success
 
+            continuous_action_norm = actions[
+                b * self.action_dim + 1 : b * self.action_dim + 10
+            ]
+            continuous_action_norm_mean = sum(
+                abs(c) for c in continuous_action_norm
+            ) / len(continuous_action_norm)
+            continuous_action_norm_median = median(
+                abs(c) for c in continuous_action_norm
+            )
+
             if self._config.get(
                 "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
             ):
@@ -758,6 +775,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": float(success),
                     "failure": float(failure),
+                    "pick_success": float(self._past_pick_success[b]),
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
@@ -765,9 +783,12 @@ class BatchedEnv:
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
+                    "continuous_action_norm_mean": continuous_action_norm_mean,
+                    "continuous_action_norm_median": continuous_action_norm_median,
                 }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
+                self._past_pick_success[b] = False
                 self._object_dropped_properly[b] = False
 
                 next_episode = self.get_next_episode()
@@ -789,6 +810,7 @@ class BatchedEnv:
                 self.infos[b] = {
                     "success": 0.0,
                     "failure": 0.0,
+                    "pick_success": float(self._past_pick_success[b]),
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
@@ -796,6 +818,8 @@ class BatchedEnv:
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
+                    "continuous_action_norm_mean": continuous_action_norm_mean,
+                    "continuous_action_norm_median": continuous_action_norm_median,
                 }
                 if self._previous_state[b] is not None:
                     prev_obj_pos = prev_state.obj_positions[

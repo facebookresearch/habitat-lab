@@ -656,9 +656,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self.agent.train()
 
-        value_loss, action_loss, dist_entropy, grad_norm = self.agent.update(
-            self.rollouts
-        )
+        (
+            value_loss,
+            action_loss,
+            dist_entropy,
+            grad_norm,
+            unclipped_grad_norm,
+        ) = self.agent.update(self.rollouts)
 
         self.rollouts.after_update()
         self.pth_time += time.time() - t_update_model
@@ -668,6 +672,7 @@ class PPOTrainer(BaseRLTrainer):
             action_loss,
             dist_entropy,
             grad_norm,
+            unclipped_grad_norm,
         )
 
     def _coalesce_post_step(
@@ -935,6 +940,7 @@ class PPOTrainer(BaseRLTrainer):
                     action_loss,
                     dist_entropy,
                     grad_norm,
+                    uncliped_grad_norm,
                 ) = self._update_agent()
 
                 if ppo_cfg.use_linear_lr_decay:
@@ -947,6 +953,7 @@ class PPOTrainer(BaseRLTrainer):
                         action_loss=action_loss,
                         entropy_loss=dist_entropy,
                         grad_norm=grad_norm,
+                        uncliped_grad_norm=uncliped_grad_norm,
                     ),
                     count_steps_delta,
                 )
@@ -1106,7 +1113,7 @@ class PPOTrainer(BaseRLTrainer):
         checkpoint_path: str,
         writer: TensorboardWriter,
         checkpoint_index: int = 0,
-    ) -> None:
+    ) -> Dict[int, int]:
         r"""Evaluates a single checkpoint.
 
         Args:
@@ -1117,6 +1124,7 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
+        episode_success_counter = {}
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
@@ -1334,6 +1342,10 @@ class PPOTrainer(BaseRLTrainer):
                         )
                     ] = episode_stats
 
+                    episode_success_counter[
+                        current_episodes[i].episode_id
+                    ] = int(infos[i]["success"])
+
                     if len(self.config.VIDEO_OPTION) > 0:
                         generate_video(
                             video_option=self.config.VIDEO_OPTION,
@@ -1396,3 +1408,4 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalars("eval_metrics", metrics, step_id)
 
         self.envs.close()
+        return episode_success_counter

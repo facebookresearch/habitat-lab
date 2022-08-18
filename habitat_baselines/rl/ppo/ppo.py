@@ -118,13 +118,14 @@ class PPO(nn.Module):
 
     def update(
         self, rollouts: RolloutStorage
-    ) -> Tuple[float, float, float, float]:
+    ) -> Tuple[float, float, float, float, float]:
         advantages = self.get_advantages(rollouts)
 
         value_loss_epoch = 0.0
         action_loss_epoch = 0.0
         dist_entropy_epoch = 0.0
         grad_norm_epoch = 0.0
+        uncliped_grad_norm_epoch = 0.0
 
         for _e in range(self.ppo_epoch):
             # profiling_wrapper.range_push("PPO.update epoch")
@@ -206,6 +207,10 @@ class PPO(nn.Module):
                 profiling_wrapper.range_pop()
                 self.after_backward(total_loss)
 
+                uncliped_grad_norm_epoch += get_grad_norm(
+                    self.actor_critic.parameters()
+                )
+
                 self.before_step()
 
                 grad_norm_epoch += get_grad_norm(
@@ -234,12 +239,14 @@ class PPO(nn.Module):
         action_loss_epoch /= num_updates
         dist_entropy_epoch /= num_updates
         grad_norm_epoch /= num_updates
+        uncliped_grad_norm_epoch /= num_updates
 
         return (
             value_loss_epoch,
             action_loss_epoch,
             dist_entropy_epoch,
             grad_norm_epoch,
+            uncliped_grad_norm_epoch,
         )
 
     def _evaluate_actions(
@@ -259,7 +266,7 @@ class PPO(nn.Module):
         pass
 
     def before_step(self) -> None:
-        nn.utils.clip_grad_norm_(
+        return nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(), self.max_grad_norm
         )
 
