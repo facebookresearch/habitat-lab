@@ -155,8 +155,8 @@ class NormalAndCategoricalDistribution(torch.distributions.Distribution):
     ) -> Tensor:
         return torch.cat(
             [
-                self._gaussian.rsample(sample_shape),
                 self._categorical_0.sample(sample_shape),
+                self._gaussian.rsample(sample_shape),
                 self._categorical_1.sample(sample_shape),
             ],
             dim=1,
@@ -164,10 +164,8 @@ class NormalAndCategoricalDistribution(torch.distributions.Distribution):
 
     def log_probs(self, actions) -> Tensor:
         ret = (
-            self._gaussian.log_probs(actions[:, : self.NUM_CONTINUOUS])
-            + self._categorical_0.log_probs(
-                actions[:, self.NUM_CONTINUOUS + 0 : self.NUM_CONTINUOUS + 1]
-            )
+            self._gaussian.log_probs(actions[:, 1 : self.NUM_CONTINUOUS + 1])
+            + self._categorical_0.log_probs(actions[:, 0:1])
             + self._categorical_1.log_probs(
                 actions[:, self.NUM_CONTINUOUS + 1 : self.NUM_CONTINUOUS + 2]
             )
@@ -421,7 +419,7 @@ def poll_checkpoint_folder(
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
     models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
+        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*.pth"))
     )
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1

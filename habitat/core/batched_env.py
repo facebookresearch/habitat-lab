@@ -657,9 +657,7 @@ class BatchedEnv:
 
             tried_grasp_last_step = (
                 self._previous_action[b] is not None
-            ) and (
-                self._previous_action[b][(b + 1) * self.action_dim - 2] > 0.0
-            )
+            ) and (self._previous_action[b][(b * self.action_dim)] > 0.0)
 
             prev_state = self._previous_state[b]
             ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
@@ -695,17 +693,17 @@ class BatchedEnv:
                 if (
                     is_holding_correct
                     and not object_is_in_drop_position
-                    and actions[(b + 1)] <= 0.0
+                    and actions[(b * self.action_dim)] <= 0.0
                 ):
                     bad_attempt_penalty = self._config.get(
                         "DROP_WRONG_PENALTY", 0.1
                     )
                     # keep holding
-                    actions[(b + 1)] = 1.0
+                    actions[(b * self.action_dim)] = 1.0
                 elif (
                     is_holding_correct
                     and object_is_in_drop_position
-                    and actions[(b + 1)] <= 0.0
+                    and actions[(b * self.action_dim)] <= 0.0
                 ):
                     self._object_dropped_properly[b] = True
 
@@ -763,7 +761,7 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
-                    "try_grasp": actions[(b + 1) * self.action_dim - 2] > 0.0,
+                    "try_grasp": actions[(b * self.action_dim)] > 0.0,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
@@ -794,7 +792,7 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
-                    "try_grasp": actions[(b + 1) * self.action_dim - 2] > 0.0,
+                    "try_grasp": actions[(b * self.action_dim)] > 0.0,
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
