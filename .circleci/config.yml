@@ -47,9 +47,9 @@ jobs:
           command: |
             cat .pre-commit-config.yaml > pre-commit-deps.txt
             python -VV >> pre-commit-deps.txt
-      # - restore_cache:
-      #     keys:
-      #     - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+      - restore_cache:
+          keys:
+          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
 
       - run:
           name: Install Dependencies
@@ -120,9 +120,9 @@ jobs:
               # touch ./cuda_installed
               nvidia-smi
       # Restore Conda cache
-      # - restore_cache:
-      #     keys:
-      #       - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+      - restore_cache:
+          keys:
+            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -154,14 +154,14 @@ jobs:
               fi
               touch ~/miniconda/pytorch_installed
               python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
-      # - restore_cache:
-      #     keys:
-      #       - habitat-sim-{{ checksum "./hsim_sha" }}
-      # - restore_cache:
-      #     keys:
-      #       - ccache-{{ arch }}-main
-      #     paths:
-      #       - /home/circleci/.ccache
+      - restore_cache:
+          keys:
+            - habitat-sim-{{ checksum "./hsim_sha" }}
+      - restore_cache:
+          keys:
+            - ccache-{{ arch }}-main
+          paths:
+            - /home/circleci/.ccache
       - run:
           name: CCache initialization
           command: |
@@ -258,7 +258,7 @@ jobs:
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
           name: Run baseline training tests
-          no_output_timeout: 130m
+          no_output_timeout: 30m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
@@ -266,7 +266,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python setup.py test --addopts "-s test/test_baseline_training.py"
+              python setup.py test --addopts "test/test_baseline_training.py"
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m

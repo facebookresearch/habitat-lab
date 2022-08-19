@@ -66,6 +66,15 @@ def test_trainers(config_path, num_updates, trainer_name):
             "data/test_checkpoints/test_training",
             "TRAINER_NAME",
             trainer_name,
+            # Changing the visual observation size for speed
+            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.WIDTH",
+            64,
+            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.HEIGHT",
+            64,
+            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.WIDTH",
+            64,
+            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.HEIGHT",
+            64,
         ],
     )
     random.seed(config.TASK_CONFIG.SEED)
