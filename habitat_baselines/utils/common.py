@@ -147,6 +147,111 @@ class GaussianNet(nn.Module):
         return CustomNormal(mu, std)
 
 
+class NormalAndCategoricalDistribution(torch.distributions.Distribution):
+    NUM_CONTINUOUS = 9
+
+    def __init__(
+        self,
+        gaussian_mean,
+        gaussian_std,
+        categorical_logits_0,
+        categorical_logits_1,
+    ):
+        self._gaussian = CustomNormal(gaussian_mean, gaussian_std)
+        self._categorical_0 = CustomFixedCategorical(
+            logits=categorical_logits_0
+        )
+        self._categorical_1 = CustomFixedCategorical(
+            logits=categorical_logits_1
+        )
+
+    def sample(
+        self, sample_shape: Size = torch.Size()  # noqa: B008
+    ) -> Tensor:
+        return torch.cat(
+            [
+                self._categorical_0.sample(sample_shape),
+                self._gaussian.rsample(sample_shape),
+                self._categorical_1.sample(sample_shape),
+            ],
+            dim=1,
+        )
+
+    def log_probs(self, actions) -> Tensor:
+        ret = (
+            self._gaussian.log_probs(actions[:, 1 : self.NUM_CONTINUOUS + 1])
+            + self._categorical_0.log_probs(actions[:, 0:1])
+            + self._categorical_1.log_probs(
+                actions[:, self.NUM_CONTINUOUS + 1 : self.NUM_CONTINUOUS + 2]
+            )
+        )
+
+        return ret
+
+    def entropy(self) -> Tensor:
+        ret = self._gaussian.entropy().sum(-1).unsqueeze(-1)
+        ret += self._categorical_0.entropy().unsqueeze(-1)
+        ret += self._categorical_1.entropy().unsqueeze(-1)
+        return ret
+
+
+class NormalAndCategoricalNet(nn.Module):
+    def __init__(
+        self,
+        num_inputs: int,
+        num_outputs: int,
+        config: Config,
+    ) -> None:
+        super().__init__()
+
+        assert num_outputs == -1
+        self.action_activation = config.action_activation
+        self.use_log_std = config.use_log_std
+        self.use_softplus = config.use_softplus
+        if config.use_log_std:
+            self.min_std = config.min_log_std
+            self.max_std = config.max_log_std
+        else:
+            self.min_std = config.min_std
+            self.max_std = config.max_std
+
+        self.mu = nn.Linear(
+            num_inputs, NormalAndCategoricalDistribution.NUM_CONTINUOUS
+        )
+        self.std = nn.Linear(
+            num_inputs, NormalAndCategoricalDistribution.NUM_CONTINUOUS
+        )
+
+        nn.init.orthogonal_(self.mu.weight, gain=0.01)
+        nn.init.constant_(self.mu.bias, 0)
+        nn.init.orthogonal_(self.std.weight, gain=0.01)
+        nn.init.constant_(self.std.bias, 0)
+
+        self.linear_0 = nn.Linear(num_inputs, 2)
+        nn.init.orthogonal_(self.linear_0.weight, gain=0.01)
+        nn.init.constant_(self.linear_0.bias, 0)
+
+        self.linear_1 = nn.Linear(num_inputs, 2)
+        nn.init.orthogonal_(self.linear_1.weight, gain=0.01)
+        nn.init.constant_(self.linear_1.bias, 0)
+
+    def forward(self, x: Tensor) -> CustomNormal:
+        mu = self.mu(x)
+        if self.action_activation == "tanh":
+            mu = torch.tanh(mu)
+
+        std = torch.clamp(self.std(x), min=self.min_std, max=self.max_std)
+        if self.use_log_std:
+            std = torch.exp(std)
+        if self.use_softplus:
+            std = torch.nn.functional.softplus(std)
+
+        cat_0 = self.linear_0(x)
+        cat_1 = self.linear_1(x)
+
+        return NormalAndCategoricalDistribution(mu, std, cat_0, cat_1)
+
+
 def linear_decay(epoch: int, total_num_updates: int) -> float:
     r"""Returns a multiplicative factor for linear value decay
 

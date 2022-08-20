@@ -34,7 +34,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         return spaces.Box(
-            shape=(n_targets * 3,),
+            shape=(3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -84,7 +84,7 @@ class TargetStartSensor(MultiObjSensor):
         global_T = self._sim.robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
-        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
+        return batch_transform_point(pos, T_inv, np.float32)[0].reshape(-1)
 
 
 class PositionGpsCompassSensor(Sensor):
@@ -105,7 +105,7 @@ class PositionGpsCompassSensor(Sensor):
             dim_per_obj = 2
         self._polar_pos = np.zeros(n_targets * dim_per_obj, dtype=np.float32)
         return spaces.Box(
-            shape=(n_targets * dim_per_obj,),
+            shape=(dim_per_obj,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -141,7 +141,7 @@ class TargetStartGpsCompassSensor(PositionGpsCompassSensor):
         return TargetStartGpsCompassSensor.cls_uuid
 
     def _get_positions(self) -> np.ndarray:
-        return self._sim.get_target_objs_start()
+        return self._sim.get_target_objs_start()[0]
 
 
 @registry.register_sensor
@@ -153,7 +153,7 @@ class TargetGoalGpsCompassSensor(PositionGpsCompassSensor):
 
     def _get_positions(self) -> np.ndarray:
         _, pos = self._sim.get_targets()
-        return pos
+        return pos[0]
 
 
 @registry.register_sensor
@@ -182,7 +182,7 @@ class GoalSensor(MultiObjSensor):
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
-        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
+        return batch_transform_point(pos, T_inv, np.float32)[0].reshape(-1)
 
 
 @registry.register_sensor
@@ -750,9 +750,7 @@ class ForceTerminate(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        accum_force = task.measurements.measures[
-            RobotForce.cls_uuid
-        ].get_metric()
+        accum_force = task.measurements.measures[RobotForce.cls_uuid].get_metric()
         if (
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
