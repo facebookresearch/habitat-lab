@@ -92,7 +92,9 @@ class WeightsAndBiasesWriter:
         r"""
         Integrates with https://wandb.ai logging service.
         """
-        wb_kwargs = {}
+        wb_kwargs = {
+            "dir": "/private/home/vincentpierre/Documents/gala_kinematic"
+        }
         if config.WB.PROJECT_NAME != "":
             wb_kwargs["project"] = config.WB.PROJECT_NAME
         if config.WB.RUN_NAME != "":

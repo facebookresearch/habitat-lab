@@ -98,6 +98,7 @@ class BaseTrainer:
             ), "Must specify a directory for storing videos on disk"
 
         with get_writer(self.config, flush_secs=self.flush_secs) as writer:
+            episode_success_histogram = {}
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
                 proposed_index = get_checkpoint_id(
@@ -124,10 +125,29 @@ class BaseTrainer:
                         time.sleep(2)  # sleep for 2 secs before polling again
                     logger.info(f"=======current_ckpt: {current_ckpt}=======")
                     prev_ckpt_ind += 1
-                    self._eval_checkpoint(
+                    success_counter = self._eval_checkpoint(
                         checkpoint_path=current_ckpt,
                         writer=writer,
                         checkpoint_index=prev_ckpt_ind,
+                    )
+                    for k, v in success_counter.items():
+                        if k not in episode_success_histogram:
+                            episode_success_histogram[k] = (0, 0)
+                        episode_success_histogram[k] = (
+                            episode_success_histogram[k][0] + v,
+                            episode_success_histogram[k][1] + 1,
+                        )
+                    print(
+                        "====================================================="
+                    )
+                    print(
+                        f"Episode success historgram at ckpt {prev_ckpt_ind}: "
+                    )
+                    print(episode_success_histogram)
+                    for k, v in episode_success_histogram.items():
+                        print(k, " : ", v[0], " / ", v[1])
+                    print(
+                        "====================================================="
                     )
 
     def _eval_checkpoint(

@@ -463,7 +463,7 @@ def generate_video(
         metric_strs.append(f"{k}={v:.2f}")
 
     video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
-        metric_strs
+        [m for m in metric_strs if "action" not in m]
     )
     if "disk" in video_option:
         assert video_dir is not None

@@ -722,7 +722,11 @@ class BatchedEnv:
                 success = is_holding_correct and end_episode_action
 
             if self._config.get("TASK_IS_PLACE", False):
-                success = success and (state.held_obj_idx == -1)
+                success = (
+                    success
+                    and (state.held_obj_idx == -1)
+                    and self._past_pick_success[b]
+                )
 
             if self._config.get("PREVENT_STOP_ACTION", False):
                 end_episode_action = False
@@ -745,6 +749,10 @@ class BatchedEnv:
             continuous_action_norm = actions[
                 b * self.action_dim + 1 : b * self.action_dim + 10
             ]
+            continuous_action_l2 = sum(c * c for c in continuous_action_norm)
+            action_penalty = (
+                self._config.get("ACTION_PENALTY", 0.0) * continuous_action_l2
+            )
             continuous_action_norm_mean = sum(
                 abs(c) for c in continuous_action_norm
             ) / len(continuous_action_norm)
@@ -785,6 +793,7 @@ class BatchedEnv:
                     "end_action": float(end_episode_action),
                     "continuous_action_norm_mean": continuous_action_norm_mean,
                     "continuous_action_norm_median": continuous_action_norm_median,
+                    "continuous_action_l2": continuous_action_l2,
                 }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
@@ -820,6 +829,7 @@ class BatchedEnv:
                     "end_action": float(end_episode_action),
                     "continuous_action_norm_mean": continuous_action_norm_mean,
                     "continuous_action_norm_median": continuous_action_norm_median,
+                    "continuous_action_l2": continuous_action_l2,
                 }
                 if self._previous_state[b] is not None:
                     prev_obj_pos = prev_state.obj_positions[
@@ -842,6 +852,7 @@ class BatchedEnv:
                         obj_to_goal - prev_obj_to_goal
                     ) * self._config.get("CARTHESIAN_REWARD", 1.0)
                     self.rewards[b] -= bad_attempt_penalty
+                    self.rewards[b] -= action_penalty
                     if (
                         self._config.get("DROP_IS_FAIL", True)
                         and is_holding_correct
