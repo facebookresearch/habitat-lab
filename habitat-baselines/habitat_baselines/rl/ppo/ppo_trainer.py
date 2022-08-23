@@ -19,6 +19,8 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
+from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
@@ -135,7 +137,10 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         self.actor_critic = policy.from_config(
-            self.config, observation_space, self.policy_action_space
+            self.config,
+            observation_space,
+            self.policy_action_space,
+            orig_action_space=self.orig_policy_action_space,
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -240,6 +245,7 @@ class PPOTrainer(BaseRLTrainer):
 
         action_space = self.envs.action_spaces[0]
         self.policy_action_space = action_space
+        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
         if is_continuous_action_space(action_space):
             # Assume ALL actions are NOT discrete
             action_shape = (get_num_actions(action_space),)
@@ -895,6 +901,17 @@ class PPOTrainer(BaseRLTrainer):
             config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
             config.freeze()
 
+        if (
+            len(config.VIDEO_RENDER_VIEWS) > 0
+            and len(self.config.VIDEO_OPTION) > 0
+        ):
+            config.defrost()
+            for render_view in config.VIDEO_RENDER_VIEWS:
+                uuid = config.TASK_CONFIG.SIMULATOR[render_view].UUID
+                config.TASK_CONFIG.GYM.OBS_KEYS.append(uuid)
+                config.SENSORS.append(render_view)
+            config.freeze()
+
         if config.VERBOSE:
             logger.info(f"env config: {config}")
 
@@ -902,6 +919,7 @@ class PPOTrainer(BaseRLTrainer):
 
         action_space = self.envs.action_spaces[0]
         self.policy_action_space = action_space
+        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
         if is_continuous_action_space(action_space):
             # Assume NONE of the actions are discrete
             action_shape = (get_num_actions(action_space),)
@@ -1093,6 +1111,14 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+
+                    gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
+                    if gfx_str != "":
+                        write_gfx_replay(
+                            gfx_str,
+                            self.config.TASK_CONFIG.TASK,
+                            current_episodes[i].episode_id,
+                        )
 
             not_done_masks = not_done_masks.to(device=self.device)
             (

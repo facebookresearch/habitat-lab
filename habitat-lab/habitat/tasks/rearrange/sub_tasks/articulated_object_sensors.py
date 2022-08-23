@@ -15,11 +15,11 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToRestDistance,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
 
 
 @registry.register_sensor
-class MarkerRelPosSensor(Sensor):
+class MarkerRelPosSensor(UsesRobotInterface, Sensor):
     """
     Tracks the relative position of a marker to the robot end-effector
     specified by `use_marker_name` in the task. This `use_marker_name` must
@@ -50,7 +50,7 @@ class MarkerRelPosSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         marker = self._task.get_use_marker()
-        ee_trans = self._sim.robot.ee_transform
+        ee_trans = self._sim.get_robot_data(self.robot_id).robot.ee_transform
         rel_marker_pos = ee_trans.inverted().transform_point(
             marker.get_current_position()
         )
@@ -220,7 +220,7 @@ class ArtObjSuccess(Measure):
 
 
 @registry.register_measure
-class EndEffectorDistToMarker(Measure):
+class EndEffectorDistToMarker(UsesRobotInterface, Measure):
     """
     The distance of the end-effector to the target marker on the articulated object.
     """
@@ -240,10 +240,14 @@ class EndEffectorDistToMarker(Measure):
             **kwargs
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = np.linalg.norm(
-            observations[MarkerRelPosSensor.cls_uuid]
+    def update_metric(self, *args, task, **kwargs):
+        marker = task.get_use_marker()
+        ee_trans = task._sim.get_robot_data(self.robot_id).robot.ee_transform
+        rel_marker_pos = ee_trans.inverted().transform_point(
+            marker.get_current_position()
         )
+
+        self._metric = np.linalg.norm(rel_marker_pos)
 
 
 @registry.register_measure

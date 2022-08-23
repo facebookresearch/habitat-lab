@@ -40,7 +40,7 @@ from habitat.utils.render_wrapper import HabRenderWrapper
                 "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
                 "SuctionGraspAction",
             ],
-            7,
+            8,
             dict,
         ),
         (

@@ -19,11 +19,22 @@ class HighLevelPolicy:
 
 
 class GtHighLevelPolicy:
+    """
+    :property _solution_actions: List of tuples were first tuple element is the
+        action name and the second is the action arguments.
+    """
+
+    _solution_actions: List[Tuple[str, List[str]]]
+
     def __init__(self, config, task_spec_file, num_envs, skill_name_to_idx):
         with open(task_spec_file, "r") as f:
             task_spec = yaml.safe_load(f)
 
         self._solution_actions = []
+        if "solution" not in task_spec:
+            raise ValueError(
+                f"The ground truth task planner only works when the task solution is hard-coded in the PDDL problem file at {task_spec_file}"
+            )
         for i, sol_step in enumerate(task_spec["solution"]):
             sol_action = parse_func(sol_step)
             self._solution_actions.append(sol_action)
@@ -69,7 +80,7 @@ class GtHighLevelPolicy:
                         f"Could not find skill named {skill_name} in {self._skill_name_to_idx}"
                     )
                 next_skill[batch_idx] = self._skill_name_to_idx[skill_name]
-                skill_args = skill_args.split(",")
+
                 skill_args_data[batch_idx] = skill_args
 
                 self._next_sol_idxs[batch_idx] += 1

@@ -18,17 +18,18 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 # flake8: noqa
 # These actions need to be imported since there is a Python evaluation
 # statement which dynamically creates the desired grip controller.
-from habitat.tasks.rearrange.grip_actions import (
+from habitat.tasks.rearrange.actions.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
 )
+from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 
 @registry.register_task_action
-class EmptyAction(SimulatorTaskAction):
+class EmptyAction(RobotAction):
     """A No-op action useful for testing and in some controllers where we want
     to wait before the next operation.
     """
@@ -71,7 +72,7 @@ class RearrangeStopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmAction(SimulatorTaskAction):
+class ArmAction(RobotAction):
     """An arm control and grip control into one action space."""
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -102,17 +103,20 @@ class ArmAction(SimulatorTaskAction):
     @property
     def action_space(self):
         action_spaces = {
-            "arm_action": self.arm_ctrlr.action_space,
+            self._action_arg_prefix
+            + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces["grip_action"] = self.grip_ctrlr.action_space
+            action_spaces[
+                self._action_arg_prefix + "grip_action"
+            ] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
-    def step(
-        self, arm_action, is_last_action, grip_action=None, *args, **kwargs
-    ):
+    def step(self, is_last_action, *args, **kwargs):
+        arm_action = kwargs[self._action_arg_prefix + "arm_action"]
         self.arm_ctrlr.step(arm_action)
         if self.grip_ctrlr is not None and not self.disable_grip:
+            grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
         if is_last_action:
             return self._sim.step(HabitatSimActions.ARM_ACTION)
@@ -121,7 +125,7 @@ class ArmAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmRelPosAction(SimulatorTaskAction):
+class ArmRelPosAction(RobotAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -142,13 +146,11 @@ class ArmRelPosAction(SimulatorTaskAction):
         delta_pos *= self._config.DELTA_POS_LIMIT
         # The actual joint positions
         self._sim: RearrangeSim
-        self._sim.robot.arm_motor_pos = (
-            delta_pos + self._sim.robot.arm_motor_pos
-        )
+        self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
 
 
 @registry.register_task_action
-class ArmRelPosKinematicAction(SimulatorTaskAction):
+class ArmRelPosKinematicAction(RobotAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -170,13 +172,13 @@ class ArmRelPosKinematicAction(SimulatorTaskAction):
         delta_pos *= self._config.DELTA_POS_LIMIT
         self._sim: RearrangeSim
 
-        set_arm_pos = delta_pos + self._sim.robot.arm_joint_pos
-        self._sim.robot.arm_joint_pos = set_arm_pos
-        self._sim.robot.fix_joint_values = set_arm_pos
+        set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
+        self.cur_robot.arm_joint_pos = set_arm_pos
+        self.cur_robot.fix_joint_values = set_arm_pos
 
 
 @registry.register_task_action
-class ArmAbsPosAction(SimulatorTaskAction):
+class ArmAbsPosAction(RobotAction):
     """
     The arm motor targets are directly set to the joint configuration specified
     by the action.
@@ -195,11 +197,11 @@ class ArmAbsPosAction(SimulatorTaskAction):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
         self._sim: RearrangeSim
-        self._sim.robot.arm_motor_pos = set_pos
+        self.cur_robot.arm_motor_pos = set_pos
 
 
 @registry.register_task_action
-class ArmAbsPosKinematicAction(SimulatorTaskAction):
+class ArmAbsPosKinematicAction(RobotAction):
     """
     The arm is kinematically directly set to the joint configuration specified
     by the action.
@@ -218,11 +220,11 @@ class ArmAbsPosKinematicAction(SimulatorTaskAction):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
         self._sim: RearrangeSim
-        self._sim.robot.arm_joint_pos = set_pos
+        self.cur_robot.arm_joint_pos = set_pos
 
 
 @registry.register_task_action
-class BaseVelAction(SimulatorTaskAction):
+class BaseVelAction(RobotAction):
     """
     The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -247,34 +249,36 @@ class BaseVelAction(SimulatorTaskAction):
         lim = 20
         return spaces.Dict(
             {
-                "base_vel": spaces.Box(
+                self._action_arg_prefix
+                + "base_vel": spaces.Box(
                     shape=(2,), low=-lim, high=lim, dtype=np.float32
                 )
             }
         )
 
-    def _capture_robot_state(self, sim):
+    def _capture_robot_state(self):
         return {
-            "forces": sim.robot.sim_obj.joint_forces,
-            "vel": sim.robot.sim_obj.joint_velocities,
-            "pos": sim.robot.sim_obj.joint_positions,
+            "forces": self.cur_robot.sim_obj.joint_forces,
+            "vel": self.cur_robot.sim_obj.joint_velocities,
+            "pos": self.cur_robot.sim_obj.joint_positions,
         }
 
-    def _set_robot_state(self, sim: RearrangeSim, set_dat):
-        sim.robot.sim_obj.joint_positions = set_dat["forces"]
-        sim.robot.sim_obj.joint_velocities = set_dat["vel"]
-        sim.robot.sim_obj.joint_forces = set_dat["pos"]
+    def _set_robot_state(self, set_dat):
+        self.cur_robot.sim_obj.joint_positions = set_dat["forces"]
+        self.cur_robot.sim_obj.joint_velocities = set_dat["vel"]
+        self.cur_robot.sim_obj.joint_forces = set_dat["pos"]
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
     def update_base(self):
+
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robot_state(self._sim)
+        before_trans_state = self._capture_robot_state()
 
-        trans = self._sim.robot.sim_obj.transformation
+        trans = self.cur_robot.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
@@ -289,7 +293,7 @@ class BaseVelAction(SimulatorTaskAction):
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        self._sim.robot.sim_obj.transformation = target_trans
+        self.cur_robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything.
@@ -301,15 +305,15 @@ class BaseVelAction(SimulatorTaskAction):
             )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robot_state(self._sim, before_trans_state)
-                self._sim.robot.sim_obj.transformation = trans
-        if self._sim.grasp_mgr.snap_idx is not None:
+                self._set_robot_state(before_trans_state)
+                self.cur_robot.sim_obj.transformation = trans
+        if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             # object.
-            self._sim.grasp_mgr.update_object_to_grasp()
+            self.cur_grasp_mgr.update_object_to_grasp()
 
-    def step(self, base_vel, *args, is_last_action, **kwargs):
-        lin_vel, ang_vel = base_vel
+    def step(self, *args, is_last_action, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._config.LIN_SPEED
         ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
         if not self._config.ALLOW_BACK:
@@ -336,17 +340,17 @@ class BaseVelAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmEEAction(SimulatorTaskAction):
+class ArmEEAction(RobotAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
 
-    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
-        super().__init__(*args, config=config, sim=sim, **kwargs)
+        super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
 
     def reset(self, *args, **kwargs):
         super().reset()
-        cur_ee = self._sim.ik_helper.calc_fk(
+        cur_ee = self._ik_helper.calc_fk(
             np.array(self._sim.robot.arm_joint_pos)
         )
 
@@ -368,14 +372,12 @@ class ArmEEAction(SimulatorTaskAction):
 
         self.apply_ee_constraints()
 
-        ik = self._sim.ik_helper
-
         joint_pos = np.array(self._sim.robot.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
-        ik.set_arm_state(joint_pos, joint_vel)
+        self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = ik.calc_ik(self.ee_target)
+        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
         self._sim.robot.arm_motor_pos = des_joint_pos
 

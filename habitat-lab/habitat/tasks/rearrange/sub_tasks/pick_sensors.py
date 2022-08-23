@@ -113,9 +113,7 @@ class RearrangePickReward(RearrangeReward):
                         "Grasped wrong object, ending episode."
                     )
                     self._task.should_end = True
-                self._metric = self._metric
                 self._prev_picked = cur_picked
-                self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
                 self.cur_dist = -1
                 return
 
@@ -137,14 +135,11 @@ class RearrangePickReward(RearrangeReward):
             self._metric -= self._config.DROP_PEN
             if self._config.DROP_OBJ_SHOULD_END:
                 self._task.should_end = True
-            self._metric = self._metric
             self._prev_picked = cur_picked
-            self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
             self.cur_dist = -1
             return
 
         self._prev_picked = cur_picked
-        self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
 
 @registry.register_measure

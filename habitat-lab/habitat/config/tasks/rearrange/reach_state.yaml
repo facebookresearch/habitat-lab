@@ -22,8 +22,6 @@ TASK:
     SUCCESS_REWARD: 10.0
     END_ON_SUCCESS: True
 
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
-
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
@@ -36,7 +34,7 @@ TASK:
     JOINT_VELOCITY_SENSOR:
         TYPE: "JointVelocitySensor"
         DIMENSIONALITY: 7
-    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "RELATIVE_RESTING_POS_SENSOR", 'END_EFFECTOR_SENSOR', "RESTING_POS_SENSOR"]
+    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
 
     END_EFFECTOR_TO_REST_DISTANCE:
         TYPE: "EndEffectorToRestDistance"
@@ -84,6 +82,9 @@ SIMULATOR:
         SENSORS: [HEAD_DEPTH_SENSOR]
         START_POSITION: [0.0, 0.0, 2.0]
         START_ROTATION: [0.0, 0.0, 0.0, 1.0]
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        IK_ARM_URDF: null
+        ROBOT_TYPE: "FetchRobot"
     HEAD_DEPTH_SENSOR:
         WIDTH: 32
         HEIGHT: 32
@@ -92,16 +93,11 @@ SIMULATOR:
         NORMALIZE_DEPTH: True
 
     # Agent setup
-    ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 8
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: "FetchRobot"
-    EE_LINK_NAME: null
     FORWARD_STEP_SIZE: 0.25
     LAG_OBSERVATIONS: 0
     LOAD_OBJS: False
-    IK_ARM_URDF: null
 
     # Grasping
     HOLD_THRESH: 0.09

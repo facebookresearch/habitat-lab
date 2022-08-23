@@ -8,7 +8,7 @@ import os.path as osp
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import magnum as mn
 import numpy as np
@@ -16,19 +16,15 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
+from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    PddlAction,
-    RearrangeObjectTypes,
-    search_for_id,
-)
-from habitat.tasks.rearrange.multi_task.task_creator_utils import (
-    create_task_object,
+    OBJ_TYPE,
+    RIGID_OBJ_TYPE,
+    PddlEntity,
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
-
-DYN_NAV_TASK_NAME = "RearrangeNavToObjTask-v0"
 
 
 @dataclass
@@ -37,25 +33,25 @@ class NavToInfo:
     :property nav_target_pos: Where the robot should navigate to.
     :property nav_target_angle: What angle the robot should be at when at the goal.
     :property nav_to_task_name: The name of the sub-task we are navigating to.
-    :property nav_to_obj_type: All sub-tasks are assumed to be interacting with
-        some object. This is the object the sub-task we are navigating to is
-        defined relative to.
     """
 
     nav_target_pos: mn.Vector3
     nav_target_angle: float
     nav_to_task_name: str
-    nav_to_obj_type: RearrangeObjectTypes
+    nav_to_entity_name: str
     start_hold_obj_idx: Optional[int] = None
     start_base_pos: Optional[mn.Vector3] = None
     start_base_rot: Optional[float] = None
 
 
-@registry.register_task(name=DYN_NAV_TASK_NAME)
+@registry.register_task(name="NavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
     """
-    :_nav_to_info: Information about the next skill we are navigating to.
+    :property _nav_to_info: Information about the next skill we are navigating to.
     """
+
+    pddl_problem: PddlProblem
+    _nav_to_info: Optional[NavToInfo]
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
@@ -72,16 +68,25 @@ class DynNavRLEnv(RearrangeTask):
             verbose=False,
         )
         self.start_states = self.cache.load()
-        self.domain = None
-        self._nav_to_info: Optional[NavToInfo] = None
 
-    @property
-    def nav_to_obj_type(self):
-        return self._nav_to_info.nav_to_obj_type
+        task_spec_path = osp.join(
+            self._config.TASK_SPEC_BASE_PATH, self._config.TASK_SPEC + ".yaml"
+        )
+
+        self.pddl_problem = PddlProblem(
+            self._config.PDDL_DOMAIN_DEF,
+            task_spec_path,
+            self._config,
+        )
+        self._nav_to_info = None
 
     @property
     def nav_to_task_name(self):
         return self._nav_to_info.nav_to_task_name
+
+    @property
+    def nav_to_entity_name(self) -> str:
+        return self._nav_to_info.nav_to_entity_name
 
     @property
     def nav_target_pos(self):
@@ -92,83 +97,74 @@ class DynNavRLEnv(RearrangeTask):
         return self._nav_to_info.nav_target_angle
 
     def set_args(self, obj, **kwargs):
-        if "marker" in kwargs:
-            self.force_recep_to_name = kwargs["orig_applied_args"]["marker"]
         self.force_obj_to_idx = obj
-        self.force_obj_to_name = kwargs["orig_applied_args"]["obj"]
         self.force_kwargs = kwargs
+        if "marker" in kwargs:
+            self.force_recep_to_name = kwargs["marker"]
 
     def _get_allowed_tasks(
-        self, filter_actions: Optional[List[str]] = None
+        self, filter_entities: Optional[List[PddlEntity]] = None
     ) -> Dict[str, List[PddlAction]]:
         """
         :returns: Mapping the action name to the grounded instances of the action that are possible in the current state.
         """
-        cur_preds = self.domain.get_true_predicates()
+        allowed_actions = None
+        if len(self._config.FILTER_NAV_TO_TASKS) != 0:
+            allowed_actions = self._config.FILTER_NAV_TO_TASKS
+        true_preds = self.pddl_problem.get_true_predicates()
+        robot_entity = self.pddl_problem.get_entity("ROBOT_0")
 
-        # Get all actions which can be actively applied.
-        allowed_actions = defaultdict(list)
-        for action in self.domain.actions.values():
-            if (
-                filter_actions is not None
-                and action.name not in filter_actions
+        for entity in self.pddl_problem.all_entities.values():
+            if entity.expr_type.is_subtype_of(
+                self.pddl_problem.expr_types[RIGID_OBJ_TYPE]
             ):
-                continue
-            if action.task == DYN_NAV_TASK_NAME or (
-                len(self._config.FILTER_NAV_TO_TASKS) != 0
-                and action.name not in self._config.FILTER_NAV_TO_TASKS
-            ):
-                continue
+                # The robot could be at this object.
+                new_pred = self.pddl_problem.predicates["robot_at"].clone()
+                new_pred.set_param_values([entity, robot_entity])
+                true_preds.append(new_pred)
 
-            consistent_actions = action.get_possible_actions(
-                cur_preds, self.domain.get_name_to_id_mapping()
-            )
-            rearrange_logger.debug(
-                f"For {action.name} got consistent actions:"
-            )
-            for action in consistent_actions:
-                rearrange_logger.debug(f"- {action}")
-                allowed_actions[action.name].append(action)
+        poss_actions = self.pddl_problem.get_possible_actions(
+            true_preds=true_preds,
+            filter_entities=filter_entities,
+            restricted_action_names=["nav", "nav_to_receptacle"],
+            allowed_action_names=allowed_actions,
+        )
 
-        return allowed_actions
+        grouped_poss_actions = defaultdict(list)
+        for action in poss_actions:
+            grouped_poss_actions[action.name].append(action)
+
+        return dict(grouped_poss_actions)
 
     def _get_nav_targ(
-        self, task_name: str, task_args: Dict[str, Any], episode: Episode
-    ) -> Tuple[mn.Vector3, float, RearrangeObjectTypes]:
+        self,
+        action: PddlAction,
+        add_task_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[mn.Vector3, float, str]:
         rearrange_logger.debug(
-            f"Getting nav target for {task_name} with arguments {task_args}"
-        )
-        # Get the config for this task
-        action = self.domain.get_task_match_for_name(task_name)
-        rearrange_logger.debug(
-            f"Corresponding action with task={action.task}, task_def={action.task_def}, config_task_args={action.config_task_args}"
+            f"Getting nav target for {action} with added arguments {add_task_kwargs}"
         )
 
         orig_state = self._sim.capture_state(with_robot_js=True)
-        assert isinstance(
-            self._dataset, RearrangeDatasetV0
-        ), "Incompatble dataset type"
-        create_task_object(
-            action.task,
-            action.task_def,
-            self._config.clone(),
-            self,
-            self._dataset,
-            False,
-            task_args,
-            episode,
-            action.config_task_args,
+        action.init_task(
+            self.pddl_problem.sim_info,
+            should_reset=False,
+            add_task_kwargs=add_task_kwargs,
         )
         robo_pos = self._sim.robot.base_pos
         heading_angle = self._sim.robot.base_rot
 
         self._sim.set_state(orig_state, set_hold=True)
+        obj_type = self.pddl_problem.expr_types[OBJ_TYPE]
+        nav_to_entity = action.get_arg_value("obj")
+        if nav_to_entity is None:
+            raise ValueError(f"`obj` argument is necessary in action {action}")
+        if not nav_to_entity.expr_type.is_subtype_of(obj_type):
+            raise ValueError(
+                f"Cannot navigate to non obj_type {nav_to_entity}"
+            )
 
-        _, obj_to_type = search_for_id(
-            task_args["orig_obj"], self.domain.get_name_to_id_mapping()
-        )
-
-        return robo_pos, heading_angle, obj_to_type
+        return robo_pos, heading_angle, nav_to_entity.name
 
     def _generate_snap_to_obj(self) -> int:
         # Snap the target object to the robot hand.
@@ -183,28 +179,30 @@ class DynNavRLEnv(RearrangeTask):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
         allowed_tasks = self._get_allowed_tasks()
+        if len(allowed_tasks) == 0:
+            raise ValueError(
+                "Could not get any allowed tasks as navigation targets."
+            )
 
         nav_to_task_name = random.choice(list(allowed_tasks.keys()))
-        task = random.choice(allowed_tasks[nav_to_task_name])
-
-        target_pos, target_angle, obj_type = self._get_nav_targ(
-            nav_to_task_name,
+        nav_to_task = random.choice(allowed_tasks[nav_to_task_name])
+        target_pos, target_angle, nav_to_entity_name = self._get_nav_targ(
+            nav_to_task,
             {
-                **task.task_args,
                 ADD_CACHE_KEY: "nav",
             },
-            episode,
         )
 
         rearrange_logger.debug(f"Got nav to skill {nav_to_task_name}")
         target_pos = np.array(self._sim.safe_snap_point(target_pos))
 
         start_pos, start_rot = get_robo_start_pos(self._sim, target_pos)
+
         return NavToInfo(
             nav_target_pos=target_pos,
             nav_target_angle=float(target_angle),
             nav_to_task_name=nav_to_task_name,
-            nav_to_obj_type=obj_type,
+            nav_to_entity_name=nav_to_entity_name,
             start_hold_obj_idx=start_hold_obj_idx,
             start_base_pos=start_pos,
             start_base_rot=start_rot,
@@ -214,74 +212,29 @@ class DynNavRLEnv(RearrangeTask):
         rearrange_logger.debug(
             f"Navigation getting target for {self.force_obj_to_idx} with task arguments {self.force_kwargs}"
         )
-        name_to_id = self.domain.get_name_to_id_mapping()
 
-        if self.force_recep_to_name is not None:
-            rearrange_logger.debug(
-                f"Forcing receptacle {self.force_recep_to_name}"
-            )
-            _, entity_type = search_for_id(
-                self.force_recep_to_name, name_to_id
-            )
-            use_name = self.force_recep_to_name
-        else:
-            _, entity_type = search_for_id(self.force_obj_to_name, name_to_id)
-            use_name = self.force_obj_to_name
-            rearrange_logger.debug(
-                f"Search object name {use_name} with type {entity_type}"
-            )
+        must_include_entities = [
+            self.pddl_problem.get_entity(entity_name)
+            for entity_name in self.force_kwargs["orig_applied_args"].values()
+        ]
 
-        matching_skills = self.domain.get_matching_skills(
-            entity_type, use_name
-        )
-
-        allowed_tasks = self._get_allowed_tasks(matching_skills)
+        allowed_tasks = self._get_allowed_tasks(must_include_entities)
         if len(allowed_tasks) == 0:
-            raise ValueError(
-                f"Got no allowed tasks {allowed_tasks} from {matching_skills}, {entity_type}, {use_name}"
-            )
+            raise ValueError("Got no allowed tasks.")
 
-        filtered_allowed_tasks = []
-        orig_args = self.force_kwargs["orig_applied_args"]
-        for sub_allowed_tasks in allowed_tasks.values():
-            for task in sub_allowed_tasks:
-                assigned_args = task.task_args
+        any_key = next(iter(allowed_tasks))
+        nav_to_task = allowed_tasks[any_key][0]
 
-                # Check that `orig_args` is a SUBSET of `assigned_args` meaning
-                # the keys and values match something in assigned args.
-                is_orig_args_subset = all(
-                    [
-                        assigned_args.get(k, None) == v
-                        or assigned_args.get(f"orig_{k}", None) == v
-                        for k, v in orig_args.items()
-                    ]
-                )
-                if is_orig_args_subset:
-                    filtered_allowed_tasks.append(task)
+        rearrange_logger.debug(f"Navigating to {nav_to_task}")
 
-        rearrange_logger.debug(f"Got allowed tasks {filtered_allowed_tasks}")
-
-        if len(filtered_allowed_tasks) == 0:
-            allowed_tasks_str = (
-                "".join(["\n   - " + x for x in allowed_tasks]) + "\n"
-            )
-            raise ValueError(
-                f"Got no tasks out of {allowed_tasks_str}. With entity_type={entity_type}, use_name={use_name} force kwargs={self.force_kwargs}"
-            )
-        nav_to_task = filtered_allowed_tasks[0]
-
-        rearrange_logger.debug(
-            f"Navigating to {nav_to_task.name} with arguments {nav_to_task.task_args}"
-        )
-
-        targ_pos, nav_target_angle, obj_type = self._get_nav_targ(
-            nav_to_task.name, nav_to_task.task_args, episode
+        targ_pos, nav_target_angle, nav_to_entity_name = self._get_nav_targ(
+            nav_to_task
         )
         return NavToInfo(
             nav_target_pos=np.array(self._sim.safe_snap_point(targ_pos)),
             nav_target_angle=float(nav_target_angle),
+            nav_to_entity_name=nav_to_entity_name,
             nav_to_task_name=nav_to_task.name,
-            nav_to_obj_type=obj_type,
         )
 
     def reset(self, episode: Episode):
@@ -289,20 +242,14 @@ class DynNavRLEnv(RearrangeTask):
         super().reset(episode, fetch_observations=False)
         rearrange_logger.debug("Resetting navigation task")
 
-        assert isinstance(
-            self._dataset, RearrangeDatasetV0
-        ), "Incompatble dataset type"
-        if self.domain is None:
-            self.domain = PddlDomain(
-                self._config.PDDL_DOMAIN_DEF,
-                self._dataset,
-                self._config,
-                self._sim,
-            )
-        else:
-            self.domain.reset()
+        self.pddl_problem.bind_to_instance(
+            self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
+        )
 
         episode_id = sim.ep_info["episode_id"]
+
+        # Rest the nav to information for this episode.
+        self._nav_to_info = None
 
         if self.force_obj_to_idx is not None:
             full_key = (
@@ -387,7 +334,7 @@ class DynNavRLEnv(RearrangeTask):
         rearrange_logger.debug(f"Got nav to info {self._nav_to_info}")
 
         if not sim.pathfinder.is_navigable(self._nav_to_info.nav_target_pos):
-            rearrange_logger.error("Goal is not navigable")
+            rearrange_logger.error("Goal is not navigable.")
 
         if self._sim.habitat_config.DEBUG_RENDER:
             # Visualize the position the agent is navigating to.

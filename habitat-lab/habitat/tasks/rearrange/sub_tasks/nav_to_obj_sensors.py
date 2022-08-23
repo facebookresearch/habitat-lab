@@ -11,17 +11,15 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    RearrangeObjectTypes,
-)
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 
 
 @registry.register_sensor
-class TargetOrGoalStartPointGoalSensor(Sensor):
+class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -49,16 +47,27 @@ class TargetOrGoalStartPointGoalSensor(Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.robot.base_transformation
+        robot_T = self._sim.get_robot_data(
+            self.robot_id
+        ).robot.base_transformation
 
-        if task.nav_to_obj_type == RearrangeObjectTypes.GOAL_POSITION:
+        if not hasattr(task, "pddl_problem"):
+            raise ValueError(f"Must use task with PDDL. {task} does not.")
+
+        pddl = task.pddl_problem
+
+        entity = None
+        if task.nav_to_entity_name != "":
+            entity = pddl.get_entity(task.nav_to_entity_name)
+
+        if entity is None or entity.expr_type.is_subtype_of(
+            pddl.expr_types["goal_type"]
+        ):
             to_pos = self._sim.get_targets()[1][self._task.targ_idx]
-        elif task.nav_to_obj_type == RearrangeObjectTypes.RIGID_OBJECT:
+        elif entity.expr_type.is_subtype_of(pddl.expr_types["rigid_obj_type"]):
             to_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
         else:
-            raise ValueError(
-                f"Got navigate to object type {RearrangeObjectTypes.RIGID_OBJECT}"
-            )
+            raise ValueError(f"Unknown {entity}.")
 
         dir_vector = robot_T.inverted().transform_point(to_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
@@ -72,6 +81,7 @@ class NavToSkillSensor(Sensor):
 
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
+        self._action_names = None
         super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
@@ -90,11 +100,10 @@ class NavToSkillSensor(Sensor):
 
     def get_observation(self, task, *args, **kwargs):
         ret = np.zeros(self._config.NUM_SKILLS, dtype=np.float32)
-        if task.nav_to_task_name is None or task.domain is None:
-            return ret
-        skills = task.domain.action_names
+        if self._action_names is None:
+            self._action_names = list(task.pddl_problem.actions.keys())
 
-        cur_idx = skills.index(task.nav_to_task_name)
+        cur_idx = self._action_names.index(task.nav_to_task_name)
         ret[cur_idx] = 1.0
         return ret
 
@@ -134,6 +143,12 @@ class DistToNavGoalSensor(Sensor):
 class NavGoalSensor(Sensor):
     cls_uuid: str = "nav_goal"
 
+    def __init__(self, *args, sim, task, **kwargs):
+        super().__init__(*args, task=task, **kwargs)
+        self._task = task
+        self._prev_ep_id = None
+        self._sim = sim
+
     def _get_uuid(self, *args, **kwargs):
         return NavGoalSensor.cls_uuid
 
@@ -148,43 +163,30 @@ class NavGoalSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(self, task, *args, **kwargs):
-        return task.nav_target_pos.astype(np.float32)
-
-
-@registry.register_sensor
-class NavRotToGoalSensor(Sensor):
-    """
-    Warning: This represents priviledged information in the task.
-    """
-
-    cls_uuid: str = "nav_rot_to_goal_sensor"
-
-    def _get_uuid(self, *args, **kwargs):
-        return NavRotToGoalSensor.cls_uuid
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(config=config)
-        self._sim = sim
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(1,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
+    def _generate_targets(self, task):
+        robot_entity = task.pddl_problem.all_entities["ROBOT_0"]
+        poss_actions = task.pddl_problem.get_possible_actions(
+            allowed_action_names=["nav", "nav_to_receptacle"],
+            filter_entities=[robot_entity],
+            true_preds=task.pddl_problem.get_true_predicates(),
         )
+        targets = []
+        state = self._sim.capture_state(True)
+        for action in poss_actions:
+            task = action.init_task(
+                task.pddl_problem.sim_info, should_reset=True
+            )
+            target_pos = task.nav_target_pos
+            targets.append(target_pos)
+        self._sim.set_state(state, True)
+        return np.stack(targets, axis=0).astype(np.float32)
 
     def get_observation(self, task, *args, **kwargs):
-        heading_angle = float(self._sim.robot.base_rot)
-        angle_dist = np.arctan2(
-            np.sin(heading_angle - task.nav_target_angle),
-            np.cos(heading_angle - task.nav_target_angle),
-        )
-        return np.abs(angle_dist)
+        if task._episode_id != self._prev_ep_id:
+            self._cur_targs = self._generate_targets(task)
+            self._prev_ep_id = task._episode_id
+
+        return self._cur_targs
 
 
 @registry.register_sensor

@@ -51,16 +51,15 @@ SIMULATOR:
         SENSORS: ['HEAD_RGB_SENSOR']
         START_POSITION: [3.66997,0.0,3.5041]
         START_ROTATION: [0.0, 0.999657, 0.0, -0.0261769]
+        ROBOT_TYPE: FetchRobotNoWheels
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
 
     # Agent setup
-    ARM_REST: [0.6, 0.0, 0.9]
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
-    ROBOT_TYPE: FetchRobotNoWheels
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
     FORWARD_STEP_SIZE: 0.25
 
     # Grasping

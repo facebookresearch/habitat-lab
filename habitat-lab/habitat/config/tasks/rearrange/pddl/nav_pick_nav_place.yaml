@@ -1,19 +1,30 @@
+objects:
+  - name: hab2|0
+    expr_type: rigid_obj_type
+  - name: TARGET_hab2|0
+    expr_type: goal_type
+  - name: ROBOT_0
+    expr_type: robot_type
+
 stage_goals:
   stage_0_5:
-    - "holding(hab2|0)"
+    expr_type: AND
+    sub_exprs:
+      - holding(hab2|0, ROBOT_0)
   stage_1:
-    - "at(hab2|0,TARGET_hab2|0)"
-start:
-    precondition: []
-    state:
-        robo:
-            pos: 'rnd'
+    expr_type: AND
+    sub_exprs:
+      - at(hab2|0,TARGET_hab2|0)
+
+init: []
 
 goal:
-  - "at(hab2|0,TARGET_hab2|0)"
+  expr_type: AND
+  sub_exprs:
+    - at(hab2|0,TARGET_hab2|0)
 
 solution:
-    - "nav(hab2|0)"
-    - "pick(hab2|0)"
-    - "nav(TARGET_hab2|0)"
-    - "place(hab2|0,TARGET_hab2|0)"
+  - nav(hab2|0, ROBOT_0)
+  - pick(hab2|0, ROBOT_0)
+  - nav(TARGET_hab2|0, ROBOT_0)
+  - place(hab2|0,TARGET_hab2|0, ROBOT_0)
