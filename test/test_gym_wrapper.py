@@ -14,7 +14,6 @@ import pytest
 import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
-from habitat.utils.gym_adapter import HabGymWrapper
 from habitat.utils.gym_definitions import _get_env_name
 from habitat.utils.render_wrapper import HabRenderWrapper
 
@@ -65,7 +64,6 @@ def test_gym_wrapper_contract_continuous(
         env_class=env_class, config=config
     )
 
-    env = HabGymWrapper(env)
     env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Box)
     assert (
@@ -116,7 +114,6 @@ def test_gym_wrapper_contract_discrete(
         env_class=env_class, config=config
     )
 
-    env = HabGymWrapper(env)
     env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Discrete)
     assert (
