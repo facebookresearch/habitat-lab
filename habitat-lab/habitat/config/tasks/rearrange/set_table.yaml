@@ -29,7 +29,7 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
-    TASK_SPEC_BASE_PATH: habitat-lab/habitat/config/tasks/rearrange/pddl/
+    TASK_SPEC_BASE_PATH: tasks/rearrange/pddl/
     TASK_SPEC: set_table
     PDDL_DOMAIN_DEF: replica_cad
     SENSORS:

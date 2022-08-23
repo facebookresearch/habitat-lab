@@ -102,7 +102,7 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
-_C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
+_C.TASK.TASK_SPEC_BASE_PATH = "tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = ""
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = "replica_cad"

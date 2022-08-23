@@ -29,7 +29,7 @@ Controls:
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
 
-Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `configs/tasks/rearrange/` folder).
+Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/tasks/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
